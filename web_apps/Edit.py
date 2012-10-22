@@ -106,20 +106,20 @@ class Edit(Page):
     
     def build_generator_parameters(self, ob, index):
         res = "<li id='generator_parameters_"+str(index)+"' class='ui-widget-content'>"+ob['submission_details']['author_name']
-        res += " ("+ob['submission_details']['submission_date']+")"
+        #res += " ("+ob['submission_details']['submission_date']+")"
         res += "</li>"
         return res
 
     def build_comment(self, ob, index):
         res = "<li id='comments_"+str(index)+"' class='ui-widget-content'>"+str(ob['submission_details']['author_name'])
-        res += "("+str(ob['submission_details']['submission_date'])+")"
+        #res += "("+str(ob['submission_details']['submission_date'])+")"
         res += "<p>"+str(ob['message'])+"</p>"
         #res += "<a class='iconholder ui-state-default ui-corner-all' href='javascript:delete_composite_object(\"comments_"+str(index)+"\");'><span class='ui-icon ui-icon-close'></span></a></li>"
         return res  + "</li>"
 
     def build_approval(self, ob, index):
-        res = "<li id='approvals_"+str(index)+"' class='ui-widget-content'>"+ob['approver']['author_name']
-        res += "(" + ob["approver"]['submission_date'] + ")"
+        res = "<li id='approvals_"+str(index)+"' class='ui-widget-content'>"#+ob['approver']['author_name']
+        #res += "(" + ob["approver"]['submission_date'] + ")"
         res += "<p>" + ob["approval_step"] + "</p>"
         #res += "<a class='iconholder ui-state-default ui-corner-all' href='javascript:delete_composite_object(\"approvals_"+str(index)+"\");'><span class='ui-icon ui-icon-close'></span></a></li>"
         return res + "</li>"
