@@ -1,0 +1,120 @@
+<script>
+	var comments_json = {
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""},
+            'message':''
+            }
+</script>
+<script>
+	$(document).ready(function() {
+		$("#comments_dialog").hide();
+	});
+</script>
+
+<div id='comments_dialog' class="ui-widget">
+	<label for='comments_author_name'>Author name: </label>
+	<input class="ui-widget-content" id='comments_author_name' type='text' placeholder='author_name'>
+	<label for='comments_message'>Message: </label> 
+	<textarea class="ui-widget-content" id='comments_message' cols=20 rows=10 placeholder='message'></textarea>
+</div>
+
+<script>
+	var generator_parameters_json = { 
+            'version':0, 
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""}, 
+            'cross_section':-1.0,
+            'filter_efficiency':-1.0,
+            'filter_efficiency_error':-1.0,
+            'match_efficiency':-1.0,
+            'match_efficiency_error':-1.0
+            };
+
+</script>
+<script>
+	$(document).ready(function() {
+                $("#generator_parameters_dialog").hide();
+        });
+</script>
+<div id="generator_parameters_dialog" class="ui-widget">
+	<label for='generator_parameters_author_name'>Name</label>
+	<input type="text" id="generator_parameters_author_name" class="ui-widget-content">
+	<label for='generator_parameters_cross_section'>Cross Section</label>
+	<input type="text" id="generator_parameters_cross_section" class="ui-widget-content">
+ 	<label for='generator_parameters_filter_efficiency'>Filter Efficiency</label>
+        <input type="text" id="generator_parameters_filter_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_filter_efficiency_error'>Filter Efficiency Error</label>
+        <input type="text" id="generator_parameters_filter_efficiency_error" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency'>Match Efficiency</label>
+        <input type="text" id="generator_parameters_match_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency_error'>Match Efficiency Error</label>
+        <input type="text" id="generator_parameters_match_efficiency_error" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#generators_dialog").hide();
+	});
+</script>
+<div id="generators_dialog" class="ui-widget">
+	<label for='generators_generators'>Generators</label>
+    <input type="text" id="generators_generators" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#type_dialog").hide();
+	});
+</script>
+<div id="type_dialog" class="ui-widget">
+	<label for='type_type'>Type</label>
+    <input type="text" id="type_type" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#process_string_dialog").hide();
+	});
+</script>
+<div id="process_string_dialog" class="ui-widget">
+	<label for='process_string_process_string'>Process String</label>
+    <input type="text" id="process_string_process_string" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#cmssw_release_dialog").hide();
+	});
+</script>
+<div id="cmssw_release_dialog" class="ui-widget">
+	<label for='cmssw_release_cmssw_release'>CMSSW Release</label>
+    <input type="text" id="cmssw_release_cmssw_release" class="ui-widget-content">
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#campaigns_dialog").hide();
+		ajax_search("campaigns", "", -1, function(data) {
+			$.each(data, function(i,v) {
+				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#campaigns_campaigns");
+			});
+			addHover("li");
+			$("#campaigns_campaigns").selectable({selected: function(events, ui){update_json_object("campaigns", ui.selected.id);}});
+		}, function(data){alert(data);});
+	});
+</script>
+<div id='campaigns_dialog' class="ui-widget">
+	<label for='campaigns_campaigns'>Choose a campaign</label>
+	<ol id='campaigns_campaigns' class="ui-widget-content"></ol>
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#allowed_campaigns_dialog").hide();
+		ajax_search("campaigns", "", -1, function(data) {
+			$.each(data, function(i,v) {
+				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#allowed_campaigns_allowed_campaigns");
+			});
+			addHover("li");
+			$("#allowed_campaigns_allowed_campaigns").selectable({selected: function(events, ui){update_json_object("allowed_campaigns", ui.selected.id);}});
+		}, function(data){alert(data);});
+	});
+</script>
+<div id='allowed_campaigns_dialog' class="ui-widget">
+	<label for='allowed_campaigns_allowed_campaigns'>Choose a campaign</label>
+	<ol id='allowed_campaigns_allowed_campaigns' class="ui-widget-content"></ol>
+</div>

@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Tasks SYSTEM "Tasks-4.2.dtd">
+<!-- eric4 tasks file for project prep2 -->
+<!-- Saved: 2012-10-19, 15:34:33 -->
+<Tasks version="4.2">
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: set caching in the calling methods.</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>98</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: implement COPY and MOVE calls.</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>147</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: remove leading whitespace when committing a view</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>148</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Thread this off so that it's non blocking...</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>196</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: restore support for returndocs and viewlist</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>240</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: commit in thread to avoid blocking others</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>253</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: MAKE BETTER ERROR HANDLING</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>508</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: load a rotating DB from the seed db</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>585</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Maybe call self._rotate() here?</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>587</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: check that the views listed exist in the seed</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>598</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: support passing in view options</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>599</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: deal with multiple instances, load from doc?</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>609</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: update function?</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>644</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: This should be a worker thread/pool thingy so it's non-blocking</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>659</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: improve handling views and options here</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>663</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: couchapp this, how to make sure that the app is deployed?</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>693</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Improve source/destination handling - can't simply URL quote,</Summary>
+    <Description></Description>
+    <Created>2012-10-05, 11:48:05</Created>
+    <Resource>
+      <Filename>WMCore/Database/CMSCouch.py</Filename>
+      <Linenumber>817</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Check to see if the request is a GEN-SIM request</Summary>
+    <Description></Description>
+    <Created>2012-10-08, 13:33:03</Created>
+    <Resource>
+      <Filename>rest_api/RequestActions.py</Filename>
+      <Linenumber>44</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Check if c is a GEN-SIM (root) campaign</Summary>
+    <Description></Description>
+    <Created>2012-10-15, 13:55:15</Created>
+    <Resource>
+      <Filename>rest_api/FlowActions.py</Filename>
+      <Linenumber>58</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and</Summary>
+    <Description></Description>
+    <Created>2012-10-15, 13:55:15</Created>
+    <Resource>
+      <Filename>rest_api/FlowActions.py</Filename>
+      <Linenumber>179</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Check if c is a GEN-SIM (root) campaign</Summary>
+    <Description></Description>
+    <Created>2012-10-15, 13:55:15</Created>
+    <Resource>
+      <Filename>rest_api/FlowActions.py</Filename>
+      <Linenumber>231</Linenumber>
+    </Resource>
+  </Task>
+  <Task priority="1" completed="False" bugfix="False">
+    <Summary>TODO: Na kanw ta chained campaigns na diagrafontai me ton deleter apo to CHainedCampaignActions</Summary>
+    <Description></Description>
+    <Created>2012-10-15, 13:55:15</Created>
+    <Resource>
+      <Filename>rest_api/FlowActions.py</Filename>
+      <Linenumber>314</Linenumber>
+    </Resource>
+  </Task>
+</Tasks>

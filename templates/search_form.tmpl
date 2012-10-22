@@ -1,0 +1,58 @@
+<div id="forms_search" class="ui-widget-header ui-corner-all">
+<script>
+	$(document).ready(function() {
+		$(".forms_search_textbox").autocomplete();
+		$("#submit_search_form").button().click(function(){search();});
+		
+		// reflect option on hidden inputs
+		$("#entity_menu").change( function() {
+			$("#db_input").val($("#entity_menu").find("option:selected").text());	
+		});
+	});
+</script>
+	<!-- hiddens -->
+	{% include "inputs.tmpl" %}	
+
+	<div id="forms_search_show_div">
+	<label>Show</label>
+	<select id="entity_menu" class="ui-widget-content">
+		<option selected="selected">requests</option>
+		<option>campaigns</option> 
+		<option>chained_requests</option>
+		<option>chained_campaigns</option>  
+	</select>	
+	
+	<input id="db_name" type="hidden" value="requests">
+	<label>that have:</label>
+	</div>
+	
+	<div id="forms_search_form_container">
+		<div id="cont_0">
+			<select id="params_0" class="ui-widget-content">
+				<option>prepid</option>
+				<option>priority</option>
+				<option>member_of_campaign</option>
+				<option>type</option>
+			</select>
+	
+			<select id="ops_0" class="ui-widget-content">
+				<option><</option>
+				<option><=</option>
+				<option>==</option>
+				<option>></option>
+				<option>>=</option>
+				<option>!=</option>
+				<option>~=</option>
+			</select>
+	
+			<input id="input_0" type='input' value='' class="ui-widget-content">
+			<a class="iconholder ui-state-default ui-corner-all" id="add_form_button" title="add filter" href="javascript:add_search_form(1);">
+				<span class="ui-icon ui-icon-plus"></span>
+			</a>
+			<a class="iconholder ui-state-default ui-corner-all" id="remove_form_button" title="remove filter" href="javascript:remove_search_form(1);">
+				<span class="ui-icon ui-icon-minus"></span>
+			</a>
+		</div>
+	</div>
+	<a id="submit_search_form" href="#">Search</a>
+</div>

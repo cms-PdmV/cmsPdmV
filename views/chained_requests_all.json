@@ -1,0 +1,20 @@
+{
+	"_id" : "_design/chained_requests",
+	"views" : {
+		"all" : {
+			"map" : "function(doc){ if(doc.prepid) emit(doc.prepid,doc);}"
+		},
+		"prepid" : {
+			"map" : "function(doc){ if(doc.prepid) emit(doc.prepid, doc);}"
+		},	
+		"priority" : {
+			"map" : "function(doc){ if(doc.priority) emit(doc.priority, doc);}"
+		},
+		"member_of_campaign" : {
+			"map" : "function(doc){ if(doc.member_of_campaign) emit(doc.member_of_campaign, doc);}"
+		},
+		"root_request" : {
+		    "map" : "function(doc){ if(doc.chain) emit(doc.chain[0], doc);}"
+		}
+	}
+}

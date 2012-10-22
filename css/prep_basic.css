@@ -1,0 +1,61 @@
+/*----------------------------- jqueryui & themeroller specific ----------------------------------*/
+/*#switcher { overflow: hidden;}*/
+
+/*----------------------------- General css ------------------------------------*/
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; }
+
+
+/*----------------------------- icon wrapper class ----------------------------------*/
+.iconholder { margin: 3px 3px 3px -3px ; position: relative; padding: 4px 4px; cursor: pointer; float: right; list-style: none;}
+
+.iconholder .ui-icon { padding: 1px 1px; float: left; }
+
+/*----------------------------- Object List ----------------------------------*/
+#object_list { min-height: 400px; max-height: 2000px;}
+#object_list_table { width: 100%; height: auto;}
+#object_list_thead { width: 100%; height: auto;}
+#object_list_tbody { width: 100%; height: auto; text-align: left;}
+#object_list .loading {text-align: center; }
+#object_list .ui-progressbar-value { height: 0.600em;}
+#object_list .ui-progressbar { height: 0.7em; }
+#object_list .prog_container { position: relative;}
+#object_list .prog_text { position: absolute; top: 20%; left: 38%; font-family: verdana; font-size: 52%; }
+#create_new_button { float: left; margin-left: 0.2em; text-decoration: none; }
+
+/*----------------------------- Search form ----------------------------------*/
+#forms_search { /*line-height: 4px;*/ }
+#forms_search_form_container { padding-left: 2.5em; padding-top: 2em; padding-bottom: 2em; }
+#forms_search_show_div { padding-top: 1em; padding-left: 0.5em;}
+#forms_search select { width: 200px; }
+#submit_search_form { float: right; text-decoration: none;}
+
+/*----------------------------- navigation menu ----------------------------------*/
+#navigation_menu { margin-top: 2em; }
+#navigation_menu table { width: 100%; text-align: center }
+
+/*----------------------------- editor ----------------------------------*/
+#editor .iconholder { margin-top: -2em; padding: 0;}
+#editor #sequences .iconholder { margin: 0px; padding: 0; }
+.ui-widget-overlay { position: absolute; top: 0%;}
+.dialog-no-close .ui-dialog-titlebar-close { display: none; }
+#editor .comp_btn { margin-left: 1em; margin-top: 0.2em; float:left; text-decoration: none;}
+#chain .iconholder { margin-top: 0; }
+ul.chain_links li {display: inline;}
+ui.chain_links li a :hover { font-color: white; }
+ul.chain_links li:not(:last-child):after { content: ', ';}
+
+
+/*----------------------------- comments_dialog -------------------------*/
+#comments_dialog { text-align: center }
+#comments_dialog_name { margin: 1px; }
+
+/*----------------------------- campaigns dialog -------------------------*/
+#campaigns_dialog {overflow: auto; max-height: 20em;}
+#campaigns_campaigns li { cursor: pointer; }
+
+/*----------------------------- actions table ----------------------------*/
+#actions_table {}
+#actions_table td {padding: 0.55em; text-align: center; }
+#actions_table td input {text-align: center; width: 30%; }
+#actions_table td .gen_buttons { position: relative; font-size:8px; margin-left: 2em; margin-top: 1em;}
+

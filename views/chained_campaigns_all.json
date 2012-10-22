@@ -1,0 +1,20 @@
+{
+  "_id" : "_design/chained_campaigns",
+  "views" : {
+                "all" : {
+                        "map" : "function(doc){ if(doc._id) emit(doc._id,doc);}"
+                },
+                "prepid" : {
+                        "map" : "function(doc){ if(doc._id) emit(doc._id, doc);}"
+                },
+                "type" : {
+                        "map" : "function(doc){ if(doc.energy) emit(doc.energy, doc);}"
+                },
+                "root" : {
+                        "map" : "function(doc){ if(doc.campaigns) emit(doc.campaigns[0], doc);}"
+                },
+                "last_campaign" : {
+                        "map" : "function(doc) { if(doc.campaigns) emit(doc.campaigns[doc.campaigns.length-1], doc);}"
+                }
+        }
+}
