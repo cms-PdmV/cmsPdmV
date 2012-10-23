@@ -3,6 +3,7 @@ from submission_details import submission_details
 from approval import approval
 from comment import comment
 from request import request
+from couchdb_layer.prep_database import database
 import json
 
 class chained_request(json_base):
@@ -60,11 +61,64 @@ class chained_request(json_base):
     
     # proceed to the next request in the chain
     def flow(self):
+        # increase step counter
         step = self.get_attribute('step') + 1
-        if step >= len(self.get_attribute('chain')):
+            
+        # check sanity
+        if not self.get_attribute('chain'):
+            print 'Error: Chain '+self.get_attribute('_id')+' has no root.'
             return False
-        # set attr
+        
+        try:
+            rdb = database('requests')
+            ccdb = database('chained_campaigns')
+        except database.DatabaseAccessError as ex:
+            print str(ex)
+            return False
+        
+        # get root request id
+        root = self.get_attribute('chain')[0]
+        
+        # check if exists
+        if not rdb.document_exists(root):
+            print 'Error: Request '+str(root)+' does not exist.'
+            return False
+        
+        # actually get root request
+        req = rdb.get(root)
+        
+        # get the campaign in the next step
+        if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
+            print 'Error: Chained Campaign '+str(self.get_attribute('member_of_campaign'))+' does not exist.'
+            return False
+        
+        # get mother chained_campaign
+        cc = ccdb.get(self.get_attribute('member_of_campaign'))
+        if step >= len(cc['campaigns']):
+            print 'Warning: Chained Request '+str(self.get_attribute('_id'))+' cannot flow any further.'
+            return False  
+        
+        # get next campaign
+        next_camp = cc['campaigns'][step][0] # just the camp name, not the flow
+        
+        # use root request as template
+        req['member_of_campaign'] = next_camp
+        req['root'] = False
+        
+        # remove couchdb specific fields
+        del req['_rev']
+        del req['_id']
+        
+        # register it to the chain
+        print req
+        new_req = self.add_request(req)
+        
+        # save new request to database
+        rdb.save(new_req)
+        
+        # finalize changes
         self.set_attribute('step',  step)
+        
         return True
 
     def approve(self,  index=-1):

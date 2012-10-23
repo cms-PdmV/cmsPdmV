@@ -13,6 +13,7 @@ class ImportRequest(RESTResource):
         self.db_name = 'requests'
         self.db = database(self.db_name)
         self.adb = database('actions')
+        self.cdb = database('campaigns')
         self.json = {}
 
     def PUT(self):
@@ -20,7 +21,7 @@ class ImportRequest(RESTResource):
 
     def import_request(self, data):
         try:
-            self.json = request('TEST', json_input=loads(data)).json()
+            self.json = request('automatic', json_input=loads(data)).json()
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
@@ -38,10 +39,21 @@ class ImportRequest(RESTResource):
         # add an action to the action_db
         self.add_action()
         
-        return dumps({"results":True})
+        return dumps({"results":self.json['_id']})
         
     def add_action(self):
-        #TODO: Check to see if the request is a GEN-SIM request
+        # Check to see if the request is a root request
+        if self.json['mcdb_id'] != -1:
+            camp = self.json['member_of_campaign']
+            
+            if not self.cdb.document_exists(camp):
+                return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+                
+            # get campaign
+            c = self.cdb.get(camp)
+            
+            if c['root'] != 0:
+                return
         
         # check to see if the action already exists
         if not self.adb.document_exists(self.json['prepid']):
@@ -111,6 +123,24 @@ class GetRequest(RESTResource):
     
     def get_request(self, data):
         return dumps({"results":self.db.get(prepid=data)})
+
+class ApproveRequest(RESTResource):
+    def __init__(self):
+        self.db = database('requests')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.approve(args[0],  args[1])
+        
+    def approve(self,  rid,  val):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given request id does not exist.'})
+        req = request('',  json_input=self.db.get(rid))
+        if not req.approve(val):
+            return dumps({"results":False})
+        
+        return dumps({"results":self.db.update(req.json())})
 
 class InjectRequest(RESTResource):
     def __init__(self):

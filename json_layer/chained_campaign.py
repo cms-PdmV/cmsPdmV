@@ -35,7 +35,8 @@ class chained_campaign(json_base):
             'action_parameters':{}, 
             'www':'',
             'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project    ),
-            'comments':[]
+            'comments':[], 
+            'valid':True
             }
         
         # update self according to json_input
@@ -63,30 +64,18 @@ class chained_campaign(json_base):
                     self._json_base__json[key] = self._json_base__schema[key]
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
-
-    def approve(self,  author_name,  author_cmsid=-1, author_inst_code='', author_project=''):
-        approvals = self.get_attribute('approvals')
-        app = approval('')
-        app.set_approval_steps(['Defined', 'Started'])
-        index = -1
-        step = app.get_approval(0)
-        # find if approve is legal (and next step)
-        if len(approvals) == 0:
-            index = -1
-        elif len(approvals) == len(app.get_approval_steps()):
-            raise app.IllegalApprovalStep()
-        else:
-            step = approvals[-1]['approval_step']
-            index = app.index(step) + 1
-            step = app.get_approval(index)
-        # build approval 
-        try:
-            new_approval = approval(author_name, author_cmsid, author_inst_code,author_project).build(step)
-        except approval('').IllegalApprovalStep(step) as ex:
-            print str(ex)
+    
+    # start() makes the chained campaign visible to the actions page
+    def start(self):
+        if self._json_base__json['valid']:
             return
-        approvals.append(new_approval)
-        self.set_attribute('approvals',  approvals)
+        self._json_base__json['valid']=True
+    
+    # stop() makes the chained campaign invisible to the actions page
+    def stop(self):
+        if not self._json_base__json['valid']:
+            return
+        self._json_base__json['valid']=False
 
     def add_comment(self,author_name, comment, author_cmsid=-1, author_inst_code='', author_project=''):
         comments = self.get_attribute('comments')

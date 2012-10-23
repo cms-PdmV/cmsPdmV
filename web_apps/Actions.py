@@ -59,6 +59,9 @@ class Actions(Page):
         
         # build header using all chained_campaigns
         for cc in ccamps:
+            # print only valid chained campaigns
+            if not cc['valid']:
+                continue
             if cc['alias']:
                 result +='<td><a href="javascript:new_tab_redirect(\'/edit/chained_campaigns/'+cc['_id']+'\');">'+cc['alias']+'</a>'
             else:

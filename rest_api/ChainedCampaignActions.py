@@ -213,3 +213,40 @@ class GenerateChainedRequests(RESTResource):
                     self.crdb.save(new_req)
                     
         return dumps({"results":True})
+
+# starts the chained campaign
+class Start(RESTResource):
+    def __init__(self):
+        self.ccdb = database('chained_campaigns')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.start(args[0])
+    
+    def start(self,  ccid):
+        if not self.ccdb.document_exists(ccid):
+            return dumps({"results":'Error: The Chained Campaign does not exist'})
+        
+        cc = self.ccdb.get(ccid)
+        cc.start()
+        self.ccdb.update(cc.json())
+
+# stops the chained campaign
+class Stop(RESTResource):
+    def __init__(self):
+        self.ccdb = database('chained_campaigns')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.stop(args[0])
+    
+    def stop(self,  ccid):
+        if not self.ccdb.document_exists(ccid):
+            return dumps({"results":'Error: The Chained Campaign does not exist'})
+        
+        cc = self.ccdb.get(ccid)
+        cc.stop()
+        self.ccdb.update(cc.json())
+

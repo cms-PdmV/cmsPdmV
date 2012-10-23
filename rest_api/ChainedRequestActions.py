@@ -145,15 +145,9 @@ class FlowToNextStep(RESTResource):
     def __init__(self):
         self.db = database('chained_requests')
     
-    def POST(self,  chainid=''):
-        if not chainid:
-            print 'Error: Chainid was invalid'
-            return dumps({"results":False})
-        return self.flow(chainid)
-    
     def GET(self, *args):
         if not args:
-            return dumps({"results":'Error: No arguments wer given'})
+            return dumps({"results":'Error: No arguments were given.'})
         return self.flow(args[0])
         
     def flow(self,  chainid):
