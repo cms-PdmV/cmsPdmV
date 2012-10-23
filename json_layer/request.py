@@ -47,7 +47,7 @@ class request(json_base):
             'member_of_campaign':'',
             'time_event':-1,
             'size_event':-1,
-            'gen_fragment':'', 
+            #'gen_fragment':'', 
             'version':0,
             'status':'',
             'type':'',
@@ -99,9 +99,30 @@ class request(json_base):
         comments.append(new_comment)
         self.set_attribute('comments',  comments)
     
-    def add_sequence(self,  customize_name='', customize_function='', sequenc='',  kcustomize_name='',  kcustomize_function='',  ksequence=''):
+    def add_sequence(self,
+              steps=[],
+              nameorfragment='',
+              conditions='',
+              event_content=[],
+              data_tier=[],
+              beamspot='',
+              customise=[],
+              filtername='',
+              geometry='',
+              magField='',
+              pileup='NoPileUp',
+              datamix='NODATAMIXER',
+              scenario='',
+              processName='',
+              harvesting='',
+              particle_table='',
+              inputCommands='',
+              dropDescendant=False,
+              donotDropOnInput=True,
+              restoreRNDSeeds='',
+              slhc=''):
         seq = sequence()
-        seq.build(customize_name,  customize_function,  sequenc,  kcustomize_name,  kcustomize_function,  ksequence)
+        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
         sequences = self.get_attribute('sequences')
         index = len(sequences) + 1
         seq.set_attribute('index', index)

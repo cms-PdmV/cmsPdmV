@@ -4,6 +4,7 @@ from Page import Page
 import json
 from couchdb_layer.prep_database import database
 from json_layer.request import request
+from json_layer.sequence import sequence
 from json_layer.campaign import campaign
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
@@ -125,10 +126,11 @@ class Edit(Page):
         return res + "</li>"
 
     def build_sequence(self, ob, index):
-        s = ''
+        thesequence=sequence(ob)
+        s = '' + thesequence.buildCmsDriver()
         res = ''
-        for seq in ob['sequence']:
-                    s += seq + ','
+        #for seq in ob['sequence']:
+        #            s += seq + ','
         if s:
             if s[-1] == ',':
                 s = s[:len(s)-1]
