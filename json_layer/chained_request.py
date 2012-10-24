@@ -71,6 +71,7 @@ class chained_request(json_base):
         
         try:
             rdb = database('requests')
+            cdb = database('campaigns')
             ccdb = database('chained_campaigns')
         except database.DatabaseAccessError as ex:
             print str(ex)
@@ -101,9 +102,17 @@ class chained_request(json_base):
         # get next campaign
         next_camp = cc['campaigns'][step][0] # just the camp name, not the flow
         
+        # check if exists
+        if not cdb.document_exists(next_camp):
+            print 'Error: Campaign '+str(next_camp)+' does not exist.'
+            return False
+        
+        # get campaign
+        nc = cdb.get(next_camp)
+        
         # use root request as template
         req['member_of_campaign'] = next_camp
-        req['type'] = 'MCReproc'
+        req['type'] = nc.get_attribute('type')
         req['root'] = False
         
         # remove couchdb specific fields
