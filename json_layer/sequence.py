@@ -24,7 +24,7 @@ class sequence(json_base):
             'particle_table':'',
             'inputCommands':'',
             'dropDescendant':False,
-            'donotDropOnInput':True,
+            'donotDropOnInput':'',
             'restoreRNDSeeds':'',
             'slhc':''} 
 
@@ -71,7 +71,7 @@ class sequence(json_base):
               particle_table='',
               inputCommands='',
               dropDescendant=False,
-              donotDropOnInput=True,
+              donotDropOnInput='',
               restoreRNDSeeds='',
               slhc=''):
         self.set_attribute('steps',  steps)
