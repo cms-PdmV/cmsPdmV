@@ -6,7 +6,7 @@ class sequence(json_base):
     def __init__(self,  json_input={}):
         self._json_base__schema = {
             'index':-1,
-            'nameorfragment': 'STEP',
+            'evt_type': 'STEP',
             'step':[], 
             'conditions':'',
             'event_content':[],
@@ -54,7 +54,7 @@ class sequence(json_base):
 
     def build(self,  
               steps=[],  
-              nameorfragment='STEP', 
+              evt_type='STEP', 
               conditions='',  
               event_content=[],
               data_tier=[],
@@ -75,7 +75,7 @@ class sequence(json_base):
               restoreRNDSeeds='',
               slhc=''):
         self.set_attribute('steps',  steps)
-        self.set_attribute('nameorfragment',  nameorfragment)
+        self.set_attribute('evt_type',  evt_type)
         self.set_attribute('conditions', conditions)
         self.set_attribute('event_content', event_content)
         self.set_attribute('data_tier', data_tier)
@@ -109,8 +109,6 @@ class sequence(json_base):
     def tocommandline(self, attribute):
       if attribute == 'index':
         return ''
-      if attribute == 'nameorfragment':
-        return self.get_attribute(attribute).decode('utf-8')
       if self.get_attribute(attribute) == '':
         return ''
       elif self.get_attribute(attribute) == True:
