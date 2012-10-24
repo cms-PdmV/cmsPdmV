@@ -21,7 +21,7 @@ class RESTResourceIndex(RESTResource):
 		self.res = ""
 		self.data = data
 		if not self.data:
-			self.data = {'PUT':[('import_request','Request JSON', 'Import a request to the database')], 'GET':[('get_request', 'prepid', 'Retrieve a request from the database'), ('request_prepid', 'Pwg, Campaign Name', 'Generates the next available PREP_ID from the database')], 'DELETE':[('delete_request', 'prepid', 'Delete a request from the database')]}
+			self.data = {'PUT':[('import_request','Request JSON', 'Import a request to the database')], 'GET':[('get_request', 'prepid', 'Retrieve a request from the database'), ('request_prepid', 'Pwg, Campaign Name', 'Generates the next available PREP_ID from the database'), ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')], 'DELETE':[('delete_request', 'prepid', 'Delete a request from the database')]}
 	
 	def GET(self):
 		return self.index()

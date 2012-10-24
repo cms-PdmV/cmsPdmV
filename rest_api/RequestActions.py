@@ -90,6 +90,29 @@ class UpdateRequest(RESTResource):
     def save_request(self):
         return dumps({"results":self.db.update(self.json)})
 
+class GetCmsDriverForRequest(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+        self.json = {}
+        self.request = None
+
+    def GET(self, *args):
+      print args
+      if not args:
+        return dumps({"results":{}})
+      return self.get_cmsDriver(self.db.get(prepid=args[0]))
+
+    def get_cmsDriver(self, data):
+      try:
+        self.request = request('TEST', json_input=data)
+        self.request.print_self()     
+      except request.IllegalAttributeName as ex:
+        return dumps({"results":''})
+        
+      return dumps({"results":self.request.buildCmsDrivers()}) 
+      
+
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -117,6 +140,7 @@ class GetRequest(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        print args
         if not args:
             return dumps({"results":{}})
         return self.get_request(args[0])

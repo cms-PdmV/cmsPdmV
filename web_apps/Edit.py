@@ -59,12 +59,12 @@ class Edit(Page):
                     res += self.build_comment(ob, index) 
                 elif key == 'approvals':
                     res += self.build_approval(ob, index)
-                elif key == 'sequences':
-                    s = self.build_sequence(ob, index)
-                    if s:
-                        res += s
-                    else:
-                        continue
+                #elif key == 'sequences':
+                #    s = self.build_sequence(ob, index)
+                #    if s:
+                #        res += s
+                #    else:
+                #        continue
 
                 elif key == 'generator_parameters':
                                         res += self.build_generator_parameters(ob, index)

@@ -6,7 +6,6 @@ class sequence(json_base):
     def __init__(self,  json_input={}):
         self._json_base__schema = {
             'index':-1,
-            'evt_type': 'STEP',
             'step':[], 
             'conditions':'',
             'event_content':[],
@@ -54,7 +53,6 @@ class sequence(json_base):
 
     def build(self,  
               steps=[],  
-              evt_type='STEP', 
               conditions='',  
               event_content=[],
               data_tier=[],
@@ -97,39 +95,8 @@ class sequence(json_base):
         self.set_attribute('slhc', slhc)
         return self._json_base__json
 
-    def srepr(self,arg):
-      if isinstance(arg, basestring): # Python 3: isinstance(arg, str)
-        return arg.decode('utf-8')
-      try:
-        return ",".join(self.srepr(x) for x in arg)
-      except TypeError: # catch when for loop fails
-        return arg.decode('utf-8') # not a sequence so just return repr
- 
-
-    def tocommandline(self, attribute):
-      if attribute == 'index':
-        return ''
-      if self.get_attribute(attribute) == '':
-        return ''
-      elif self.get_attribute(attribute) == True:
-        return "--"+str(attribute)
-      elif self.get_attribute(attribute) == False:
-        return ''
-      else :
-        return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))  
-
-
-    def buildCmsDriver(self): 
-      command = 'cmsDriver.py '
-      for key in self._json_base__schema:
-        print key
-        command += self.tocommandline(key)
-        command += ' ' 
-      return command
-
       
     
 if __name__=='__main__':
     s = sequence()
     s.print_self()
-    #print s.buildCmsDriver()

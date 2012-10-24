@@ -6,7 +6,7 @@ from web_apps.Edit import Edit
 from web_apps.Create import Create  
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep
@@ -85,6 +85,7 @@ root.restapi.requests.save = ImportRequest()
 root.restapi.requests.update = UpdateRequest()
 root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.get = GetRequest()
+root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest() 
 root.restapi.requests.request_prepid = RequestPrepId()
 
 # REST Campaign Actions
