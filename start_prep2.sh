@@ -1,3 +1,12 @@
+#!/usr/bin/env bash
+
+# check for root( root is needed to avoid SELINUX restrictions for sockets)
+if ! id | grep -q "uid=0(root)" ; then
+	echo "ERROR:  must be root in order to run this script"
+	exit 1
+fi
+
+
 # check CouchDB status
 couch_status=`/etc/init.d/couchdb status | grep running`
 
@@ -13,11 +22,7 @@ if [ -z "$couch_status" ]; then
 	fi	
 fi
 
-# init cherrypy web server (optional: take a different path than ./) 
-cherry_path=$1
-
-if [ -z $cherry_path ]; then
-	cherry_path=main.py
-fi
-
-python $cherry_path
+# CherryPy path
+cherry_path=/home/prep2
+cd $cherry_path
+python $cherry_path/main.py

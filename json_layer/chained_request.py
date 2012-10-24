@@ -103,6 +103,7 @@ class chained_request(json_base):
         
         # use root request as template
         req['member_of_campaign'] = next_camp
+        req['type'] = 'MCReproc'
         req['root'] = False
         
         # remove couchdb specific fields
@@ -110,7 +111,6 @@ class chained_request(json_base):
         del req['_id']
         
         # register it to the chain
-        print req
         new_req = self.add_request(req)
         
         # save new request to database

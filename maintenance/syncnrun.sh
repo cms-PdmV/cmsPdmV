@@ -1,3 +1,3 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-rsync /home/nnazirid/workspace/prep2/ cherryprep:/home/prep2.0/ -rP
+rsync /home/nnazirid/workspace/prep2/ preptest:/home/prep2/ -rPu

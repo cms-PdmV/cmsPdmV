@@ -150,5 +150,13 @@ cd /home/
 sudo chown -R $user:$group prep2/
 
 # reboot
-echo 'Installation Complete! Rebooting...'
-sudo reboot
+echo 'Installation complete.'
+
+echo "You have to reboot to complete the process. Reboot now? [y/n]:"
+read choice
+
+if [ "$choice" == "y" ]; then
+	sudo reboot
+else
+	echo "Aborting..."
+fi

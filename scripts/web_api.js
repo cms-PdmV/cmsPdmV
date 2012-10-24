@@ -1,3 +1,24 @@
+// asks a chained_request to flow to its next step in the chain. Uses rest api
+function flow_to_next_step(chainid) {
+    $.ajax({
+        type: 'GET',
+        url: '/restapi/chained_requests/flow/'+chainid,
+        success:function(data) {
+            var json = $.parseJSON(data);
+            if (json["results"]==true)
+                alert('Chained Request flow was successful!');
+            else if (json["results"]==false)
+                alert('Could not save data to database.');
+            else
+                alert(json["results"]);
+        },
+        error:function(xhr, error, data){
+            alert( data + '. Could not save object.');
+        }
+    }); 
+}
+
+
 // open url in a new tab (or popup )
 function new_tab_redirect(url) {
     window.open(url);
@@ -113,6 +134,7 @@ function json_escape(str) {
 //function commit_changes(db, data);
 //function save_object(db, data); 
 
+// deletes an object from the database using the rest api
 function delete_object(db, id) {
 	$.ajax({
 		type: 'DELETE',
@@ -133,10 +155,13 @@ function delete_object(db, id) {
  	});
 }
 
+// injects a request to reqmgr using the rest api
 function inject_object(db, id) {
 	redirect("/inject/"+db+"/"+id);
 } 
 
+// breaks the composite id of an element to its basic elements.
+// used to pass ids through independent functions
 function get_composite_id(id) {
 	var substr = id.split("_");
         var key = '';
@@ -161,6 +186,7 @@ function get_composite_id(id) {
 	return [key, index];
 }
 
+// wrapper: calls the edit_box() method that spawns a dialog to edit an object
 function edit_composite_object(id) {
 	c = get_composite_id(id);	
 
@@ -168,10 +194,12 @@ function edit_composite_object(id) {
 	edit_box(c[0], c[1]);
 }
 
+// wrapper: calls the create_box() method that spawns a dialog to create an object
 function create_composite_object(key) {
 	create_box(key);
 }
 
+// deletes an object from a parameter list, using the rest api
 function delete_composite_object(key, index) {
 	// remove element from list
 	jsondata[key].splice(index, 1);
@@ -180,6 +208,7 @@ function delete_composite_object(key, index) {
 	update_object(db_name);
 }
 
+// adds a new request to a chain id
 function add_to_chain(chainid, campaignid) {
 	if (campaignid.indexOf("-") != -1)
 		new_tab_redirect("/edit/requests/"+campaignid);
@@ -187,6 +216,7 @@ function add_to_chain(chainid, campaignid) {
 		new_tab_redirect("/create/requests/"+campaignid+"/?chainid="+chainid);
 }
 
+//spawns a dialog that uses the web_api.js to save an object in the database
 function create_box(key) {
 	$("#"+key+"_dialog").dialog({
                 closeOnEscape: true,
