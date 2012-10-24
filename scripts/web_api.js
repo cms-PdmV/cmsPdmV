@@ -66,7 +66,11 @@ function update_object(db) {
         // gather all data from the page
         $("#editor tbody").children("tr").each(function() {
                 var key = $(this).children("td:first-child").html();
-                var val = $(this).children("td:nth-child(2)").children("textarea:first-child").val();
+                //var val = $(this).children("td:nth-child(2)").children("textarea:first-child").val();
+                if ($(this).children("td:nth-child(2)").children(":first-child").is("textarea"))
+                        var val = $(this).children("td:nth-child(2)").children("textarea:first-child").val();
+                else if($(this).children("td:nth-child(2)").children(":first-child").is("select"))
+                        var val = $(this).children("td:nth-child(2)").find(":selected").html();
                 if(val)
                         jsondata[key] = val;
         });
