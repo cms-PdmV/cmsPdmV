@@ -99,11 +99,11 @@ class sequence(json_base):
 
     def srepr(self,arg):
       if isinstance(arg, basestring): # Python 3: isinstance(arg, str)
-        return repr(arg).decode('utf-8')
+        return arg.decode('utf-8')
       try:
         return ",".join(self.srepr(x) for x in arg)
       except TypeError: # catch when for loop fails
-        return repr(arg).decode('utf-8') # not a sequence so just return repr
+        return arg.decode('utf-8') # not a sequence so just return repr
  
 
     def tocommandline(self, attribute):
