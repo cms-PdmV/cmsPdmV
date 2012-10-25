@@ -12,19 +12,19 @@ class sequence(json_base):
             'data_tier':[], 
             'beamspot':'',
             'customise':'',
-            'filter_name':'',
+            'filtername':'',
             'geometry':'', 
-            'mag_field':'', 
+            'magField':'', 
             'pileup':'', 
             'datamix':'', 
             'scenario':'',
-            'process_name':'',
+            'processName':'',
             'harvesting':'',
             'particle_table':'',
-            'input_commands':'',
-            'drop_descendant':False,
-            'do_not_drop_on_input':'',
-            'restore_rnd_seeds':'',
+            'inputCommands':'',
+            'dropDescendant':False,
+            'donotDropOnInput':'',
+            'restoreRNDSeeds':'',
             'slhc':''} 
 
         # update self according to json_input
@@ -58,19 +58,19 @@ class sequence(json_base):
               data_tier=[],
               beamspot='',
               customise=[],
-              filter_name='',
+              filtername='',
               geometry='',
-              mag_field='',
+              magField='',
               pileup='NoPileUp',
               datamix='NODATAMIXER',
               scenario='',
-              process_name='',
+              processName='',
               harvesting='',
               particle_table='',
-              input_commands='',
-              drop_descendant=False,
-              do_not_drop_on_input='',
-              restore_rnd_seeds='',
+              inputCommands='',
+              dropDescendant=False,
+              donotDropOnInput='',
+              restoreRNDSeeds='',
               slhc=''):
         self.set_attribute('steps',  steps)
         self.set_attribute('evt_type',  evt_type)
@@ -79,19 +79,19 @@ class sequence(json_base):
         self.set_attribute('data_tier', data_tier)
         self.set_attribute('beamspot', beamspot)
         self.set_attribute('customise', customise)
-        self.set_attribute('filter_name', filter_name)
+        self.set_attribute('filtername', filtername)
         self.set_attribute('geometry', geometry)
-        self.set_attribute('mag_field', mag_field)
+        self.set_attribute('magField', magField)
         self.set_attribute('pileup', pileup)
         self.set_attribute('datamix', datamix)
         self.set_attribute('scenario', scenario)
-        self.set_attribute('process_name', process_name)
+        self.set_attribute('processName', processName)
         self.set_attribute('harvesting', harvesting)
         self.set_attribute('particle_table', particle_table)
-        self.set_attribute('input_commands', input_commands)
-        self.set_attribute('drop_descendant', drop_descendant)
-        self.set_attribute('do_not_drop_on_input', do_not_drop_on_input)
-        self.set_attribute('restore_rnd_seeds', restore_rnd_seeds)
+        self.set_attribute('inputCommands', inputCommands)
+        self.set_attribute('dropDescendant', dropDescendant)
+        self.set_attribute('donotDropOnInput', donotDropOnInput)
+        self.set_attribute('restoreRNDSeeds', restoreRNDSeeds)
         self.set_attribute('slhc', slhc)
         return self._json_base__json
 

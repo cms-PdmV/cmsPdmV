@@ -88,6 +88,10 @@ class Edit(Page):
                         for k in li[key]:
                             res += '<li>' + str(k) + ' : ' + str(li[key][k])+'</li>'
                         res += '</ul>'
+            elif key == 'sequences':
+                for key in sorted(li.keys()):
+                    for k in li[key]:
+                        res += self.build_sequence(li[key],  k)
         res += '</ol>'
         return res
     
@@ -126,7 +130,9 @@ class Edit(Page):
         return res + "</li>"
 
     def build_sequence(self, ob, index):
+        print ob
         thesequence=sequence(json_input=ob)
+        print thesequence.json()
         s = '' + thesequence.build_cmsDriver()
         res = ''
         #for seq in ob['sequence']:

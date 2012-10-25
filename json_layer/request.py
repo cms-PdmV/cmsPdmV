@@ -107,22 +107,22 @@ class request(json_base):
               data_tier=[],
               beamspot='',
               customise=[],
-              filter_name='',
+              filtername='',
               geometry='',
-              mag_field='',
+              magField='',
               pileup='NoPileUp',
               datamix='NODATAMIXER',
               scenario='',
-              process_name='',
+              processName='',
               harvesting='',
               particle_table='',
-              input_commands='',
-              drop_descendant=False,
-              do_not_drop_on_input=True,
-              restore_rnd_seeds='',
+              inputCommands='',
+              dropDescendant=False,
+              donotDropOnInput=True,
+              restoreRNDSeeds='',
               slhc=''):
         seq = sequence()
-        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filter_name, geometry, mag_field, pileup, datamix, scenario, process_name, harvesting, particle_table, input_commands, drop_descendant, do_not_drop_on_input, restore_rnd_seeds, slhc)
+        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
         sequences = self.get_attribute('sequences')
         index = len(sequences) + 1
         seq.set_attribute('index', index)

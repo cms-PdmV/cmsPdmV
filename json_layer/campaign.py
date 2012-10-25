@@ -76,12 +76,18 @@ class campaign(json_base):
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
 
-    def add_sequence(self,  seq_json={}):
+    def add_sequence(self, seq_json={},  step=-1):
         seq = sequence(json_input=seq_json)
         sequences = self.get_attribute('sequences')
-        index = len(sequences) + 1
-        seq.set_attribute('index', index)
-        sequences.append(seq.json())
+        
+        if step == -1:
+            index = len(sequences) + 1
+        elif step <= len(sequences):
+            index = step
+        else:
+            return
+            
+        sequences[index].append(seq.json())
         self.set_attribute('sequences', sequences)
     
     def add_comment(author_name, comment, author_cmsid=-1, author_inst_code='', author_project=''):
