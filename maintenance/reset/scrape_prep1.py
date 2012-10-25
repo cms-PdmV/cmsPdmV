@@ -66,7 +66,16 @@ def get_requests(campaign_name, limit=-1, constraints = ''):
         # collect results
         results.append(rows)
 
-    return results      
+    return results     
+
+#convert comma separated strings in prep1 in lists for prep2    
+def splitPrep1String(thestring):
+    stringsplit = string.split(',')
+    li=[]
+    for step in stringsplit:
+      item = step.split(' ', 1)[0]
+      li.append(item)
+    return li  
 
 # convert the json returned by the cursor to a request object in prep2 db 
 def morph_requests(request_list):
@@ -120,7 +129,7 @@ def re_morph(req_json):
     new['member_of_campaign'] = req_json['member_of_campaign']
     new['time_event'] = req_json['timeEvent']
     new['size_event'] = req_json['sizeEvent']
-    new['gen_fragment'] = req_json['genFragment']
+    new['nameorfragment'] = req_json['genFragment']
     new['version'] = 0
     new['type'] = req_json['type']
     new['generators'] = req_json['generators']
@@ -129,7 +138,21 @@ def re_morph(req_json):
 
     new['comments'] = []  
 
-    new['sequences'] = [{'index':0, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName1'], 'customize_function':req_json['customizeFunction1'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence1']]}, {'index':1, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName2'], 'customize_function':req_json['customizeFunction2'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence2']]} ]
+    customize1 = splitPrep1String(req_json['customizeName1'])
+    customizeF1 = splitPrep1String(req_json['customizeFunction1'])
+    cust1 = []
+    for index in range(len(customize1)):
+      cust1.append(customize1[index].split('.py')[0]+'.'+customizeF1[index])
+
+    customize2 = splitPrep1String(req_json['customizeName2'])
+    customizeF2 = splitPrep1String(req_json['customizeFunction2'])
+    cust2 = []
+    for index in range(len(customize2)):
+      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index]) 
+
+    new['sequences'] = [{'index':0, "slhc": "", "pileup_scenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magnetic_field": "", "step": splitPrep1String(req_json['sequence1']), "data_tier": splitPrep1String(req_json['dataTier1']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(req_json['eventContent1']), "conditions": req_json['conditions']},{'index':1, "slhc": "", "pileup_scenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magnetic_field": "", "step": splitPrep1String(req_json['sequence2']), "data_tier": splitPrep1String(req_json['dataTier2']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(req_json['eventContent2']), "conditions": req_json['conditions']}]
+    
+    #[{'index':0, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName1'], 'customize_function':req_json['customizeFunction1'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence1']]}, {'index':1, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName2'], 'customize_function':req_json['customizeFunction2'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence2']]} ]
 
     new['generator_parameters'] = [{'version':0, 'submission_details':{'author_name':'automatic'}, 'cross_section':req_json['crossSection'], 'filter_efficiency': req_json['filterEff'], 'filter_efficiency_error': req_json['filterEffError'], 'match_efficiency': req_json['matchEff'], 'match_efficiency_error': -1}] 
 
@@ -218,7 +241,7 @@ def morph_campaign(camp):
     new['validation'] = camp['validation']
     new['pileup_dataset_name'] = camp['pileupDataSetName'].split(';')
     new['process_string'] = camp['processStr'].split(';')
-	new['generators'] = [camp['generators']]
+    new['generators'] = [camp['generators']]
     new['input_filename'] = camp['inputFileName']
     new['www'] = camp['www']
     new['completed_events'] = -1
@@ -272,8 +295,9 @@ if __name__=='__main__':
         if not os.path.exists(datadir + 'requests/'):
             os.makedirs(datadir + 'requests/')
                 
-        #res = get_requests(camp, limit=10, constraints='MCDBid != -1')
-        #final = morph_requests(res)
+        res = get_requests(camp, limit=1, constraints='MCDBid != -1')
+        final = morph_requests(res)
+        print final
 
         #for r in final:
         #    f = open(datadir + 'requests/' + r['_id'], 'w')
