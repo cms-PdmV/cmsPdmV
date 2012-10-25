@@ -107,22 +107,22 @@ class request(json_base):
               data_tier=[],
               beamspot='',
               customise=[],
-              filtername='',
+              filter_name='',
               geometry='',
-              magField='',
+              mag_field='',
               pileup='NoPileUp',
               datamix='NODATAMIXER',
               scenario='',
-              processName='',
+              process_name='',
               harvesting='',
               particle_table='',
-              inputCommands='',
-              dropDescendant=False,
-              donotDropOnInput=True,
-              restoreRNDSeeds='',
+              input_commands='',
+              drop_descendant=False,
+              do_not_drop_on_input=True,
+              restore_rnd_seeds='',
               slhc=''):
         seq = sequence()
-        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
+        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filter_name, geometry, mag_field, pileup, datamix, scenario, process_name, harvesting, particle_table, input_commands, drop_descendant, do_not_drop_on_input, restore_rnd_seeds, slhc)
         sequences = self.get_attribute('sequences')
         index = len(sequences) + 1
         seq.set_attribute('index', index)
@@ -138,8 +138,8 @@ class request(json_base):
         return arg.decode('utf-8') # not a sequence so just return repr
 
 
-    def tocommandline(self, ob, attribute):
-      print attribute
+    def to_command_line(self, ob, attribute):
+      #print attribute
       if attribute == 'index':
         return ''
       if ob.get_attribute(attribute) == '':
@@ -152,21 +152,21 @@ class request(json_base):
         return "--"+attribute+"="+self.srepr(ob.get_attribute(attribute))
 
 
-    def buildCmsDriver(self, sequenceindex):
+    def build_cmsDriver(self, sequenceindex):
       command = 'cmsDriver.py '+self.get_attribute('nameorfragment').decode('utf-8')+' '
       seq = sequence(self.get_attribute('sequences')[sequenceindex])
       #print seq
       for key in seq._json_base__schema:
-        print key
-        command += self.tocommandline(seq,key)
+        #print key
+        command += self.to_command_line(seq,key)
         command += ' '
       return command 
 
-    def buildCmsDrivers(self):
+    def build_cmsDrivers(self):
       commands = []
-      print len(self.get_attribute('sequences'))
+      #print len(self.get_attribute('sequences'))
       for i in range(len(self.get_attribute('sequences'))):
-        commands.append(self.buildCmsDriver(i))
+        commands.append(self.build_cmsDriver(i))
       return commands  
 
     def approve(self,  index=-1):

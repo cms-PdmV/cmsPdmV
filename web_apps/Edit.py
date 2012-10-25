@@ -59,12 +59,12 @@ class Edit(Page):
                     res += self.build_comment(ob, index) 
                 elif key == 'approvals':
                     res += self.build_approval(ob, index)
-                #elif key == 'sequences':
-                #    s = self.build_sequence(ob, index)
-                #    if s:
-                #        res += s
-                #    else:
-                #        continue
+                elif key == 'sequences':
+                    s = self.build_sequence(ob, index)
+                    if s:
+                        res += s
+                    else:
+                        continue
 
                 elif key == 'generator_parameters':
                                         res += self.build_generator_parameters(ob, index)
@@ -126,8 +126,8 @@ class Edit(Page):
         return res + "</li>"
 
     def build_sequence(self, ob, index):
-        thesequence=sequence(ob)
-        s = '' + thesequence.buildCmsDriver()
+        thesequence=sequence(json_input=ob)
+        s = '' + thesequence.build_cmsDriver()
         res = ''
         #for seq in ob['sequence']:
         #            s += seq + ','
@@ -154,7 +154,7 @@ class Edit(Page):
     
         elif key in inherited:
             if 'requests' == self.db_name:
-                return self.build_select(key, self.campaign[key])
+                return self.build_select(key, self.campaign[key],  self.object[key])
             else:
                 if type(self.object[key]) == list or type(self.object[key]) == dict:
                     result = self.present_list(self.object[key], key)
@@ -176,13 +176,21 @@ class Edit(Page):
             result += '>'+str(self.object[key])+'</textarea>'
             return result
         
-    def build_select(self, key, lst):
+    def build_select(self, key, lst,  oblist=None):
         res = '<select class="ui-widget-content" id="'+key+'">'
-        for l in lst:
-            if self.object[key] == l:
-                res += "<option selected='selected' class='ui-widget-content'>"+str(l)+"</option>"
-            else:
-                res += "<option class='ui-widget-content'>"+str(l)+"</option>"
+        if type(lst) != list:
+            res += "<option selected='selected' class='ui-widget-content'>"+str(lst)+"</option>"
+        elif type(lst) == list:        
+            for l in lst:
+                if self.object[key] == l:
+                    res += "<option selected='selected' class='ui-widget-content'>"+str(l)+"</option>"
+                else:
+                    res += "<option class='ui-widget-content'>"+str(l)+"</option>"
+            
+            if not lst:
+                if oblist:
+                    res += "<option selected='selected' class='ui-widget-content'>"+str(oblist)+"</option>"
+            
         res += "</select>"
         return res
 

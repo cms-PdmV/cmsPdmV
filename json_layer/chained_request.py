@@ -60,7 +60,7 @@ class chained_request(json_base):
                 self._json_base__json['_rev'] = json_input['_rev']
     
     # proceed to the next request in the chain
-    def flow(self):
+    def flow(self,  input_dataset=''):
         # increase step counter
         step = self.get_attribute('step') + 1
             
@@ -77,8 +77,8 @@ class chained_request(json_base):
             print str(ex)
             return False
         
-        # get root request id
-        root = self.get_attribute('chain')[0]
+        # get previous request id
+        root = self.get_attribute('chain')[step-1]
         
         # check if exists
         if not rdb.document_exists(root):
@@ -112,8 +112,12 @@ class chained_request(json_base):
         
         # use root request as template
         req['member_of_campaign'] = next_camp
-        req['type'] = nc.get_attribute('type')
+        req['type'] = nc['type']
         req['root'] = False
+        
+        # add the previous requests output_dataset name as input for the new
+        if input_dataset: 
+            req['input_dataset'] = input_dataset
         
         # remove couchdb specific fields
         del req['_rev']

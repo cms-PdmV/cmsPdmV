@@ -100,7 +100,7 @@ class GetCmsDriverForRequest(RESTResource):
     def GET(self, *args):
       print args
       if not args:
-        return dumps({"results":{}})
+        return dumps({"results":'Error: No arguments were given.'})
       return self.get_cmsDriver(self.db.get(prepid=args[0]))
 
     def get_cmsDriver(self, data):
@@ -110,7 +110,7 @@ class GetCmsDriverForRequest(RESTResource):
       except request.IllegalAttributeName as ex:
         return dumps({"results":''})
         
-      return dumps({"results":self.request.buildCmsDrivers()}) 
+      return dumps({"results":self.request.build_cmsDrivers()}) 
       
 
 class DeleteRequest(RESTResource):
