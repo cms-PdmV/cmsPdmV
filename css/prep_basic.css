@@ -53,6 +53,9 @@ ul.chain_links li:not(:last-child):after { content: ', ';}
 #campaigns_dialog {overflow: auto; max-height: 20em;}
 #campaigns_campaigns li { cursor: pointer; }
 
+/*----------------------------- sequences dialog --------------------------*/
+#sequences_dialog {max-height:20em; overflow: auto;}
+
 /*----------------------------- actions table ----------------------------*/
 #actions_table {}
 #actions_table td {padding: 0.55em; text-align: center; }

@@ -243,11 +243,60 @@ function create_box(key) {
                                 click: function() {
                                         if (key == "generators" || key=="process_string" || key=="type" || key=="cmssw_release" || key=="allowed_campaigns")       
                                                 update_json_object(key, $("#"+key+"_"+key).val());
+                                        if (key == "sequences")
+                                                update_sequences(key);
                                         else 
                                                 update_json_object(key, get_dialog_data(key));
                                }
                         }],
         });
+}
+
+function update_sequences(key) {
+    	var json_var = $(window).attr(key+"_json");
+    	var flag = true;
+    	var index = -1;
+        $.each(json_var, function(k, v) {
+            if (k == 'index') {
+                    if(!$("#"+key+"_"+k).val()) {
+                        alert("Error: You have not specified the index of the sequence");
+                        flag = false;
+                        return;
+                    }
+                    index = $("#"+key+"_"+k).val();
+            }
+            if (k == 'dropDescendant') {
+                if($("#"+key+"_"+k).is(":checked"))
+                    json_var[k] = true;
+                else
+                    json_var[k] = false;
+                
+                return;
+            }
+            
+            if (k == 'event_content' || k == 'data_tier' || k == 'step') {
+                if ($("#"+key+"_"+k).val().indexOf(',') > -1)
+                    json_var[k] = $("#"+key+"_"+k).val().split(',');
+                else
+                    json_var[k] = [$("#"+key+"_"+k).val()];
+                    
+                return;
+            }
+            
+            json_var[k] = $("#"+key+"_"+k).val();
+            
+        });
+        
+        if (!flag)
+            return;
+        
+        if (index in jsondata[key])
+            jsondata[key][index].push(json_var);
+        else
+    	    jsondata[key][index] = [json_var];
+	    console.log(jsondata);
+	
+	    update_object(db_name); // push to the database and reload page
 }
 
 function edit_box(key, index) {
@@ -332,6 +381,7 @@ function get_dialog_data(key) {
 }
 
 function update_json_object(key, value, index) {
+
 	// push object to db 
 	if (typeof index != undefined)
 		jsondata[key][index] = value;

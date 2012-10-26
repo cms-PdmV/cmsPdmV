@@ -90,8 +90,10 @@ class Edit(Page):
                         res += '</ul>'
             elif key == 'sequences':
                 for key in sorted(li.keys()):
+                    index = -1
                     for k in li[key]:
-                        res += self.build_sequence(li[key],  k)
+                        index += 1
+                        res += self.build_sequence(k,  index)
         res += '</ol>'
         return res
     
@@ -130,9 +132,7 @@ class Edit(Page):
         return res + "</li>"
 
     def build_sequence(self, ob, index):
-        print ob
         thesequence=sequence(json_input=ob)
-        print thesequence.json()
         s = '' + thesequence.build_cmsDriver()
         res = ''
         #for seq in ob['sequence']:
@@ -155,7 +155,10 @@ class Edit(Page):
         elif type(self.object[key]) == list or type(self.object[key]) == dict:
             result = self.present_list(self.object[key], key)
             if key not in protected:
-                result += '<a href="javascript:create_composite_object(\''+key+'\');" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'
+                if key != 'sequences' or self.db_name != 'requests':
+                    result += '<a href="javascript:create_composite_object(\''+key+'\');" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'
+                else:
+                    result += '<a href="javascript:alert(1);" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'
             return result
     
         elif key in inherited:
