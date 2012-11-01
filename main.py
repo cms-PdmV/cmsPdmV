@@ -7,10 +7,10 @@ from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep
-from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow
+from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest
+from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains
 from rest_api.RequestPrepId import RequestPrepId 
 from rest_api.RequestChainId import RequestChainId
@@ -93,6 +93,7 @@ root.restapi.campaigns.save = CreateCampaign()
 root.restapi.campaigns.update = UpdateCampaign()
 root.restapi.campaigns.delete = DeleteCampaign()
 root.restapi.campaigns.get = GetCampaign()
+root.restapi.campaigns.toggle = ToggleCampaign() # start/stop campaign
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()
@@ -109,6 +110,7 @@ root.restapi.chained_requests.delete = DeleteChainedRequest()
 root.restapi.chained_requests.get = GetChainedRequest()
 root.restapi.chained_requests.add_to_chain = AddRequestToChain()
 root.restapi.chained_requests.flow = FlowToNextStep()
+root.restapi.chained_requests.approve = ApproveRequest()
 
 # REST Actions
 root.restapi.actions.get = GetAction()
@@ -117,11 +119,12 @@ root.restapi.actions.deselect = DeSelectChain()
 root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
 root.restapi.actions.detect_chains = DetectChains()
 
-# REST Actions
+# REST Flow Actions
 root.restapi.flows.get = GetFlow()
 root.restapi.flows.save = CreateFlow()
 root.restapi.flows.update = UpdateFlow()
 root.restapi.flows.delete = DeleteFlow()
+root.restapi.flows.approve = ApproveFlow()
 
 # Use global configs
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')

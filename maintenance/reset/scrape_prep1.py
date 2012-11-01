@@ -39,7 +39,8 @@ def get_requests(campaign_name, limit=-1, constraints = ''):
         q1 += ' and ' + constraints
     if limit > 0:
         q1 += ' limit '+str(limit)
-    q1 += ';'   
+    q1 += ';'  
+    
 
     # execute query
     cursor.execute(q1)
@@ -70,7 +71,7 @@ def get_requests(campaign_name, limit=-1, constraints = ''):
 
 #convert comma separated strings in prep1 in lists for prep2    
 def splitPrep1String(thestring):
-    stringsplit = string.split(',')
+    stringsplit = thestring.split(',')
     li=[]
     for step in stringsplit:
       item = step.split(' ', 1)[0]
@@ -133,6 +134,8 @@ def re_morph(req_json):
     new['version'] = 0
     new['type'] = req_json['type']
     new['generators'] = req_json['generators']
+    new['block_black_list'] = []
+    new['block_white_list'] = []
 
     new['submission_details'] = { 'author_name': req_json['authorName'], 'author_cmsid' : req_json['authorCMSid'], 'author_inst_code': req_json['authorInstCode'], 'submission_date': convert_date(req_json['requestDate'].split(' ')[0], req_json['requestDate'].split(' ')[1]), 'author_project': ''}
 
@@ -149,8 +152,43 @@ def re_morph(req_json):
     cust2 = []
     for index in range(len(customize2)):
       cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index]) 
+    
+    # split sequences
+    se1 = {}
+    tok1 = req_json['sequence1'].split(' ')
+    for tok in tok1:
+        if ',' in tok: 
+            se1['step'] = splitPrep1String(tok)
+        else:
+            atts = tok.split(' ')
+            if len(atts) > 1:
+                se1[atts[0].strip('--')] = atts[1]
+            else:
+                se1[atts[0].strip('--')] = ""
+    
+    se2 = {}
+    tok2 = req_json['sequence1'].split(' ')
+    for tok in tok2:
+        if ',' in tok: 
+            se2['step'] = splitPrep1String(tok)
+        else:
+            atts = tok.split(' ')
+            if len(atts) > 1:
+                se2[atts[0].strip('--')] = atts[1]
+            else:
+                se2[atts[0].strip('--')] = ""    
+    
 
-    new['sequences'] = [{'index':0, "slhc": "", "pileup_scenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magnetic_field": "", "step": splitPrep1String(req_json['sequence1']), "data_tier": splitPrep1String(req_json['dataTier1']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(req_json['eventContent1']), "conditions": req_json['conditions']},{'index':1, "slhc": "", "pileup_scenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magnetic_field": "", "step": splitPrep1String(req_json['sequence2']), "data_tier": splitPrep1String(req_json['dataTier2']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(req_json['eventContent2']), "conditions": req_json['conditions']}]
+    new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence1']), "dataTier": splitPrep1String(req_json['dataTier']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(req_json['eventContent']), "conditions": req_json['conditions']},{'index':1, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence2']), "dataTier": splitPrep1String(req_json['dataTier']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(req_json['eventContent']), "conditions": req_json['conditions']}]
+    for i in range(len(new['sequences'])):
+        for att in new['sequences'][i]:
+            if i == 1:
+                if att in se1:
+                    new['sequences'][i][att] = se1[att]
+            elif i == 2:
+                if att in se2:
+                    new['sequences'][i][att] = se2[att]
+            
     
     #[{'index':0, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName1'], 'customize_function':req_json['customizeFunction1'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence1']]}, {'index':1, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName2'], 'customize_function':req_json['customizeFunction2'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence2']]} ]
 
@@ -252,13 +290,71 @@ def morph_campaign(camp):
         new['root'] = 1 # non root
     else:
         new['root'] = -1 # possible root
-    new['sequences'] = [{'index':0, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName1'], 'customize_function':camp['customizeFunction1'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence1']]}, {'index':1, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName2'], 'customize_function':camp['customizeFunction2'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence2']]} ]
+    
+    #sequences fix
+    customize1 = splitPrep1String(camp['customizeName1'])
+    customizeF1 = splitPrep1String(camp['customizeFunction1'])
+    cust1 = []
+    for index in range(len(customize1)):
+      cust1.append(customize1[index].split('.py')[0]+'.'+customizeF1[index])
+
+    customize2 = splitPrep1String(camp['customizeName2'])
+    customizeF2 = splitPrep1String(camp['customizeFunction2'])
+    cust2 = []
+    for index in range(len(customize2)):
+      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index]) 
+    
+    # split sequences
+    se1 = {}
+    tok1 = camp['sequence1'].split(' ')
+    for tok in tok1:
+        if ',' in tok: 
+            se1['step'] = splitPrep1String(tok)
+        else:
+            atts = tok.split(' ')
+            if len(atts) > 1:
+                se1[atts[0].strip('--')] = atts[1]
+            else:
+                se1[atts[0].strip('--')] = ""
+    
+    se2 = {}
+    tok2 = camp['sequence1'].split(' ')
+    for tok in tok2:
+        if ',' in tok: 
+            se2['step'] = splitPrep1String(tok)
+        else:
+            atts = tok.split(' ')
+            if len(atts) > 1:
+                se2[atts[0].strip('--')] = atts[1]
+            else:
+                se2[atts[0].strip('--')] = ""    
+    
+
+    new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence1']), "dataTier": splitPrep1String(camp['dataTier']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']},{'index':1, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence2']), "dataTier": splitPrep1String(camp['dataTier']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}]
+    for i in range(len(new['sequences'])):
+        for att in new['sequences'][i]:
+            if i == 1:
+                if att in se1:
+                    new['sequences'][i][att] = se1[att]
+            elif i == 2:
+                if att in se2:
+                    new['sequences'][i][att] = se2[att]
+            
+    
+        
+    #new['sequences'] = [{'index':0, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName1'], 'customize_function':camp['customizeFunction1'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence1']]}, {'index':1, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName2'], 'customize_function':camp['customizeFunction2'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence2']]} ]
+    
     new['submission_details'] = { 'author_name': camp['authorName'], 'author_cmsid' : camp['authorCMSid'], 'author_inst_code': camp['authorInstCode'], 'submission_date': convert_date(camp['campaignDate']), 'author_project': ''}
     new['approvals'] = [{'index':0, 'approval_step':'start', 'approver':{}}] if 'Start' in camp['approvals'] else [{'index':0, 'approval_step':'start', 'approver':{}},{'index':1, 'approval_step':'stop', 'approver':{}}]    
     new['comments'] = []
     
     return new
 
+# create actions from all the requests
+def create_actions():
+    import os
+    for filename in os.path.listdir('data/requests/'):
+        
 
 # auto magic wrapper to get a campaign
 def retrieve_campaign(campaign_name):
@@ -294,12 +390,24 @@ if __name__=='__main__':
         # created dedicated directory for requests
         if not os.path.exists(datadir + 'requests/'):
             os.makedirs(datadir + 'requests/')
-                
-        res = get_requests(camp, limit=1, constraints='MCDBid != -1')
-        final = morph_requests(res)
-        print final
+        
+        # requests
+        requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
+        
+        if camp == 'Summer12':
+            for r in requests:
+                #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
+                res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
+                final = morph_requests(res)
+                #print final
 
-        #for r in final:
-        #    f = open(datadir + 'requests/' + r['_id'], 'w')
-        #    f.write(json.dumps(r))
-        #    f.close()        
+                for r in final:
+                    f = open(datadir + 'requests/' + r['_id'], 'w')
+                    f.write(json.dumps(r))
+                    f.close()      
+            
+            
+            
+            
+            
+              

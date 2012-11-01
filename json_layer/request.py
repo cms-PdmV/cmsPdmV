@@ -34,6 +34,8 @@ class request(json_base):
             'www':'',
             'process_string':'',
             'input_block':'',
+            'block_black_list':[], 
+            'block_white_list':[], 
             'cvs_tag':'',
             'pvt_flag':'',
             'pvt_comment':'',

@@ -411,3 +411,21 @@ class GetFlow(RESTResource):
     
     def get_request(self, data):
         return dumps({"results":self.db.get(prepid=data)})
+        
+class ApproveFlow(RESTResource):
+    def __init__(self):
+        self.db = database('flows')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.approve(args[0],  args[1])
+        
+    def approve(self,  rid,  val):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given flow id does not exist.'})
+        f = flow('',  json_input=self.db.get(rid))
+        if not f.approve(val):
+            return dumps({"results":False})
+        
+        return dumps({"results":self.db.update(f.json())})

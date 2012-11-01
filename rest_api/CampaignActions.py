@@ -145,8 +145,25 @@ class GetCampaign(RESTResource):
     
     def GET(self, *args):
         if not args:
-            return dumps({"results":{}})
+            return dumps({"results":'Error: No arguments were given'})
         return self.get_request(args[0])
     
     def get_request(self, data):
         return dumps({"results":self.db.get(prepid=data)})
+        
+class ToggleCampaign(RESTResource):
+    def __init__(self):
+        self.db = database('campaigns')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.toggle_campaign(args[0])
+    
+    def toggle_campaign(self,  id):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given campaign id does not exist.'})
+        camp = campaign('',  json_input=self.db.get(rid))
+        camp.toggle_approval()
+        
+        return dumps({"results":self.db.update(camp.json())})        

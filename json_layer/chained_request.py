@@ -59,8 +59,11 @@ class chained_request(json_base):
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
     
+    def flow(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
+        return self.flow_to_next_step(input_dataset,  block_black_list,  block_white_list)
+        
     # proceed to the next request in the chain
-    def flow(self,  input_dataset=''):
+    def flow_to_next_step(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
         # increase step counter
         step = self.get_attribute('step') + 1
             
@@ -88,6 +91,21 @@ class chained_request(json_base):
         # actually get root request
         req = rdb.get(root)
         
+        # check if request is approved
+        # TODO: check flow's approvals
+        allowed_approvals = ['flow',  'inject',  'approve']
+            
+        if req['approvals'][-1]['approval_step'] not in allowed_approvals:
+            if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
+                print 'Error: Chained request '+self.get_attribute('_id')+' is not "flow" approved. Will not flow.'
+                return False
+            else:
+                if req['approvals'][-1]['approval_step'] == 'gen':
+                    pass
+                else:
+                    print 'Error: Request '+str(root)+ ' is not "gen" approved. Will not flow.'
+                    return False
+            
         # get the campaign in the next step
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
             print 'Error: Chained Campaign '+str(self.get_attribute('member_of_campaign'))+' does not exist.'
@@ -110,6 +128,11 @@ class chained_request(json_base):
         # get campaign
         nc = cdb.get(next_camp)
         
+        # check if next campaign is started or stopped
+        if nc['approvals'][-1]['approval_step'] == 'stop':
+            print 'Error: Campaign '+str(next_camp)+' is stopped. Cannot flow to next step.'
+            return False
+        
         # use root request as template
         req['member_of_campaign'] = next_camp
         req['type'] = nc['type']
@@ -118,6 +141,13 @@ class chained_request(json_base):
         # add the previous requests output_dataset name as input for the new
         if input_dataset: 
             req['input_dataset'] = input_dataset
+            
+        # add a block black and white list
+        if block_black_list:
+            req['block_black_list'] = block_black_list
+        
+        if block_white_list:
+            req['block_white_list'] = block_white_list
         
         # remove couchdb specific fields
         del req['_rev']
@@ -228,5 +258,7 @@ class chained_request(json_base):
         
         req.set_attribute('_id', prepid)
         req.set_attribute('prepid',  prepid)
+        # set request approval status to new
+        req.approve(0)
         return req.json()
 

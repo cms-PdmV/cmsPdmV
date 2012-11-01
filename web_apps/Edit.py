@@ -90,10 +90,12 @@ class Edit(Page):
                         res += '</ul>'
             elif key == 'sequences':
                 for key in sorted(li.keys()):
+                    res += "<li><ul>"                    
                     index = -1
                     for k in li[key]:
                         index += 1
                         res += self.build_sequence(k,  index)
+                    res += "</ul></li>"
         res += '</ol>'
         return res
     

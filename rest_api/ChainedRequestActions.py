@@ -163,4 +163,20 @@ class FlowToNextStep(RESTResource):
             return dumps({"results":True})
         return dumps({"results":False})
 
-
+class ApproveRequest(RESTResource):
+    def __init__(self):
+        self.db = database('chained_requests')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.approve(args[0],  args[1])
+        
+    def approve(self,  rid,  val):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given chained_request id does not exist.'})
+        creq = chained_request('',  json_input=self.db.get(rid))
+        if not creq.approve(val):
+            return dumps({"results":False})
+        
+        return dumps({"results":self.db.update(creq.json())})

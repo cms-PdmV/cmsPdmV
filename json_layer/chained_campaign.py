@@ -167,6 +167,7 @@ class chained_campaign(json_base):
         creq.set_attribute("dataset_name", req["dataset_name"])
         creq.set_attribute("pwg", req["pwg"])
         creq.set_attribute("priority", req["priority"] )
+        creq.approve(0)
         
         # set request parameters
         reqp = self.get_attribute('action_parameters')

@@ -16,6 +16,7 @@ class flow(json_base):
             'allowed_campaigns':[], 
             'request_actions':{}, 
             'description':'',
+            'approvals':[], 
             'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project    ),
             }
         
@@ -84,3 +85,19 @@ class flow(json_base):
         # remove it and make persistent
         allowed.remove(cid)
         self.set_attribute('allowed_campaigns',  allowed)
+
+    def approve(self,  index=-1):
+        approvals = self.get_attribute('approvals')
+        app = approval('')
+        
+        # if no index is specified, just go one step further
+        if index==-1:
+            index = len(approvals)
+        
+        try:
+            new_apps = app.approve(index)
+            self.set_attribute('approvals',  new_apps)
+            return True
+        except app.IllegalApprovalStep as ex:
+            print str(ex)
+            return False
