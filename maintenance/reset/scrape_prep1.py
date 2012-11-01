@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 # import MySQL connector for python
-import MySQLdb
+#import MySQLdb
 
 # json lib is only used for visualization of data
 import json
 
 # MySQL db and cursor for queries init (cursor is set to json)
-db = MySQLdb.connect(host="devdb",user="prepdb", passwd="Testprepdb", db="MonteCarlo")
-cursor = db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+#db = MySQLdb.connect(host="devdb",user="prepdb", passwd="Testprepdb", db="MonteCarlo")
+#cursor = db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 
 # returns the campaign primary key corresponding to the given campaign name
 def get_campaign_key(campaign_name):
@@ -155,10 +155,10 @@ def re_morph(req_json):
     
     # split sequences
     se1 = {}
-    tok1 = req_json['sequence1'].split(' ')
+    tok1 = req_json['sequence1'].split('--')
     for tok in tok1:
         if ',' in tok: 
-            se1['step'] = splitPrep1String(tok)
+            se1['step'] = splitPrep1String(tok.strip())
         else:
             atts = tok.split(' ')
             if len(atts) > 1:
@@ -179,11 +179,15 @@ def re_morph(req_json):
                 se2[atts[0].strip('--')] = ""    
     
 
-    new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence1']), "dataTier": splitPrep1String(req_json['dataTier']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(req_json['eventContent']), "conditions": req_json['conditions']},{'index':1, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence2']), "dataTier": splitPrep1String(req_json['dataTier']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(req_json['eventContent']), "conditions": req_json['conditions']}]
+    new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence1']), "datatier": ['GEN-SIM'], "scenario": "", "geometry": "", "customise": "", "datamix": "", "eventcontent": ['RAWSIM'], "conditions": req_json['conditions']}]
+
+    if req_json['sequence2']:
+        new['sequences'].append({'index':1, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence2']), "datatier": splitPrep1String(req_json['dataTier']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "eventcontent": splitPrep1String(req_json['eventContent']), "conditions": req_json['conditions']})
     for i in range(len(new['sequences'])):
         for att in new['sequences'][i]:
             if i == 1:
                 if att in se1:
+                    print att, ':', se1[att]
                     new['sequences'][i][att] = se1[att]
             elif i == 2:
                 if att in se2:
@@ -279,7 +283,7 @@ def morph_campaign(camp):
     new['validation'] = camp['validation']
     new['pileup_dataset_name'] = camp['pileupDataSetName'].split(';')
     new['process_string'] = camp['processStr'].split(';')
-    new['generators'] = [camp['generators']]
+    new['generators'] = camp['generators'].split(';')
     new['input_filename'] = camp['inputFileName']
     new['www'] = camp['www']
     new['completed_events'] = -1
@@ -318,7 +322,7 @@ def morph_campaign(camp):
                 se1[atts[0].strip('--')] = ""
     
     se2 = {}
-    tok2 = camp['sequence1'].split(' ')
+    tok2 = camp['sequence2'].split(' ')
     for tok in tok2:
         if ',' in tok: 
             se2['step'] = splitPrep1String(tok)
@@ -330,17 +334,20 @@ def morph_campaign(camp):
                 se2[atts[0].strip('--')] = ""    
     
 
-    new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence1']), "dataTier": splitPrep1String(camp['dataTier']), "scenario": "", "geometry": "", "customise": cust1, "datamix": "", "event_content": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']},{'index':1, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence2']), "dataTier": splitPrep1String(camp['dataTier']), "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "event_content": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}]
-    for i in range(len(new['sequences'])):
-        for att in new['sequences'][i]:
-            if i == 1:
-                if att in se1:
-                    new['sequences'][i][att] = se1[att]
-            elif i == 2:
-                if att in se2:
-                    new['sequences'][i][att] = se2[att]
-            
+    new['sequences'] = {1: {"default":{'index':0, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence1']), "datatier": splitPrep1String(camp['dataTier'].strip('|')), "scenario": "", "geometry": "", "customise": '', "datamix": "", "eventcontent": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}}}#,
+
+    if camp['sequence2']:
+        new['sequences'][2] = {"default":{'index':1, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence2']), "datatier": splitPrep1String(camp['dataTier'].strip('|')), "scenario": "", "geometry": "", "customise": '', "datamix": "", "eventcontent": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}}
     
+    for i in range(len(new['sequences'])):
+        for att in new['sequences'][i+1]["default"]:
+            if i == 0:
+                if att in se1:
+                    new['sequences'][i+1][att] = se1[att]
+            elif i == 1:
+                if att in se2:
+                    new['sequences'][i+1][att] = se2[att]
+            
         
     #new['sequences'] = [{'index':0, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName1'], 'customize_function':camp['customizeFunction1'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence1']]}, {'index':1, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName2'], 'customize_function':camp['customizeFunction2'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence2']]} ]
     
@@ -351,10 +358,65 @@ def morph_campaign(camp):
     return new
 
 # create actions from all the requests
-def create_actions():
-    import os
-    for filename in os.path.listdir('data/requests/'):
-        
+def create_actions(directory='data/'):
+    try:
+        import os
+    except ImportError:
+        print 'Error: Could not import module "os"'
+        return False
+
+    # get main dir root
+    datadir = os.path.abspath(directory) + '/'
+
+    if not os.path.exists(datadir + 'actions/'):
+        os.makedirs(datadir + 'actions/') 
+
+    flist = os.listdir(datadir+'requests/')
+    for filename in flist:
+         f = open(datadir + 'actions/' + filename, 'w')
+         f.write('{"_id":"'+filename+'", "prepid":"'+filename+'", "member_of_campaign": "'+filename.split('-')[1]+'", "chains":{}, "submission_details":{"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}}')
+         f.close()
+
+    return True
+
+def create_chained_campaigns(directory='data/'):
+	try:
+		import os
+	except ImportError:
+		print 'Error: Could not import module "os".'
+		return False
+	
+	datadir = os.path.abspath(directory) + '/'
+
+	if not os.path.exists(datadir + 'chained_campaigns/'):
+		os.makedirs(datadir + 'chained_campaigns/')
+	
+	flist = os.listdir(datadir+'campaigns/')
+	for filename in flist:
+		fout = open(datadir + 'chained_campaigns/chain_' + filename, 'w')
+		fin = open(datadir + 'campaigns/'+filename, 'r')
+		camp = json.loads(fin.read())
+		fin.close()
+
+		ccamp = {}
+		ccamp['prepid'] = camp['prepid']
+		ccamp['_id'] = camp['prepid']
+		ccamp['energy'] = camp['energy']
+		ccamp['campaigns'] = [camp['prepid']]
+		ccamp['alias'] = camp['prepid']
+		ccamp['approvals'] = []
+		ccamp['description'] = 'Dedicated chained campaign for '+camp['prepid']
+		ccamp['action_parameters'] = {}
+		ccamp['www'] = 'http://preptest.cern.ch/edit/chained_campaigns/chain_'+camp['prepid']+'/'
+		ccamp['submission_details'] = {"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}
+		ccamp['comments'] = []
+		ccamp['valid'] = True
+
+		fout.write(json.dumps(ccamp))
+		fout.close()
+
+	return True
+
 
 # auto magic wrapper to get a campaign
 def retrieve_campaign(campaign_name):
@@ -371,41 +433,43 @@ if __name__=='__main__':
 
     datadir = 'data/'
 
-    #camps = ['Summer12_LHE', 'Summer12', 'Summer12_DR53X']
-    camps = ['Summer12', 'Summer12_DR53X']
-    for camp in camps:
+   #camps = ['Summer12_LHE', 'Summer12', 'Summer12_DR53X']
+#    camps = ['Summer12', 'Summer12_DR53X']
+#    for camp in camps:
         
         
         # create dedicated directory for campaigns
-        if not os.path.exists(datadir + 'campaigns/'):
-            os.makedirs(datadir + 'campaigns/')  
+#        if not os.path.exists(datadir + 'campaigns/'):
+#            os.makedirs(datadir + 'campaigns/')  
         
         # get campaign
-        c = retrieve_campaign(camp)
-        if c:
-            f = open(datadir + 'campaigns/'+ c['_id'], 'w')
-            f.write(json.dumps(c))
-            f.close()                     
+#        c = retrieve_campaign(camp)
+#        if c:
+#            f = open(datadir + 'campaigns/'+ c['_id'], 'w')
+#            f.write(json.dumps(c))
+#            f.close()                     
         
         # created dedicated directory for requests
-        if not os.path.exists(datadir + 'requests/'):
-            os.makedirs(datadir + 'requests/')
+#        if not os.path.exists(datadir + 'requests/'):
+#            os.makedirs(datadir + 'requests/')
         
         # requests
-        requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
+ #       requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
         
-        if camp == 'Summer12':
-            for r in requests:
+ #       if camp == 'Summer12':
+ #           for r in requests:
                 #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
-                res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
-                final = morph_requests(res)
+ #               res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
+ #               final = morph_requests(res)
                 #print final
 
-                for r in final:
-                    f = open(datadir + 'requests/' + r['_id'], 'w')
-                    f.write(json.dumps(r))
-                    f.close()      
-            
+ #               for r in final:
+ #                   f = open(datadir + 'requests/' + r['_id'], 'w')
+ #                   f.write(json.dumps(r))
+ #                   f.close()      
+
+create_actions()
+create_chained_campaigns()            
             
             
             
