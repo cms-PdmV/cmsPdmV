@@ -6,10 +6,10 @@ from web_apps.Edit import Edit
 from web_apps.Create import Create  
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest
+from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains
 from rest_api.RequestPrepId import RequestPrepId 
@@ -87,6 +87,7 @@ root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest() 
 root.restapi.requests.request_prepid = RequestPrepId()
+root.restapi.requests.approve = ApproveRequest()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -110,7 +111,7 @@ root.restapi.chained_requests.delete = DeleteChainedRequest()
 root.restapi.chained_requests.get = GetChainedRequest()
 root.restapi.chained_requests.add_to_chain = AddRequestToChain()
 root.restapi.chained_requests.flow = FlowToNextStep()
-root.restapi.chained_requests.approve = ApproveRequest()
+root.restapi.chained_requests.approve = ApproveChainedRequest()
 
 # REST Actions
 root.restapi.actions.get = GetAction()

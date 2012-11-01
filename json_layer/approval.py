@@ -43,22 +43,32 @@ class approval(json_base):
                     self._json_base__json[key] = json_input[key]
                 else:
                     self._json_base__json[key] = self._json_base__schema[key]
-        
+    
+    def __clone(self):
+        new={}
+        for att in self._json_base__schema:
+           new[att] = self._json_base__schema[att]
+        return new
+    
     def  build(self, approval_step):
         if approval_step not in self.__approval_steps:
             raise self.IllegalApprovalStep(approval_step)
-        self.set_attribute('approval_step', approval_step)
-        self.set_attribute('index', self.__approval_steps.index(approval_step))
-        return self.json()
+        
+        new = self.__clone()
+        
+        new['approval_step'] = approval_step
+        new['index'] = self.__approval_steps.index(approval_step)
+        return new
     
     def approve(self,  index):
-        if index >= self.__approval_steps:
+        if index >= len(self.__approval_steps):
             raise self.IllegalApprovalStep(index)
         
         approvals = []
         
         for i in range(index+1):
             approvals.append(self.build(self.__approval_steps[i]))
+        print approvals    
         
         return approvals
     

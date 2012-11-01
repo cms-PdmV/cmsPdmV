@@ -150,6 +150,7 @@ class chained_campaign(json_base):
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
+        print creq.json()
         
         # generate new chain id
         id = RequestChainId().generate_id(creq.get_attribute('pwg'), creq.get_attribute('member_of_campaign'))

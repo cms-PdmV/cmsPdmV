@@ -94,7 +94,7 @@ class Edit(Page):
                     index = -1
                     for k in li[key]:
                         index += 1
-                        res += self.build_sequence(k,  index)
+                        res += self.build_sequence(li[key][k],  index)
                     res += "</ul></li>"
         res += '</ol>'
         return res

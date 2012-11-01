@@ -8,8 +8,8 @@ class sequence(json_base):
             'index':-1,
             'step':[], 
             'conditions':'',
-            'event_content':[],
-            'data_tier':[], 
+            'eventcontent':[],
+            'datatier':[], 
             'beamspot':'',
             'customise':'',
             'filtername':'',
@@ -54,8 +54,8 @@ class sequence(json_base):
     def build(self,  
               steps=[],  
               conditions='',  
-              event_content=[],
-              data_tier=[],
+              eventcontent=[],
+              datatier=[],
               beamspot='',
               customise=[],
               filtername='',
@@ -75,8 +75,8 @@ class sequence(json_base):
         self.set_attribute('steps',  steps)
         self.set_attribute('evt_type',  evt_type)
         self.set_attribute('conditions', conditions)
-        self.set_attribute('event_content', event_content)
-        self.set_attribute('data_tier', data_tier)
+        self.set_attribute('eventcontent', eventcontent)
+        self.set_attribute('datatier', datatier)
         self.set_attribute('beamspot', beamspot)
         self.set_attribute('customise', customise)
         self.set_attribute('filtername', filtername)

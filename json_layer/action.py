@@ -96,6 +96,7 @@ class action(json_base):
         # initialize db connections
         try:
             chaindb = database('chained_campaigns')
+            cdb = database('campaigns')
         except datase.DatabaseAccessError as ex:
             print str(ex)
             return False

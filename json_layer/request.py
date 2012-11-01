@@ -105,8 +105,8 @@ class request(json_base):
               steps=[],
               nameorfragment='',
               conditions='',
-              event_content=[],
-              data_tier=[],
+              eventcontent=[],
+              datatier=[],
               beamspot='',
               customise=[],
               filtername='',
@@ -124,7 +124,7 @@ class request(json_base):
               restoreRNDSeeds='',
               slhc=''):
         seq = sequence()
-        seq.build(steps, nameorfragment, conditions, event_content, data_tier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
+        seq.build(steps, nameorfragment, conditions, eventcontent, datatier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
         sequences = self.get_attribute('sequences')
         index = len(sequences) + 1
         seq.set_attribute('index', index)

@@ -106,7 +106,7 @@ class GetCmsDriverForRequest(RESTResource):
     def get_cmsDriver(self, data):
       try:
         self.request = request('TEST', json_input=data)
-        self.request.print_self()     
+        #self.request.print_self()     
       except request.IllegalAttributeName as ex:
         return dumps({"results":''})
         
@@ -155,7 +155,7 @@ class ApproveRequest(RESTResource):
     def GET(self,  *args):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
-        return self.approve(args[0],  args[1])
+        return self.approve(args[0],  int(args[1]))
         
     def approve(self,  rid,  val):
         if not self.db.document_exists(rid):
