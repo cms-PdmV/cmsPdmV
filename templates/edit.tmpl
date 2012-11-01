@@ -11,9 +11,9 @@
 </script>
 
 <div id='comments_dialog' class="ui-widget">
-	<label for='comments_author_name'>Author name: </label>
+	<label for='comments_author_name'>Author name: </label><br>
 	<input class="ui-widget-content" id='comments_author_name' type='text' placeholder='author_name'>
-	<label for='comments_message'>Message: </label> 
+	<label for='comments_message'>Message: </label> <br>
 	<textarea class="ui-widget-content" id='comments_message' cols=20 rows=10 placeholder='message'></textarea>
 </div>
 
@@ -35,17 +35,17 @@
         });
 </script>
 <div id="generator_parameters_dialog" class="ui-widget">
-	<label for='generator_parameters_author_name'>Name</label>
+	<label for='generator_parameters_author_name'>Name</label><br>
 	<input type="text" id="generator_parameters_author_name" class="ui-widget-content">
-	<label for='generator_parameters_cross_section'>Cross Section</label>
+	<label for='generator_parameters_cross_section'>Cross Section</label><br>
 	<input type="text" id="generator_parameters_cross_section" class="ui-widget-content">
- 	<label for='generator_parameters_filter_efficiency'>Filter Efficiency</label>
+ 	<label for='generator_parameters_filter_efficiency'>Filter Efficiency</label><br>
         <input type="text" id="generator_parameters_filter_efficiency" class="ui-widget-content">
-	<label for='generator_parameters_filter_efficiency_error'>Filter Efficiency Error</label>
+	<label for='generator_parameters_filter_efficiency_error'>Filter Efficiency Error</label><br>
         <input type="text" id="generator_parameters_filter_efficiency_error" class="ui-widget-content">
-	<label for='generator_parameters_match_efficiency'>Match Efficiency</label>
+	<label for='generator_parameters_match_efficiency'>Match Efficiency</label><br>
         <input type="text" id="generator_parameters_match_efficiency" class="ui-widget-content">
-	<label for='generator_parameters_match_efficiency_error'>Match Efficiency Error</label>
+	<label for='generator_parameters_match_efficiency_error'>Match Efficiency Error</label><br>
         <input type="text" id="generator_parameters_match_efficiency_error" class="ui-widget-content">
 </div>
 <script>
@@ -54,7 +54,7 @@
 	});
 </script>
 <div id="generators_dialog" class="ui-widget">
-	<label for='generators_generators'>Generators</label>
+	<label for='generators_generators'>Generators</label><br>
     <input type="text" id="generators_generators" class="ui-widget-content">
 </div>
 <script>
@@ -63,7 +63,7 @@
 	});
 </script>
 <div id="type_dialog" class="ui-widget">
-	<label for='type_type'>Type</label>
+	<label for='type_type'>Type</label><br>
     <input type="text" id="type_type" class="ui-widget-content">
 </div>
 <script>
@@ -72,7 +72,7 @@
 	});
 </script>
 <div id="process_string_dialog" class="ui-widget">
-	<label for='process_string_process_string'>Process String</label>
+	<label for='process_string_process_string'>Process String</label><br>
     <input type="text" id="process_string_process_string" class="ui-widget-content">
 </div>
 <script>
@@ -81,7 +81,7 @@
 	});
 </script>
 <div id="cmssw_release_dialog" class="ui-widget">
-	<label for='cmssw_release_cmssw_release'>CMSSW Release</label>
+	<label for='cmssw_release_cmssw_release'>CMSSW Release</label><br>
     <input type="text" id="cmssw_release_cmssw_release" class="ui-widget-content">
 </div>
 
@@ -90,7 +90,8 @@
 		$("#campaigns_dialog").hide();
 		ajax_search("campaigns", "", -1, function(data) {
 			$.each(data, function(i,v) {
-				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#campaigns_campaigns");
+			    if (v["root"] == 0 || v["root"] == -1)
+    				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#campaigns_campaigns");
 			});
 			addHover("li");
 			$("#campaigns_campaigns").selectable({selected: function(events, ui){update_json_object("campaigns", ui.selected.id);}});
@@ -98,7 +99,7 @@
 	});
 </script>
 <div id='campaigns_dialog' class="ui-widget">
-	<label for='campaigns_campaigns'>Choose a campaign</label>
+	<label for='campaigns_campaigns'>Choose a campaign</label><br>
 	<ol id='campaigns_campaigns' class="ui-widget-content"></ol>
 </div>
 
@@ -115,7 +116,7 @@
 	});
 </script>
 <div id='allowed_campaigns_dialog' class="ui-widget">
-	<label for='allowed_campaigns_allowed_campaigns'>Choose a campaign</label>
+	<label for='allowed_campaigns_allowed_campaigns'>Choose a campaign</label><br>
 	<ol id='allowed_campaigns_allowed_campaigns' class="ui-widget-content"></ol>
 </div>
 
@@ -193,4 +194,18 @@
 	<input type="text" class="ui-widget-content" id="sequences_restoreRNDSeeds"><br>
 	<label for="sequences_slhc">SLHC</label><br>
 	<input type="text" class="ui-widget-content" id="sequences_slhc"><br>
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#approvals_dialog").hide();
+		$("<option value=0>New</option>").appendTo("#approvals_approvals");
+		$("<option value=1>Flow</option>").appendTo("#approvals_approvals");		
+		$("<option value=2>Inject</option>").appendTo("#approvals_approvals");		
+		$("<option value=3>Approve</option>").appendTo("#approvals_approvals");		
+	});
+</script>
+<div id='approvals_dialog' class="ui-widget">
+	<label for='approvals_approvals'>Approve:</label><br>
+	<select id='approvals_approvals' class="ui-widget-content"></select>
 </div>

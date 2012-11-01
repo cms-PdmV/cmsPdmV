@@ -29,6 +29,35 @@ function redirect(url) {
     window.location = url;
 }
 
+
+// auto-magic wrapper for approve_object()
+function approve(key) {
+    var level = $("#"+key+"_"+key).find(":selected").val();
+    var db = String(window.location).split("/")[4];
+    var id = String(window.location).split("/")[5];
+    approve_object(db, id, level);
+}
+
+// approves an object
+function approve_object(db, id, level) {
+    $.ajax({
+        type: 'GET',
+        url: '/restapi/'+db+'/approve/'+id+'/'+level+'/',
+        success:function(data) {
+            var json = $.parseJSON(data);
+            if (json["results"]==true)
+                redirect(window.location);
+            else if (json["results"]==false)
+                alert('Could not save data to database.');
+            else
+                alert(json["results"]);
+        },
+        error:function(xhr, error, data){
+            alert( data + '. Could not save object.');
+        }
+    });     
+}
+
 // redirect to the web app that creates and saves 
 // objects in the database
 function create_object(db, parid) {
@@ -243,6 +272,10 @@ function create_box(key) {
                                 click: function() {
                                         if (key == "generators" || key=="process_string" || key=="type" || key=="cmssw_release" || key=="allowed_campaigns")       
                                                 update_json_object(key, $("#"+key+"_"+key).val());
+                                        
+                                        if (key == "approvals")
+                                            approve(key);
+                                        
                                         if (key == "sequences")
                                                 update_sequences(key);
                                         else 
