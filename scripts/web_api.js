@@ -217,6 +217,7 @@ function get_composite_id(id) {
 
 // wrapper: calls the edit_box() method that spawns a dialog to edit an object
 function edit_composite_object(id) {
+    alert(id);
 	c = get_composite_id(id);	
 
 	// call dialog to edit the object
@@ -289,6 +290,7 @@ function update_sequences(key) {
     	var json_var = $(window).attr(key+"_json");
     	var flag = true;
     	var index = -1;
+    	var sname = "";
         $.each(json_var, function(k, v) {
             if (k == 'index') {
                     if(!$("#"+key+"_"+k).val()) {
@@ -297,6 +299,14 @@ function update_sequences(key) {
                         return;
                     }
                     index = $("#"+key+"_"+k).val();
+            }
+            if (k == 'name') {
+                if(!$("#"+key+"_"+k).val()) {
+                    alert("Error: You have not specified a name for this collection of sequence data.");
+                    flag = false;
+                    return
+                }
+                sname = $("#"+key+"_"+k).val();
             }
             if (k == 'dropDescendant') {
                 if($("#"+key+"_"+k).is(":checked"))
@@ -323,11 +333,15 @@ function update_sequences(key) {
         if (!flag)
             return;
         
-        if (index in jsondata[key])
-            jsondata[key][index].push(json_var);
+        if (index in jsondata[key]) {
+            if (sname in jsondata[key][index]) {
+                alert("Error: Name "+sname+" already exists in object. Please choose a different one.");
+                return;
+            }
+            jsondata[key][index][sname] = json_var;
+        }
         else
-    	    jsondata[key][index] = [json_var];
-	    console.log(jsondata);
+    	    jsondata[key][index][sname] = [json_var];
 	
 	    update_object(db_name); // push to the database and reload page
 }
@@ -349,6 +363,7 @@ function edit_box(key, index) {
 		},
 		modal: true ,
 		open: function() {
+		    
 			ob = jsondata[key][index];
 			build_edit_dialog(ob, key);	
 		},
@@ -360,6 +375,9 @@ function edit_box(key, index) {
 			},{
 				text: "update",
 				click: function() {
+				    if (key == "approvals")
+                        approve(key);
+				    
 					if (key == "generators" || key=="process_string" || key=="type" || key=="cmssw_release")  
 						update_json_object(key, $("#"+key+"_"+key).val(), index);
 					else {

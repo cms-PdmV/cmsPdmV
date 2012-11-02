@@ -35,7 +35,7 @@ class Edit(Page):
         self.detect_object_type()
         if not self.object:
             return ''
-        result = '<script>$(document).ready(function() {$(".selectables").selectable({selected: function(events, ui){edit_composite_object(ui.selected.id);}}); $("#chain").selectable({selected: function(events, ui) {add_to_chain("'+self.object["prepid"]+'", $("#"+ui.selected.id).html());}}); addHover("li"); addHover(".comp_btn"); });</script>'
+        result = '<script>$(document).ready(function() { $(".selectables").selectable({selected: function(events, ui){edit_composite_object(ui.selected.id);}}); $("#chain").selectable({selected: function(events, ui) {add_to_chain("'+self.object["prepid"]+'", $("#"+ui.selected.id).html());}}); addHover("li"); addHover(".comp_btn"); });</script>'
         result += '<body><table class="ui-widget" id="editor">'
         result += '<thead class="ui-widget-header"><td>Attribute</td><td>Value</td></thead>'
         result += '<tbody class="ui-widget-content">' 
@@ -51,7 +51,10 @@ class Edit(Page):
     def present_list(self, li, key):
         if not li:
             return ''
-        res = '<ol class="selectables" id="'+key+'">'
+        if key =='sequences':
+            res = '<ul class="selectables" id="'+key+'">'
+        else:
+            res = '<ol class="selectables" id="'+key+'">'
         index = 0
         if type(li) == list:
             for ob in li:
@@ -82,21 +85,25 @@ class Edit(Page):
                 for key in li:
                     res += '<li>'+str(key)+' : '+str(li[key])+'</li>'
             elif key == 'action_parameters':
-                    for key in li:
-                        res += '<li>'+str(key) + "</li>"
-                        res += '<ul>'
-                        for k in li[key]:
-                            res += '<li>' + str(k) + ' : ' + str(li[key][k])+'</li>'
-                        res += '</ul>'
+                for key in li:
+                    res += '<li>'+str(key) + "</li>"
+                    res += '<ul>'
+                    for k in li[key]:
+                        res += '<li>' + str(k) + ' : ' + str(li[key][k])+'</li>'
+                    res += '</ul>'
             elif key == 'sequences':
                 for key in sorted(li.keys()):
-                    res += "<li><ul>"                    
+                    #res += "<li class='sequences_unselectable'><ul>"  
                     index = -1
                     for k in li[key]:
                         index += 1
-                        res += self.build_sequence(li[key][k],  index)
-                    res += "</ul></li>"
-        res += '</ol>'
+                        res += self.build_sequence(li[key][k],  (key, index))
+                    #res += "</ul></li>"
+                res += '</ul>'
+        if key == 'sequences':
+            pass
+        else:
+            res += '</ol>'
         return res
     
     def build_one_line_list(self, key, ob, index):
@@ -143,9 +150,12 @@ class Edit(Page):
             if s[-1] == ',':
                 s = s[:len(s)-1]
         if s != '':
-            res += '<li id="sequences_'+str(index)+'" class="ui-widget-content">' + s 
+            if type(index) == type((0, 0)):
+                res += '<li id="sequences_'+str(index[1])+'_'+str(index[0])+'" class="ui-widget-content sequences_selectable">index ' +str(index[0])+': '+ s  + "</li>"
+            else:
+                res += '<li id="sequences_'+str(index)+'" class="ui-widget-content sequences_selectable">' + s + "</li>"
         #   res += "<a class='iconholder ui-state-default ui-corner-all' href='javascript:delete_composite_object(\"sequences_"+str(index)+"\");'><span class='ui-icon ui-icon-close'></span></a></li>"
-        return res + "</li>"
+        return res 
 
     def build_parameter(self, key):
         protected = ['_id', 'submission_details', 'pwg', 'prepid', 'member_of_campaign', 'chain']
@@ -156,11 +166,15 @@ class Edit(Page):
     
         elif type(self.object[key]) == list or type(self.object[key]) == dict:
             result = self.present_list(self.object[key], key)
+            
+            if key == 'sequences':
+                print self.present_list(self.object[key], key)
+            
             if key not in protected:
                 if key != 'sequences' or self.db_name != 'requests':
-                    result += '<a href="javascript:create_composite_object(\''+key+'\');" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'
+                    result += '<a href="javascript:create_composite_object(\''+key+'\');" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'                    
                 else:
-                    result += '<a href="javascript:alert(1);" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>add ' + key + '</a>'
+                    result += '<a href="javascript:alert(1);" class="comp_btn iconholder ui-state-default ui-corner-all"><span class="ui-icon ui-icon-plus"></span>choose ' + key + '</a>'
             return result
     
         elif key in inherited:

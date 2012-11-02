@@ -55,6 +55,7 @@ ul.chain_links li:not(:last-child):after { content: ', ';}
 
 /*----------------------------- sequences dialog --------------------------*/
 #sequences_dialog {max-height:20em; overflow: auto;}
+.sequences_selectable {cursor: pointer; }
 
 /*----------------------------- actions table ----------------------------*/
 #actions_table {}
