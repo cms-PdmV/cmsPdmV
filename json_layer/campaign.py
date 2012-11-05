@@ -52,7 +52,7 @@ class campaign(json_base):
         self.__validate()
         
         # set campaign approval steps
-        self.__approval_steps = ['start',  'stop']
+        self.approval_steps = ['start',  'stop']
 
     def __validate(self):
         if not self._json_base__json:
@@ -119,7 +119,7 @@ class campaign(json_base):
     def toggle_approval(self):
         apps = self.get_attribute('approvals')
         a = approval('')
-        a.set_approval_steps(self.__approval_steps)
+        a.set_approval_steps(self.approval_steps)
         
         if not apps:
             self.set_attribute('approvals',  [a.build('start')])

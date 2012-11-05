@@ -55,7 +55,7 @@ class Actions(Page):
         
         # build actions table
         result += '<body><table class="ui-widget" id="actions_table">'
-        result += '<thead class="ui-widget-header"><td>Actions</td>'
+        result += '<thead class="ui-widget-header"><td>Actions<a class="gen_buttons" href="javascript:generate_all_requests();">genall</a></td>'
         
         # build header using all chained_campaigns
         for cc in ccamps:

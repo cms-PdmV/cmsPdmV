@@ -212,14 +212,14 @@ function get_composite_id(id) {
                 key = substr[0];
                 index = substr[1];
 	}
+	
 	return [key, index];
 }
 
 // wrapper: calls the edit_box() method that spawns a dialog to edit an object
 function edit_composite_object(id) {
-    alert(id);
 	c = get_composite_id(id);	
-
+	
 	// call dialog to edit the object
 	edit_box(c[0], c[1]);
 }
@@ -346,7 +346,17 @@ function update_sequences(key) {
 	    update_object(db_name); // push to the database and reload page
 }
 
-function edit_box(key, index) {
+function edit_box(jkey, jindex) {
+    if (jkey.indexOf("sequences") != -1) {
+        var key = jkey.split("_")[0];
+        var step = jkey.split("_")[1];
+        var index = jindex;
+    }
+    else {
+        var key = jkey;
+        var index = jindex;
+    }     
+        
 	$("#"+key+"_dialog").dialog({
 		closeOnEscape: true, 
 		autoOpen: true,
@@ -363,9 +373,14 @@ function edit_box(key, index) {
 		},
 		modal: true ,
 		open: function() {
-		    
-			ob = jsondata[key][index];
-			build_edit_dialog(ob, key);	
+		    if (key == "sequences") {
+		        ob = jsondata[key][step][index];
+		        build_edit_dialog(ob, [key, index]);
+		    }
+		    else {
+    			ob = jsondata[key][index];
+    			build_edit_dialog(ob, key);	
+    	    }
 		},
 		buttons: [{ 
 				text: "close", 
@@ -380,6 +395,8 @@ function edit_box(key, index) {
 				    
 					if (key == "generators" || key=="process_string" || key=="type" || key=="cmssw_release")  
 						update_json_object(key, $("#"+key+"_"+key).val(), index);
+				    else if (key == "sequences")
+				        update_sequences(key);
 					else {
 						update_json_object(key, get_dialog_data(key), index);
 					}
@@ -393,7 +410,20 @@ function edit_box(key, index) {
 	});
 }
 
-function build_edit_dialog(ob, key) {
+function build_edit_dialog(job, jkey) {
+    if (typeof jkey === "object") {
+        var key = jkey[0];
+        var sname = jkey[1];
+        var ob = job;
+        
+        $("#sequences_name").val(sname);   
+    }
+    else {
+        var key = jkey;
+        var ob = job;
+    }
+        
+    
 	if (typeof ob === "string")
 		$("#"+key+"_"+key).val(ob);
 	$.each(ob, function(k, v) {

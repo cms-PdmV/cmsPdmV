@@ -118,8 +118,58 @@ class GenerateChainedRequests(RESTResource):
                 self.crdb.save(new_req)
         
         return dumps({'results':True})
-        
 
+class GenerateAllChainedRequests(RESTResource):
+    def __init__(self):
+        self.db = database('actions')
+        self.ccdb = database('chained_campaigns')
+        self.crdb = database('chained_requests')
+    
+    def GET(self,  *args):
+        return self.generate_requests()
+        
+    def generate_requests(self):
+        allacs = self.db.get_all(-1) # no pagination
+        for a in allacs:
+            self.generate_request(a['key'])
+        
+        return dumps({'results':True})
+            
+    def generate_request(self,  id):
+        if not self.db.document_exists(id):
+            return dumps({'results':'Error: PrepId '+id+' does not exist in the database.'})
+        
+        # init action
+        req = action('',  json_input=self.db.get(id))
+                
+        # get chains
+        chains = req.get_attribute('chains')
+        
+        # iterate through chains
+        for cc in chains:
+            if chains[cc] > 0:
+                # check if the chain already exists
+                accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
+                flag = False
+                for acc in accs:
+                    if cc == acc['_id'].split('-')[1]:
+                        flag = True
+                        break
+                
+                if flag:
+                    print 'Warning: A chained request already exists for chained_campaign',  cc
+                    continue
+                
+                # init chained campaign
+                ccamp = chained_campaign('',  json_input=self.ccdb.get(cc))
+                # create the chained request
+                new_req = ccamp.generate_request(id)
+                # save to database
+                self.crdb.save(new_req)
+        
+        return dumps({'results':True})
+            
+        
 class DetectChains(RESTResource):
     def __init__(self):
         self.db = database('actions')

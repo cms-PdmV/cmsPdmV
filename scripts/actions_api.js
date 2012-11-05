@@ -242,6 +242,30 @@ function generate_requests(id) {
     });
 }
 
+// generate all possible chained_requests
+function generate_all_requests() {
+    // submit it to the db through rest
+    $.ajax({
+        type: 'GET',
+        url: "/restapi/actions/generate_all_chained_requests/",
+        success:function(data){
+        var json = $.parseJSON(data);
+        if (json) {
+            if (json["results"] != true)
+                alert(json["results"]);
+        }
+        else
+            alert('Could not update data to database.');
+
+        //refresh
+        redirect(window.location);
+        },
+        error:function(xhr, error, data){
+            alert(data + '. Could not update object.');
+        }
+    });    
+}
+
 // requests that all actions will calculate their actions
 function refresh_all_chains() {
         // contact REST

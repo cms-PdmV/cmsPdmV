@@ -18,6 +18,7 @@ class Edit(Page):
             self.db = database(db_name)
             self.id = id
             self.campaign = {}
+            self.approval_steps = []
         except database.DatabaseNotFoundException(db_name) as ex:
             print str(ex)
             return
@@ -35,7 +36,30 @@ class Edit(Page):
         self.detect_object_type()
         if not self.object:
             return ''
-        result = '<script>$(document).ready(function() { $(".selectables").selectable({selected: function(events, ui){edit_composite_object(ui.selected.id);}}); $("#chain").selectable({selected: function(events, ui) {add_to_chain("'+self.object["prepid"]+'", $("#"+ui.selected.id).html());}}); addHover("li"); addHover(".comp_btn"); });</script>'
+
+        # loading the json of the object to be edited. Also, the name of the database. These are
+        # publicly accessible from javascript.
+        result = '<script>var jsondata='+json.dumps(self.object)+'; var db_name="'+self.db_name+'";</script>'
+
+        # onload script
+        result += '<script>'
+        result += '$(document).ready(function() { '
+        result +='$(".selectables").selectable({selected: function(events, ui){edit_composite_object(ui.selected.id);}});'
+        result += '$("#chain").selectable({selected: function(events, ui) {add_to_chain("'+self.object["prepid"]+'", $("#"+ui.selected.id).html());}});'
+        result +='addHover("li"); '
+        result +='addHover(".comp_btn"); '
+        
+        # add approval steps to approval dialog
+        result += '$("#approvals_approvals").empty();'
+        i = 0
+        for app in self.approval_steps:
+            result += '$("<option value='+str(i)+'>'+str(app)+'</option>").append("#approvals_approvals");'
+            i += 1
+        
+        
+        result += '});</script>'
+        
+        # build the attribute table
         result += '<body><table class="ui-widget" id="editor">'
         result += '<thead class="ui-widget-header"><td>Attribute</td><td>Value</td></thead>'
         result += '<tbody class="ui-widget-content">' 
@@ -45,7 +69,7 @@ class Edit(Page):
             result += '</td></tr>'
         result += '</tbody>'
         result += '</table><br><a class="ui-state-default ui-corner-all" href="javascript:update_object(\''+self.db_name+'\');">Commit</a><a class="ui-state-default ui-corner-all" style="float: right;" href="javascript:delete_object(\''+self.db_name+'\', \''+self.object["prepid"]+'\');">Delete</a></body>'
-        result += '<script>var jsondata='+json.dumps(self.object)+'; var db_name="'+self.db_name+'";</script>'
+        
         return result
 
     def present_list(self, li, key):
@@ -97,7 +121,7 @@ class Edit(Page):
                     index = -1
                     for k in li[key]:
                         index += 1
-                        res += self.build_sequence(li[key][k],  (key, index))
+                        res += self.build_sequence(li[key][k],  (k, key))
                     #res += "</ul></li>"
                 res += '</ul>'
         if key == 'sequences':
@@ -151,7 +175,7 @@ class Edit(Page):
                 s = s[:len(s)-1]
         if s != '':
             if type(index) == type((0, 0)):
-                res += '<li id="sequences_'+str(index[1])+'_'+str(index[0])+'" class="ui-widget-content sequences_selectable">index ' +str(index[0])+': '+ s  + "</li>"
+                res += '<li id="sequences_'+str(index[1])+'_'+str(index[0])+'" class="ui-widget-content sequences_selectable">' +str(index[0])+': '+ s  + "</li>"
             else:
                 res += '<li id="sequences_'+str(index)+'" class="ui-widget-content sequences_selectable">' + s + "</li>"
         #   res += "<a class='iconholder ui-state-default ui-corner-all' href='javascript:delete_composite_object(\"sequences_"+str(index)+"\");'><span class='ui-icon ui-icon-close'></span></a></li>"
@@ -166,9 +190,6 @@ class Edit(Page):
     
         elif type(self.object[key]) == list or type(self.object[key]) == dict:
             result = self.present_list(self.object[key], key)
-            
-            if key == 'sequences':
-                print self.present_list(self.object[key], key)
             
             if key not in protected:
                 if key != 'sequences' or self.db_name != 'requests':
@@ -224,17 +245,22 @@ class Edit(Page):
         if self.db_name == 'requests':
                 object = request('')
                 db_name = 'campaigns'
+                self.approval_steps = object.approval_steps
         elif self.db_name == 'chained_requests':
                 object = chained_request('')
                 db_name = 'chained_campaigns'
+                self.approval_steps = object.approval_steps
         elif self.db_name == 'campaigns':
                 object = campaign('')
+                self.approval_steps = object.approval_steps
                 return object.json()
         elif self.db_name == 'chained_campaigns':
                 object = chained_campaign('')
+                self.approval_steps = object.approval_steps
                 return object.json()
         elif self.db_name == 'flows':
                 object = flow('')
+                self.approval_steps = object.approval_steps
                 return object.json()
         else:
                 return None

@@ -5,13 +5,14 @@ class json_base:
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
                 self.__attribute = repr(attribute)
-        def	__str__(self):
+        def __str__(self):
             return 'Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal'
     
     def __init__(self,  json={}):
         if json:
             self.__json = json
-        self.__schema = {}	
+        self.__schema = {}  
+        self.approval_steps = ['new',  'flow',  'inject',  'approve']
     
     def set_attribute(self,  attribute='',  value=None):
         if not attribute or attribute not in self.__schema:
@@ -27,9 +28,9 @@ class json_base:
         
     def json(self):
         return self.__json
-	
-	def schema(self):
-		return self.__schema
+    
+    def schema(self):
+        return self.__schema
     
     def print_self(self):
         try:
@@ -37,13 +38,17 @@ class json_base:
         except ImportError as ex:
             print 'Error: Could not import json module'
             print self.__json
-        print simplejson.dumps(self.__json, indent=4)	
-	
-    def keys(self):	
-        return self.__schema.keys() 	
+        print simplejson.dumps(self.__json, indent=4)   
+    
+    def keys(self): 
+        return self.__schema.keys()     
 
     def print_schema(self):
         print '{'
         for key in self.__json:
             print key, ': ',  self.__json[key],  '\t(',  type(self.__json[key]), ')'
         print '}'
+    
+    def get_approval_steps(self):
+            return self.approval_steps
+        

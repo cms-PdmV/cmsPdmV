@@ -69,9 +69,9 @@ class request(json_base):
         
         # detect approval steps
         if self.get_attribute('root'):
-            self.__approval_steps = ['new',  'contact_approved',  'gen_approved',  'flow', 'inject', 'approve']
+            self.approval_steps = ['new',  'contact_approved',  'gen_approved',  'flow', 'inject', 'approve']
         else:
-            self.__approval_steps = ['new', 'flow', 'inject', 'approve']
+            self.approval_steps = ['new', 'flow', 'inject', 'approve']
 
     def __validate(self):
         if not self._json_base__json:
@@ -174,7 +174,7 @@ class request(json_base):
     def approve(self,  index=-1):
         approvals = self.get_attribute('approvals')
         app = approval('')
-        app.set_approval_steps(self.__approval_steps)
+        app.set_approval_steps(self.approval_steps)
         
         # if no index is specified, just go one step further
         if index==-1:

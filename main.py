@@ -11,7 +11,7 @@ from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampa
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains
+from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests
 from rest_api.RequestPrepId import RequestPrepId 
 from rest_api.RequestChainId import RequestChainId
 
@@ -120,6 +120,7 @@ root.restapi.actions.select = SelectChain()
 root.restapi.actions.deselect = DeSelectChain()
 root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
 root.restapi.actions.detect_chains = DetectChains()
+root.restapi.actions.generate_all_chained_requests = GenerateAllChainedRequests()
 
 # REST Flow Actions
 root.restapi.flows.get = GetFlow()
