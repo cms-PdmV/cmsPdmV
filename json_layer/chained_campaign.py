@@ -150,7 +150,6 @@ class chained_campaign(json_base):
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
-        print creq.json()
         
         # generate new chain id
         id = RequestChainId().generate_id(creq.get_attribute('pwg'), creq.get_attribute('member_of_campaign'))
@@ -175,8 +174,22 @@ class chained_campaign(json_base):
         if root_request_id in reqp:
             creq.set_attribute('request_parameters',  reqp[root_request_id])
         
+            # delete the parameters for this chained request
+            #self.__remove_request_parameters(root_request_id)
+            del reqp[root_request_id]
+            self.set_attribute('action_parameters',  reqp)
+        
         # add root request to chain
         creq.set_attribute('chain',  [root_request_id])
         
         # save to database
         return creq.json()
+        
+    def __remove_request_parameters(self,  rootid=None):
+        ob = self.get_attribute('action_parameters')
+        res = {}
+        for key in ob:
+            if key == rootid:
+                continue
+            res[key] = ob[key]
+        self.set_attribute('action_parameters',  res)

@@ -11,7 +11,26 @@ class chained_request(json_base):
         def __init__(self,  campaign):
             self.c = campaign
         def __str__(self):
-            return 'Error: Campaign', self.c,  'already represented in the chain.' 
+            return 'Error: Campaign', self.c,  'already represented in the chain.'
+    
+    class ChainedRequestCannotFlowException(Exception):
+        def __init__(self,  crname):
+            self.name = str(crname)
+        def __str__(self):
+            return 'Error: Chained request '+self.name+' cannot flow any further.'
+    
+    class NotApprovedException(Exception):
+        def __init__(self,  oname,  alevel):
+            self.name = str(oname)
+            self.level = str(alevel)
+        def __str__(self):
+            return 'Error: '+self.name+' has not been "'+self.level+'" approved.'
+        
+    class CampaignStoppedException(NotApprovedException):
+        def __init__(self,  oname):
+            self.name = str(oname)
+        def __str__(self):
+            return 'Error: '+self.name+' has been stopped.'
     
     def __init__(self, author_name, author_cmsid=-1, author_inst_code='', author_project='', json_input={}):
         self._json_base__schema = {
@@ -76,6 +95,7 @@ class chained_request(json_base):
             rdb = database('requests')
             cdb = database('campaigns')
             ccdb = database('chained_campaigns')
+            fdb = database('flows')
         except database.DatabaseAccessError as ex:
             print str(ex)
             return False
@@ -90,21 +110,6 @@ class chained_request(json_base):
         
         # actually get root request
         req = rdb.get(root)
-        
-        # check if request is approved
-        # TODO: check flow's approvals
-        allowed_approvals = ['flow',  'inject',  'approve']
-            
-        if req['approvals'][-1]['approval_step'] not in allowed_approvals:
-            if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
-                print 'Error: Chained request '+self.get_attribute('_id')+' is not "flow" approved. Will not flow.'
-                return False
-            else:
-                if req['approvals'][-1]['approval_step'] == 'gen':
-                    pass
-                else:
-                    print 'Error: Request '+str(root)+ ' is not "gen" approved. Will not flow.'
-                    return False
             
         # get the campaign in the next step
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
@@ -114,8 +119,42 @@ class chained_request(json_base):
         # get mother chained_campaign
         cc = ccdb.get(self.get_attribute('member_of_campaign'))
         if step >= len(cc['campaigns']):
-            print 'Warning: Chained Request '+str(self.get_attribute('_id'))+' cannot flow any further.'
-            return False  
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'))
+        
+        # check if request is approved
+        # TODO: check flow's approvals
+        allowed_approvals = ['flow',  'inject',  'approve']
+        
+        if req['approvals'][-1]['approval_step'] != 'gen' and req['approvals'][-1]['approval_step'] not in allowed_approvals:  
+                raise self.NotApprovedException(req['_id'],  'gen')
+        
+        # find the flow responsible for this step
+        tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
+        
+        # since step has been increased at the beginning, only add 1
+        if len(tokstr) <= step+1:
+            print 'Warning: Chained Campaign '+cc['prepid']+' does not allow another flow.'
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('prepid'))
+            
+        flowname = tokstr[step+1]
+        
+        if not fdb.document_exists(flowname):
+            print 'Error: Flow '+str(flowname)+' does not exist.'
+            return False
+        
+        # get flow
+        fl = fdb.get(flowname)
+        
+        # check all approvals (if flow say yes -> allowing policy)
+        if fl['approvals'][-1]['approval_step'] not in allowed_approvals:
+            if req['approvals'][-1]['approval_step'] not in allowed_approvals:
+                if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
+                    raise self.NotApprovedException(self.get_attribute('_id'),  'flow')
+                else:
+                    if req['approvals'][-1]['approval_step'] == 'gen':
+                        pass
+                    else:
+                        raise self.NotApprovedException(req['_id'],  'gen')
         
         # get next campaign
         next_camp = cc['campaigns'][step][0] # just the camp name, not the flow
@@ -130,8 +169,7 @@ class chained_request(json_base):
         
         # check if next campaign is started or stopped
         if nc['approvals'][-1]['approval_step'] == 'stop':
-            print 'Error: Campaign '+str(next_camp)+' is stopped. Cannot flow to next step.'
-            return False
+            raise self.CampaignStoppedException(str(next_camp))
         
         # use root request as template
         req['member_of_campaign'] = next_camp
@@ -226,11 +264,14 @@ class chained_request(json_base):
         except Exception as ex:
             print str(ex)
             return {}
-
+        
+        chain_specific = ['threshold',  'block_number',  'staged']
+        
         if len(self.get_attribute('request_parameters')) > 0:
-            changes = self.get_attribute('request_parameters')[-1]
+            changes = self.get_attribute('request_parameters')
             for key in changes:
-                req.set_attribute(key, changes[key])
+                if key not in chain_specific:
+                    req.set_attribute(key, changes[key])
         
         # get the chain and inherit
         req.set_attribute("generators", self.get_attribute("generators"))

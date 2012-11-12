@@ -115,7 +115,11 @@ class GenerateChainedRequests(RESTResource):
                 # create the chained request
                 new_req = ccamp.generate_request(id)
                 # save to database
-                self.crdb.save(new_req)
+                if not self.crdb.save(new_req):
+                    print 'Error: Could not save '+str(id)+' to database.'
+                    return dumps({'results':False})
+                    
+                self.ccdb.update(ccamp.json())
         
         return dumps({'results':True})
 
@@ -165,7 +169,11 @@ class GenerateAllChainedRequests(RESTResource):
                 # create the chained request
                 new_req = ccamp.generate_request(id)
                 # save to database
-                self.crdb.save(new_req)
+                if not self.crdb.save(new_req):
+                    print 'Error: Could not save '+str(id)+' to database.'
+                    return dumps({'results':False})
+                    
+                self.ccdb.update(ccamp.json())
         
         return dumps({'results':True})
             

@@ -51,9 +51,8 @@ class request(json_base):
             'size_event':-1,
             'nameorfragment':'', 
             'version':0,
-            'status':'',
+            'status':[],
             'type':'',
-            'root' :False, # flag if request is a root request or not
             'generators':'',
             'comments':[],
             'sequences':[],
@@ -68,10 +67,10 @@ class request(json_base):
         self.__validate()
         
         # detect approval steps
-        if self.get_attribute('root'):
-            self.approval_steps = ['new',  'contact_approved',  'gen_approved',  'flow', 'inject', 'approve']
+        if self.get_attribute('mcdb_id') == -1:
+            self._json_base__approvalsteps = ['new',  'contact',  'gen',  'flow', 'inject', 'approve']
         else:
-            self.approval_steps = ['new', 'flow', 'inject', 'approve']
+            self._json_base__approvalsteps = ['new', 'flow', 'inject', 'approve']
 
     def __validate(self):
         if not self._json_base__json:
@@ -174,7 +173,7 @@ class request(json_base):
     def approve(self,  index=-1):
         approvals = self.get_attribute('approvals')
         app = approval('')
-        app.set_approval_steps(self.approval_steps)
+        app.set_approval_steps(self._json_base__approvalsteps)
         
         # if no index is specified, just go one step further
         if index==-1:
@@ -188,32 +187,22 @@ class request(json_base):
             print str(ex)
             return False
     
-    def approve1(self,  author_name,  author_cmsid=-1, author_inst_code='', author_project=''):
-        approvals = self.get_attribute('approvals')
-        app = approval('')
-        index = -1
-        step = app.get_approval(0)
+    def add_status(self,  index=-1):
+        st = status('')
+        st.set_status_steps(self._json_base__status)
         
-        # find if approve is legal (and next step)
-        if len(approvals) == 0:
-            index = -1
-        elif len(approvals) == len(app.get_approval_steps()):
-            raise app.IllegalApprovalStep()
-        else:
-            step = approvals[-1]['approval_step']
-            index = app.index(step) + 1
-            step = app.get_approval(index)
-
-    # build approval 
+        # if no index is specified, just go one step further
+        if index==-1:
+            index = len(st.get_status_steps())
+        
         try:
-            new_approval = approval(author_name, author_cmsid, author_inst_code, author_project).build(step)
-        except approval('').IllegalApprovalStep(step) as ex:
+            new_status = st.build(index)
+            self.set_attribute('status',  new_status)
+            return True
+        except st.IllegalStatusStep as ex:
             print str(ex)
-            return
+            return False
         
-        # make persistent
-        approvals.append(new_approval)
-        self.set_attribute('approvals',  approvals)
     
     def update_generator_parameters(self, generator_parameters={}):
         if not generator_parameters:

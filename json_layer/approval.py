@@ -12,7 +12,7 @@ class approval(json_base):
 
     def __init__(self, author_name,  author_cmsid=-1 ,  author_inst_code='',  author_project='',json_input={}):
         
-        self.approval_steps = ['new',  'flow',  'inject',  'approve']
+        self._json_base__approvalsteps = ['new',  'flow',  'inject',  'approve']
         
         self._json_base__schema = {
             'index':-1,
@@ -51,43 +51,42 @@ class approval(json_base):
         return new
     
     def  build(self, approval_step):
-        if approval_step not in self.approval_steps:
+        if approval_step not in self._json_base__approvalsteps:
             raise self.IllegalApprovalStep(approval_step)
         
         new = self.__clone()
         
         new['approval_step'] = approval_step
-        new['index'] = self.approval_steps.index(approval_step)
+        new['index'] = self._json_base__approvalsteps.index(approval_step)
         return new
     
     def approve(self,  index):
-        if index >= len(self.approval_steps):
+        if index >= len(self._json_base__approvalsteps):
             raise self.IllegalApprovalStep(index)
         
         approvals = []
         
         for i in range(index+1):
-            approvals.append(self.build(self.approval_steps[i]))
-        print approvals    
+            approvals.append(self.build(self._json_base__approvalsteps[i]))
         
         return approvals
     
     def get_approval(self,  index):
-        if index < 0 or index > len(self.approval_steps):
+        if index < 0 or index > len(self._json_base__approvalsteps):
             raise self.IllegalApprovalStep(index)
-        return self.approval_steps[index]
+        return self._json_base__approvalsteps[index]
     
     def index(self,  approval):
-        if approval not in self.approval_steps:
+        if approval not in self._json_base__approvalsteps:
             raise self.IllegalApprovalStep(approval)
-        return self.approval_steps.index(approval)
+        return self._json_base__approvalsteps.index(approval)
     
     def get_approval_steps(self):
-        return self.approval_steps
+        return self._json_base__approvalsteps
     
     def set_approval_steps(self,  approvals):
         if approvals:
-            self.approval_steps = approvals
+            self._json_base__approvalsteps = approvals
             
 if __name__=='__main__':
     a = approval(' ')

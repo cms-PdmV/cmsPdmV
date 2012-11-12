@@ -53,7 +53,7 @@ class Edit(Page):
         result += '$("#approvals_approvals").empty();'
         i = 0
         for app in self.approval_steps:
-            result += '$("<option value='+str(i)+'>'+str(app)+'</option>").append("#approvals_approvals");'
+            result += '$("<option value='+str(i)+'>'+str(app)+'</option>").appendTo("#approvals_approvals");'
             i += 1
         
         
@@ -92,6 +92,8 @@ class Edit(Page):
                         res += s
                     else:
                         continue
+                elif key == 'status':
+                    res += self.build_status(ob,  index)
 
                 elif key == 'generator_parameters':
                                         res += self.build_generator_parameters(ob, index)
@@ -163,6 +165,12 @@ class Edit(Page):
         res += "<p>" + ob["approval_step"] + "</p>"
         #res += "<a class='iconholder ui-state-default ui-corner-all' href='javascript:delete_composite_object(\"approvals_"+str(index)+"\");'><span class='ui-icon ui-icon-close'></span></a></li>"
         return res + "</li>"
+        
+    def build_status(self,  ob,  index):
+        res = "<li id='status_"+str(index)+"' class='ui-widget-content'>"
+        res += "<p>"+ob["status"]+"</p>"
+        res += "</li>"
+        return res
 
     def build_sequence(self, ob, index):
         thesequence=sequence(json_input=ob)
@@ -241,26 +249,32 @@ class Edit(Page):
         return res
 
     def detect_object_type(self):
+        if not self.object:
+            return None
+            
         object = None
         if self.db_name == 'requests':
-                object = request('')
+                object = request('',  json_input=self.object)
                 db_name = 'campaigns'
-                self.approval_steps = object.approval_steps
+                self.approval_steps = object.get_approval_steps()
         elif self.db_name == 'chained_requests':
-                object = chained_request('')
+                object = chained_request('',  json_input=self.object)
                 db_name = 'chained_campaigns'
-                self.approval_steps = object.approval_steps
+                self.approval_steps = object.get_approval_steps()
         elif self.db_name == 'campaigns':
-                object = campaign('')
-                self.approval_steps = object.approval_steps
+                object = campaign('',  json_input=self.object)
+                self.approval_steps = object.get_approval_steps()
+                self.object = object.json()
                 return object.json()
         elif self.db_name == 'chained_campaigns':
-                object = chained_campaign('')
-                self.approval_steps = object.approval_steps
+                object = chained_campaign('',  json_input=self.object)
+                self.approval_steps = object.get_approval_steps()
+                self.object = object.json()
                 return object.json()
         elif self.db_name == 'flows':
-                object = flow('')
-                self.approval_steps = object.approval_steps
+                object = flow('',  json_input=self.object)
+                self.approval_steps = object.get_approval_steps()
+                self.object = object.json()
                 return object.json()
         else:
                 return None
@@ -286,6 +300,7 @@ class Edit(Page):
                 return
                 
         self.campaign = cdb.get(self.object['member_of_campaign'])
+        self.object = object.json()
         return object.json()
 
 

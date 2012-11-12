@@ -83,6 +83,7 @@ class AddRequestToChain(RESTResource):
         self.request_db = database('requests')
         self.campaign_db = database('campaigns')
         self.chained_db = database('chained_requests')
+        self.ccamp_db = database('chained_campaigns')
         self.json = {}
 
     def POST(self, *args):
@@ -211,6 +212,7 @@ class GenerateChainedRequests(RESTResource):
                     new_req = cc.generate_request(ract['prepid'])
                     # save to database
                     self.crdb.save(new_req)
+                    self.ccdb.update(cc.json())
                     
         return dumps({"results":True})
 

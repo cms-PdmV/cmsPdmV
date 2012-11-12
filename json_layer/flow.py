@@ -89,6 +89,7 @@ class flow(json_base):
     def approve(self,  index=-1):
         approvals = self.get_attribute('approvals')
         app = approval('')
+        app.set_approval_steps(self._json_base__approvalsteps)
         
         # if no index is specified, just go one step further
         if index==-1:

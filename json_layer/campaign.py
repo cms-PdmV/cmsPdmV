@@ -52,7 +52,7 @@ class campaign(json_base):
         self.__validate()
         
         # set campaign approval steps
-        self.approval_steps = ['start',  'stop']
+        self._json_base__approvalsteps = ['start',  'stop']
 
     def __validate(self):
         if not self._json_base__json:
@@ -119,7 +119,7 @@ class campaign(json_base):
     def toggle_approval(self):
         apps = self.get_attribute('approvals')
         a = approval('')
-        a.set_approval_steps(self.approval_steps)
+        a.set_approval_steps(self._json_base__approvalsteps)
         
         if not apps:
             self.set_attribute('approvals',  [a.build('start')])
@@ -131,6 +131,23 @@ class campaign(json_base):
             return
         else:
             self.set_attribute('approvals',  [apps[0]])
+
+    def approve(self,  index=-1):
+        approvals = self.get_attribute('approvals')
+        app = approval('')
+        app.set_approval_steps(self._json_base__approvalsteps)
+
+        # if no index is specified, just go one step further
+        if index==-1:
+            index = len(approvals)
+        
+        try:
+            new_apps = app.approve(index)
+            self.set_attribute('approvals',  new_apps)
+            return True
+        except app.IllegalApprovalStep as ex:
+            print 'Error: ', str(ex)
+            return False
     
     def add_next(self,  cid):
         if cid not in self.get_attribute('next'):

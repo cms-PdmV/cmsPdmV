@@ -160,10 +160,27 @@ class ToggleCampaign(RESTResource):
             return dumps({"results":'Error: No arguments were given'})
         return self.toggle_campaign(args[0])
     
-    def toggle_campaign(self,  id):
+    def toggle_campaign(self,  rid):
         if not self.db.document_exists(rid):
             return dumps({"results":'Error: The given campaign id does not exist.'})
         camp = campaign('',  json_input=self.db.get(rid))
         camp.toggle_approval()
         
-        return dumps({"results":self.db.update(camp.json())})        
+        return dumps({"results":self.db.update(camp.json())})
+    
+class ApproveCampaign(RESTResource):
+    def __init__(self):
+        self.db = database('campaigns')
+    
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.toggle_campaign(args[0],  args[1])
+    
+    def toggle_campaign(self,  rid,  index):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given campaign id does not exist.'})
+        camp = campaign('',  json_input=self.db.get(rid))
+        camp.approve(int(index))
+        
+        return dumps({"results":self.db.update(camp.json())})

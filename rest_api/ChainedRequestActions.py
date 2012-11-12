@@ -158,10 +158,15 @@ class FlowToNextStep(RESTResource):
             return dumps({"results":str(ex)})
         
         # if the chained_request can flow, do it
-        if creq.flow():
-            self.db.update(creq.json())
-            return dumps({"results":True})
-        return dumps({"results":False})
+        try:
+            if creq.flow():
+                self.db.update(creq.json())
+                return dumps({"results":True})
+            return dumps({"results":False})
+        except chained_request.NotApprovedException as ex:
+            return dumps({"results":str(ex)})
+        except chained_request.ChainedRequestCannotFlowException as ex:
+            return dumps({"results":str(ex)})
 
 class ApproveRequest(RESTResource):
     def __init__(self):

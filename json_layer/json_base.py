@@ -2,6 +2,8 @@
 
 class json_base:
     __json = {}
+    __approvalsteps = ['new',  'flow',  'inject',  'approve']
+    __status = ['new',  'defined',  'injected',  'done']
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
                 self.__attribute = repr(attribute)
@@ -12,7 +14,6 @@ class json_base:
         if json:
             self.__json = json
         self.__schema = {}  
-        self.approval_steps = ['new',  'flow',  'inject',  'approve']
     
     def set_attribute(self,  attribute='',  value=None):
         if not attribute or attribute not in self.__schema:
@@ -50,5 +51,5 @@ class json_base:
         print '}'
     
     def get_approval_steps(self):
-            return self.approval_steps
+            return self.__approvalsteps
         

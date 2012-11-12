@@ -425,7 +425,7 @@ class ApproveFlow(RESTResource):
         if not self.db.document_exists(rid):
             return dumps({"results":'Error: The given flow id does not exist.'})
         f = flow('',  json_input=self.db.get(rid))
-        if not f.approve(val):
+        if not f.approve(int(val)):
             return dumps({"results":False})
         
         return dumps({"results":self.db.update(f.json())})

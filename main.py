@@ -7,7 +7,7 @@ from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest,  InjectRequest
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign,  ApproveCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
@@ -96,6 +96,7 @@ root.restapi.campaigns.update = UpdateCampaign()
 root.restapi.campaigns.delete = DeleteCampaign()
 root.restapi.campaigns.get = GetCampaign()
 root.restapi.campaigns.toggle = ToggleCampaign() # start/stop campaign
+root.restapi.campaigns.approve = ApproveCampaign()
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()
