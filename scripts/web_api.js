@@ -121,8 +121,18 @@ function update_object(db) {
                         var val = $(this).children("td:nth-child(2)").children("textarea:first-child").val();
                 else if($(this).children("td:nth-child(2)").children(":first-child").is("select"))
                         var val = $(this).children("td:nth-child(2)").find(":selected").html();
+				else if ($(this).children("td:nth-child(2)").children(":first-child").is("input")){
+						if ($(this).children("td:nth-child(2)").children(":first-child").is(":checked")) {
+							var val = true;
+						}
+						else {
+							var val = false;
+							jsondata[key] = val;
+						}	
+				}
                 if(val)
                         jsondata[key] = val;
+
         });
         
 	// submit it to the db through rest
@@ -274,10 +284,10 @@ function create_box(key) {
                                         if (key == "generators" || key=="process_string" || key=="type" || key=="cmssw_release" || key=="allowed_campaigns")       
                                                 update_json_object(key, $("#"+key+"_"+key).val());
                                         
-                                        if (key == "approvals")
+                                        else if (key == "approvals")
                                             approve(key);
                                         
-                                        if (key == "sequences")
+                                        else if (key == "sequences")
                                                 update_sequences(key);
                                         else 
                                                 update_json_object(key, get_dialog_data(key));

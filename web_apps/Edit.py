@@ -223,12 +223,17 @@ class Edit(Page):
                     result += '>'+str(self.object[key])+'</textarea>'
                     return result
         else:
-            result = '<textarea class="ui-widget-content" id="'+str(key)+'" '
-            result += 'cols=100 rows='+str(len(str(self.object[key]))/100)
-            if key in protected:
-                result += ' readonly="readonly"'
-            result += '>'+str(self.object[key])+'</textarea>'
-            return result
+            if key == 'valid':
+                result = '<input type="checkbox" class="ui-widget-content" id="'+str(key)+'" '
+                if self.object[key]:
+                    result += 'checked="checked" >'
+            else:
+                result = '<textarea class="ui-widget-content" id="'+str(key)+'" '
+                result += 'cols=100 rows='+str(len(str(self.object[key]))/100)
+                if key in protected:
+                    result += ' readonly="readonly"'
+                result += '>'+str(self.object[key])+'</textarea>'
+        return result
         
     def build_select(self, key, lst,  oblist=None):
         res = '<select class="ui-widget-content" id="'+key+'">'
