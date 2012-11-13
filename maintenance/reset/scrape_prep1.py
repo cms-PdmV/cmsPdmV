@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 # import MySQL connector for python
-#import MySQLdb
+import MySQLdb
 
 # json lib is only used for visualization of data
 import json
 
 # MySQL db and cursor for queries init (cursor is set to json)
-#db = MySQLdb.connect(host="devdb",user="prepdb", passwd="Testprepdb", db="MonteCarlo")
-#cursor = db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+db = MySQLdb.connect(host="devdb",user="prepdb", passwd="Testprepdb", db="MonteCarlo")
+cursor = db.cursor(cursorclass=MySQLdb.cursors.DictCursor)
 
 # returns the campaign primary key corresponding to the given campaign name
 def get_campaign_key(campaign_name):
@@ -373,9 +373,13 @@ def create_actions(directory='data/'):
 
     flist = os.listdir(datadir+'requests/')
     for filename in flist:
-         f = open(datadir + 'actions/' + filename, 'w')
-         f.write('{"_id":"'+filename+'", "prepid":"'+filename+'", "member_of_campaign": "'+filename.split('-')[1]+'", "chains":{}, "submission_details":{"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}}')
-         f.close()
+         try:
+             f = open(datadir + 'actions/' + filename, 'w')
+             f.write('{"_id":"'+filename+'", "prepid":"'+filename+'", "member_of_campaign": "'+filename.split('-')[1]+'", "chains":{},"submission_details":{"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}}')
+             f.close()
+         except Exception:
+            print filename + ' could not be an action'
+             
 
     return True
 
@@ -393,27 +397,30 @@ def create_chained_campaigns(directory='data/'):
 	
 	flist = os.listdir(datadir+'campaigns/')
 	for filename in flist:
-		fout = open(datadir + 'chained_campaigns/chain_' + filename, 'w')
-		fin = open(datadir + 'campaigns/'+filename, 'r')
-		camp = json.loads(fin.read())
-		fin.close()
+	    try:
+    		fout = open(datadir + 'chained_campaigns/chain_' + filename, 'w')
+    		fin = open(datadir + 'campaigns/'+filename, 'r')
+	    	camp = json.loads(fin.read())
+	    	fin.close()
 
-		ccamp = {}
-		ccamp['prepid'] = camp['prepid']
-		ccamp['_id'] = camp['prepid']
-		ccamp['energy'] = camp['energy']
-		ccamp['campaigns'] = [camp['prepid']]
-		ccamp['alias'] = camp['prepid']
-		ccamp['approvals'] = []
-		ccamp['description'] = 'Dedicated chained campaign for '+camp['prepid']
-		ccamp['action_parameters'] = {}
-		ccamp['www'] = 'http://preptest.cern.ch/edit/chained_campaigns/chain_'+camp['prepid']+'/'
-		ccamp['submission_details'] = {"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}
-		ccamp['comments'] = []
-		ccamp['valid'] = True
+	    	ccamp = {}
+	    	ccamp['prepid'] = camp['prepid']
+	    	ccamp['_id'] = camp['prepid']
+	    	ccamp['energy'] = camp['energy']
+	    	ccamp['campaigns'] = [camp['prepid']]
+	    	ccamp['alias'] = camp['prepid']
+	    	ccamp['approvals'] = []
+	    	ccamp['description'] = 'Dedicated chained campaign for '+camp['prepid']
+	    	ccamp['action_parameters'] = {}
+	    	ccamp['www'] = 'http://preptest.cern.ch/edit/chained_campaigns/chain_'+camp['prepid']+'/'
+	    	ccamp['submission_details'] = {"author_name":"automatic", "author_cmsid":"", "author_inst_code":"", "author_project":"", "submission_date":""}
+    		ccamp['comments'] = []
+	    	ccamp['valid'] = True
 
-		fout.write(json.dumps(ccamp))
-		fout.close()
+	    	fout.write(json.dumps(ccamp))
+	    	fout.close()
+	    except Exception as ex:
+	        print filename + ' could be a chained_campaign.' +str(ex)
 
 	return True
 
@@ -433,43 +440,45 @@ if __name__=='__main__':
 
     datadir = 'data/'
 
-   #camps = ['Summer12_LHE', 'Summer12', 'Summer12_DR53X']
+
 #    camps = ['Summer12', 'Summer12_DR53X']
-#    for camp in camps:
+    camps = ['Fall11_R1', 'Fall11_R2']
+    for camp in camps:
         
         
         # create dedicated directory for campaigns
-#        if not os.path.exists(datadir + 'campaigns/'):
-#            os.makedirs(datadir + 'campaigns/')  
+        if not os.path.exists(datadir + 'campaigns/'):
+            os.makedirs(datadir + 'campaigns/')  
         
         # get campaign
-#        c = retrieve_campaign(camp)
-#        if c:
-#            f = open(datadir + 'campaigns/'+ c['_id'], 'w')
-#            f.write(json.dumps(c))
-#            f.close()                     
+        c = retrieve_campaign(camp)
+        if c:
+            f = open(datadir + 'campaigns/'+ c['_id'], 'w')
+            f.write(json.dumps(c))
+            f.close()                     
         
         # created dedicated directory for requests
-#        if not os.path.exists(datadir + 'requests/'):
-#            os.makedirs(datadir + 'requests/')
+        #if not os.path.exists(datadir + 'requests/'):
+        #    os.makedirs(datadir + 'requests/')
         
         # requests
- #       requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
+       #requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
+        #requests = ['HIG-Summer11-01179']
         
- #       if camp == 'Summer12':
- #           for r in requests:
-                #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
- #               res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
- #               final = morph_requests(res)
-                #print final
+        #if camp == 'Summer11':
+        #    for r in requests:
+        #        #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
+        #        res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
+        #        final = morph_requests(res)
+        #        print final
 
- #               for r in final:
- #                   f = open(datadir + 'requests/' + r['_id'], 'w')
- #                   f.write(json.dumps(r))
- #                   f.close()      
+        #        for r in final:
+        #            f = open(datadir + 'requests/' + r['_id'], 'w')
+        #           f.write(json.dumps(r))
+        #            f.close()      
 
-create_actions()
-create_chained_campaigns()            
+    create_actions()
+    create_chained_campaigns()            
             
             
             

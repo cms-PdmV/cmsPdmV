@@ -28,7 +28,6 @@ class request(json_base):
             'input_filename':'',
             'pwg':'',
             'validation':'',
-            'input_filename':'',
             'dataset_name':'',
             'pileup_dataset_name':'',
             'www':'',
@@ -71,6 +70,10 @@ class request(json_base):
             self._json_base__approvalsteps = ['new',  'contact',  'gen',  'flow', 'inject', 'approve']
         else:
             self._json_base__approvalsteps = ['new', 'flow', 'inject', 'approve']
+            
+        
+        # AFS submit directory
+        self.submit_directory = '/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/'
 
     def __validate(self):
         if not self._json_base__json:
