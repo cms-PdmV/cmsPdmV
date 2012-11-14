@@ -184,7 +184,10 @@ class database:
                     view_opts['skip']=page*limit                    
                 return self.db.loadView(self.db_name, view_name, options=view_opts)['rows']
             else:
-                return []              
+                return []
+    
+    def raw_query(self,  view_name,  options={}):
+        return self.db.loadView(self.db_name,  view_name,  options)['rows']
                 
     def __get_op(self, oper):
         if oper == '>':

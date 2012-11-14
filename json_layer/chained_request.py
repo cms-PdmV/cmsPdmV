@@ -178,7 +178,7 @@ class chained_request(json_base):
         
         # add the previous requests output_dataset name as input for the new
         if input_dataset: 
-            req['input_dataset'] = input_dataset
+            req['input_filename'] = input_dataset
             
         # add a block black and white list
         if block_black_list:

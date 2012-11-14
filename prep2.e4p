@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project prep2 -->
-<!-- Saved: 2012-10-19, 15:34:33 -->
+<!-- Saved: 2012-11-13, 14:43:26 -->
 <!-- Copyright (C) 2012 Nikolaos Naziridis, nikolaos.naziridis@cern.ch -->
 <Project version="4.6">
   <Language></Language>
@@ -1388,6 +1388,23 @@
     <Source>web_apps/Search.py</Source>
     <Source>web_apps/__init__.py</Source>
     <Source>web_apps/Actions.py</Source>
+    <Source>json_layer/status.py</Source>
+    <Source>json_layer/submitter/deploy_toolchain.py</Source>
+    <Source>json_layer/submitter/prep.py</Source>
+    <Source>json_layer/submitter/PREPxml.py</Source>
+    <Source>json_layer/submitter/submit_package.py</Source>
+    <Source>json_layer/submitter/Request.py</Source>
+    <Source>json_layer/submitter/PREPtest.py</Source>
+    <Source>json_layer/submitter/class_tarball.py</Source>
+    <Source>json_layer/submitter/CommandBuilder.py</Source>
+    <Source>json_layer/submitter/__init__.py</Source>
+    <Source>json_layer/submitter/LocalCommandBuilder.py</Source>
+    <Source>json_layer/submitter/PREPtools.py</Source>
+    <Source>json_layer/submitter/package_tester.py</Source>
+    <Source>json_layer/submitter/xmld.py</Source>
+    <Source>json_layer/submitter/PREPsubmit.py</Source>
+    <Source>json_layer/submitter/Worker.py</Source>
+    <Source>json_layer/submitter/package_builder.py</Source>
   </Sources>
   <Forms>
   </Forms>
@@ -1401,7 +1418,7 @@
   </Others>
   <MainScript>main.py</MainScript>
   <Vcs>
-    <VcsType>None</VcsType>
+    <VcsType>Subversion</VcsType>
     <VcsOptions>
       <dict>
         <key>

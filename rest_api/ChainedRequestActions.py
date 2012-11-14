@@ -145,10 +145,48 @@ class FlowToNextStep(RESTResource):
     def __init__(self):
         self.db = database('chained_requests')
     
+    def PUT(self):
+        return self.flow2(cherrypy.request.body.read().strip())
+    
     def GET(self, *args):
         if not args:
             return dumps({"results":'Error: No arguments were given.'})
-        return self.flow(args[0])
+        
+            return self.flow(args[0])
+    
+    def flow2(self,  data):
+        try:
+            vdata = loads(data)
+        except ValueError as ex:
+            print 'Error: '+str(ex)
+            return dumps({"results":str(ex)})
+        
+        try:
+            creq = chained_request('test',  json_input=self.db.get(vdata['prepid']))
+        except Exception as ex:
+            print str(ex)
+            return dumps({"results":str(ex)})        
+    
+        # if the chained_request can flow, do it
+        inputds = None
+        inblack = None
+        inwhite = None
+        try:
+            if 'input_filename' in vdata:
+                inputds = vdata['input_filename']
+            if 'block_black_list' in vdata:
+                inblack = vdata['block_black_list']
+            if 'block_white_list' in vdata:
+                inwhite = vdata['block_white_list']
+            
+            if creq.flow(inputds,  inblack,  inwhite):
+                self.db.update(creq.json())
+                return dumps({"results":True})
+            return dumps({"results":False})
+        except chained_request.NotApprovedException as ex:
+            return dumps({"results":str(ex)})
+        except chained_request.ChainedRequestCannotFlowException as ex:
+            return dumps({"results":str(ex)})
         
     def flow(self,  chainid):
         try:

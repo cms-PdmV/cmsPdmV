@@ -20,7 +20,6 @@ class CreateFlow(RESTResource):
         self.f = None
 
     def PUT(self,  *args,  **kwargs):
-        print args,  kwargs
         return self.create_flow(cherrypy.request.body.read().strip())
         
     def create_flow(self, data):
@@ -44,11 +43,11 @@ class CreateFlow(RESTResource):
             return dumps({"results":False})
         
         # update all relevant campaigns
-        try:
-            self.update_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
-        except Exception as ex:
-            print 'Error: update_campaigns returned:'+ str(ex)
-            return dumps({"results":'Error: update_campaigns returned:'+ str(ex)})
+        #try:
+        self.update_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
+        #except Exception as ex:
+        #    print 'Error: update_campaigns returned:'+ str(ex)
+        #    return dumps({"results":'Error: update_campaigns returned:'+ str(ex)})
             
         # create all possible chained_campaigns from the next and allowed campaigns
         try:
@@ -113,6 +112,9 @@ class CreateFlow(RESTResource):
         if not self.cdb.document_exists(next):
             raise ValueError('Campaign '+str(next)+' does not exist.')
         
+        if not next:
+            return
+        
         n = self.cdb.get(next)
         if n['root'] == 0:
             raise ValueError('Campaign '+str(next)+' is not a root campaign.')
@@ -153,9 +155,19 @@ class CreateFlow(RESTResource):
             camp = self.cdb.get(c)
             #if c is NOT a root campaign
             if camp['root']==1 or camp['root']==-1:
-                # get all campaigns that have the allowed c as the last step
-                ccamps = self.ccdb.query('last_campaign=='+c)
-                ccs = map(lambda x: x['value'],  ccamps)
+                # get all flows, that have the allowed c as the next campaign
+                vflows = self.db.query('next_campaign=='+c)
+                vfs = map(lambda x: x['value'],  vflows)
+                ccs = []
+                
+                for vf in vfs:
+                    # get all campaigns that have the allowed c as the last step
+                    #ccamps = self.ccdb.query('last_campaign=="%5B%22'+c+'%22%2C%22'+vf['_id']+'%22%5D"')
+                    ccamps = self.ccdb.raw_query('last_campaign',  options={"key":[c,  vf['_id']]})
+                    #ccamps = self.ccdb.query('last_campaign==['+c+','+vf['_id']+']')
+                    ccslst = map(lambda x: x['value'],  ccamps)
+                    ccs.extend(ccslst)
+                
 
                 # for each chained campaign
                 for cc in ccs:
@@ -174,6 +186,7 @@ class CreateFlow(RESTResource):
                     # update the id
                     ccamp.set_attribute('_id',  ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
                     ccamp.set_attribute('prepid',  ccamp.get_attribute('_id'))
+                    ccamp.set_attribute('alias',  '')
                     
                     # restart chained campaign
                     ccamp.start()

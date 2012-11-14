@@ -173,8 +173,15 @@ class InjectRequest(RESTResource):
 
     def GET(self, *args):
         if not args:
-            return dumps({"results":{}})
+            return dumps({"results":'Error: No arguments were given'})
         return self.inject_request(args[0])
 
     def inject_request(self, id):
-        pass  
+        try:
+            from json_layer.submitter.package_builder import package_builder
+        except ImportError:
+            print 'Error: Could not import "package_builder" module.'
+            return dumps({"results":'Error: Could not import "package_builder" module.'})        
+        req = self.db.get(id)
+        pb = package_builder(req_json=req)
+        return dumps({"results": str(pb.build_package())})
