@@ -37,6 +37,7 @@ class CreateFlow(RESTResource):
             return dumps({"results":'Error: PrepId was not defined.'})
 
         self.f.set_attribute('_id', self.f.get_attribute('prepid'))
+        self.f.approve(0)
         
         # save the flow to db
         if not self.db.save(self.f.json()):
@@ -138,6 +139,7 @@ class CreateFlow(RESTResource):
             raise ValueError('Campaign '+str(next)+' does not exist.')
         
         n = self.cdb.get(next)
+                
         if n['root'] == 0:
             raise ValueError('Campaign '+str(next)+' is not a root campaign.')        
         
@@ -168,12 +170,11 @@ class CreateFlow(RESTResource):
                     ccslst = map(lambda x: x['value'],  ccamps)
                     ccs.extend(ccslst)
                 
-
                 # for each chained campaign
                 for cc in ccs:
                     if cc['_id'] == 'chain_'+camp['_id']:
                         continue
-
+                    
                     # init a ccamp object based on the old
                     ccamp = chained_campaign('',  json_input=cc)
                     # disable it
@@ -191,8 +192,13 @@ class CreateFlow(RESTResource):
                     # restart chained campaign
                     ccamp.start()
                     
+                    # remove CouchDB revision trash
+                    new_ccamp = ccamp.json()
+                    del new_ccamp['_rev']
+                    
                     # save new chained campaign to database
-                    self.ccdb.save(ccamp.json())
+                    #self.ccdb.save(ccamp.json())
+                    self.ccdb.save(new_ccamp)
 
             # else if c is root campaign:
             if camp['root']==0 or camp['root']==-1:

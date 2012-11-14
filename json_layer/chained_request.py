@@ -146,15 +146,15 @@ class chained_request(json_base):
         fl = fdb.get(flowname)
         
         # check all approvals (if flow say yes -> allowing policy)
-        if fl['approvals'][-1]['approval_step'] not in allowed_approvals:
+        if approvals in fl and len(fl['approvals']) > 0:
+            if fl['approvals'][-1]['approval_step'] not in allowed_approvals:
+                if req['approvals'][-1]['approval_step'] not in allowed_approvals:
+                    if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
+                        raise self.NotApprovedException(self.get_attribute('_id'),  'flow')
+        else:
             if req['approvals'][-1]['approval_step'] not in allowed_approvals:
                 if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
-                    raise self.NotApprovedException(self.get_attribute('_id'),  'flow')
-                else:
-                    if req['approvals'][-1]['approval_step'] == 'gen':
-                        pass
-                    else:
-                        raise self.NotApprovedException(req['_id'],  'gen')
+                    raise self.NotApprovedException(self.get_attribute('_id'),  'flow')            
         
         # get next campaign
         next_camp = cc['campaigns'][step][0] # just the camp name, not the flow

@@ -152,7 +152,7 @@ class FlowToNextStep(RESTResource):
         if not args:
             return dumps({"results":'Error: No arguments were given.'})
         
-            return self.flow(args[0])
+        return self.flow(args[0])
     
     def flow2(self,  data):
         try:

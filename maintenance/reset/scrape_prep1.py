@@ -442,20 +442,21 @@ if __name__=='__main__':
 
 
 #    camps = ['Summer12', 'Summer12_DR53X']
-    camps = ['Fall11_R1', 'Fall11_R2']
+    #camps = ['Fall11_R1', 'Fall11_R2']
+    camps = ['Summer11']
     for camp in camps:
         
         
         # create dedicated directory for campaigns
-        if not os.path.exists(datadir + 'campaigns/'):
-            os.makedirs(datadir + 'campaigns/')  
+        #if not os.path.exists(datadir + 'campaigns/'):
+        #    os.makedirs(datadir + 'campaigns/')  
         
         # get campaign
-        c = retrieve_campaign(camp)
-        if c:
-            f = open(datadir + 'campaigns/'+ c['_id'], 'w')
-            f.write(json.dumps(c))
-            f.close()                     
+        #c = retrieve_campaign(camp)
+        #if c:
+        #    f = open(datadir + 'campaigns/'+ c['_id'], 'w')
+        #    f.write(json.dumps(c))
+        #    f.close()                     
         
         # created dedicated directory for requests
         #if not os.path.exists(datadir + 'requests/'):
@@ -463,19 +464,19 @@ if __name__=='__main__':
         
         # requests
        #requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
-        #requests = ['HIG-Summer11-01179']
+        requests = ['HIG-Summer11-01203']
         
-        #if camp == 'Summer11':
-        #    for r in requests:
+        if camp == 'Summer11':
+            for r in requests:
         #        #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
-        #        res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
-        #        final = morph_requests(res)
-        #        print final
+                res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
+                final = morph_requests(res)
+                #print final
 
-        #        for r in final:
-        #            f = open(datadir + 'requests/' + r['_id'], 'w')
-        #           f.write(json.dumps(r))
-        #            f.close()      
+                for r in final:
+                    f = open(datadir + 'requests/' + r['_id'], 'w')
+                    f.write(json.dumps(r))
+                    f.close()      
 
     create_actions()
     create_chained_campaigns()            
