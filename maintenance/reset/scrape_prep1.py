@@ -15,14 +15,14 @@ def get_campaign_key(campaign_name):
     q = 'select name, PrKeyPF from Campaign;'
     cursor.execute(q)
     camp_codes = cursor.fetchall()
-    
+
     for ccode in camp_codes:
         if campaign_name == ccode['name']:
             return ccode['PrKeyPF']
-    return -1  
+    return -1
 
-# return the requests belonging to the given campaign 
-def get_requests(campaign_name, limit=-1, constraints = ''): 
+# return the requests belonging to the given campaign
+def get_requests(campaign_name, limit=-1, constraints = ''):
 
     results = []
 
@@ -30,17 +30,15 @@ def get_requests(campaign_name, limit=-1, constraints = ''):
     ckey = get_campaign_key(campaign_name)
     if ckey == -1:
         print 'Error: Campaign ' + str(campaign_name) + ' does not exist'
-        return []   
-    
-    # find all requests that are are connected to another request (MCDBid != -1) 
+        return []
     # limit 10 => returns only the first 10 requests
     q1 = 'select PrKeyPF from Request where campaignKey = '+str(ckey)
     if constraints:
         q1 += ' and ' + constraints
     if limit > 0:
         q1 += ' limit '+str(limit)
-    q1 += ';'  
-    
+    q1 += ';'
+
 
     # execute query
     cursor.execute(q1)
@@ -50,37 +48,37 @@ def get_requests(campaign_name, limit=-1, constraints = ''):
 
     # iterate through all requests
     for req in allrequests:
-    
-        # find primary key      
+
+        # find primary key
         prk = req["PrKeyPF"]
 
-        # build query that returns all information about a request in a single json (2 joins: Resources, Options)   
-        q2 = 'select * from RequestResourcesRel left join Request on RequestResourcesRel.onRequest = Request.PrKeyPF left join Resources on RequestResourcesRel.resources = Resources.PrKeyPF left join RequestOptions on RequestResourcesRel.onRequest = RequestOptions.forRequest where Request.PrKeyPF='+str(prk)+';' 
-    
+        # build query that returns all information about a request in a single json (2 joins: Resources, Options)
+        q2 = 'select * from RequestResourcesRel left join Request on RequestResourcesRel.onRequest = Request.PrKeyPF left join Resources on RequestResourcesRel.resources = Resources.PrKeyPF left join RequestOptions on RequestResourcesRel.onRequest = RequestOptions.forRequest where Request.PrKeyPF='+str(prk)+';'
+
         # execute query
-        cursor.execute(q2)  
-    
+        cursor.execute(q2)
+
         # append campaign name in the json
         rows = cursor.fetchone()
         rows['member_of_campaign'] = campaign_name
-        
+
         # collect results
         results.append(rows)
 
-    return results     
+    return results
 
-#convert comma separated strings in prep1 in lists for prep2    
+#convert comma separated strings in prep1 in lists for prep2
 def splitPrep1String(thestring):
     stringsplit = thestring.split(',')
     li=[]
     for step in stringsplit:
       item = step.split(' ', 1)[0]
       li.append(item)
-    return li  
+    return li
 
-# convert the json returned by the cursor to a request object in prep2 db 
+# convert the json returned by the cursor to a request object in prep2 db
 def morph_requests(request_list):
-    return map(lambda x: re_morph(x), request_list) 
+    return map(lambda x: re_morph(x), request_list)
 
 # aux: converts the date format to the prep2 date format
 def convert_date(date,  time=''):
@@ -89,7 +87,7 @@ def convert_date(date,  time=''):
     toks = date.rsplit('/')
     new_date = ''
     for tok in reversed(toks):
-        new_date += tok + '-' 
+        new_date += tok + '-'
     toks = new_date.rsplit('-')
     if not time:
         for i in xrange(6-len(toks)):
@@ -97,7 +95,7 @@ def convert_date(date,  time=''):
     else:
         toks = time.rsplit(':')
         for i in reversed(range(len(toks)-1)):
-            new_date += toks[i] + '-' 
+            new_date += toks[i] + '-'
     return new_date.rstrip('-')
 
 # aux: internal conversion of json of mysql to prep2 json
@@ -106,9 +104,9 @@ def re_morph(req_json):
     new['_id'] = req_json['code']
     new['prepid'] = req_json['code']
     new['priority'] = req_json['priority']
-    new['status'] = req_json['status']  
+    new['status'] = req_json['status']
     new['completion_date'] = ''
-    new['cmssw_release'] = req_json['swrelease']    
+    new['cmssw_release'] = req_json['swrelease']
     new['input_filename'] = req_json['inputFileName']
     new['pwg'] = req_json['pwg']
     new['validation'] = req_json['validation']
@@ -139,7 +137,7 @@ def re_morph(req_json):
 
     new['submission_details'] = { 'author_name': req_json['authorName'], 'author_cmsid' : req_json['authorCMSid'], 'author_inst_code': req_json['authorInstCode'], 'submission_date': convert_date(req_json['requestDate'].split(' ')[0], req_json['requestDate'].split(' ')[1]), 'author_project': ''}
 
-    new['comments'] = []  
+    new['comments'] = []
 
     customize1 = splitPrep1String(req_json['customizeName1'])
     customizeF1 = splitPrep1String(req_json['customizeFunction1'])
@@ -151,13 +149,13 @@ def re_morph(req_json):
     customizeF2 = splitPrep1String(req_json['customizeFunction2'])
     cust2 = []
     for index in range(len(customize2)):
-      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index]) 
-    
+      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index])
+
     # split sequences
     se1 = {}
     tok1 = req_json['sequence1'].split('--')
     for tok in tok1:
-        if ',' in tok: 
+        if ',' in tok:
             se1['step'] = splitPrep1String(tok.strip())
         else:
             atts = tok.split(' ')
@@ -165,19 +163,19 @@ def re_morph(req_json):
                 se1[atts[0].strip('--')] = atts[1]
             else:
                 se1[atts[0].strip('--')] = ""
-    
+
     se2 = {}
     tok2 = req_json['sequence1'].split(' ')
     for tok in tok2:
-        if ',' in tok: 
+        if ',' in tok:
             se2['step'] = splitPrep1String(tok)
         else:
             atts = tok.split(' ')
             if len(atts) > 1:
                 se2[atts[0].strip('--')] = atts[1]
             else:
-                se2[atts[0].strip('--')] = ""    
-    
+                se2[atts[0].strip('--')] = ""
+
 
     new['sequences'] = [{'index':0, "slhc": "", "pileupScenario": req_json['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(req_json['sequence1']), "datatier": ['GEN-SIM'], "scenario": "", "geometry": "", "customise": "", "datamix": "", "eventcontent": ['RAWSIM'], "conditions": req_json['conditions']}]
 
@@ -192,22 +190,22 @@ def re_morph(req_json):
             elif i == 2:
                 if att in se2:
                     new['sequences'][i][att] = se2[att]
-            
-    
+
+
     #[{'index':0, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName1'], 'customize_function':req_json['customizeFunction1'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence1']]}, {'index':1, 'step': req_json['step'], 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[req_json['conditions']], 'pileup_scenario':[req_json['pileupScenario']], 'datamixer_scenario':[req_json['dataMixerScenario']], 'scenario':'', 'customize_name':req_json['customizeName2'], 'customize_function':req_json['customizeFunction2'], 'slhc':'', 'event_content':[req_json['eventContent']], 'data_tier':[req_json['dataTier']], 'sequence':[req_json['sequence2']]} ]
 
-    new['generator_parameters'] = [{'version':0, 'submission_details':{'author_name':'automatic'}, 'cross_section':req_json['crossSection'], 'filter_efficiency': req_json['filterEff'], 'filter_efficiency_error': req_json['filterEffError'], 'match_efficiency': req_json['matchEff'], 'match_efficiency_error': -1}] 
+    new['generator_parameters'] = [{'version':0, 'submission_details':{'author_name':'automatic'}, 'cross_section':req_json['crossSection'], 'filter_efficiency': req_json['filterEff'], 'filter_efficiency_error': req_json['filterEffError'], 'match_efficiency': req_json['matchEff'], 'match_efficiency_error': -1}]
 
     new['reqmgr_name'] = []
 
     new['approvals'] = build_approvals(req_json['approvals']) # a list
-    new['update_details'] = []  
+    new['update_details'] = []
 
     return new
 
 def build_approvals(appstr):
-    
-    res = []    
+
+    res = []
 
     if ':' in appstr:
         toks = appstr.split(':')
@@ -221,27 +219,27 @@ def build_approvals(appstr):
                 appstep = 'inject'
             elif 'Done' in toks[i]:
                 appstep = 'approved'
-             
+
             app = {'index':i, 'approval_step': appstep, 'approver':{}}
             res.append(app)
     else:
         appstep = appstr
         if 'GEN' in appstr:
-            appstep = 'gen' 
+            appstep = 'gen'
         elif 'Defined' in appstr:
-            appstep = 'defined' 
+            appstep = 'defined'
         elif 'SUBMIT' in appstr:
             appstep = 'inject'
         elif 'Done' in appstr:
             appstep = 'approved'
 
-        res.append({'index':0, 'approval_step':appstep, 'approver':{}}) 
-    
+        res.append({'index':0, 'approval_step':appstep, 'approver':{}})
+
     return res
 
 # retrieve a campaign
 def get_campaign(campaign_name):
-    
+
     # results holder
     results = []
 
@@ -250,24 +248,24 @@ def get_campaign(campaign_name):
     if ckey == -1:
         print 'Error: Campaign ' + str(campaign_name) + ' does not exist'
         return []
-    
+
     # build query to get the campaign details
     q1 = 'select * from Campaign where PrKeyPF = '+str(ckey)+';'
-    
+
     # execute the query
     cursor.execute(q1)
 
     # get all rows returned
     camp = cursor.fetchone()
-    
+
     return camp
-    
+
 def morph_campaign(camp):
     new = {}
-    
+
     if not camp:
         return new
-    
+
     new['_id'] = camp['name']
     new['prepid'] = camp['name']
     new['start_date'] = convert_date(camp['startDate'])
@@ -294,7 +292,7 @@ def morph_campaign(camp):
         new['root'] = 1 # non root
     else:
         new['root'] = -1 # possible root
-    
+
     #sequences fix
     customize1 = splitPrep1String(camp['customizeName1'])
     customizeF1 = splitPrep1String(camp['customizeFunction1'])
@@ -306,13 +304,13 @@ def morph_campaign(camp):
     customizeF2 = splitPrep1String(camp['customizeFunction2'])
     cust2 = []
     for index in range(len(customize2)):
-      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index]) 
-    
+      cust2.append(customize2[index].split('.py')[0]+'.'+customizeF2[index])
+
     # split sequences
     se1 = {}
     tok1 = camp['sequence1'].split(' ')
     for tok in tok1:
-        if ',' in tok: 
+        if ',' in tok:
             se1['step'] = splitPrep1String(tok)
         else:
             atts = tok.split(' ')
@@ -320,25 +318,25 @@ def morph_campaign(camp):
                 se1[atts[0].strip('--')] = atts[1]
             else:
                 se1[atts[0].strip('--')] = ""
-    
+
     se2 = {}
     tok2 = camp['sequence2'].split(' ')
     for tok in tok2:
-        if ',' in tok: 
+        if ',' in tok:
             se2['step'] = splitPrep1String(tok)
         else:
             atts = tok.split(' ')
             if len(atts) > 1:
                 se2[atts[0].strip('--')] = atts[1]
             else:
-                se2[atts[0].strip('--')] = ""    
-    
+                se2[atts[0].strip('--')] = ""
+
 
     new['sequences'] = {1: {"default":{'index':0, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence1']), "datatier": splitPrep1String(camp['dataTier'].strip('|')), "scenario": "", "geometry": "", "customise": '', "datamix": "", "eventcontent": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}}}#,
 
     if camp['sequence2']:
         new['sequences'][2] = {"default":{'index':1, "slhc": "", "pileupScenario": camp['pileupScenario'], "beamspot": "Realistic8TeVCollision", "magField": "", "step": splitPrep1String(camp['sequence2']), "datatier": splitPrep1String(camp['dataTier'].strip('|')), "scenario": "", "geometry": "", "customise": '', "datamix": "", "eventcontent": splitPrep1String(camp['eventContent']), "conditions": camp['conditions']}}
-    
+
     for i in range(len(new['sequences'])):
         for att in new['sequences'][i+1]["default"]:
             if i == 0:
@@ -347,14 +345,14 @@ def morph_campaign(camp):
             elif i == 1:
                 if att in se2:
                     new['sequences'][i+1][att] = se2[att]
-            
-        
+
+
     #new['sequences'] = [{'index':0, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName1'], 'customize_function':camp['customizeFunction1'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence1']]}, {'index':1, 'step': -1, 'beamspot':'', 'geometry':'', 'magnetic_field':'', 'conditions':[camp['conditions']], 'pileup_scenario':[camp['pileupScenario']], 'datamixer_scenario':[camp['dataMixerScenario']], 'scenario':'', 'customize_name':camp['customizeName2'], 'customize_function':camp['customizeFunction2'], 'slhc':'', 'event_content':[camp['eventContent']], 'data_tier':[camp['dataTier']], 'sequence':[camp['sequence2']]} ]
-    
+
     new['submission_details'] = { 'author_name': camp['authorName'], 'author_cmsid' : camp['authorCMSid'], 'author_inst_code': camp['authorInstCode'], 'submission_date': convert_date(camp['campaignDate']), 'author_project': ''}
-    new['approvals'] = [{'index':0, 'approval_step':'start', 'approver':{}}] if 'Start' in camp['approvals'] else [{'index':0, 'approval_step':'start', 'approver':{}},{'index':1, 'approval_step':'stop', 'approver':{}}]    
+    new['approvals'] = [{'index':0, 'approval_step':'start', 'approver':{}}] if 'Start' in camp['approvals'] else [{'index':0, 'approval_step':'start', 'approver':{}},{'index':1, 'approval_step':'stop', 'approver':{}}]
     new['comments'] = []
-    
+
     return new
 
 # create actions from all the requests
@@ -367,10 +365,6 @@ def create_actions(directory='data/'):
 
     # get main dir root
     datadir = os.path.abspath(directory) + '/'
-
-    if not os.path.exists(datadir + 'actions/'):
-        os.makedirs(datadir + 'actions/') 
-
     flist = os.listdir(datadir+'requests/')
     for filename in flist:
          try:
@@ -379,7 +373,7 @@ def create_actions(directory='data/'):
              f.close()
          except Exception:
             print filename + ' could not be an action'
-             
+
 
     return True
 
@@ -389,12 +383,9 @@ def create_chained_campaigns(directory='data/'):
 	except ImportError:
 		print 'Error: Could not import module "os".'
 		return False
-	
+
 	datadir = os.path.abspath(directory) + '/'
 
-	if not os.path.exists(datadir + 'chained_campaigns/'):
-		os.makedirs(datadir + 'chained_campaigns/')
-	
 	flist = os.listdir(datadir+'campaigns/')
 	for filename in flist:
 	    try:
@@ -428,60 +419,85 @@ def create_chained_campaigns(directory='data/'):
 # auto magic wrapper to get a campaign
 def retrieve_campaign(campaign_name):
     return morph_campaign(get_campaign(campaign_name))
-        
+
 # auto magic wrapper for get_requests
 def retrieve_requests(campaign_name, limit=-1, constraints=''):
     return morph_requests(get_requests(campaign_name, limit, constraints))
-    
+
+def get_request(prepid=None):
+    if not prepid:
+        return False
+    if '-' not in prepid:
+        return False
+
+    camp = prepid.split('-')[1]
+    return retrieve_requests(camp, constraints='code like "%'+prepid+'%"')
 
 if __name__=='__main__':
 
-    import os
+    import os, sys, argparse
 
-    datadir = 'data/'
+    datadir = '/home/prep2/data/'
 
+    parser = argparse.ArgumentParser(description='Export data objects from PREP1 to PREP2 json format.')
 
-#    camps = ['Summer12', 'Summer12_DR53X']
-    #camps = ['Fall11_R1', 'Fall11_R2']
-    camps = ['Summer11']
-    for camp in camps:
-        
-        
-        # create dedicated directory for campaigns
-        #if not os.path.exists(datadir + 'campaigns/'):
-        #    os.makedirs(datadir + 'campaigns/')  
-        
-        # get campaign
-        #c = retrieve_campaign(camp)
-        #if c:
-        #    f = open(datadir + 'campaigns/'+ c['_id'], 'w')
-        #    f.write(json.dumps(c))
-        #    f.close()                     
-        
-        # created dedicated directory for requests
-        #if not os.path.exists(datadir + 'requests/'):
-        #    os.makedirs(datadir + 'requests/')
-        
-        # requests
-       #requests = ['EWK-Summer12-00010', 'EWK-Summer12-00011', 'EWK-Summer12-00012', 'EWK-Summer12-00013', 'EWK-Summer12-00014', 'EWK-Summer12-00015', 'EWK-Summer12-00016', 'EWK-Summer12-00017', 'EWK-Summer12-00018', 'EWK-Summer12-00019', 'EWK-Summer12-00020']        
-        requests = ['HIG-Summer11-01203']
-        
-        if camp == 'Summer11':
-            for r in requests:
-        #        #res = get_requests(camp, limit=1, constraints='MCDBid != -1')
-                res = get_requests(camp, limit=1, constraints='code like "%'+r+'%"')
-                final = morph_requests(res)
-                #print final
+    parser.add_argument('-a', '--create-action',
+                help='Creates the corresponding action for the new request',
+                action='store_true', default=False)
+    parser.add_argument('-c', '--create-campaign',
+                help='Creates the json for the campaign the request belongs to',
+                action='store_true', default=False)
+    parser.add_argument('-p', '--prepid',
+                help='The list of PREP IDs to export', required=True,
+                metavar="PREPID", nargs="+")
+    parser.add_argument('-d', '--directory',
+                help='The directory to create the new objects',
+                metavar='DIRECTORY', default=None)
 
-                for r in final:
-                    f = open(datadir + 'requests/' + r['_id'], 'w')
-                    f.write(json.dumps(r))
-                    f.close()      
+    args = parser.parse_args()
 
-    create_actions()
-    create_chained_campaigns()            
-            
-            
-            
-            
-              
+    if args.directory:
+        datadir = os.path.abspath(args.directory)+'/data/'
+
+    # build directory structure
+    if not os.path.exists(datadir):
+        os.makedirs(datadir + 'requests')
+
+    if args.create_action:
+        os.makedirs(datadir + 'actions')
+    if args.create_campaign:
+        os.makedirs(datadir + 'campaigns')
+        os.makedirs(datadir + 'chained_campaigns')
+
+    prepid_list = args.prepid
+
+    for pid in prepid_list:
+        req = get_request(pid)
+
+        if not req:
+            print 'Error: Could not retrieve results.'
+            sys.exit(1)
+
+        try:
+            f = open(datadir + 'requests/' + pid, 'w')
+            f.write(json.dumps(req[0]))
+            f.close()
+        except IOError as ex:
+            print 'Error: Could not save results to disk. Reason: '+str(ex)
+            sys.exit(1)
+
+        if args.create_action:
+            create_actions(datadir)
+
+        if args.create_campaign:
+            c = retrieve_campaign(pid.split('-')[1])
+            try:
+                f = open(datadir + 'campaigns/' + pid.split('-')[1], 'w')
+                f.write(json.dumps(c))
+                f.close()
+            except IOError as ex:
+                print 'Error: Could not save Campaign object to disk. Reason: '+str(ex)
+                sys.exit(1)
+
+            if c['root'] == -1 or c['root'] == 0:
+                    create_chained_campaigns(datadir)

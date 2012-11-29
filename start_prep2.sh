@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 
+username=nnazirid
+
 # check for root( root is needed to avoid SELINUX restrictions for sockets)
 if ! id | grep -q "uid=0(root)" ; then
 	echo "ERROR:  must be root in order to run this script"
 	exit 1
 fi
 
+# get kerberos credentials
+klist 
+if [ $? -eq 1 ]; then
+    kinit $username
+    aklog
+fi
 
 # check CouchDB status
 couch_status=`/etc/init.d/couchdb status | grep running`

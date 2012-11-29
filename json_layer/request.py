@@ -163,6 +163,9 @@ class request(json_base):
       for key in seq._json_base__schema:
         #print key
         command += self.to_command_line(seq,key)
+        if key == 'conditions':
+            if ':All' not in command:
+                command += '::All'
         command += ' '
       return command 
 

@@ -24,13 +24,31 @@ class ImportRequest(RESTResource):
             self.json = request('automatic', json_input=loads(data)).json()
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
-
-        id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
-        self.json['prepid'] = loads(id)['prepid']
         
-        if not self.json['prepid']:
-            raise ValueError('Prepid returned was None')
-        self.json['_id'] = self.json['prepid']
+        if '_id' in self.json and self.json['_id'] :
+            self.json['prepid'] = self.json['_id'] 
+        elif 'prepid' in self.json and self.json['prepid']:
+            self.json['_id'] = self.json['prepid']
+        else:
+            self.json['_id'] = self.json['prepid'] = ''
+        
+        if self.db.document_exists(self.json['_id']):
+            print 'Prep ID '+self.json['_id']+ ' already exists. Generating another...'
+            
+            id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
+            self.json['prepid'] = loads(id)['prepid']
+        
+            if not self.json['prepid']:
+                raise ValueError('Prepid returned was None')
+            self.json['_id'] = self.json['prepid']
+            
+        
+        # global tag ::All fix
+        i = 0
+        for seq in self.json['sequences']:
+            if '::All' not in seq['conditions']:
+                self.json['sequences'][i]['conditions'] += '::All'
+            i += 1
         
         # save to database
         if not self.db.save(self.json):

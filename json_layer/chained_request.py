@@ -84,7 +84,7 @@ class chained_request(json_base):
     # proceed to the next request in the chain
     def flow_to_next_step(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
         # increase step counter
-        step = self.get_attribute('step') + 1
+        step = int(self.get_attribute('step') )+ 1
             
         # check sanity
         if not self.get_attribute('chain'):
@@ -146,7 +146,7 @@ class chained_request(json_base):
         fl = fdb.get(flowname)
         
         # check all approvals (if flow say yes -> allowing policy)
-        if approvals in fl and len(fl['approvals']) > 0:
+        if 'approvals' in fl and len(fl['approvals']) > 0:
             if fl['approvals'][-1]['approval_step'] not in allowed_approvals:
                 if req['approvals'][-1]['approval_step'] not in allowed_approvals:
                     if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
@@ -194,11 +194,21 @@ class chained_request(json_base):
         # register it to the chain
         new_req = self.add_request(req)
         
+        # get the sequences
+        new_req['sequences'] = []
+        for seq in sorted(nc['sequences']):
+            new_req['sequences'].append(nc['sequences'][seq]['default'])
+        
+        if 'sequences' in fl['request_actions']:
+            for seq in fl['request_actions']['sequences']:
+                for key in fl['request_actions']['sequences'][seq]:
+                    new_req['sequences'][seq][key] = fl['request_actions']['sequences'][seq][key]
+        
         # save new request to database
         rdb.save(new_req)
         
         # finalize changes
-        self.set_attribute('step',  step)
+        self.set_attribute('step',  str(step))
         
         return True
 
