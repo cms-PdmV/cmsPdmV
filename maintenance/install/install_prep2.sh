@@ -4,6 +4,9 @@
 # root permissions to create the file tree, install all relevant dependencies and initialize the PREP2.0 service 
 # with a formatted CouchDB instance.
 
+# globals
+machine=preptest
+
 # check for root permissions
 if ! id | grep -q "uid=0(root)" ; then
 	echo "ERROR:  must be root in order to run this script"
@@ -132,6 +135,41 @@ iprule=`sudo iptables -L --numeric | grep ACCEPT | grep 'tcp dpt:443'`
 if [ -z "$iprule" ]; then
         sudo iptables -I INPUT `sudo iptables --numeric --line-numbers -L INPUT | cut -b 1 | tr -d [:alpha:][:cntrl:][:blank:] | wc -m` -p tcp --dport 443 -j ACCEPT || sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 fi
+
+# restart iptables
+/sbin/service iptables restart
+
+# Update SELINUX policy 
+sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/sysconfig/selinux
+
+# update selinux session 
+/usr/sbin/setenforce Permissive 
+
+# install openssl and mod_ssl for apache
+sudo yum install openssl
+sudo yum install mod_ssl
+
+# install mod_wsgi
+sudo yum install mod_wsgi
+
+# install shibboleth
+sudo yum install shibboleth log4shib xmltooling-schemas opensaml-schemas
+
+# enable automatic shib start up
+/sbin/chkconfig --levels 345 shibd on
+
+# shibboleth shit
+cd /etc/shibboleth/
+wget http://linux.web.cern.ch/linux/scientific6/docs/shibboleth/shibboleth2.xml
+wget http://linux.web.cern.ch/linux/scientific6/docs/shibboleth/ADFS-metadata.xml
+wget http://linux.web.cern.ch/linux/scientific6/docs/shibboleth/attribute-map.xml
+wget http://linux.web.cern.ch/linux/scientific6/docs/shibboleth/wsignout.gif
+
+# update defaults in shib's XMLs
+sed -i "s/somehost.cern.ch/$machine.cern.ch/g" shibboleth2.xml
+
+# copy apache configuration
+cp /home/prep2/maintenance/apache/httpd.conf /etc/httpd/conf/
 
 # remove versioning from WMCore
 cd /home/prep2/WMCore
