@@ -196,7 +196,7 @@ class InjectRequest(RESTResource):
 
     def inject_request(self, id):
         try:
-            from json_layer.submitter.package_builder import package_builder
+            from submitter.package_builder import package_builder
         except ImportError:
             print 'Error: Could not import "package_builder" module.'
             return dumps({"results":'Error: Could not import "package_builder" module.'})        
