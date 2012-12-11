@@ -1,9 +1,8 @@
-import cherrypy
 from web_apps.Page import Page
 from web_apps.Search import Search
 from web_apps.Results import Results
 from web_apps.Edit import Edit
-from web_apps.Create import Create  
+from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest,  InjectRequest
@@ -12,7 +11,7 @@ from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChained
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests
-from rest_api.RequestPrepId import RequestPrepId 
+from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 
 # Initialize Web UI Page Objects
@@ -85,7 +84,7 @@ root.restapi.requests.save = ImportRequest()
 root.restapi.requests.update = UpdateRequest()
 root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.get = GetRequest()
-root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest() 
+root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
 root.restapi.requests.request_prepid = RequestPrepId()
 root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.inject = InjectRequest()
@@ -129,6 +128,3 @@ root.restapi.flows.save = CreateFlow()
 root.restapi.flows.update = UpdateFlow()
 root.restapi.flows.delete = DeleteFlow()
 root.restapi.flows.approve = ApproveFlow()
-
-# Use global configs
-cherrypy.quickstart(root, config='configuration/cherrypy.conf')

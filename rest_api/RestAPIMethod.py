@@ -18,6 +18,12 @@ class RESTResource(object):
 
 class RESTResourceIndex(RESTResource):
 	def __init__(self, data={}):
+
+		# this is the restriction for 
+		# the role of the user that can
+		# access this method.
+		self.access_role = 0
+
 		self.res = ""
 		self.data = data
 		if not self.data:

@@ -128,6 +128,11 @@ if [ -z "$iprule" ]; then
 	sudo iptables -I INPUT `sudo iptables --numeric --line-numbers -L INPUT | cut -b 1 | tr -d [:alpha:][:cntrl:][:blank:] | wc -m` -p tcp --dport 80 -j ACCEPT || sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 fi
 
+iprule=`sudo iptables -L --numeric | grep ACCEPT | grep 'tcp dpt:443'`
+if [ -z "$iprule" ]; then
+        sudo iptables -I INPUT `sudo iptables --numeric --line-numbers -L INPUT | cut -b 1 | tr -d [:alpha:][:cntrl:][:blank:] | wc -m` -p tcp --dport 443 -j ACCEPT || sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+fi
+
 # remove versioning from WMCore
 cd /home/prep2/WMCore
 rm -rf `find . | grep .svn`

@@ -2,6 +2,7 @@
 
 from Page import Page
 import json
+import cherrypy
 from couchdb_layer.prep_database import database
 from json_layer.request import request
 from json_layer.sequence import sequence
@@ -11,8 +12,13 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.flow import flow
 
 
+
 class Edit(Page):
     def edit(self, db_name, id):
+	self.authenticator.set_limit(3)
+	if not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
+		raise cherrypy.HTTPError(403, 'You cannot access this page')
+
         try:
             self.db_name = db_name
             self.db = database(db_name)

@@ -30,7 +30,9 @@ if [ -z "$couch_status" ]; then
 	fi	
 fi
 
-# CherryPy path
-cherry_path=/home/prep2
-cd $cherry_path
-python $cherry_path/main.py
+# spawn Apache server
+apache_status=`sudo /etc/init.d/httpd restart | grep OK`
+if [ -z "$couch_status" ]; then
+	echo 'ERROR: Could not raise Apache instance. Exiting...'
+        exit
+fi

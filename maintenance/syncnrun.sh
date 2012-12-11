@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-if [ -z "$1" ]; then
-	rsync /home/nnazirid/workspace/prep2/ preptest:/home/prep2/ -rP
-fi
+local_workspace=/home/nnazirid/workspace/prep2/
+remote_workspace=/home/prep2/
+remote_machine=testy
+remote_username=nnazirid
 
-if [ "update" = "$1" ]; then
-	rsync /home/nnazirid/workspace/prep2/ preptest:/home/prep2/ -rPu
-fi
+# rsync the remote workspace
+rsync $local_workspace $remote_machine:$remote_workspace -rP
+
+# restart apache instance
+ssh -t $remote_username@$remote_machine sudo sh $remote_workspace/start_prep2.sh
