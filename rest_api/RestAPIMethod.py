@@ -1,11 +1,33 @@
 #!/usr/bin/env python
 
+from json_layer.authenticator import authenticator as auth_obj
+import cherrypy
+
 class RESTResource(object):
+	authenticator = auth_obj(limit=3)
 	def __init__(self, content=''):
 		self.content = content
 	
-	exposed = True
+	@cherrypy.expose
+	def default(self, *vpath, **params):
+		method = getattr(self, cherrypy.request.method, None)
+		if not method:
+			raise cherrypy.HTTPError(405, "Method not implemented.")
+		
+		if cherrypy.request.method == 'GET':
+			self.authenticator.set_limit(0)
+		elif cherrypy.request.method == 'PUT':
+			self.authenticator.set_limit(1)
+		elif cherrypy.request.method == 'POST':
+			self.authenticator.set_limit(1)
+		elif cherrypy.request.method == 'DELETE':
+			self.authenticator.set_limit(3)
 
+                if not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
+                        raise cherrypy.HTTPError(403, 'You cannot access this page')
+		
+		return method(*vpath, **params);
+	
 	def GET(self):
 		pass
 	def PUT(self):

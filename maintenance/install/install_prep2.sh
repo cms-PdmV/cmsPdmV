@@ -137,6 +137,7 @@ if [ -z "$iprule" ]; then
 fi
 
 # restart iptables
+/sbin/service iptables save
 /sbin/service iptables restart
 
 # Update SELINUX policy 
