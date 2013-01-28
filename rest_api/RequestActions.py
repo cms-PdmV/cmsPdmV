@@ -186,6 +186,8 @@ class ApproveRequest(RESTResource):
 
 class InjectRequest(RESTResource):
     def __init__(self):
+        # set user access to administrator
+        self.authenticator.set_limit(4)
         self.db_name = 'requests'
         self.db = database(self.db_name)
 
