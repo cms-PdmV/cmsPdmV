@@ -2,8 +2,8 @@
 
 class json_base:
     __json = {}
-    __approvalsteps = ['new',  'flow',  'inject',  'approve']
-    __status = ['new',  'defined',  'injected',  'done']
+    __approvalsteps = ['validation',  'define',  'approve', 'submit']
+    __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
                 self.__attribute = repr(attribute)
@@ -14,6 +14,15 @@ class json_base:
         if json:
             self.__json = json
         self.__schema = {}  
+   
+    def update_history(self, history):
+        hist = self.get_attribute('history')
+        if not history:
+            return
+        hist.append(history)
+
+        self.set_attribute('history', hist)
+        self.set_attribute('version', int(self.get_attribute('version')) + 1)
     
     def set_attribute(self,  attribute='',  value=None):
         if not attribute or attribute not in self.__schema:
@@ -35,11 +44,11 @@ class json_base:
     
     def print_self(self):
         try:
-            import simplejson
+            import json
         except ImportError as ex:
             print 'Error: Could not import json module'
             print self.__json
-        print simplejson.dumps(self.__json, indent=4)   
+        print json.dumps(self.__json, indent=4)   
     
     def keys(self): 
         return self.__schema.keys()     

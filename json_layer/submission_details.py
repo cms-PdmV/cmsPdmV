@@ -51,7 +51,7 @@ class submission_details(json_base):
             datetime += str(localtime[i]).zfill(2) + '-'
         return datetime.rstrip('-') 
 
-    def build(self, author_name, author_cmsid=-1, author_inst_code='', author_project=''):
+    def build(self, author_name='automatic', author_cmsid=-1, author_inst_code='', author_project=''):
         self.set_attribute('author_name', author_name)
         self.set_attribute('author_cmsid', author_cmsid)
         self.set_attribute('author_inst_code', author_inst_code)

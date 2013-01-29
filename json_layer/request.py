@@ -21,6 +21,7 @@ class request(json_base):
         self._json_base__schema = {
             '_id':'', 
             'prepid':'',
+            'history':[],  
             'priority':'',
             'status':'',
             'completion_date':'', 
@@ -66,10 +67,8 @@ class request(json_base):
         self.__validate()
         
         # detect approval steps
-        if self.get_attribute('mcdb_id') == -1:
-            self._json_base__approvalsteps = ['new',  'contact',  'gen',  'flow', 'inject', 'approve']
-        else:
-            self._json_base__approvalsteps = ['new', 'flow', 'inject', 'approve']
+        if self.get_attribute('mcdb_id') != -1:
+            self._json_base__approvalsteps = ['approve', 'submit']
             
         
         # AFS submit directory
@@ -194,20 +193,20 @@ class request(json_base):
             return False
     
     def add_status(self,  index=-1):
-        st = status('')
-        st.set_status_steps(self._json_base__status)
-        
         # if no index is specified, just go one step further
         if index==-1:
-            index = len(st.get_status_steps())
-        
-        try:
-            new_status = st.build(index)
-            self.set_attribute('status',  new_status)
-            return True
-        except st.IllegalStatusStep as ex:
-            print str(ex)
+            status = self.get_attribute('status')
+            if not status:
+                index = 0 
+            else:
+                index = self._json_base__status.index(status)+1
+
+        if index >= len(self._json_base__status):
+            print 'Error: Illegal Status index: '+str(index)
             return False
+
+        self.set_attribute('status',  self._json_base__status[index])
+        return True
         
     
     def update_generator_parameters(self, generator_parameters={}):
