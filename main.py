@@ -14,6 +14,8 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 
+import cherrypy #to expose cherrypy methods serving the HTML files
+
 # Initialize Web UI Page Objects
 
 # home (root)
@@ -47,8 +49,38 @@ create = Create(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 
 actions = Actions(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
 actions.render_template('actions.tmpl')
 
+###UPDATED METHODS##
+@cherrypy.expose
+def campaigns2( *args, **kwargs):
+    return open('HTML/campaigns.html')
+
+@cherrypy.expose
+def requests2( *args, **kwargs):
+    return open('HTML/requests.html')
+
+@cherrypy.expose
+def edit2( *args, **kwargs):
+    return open('HTML/edit.html')
+    
+@cherrypy.expose
+def flows2( *args, **kwargs):
+    return open('HTML/flows.html')
+@cherrypy.expose
+def chained_campaigns2( *args, **kwargs):
+    return open('HTML/chained_campaigns.html')
+@cherrypy.expose
+def chained_requests2( *args, **kwargs):
+    return open('HTML/chained_requests.html')
+@cherrypy.expose
+def actions2( *args, **kwargs):
+    return open('HTML/actions.html')
+@cherrypy.expose
+def index( *args, **kwargs):
+    return open('HTML/index.html')
+### END OF UPDATED METHODS###
 # root
-root = home
+#root = home #original
+root = index
 
 # web apps (relevant to interface)
 root.search = Search()

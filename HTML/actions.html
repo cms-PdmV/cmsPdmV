@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="eng" ng-app="testApp">
+  <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/actions_controller.js"></script>
+  </head> 
+  <body ng-controller="resultsCtrl">
+    <div class="navbar navbar-static-top">       <!--  place for NAV-BAR-->
+      <div class="navbar-inner">
+        <ul class="nav">
+          <li>
+           <a href='campaigns2#?db_name=campaigns&query=""&page=0'>Campaigns</a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li>
+            <a href='requests2#?db_name=requests&query=""&page=0'>Requests</a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li>
+            <a href='flows2#?db_name=flows&query=""&page=0'>Flows</a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li class="active">
+            <a href='actions2#?db_name=actions&query=""&page=0'>Actions</a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li>
+            <a href='chained_campaigns2#?db_name=chained_campaigns&query=""&page=0'>Chained campaigs</a>
+          </li>
+          <li class="divider-vertical"></li>
+          <li>
+            <a href='chained_requests2#?db_name=chained_requests&query=""&page=0'>Chained requests</a>
+          </li>                
+        </ul>
+      </div>
+    </div> <!--END of navbar-->
+    <div class="container">
+      <div class="span12" style="overflow: auto">
+        <div align="middle" style="margin-top: 20px;"><!--div for selecting a campaing -->
+            <select>
+              <option ng-repeat="campaign in campaigns" value="campaign">{{campaign}}</option>
+            </select>
+        </div><!--End of campaing SELECT -->
+        
+        <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
+          <span ng-repeat="value in actions_defaults" ng-show="show_well">
+            <label class="checkbox inline">
+               <input type="checkbox" ng-model="value.select"> {{value.text}}
+            </label>
+          </span>
+          <span style="float: left;">
+            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
+            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+          </span>
+        </div><!--end of well for table columns-->
+      </div> <!--end of SPAN12-->
+    </div> <!--end of container-->
+    <table class="table table-bordered table-stripped">
+      <thead>
+        <tr>
+          <th ng-repeat="column in actions_defaults" ng-show="column.select">
+            {{column.text}}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="data in result">
+          <td ng-repeat="value in actions_defaults" ng-show="value.select">
+            <div ng-switch on="value.text">
+              <div ng-switch-when="Actions">
+                {{data[value.db_name]}}
+              </div>
+              <div ng-switch-when="Submission details">
+                {{data[value.db_name]}}
+              </div>
+              <div ng-switch-when="Member of campaign">
+                {{data[value.db_name]}}
+              </div>
+              <div ng-switch-when="Chains">
+                {{data[value.db_name]}}
+              </div>
+              <div ng-switch-default>
+                <div ng-switch on="data['chains'][value.db_name] == undefined">
+                  <div ng-sitch-when='true'></div>
+<!--                <custom-prep-id ng-switch-when='false' ng-model="data['chains'][value.db_name]"></custom-prep-id> -->
+                  <div ng-switch="false">{{data['chains'][value.db_name]}}</div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="pagination pagination-right">
+      <ul>
+        <li ng-class="{ disabled: list_page <= -1 }">
+          <a ng-click="previous_page(list_page)">Prev</a>
+        </li>
+        <li ng-class="{ disabled: result.length == 0 }">
+          <a ng-click="next_page(list_page)">Next</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
