@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-username=nnazirid
+username=anorkus
 
 # check for root( root is needed to avoid SELINUX restrictions for sockets)
 if ! id | grep -q "uid=0(root)" ; then

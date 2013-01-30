@@ -15,6 +15,7 @@ from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 
 import cherrypy #to expose cherrypy methods serving the HTML files
+import os
 
 # Initialize Web UI Page Objects
 
@@ -49,50 +50,59 @@ create = Create(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 
 actions = Actions(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
 actions.render_template('actions.tmpl')
 
+file_location = os.path.dirname(__file__)
+
 ###UPDATED METHODS##
 @cherrypy.expose
 def campaigns2( *args, **kwargs):
-    return open('HTML/campaigns.html')
+    return open(os.path.join(file_location,'HTML','campaigns.html'))
 
 @cherrypy.expose
 def requests2( *args, **kwargs):
-    return open('HTML/requests.html')
+    return open(os.path.join(file_location,'HTML','requests.html'))
 
 @cherrypy.expose
 def edit2( *args, **kwargs):
-    return open('HTML/edit.html')
+    return open(os.path.join(file_location,'HTML','edit.html'))
     
 @cherrypy.expose
 def flows2( *args, **kwargs):
-    return open('HTML/flows.html')
+    return open(os.path.join(file_location,'HTML','flows.html'))
 @cherrypy.expose
 def chained_campaigns2( *args, **kwargs):
-    return open('HTML/chained_campaigns.html')
+    return open(os.path.join(file_location,'HTML','chained_campaigns.html'))
 @cherrypy.expose
 def chained_requests2( *args, **kwargs):
-    return open('HTML/chained_requests.html')
+    return open(os.path.join(file_location,'HTML','chained_requests.html'))
 @cherrypy.expose
 def actions2( *args, **kwargs):
-    return open('HTML/actions.html')
+    return open(os.path.join(file_location,'HTML','actions.html'))
 @cherrypy.expose
 def index( *args, **kwargs):
-    return open('HTML/index.html')
+    return open(os.path.join(file_location,'HTML','index.html'))
 ### END OF UPDATED METHODS###
 # root
-#root = home #original
+#root = home
 root = index
 
 # web apps (relevant to interface)
 root.search = Search()
 root.campaigns = campaigns
+root.campaigns2 = campaigns2
 root.chained_campaigns = chained_campaigns
+root.chained_campaigns2 = chained_campaigns2
 root.chained_requests = chained_requests
+root.chained_requests2 = chained_requests2
 root.requests = requests
+root.requests2 = requests2
 root.flows = flows
+root.flows2 = flows2
 root.results = results
 root.edit = edit
+root.edit2 = edit2
 root.create = create
 root.actions = actions
+root.actions2 = actions2
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
