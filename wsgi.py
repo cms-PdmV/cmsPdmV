@@ -4,10 +4,11 @@ import atexit
 import os
 import socket
 
-sys.stdout = sys.stderr
+#sys.stdout = sys.stderr
+sys.stderr = sys.stdout
 
 # mod_wsgi fix
-sys.path.append('/home/prep2')
+sys.path.append('/home/prep2/')
 sys.path.append('/home/')
 
 import main

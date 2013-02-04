@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 import cherrypy
+import sys
 from json import loads,dumps
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.request import request
+from json_layer.submission_details import submission_details
 from json_layer.action import action
 
 class ImportRequest(RESTResource):
@@ -173,15 +175,83 @@ class ApproveRequest(RESTResource):
     def GET(self,  *args):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
+        if len(args) == 1:
+		return self.approve(args[0])
         return self.approve(args[0],  int(args[1]))
         
-    def approve(self,  rid,  val):
+    def approve(self,  rid,  val=-1):
         if not self.db.document_exists(rid):
             return dumps({"results":'Error: The given request id does not exist.'})
         req = request('',  json_input=self.db.get(rid))
         if not req.approve(val):
             return dumps({"results":False})
-        
+
+        hist = {}
+        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
+        hist['action'] = sys._getframe().f_code.co_name
+        hist['step'] = req.get_attribute('approvals')[-1]['approval_step']
+
+        req.update_history(hist)
+
+        return dumps({"results":self.db.update(req.json())})
+
+class ResetRequestApproval(RESTResource):
+    def __init__(self):
+        self.db = database('requests')
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        if len(args) < 2:
+            return self.reset(args[0])
+        return self.reset(args[0], int(args[1]))
+
+    def reset(self, rid, step=0):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given request id does not exist.'})
+
+        req = request('', json_input=self.db.get(rid))
+        if step >= len(req.get_attribute('approvals')) - 1:
+            return dumps({"results":'Error: Cannot reset higher approval step'})
+
+        if not req.approve(step):
+            return dumps({"results":False})
+
+        hist = {}
+        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
+        hist['action'] = sys._getframe().f_code.co_name
+        hist['step'] = req.get_attribute('approvals')[-1]['approval_step']
+
+        req.update_history(hist)
+
+        return dumps({"results":self.db.update(req.json())})
+
+class SetStatus(RESTResource):
+    def __init__(self):
+        self.db = database('requests')
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        if len(args) < 2:
+            return self.status(args[0])
+        return self.status(args[0], int(args[1]))
+
+    def status(self, rid, step=-1):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given request id does not exist.'})
+
+        req = request('', json_input=self.db.get(rid))
+
+        if not req.add_status(step):
+            return dumps({"results":False})
+
+        hist = {}
+        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
+        hist['action'] = sys._getframe().f_code.co_name
+        hist['step'] = req.get_attribute('status')
+
+        req.update_history(hist)
+
         return dumps({"results":self.db.update(req.json())})
 
 class InjectRequest(RESTResource):

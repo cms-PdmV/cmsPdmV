@@ -23,7 +23,11 @@ class RESTResource(object):
 		elif cherrypy.request.method == 'DELETE':
 			self.authenticator.set_limit(3)
 
-                if not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
+		if 'ADFS-LOGIN' not in cherrypy.request.headers.keys():
+			if cherrypy.request.method != 'GET':
+				raise cherrypy.HTTPError(403, 'User credentials were not provided.')
+
+                elif not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
                         raise cherrypy.HTTPError(403, 'You cannot access this page')
 		
 		return method(*vpath, **params);
