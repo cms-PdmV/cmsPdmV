@@ -440,9 +440,12 @@ class package_builder:
         if int(nrelease)>=510:
             scram_arch='slc5_amd64_gcc462'
 
+        # use the central installation of wmconrol
+	command = 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n' 
+
         # if MonteCarlo analysis
         if self.wmagent_type == 'MonteCarlo':
-            command =  'python wmcontrol2_newauth.py --release %s' %(self.request.get_attribute('cmssw_release'))
+            command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
             command += ' --arch %s' %(scram_arch)
             command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
             command += ' --version %s' %("0") # dummy
@@ -473,7 +476,7 @@ class package_builder:
             command += '\n'
 
         elif self.wmagent_type == 'MonteCarloFromGEN':
-            command =  'python wmcontrol2_newauth.py --release %s' %(self.request.get_attribute('cmssw_release'))
+            command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
             command += ' --arch %s' %(scram_arch)
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
             command += ' --version %s' %("0") # dummy
@@ -504,9 +507,30 @@ class package_builder:
                 command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
             command += '\n'
 
+        elif self.wmagent_type == 'LHEStepZero':
+            command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
+            command += ' --arch %s' %(scram_arch)
+            command += ' --version %s' %("0") # dummy
+            command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
+            if self.request.get_attribute("priority") >= 1:
+                command += ' --priority %s' %(self.request.get_attribute("priority"))
+            command += ' --time-event %s' %(self.request.get_attribute('time_event'))
+            command += ' --size-event %s' %(self.request.get_attribute('size_event'))
+            command += ' --number-events %s' %(self.request.get_attribute('total_events'))
+            command += ' --request-type %s' %(self.wmagent_type)
+            command += ' --step1-cfg %s' %('config_0_1_cfg.py')
+            command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
+            command += ' --request-id %s' %(self.request.get_attribute('prepid'))
+            command += ' --cfg_db_file configs.txt'
+            command += ' --user myuser'
+            command += ' --group mygroup'
+            if int(self.mcdbid) == 0:
+              command += ' --events-per-job '+str(self.numberOfEventsPerJob)
+
+
         # Else: ReDigi step
         elif self.wmagent_type == 'ReDigi':
-            command =  'python wmcontrol2_newauth.py --release %s' %(self.request.get_attribute('cmssw_release'))
+            command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
             command += ' --arch %s' %(scram_arch)
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
             command += ' --step1-cfg %s' %('config_0_1_cfg.py')
@@ -704,22 +728,24 @@ class package_builder:
             return False
         
         # test configuration
-        tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
-        if tester.test():
-            self.__tarobj.add(self.directory)
-            print 'JOB completed successfully'
-            flag = True
+        #tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
+        #if tester.test():
+        #    self.__tarobj.add(self.directory)
+        #    print 'JOB completed successfully'
+        #    flag = True
         
         
-        else:
-            print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
-            flag = False
+        #else:
+        #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
+        #    flag = False
 
         # clean directory
         #self.__clean_directory()    
 
         # clean up
         self.close()
+
+	flag = True
         
         # inject config to couch
         if flag:

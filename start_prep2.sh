@@ -31,8 +31,11 @@ if [ -z "$couch_status" ]; then
 fi
 
 # spawn Apache server
-apache_status=`sudo /etc/init.d/httpd restart | grep OK`
-if [ -z "$couch_status" ]; then
-	echo 'ERROR: Could not raise Apache instance. Exiting...'
-        exit
-fi
+#apache_status=`sudo /etc/init.d/httpd restart | grep OK`
+#if [ -z "$couch_status" ]; then
+#	echo 'ERROR: Could not raise Apache instance. Exiting...'
+#        exit
+#fi
+
+# start CherryPy
+python2.6 main.py

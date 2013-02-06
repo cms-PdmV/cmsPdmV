@@ -145,11 +145,23 @@ class GetCampaign(RESTResource):
     
     def GET(self, *args):
         if not args:
+	    self.logger.error("No Arguments were given", __name__)
             return dumps({"results":'Error: No arguments were given'})
         return self.get_request(args[0])
     
     def get_request(self, data):
         return dumps({"results":self.db.get(prepid=data)})
+
+class GetAllCampaigns(RESTResource):
+    def __init__(self):
+        self.db_name = 'campaigns'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+        return self.get_all()
+
+    def get_all(self):
+        return dumps({"results":self.db.raw_query("prepid")})
         
 class ToggleCampaign(RESTResource):
     def __init__(self):

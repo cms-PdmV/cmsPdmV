@@ -6,7 +6,7 @@ from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign,  ApproveCampaign
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign,  ApproveCampaign, GetAllCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
@@ -14,6 +14,8 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 
+import logging
+import logging.handlers
 import cherrypy #to expose cherrypy methods serving the HTML files
 import os
 
@@ -140,6 +142,7 @@ root.restapi.campaigns.delete = DeleteCampaign()
 root.restapi.campaigns.get = GetCampaign()
 root.restapi.campaigns.toggle = ToggleCampaign() # start/stop campaign
 root.restapi.campaigns.approve = ApproveCampaign()
+root.restapi.campaigns.get_all = GetAllCampaigns()
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()
@@ -172,3 +175,34 @@ root.restapi.flows.save = CreateFlow()
 root.restapi.flows.update = UpdateFlow()
 root.restapi.flows.delete = DeleteFlow()
 root.restapi.flows.approve = ApproveFlow()
+
+#cherrypy.root = root
+#cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
+#cherrypy.server.start()
+
+log = cherrypy.log
+log.error_file = None
+log.access_file = None
+
+maxBytes = getattr(log, "rot_maxBytes", 10000000)
+backupCount = getattr(log, "rot_backupCount", 1000)
+
+# Make a new RotatingFileHandler for the error log.
+fname = getattr(log, "rot_error_file", "logs/error.log")
+h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+h.setLevel(logging.DEBUG)
+h.setFormatter(logging.Formatter('%(funcName)-3s %(message)s'))
+log.error_log.addHandler(h)
+
+# set up custom ReST logger
+#logger = logging.getLogger("rest")
+#logger.addHandler(h)
+
+# Make a new RotatingFileHandler for the access log.
+fname = getattr(log, "rot_access_file", "logs/access.log")
+h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+h.setLevel(logging.DEBUG)
+h.setFormatter(logging.Formatter('%(funcName)-3s %(message)s'))
+log.access_log.addHandler(h)
+
+cherrypy.quickstart(root, config='configuration/cherrypy.conf')
