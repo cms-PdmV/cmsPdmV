@@ -1,12 +1,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app>
+<html lang="eng" ng-app="testApp">
 <head>
+        <title>Campaigns page PREP2</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
-         <script type="text/javascript" src="scripts/angular.min.js"> </script>
-         <script src="scripts/controller.js"></script>
+         <script type="text/javascript" src="scripts/angular.min.js"></script>
+         <script src="scripts/controller.js"></script>     
 </head>
 
 <body ng-controller="resultsCtrl">
@@ -14,27 +15,27 @@
     <div class="navbar-inner">
       <ul class="nav">
         <li class="active">
-          <a href="campaigns2#?db_name=campaigns&query=""&page=0">Campaigns</a>
+          <a ng-href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='requests2#?db_name=requests&query=""&page=0'>Requests</a>
+          <a ng-href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='flows2#?db_name=flows&query=""&page=0'>Flows</a>
+          <a ng-href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='actions2#?db_name=actions&query=""&page=0'>Actions</a>
+          <a ng-href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='chained_campaigns2#?db_name=chained_campaigns&query=""&page=0'>Chained campaigs</a>
+          <a ng-href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='chained_requests2#?db_name=chained_requests&query=""&page=0'>Chained requests</a>
+          <a ng-href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
         </li>
       </ul>
     </div>
@@ -57,28 +58,55 @@
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
-        <th ng-repeat="column in defaults" ng-show="column.select">
-          {{column.text}}
+        <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+          {{column.text}} 
+          <span ng-show="selectedCls(column.db_name)">
+            <i class="icon-chevron-up" ng-show="sort.descending"></i>
+            <i class="icon-chevron-down" ng-hide="sort.descending"></i>
+          </span>
         </th>
       </tr>
     </thead>
     <tbody>
-      <tr ng-repeat="data in result">
+      <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
         <td ng-repeat="value in defaults" ng-show="value.select">
           <div ng-switch on="value.text">
             <div ng-switch-when="Actions">
-              <a ng-href="edit/campaigns/{{data.prepid}}" rel="tooltip" title="Create new request">
+              <a ng-href="edit/campaigns/{{data.prepid}}" rel="tooltip" title="Create new request"  target="_blank">
                 <i class="icon-plus-sign"></i>
               </a>
-              <a ng-href='results/?db_name=requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests">
+              <a ng-href='results?db_name=requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
                 <i class="icon-folder-open"></i>
               </a>
               <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign">
                 <i class="icon-minus-sign"></i>
               </a>
-              <a ng-href="edit/campaigns/{{data.prepid}}" rel="tooltip" title="Edit details">
+              <a ng-href="edit/campaigns/{{data.prepid}}" rel="tooltip" title="Edit details"  target="_blank">
                 <i class="icon-wrench"></i>
               </a>
+            </div>
+            <div ng-switch-when="Sequences">
+              <a ng-href="restapi/{{dbName}}/get_cmsDrivers/{{data.prepid}}"  target="_blank">get cmsDriver</a>
+            </div>
+            <div ng-switch-when="Generators">
+              <ul style="margin-bottom: 0px;">
+                <li ng-repeat="generator in data[value.db_name]">
+                  {{generator}}
+                </li>
+              </ul>
+            </div>
+            <div ng-switch-when="Submission details">
+              <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
+                  <dt>{{key}}</dt>
+                  <dd>{{value}}</dd>                
+              </dl>
+            </div>
+            <div ng-switch-when="Process string">
+              <ul style="margin-bottom: 0px;">
+                <li ng-repeat="generator in data[value.db_name]">
+                  {{generator}}
+                </li>
+              </ul>
             </div>
             <div ng-switch-default>{{data[value.db_name]}}</div>
           </div>

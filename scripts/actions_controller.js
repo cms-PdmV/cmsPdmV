@@ -1,4 +1,5 @@
 function resultsCtrl($scope, $http, $location){ 
+    console.log($location.search());
     $scope.actions_defaults = [
         {text:'Actions',select:true, db_name:'prepid'}
 //         {text:'Actions',select:true, db_name:''},
@@ -16,7 +17,7 @@ function resultsCtrl($scope, $http, $location){
     }
     var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
     promise.then(function(data){
-        console.log(data);
+//         console.log(data);
         $scope.result = data.data.results; 
         if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
@@ -43,9 +44,9 @@ function resultsCtrl($scope, $http, $location){
         _.each(data.data.results, function(v){
             $scope.chained_campaigns.push(v._id);
             $scope.actions_defaults.push({text:v._id, select:true, db_name:v._id});
-            console.log('chained',v._id);
+//             console.log('chained',v._id);
         });
-        console.log($scope.actions_defaults);
+//         console.log($scope.actions_defaults);
     });
     
     promise = $http.get('search/?db_name=campaigns&query=""&page=-1')
@@ -53,7 +54,7 @@ function resultsCtrl($scope, $http, $location){
         _.each(data.data.results, function(v){
            $scope.campaigns.push(v.prepid); 
         });
-        console.log($scope.campaigns);
+//         console.log($scope.campaigns);
     });
     
   $scope.showing_well = function(){
@@ -61,7 +62,7 @@ function resultsCtrl($scope, $http, $location){
           $scope.show_well = false;
         }
         else{
-            console.log("true");
+//             console.log("true");
             $scope.show_well = true;
         }
     };

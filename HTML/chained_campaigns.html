@@ -1,6 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
+        <title>Chained campaigns page PREP2</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -13,27 +14,27 @@
       <div class="navbar-inner">
         <ul class="nav">
           <li>
-            <a href='campaigns2#?db_name=campaigns&query=""&page=0'>Campaigns</a>
+            <a href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
-            <a href='requests2#?db_name=requests&query=""&page=0'>Requests</a>
+            <a href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
-            <a href='flows2#?db_name=flows&query=""&page=0'>Flows</a>
+            <a href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
-            <a href='actions2#?db_name=actions&query=""&page=0'>Actions</a>
+            <a href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
           </li>
           <li class="divider-vertical"></li>
           <li class="active">
-            <a href='chained_campaigns2#?db_name=chained_campaigns&query=""&page=0'>Chained campaigs</a>
+            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
-            <a href='chained_requests2#?db_name=chained_requests&query=""&page=0'>Chained requests</a>
+            <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
           </li>
         </ul>
       </div>
@@ -66,16 +67,16 @@
           <td ng-repeat="value in chainedCampaigns_defaults" ng-show="value.select" style="min-width:100px;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-href="create/chained_requests/{{data.prepid}}" rel="tooltip" title="Create new request">
+                <a ng-href="create/chained_requests/{{data.prepid}}" rel="tooltip" title="Create new request"  target="_blank">
                   <i class="icon-plus-sign"></i>
                 </a>
-                <a ng-href='results/?db_name=chained_requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests">
+                <a ng-href='results?db_name=chained_requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
                 <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete flow">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit/chained_campaigns/{{data.prepid}}" rel="tooltip" title="Edit details">
+                <a ng-href="edit/chained_campaigns/{{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
               </div>
