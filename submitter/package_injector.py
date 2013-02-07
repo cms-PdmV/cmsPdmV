@@ -2,25 +2,27 @@ import paramiko
 import os
 
 class package_injector:
-    def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/',  batch=10):
+    def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  batch=10):
         self.tarball = str(tarball)
         self.directory = str(directory)
         self.cmssw_release = str(cmssw_release)
         self.batch = str(batch)
 
         self.ssh_client = None
-        self.ssh_server = 'lxplus.cern.ch'
+        self.ssh_server = 'pdmvserv-test.cern.ch'#'lxplus.cern.ch'
         self.ssh_server_port = 22
-        self.ssh_credentials = '/afs/cern.ch/user/n/nnazirid/private/credentials'
+        self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'
 
         self.__build_ssh_client()
 
     def build_injection_script(self):
         script = ''
         script += 'cd '+self.directory + '\n'
-        script += 'source /afs/cern.ch/project/gd/LCG-share/current_3.2/etc/profile.d/grid_env.sh\n'
-        script += 'voms-proxy-init --debug\n'
-        script += 'cd SubmissionTools/\n'
+	#script += 'source /afs/cern.ch/project/gd/LCG-share/current_4.2/etc/profile.d/grid_env.sh\n'
+        #script += 'voms-proxy-init --debug\n'
+        script += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
+	script += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem\n'
+	script += 'cd SubmissionTools/\n'
         script += 'sh wmcontrol2_injection_procedure.sh '+self.directory+'/'+self.tarball+' '+self.cmssw_release+' nnazirid PREP '+self.batch +'\n'
         
         try:
@@ -35,7 +37,7 @@ class package_injector:
     def __build_ssh_client(self):
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/n/nnazirid/', ".ssh", "known_hosts")))
+        #self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/p/pdmvserv/', ".ssh", "known_hosts")))
 
         us,  pw = self.__get_ssh_credentials()
 
@@ -95,9 +97,12 @@ class package_injector:
 
 
     def inject(self):
+	print 'building...'
         flag = self.build_injection_script()
         if not flag:
             return False
+
+	print 'trying//'
 
         stdin,  stdout,  stderr = self.__remote_exec('sh '+self.directory+'inject-'+self.tarball+'.sh')
 

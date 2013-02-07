@@ -1,26 +1,32 @@
 #!/usr/bin/env python
 
 from json_layer.request import request
+from tools.logger import logger as logfactory
 from json_layer.campaign import campaign
 from WMCore.Database.CMSCouch import Database
 import json
 
 
 class database:
+    logger = logfactory("prep2")
+
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
         def __str__(self):
+            database.logger.error('Database "%s" was not found.' % (self.db), level='critical')
             return 'Error: Database ',  self.db,  ' was not found.'
     class DatabaseAccessError(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
         def __str__(self):
+            database.logger.error('Could not access database "%s".' % (self.db), level='critical')
             return 'Error: Could not access database ',  self.db
     class DocumentNotFoundException(Exception):
         def __init__(self,  name=''):
             self.name = name
         def __str__(self):
+            database.logger.error('Document "%s" was not found.' % (self.name))
             return 'Error: Document ',  self.name,  ' was not found.'
     class MapReduceSyntaxError(Exception):
         def __init__(self,  query=''):
@@ -45,7 +51,6 @@ class database:
         try:    
             self.db = Database(db_name)
         except ValueError as ex:
-            print 'Error: Database', db_name,  'could not be accessed or created. Reason:', str(ex)
             raise self.DatabaseAccessError(db_name)
             
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
@@ -58,10 +63,11 @@ class database:
             return False
        
     def get(self,  prepid=''):
+        self.logger.log('Looking for document "%s"...' % (prepid))
         try:
             return self.db.document(id=prepid)
         except Exception as ex:
-            print 'Error: Could not retrieve document: ',  prepid,  '. Reason: ',  str(ex)
+            self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return {}
     
     def __document_exists(self,  doc):
@@ -86,7 +92,7 @@ class database:
         try:
             return self.db.documentExists(id=prepid)
         except Exception as ex:
-            print 'Error: Could not retrieve document: ',  prepid,  '. Reason: ',  str(ex)
+            self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return False
     
     def delete(self, prepid=''):
@@ -94,6 +100,8 @@ class database:
             return False
         if not self.__id_exists(prepid):
             return False
+
+        self.logger.log('Trying to delete document "%s"...')
         try:
             self.db.delete_doc(id=prepid)
             return True

@@ -16,6 +16,7 @@ from rest_api.RequestChainId import RequestChainId
 
 import logging
 import logging.handlers
+from tools.logger import formatter
 import cherrypy #to expose cherrypy methods serving the HTML files
 import os
 
@@ -191,18 +192,26 @@ backupCount = getattr(log, "rot_backupCount", 1000)
 fname = getattr(log, "rot_error_file", "logs/error.log")
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 h.setLevel(logging.DEBUG)
-h.setFormatter(logging.Formatter('%(funcName)-3s %(message)s'))
+#h.setFormatter(logging.Formatter('%(funcName)-3s %(message)s'))
+h.setFormatter(formatter())
 log.error_log.addHandler(h)
 
 # set up custom ReST logger
-#logger = logging.getLogger("rest")
-#logger.addHandler(h)
+logger = logging.getLogger("rest_error")
+logger.addHandler(h)
+logger = logging.getLogger("prep2_error")
+logger.addHandler(h)
 
 # Make a new RotatingFileHandler for the access log.
 fname = getattr(log, "rot_access_file", "logs/access.log")
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 h.setLevel(logging.DEBUG)
-h.setFormatter(logging.Formatter('%(funcName)-3s %(message)s'))
+h.setFormatter(formatter())
 log.access_log.addHandler(h)
+
+logger = logging.getLogger("rest_access")
+logger.addHandler(h)
+logger = logging.getLogger("prep2_access")
+logger.addHandler(h)
 
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')

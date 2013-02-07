@@ -42,7 +42,7 @@ class package_builder:
             return 'Error: Package name given was NoneType'
 
 
-    def __init__(self,  req_json=None,  directory='/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/',  events=5):
+    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5):
         
         # set time out to 2000 seconds
         cherrypy.response.timeout = 2000
@@ -69,8 +69,8 @@ class package_builder:
         # reqmgr config cache specifics
         self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
         self.reqmgr_database = "reqmgr_config_cache"
-        self.reqmgr_user = "myuser" # generic uname and pword
-        self.reqmgr_group = "mygroup" # to be updated on the fly later (no worries)
+        self.reqmgr_user = "pdmvserv" # generic uname and pword
+        self.reqmgr_group = "ppd" # to be updated on the fly later (no worries)
 
         # config files
         self.__summary = None
@@ -471,9 +471,6 @@ class package_builder:
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
             command += ' --cfg_db_file configs.txt'
-            command += ' --user myuser'
-            command += ' --group mygroup'
-            command += '\n'
 
         elif self.wmagent_type == 'MonteCarloFromGEN':
             command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
@@ -501,11 +498,9 @@ class package_builder:
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
             command += ' --cfg_db_file configs.txt'
-            command += ' --user myuser'
-            command += ' --group mygroup'
             if self.request.get_attribute('input_block') != None:
                 command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
-            command += '\n'
+
 
         elif self.wmagent_type == 'LHEStepZero':
             command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
@@ -522,8 +517,6 @@ class package_builder:
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
             command += ' --cfg_db_file configs.txt'
-            command += ' --user myuser'
-            command += ' --group mygroup'
             if int(self.mcdbid) == 0:
               command += ' --events-per-job '+str(self.numberOfEventsPerJob)
 
@@ -544,8 +537,6 @@ class package_builder:
             command += ' --request-type %s' %(self.wmagent_type)
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
             command += ' --cfg_db_file configs.txt'
-            command += ' --user myuser'
-            command += ' --group mygroup'
 
             # temp ev cont holder
             eventcontentlist = []
@@ -577,7 +568,12 @@ class package_builder:
                 command += ' --process-string '+self.request.get_attribute('process_string')
             if self.request.get_attribute('input_block') != None:
                 command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
-            command += '\n'
+
+
+        command += ' --user %s' % (self.reqmgr_user)
+        command += ' --group %s' % (self.reqmgr_group)
+        command += ' --batch mybatch'
+        command += '\n'
 
         return command
 
@@ -653,7 +649,7 @@ class package_builder:
         self.__tarobj.close()
 
         # delete directory
-        self.__delete_directory()
+        #self.__delete_directory()
 
     # clean work directory for tarification
     def __clean_directory(self):
@@ -730,7 +726,7 @@ class package_builder:
         # test configuration
         #tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
         #if tester.test():
-        #    self.__tarobj.add(self.directory)
+        self.__tarobj.add(self.directory)
         #    print 'JOB completed successfully'
         #    flag = True
         

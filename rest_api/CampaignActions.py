@@ -145,7 +145,7 @@ class GetCampaign(RESTResource):
     
     def GET(self, *args):
         if not args:
-	    self.logger.error("No Arguments were given", __name__)
+	    self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
         return self.get_request(args[0])
     

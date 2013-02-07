@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 
-from json_layer.authenticator import authenticator as auth_obj
+from tools.authenticator import authenticator as auth_obj
+from tools.logger import logger as logfactory
 import logging
 import logging.handlers
 import cherrypy
 
 class RESTResource(object):
 	authenticator = auth_obj(limit=3)
-	logger = cherrypy.log
+	#logger = cherrypy.log
+	logger = logfactory('rest')
 
 	def __init__(self, content=''):
 		self.content = content
@@ -29,10 +31,10 @@ class RESTResource(object):
 		elif cherrypy.request.method == 'DELETE':
 			self.authenticator.set_limit(3)
 
-		if 'ADFS-LOGIN' not in cherrypy.request.headers.keys():
-			if cherrypy.request.method != 'GET': 
-				raise cherrypy.HTTPError(403, 'User credentials were not provided.')
-                elif not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
+		#if 'ADFS-LOGIN' not in cherrypy.request.headers.keys():
+			#if cherrypy.request.method != 'GET': 
+			#	raise cherrypy.HTTPError(403, 'User credentials were not provided.')
+                if not self.authenticator.can_access(cherrypy.request.headers['ADFS-LOGIN']):
                         raise cherrypy.HTTPError(403, 'You cannot access this page')
 		
 		return method(*vpath, **params);

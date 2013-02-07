@@ -2,6 +2,7 @@
 
 #from couchdb_layer.prep_database import database
 from json_base import json_base
+from tools.logger import logger as logfactory
 from submission_details import submission_details
 from approval import approval
 from comment import comment
@@ -10,14 +11,18 @@ from sequence import sequence
 class campaign(json_base):
     class DuplicateApprovalStep(Exception):
         def __init__(self,  approval=None):
+            self.logger	= logfactory("prep2")
             self.__approval = repr(approval)
         def __str__(self):
+            self.logger.error('Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved')
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
     
     class CampaignExistsException(Exception):
         def __init__(self,  cid):
+            self.logger = logfactory("prep2")
             self.c = cid
         def __str__(self):
+            self.logger.error('Error: Campaign '+  self.c +  ' already in "next" list.') 
             return 'Error: Campaign '+  self.c +  ' already in "next" list.'
 
     def __init__(self, author_name,  author_cmsid=-1,   author_inst_code='',  author_project='', json_input={}):
@@ -101,8 +106,7 @@ class campaign(json_base):
             from request import request
             req = request('', request_json=req_json)
         except ImportError as ex:
-            print 'Error while trying to import \'request\' module.'
-            print 'Returned: ' + str(ex)
+            self.logger.error('Could not import \'request\' module. Reason: %s' %(ex))
             return {}
         except self.IllegalAttributeName() as ex:
             return {}
@@ -146,7 +150,6 @@ class campaign(json_base):
             self.set_attribute('approvals',  new_apps)
             return True
         except app.IllegalApprovalStep as ex:
-            print 'Error: ', str(ex)
             return False
     
     def add_next(self,  cid):

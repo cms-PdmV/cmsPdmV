@@ -1,15 +1,21 @@
 #!/usr/bin/env python
 
+from tools.logger import logger as logfactory
+
 class json_base:
     __json = {}
     __approvalsteps = ['validation',  'define',  'approve', 'submit']
     __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
+                self.logger = logfactory("prep2")
                 self.__attribute = repr(attribute)
         def __str__(self):
+            self.logger.error('Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal')
             return 'Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal'
-    
+
+    logger = logfactory("prep2")    
+
     def __init__(self,  json={}):
         if json:
             self.__json = json
@@ -20,7 +26,7 @@ class json_base:
         if not history:
             return
         hist.append(history)
-
+        self.logger.log('Updating history...')
         self.set_attribute('history', hist)
         self.set_attribute('version', int(self.get_attribute('version')) + 1)
     
@@ -46,7 +52,7 @@ class json_base:
         try:
             import json
         except ImportError as ex:
-            print 'Error: Could not import json module'
+            self.logger.error('Error: Could not import "json" module')
             print self.__json
         print json.dumps(self.__json, indent=4)   
     
