@@ -3,7 +3,7 @@ function resultsCtrl($scope, $http, $location){
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
         {text:'Status',select:true, db_name:'status'},
-        {text:'Approvals',select:true, db_name:'approvals'},
+        {text:'Approvals',select:false, db_name:'approvals'},
         {text:'MCDBId',select:true, db_name:'mcdb_id'},
         {text:'DataSet Name',select:true, db_name:'dataset_name'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
@@ -23,30 +23,6 @@ function resultsCtrl($scope, $http, $location){
         $scope.list_page = parseInt(page);
     }
     $scope.dbName = $location.search()["db_name"];
-    var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
-    promise.then(function(data){
-        console.log(data);
-        $scope.result = data.data.results; 
-        if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-            add = true;
-            _.each($scope.requests_defaults, function(column){
-            if (column.db_name == v){
-                add = false;
-            }
-         });
-            if (add){
-                $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
-        });
-        }
-        console.log($scope.requests_defaults);
-    }, function(){
-       console.log("Error"); 
-    });
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'/restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -114,8 +90,24 @@ function resultsCtrl($scope, $http, $location){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
-          console.log(data);
-          $scope.result = data.data.results;
+        $scope.result = data.data.results; 
+        if ($scope.result.length != 0){
+        columns = _.keys($scope.result[0]);
+        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+        _.each(rejected, function(v){
+            add = true;
+            _.each($scope.requests_defaults, function(column){
+            if (column.db_name == v){
+                add = false;
+            }
+         });
+            if (add){
+                $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+            }
+        });
+        }
+        console.log($scope.requests_defaults);
          }, function(){
              console.log("Error"); 
          });
@@ -151,7 +143,13 @@ function resultsCtrl($scope, $http, $location){
         $scope.selected_prepids.push(prepid);
   };
   $scope.next_approval = function(){
-    console.log($scope.selected_prepids);
+    console.log("to be approved:", $scope.selected_prepids.join());
+    $http({method:'PUT', url:'/restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
+            alert("Success!");
+        }).error(function(data,status){
+            console.log(status);
+            alert("Error while processing request. Code: "+status);
+        });
   };
   $scope.delete_multiple_objects = function(){
     console.log("selected to delete:", $scope.selected_prepids, " will delete with updated API. DB: ", $scope.dbName)
@@ -237,7 +235,7 @@ testApp.directive("customHistory", function(){
     '          <td style="padding: 0px;">{{elem.step}}</td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">{{elem.updater.author_name}}</td>'+
-    '          <td style="padding: 0px;">{{elem.updater.cmsid}}</td>'+
+    '          <td style="padding: 0px;">{{elem.updater.author_cmsid}}</td>'+
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+

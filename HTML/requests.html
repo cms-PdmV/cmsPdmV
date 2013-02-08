@@ -105,6 +105,13 @@
                   </dl>
                 </div>
               </div>
+              <div ng-switch-when="Member of chain">
+                <ul style="margin-bottom: 0px;">
+                  <li ng-repeat="chain in data[value.db_name]">
+                    {{chain}}
+                  </li>
+                </ul>
+              </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
