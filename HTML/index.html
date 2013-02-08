@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng">
+<html lang="eng" ng-app="testApp">
 <head>
         <title>PREP2 index</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -7,9 +7,10 @@
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-<!--          <script src="scripts/controller.js"></script> -->
+        <script type="text/javascript">var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);}); 
+</script>
 </head>
-<body ng-controller="resultsCtrl">
+<body>
   <div class="navbar navbar-static-top"> <!--  place for NAV-BAR-->
     <div class="navbar-inner">
       <ul class="nav">
