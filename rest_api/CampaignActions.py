@@ -28,12 +28,14 @@ class CreateCampaign(RESTResource):
         #id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
         #self.json['prepid'] = loads(id)['prepid']
         if not self.json['prepid']:
+            self.logger.error('Invalid prepid: Prepid returned None')
             return dumps({"results":False})
 
         self.json['_id'] = self.json['prepid']
         
         # save to db
         if not self.db.save(self.json):
+            self.logger.error('Could not save object to database')
             return dumps({"results":False})
         
         # create dedicated chained campaign
@@ -186,13 +188,24 @@ class ApproveCampaign(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
-        return self.toggle_campaign(args[0],  args[1])
+        return self.multiple_toggle(args[0],  args[1])
+
+    def multiple_toggle(self, rid, val=0):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.toggle_campaign(r, val))
+            return dumps(res)
+        else:
+            return dumps(self.toggle_campaign(rid, val))
     
     def toggle_campaign(self,  rid,  index):
         if not self.db.document_exists(rid):
-            return dumps({"results":'Error: The given campaign id does not exist.'})
+            return {"prepid": rid,  "results":'Error: The given campaign id does not exist.'}
         camp = campaign('',  json_input=self.db.get(rid))
         camp.approve(int(index))
         
-        return dumps({"results":self.db.update(camp.json())})
+        return {"prepid": rid, "results":self.db.update(camp.json())}

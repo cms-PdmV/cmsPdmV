@@ -41,7 +41,7 @@ class submission_details(json_base):
         try:
             import time
         except ImportError as ex: 
-            print 'Error while attempting to import time module.'
+            self.logger.error('Could not import "time" module.', level='critical')    
             print 'Returned: ' + str(ex)
                                                         
         localtime = time.localtime(time.time())

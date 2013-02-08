@@ -47,19 +47,19 @@ class flow(json_base):
                 self._json_base__json['_rev'] = json_input['_rev']
     
     def add_allowed_campaign(self,  cid):
+        self.logger.log('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
         
         # import database connector
         try:
             from couchdb_layer.prep_database import database
         except ImportError as ex:
-            print str(ex)
+            self.logger.error('Could not import database connector class. Reason: %s' % (ex), level='critical')
             return False
         
         # initialize database connector
         try:
             cdb = database('campaigns')
         except database.DatabaseAccessError as ex:
-            print str(ex)
             return False
             
         # check campaign exists
@@ -94,11 +94,12 @@ class flow(json_base):
         # if no index is specified, just go one step further
         if index==-1:
             index = len(approvals)
-        
+
+        self.logger.log('Approving flow %s for step "%s"' % (self.get_attribute('_id'), index))
+       
         try:
             new_apps = app.approve(index)
             self.set_attribute('approvals',  new_apps)
             return True
         except app.IllegalApprovalStep as ex:
-            print str(ex)
             return False

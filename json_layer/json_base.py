@@ -6,15 +6,16 @@ class json_base:
     __json = {}
     __approvalsteps = ['validation',  'define',  'approve', 'submit']
     __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
+    logger = logfactory("prep2")
+
+
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
                 self.logger = logfactory("prep2")
                 self.__attribute = repr(attribute)
+                json_base.logger.error('Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal')
         def __str__(self):
-            self.logger.error('Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal')
             return 'Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal'
-
-    logger = logfactory("prep2")    
 
     def __init__(self,  json={}):
         if json:

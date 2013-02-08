@@ -14,12 +14,16 @@ class chained_campaign(json_base):
     class CampaignDoesNotExistException(Exception):
         def __init__(self,  campid):
             self.c = str(campid)
+            chained_campaign.logger.error('Campaign %s does not exist' % (self.c) )
+
         def __str__(self):
             return 'Error: Campaign ' +  self.c +  ' does not exist.'
     
     class FlowDoesNotExistException(Exception):
         def __init__(self,  flowid):
             self.f = str(flowid)
+            chained_campaign.logger.error('Flow %s does not exist' % (self.f))
+
         def __str__(self):
             return 'Error: Flow ' + self.f + ' does not exist.'
     
@@ -84,17 +88,18 @@ class chained_campaign(json_base):
         self.set_attribute('comments',  comments)
     
     def add_campaign(self, campaign_id,  flow_name=None):
+        self.logger.log('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id'))) 
+
         try:
             from couchdb_layer.prep_database import database
         except ImportError as ex:
-            print str(ex)
+            self.logger.error('Could not import database connector class. Reason: %s' % (ex),  level='critical')
             return False
             
         try:
             camp_db = database('campaigns')
             flow_db = database('flows')
         except database.DatabaseAccessError as ex:
-            print str(ex)
             return False
             
         if not camp_db.document_exists(campaign_id):
@@ -114,6 +119,7 @@ class chained_campaign(json_base):
         return True
         
     def remove_campaign(self,  cid):
+        self.logger.log('Removing campaign %s from chained_campaign %s' % (cid, self.get_attribute('_id'))) 
         camps = self.get_attribute('campaigns')
         new_camps = []
         if not camps or camps is None:
@@ -128,15 +134,14 @@ class chained_campaign(json_base):
     
     # create a chained request spawning from root_request_id
     def generate_request(self,  root_request_id):
+        self.logger.log('Building a new chained_request for chained_campaign %s. Root request: %s' % (self.get_attribute('_id'), root_request_id ))
         try:
             rdb = database('requests')
         except database.DatabaseAccessError as ex:
-            print str(ex)
             return {}
             
         # check to see if root request id exists
         if not rdb.document_exists(root_request_id):
-            print 'Error: PrepId ',  root_request_id,  'does not exist.'
             return {}
         
         # init new creq

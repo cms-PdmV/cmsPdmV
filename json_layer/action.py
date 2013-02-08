@@ -7,18 +7,22 @@ from json_layer.submission_details import submission_details
 
 class action(json_base):
     class PrepIdNotDefinedException(Exception):
+        def __init__(self):
+	        action.logger.error('Prepid is not defined.')
         def __str__(self):
             return 'Error: PrepId is not defined.'
             
     class PrepIdDoesNotExistException(Exception):
         def __init__(self,  pid):
             self.pid = pid
+            action.logger.error('prepid %s does not exist in the database.' % (self.pid))
         def __str__(self):
             return 'Error: PrepId ' + self.pid + ' does not exist in the database.'
             
     class ChainedCampaignDoesNotExistException(Exception):
         def __init__(self,  cid):
             self.c = cid
+            action.logger.error('chained_campaign %s does not exist in the database.' % (self.c))
         def __str__(self):
             return 'Error: Chained Campaign '+ self.c + ' does not exist'
     
@@ -84,6 +88,7 @@ class action(json_base):
         # check if campaign exists
         campid = req.get_attribute('member_of_campaign')
         if not campid:
+            self.logger.error('action %s has not a campaign defined' % (self.get_attribute('prepid')))     
             raise ValueError('Error: Campaign was not set for',  self.get_attribute('prepid'))
         if not campaigndb.document_exists(campid):
             raise self.PrepIdDoesNotExistException(campid)
@@ -98,7 +103,6 @@ class action(json_base):
             chaindb = database('chained_campaigns')
             cdb = database('campaigns')
         except datase.DatabaseAccessError as ex:
-            print str(ex)
             return False
         
         # get all chains

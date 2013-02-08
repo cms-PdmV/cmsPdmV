@@ -17,6 +17,7 @@ class GetAction(RESTResource):
     
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
             
         return self.get_request(args[0])
@@ -31,11 +32,13 @@ class SelectChain(RESTResource):
     
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given'})
             
         return self.select_chain(args[0],  args[1],  args[2])
     
     def select_chain(self, id,  chainid,  value):
+        self.logger.log('Selecting chain %s for action %s...' % (chainid, id))
         # if action exists
         if self.db.document_exists(id):
             # initialize the object
@@ -56,11 +59,13 @@ class DeSelectChain(RESTResource):
     
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
             
         return self.deselect_chain(args[0],  args[1])
     
     def deselect_chain(self,  aid,  chainid):
+        self.logger.log('Deselecting chain %s for action %s...' % (chainid, aid))        
         # if action exists
         if self.db.document_exists(aid):
             # initialize the object
@@ -81,6 +86,7 @@ class GenerateChainedRequests(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({'results':'Error: No arguments were given'})
         
         return self.generate_request(args[0])
@@ -88,6 +94,8 @@ class GenerateChainedRequests(RESTResource):
     def generate_request(self,  id):
         if not self.db.document_exists(id):
             return dumps({'results':'Error: PrepId '+id+' does not exist in the database.'})
+        
+        self.logger.log('Generating all selected chained_requests for action %s' % (id)) 
         
         # init action
         req = action('',  json_input=self.db.get(id))
@@ -107,7 +115,7 @@ class GenerateChainedRequests(RESTResource):
                         break
                 
                 if flag:
-                    print 'Warning: A chained request already exists for chained_campaign',  cc
+                    self.logger.error('A chained request already exists for chained_campaign %s' % (cc), level='warning')
                     continue
                 
                 # init chained campaign
@@ -116,7 +124,7 @@ class GenerateChainedRequests(RESTResource):
                 new_req = ccamp.generate_request(id)
                 # save to database
                 if not self.crdb.save(new_req):
-                    print 'Error: Could not save '+str(id)+' to database.'
+                    self.logger.error('Could not save modified action %s to database.' % (id))  
                     return dumps({'results':False})
                     
                 self.ccdb.update(ccamp.json())
@@ -133,6 +141,7 @@ class GenerateAllChainedRequests(RESTResource):
         return self.generate_requests()
         
     def generate_requests(self):
+        self.logger.log('Generating all possible (and selected) chained_requests...')
         allacs = self.db.get_all(-1) # no pagination
         for a in allacs:
             self.generate_request(a['key'])
@@ -161,7 +170,7 @@ class GenerateAllChainedRequests(RESTResource):
                         break
                 
                 if flag:
-                    print 'Warning: A chained request already exists for chained_campaign',  cc
+                    self.logger.error('A chained request already exists for chained_campaign %s' % (cc), level='warning')
                     continue
                 
                 # init chained campaign
@@ -170,7 +179,7 @@ class GenerateAllChainedRequests(RESTResource):
                 new_req = ccamp.generate_request(id)
                 # save to database
                 if not self.crdb.save(new_req):
-                    print 'Error: Could not save '+str(id)+' to database.'
+                    self.logger.error('Could not save newly created chained_request %s to database' % (id))
                     return dumps({'results':False})
                     
                 self.ccdb.update(ccamp.json())
@@ -188,14 +197,17 @@ class DetectChains(RESTResource):
         return self.find_chains(args[0])
     
     def find_chains(self,  aid):
+        self.logger.log('Identifying all possible chains for action %s' % (aid))
         ac = action('',  json_input=self.db.get(aid))
         ac.find_chains()
         return dumps({'results':self.db.update(ac.json())})
     
     def find_all_chains(self):
+        self.logger.log('Identifying all possible chains for all actions in the database...')
         try:
             map(lambda x: self.find_chains(x['key']),  self.db.get_all(-1))
         except Exception as ex:
+            self.logger.error('Could not finish detecting chains. Reason: %s' % (ex))   
             return dumps({'results': str(ex)})
         return dumps({'results': True})
         

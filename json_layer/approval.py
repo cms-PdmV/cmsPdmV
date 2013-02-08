@@ -7,6 +7,7 @@ class approval(json_base):
     class IllegalApprovalStep(Exception):
         def __init__(self,  step=None):
             self.__step = repr(step)
+            approval.logger.error('Illegal approval step: %s' % (self.__step))
         def __str__(self):
             return 'Illegal Approval Step: ' + self.__step
 

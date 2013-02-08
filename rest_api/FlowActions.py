@@ -26,21 +26,23 @@ class CreateFlow(RESTResource):
         try:
             self.f = flow('TEST', json_input=loads(data))
         except flow.IllegalAttributeName as ex:
-            print 'Error: '+str(ex)
             return dumps({"results":str(ex)})
         except ValueError as ex:
-            print 'Error: '+str(ex)
+            self.logger.error('Could not initialize flow object. Reason: %s' % (ex)) 
             return dumps({"results":str(ex)})
 
         if not self.f.get_attribute('prepid'):
-            print 'Error: PrepId was not defined.'
+            self.logger.error('prepid is not defined.')
             return dumps({"results":'Error: PrepId was not defined.'})
 
         self.f.set_attribute('_id', self.f.get_attribute('prepid'))
         self.f.approve(0)
+
+        self.logger.log('Creating new flow %s ...' % (self.f.get_attribute('_id')))
         
         # save the flow to db
         if not self.db.save(self.f.json()):
+            self.logger.error('Could not save newly created flow %s to database.' % (self.f.get_attribute('_id')))  
             return dumps({"results":False})
         
         # update all relevant campaigns
@@ -54,6 +56,7 @@ class CreateFlow(RESTResource):
         try:
             self.update_chained_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
         except Exception as ex:
+           self.logger.error('Could not build derived chained_campaigns for flow %s. Reason: %s' % (self.f.get_attribute('_id'), ex)) 
            return dumps({"results":'Error while creating derived chained_campaigns: '+str(ex)})
         
         # save to database
@@ -71,14 +74,14 @@ class CreateFlow(RESTResource):
             try:
                 self.update_campaigns(next,  allowed)
             except Exception as ex:
-                print 'Error: update_campaigns returned:'+ str(ex)
+                self.logger.error('Could not update campaigns for new flow %s' % (self.f.get_attribute('_id')))
                 return dumps({"results":'Error: update_campaigns returned:'+ str(ex)})
         
         # create new chained campaigns
         try:
             self.update_chained_campaigns(next,  tbc)
         except Exception as ex:
-            print 'Error while creating derived chained_campaigns: '+str(ex)
+            self.logger.error('Could not build derived chained_campaigns for flow %s. Reason: %s' % (self.f.get_attribute('_id'), ex))                 
             return dumps({"results":'Error while creating derived chained_campaigns: '+str(ex)})
         
         # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and 
@@ -139,8 +142,11 @@ class CreateFlow(RESTResource):
             raise ValueError('Campaign '+str(next)+' does not exist.')
         
         n = self.cdb.get(next)
+
+        self.logger.log('Updating all derived chained_campaigns...')
                 
         if n['root'] == 0:
+            self.logger.error('Campaign %s is not a root campaign' % (next))
             raise ValueError('Campaign '+str(next)+' is not a root campaign.')        
         
         for c in allowed:
@@ -228,6 +234,7 @@ class CreateFlow(RESTResource):
             self.update_actions(c)
 
     def update_actions(self,  c):
+        self.logger.log('Updating actions...')
 
         # find all actions that belong to a campaign
         allacs = map(lambda x: x['value'],  self.adb.query('member_of_campaign=='+c,  0))
@@ -258,10 +265,10 @@ class UpdateFlow(RESTResource):
         try:
             self.f = flow('TEST', json_input=loads(data))
         except flow.IllegalAttributeName as ex:
-            print str(ex)
             return dumps({"results":str(ex)})
         
         if not self.f.get_attribute('prepid') and not self.f.get_attribute('_id'):
+            self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
         
         # find out what is the change
@@ -269,6 +276,7 @@ class UpdateFlow(RESTResource):
         
         # save to db
         if not self.db.update(self.f.json()):
+            self.logger.error('Could not update flow %s. Reason: %s' % (self.f.get_attribute('_id'), ex)) 
             return dumps({'results':False})
         
         return self.__compare_json(old,  self.f.json())
@@ -285,14 +293,14 @@ class UpdateFlow(RESTResource):
             try:
                 self.update_campaigns(next,  allowed)
             except Exception as ex:
-                print 'Error: update_campaigns returned:'+ str(ex)
+                self.logger.error('Could not update campaigns. Reason: %s' % (ex))
                 return dumps({"results":'Error: update_campaigns returned:'+ str(ex)})
         
         # create new chained campaigns
         try:
             self.update_chained_campaigns(next,  tbc)
         except Exception as ex:
-            print 'Error while creating derived chained_campaigns: '+str(ex)
+            self.logger.error('Could not build derived chained_campaigns. Reason: %s' % (ex))
             return dumps({"results":'Error while creating derived chained_campaigns: '+str(ex)})
         
         # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and 
@@ -329,6 +337,7 @@ class UpdateFlow(RESTResource):
         
         n = self.cdb.get(next)
         if n['root'] == 0:
+            self.logger.error('Campaign %s is not a root campaign.' % (next))
             raise ValueError('Campaign '+str(next)+' is not a root campaign.')
         
         # iterate through all allowed campaigns and update the next field
@@ -351,6 +360,7 @@ class UpdateFlow(RESTResource):
         
         n = self.cdb.get(next)
         if n['root'] == 0:
+            self.logger.error('Campaign %s is not a root campaign.' % (next))
             raise ValueError('Campaign '+str(next)+' is not a root campaign.')        
         
         for c in allowed:
@@ -464,7 +474,7 @@ class DeleteFlow(RESTResource):
         return dumps({"results":self.db.delete(id)})
         
     # ########################################### #
-    # TODO: Na kanw ta chained campaigns na diagrafontai me ton deleter apo to CHainedCampaignActions
+    # TODO: delete chained campaigns  with deleter from CHainedCampaignActions
     # ########################################### #
     def delete_chained_campaigns(self,  fid):
         # get all campaigns that contain the flow fid
@@ -498,6 +508,7 @@ class GetFlow(RESTResource):
     
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":{}})
         return self.get_request(args[0])
     
@@ -510,14 +521,25 @@ class ApproveFlow(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
-        return self.approve(args[0],  args[1])
+        return self.multiple_approve(args[0],  args[1])
+
+    def multiple_approve(self, rid, val=-1):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.approve(r, val))
+            return dumps(res)
+        else:
+            return dumps(self.approve(rid, val))
         
     def approve(self,  rid,  val):
         if not self.db.document_exists(rid):
-            return dumps({"results":'Error: The given flow id does not exist.'})
+            return {"prepid" : rid, "results":'Error: The given flow id does not exist.'}
         f = flow('',  json_input=self.db.get(rid))
         if not f.approve(int(val)):
-            return dumps({"results":False})
+            return {"prepid": rid, "results":False}
         
-        return dumps({"results":self.db.update(f.json())})
+        return {"prepid": rid, "results":self.db.update(f.json())}

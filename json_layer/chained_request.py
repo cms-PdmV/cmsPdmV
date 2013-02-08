@@ -10,12 +10,16 @@ class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):
         def __init__(self,  campaign):
             self.c = campaign
+            chained_request.logger.error('Campaign %s is already member of the chain.' % (self.c))
+
         def __str__(self):
             return 'Error: Campaign', self.c,  'already represented in the chain.'
     
     class ChainedRequestCannotFlowException(Exception):
         def __init__(self,  crname):
             self.name = str(crname)
+            chained_request.logger.error('Chained request %s cannot flow any further.' % (self.name))
+
         def __str__(self):
             return 'Error: Chained request '+self.name+' cannot flow any further.'
     
@@ -23,12 +27,16 @@ class chained_request(json_base):
         def __init__(self,  oname,  alevel):
             self.name = str(oname)
             self.level = str(alevel)
+            chained_request.logger.error('%s has not been approved for level "%s"' % (self.name , self.level))
+
         def __str__(self):
             return 'Error: '+self.name+' has not been "'+self.level+'" approved.'
         
     class CampaignStoppedException(NotApprovedException):
         def __init__(self,  oname):
             self.name = str(oname)
+            chained_request.logger.error('Campaign %s has been stopped' % (self.name))
+
         def __str__(self):
             return 'Error: '+self.name+' has been stopped.'
     
@@ -83,12 +91,14 @@ class chained_request(json_base):
         
     # proceed to the next request in the chain
     def flow_to_next_step(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
+        self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))         
+
         # increase step counter
         step = int(self.get_attribute('step') )+ 1
             
         # check sanity
         if not self.get_attribute('chain'):
-            print 'Error: Chain '+self.get_attribute('_id')+' has no root.'
+            self.logger.error('chained_request %s has got no root' % (self.get_attribute('_id')))
             return False
         
         try:
@@ -97,7 +107,6 @@ class chained_request(json_base):
             ccdb = database('chained_campaigns')
             fdb = database('flows')
         except database.DatabaseAccessError as ex:
-            print str(ex)
             return False
         
         # get previous request id
@@ -105,7 +114,6 @@ class chained_request(json_base):
         
         # check if exists
         if not rdb.document_exists(root):
-            print 'Error: Request '+str(root)+' does not exist.'
             return False
         
         # actually get root request
@@ -113,7 +121,6 @@ class chained_request(json_base):
             
         # get the campaign in the next step
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
-            print 'Error: Chained Campaign '+str(self.get_attribute('member_of_campaign'))+' does not exist.'
             return False
         
         # get mother chained_campaign
@@ -133,13 +140,12 @@ class chained_request(json_base):
         
         # since step has been increased at the beginning, only add 1
         if len(tokstr) <= step+1:
-            print 'Warning: Chained Campaign '+cc['prepid']+' does not allow another flow.'
+            self.logger.error('chained_campaign %s does not allow any further flowing.' % (cc['prepid']), level='warning')
             raise self.ChainedRequestCannotFlowException(self.get_attribute('prepid'))
             
         flowname = tokstr[step+1]
         
         if not fdb.document_exists(flowname):
-            print 'Error: Flow '+str(flowname)+' does not exist.'
             return False
         
         # get flow
@@ -161,7 +167,6 @@ class chained_request(json_base):
         
         # check if exists
         if not cdb.document_exists(next_camp):
-            print 'Error: Campaign '+str(next_camp)+' does not exist.'
             return False
         
         # get campaign
@@ -219,13 +224,14 @@ class chained_request(json_base):
         # if no index is specified, just go one step further
         if index==-1:
             index = len(approvals)
+
+        self.logger.log('Approving chained_request %s for step "%s"' % (self.get_attribute('_id'), index)) 
         
         try:
             new_apps = app.approve(index)
             self.set_attribute('approvals',  new_apps)
             return True
         except app.IllegalApprovalStep as ex:
-            print str(ex)
             return False
 
     def approve1(self,  author_name,  author_cmsid=-1, author_inst_code='', author_project=''):
@@ -248,7 +254,6 @@ class chained_request(json_base):
         try:
             new_approval = approval(author_name, author_cmsid, author_inst_code,author_project).build(step)
         except approval('').IllegalApprovalStep(step) as ex:
-            print str(ex)
             return
 
         # make persistent
@@ -263,16 +268,18 @@ class chained_request(json_base):
     
     # add a new request to the chain
     def add_request(self, data={}):
+        self.logger.log('Adding new request to chained_request %s' % (self.get_attribute('_id')))
+
         # import prep-id generator
         try:
             from rest_api.RequestPrepId import RequestPrepId
         except ImportError as ex:
-            print str(ex)
+            self.logger.error('Could not import prep-id generator class. Reason: %s' % (ex), level='critical')
             return {}
         try:
             req = request('',json_input=data)
         except Exception as ex:
-            print str(ex)
+            self.logger.error('Could not build request object. Reason: %s' % (ex))
             return {}
         
         chain_specific = ['threshold',  'block_number',  'staged']

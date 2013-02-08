@@ -26,6 +26,8 @@ class ImportRequest(RESTResource):
             self.json = request('automatic', json_input=loads(data)).json()
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
+
+        self.logger.log('Building new request...')
         
         if '_id' in self.json and self.json['_id'] :
             self.json['prepid'] = self.json['_id'] 
@@ -35,14 +37,17 @@ class ImportRequest(RESTResource):
             self.json['_id'] = self.json['prepid'] = ''
         
         if self.db.document_exists(self.json['_id']):
-            print 'Prep ID '+self.json['_id']+ ' already exists. Generating another...'
+            self.logger.error('prepid %s already exists. Generating another...' % (self.json['_id']), level='warning')
             
             id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
             self.json['prepid'] = loads(id)['prepid']
         
             if not self.json['prepid']:
+                self.logger.error('prepid returned was None')
                 raise ValueError('Prepid returned was None')
             self.json['_id'] = self.json['prepid']
+
+        self.logger.log('New prepid: %s' % (self.json['prepid']))     
             
         
         # global tag ::All fix
@@ -54,6 +59,7 @@ class ImportRequest(RESTResource):
         
         # save to database
         if not self.db.save(self.json):
+            self.logger.error('Could not save results to database')
             return dumps({"results":False})
         
         # add an action to the action_db
@@ -100,9 +106,12 @@ class UpdateRequest(RESTResource):
                 self.request = request('TEST', json_input=loads(data))
         except request.IllegalAttributeName as ex:
                 return dumps({"results":False})
-    
+
         if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
+            self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
+
+        self.logger.log('Updating request %s...' % (self.request.get_attribute('prepid')))
             
         self.json = self.request.json()
         return self.save_request()
@@ -118,8 +127,8 @@ class GetCmsDriverForRequest(RESTResource):
         self.request = None
 
     def GET(self, *args):
-      print args
       if not args:
+        self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
       return self.get_cmsDriver(self.db.get(prepid=args[0]))
 
@@ -141,6 +150,7 @@ class DeleteRequest(RESTResource):
     
     def DELETE(self, *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":False})
         return self.delete_request(args[0])
     
@@ -160,8 +170,8 @@ class GetRequest(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
-        print args
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":{}})
         return self.get_request(args[0])
     
@@ -176,15 +186,25 @@ class ApproveRequest(RESTResource):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if len(args) == 1:
-		return self.approve(args[0])
-        return self.approve(args[0],  int(args[1]))
+		return self.multiple_approve(args[0])
+        return self.multiple_approve(args[0], int(args[1]))
+
+    def multiple_approve(self, rid, val=-1):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.approve(r, val))
+            return dumps(res)
+        else:
+            return dumps(self.approve(rid, val))
         
     def approve(self,  rid,  val=-1):
         if not self.db.document_exists(rid):
-            return dumps({"results":'Error: The given request id does not exist.'})
+            return {"prepid": rid, "results":'Error: The given request id does not exist.'}
         req = request('',  json_input=self.db.get(rid))
         if not req.approve(val):
-            return dumps({"results":False})
+            return {"prepid": rid, "results":False}
 
         hist = {}
         hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
@@ -193,7 +213,7 @@ class ApproveRequest(RESTResource):
 
         req.update_history(hist)
 
-        return dumps({"results":self.db.update(req.json())})
+        return {"prepid" : rid, "results":self.db.update(req.json())}
 
 class ResetRequestApproval(RESTResource):
     def __init__(self):
@@ -202,19 +222,30 @@ class ResetRequestApproval(RESTResource):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if len(args) < 2:
-            return self.reset(args[0])
-        return self.reset(args[0], int(args[1]))
+            return self.multiple_reset(args[0])
+        return self.multiple_reset(args[0], int(args[1]))
+
+    def multiple_reset(self, rid, val=0):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.reset(r, val))
+            return dumps(res)
+        else:
+            return dumps(self.reset(rid, val))
+
 
     def reset(self, rid, step=0):
         if not self.db.document_exists(rid):
-            return dumps({"results":'Error: The given request id does not exist.'})
+            return {"prepid": rid, "results":'Error: The given request id does not exist.'}
 
         req = request('', json_input=self.db.get(rid))
         if step >= len(req.get_attribute('approvals')) - 1:
-            return dumps({"results":'Error: Cannot reset higher approval step'})
+            return {"prepid": rid, "results":'Error: Cannot reset higher approval step'}
 
         if not req.approve(step):
-            return dumps({"results":False})
+            return {"prepid":rid, "results":False}
 
         hist = {}
         hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
@@ -223,7 +254,7 @@ class ResetRequestApproval(RESTResource):
 
         req.update_history(hist)
 
-        return dumps({"results":self.db.update(req.json())})
+        return {"prepid": rid, "results":self.db.update(req.json())}
 
 class SetStatus(RESTResource):
     def __init__(self):
@@ -233,17 +264,27 @@ class SetStatus(RESTResource):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if len(args) < 2:
-            return self.status(args[0])
-        return self.status(args[0], int(args[1]))
+            return self.multiple_status(args[0])
+        return self.multiple_status(args[0], int(args[1]))
+
+    def multiple_status(self, rid, val=-1):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.status(r, val))
+            return dumps(res)
+        else:
+            return dumps(self.status(rid, val))
 
     def status(self, rid, step=-1):
         if not self.db.document_exists(rid):
-            return dumps({"results":'Error: The given request id does not exist.'})
+            return {"prepid": rid, "results":'Error: The given request id does not exist.'}
 
         req = request('', json_input=self.db.get(rid))
 
         if not req.add_status(step):
-            return dumps({"results":False})
+            return {"prepid": rid, "results":False}
 
         hist = {}
         hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
@@ -252,7 +293,7 @@ class SetStatus(RESTResource):
 
         req.update_history(hist)
 
-        return dumps({"results":self.db.update(req.json())})
+        return {"prepid": rid, "results":self.db.update(req.json())}
 
 class InjectRequest(RESTResource):
     def __init__(self):
@@ -263,6 +304,7 @@ class InjectRequest(RESTResource):
 
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         return self.inject_request(args[0])
 
@@ -270,7 +312,7 @@ class InjectRequest(RESTResource):
         try:
             from submitter.package_builder import package_builder
         except ImportError:
-            print 'Error: Could not import "package_builder" module.'
+            self.logger.error('Could not import "package_builder" module.', level='critical')
             return dumps({"results":'Error: Could not import "package_builder" module.'})        
         req = self.db.get(id)
         pb = package_builder(req_json=req)

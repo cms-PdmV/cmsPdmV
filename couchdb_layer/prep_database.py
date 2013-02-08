@@ -13,26 +13,35 @@ class database:
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-        def __str__(self):
             database.logger.error('Database "%s" was not found.' % (self.db), level='critical')
+
+        def __str__(self):
             return 'Error: Database ',  self.db,  ' was not found.'
+
     class DatabaseAccessError(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-        def __str__(self):
             database.logger.error('Could not access database "%s".' % (self.db), level='critical')
+
+        def __str__(self):
             return 'Error: Could not access database ',  self.db
+
     class DocumentNotFoundException(Exception):
         def __init__(self,  name=''):
             self.name = name
-        def __str__(self):
             database.logger.error('Document "%s" was not found.' % (self.name))
+
+        def __str__(self):
             return 'Error: Document ',  self.name,  ' was not found.'
+
     class MapReduceSyntaxError(Exception):
         def __init__(self,  query=''):
             self.query = query
+            database.logger.error('Invalid query <%s>' % (self.query))
+
         def __str__(self):
             return 'Error: Invalid query "' + self.query + '"'
+
     class InvalidOperatorError(Exception):
         def __init__(self,  op=''):
             self.op = str(op)
@@ -72,25 +81,32 @@ class database:
     
     def __document_exists(self,  doc):
         if not doc:
+            self.logger.error('Trying to locate empty string.', level='warning')
             return False
         id = ''
         if 'prepid' not in doc:
             if '_id' not in doc:
+                self.logger.error('Document does not have an "_id" parameter.', level='critical')
                 return False
             id = doc['_id']
         elif '_id' not in doc:
             if 'prepid' not in doc:
+                self.logger.error('Document does not have an "_id" parameter.', level='critical')
                 return False
             id = doc['prepid']
         id = doc['_id']
         return self.__id_exists(prepid=id)
 
     def document_exists(self, prepid=''):
+	self.logger.log('Looking for document %s...' % (prepid))
         return self.__id_exists(prepid) 
     
     def __id_exists(self,  prepid=''):
         try:
-            return self.db.documentExists(id=prepid)
+            if self.db.documentExists(id=prepid):
+                return True
+            self.logger.error('Document "%s" does not exist.' % (prepid))
+            return False  
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return False
@@ -106,12 +122,15 @@ class database:
             self.db.delete_doc(id=prepid)
             return True
         except Exception as ex:
-            print 'Error: Could not delete document:', prepid, '. Reason:', str(ex)
+            self.logger.error('Could not delete document: %s . Reason: %s ' % (prepid, ex))
             return False            
 
     def update(self,  doc={}):
+        if '_id' in doc:
+            self.logger.log('Updating document with id: %s' % (doc['_id']))
         if self.__document_exists(doc):
             return self.save(doc)
+        self.logger.error('Failed to update document: %s' % (json.dumps(doc)))         
         return False
         
     def update_all(self,  docs=[]):
@@ -125,7 +144,7 @@ class database:
             self.db.commit()
             return True
         except Exception as ex:
-            print 'Error: Could not commit changes to database. Reason: ',  str(ex)
+            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False        
         
     def get_all(self, page_num=0): 
@@ -135,7 +154,7 @@ class database:
                 return self.db.loadView(self.db_name, "all", options={'limit':limit,'skip':skip})['rows']
             return self.db.loadView(self.db_name, "all")['rows']
         except Exception as ex:
-            print 'Error: Could not access view. Reason:',  str(ex)
+            self.logger.error('Could not access view. Reason: %s' % (ex))
             return []
 
     
@@ -145,11 +164,12 @@ class database:
         try:   
             return self.__query(query, page=page_num)
         except Exception as ex:
-            print 'Error: An error occured while trying to load a view. Reason:',  str(ex)
+            self.logger.error('Could not load view for query: <%s> . Reason: %s' % (query, ex))
             return []
 
     def __extract_operators(self,  query=''):
         if not query:
+            self.logger.error('Empty query', level='warning')
             return ()
         clean = []
         tokens = []
@@ -181,7 +201,7 @@ class database:
             try:
                 tokens = self.__extract_operators(tokenized_query)
             except Exception as ex:
-                print str(ex)
+                self.logger.error('Could not parse query. Reason: %s' % (ex))
                 return []
             if tokens:
                 view_name, view_opts = self.__build_query(tokens)
@@ -195,6 +215,7 @@ class database:
                 return []
     
     def raw_query(self,  view_name,  options={}):
+        self.logger.error('Executing raw query to the database. Accessed view: %s' % (view_name), level='warning') 
         return self.db.loadView(self.db_name,  view_name,  options)['rows']
                 
     def __get_op(self, oper):
@@ -256,7 +277,7 @@ class database:
         try:
             view_opts = self.__build_options(op, kval)
         except Exception as ex:
-            print 'Error: value types are not compatible with operator:', op
+            self.logger.error('Value types are not compatible with operator %s' % (op)) 
             return None,None
         return param, view_opts
     
@@ -327,24 +348,25 @@ class database:
             self.db.commit()
             return True
         except Exception as ex:
-            print 'Error: Could not commit changes to database. Reason: ',  str(ex)
+            self.logger.error('Could not commit changes to database. Reason: %s' % (ex)) 
             return False
 
     def save(self, doc={}):
         if not doc:
+            self.logger.error('Tried to save empty document.', level='warning')
             return False
         try:
             self.db.commitOne(doc)
             return True
         except Exception as ex:
-            print 'Error: Could not commit changes to database. Reason: ', str(ex)
+            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
 
     def count(self):
         try:
             return len(self.db.allDocs()) 
         except Exception as ex:
-            print 'Error: Could not count documents in database. Reason:', str(ex)
+            self.logger.error('Could not count documents in database. Reason: %s' % (ex))
             return -1 
 
 #db = database('requests')

@@ -25,9 +25,12 @@ class CreateChainedCampaign(RESTResource):
             self.ccamp = chained_campaign('TEST', json_input=loads(jsdata))
         except chained_campaign('').IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
+
+        self.logger.log('Creating new chained_campaign %s...' % (self.ccamp.get_attribute('_id'))) 
         
         self.ccamp.set_attribute("_id", self.ccamp.get_attribute("prepid"))
         if not self.ccamp.get_attribute("_id") :#or self.db.document_exists(self.ccamp.get_attribute("_id")):
+            self.logger.error('Campaign %s already exists. Cannot re-create it.' % (self.ccamp.get_attribute('_id')))
             return dumps({"results":'Error: Campaign '+self.ccamp.get_attribute("_id")+' already exists'})
         
         # update actions db
@@ -39,6 +42,8 @@ class CreateChainedCampaign(RESTResource):
     def update_actions(self):
         # get all campaigns in the chained campaign
         camps = self.ccamp.get_attribute('campaigns')
+ 
+        self.logger.log('Updating actions for new chained_campaign %s ...' % (self.ccamp.get_attribute('_id')))
         
         # for every campaign with a defined flow
         for c, f in camps:
@@ -74,7 +79,10 @@ class UpdateChainedCampaign(RESTResource):
                         return dumps({"results":False})
 
                 if not self.ccamp.get_attribute("_id"):
+                        self.logger.error('prepid returned was None')
                         return dumps({"results":False})
+
+                self.logger.log('Updating chained_campaign %...' % (self.ccamp.get_attribute('_id')))
                 return dumps({"results":self.db.update(self.ccamp.json())})
 
         
@@ -94,25 +102,33 @@ class AddRequestToChain(RESTResource):
         return self.import_request(args[0], args[1])
 
     def add_request(self, chainid, campaignid):
+
+        self.logger.log('Generating new request to add in %s...' % (chainid))
+
         if not chainid:
+            self.logger.error('chained_request\'s prepid was None.') 
             return dumps({"results":False}) 
         else:
             try:
                 chain = chained_request('', chained_request_json=self.chained_db.get(chainid))
             except Exception as ex:
+                self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
                 return dumps({"results":False})
         if not campaignid:
+            self.logger.error('id of the campaign provided was None')
             return dumps({"results":False})
         else:
             try:
                 camp = campaign('', campaign_json=self.campaign_db.get(campaignid))
             except Exception as ex:
+                self.logger.error('Could not initialize campaign object. Reason: %s' % (ex))
                 return dumps({"results":False})
         req = camp.add_request()
         new_req = chain.add_request(req)
         
         # save everything
-        if not self.chain_db.save(chain.json()):
+        if not self.chained_db.save(chain.json()):
+            self.logger.error('Could not save newly created request to database.')
             return dumps({"results":False})
         return dumps({"results":self.request_db.save(new_req)})
 
@@ -161,6 +177,7 @@ class GetChainedCampaign(RESTResource):
         self.db = database(self.db_name)
     def GET(self, *args):
         if not args:
+            self.logger.error('No arguments were given.')
             return dumps({"results":False})
         return self.get_request(args[0])
     def get_request(self, id):
@@ -176,12 +193,19 @@ class GenerateChainedRequests(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         return self.generate_requests(args[0])
     
     def generate_requests(self,  id):
+        self.logger.log('Generating all selected chained_requests for chained_campaign %s...' % (id))       
+ 
         # init chained_campaign
-        cc = chained_campaign('',  json_input=self.ccdb.get(id))
+        try:
+            cc = chained_campaign('',  json_input=self.ccdb.get(id))
+        except Exception as ex:
+            self.logger.error('Could not initialize chained_campaign object. Reason: %s' % (ex))
+            return dumps({"results": str(ex)})
         
         # get the campaigns field and from that...
         camps = cc.get_attribute('campaigns')
@@ -205,7 +229,7 @@ class GenerateChainedRequests(RESTResource):
                             break
                 
                     if flag:
-                        print 'Warning: A chained request already exists for chained_campaign',  id
+                        self.logger.error('A chained_request with the id %s already exists' % (id), level='warning')
                         continue
                     
                     # create the chained requests
@@ -223,13 +247,17 @@ class Start(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         return self.start(args[0])
     
     def start(self,  ccid):
         if not self.ccdb.document_exists(ccid):
+            self.logger.error('chained_campaign %s does not exist' % (ccid))  
             return dumps({"results":'Error: The Chained Campaign does not exist'})
-        
+
+        self.logger.log('Starting chained_campaign %s ...' % (ccid))        
+
         cc = self.ccdb.get(ccid)
         cc.start()
         self.ccdb.update(cc.json())
@@ -241,12 +269,16 @@ class Stop(RESTResource):
     
     def GET(self,  *args):
         if not args:
+            self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
         return self.stop(args[0])
     
     def stop(self,  ccid):
         if not self.ccdb.document_exists(ccid):
+            self.logger.error('chained_campaign %s does not exist.' % (ccid) )
             return dumps({"results":'Error: The Chained Campaign does not exist'})
+
+        self.logger.log('Stopping chained_campaign %s ...' % (ccid))
         
         cc = self.ccdb.get(ccid)
         cc.stop()

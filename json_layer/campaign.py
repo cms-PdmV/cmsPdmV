@@ -13,16 +13,18 @@ class campaign(json_base):
         def __init__(self,  approval=None):
             self.logger	= logfactory("prep2")
             self.__approval = repr(approval)
+            campaign.logger.error('Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved')
+
         def __str__(self):
-            self.logger.error('Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved')
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
     
     class CampaignExistsException(Exception):
         def __init__(self,  cid):
             self.logger = logfactory("prep2")
             self.c = cid
+            campaign.logger.error('Error: Campaign '+  self.c +  ' already in "next" list.')
+
         def __str__(self):
-            self.logger.error('Error: Campaign '+  self.c +  ' already in "next" list.') 
             return 'Error: Campaign '+  self.c +  ' already in "next" list.'
 
     def __init__(self, author_name,  author_cmsid=-1,   author_inst_code='',  author_project='', json_input={}):

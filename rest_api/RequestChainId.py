@@ -15,11 +15,16 @@ class RequestChainId(RESTResourceIndex):
 
     def GET(self, *args):
         if len(args) < 2:
+            self.logger.error('No arguments were given.')
             return dumps({"results":""})
         return self.generate_id(args[0], args[1])
     
     def generate_id(self, pwg, campaign):
-        if not pwg or not campaign:
+        if not pwg:
+            self.logger.error('Physics working group provided is None.')
+            return dumps({"results":""})
+        if not campaign:
+            self.logger.error('Campaign id provided is None.')
             return dumps({"results":""})
         
         if not self.ccamp_db.document_exists(campaign):
@@ -29,10 +34,13 @@ class RequestChainId(RESTResourceIndex):
         results = map(lambda x: x['value'], self.creq_db.get_all())
         results = filter(lambda x: pwg+'-'+campaign+'-' in x,map(lambda x: x['_id'], results))
         if not results:
+            self.logger.log('Beginning new prepid family: %s' % (pwg+"-"+campaign+"-00001"))
             return dumps({"results":pwg+"-"+campaign+"-00001"})
 
         # increase the serial number of the request by one
         sn = int(results[-1].rsplit('-')[2])+1
         new_prepid = pwg + '-' + campaign + '-' + str(sn).zfill(5)
+
+        self.logger.log('New chain id: %s' % (new_prepid), level='debug')
 
         return dumps({"results":new_prepid})

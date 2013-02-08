@@ -13,6 +13,7 @@ class request(json_base):
     class DuplicateApprovalStep(Exception):
         def __init__(self,  approval=None):
             self.__approval = repr(approval)
+            request.logger.error('Duplicate Approval Step: Request has already been %s approved' % (self.__approval))
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
 
@@ -183,13 +184,14 @@ class request(json_base):
         # if no index is specified, just go one step further
         if index==-1:
             index = len(approvals)
+
+        self.logger.log('Approving request %s for step "%s"' % (self.get_attribute('_id'), index))
         
         try:
             new_apps = app.approve(index)
             self.set_attribute('approvals',  new_apps)
             return True
         except app.IllegalApprovalStep as ex:
-            print str(ex)
             return False
     
     def add_status(self,  index=-1):
@@ -198,11 +200,15 @@ class request(json_base):
             status = self.get_attribute('status')
             if not status:
                 index = 0 
-            else:
+            elif status in self._json_base__status:
                 index = self._json_base__status.index(status)+1
+            else:
+		index = 0
+
+        self.logger.log('Updating the status for request %s...' % (self.get_attribute('_id')))
 
         if index >= len(self._json_base__status):
-            print 'Error: Illegal Status index: '+str(index)
+            self.logger.error('Illegal Status index: %s' % (index))
             return False
 
         self.set_attribute('status',  self._json_base__status[index])
