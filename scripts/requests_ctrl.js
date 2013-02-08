@@ -174,7 +174,7 @@ testApp.directive("customApproval", function(){
         '  <div ng-show="display_table">'+
         '    <input type="button" value="Hide" ng-click="display_approval()">'+
         '    {{whatever.length}} step(-s)'+
-        '    <table class="table table-bordered">'+
+        '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
         '      <thead>'+
         '        <tr>'+
         '          <th style="padding: 0px;">Index</th>'+
@@ -221,7 +221,7 @@ testApp.directive("customHistory", function(){
     '  </div>'+
     '  <div ng-show="show_history">'+
     '    <input type="button" value="Hide" ng-click="show_history=false;">'+
-    '    <table class="table table-bordered">'+
+    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
@@ -245,7 +245,7 @@ testApp.directive("customHistory", function(){
     '</div>'+
     '',
     link: function(scope, element, attrs, ctrl){
-      ctrl.render = function(){
+      ctrl.$render = function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
       };
