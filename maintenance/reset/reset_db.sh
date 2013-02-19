@@ -49,16 +49,16 @@ do
 	curl -X PUT $couchhost/$db
 
 	# fill database
-	if [ -e $datadir ]; then
-		# if dedicated directory exists
-		if [ -e $datadir/$db ]; then
-			echo "Filling database '$db' with data from '$datadir/$db'"
-			for fname in `ls $datadir/$db`
-			do
-				curl -X PUT -H "Accept: application/json" $couchhost/$db/$fname --data-binary @$datadir/$db/$fname
-			done
-		fi
-	fi
+	#if [ -e $datadir ]; then
+	#	# if dedicated directory exists
+	#		if [ -e $datadir/$db ]; then
+	#		echo "Filling database '$db' with data from '$datadir/$db'"
+	#		for fname in `ls $datadir/$db`
+	#		do
+	#			curl -X PUT -H "Accept: application/json" $couchhost/$db/$fname --data-binary @$datadir/$db/$fname
+	#		done
+	#	fi
+	#fi
 
 	# create design document for views
 	if [ -e $viewdir ]; then

@@ -3,15 +3,24 @@ import time
 import os
 import re
 
+import logging
+from tools.logger import logger as logfactory, prep2_formatter
+
 class package_tester:
-    def __init__(self,  request_object,  directory='/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/',  pyconfigs=[]):
+    logger = logfactory('prep2')
+    hname = '' # handler's name
+
+    def __init__(self,  request_object,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  pyconfigs=[]):
         self.request = request_object
         
         if not self.request:
             raise NoneTypeException('Request object passed was None.')
-        
+
         self.directory = directory
         self.__check_directory()
+
+	self.hname = self.request.get_attribute('prepid')
+        self.__build_logger()
         
         self.pyconfigs = pyconfigs
         
@@ -19,17 +28,48 @@ class package_tester:
             return
         
         self.ssh_client = None
-        self.ssh_server = 'lxplus.cern.ch'
+        self.ssh_server = 'lxplus.cern.ch'#'pdmvserv-test.cern.ch'
         self.ssh_server_port = 22
-        self.ssh_credentials = '/afs/cern.ch/user/n/nnazirid/private/credentials'
+        self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'#'/afs/cern.ch/user/n/nnazirid/private/credentials'
         
         self.__build_ssh_client()
+
+    def __build_logger(self):
+
+        # define logger
+        #logger = logging.getLogger('prep2_inject')
+
+        # define .log file
+        self.__logfile = self.directory + self.request.get_attribute('prepid') + '.log'
+
+            #self.logger.setLevel(1)
+
+            # main stream handler using the stderr
+            #mh = logging.StreamHandler()
+            #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
+
+            # filename handler outputting to log
+        fh = logging.FileHandler(self.__logfile)
+        fh.setLevel(logging.DEBUG) # log filename is most verbose
+
+            # format logs
+            #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
+            #mw.setFormatter(formatter)
+        fh.setFormatter(prep2_formatter())
+
+            # add handlers to main logger - good to go
+        self.hname = self.request.get_attribute('prepid')
+        self.logger.add_inject_handler(name=self.hname, handler=fh)
+            #self.logger.addHandler(mh)
+
+        #self.logger.inject('full debugging information in ' + repr(self.__logfile), handler=self.hname)
+
     
     def __check_directory(self):
         
         # check if directory is empty
         if not self.directory:
-            self.directory = '/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/'
+            self.directory = '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'#'/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/'
         
         self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
         
@@ -44,27 +84,27 @@ class package_tester:
         self.ssh_client = paramiko.SSHClient()
         paramiko.util.log_to_file(self.directory + self.request.get_attribute('prepid')+'_ssh_.log', 10) 
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/n/nnazirid/', ".ssh", "known_hosts")))
+        #self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/n/nnazirid/', ".ssh", "known_hosts")))
         
         us,  pw = self.__get_ssh_credentials()
         
         if not us:
+            self.logger.inject('Credentials could not be retrieved. Reason: username was None', level='error', handler=self.hname)
             raise paramiko.AuthenticationException('Credentials could not be retrieved.')
         
         try:
             self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
         except paramiko.AuthenticationException as ex:
-            print 'Error: Could not authenticate to remote server '+self.ssh_server+':'+str(self.ssh_server_port)
-            print 'Reason: '+str(ex)
+            self.logger.error('Could not authenticate to remove server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
             return
         except paramiko.BadHostKeyException as ex:
-            print 'Error: Host Key was invalid. Reason: '+str(ex)
+            self.logger.inject('Host key was invalid. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SSHException as ex:
-            print 'Error: There was a problem with the SSH connection. Reason: '+str(ex)
+            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SocketError  as ex:
-            print 'Error: Could not allocate a socket. Reason: '+str(ex)
+            self.logger.inject('Could not allocate socket for SSH. Reason: %s' % (ex), level='error', handler=self.hname)
             return
 
     def __get_ssh_credentials(self):
@@ -73,7 +113,7 @@ class package_tester:
             data = f.readlines()
             f.close()
         except IOError as ex:
-            print str(ex)
+            self.logger.inject('Could not access credential file. IOError: %s' % (ex), level='error', handler=self.hname)
             return None,  None
         
         username,  password = None,  None
@@ -82,11 +122,13 @@ class package_tester:
             if 'username:' in line:
                 toks = line.split(':')
                 if len(toks) < 2:
+                    self.logger.inject('Username was None', level='error', handler=self.hname)
                     raise paramiko.AuthenticationException('Username not found.')
                 username = toks[1].strip()
             elif 'password' in line:
                 toks = line.split(':')
                 if len(toks) < 2:
+                    self.logger.inject('Password was None', level='error', handler=self.hname)
                     raise paramiko.AuthenticationException('Password not found.')
                 password = toks[1].strip()
         
@@ -99,7 +141,7 @@ class package_tester:
         try:
             return self.ssh_client.exec_command(cmd)
         except SSHException as ex:
-            print 'Error: Could not execute remote command. Reason: '+str(ex)
+            self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
             return None,  None,  None
             
     def build_submit_script(self):
@@ -128,10 +170,10 @@ class package_tester:
             script.close()
             os.chmod(self.directory + 'run_test.sh', 0755)
         except IOError as ex:
-            print 'Could not create testing script. Reason: '+str(ex)
+            self.logger.inject('Could not create testing script. Reason: %s' % (ex), level='error', handler=self.hname)
             return False
         except Exception as ex:
-            print 'Error: Could not create testing script. Reason: '+str(ex)
+            self.logger.inject('Could not create testing script. Reason: %s' % (ex), level='error', handler=self.hname)
             return False
         
         return True
@@ -152,18 +194,21 @@ class package_tester:
         cmd = self.build_test_command()
         if not cmd:
             return False
+
+        self.logger.inject('submission command: %s' % (cmd), level='debug', handler=self.hname)
         
         stdin,  stdout,  stderr = self.__remote_exec(cmd)
         
         if not stdin and not stdout and not stderr:
             return False
         
-        print stdout.read()
+        self.logger.inject(stdout.read(), handler=self.hname)
+        self.logger.inject('SSH remote execution stderr stream: "%s"' % (stderr.read()), handler=self.hname, level='debug')
         
         return True
     
     def monitor_job_status(self):
-        print '\t[Job Monitor Heartbeat]'
+        #print '\t[Job Monitor Heartbeat]'
         
         cmd = 'bjobs -w'
         
@@ -177,26 +222,79 @@ class package_tester:
         
         for line in lines:
             if self.request.get_attribute('prepid') in line:
+                jid = line[:line.index(' ')]
+                self.logger.inject(self.__get_job_percentage(jid), level='debug', handler=self.hname)
+                
                 return False
         
         return True
 
+    def __get_job_percentage(self, jobid=''):
+        if not jobid:
+            return ''
+
+        cmd = 'bjobs -WP'
+        stdin,  stdout,  stderr = self.__remote_exec(cmd)
+
+        if not stdin and not stdout and not stderr:
+            return False
+
+        data = stdout.read()
+        lines = re.split(r'(\n+)', data)
+
+        for line in lines:
+            if jobid in line:
+                return '<job monitor hearbeat> job completion: %s' % (line.strip().rsplit(' ')[-2])
+
+        return ''
+
     def get_job_result(self):
-        try:
-            log = open(self.directory + self.request.get_attribute('prepid') + '.out', 'r')
-            
-            for line in log.readlines():
-                if 'Successfully completed.' in line:
-                    return True
-                elif 'Exited with exit code' in line:
-                    return False
-            log.close()
-        except Exception as e:
-            print 'Status Log Error: ' + str(e)
-            return None
+        stdin, stdout, stderr = self.__remote_exec('cat %s.out' % (self.directory + self.request.get_attribute('prepid')))
+
+        if not stdin and not stdout and not stderr:
+            return False
+
+        data = stdout.read()
+        lines = re.split(r'(\n+)', data)
+
+        for line in lines:
+            if 'Successfully completed.' in line:
+                return True
+            elif 'Exited with ' in line:
+                self.logger.inject('workflow batch test returned: %s' % (line), level='error', handler=self.hname)
+                self.__read_job_error()
+                return False
+
+        self.logger.inject('Could not obtain status from logfile "%s.out". Error stream dump: %s' % (self.directory + self.request.get_attribute('prepid'), stderr.read()), level='error', handler=self.hname)
+        return None
+
+    def __read_job_error(self):
+        stdin, stdout, stderr = self.__remote_exec('cat %s.err' % (self.directory + self.request.get_attribute('prepid')))
+
+        if not stdin and not stdout and not stderr:
+            return
+
+        data = stdout.read()
+        if data.strip():
+	    self.logger.inject('job error dump: %s' % (data), level='error', handler=self.hname)
+
+#    def get_job_resulta(self):
+#        try:
+#            log = open(self.directory + self.request.get_attribute('prepid') + '.out', 'r')
+#            
+#            for line in log.readlines():
+#                if 'Successfully completed.' in line:
+#                    return True
+#                elif 'Exited with exit code' in line:
+#                    return False
+#            log.close()
+#        except Exception as e:
+#            self.logger.inject('Status error: %s' % (e), level='error', handler=self.hname)
+#            return None
 
     def test(self):
         if not self.ssh_client:
+            self.logger.inject('SSH Client was not initialized. Aborting...', level='error', handler=self.hname)
             raise NoneTypeError('SSH Client was not initialized. Aborting...')
         
         submit_flag = self.batch_submit()
@@ -206,7 +304,7 @@ class package_tester:
         
         
         while not self.monitor_job_status():
-            time.sleep(5)
+            time.sleep(10)
             
         result = self.get_job_result()
         

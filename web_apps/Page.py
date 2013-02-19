@@ -1,6 +1,6 @@
 import cherrypy
 from jinja2 import Environment, PackageLoader
-from json_layer.authenticator import authenticator
+from tools.authenticator import authenticator
 
 class Page(object) :
 	def __init__(self, title=None, result=None, signature=None, restful=False):

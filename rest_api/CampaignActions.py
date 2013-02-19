@@ -45,12 +45,13 @@ class CreateCampaign(RESTResource):
     
     # creates a chained campaign containing only the given campaign
     def create_chained_campaign(self,  cid,  energy=-1):
-        dcc = chained_campaign('automatic')
-        dcc.set_attribute('prepid', 'chain_'+cid)
-        dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
-        dcc.set_attribute('energy',  energy)
-        dcc.add_campaign(cid) # flow_name = None
-        self.cdb.save(dcc.json())
+	if self.db.get(cid)['root'] < 1:
+	        dcc = chained_campaign('automatic')
+        	dcc.set_attribute('prepid', 'chain_'+cid)
+	        dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
+        	dcc.set_attribute('energy',  energy)
+	        dcc.add_campaign(cid) # flow_name = None
+        	self.cdb.save(dcc.json())
 
 class UpdateCampaign(RESTResource):
     def __init__(self):

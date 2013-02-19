@@ -5,7 +5,7 @@ function resultsCtrl($scope, $http, $location){
 //         {text:'Actions',select:true, db_name:''},
     ];
     $scope.chained_campaigns = ["prepid"];
-    $scope.campaigns = ["-----"];
+    $scope.campaigns = [];
     $scope.show_well = false;
     if($location.search()["page"] === undefined){
         $location.search("page", 0);
@@ -15,6 +15,30 @@ function resultsCtrl($scope, $http, $location){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
+    var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
+    promise.then(function(data){
+//         console.log(data);
+        $scope.result = data.data.results; 
+        if ($scope.result.length != 0){
+        columns = _.keys($scope.result[0]);
+        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+//         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+        _.each(rejected, function(v){
+            add = true;
+            _.each($scope.actions_defaults, function(column){
+            if (column.db_name == v){
+                add = false;
+            }
+         });
+            if (add){
+//                 $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+            }
+        });
+        }
+        console.log($scope.actions_defaults);
+    }, function(){
+       console.log("Error"); 
+    });
     var promise = $http.get('search/?db_name=chained_campaigns&query=""&page=-1')
     promise.then(function(data){
         _.each(data.data.results, function(v){
@@ -24,15 +48,15 @@ function resultsCtrl($scope, $http, $location){
         });
 //         console.log($scope.actions_defaults);
     });
-
-    promise = $http.get('restapi/campaigns/get_all')
+    
+    promise = $http.get('search/?db_name=campaigns&query=""&page=-1')
     promise.then(function(data){
         _.each(data.data.results, function(v){
-           $scope.campaigns.push(v.value);
+           $scope.campaigns.push(v.prepid); 
         });
 //         console.log($scope.campaigns);
     });
-
+    
   $scope.showing_well = function(){
         if ($scope.show_well){
           $scope.show_well = false;
@@ -47,24 +71,8 @@ function resultsCtrl($scope, $http, $location){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
-            $scope.result = data.data.results; 
-            if ($scope.result.length != 0){
-            columns = _.keys($scope.result[0]);
-            rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-            $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-            _.each(rejected, function(v){
-                add = true;
-                _.each($scope.actions_defaults, function(column){
-                if (column.db_name == v){
-                    add = false;
-                  }
-                });
-                if (add){
-                    $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-                }
-              });
-            }
-            console.log($scope.actions_defaults);
+          console.log(data);
+          $scope.result = data.data.results;
          }, function(){
              console.log("Error"); 
          });
@@ -83,7 +91,7 @@ function resultsCtrl($scope, $http, $location){
       }
   };
 }
-var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
+var testApp = angular.module('testApp',[]);
 testApp.directive("customPrepId", function ($rootScope) {
     return {
         restrict: 'E',

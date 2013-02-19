@@ -8,24 +8,43 @@ import subprocess
 import math
 import shutil
 import cherrypy
-
-
+import logging
+from tools.logger import prep2_formatter, logger as logfactory
 from json_layer.request import request
 
 class package_builder:
+	
+    logger = logfactory('prep2')
+    hname = '' # the name of the handler for the request to be injected
+
     class DataAlreadyExistsException(Exception):
         def __init__(self, directory=None):
             self.directory = directory
+            if not self.directory:
+                package_builder.logger.inject('Data directory already exists. Give --force option to overwrite.', level='error', handler=package_builder.hname)
+            else:
+                package_builder.logger.inject('Directory already exists. Give --force option to overwrite.', level='error', handler=package_builder.hname)
+
         def __str__(self):
             if not self.directory:
                 return 'Error: Data directory already exists. Give --force option to overwrite.'
             return 'Error: Directory ' + str(self.directory) + ' already exists. Give --force option to overwrite'
+ 
     class NoValidRequestsDetectedException(Exception):
+        def __init__(self):
+            package_builder.logger.inject('Error: There were no valid requests in provided list', level='error', handler=package_builder.hname)
+
         def __str__(self):
             return 'Error: There were no valid requests in provided list'
+
     class NotInitializedException(Exception):
         def __init__(self,  msg=''):
             self.msg = str(msg)
+            if self.msg:
+                package_builder.logger.inject('Package is not initialized. Reason: %s' % (self.msg), level='error', handler=package_builder.hname)
+            else:
+                package_builder.logger.inject('Package is not initialized. ', level='error', handler=package_builder.hname)
+
         def __str__(self):
             if self.msg:
                 return 'Error: Package is not initialized. Reason: '+self.msg
@@ -34,10 +53,15 @@ class package_builder:
     class NoStepsDetected(Exception):
         def __init__(self,  rid):
             self.rid = str(rid)
+            package_builder.logger.inject(' no valid cmsDriver commands could be built for request "%s"' % (self.rid), level='error', handler=package_builder.hname)
+
         def __str__(self):
             return 'Error: no valid cmsDriver commands could be built for request "'+self.rid+'".'
 
     class NoneTypePackageNameException(Exception):
+        def __init__(self):
+            package_builder.logger.inject(' Package name given was NoneType', level='error', handler=package_builder.hname)
+
         def __str__(self):
             return 'Error: Package name given was NoneType'
 
@@ -50,8 +74,7 @@ class package_builder:
         # init request object
         try:
             self.request = request('',  json_input=req_json)
-        except request.IllegalAttributeName as ex:
-            self.logger.critical(str(ex))
+        except request.IllegalAttributeName:
             return
 
         self.__flags = []
@@ -83,7 +106,7 @@ class package_builder:
         self.__check_directory() # check directory sanity
 
         # init logger
-        self.logger = None
+        #self.logger = None
         self.__build_logger()
 
         # initialize tarball
@@ -112,6 +135,7 @@ class package_builder:
 
         # check if directory is empty
         if not self.directory:
+            self.logger.inject('Data directory is not defined', level='error', handler=self.hname)
             raise self.NotInitializedException('Data directory is not defined.')
 
         self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
@@ -128,33 +152,33 @@ class package_builder:
     def __build_logger(self):
 
         # define logger
-        self.logger = logging.getLogger(self.request.get_attribute('prepid')+'.logger')
+        #logger = logging.getLogger('prep2_inject')
 
         # define .log file
         self.__logfile = self.directory + self.request.get_attribute('prepid') + '.log'
 
-        # create and configure logger handlers
-        if not len(self.logger.handlers):
-            self.logger.setLevel(1)
+            #self.logger.setLevel(1)
 
             # main stream handler using the stderr
-            mh = logging.StreamHandler()
-            mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
+            #mh = logging.StreamHandler()
+            #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
 
             # filename handler outputting to log
-            fh = logging.FileHandler(self.__logfile)
-            fh.setLevel(10) # log filename is most verbose
+        fh = logging.FileHandler(self.__logfile)
+        fh.setLevel(logging.DEBUG) # log filename is most verbose
 
             # format logs
-            formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
-            mh.setFormatter(formatter)
-            fh.setFormatter(formatter)
+            #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
+            #mw.setFormatter(formatter)
+        fh.setFormatter(prep2_formatter())
 
             # add handlers to main logger - good to go
-            self.logger.addHandler(fh)
-            self.logger.addHandler(mh)
+        self.hname = self.request.get_attribute('prepid')
+        self.logger.add_inject_handler(name=self.hname, handler=fh)
+        #self.logger.inject_logger.handlers[0].setFormatter(inject_formatter(self.request.get_attribute('prepid')))
+            #self.logger.addHandler(mh)
 
-        self.logger.info('full debugging information in ' + repr(self.__logfile))
+        self.logger.inject('full debugging information in ' + repr(self.__logfile), handler=self.hname)
 
     # check and init the tarball
     def __init_tarball(self):
@@ -169,7 +193,7 @@ class package_builder:
             self.tarball = self.__tarobj.tarball
 
         # inform
-        self.logger.info('Tarball : '+self.tarball)
+        self.logger.inject('Tarball : %s' % (self.tarball), handler=self.hname)
 
         return self.__tarobj
 
@@ -178,14 +202,14 @@ class package_builder:
         if not self.directory:
             raise self.NotInitializedException
 
-        self.logger.info('Initializing configuration files...')
+        self.logger.inject('Initializing configuration files...', handler=self.hname)
 
         # build path strings
         self.__summary = self.directory + 'summary.txt'
         self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
-        self.logger.debug('Populating configuration files...')
+        self.logger.inject('Populating configuration files...', level='debug', handler=self.hname)
 
         # create summary
         try:
@@ -193,10 +217,9 @@ class package_builder:
             sin.write('request ID\tRelease\tEventcontent\tPriority\tEvents\ttime\tsize\tfilterEff\tmatchingEff\tdatasetName\tGlobalTag\tconfigurations\n')
             sin.close()
         except Exception as ex:
-            self.logger.error('Error while creating ' + self.__summary)
-            self.logger.error('Returned: ' + str(ex))
+            self.logger.inject('Could not create summary file "%s". Reason: %s' % (self.__summary, ex), level='error', handler=self.hname)
 
-        self.logger.debug('summary.txt file created')
+        self.logger.inject('summary.txt file created', level='debug', handler=self.hname)
 
         # create upload_configs script
         try:
@@ -204,10 +227,9 @@ class package_builder:
             uin.write('#!/usr/bin/env bash\n')
             uin.close()
         except Exception as ex:
-            self.logger.error('Error while creating ' + self.__upload_configs)
-            self.logger.error('Returned: ' + str(ex))
+            self.logger.inject('Could not create configuration injection file "%s". Reason: %s' % (self.__upload_configs, ex), level='error', handler=self.hname)
 
-        self.logger.debug('upload_configs.sh script created')
+        self.logger.inject('upload_configs.sh script created', level='debug', handler=self.hname)
 
         # create injectAndApprove.sh script
         try:
@@ -215,10 +237,9 @@ class package_builder:
             iin.write('#!/usr/bin/env bash\n')
             iin.close()
         except Exception as ex:
-            self.logger.error('Error while creating ' + self.__injectAndApprove)
-            self.logger.error('Returned: ' + str(ex))
+            self.logger.inject('Could not create injection file "%s". Reason: %s' % (self.__injectAndApprove, ex), level='error', handler=self.hname)
 
-        self.logger.debug('injectAndApprove.sh script created')
+        self.logger.inject('injectAndApprove.sh script created', level='debug', handler=self.hname)
 
     # takes a path to a configuration file and a new line
     # appends the line to the end of the configuration
@@ -239,8 +260,7 @@ class package_builder:
                 fin.write(line + '\n')
             fin.close()
         except Exception as ex:
-            self.logger.error('Could not update ' + configuration)
-            self.logger.error('Returned: ' + str(ex))
+            self.logger.inject('Could not update configuration file "%s". Reason: %s' % (configuration, ex), level='error', handler=self.hname)
 
     def init_package(self):
         self.__summary = self.directory + 'summary.txt'
@@ -348,7 +368,6 @@ class package_builder:
             try:
                 self.__validate_configuration(cmsd)
             except self.NotInitializedException as ex:
-                self.logger.critical(ex)
                 return False
 
             # check if customization is needed
@@ -387,7 +406,7 @@ class package_builder:
         # no need for directory traversal (parent stays unaffected)
         infile += 'cd ../../\n'
 
-        self.logger.debug(infile)
+        self.logger.inject(infile, level='debug', handler=self.hname)
 
         return infile
 
@@ -401,13 +420,13 @@ class package_builder:
         if not self.__cmsDrivers:
             raise self.NoStepsDetected(self.request.get_attribute('prepid'))
 
-        self.logger.info('Detected '+str(len(self.__cmsDrivers))+' steps.')
+        self.logger.inject('Detected %d steps' % (len(self.__cmsDrivers)), handler=self.hname)
 
         # get the full setup.sh script
         fullcommand = self.__build_setup_script()
 
         if not fullcommand:
-            self.logger.error('Could build configuration scripts. Please check the request.')
+            self.logger.inject('Could build configuration scripts. Please check the request.', level='error', handler=self.hname)
             return False
 
         # write full command to setup.sh
@@ -416,10 +435,10 @@ class package_builder:
             f.write(fullcommand)
             f.close()
         except IOError as ex:
-            self.logger.critical('IOError: '+str(ex))
+            self.logger.inject('Could not access setup.sh script. IOError: %s' % (ex), level='critical', handler=self.hname)
             return False
-
-        self.logger.debug('Created "setup.sh" script.')
+        
+        self.logger.inject('Created "setup.sh" script.', level='debug', handler=self.hname)
 
         # populate injectAndApprove.sh script
         self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())
@@ -609,10 +628,10 @@ class package_builder:
 
         # Avoid faulty execution and inform the user.
         if not command:
-            self.logger.error(self.request.get_attribute('prepid') + " FAILED")
+            self.logger.inject("%s FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
             return False
 
-        self.logger.info('Executing setup scripts...')
+        self.logger.inject('Executing setup scripts...', handler=self.hname)
 
         # spawn a subprocess to run it
         p = subprocess.Popen([command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -625,14 +644,14 @@ class package_builder:
         output = p.stdout.read()
         output += p.stderr.read()
 
-        self.logger.debug(output)
+        self.logger.inject(output, level='debug', handler=self.hname)
 
         # when you fail, you die
         if retcode:
-            self.logger.error(self.request.get_attribute('prepid') + " FAILED")
+            self.logger.inject("%s FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
             return False
 
-        self.logger.info(self.request.get_attribute('prepid')+ ' SUBMITTED')
+        self.logger.inject("%s SUBMITTED" % (self.request.get_attribute('prepid')), handler=self.hname)
         self.__update_configuration(self.__summary,  self.__build_summary_string())
         self.__update_configuration(self.__summary, 'Total evts = ' + str(self.request.get_attribute('total_events')))
         return True
@@ -642,8 +661,9 @@ class package_builder:
         #if self.closed:
         #    return
 
-        self.logger.debug('Shutting down...')
-        logging.shutdown()
+        #self.logger.debug('Shutting down...')
+        #logging.shutdown()
+        self.logger.remove_inject_handler(self.hname)
 
         # clean streams
         self.__tarobj.close()
@@ -653,7 +673,7 @@ class package_builder:
 
     # clean work directory for tarification
     def __clean_directory(self):
-        self.logger.debug('Cleaning up directory for tarification...')
+        self.logger.inject('Cleaning up directory ...', level='debug', handler=self.hname)
 
         for filename in os.listdir(self.directory):
             if filename == 'summary.txt':
@@ -669,14 +689,13 @@ class package_builder:
             if os.path.isdir(self.directory + filename):
                 continue
 
-            self.logger.debug('Deleting ' + filename)
+            self.logger.inject('Deleting %s...' % (filename), level='debug', handler=self.hname)
 
             try:
                 # remove
                 os.remove(self.directory + filename)
             except Exception as ex:
-                self.logger.error('Error: File ' + filename + ' could not be deleted')
-                self.logger.error('Reason: ' + str(ex))
+                self.logger.inject('Could not delete "%s". Reason: %s' % (filename, ex), level='error', handler=self.hname)
 
         # clean up parent directory
         for filename in os.listdir(self.directory + os.path.pardir):
@@ -690,8 +709,7 @@ class package_builder:
                 try:
                     shutil.rmtree(self.directory + os.path.pardir + '/' + filename)
                 except Exception as ex:
-                    self.logger.error('Error: File ' + filename + ' could not be deleted')
-                    self.logger.error('Reason: ' + str(ex))
+                    self.logger.inject('Could not delete "%s". Reason: %s' % (filename, ex), level='error', handler=self.hname)
 
     # delete working directory
     def __delete_directory(self):
@@ -701,7 +719,7 @@ class package_builder:
         try:
             shutil.rmtree(self.directory)
         except Exception as ex:
-            print 'WARNING: Could not delete directory ' + self.directory
+            self.logger.inject('Could not delete directory "%s". Reason: %s' % (self.directory, ex), level='warning')
         try:
             tempy = os.path.abspath('.') + '/'
             dirlist = os.listdir(tempy)
@@ -712,7 +730,7 @@ class package_builder:
                 except Exception:
                     continue
         except Exception as ex:
-            print 'Error: Could not list files in directory: ' + tempy
+            self.logger.inject('Could not list files in directory "%s". Reason: %s' % (tempy, ex), level='warning')
 
     def build_package(self):
         #init configuration and package specific stuff
@@ -724,16 +742,18 @@ class package_builder:
             return False
         
         # test configuration
-        #tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
-        #if tester.test():
-        self.__tarobj.add(self.directory)
-        #    print 'JOB completed successfully'
-        #    flag = True
+        tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
+        if tester.test():
+            self.__tarobj.add(self.directory)
+            self.logger.inject('JOB successfully completed !', handler=self.hname)
+            print 'JOB completed successfully'
+            flag = True
         
         
-        #else:
+        else:
         #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
-        #    flag = False
+            self.logger.inject('JOB Failed. Check tarball for details.', level='error', handler=self.hname) 
+            flag = False
 
         # clean directory
         #self.__clean_directory()    
@@ -741,18 +761,20 @@ class package_builder:
         # clean up
         self.close()
 
-	flag = True
+	#flag = True
         
         # inject config to couch
         if flag:
-            print 'Injecting...'
+            self.logger.inject('Injecting...', handler=self.hname)
 
             # initialize injector object with the finalized tarball
             injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release'))
 
             if injector.inject():
+                self.logger.inject('Injection successful !', handler=self.hname)
                 flag = True
             else:
+                self.logger.inject('Injection failed :( ', level='warning', handler=self.hname)
                 flag = False
 
         return flag

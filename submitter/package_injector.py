@@ -1,9 +1,16 @@
 import paramiko
 import os
 
+import logging
+from tools.logger import prep2_formatter, logger as logfactory
+
 class package_injector:
+    logger = logfactory('prep2')
+    hname = '' # name of the log handler
+
     def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  batch=10):
         self.tarball = str(tarball)
+        self.prepid = self.tarball.rsplit('.tgz')[0]
         self.directory = str(directory)
         self.cmssw_release = str(cmssw_release)
         self.batch = str(batch)
@@ -14,6 +21,36 @@ class package_injector:
         self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'
 
         self.__build_ssh_client()
+        self.__build_logger()
+
+
+    def __build_logger(self):
+
+        # define logger
+        #logger = logging.getLogger('prep2_inject')
+
+        # define .log file
+        self.__logfile = self.directory + self.prepid + '.log'
+
+            #self.logger.setLevel(1)
+
+            # main stream handler using the stderr
+            #mh = logging.StreamHandler()
+            #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
+
+            # filename handler outputting to log
+        fh = logging.FileHandler(self.__logfile)
+        fh.setLevel(logging.DEBUG) # log filename is most verbose
+
+            # format logs
+            #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
+            #mw.setFormatter(formatter)
+        fh.setFormatter(prep2_formatter())
+
+            # add handlers to main logger - good to go
+        self.hname = self.prepid
+        self.logger.add_inject_handler(name=self.hname, handler=fh)
+
 
     def build_injection_script(self):
         script = ''
@@ -30,7 +67,7 @@ class package_injector:
             f.write(script)
             f.close()
         except IOError as ex:
-            print 'Error: Could not create injection script. Reason:'+str(ex)
+            self.logger.inject('Could not create injection script. IOError: %s' % (ex), level='error', handler=self.hname)
             return False
         return True
 
@@ -42,22 +79,22 @@ class package_injector:
         us,  pw = self.__get_ssh_credentials()
 
         if not us:
+            self.logger.inject('Credentials for injection could not be retrieved.', level='error', handler=self.hname)
             raise paramiko.AuthenticationException('Credentials could not be retrieved.')
 
         try:
             self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
         except paramiko.AuthenticationException as ex:
-            print 'Error: Could not authenticate to remote server '+self.ssh_server+':'+str(self.ssh_server_port)
-            print 'Reason: '+str(ex)
+            self.logger.inject('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
             return
         except paramiko.BadHostKeyException as ex:
-            print 'Error: Host Key was invalid. Reason: '+str(ex)
+            self.logger.inject('Host key is invalid. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SSHException as ex:
-            print 'Error: There was a problem with the SSH connection. Reason: '+str(ex)
+            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SocketError  as ex:
-            print 'Error: Could not allocate a socket. Reason: '+str(ex)
+            self.logger.inject('Could not allocate socket. Reason: %s' % (ex), level='error', handler=self.hname)
             return
 
     def __get_ssh_credentials(self):
@@ -66,7 +103,7 @@ class package_injector:
             data = f.readlines()
             f.close()
         except IOError as ex:
-            print str(ex)
+            self.logger.inject('Could not retrieve the credentials for the injection. IOError: %s' % (ex), level='critical', handler=self.hname)
             return None,  None
 
         username,  password = None,  None
@@ -75,11 +112,13 @@ class package_injector:
             if 'username:' in line:
                 toks = line.split(':')
                 if len(toks) < 2:
+                    self.logger.inject('Username is None', level='error', handler=self.hname)
                     raise paramiko.AuthenticationException('Username not found.')
                 username = toks[1].strip()
             elif 'password' in line:
                 toks = line.split(':')
                 if len(toks) < 2:
+                    self.logger.inject('Password is None', level='error', hanlder=self.hname)
                     raise paramiko.AuthenticationException('Password not found.')
                 password = toks[1].strip()
 
@@ -92,25 +131,26 @@ class package_injector:
         try:
             return self.ssh_client.exec_command(cmd)
         except SSHException as ex:
-            print 'Error: Could not execute remote command. Reason: '+str(ex)
+            self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
             return None,  None,  None
 
 
     def inject(self):
-	print 'building...'
         flag = self.build_injection_script()
         if not flag:
             return False
 
-	print 'trying//'
 
         stdin,  stdout,  stderr = self.__remote_exec('sh '+self.directory+'inject-'+self.tarball+'.sh')
 
         if not stdin and not stdout and not stderr:
             return False
 
-        print 'Errors returned: ', stderr.read()
+        error = stderr.read()
+        if error:
+            self.logger.inject('Errors returned: %s' % (error), handler=self.hname, level='error')
 
-        print stdout.read()
+
+        self.logger.inject('Injection output: %s' % (stdout.read()), handler=self.hname)
 
         return True

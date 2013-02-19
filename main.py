@@ -13,6 +13,7 @@ from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
+from rest_api.LogActions import ReadInjectionLog
 
 import logging
 import logging.handlers
@@ -116,6 +117,8 @@ root.restapi.chained_campaigns = RESTResourceIndex()
 root.restapi.actions = RESTResourceIndex()
 root.restapi.flows = RESTResourceIndex()
 
+# read injection logs api
+
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
 
@@ -135,6 +138,7 @@ root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
 root.restapi.requests.status = SetStatus()
 root.restapi.requests.inject = InjectRequest()
+root.restapi.requests.injectlog = ReadInjectionLog()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -189,9 +193,12 @@ maxBytes = getattr(log, "rot_maxBytes", 10000000)
 backupCount = getattr(log, "rot_backupCount", 1000)
 fname = getattr(log, "rot_error_file", "logs/error.log")
 
+logger = logging.getLogger()
+logger.setLevel(0)
+
 # Make a new RotatingFileHandler for the error log.
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-h.setLevel(logging.DEBUG)
+#h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter())
 log.error_log.addHandler(h)
 
@@ -201,10 +208,16 @@ logger.addHandler(h)
 
 # set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-ha.setLevel(logging.DEBUG)
 ha.setFormatter(prep2_formatter())
 logger = logging.getLogger("prep2_error")
 logger.addHandler(ha)
+
+# set up injection logger
+logger = logging.getLogger("prep2_inject")
+hi = logging.FileHandler('logs/inject.log', 'a')
+hi.setFormatter(prep2_formatter())
+
+logger.addHandler(hi)
 
 # Make a new RotatingFileHandler for the access log.
 fname = getattr(log, "rot_access_file", "logs/access.log")
