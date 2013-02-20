@@ -78,7 +78,7 @@ class ImportRequest(RESTResource):
             # get campaign
             c = self.cdb.get(camp)
             
-            if c['root'] != 0:
+            if c['root'] > 0:
                 return
         
         # check to see if the action already exists

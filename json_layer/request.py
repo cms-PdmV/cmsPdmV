@@ -133,47 +133,22 @@ class request(json_base):
         sequences.append(seq.json())
         self.set_attribute('sequences', sequences)
    
-    def srepr(self,arg):
-      if isinstance(arg, basestring): # Python 3: isinstance(arg, str)
-        return arg.decode('utf-8')
-      try:
-        return ",".join(self.srepr(x) for x in arg)
-      except TypeError: # catch when for loop fails
-        return arg.decode('utf-8') # not a sequence so just return repr
-
-
-    def to_command_line(self, ob, attribute):
-      #print attribute
-      if attribute == 'index':
-        return ''
-      if ob.get_attribute(attribute) == '':
-        return ''
-      elif ob.get_attribute(attribute) == True:
-        return "--"+str(attribute)
-      elif ob.get_attribute(attribute) == False:
-        return ''
-      else :
-        return "--"+attribute+"="+self.srepr(ob.get_attribute(attribute))
-
-
     def build_cmsDriver(self, sequenceindex):
-      command = 'cmsDriver.py '+self.get_attribute('nameorfragment').decode('utf-8')+' '
-      seq = sequence(self.get_attribute('sequences')[sequenceindex])
-      #print seq
-      for key in seq._json_base__schema:
-        #print key
-        command += self.to_command_line(seq,key)
-        if key == 'conditions':
-            if ':All' not in command:
-                command += '::All'
-        command += ' '
-      return command 
+      command = 'cmsDriver.py %s' % (self.get_attribute('nameorfragment').decode('utf-8'))
+      try:
+          seq = sequence(self.get_attribute('sequences')[sequenceindex])
+      except Exception:
+          self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (self.get_attribute('prepid'), sequenceindex), level='critical')
+          return '' 
+      
+      return '%s %s' % (command, seq.build_cmsDriver())
 
     def build_cmsDrivers(self):
       commands = []
-      #print len(self.get_attribute('sequences'))
       for i in range(len(self.get_attribute('sequences'))):
-        commands.append(self.build_cmsDriver(i))
+        cd = self.build_cmsDriver(i)
+        if cd:
+            commands.append(cd)
       return commands  
 
     def approve(self,  index=-1):

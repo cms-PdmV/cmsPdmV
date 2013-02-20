@@ -49,7 +49,7 @@ class campaign(json_base):
                                  'completed_events':-1, 
                                  'total_events':-1, 
                                  'root':-1, # -1: possible root, 0: root, 1: non-root 
-                                 'sequences':[], 
+                                 'sequences':[], # list of jsons of jsons
                                  'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project), 
                                  'approvals':[], 
                                  'comments':[]
@@ -83,7 +83,7 @@ class campaign(json_base):
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
 
-    def add_sequence(self, seq_json={},  step=-1):
+    def add_sequence(self, seq_json={},  step=-1, name='default'):
         seq = sequence(json_input=seq_json)
         sequences = self.get_attribute('sequences')
         
@@ -94,8 +94,19 @@ class campaign(json_base):
         else:
             return
             
-        sequences[index].append(seq.json())
+        sequences[index].update({name : seq.json()})
         self.set_attribute('sequences', sequences)
+
+    def build_cmsDrivers(self):
+        cds = []
+        for step in self.get_attribute('sequences'):
+             stepcd = {}
+             for key in step:
+                 cd = sequence(step[key]).build_cmsDriver()
+                 if cd:
+                     stepcd[key] = cd
+             cds.append(stepcd)
+        return cds
     
     def add_comment(author_name, comment, author_cmsid=-1, author_inst_code='', author_project=''):
         comments = self.get_attribute('comments')

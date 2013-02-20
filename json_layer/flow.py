@@ -14,7 +14,7 @@ class flow(json_base):
             'prepid':'', 
             'next_campaign':'', 
             'allowed_campaigns':[], 
-            'request_actions':{}, 
+            'request_parameters':{}, 
             'description':'',
             'approvals':[], 
             'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project    ),

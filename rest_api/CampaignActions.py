@@ -210,3 +210,25 @@ class ApproveCampaign(RESTResource):
         camp.approve(int(index))
         
         return {"prepid": rid, "results":self.db.update(camp.json())}
+
+
+class GetCmsDriverForCampaign(RESTResource):
+    def __init__(self):
+        self.db_name = 'campaigns'
+        self.db = database(self.db_name)
+        self.campaign = None
+
+    def GET(self, *args):
+      if not args:
+        self.logger.error('No arguments were given')
+        return dumps({"results":'Error: No arguments were given.'})
+      return self.get_cmsDriver(self.db.get(prepid=args[0]))
+
+    def get_cmsDriver(self, data):
+      try:
+        self.campaign = campaign('TEST', json_input=data)
+      except campaign.IllegalAttributeName as ex:
+        return dumps({"results":''})
+
+      return dumps({"results":self.campaign.build_cmsDrivers()})
+

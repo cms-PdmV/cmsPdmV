@@ -117,7 +117,7 @@ class database:
         if not self.__id_exists(prepid):
             return False
 
-        self.logger.log('Trying to delete document "%s"...')
+        self.logger.log('Trying to delete document "%s"...' % (prepid))
         try:
             self.db.delete_doc(id=prepid)
             return True
@@ -258,7 +258,6 @@ class database:
 
         temp = self.__execute_query(t_par[0])#[page*limit:page*limit+limit]
         res = map(lambda x: x['value'], temp) 
-        print len(res)
         if len(res) == 0:
             return []
         for i in range(1,len(t_par)):

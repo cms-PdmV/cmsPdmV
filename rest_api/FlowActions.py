@@ -39,6 +39,20 @@ class CreateFlow(RESTResource):
         self.f.approve(0)
 
         self.logger.log('Creating new flow %s ...' % (self.f.get_attribute('_id')))
+	
+	# add a skeleton of the sequences of the next (landing) campaign
+	# in the new flow (allows for dynamic changing of sequences upon flowing)
+	nc = self.f.get_attribute('next_campaign')
+	rp = self.f.get_attribute('request_parameters')
+	# if the user provided a "sequences" already
+	# then use this one (if it is wrong, it will fail upon flowing)
+	if 'sequences' not in rp:
+                rp['sequences'] = []
+		camp = self.cdb.get(nc)
+		for seq in camp['sequences']:
+			rp['sequences'].append({})
+
+	self.f.set_attribute('request_parameters', rp)
         
         # save the flow to db
         if not self.db.save(self.f.json()):

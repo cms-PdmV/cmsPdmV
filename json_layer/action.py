@@ -75,7 +75,6 @@ class action(json_base):
             reqdb = database('requests')
             campaigndb = database('campaigns')
         except datase.DatabaseAccessError as ex:
-            print str(ex)
             return False
         
         # validate prepid

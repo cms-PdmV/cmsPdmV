@@ -130,10 +130,10 @@ class chained_request(json_base):
         
         # check if request is approved
         # TODO: check flow's approvals
-        allowed_approvals = ['flow',  'inject',  'approve']
+        allowed_approvals = ['define',  'approve',  'submit']
         
-        if req['approvals'][-1]['approval_step'] != 'gen' and req['approvals'][-1]['approval_step'] not in allowed_approvals:  
-                raise self.NotApprovedException(req['_id'],  'gen')
+        if req['approvals'][-1]['approval_step'] != 'define' and req['approvals'][-1]['approval_step'] not in allowed_approvals:  
+                raise self.NotApprovedException(req['_id'],  'define')
         
         # find the flow responsible for this step
         tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
@@ -173,8 +173,11 @@ class chained_request(json_base):
         nc = cdb.get(next_camp)
         
         # check if next campaign is started or stopped
-        if nc['approvals'][-1]['approval_step'] == 'stop':
-            raise self.CampaignStoppedException(str(next_camp))
+	if len(nc['approvals']) > 1:
+	        if nc['approvals'][-1]['approval_step'] == 'stop':
+        	    raise self.CampaignStoppedException(str(next_camp))
+	elif not nc['approvals']:
+		raise self.CampaignStoppedException(str(next_camp))
         
         # use root request as template
         req['member_of_campaign'] = next_camp
@@ -200,15 +203,51 @@ class chained_request(json_base):
         new_req = self.add_request(req)
         
         # get the sequences
-        new_req['sequences'] = []
-        for seq in sorted(nc['sequences']):
-            new_req['sequences'].append(nc['sequences'][seq]['default'])
-        
-        if 'sequences' in fl['request_actions']:
-            for seq in fl['request_actions']['sequences']:
-                for key in fl['request_actions']['sequences'][seq]:
-                    new_req['sequences'][seq][key] = fl['request_actions']['sequences'][seq][key]
-        
+	new_req['sequences'] = []
+
+	# check consistency for the sequences
+	if 'sequences' not in fl['request_parameters']:
+		self.logger.error('Flow "%s" does not contain any sequences. This is inconsistent. Aborting...' % (fl['_id']), level='critical')
+		raise KeyError('Parameter "sequences" is not present in the "request_parameters" of flow "%s".' % (fl['_id']))
+
+	# if the landing campaign and the flow have different sequence steps
+	# then fail due to inconsistency
+	if len(nc['sequences']) != len(fl['request_parameters']['sequences']):
+		self.logger.error('Detected inconsistency ! Campaign "%s" has different sequences defined than flow "%s". Aborting...' % (nc['_id'], fl['_id']), level='critical') 
+		raise IndexError('Sequences of campaign "%s" do not match those of flow "%s"' % (nc['_id'], fl['_id']))
+		
+
+	# copy the sequences of the flow
+	for i, step in enumerate(nc['sequences']):
+		flag = False # states that a sequence has been found
+		for name in step:
+                        if name in fl['request_parameters']['sequences'][i]:
+				# if a seq name is defined, store that in the request
+				new_req['sequences'].append(step[name])
+				
+				# if the flow contains any parameters for the sequence,
+				# then override the default ones inherited from the campaign
+				if fl['request_parameters']['sequences'][i][name]:
+					for key in fl['request_parameters']['sequences'][i][name]:
+						new_req['sequences'][-1][key] = fl['request_parameters']['sequences'][i][name][key]
+				# to avoid multiple sequence selection
+				# continue to the next step (if a valid seq is found)
+				flag = True
+				break
+
+		# if no sequence has been found, use the default
+		if not flag:
+			new_req['sequences'].append(step['default'])
+	
+	# override request's parameters
+	for key in fl['request_parameters']:
+		if key == 'sequences':
+			continue
+		else:
+			if key in new_req:
+				new_req[key] = fl['request_parameters'][key]
+		
+
         # save new request to database
         rdb.save(new_req)
         
@@ -289,7 +328,7 @@ class chained_request(json_base):
             for key in changes:
                 if key not in chain_specific:
                     req.set_attribute(key, changes[key])
-        
+
         # get the chain and inherit
         req.set_attribute("generators", self.get_attribute("generators"))
         req.set_attribute("total_events", self.get_attribute("total_events"))
