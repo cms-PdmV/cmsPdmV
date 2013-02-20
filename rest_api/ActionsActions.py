@@ -42,7 +42,7 @@ class SelectChain(RESTResource):
         # if action exists
         if self.db.document_exists(id):
             # initialize the object
-            a = action('test',  json_input=self.db.get(id))
+            a = action(json_input=self.db.get(id))
             # and set it to 1 (default ?)
             a.select_chain(chainid,  int(value))
             
@@ -69,7 +69,7 @@ class DeSelectChain(RESTResource):
         # if action exists
         if self.db.document_exists(aid):
             # initialize the object
-            a = action('test',  json_input=self.db.get(aid))
+            a = action(json_input=self.db.get(aid))
             # and set it to 1 (default ?)
             a.deselect_chain(chainid)
             # save
@@ -98,7 +98,7 @@ class GenerateChainedRequests(RESTResource):
         self.logger.log('Generating all selected chained_requests for action %s' % (id)) 
         
         # init action
-        req = action('',  json_input=self.db.get(id))
+        req = action(json_input=self.db.get(id))
                 
         # get chains
         chains = req.get_attribute('chains')
@@ -119,7 +119,7 @@ class GenerateChainedRequests(RESTResource):
                     continue
                 
                 # init chained campaign
-                ccamp = chained_campaign('',  json_input=self.ccdb.get(cc))
+                ccamp = chained_campaign(json_input=self.ccdb.get(cc))
                 # create the chained request
                 new_req = ccamp.generate_request(id)
                 # save to database
@@ -153,7 +153,7 @@ class GenerateAllChainedRequests(RESTResource):
             return dumps({'results':'Error: PrepId '+id+' does not exist in the database.'})
         
         # init action
-        req = action('',  json_input=self.db.get(id))
+        req = action(json_input=self.db.get(id))
                 
         # get chains
         chains = req.get_attribute('chains')
@@ -174,7 +174,7 @@ class GenerateAllChainedRequests(RESTResource):
                     continue
                 
                 # init chained campaign
-                ccamp = chained_campaign('',  json_input=self.ccdb.get(cc))
+                ccamp = chained_campaign(json_input=self.ccdb.get(cc))
                 # create the chained request
                 new_req = ccamp.generate_request(id)
                 # save to database
@@ -198,7 +198,7 @@ class DetectChains(RESTResource):
     
     def find_chains(self,  aid):
         self.logger.log('Identifying all possible chains for action %s' % (aid))
-        ac = action('',  json_input=self.db.get(aid))
+        ac = action(json_input=self.db.get(aid))
         ac.find_chains()
         return dumps({'results':self.db.update(ac.json())})
     

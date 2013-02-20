@@ -73,7 +73,7 @@ class package_builder:
         
         # init request object
         try:
-            self.request = request('',  json_input=req_json)
+            self.request = request(json_input=req_json)
         except request.IllegalAttributeName:
             return
 

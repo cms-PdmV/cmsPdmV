@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from json_base import json_base
-from submission_details import submission_details
+from json_base import submission_details
 
 class comment(json_base):
     def __init__(self, author_name,  author_cmsid=-1,   author_inst_code='',  author_project='',json_input={}):

@@ -1,8 +1,6 @@
 from json_base import json_base
-from submission_details import submission_details
-from approval import approval
-from comment import comment
 from request import request
+from flow import flow
 from couchdb_layer.prep_database import database
 import json
 
@@ -40,12 +38,11 @@ class chained_request(json_base):
         def __str__(self):
             return 'Error: '+self.name+' has been stopped.'
     
-    def __init__(self, author_name, author_cmsid=-1, author_inst_code='', author_project='', json_input={}):
+    def __init__(self, json_input={}):
         self._json_base__schema = {
             '_id':'',
             'chain':[],
-            'approvals':[],
-            'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project), 
+            'approval':self.get_approval_steps()[0],
             'step':0, 
             'comments':[],
             'analysis_id':[],
@@ -56,36 +53,15 @@ class chained_request(json_base):
             'alias':'', 
             'dataset_name':'',
             'total_events':-1,
+            'history':[],
             'member_of_campaign':'',
             'generator_parameters':[],
             'request_parameters':{} # json with user prefs
             }
         # update self according to json_input
-        self.__update(json_input)
-        self.__validate()
+        self.update(json_input)
+        self.validate()
 
-    def __validate(self):
-        if not self._json_base__json:
-            return 
-        for key in self._json_base__schema:
-            if key not in self._json_base__json:
-                raise self.IllegalAttributeName(key)
-    
-    # for all parameters in json_input store their values 
-    # in self._json_base__json
-    def __update(self,  json_input):
-        self._json_base__json = {}
-        if not json_input:
-            self._json_base__json = self._json_base__schema
-        else:
-            for key in self._json_base__schema:
-                if key in json_input:
-                    self._json_base__json[key] = json_input[key]
-                else:
-                    self._json_base__json[key] = self._json_base__schema[key]
-            if '_rev' in json_input:
-                self._json_base__json['_rev'] = json_input['_rev']
-    
     def flow(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
         return self.flow_to_next_step(input_dataset,  block_black_list,  block_white_list)
         
@@ -117,7 +93,7 @@ class chained_request(json_base):
             return False
         
         # actually get root request
-        req = rdb.get(root)
+        req = request(rdb.get(root)).json()
             
         # get the campaign in the next step
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
@@ -129,11 +105,11 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'))
         
         # check if request is approved
-        # TODO: check flow's approvals
         allowed_approvals = ['define',  'approve',  'submit']
         
-        if req['approvals'][-1]['approval_step'] != 'define' and req['approvals'][-1]['approval_step'] not in allowed_approvals:  
-                raise self.NotApprovedException(req['_id'],  'define')
+        if req['approval'] not in allowed_approvals:
+                raise self.NotApprovedException(req['_id'], req['approval'])
+        
         
         # find the flow responsible for this step
         tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
@@ -149,19 +125,13 @@ class chained_request(json_base):
             return False
         
         # get flow
-        fl = fdb.get(flowname)
+        fl = flow(fdb.get(flowname)).json()
         
         # check all approvals (if flow say yes -> allowing policy)
-        if 'approvals' in fl and len(fl['approvals']) > 0:
-            if fl['approvals'][-1]['approval_step'] not in allowed_approvals:
-                if req['approvals'][-1]['approval_step'] not in allowed_approvals:
-                    if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
-                        raise self.NotApprovedException(self.get_attribute('_id'),  'flow')
-        else:
-            if req['approvals'][-1]['approval_step'] not in allowed_approvals:
-                if self.get_attribute('approvals')[-1]['approval_step'] not in allowed_approvals:
-                    raise self.NotApprovedException(self.get_attribute('_id'),  'flow')            
-        
+        if fl['approval'] not in allowed_approvals:
+            if self.get_attribute('approval') not in allowed_approvals:
+                raise self.NotApprovedException(self.get_attribute('_id'),  self.get_attribute('approval'))
+
         # get next campaign
         next_camp = cc['campaigns'][step][0] # just the camp name, not the flow
         
@@ -173,11 +143,8 @@ class chained_request(json_base):
         nc = cdb.get(next_camp)
         
         # check if next campaign is started or stopped
-	if len(nc['approvals']) > 1:
-	        if nc['approvals'][-1]['approval_step'] == 'stop':
-        	    raise self.CampaignStoppedException(str(next_camp))
-	elif not nc['approvals']:
-		raise self.CampaignStoppedException(str(next_camp))
+        if nc['status'] == 'stopped':
+            raise self.CampaignStoppedException(str(next_camp)) 
         
         # use root request as template
         req['member_of_campaign'] = next_camp
@@ -248,63 +215,19 @@ class chained_request(json_base):
 				new_req[key] = fl['request_parameters'][key]
 		
 
-        # save new request to database
-        rdb.save(new_req)
+        # update history and save request to database
+        nre = request(new_req)
+	nre.update_history({'action':'flow'})
+        rdb.save(nre.json())
+
+        # update local history
+        self.update_history({'action':'flow', 'step':str(int(self.get_attribute('step'))+1)})
         
         # finalize changes
         self.set_attribute('step',  str(step))
         
         return True
 
-    def approve(self,  index=-1):
-        approvals = self.get_attribute('approvals')
-        app = approval('')
-        
-        # if no index is specified, just go one step further
-        if index==-1:
-            index = len(approvals)
-
-        self.logger.log('Approving chained_request %s for step "%s"' % (self.get_attribute('_id'), index)) 
-        
-        try:
-            new_apps = app.approve(index)
-            self.set_attribute('approvals',  new_apps)
-            return True
-        except app.IllegalApprovalStep as ex:
-            return False
-
-    def approve1(self,  author_name,  author_cmsid=-1, author_inst_code='', author_project=''):
-        approvals = self.get_attribute('approvals')
-        app = approval('')
-        index = -1
-        step = app.get_approval(0)
-
-        # find if approve is legal (and next step)
-        if len(approvals) == 0:
-            index = -1
-        elif len(approvals) == len(app.get_approval_steps()):
-            raise app.IllegalApprovalStep()
-        else:
-            step = approvals[-1]['approval_step']
-            index = app.index(step) + 1
-            step = app.get_approval(index)
-
-        # build approval 
-        try:
-            new_approval = approval(author_name, author_cmsid, author_inst_code,author_project).build(step)
-        except approval('').IllegalApprovalStep(step) as ex:
-            return
-
-        # make persistent
-        approvals.append(new_approval)
-        self.set_attribute('approvals',  approvals)
-
-    def add_comment(self,author_name, comment, author_cmsid=-1, author_inst_code='', author_project=''):
-        comments = self.get_attribute('comments')
-        new_comment = comment(author_name,  author_cmsid,  author_inst_code,  author_project).build(comment)
-        comments.append(new_comment)
-        self.set_attribute('comments',  comments)
-    
     # add a new request to the chain
     def add_request(self, data={}):
         self.logger.log('Adding new request to chained_request %s' % (self.get_attribute('_id')))
@@ -316,7 +239,7 @@ class chained_request(json_base):
             self.logger.error('Could not import prep-id generator class. Reason: %s' % (ex), level='critical')
             return {}
         try:
-            req = request('',json_input=data)
+            req = request(json_input=data)
         except Exception as ex:
             self.logger.error('Could not build request object. Reason: %s' % (ex))
             return {}
@@ -355,7 +278,12 @@ class chained_request(json_base):
         
         req.set_attribute('_id', prepid)
         req.set_attribute('prepid',  prepid)
+
+        # update history
+        req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
+        self.update_history({'action':'add request', 'step':req.get_attribute('_id')})
+
         # set request approval status to new
-        req.approve(0)
+        #req.approve(0)
         return req.json()
 

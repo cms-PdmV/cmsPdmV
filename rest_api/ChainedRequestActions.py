@@ -12,13 +12,12 @@ class CreateChainedRequest(RESTResource):
         self.db_name = 'chained_requests'
         self.db = database(self.db_name)
         self.req = None
-        self.json = {}
 
     def PUT(self):
         return self.import_request(cherrypy.request.body.read().strip())
     def import_request(self, data):
         try:
-            self.req = chained_request('TEST', json_input=loads(data))
+            self.req = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
@@ -33,11 +32,14 @@ class CreateChainedRequest(RESTResource):
         self.json = self.req.json()
 
         self.logger.log('Creating new chained_request %s' % (self.json['_id']))
+	
+	# update history with the submission details
+	self.req.update_history({'action': 'created'})
 
         return self.save_request()
 
     def save_request(self):
-        if self.db.save(self.json):
+        if self.db.save(self.req.json()):
             self.logger.log('new chained_request successfully saved.')
             return dumps({"results":True})
         else:
@@ -48,14 +50,13 @@ class UpdateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
         self.db = database(self.db_name)
-        self.json = {}
         self.request = None
     def PUT(self):
         return self.update_request(cherrypy.request.body.read().strip())
 
     def update_request(self, data):
         try:
-            self.request = chained_request('TEST', json_input=loads(data))
+            self.request = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
@@ -66,11 +67,13 @@ class UpdateChainedRequest(RESTResource):
 
         self.logger.log('Updating chained_request %s' % (self.request.get_attribute('_id')))
 
-        self.json = self.request.json()
+	# update history
+	self.request.update_history({'action': 'update'})
+
         return self.save_request()
         
     def save_request(self):
-        return dumps({"results":self.db.update(self.json)})
+        return dumps({"results":self.db.update(self.request.json())})
 
 class DeleteChainedRequest(RESTResource):
     def __init__(self):
@@ -117,7 +120,7 @@ class AddRequestToChain(RESTResource):
             self.logger.error('Could not import request object class.', level='critical')
             return dumps({"results":False})
         try:
-            req = request('TEST', json_input=loads(data))
+            req = request(json_input=loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
             
@@ -130,7 +133,7 @@ class AddRequestToChain(RESTResource):
             return dumps({"results":'Error: "member_of_chain" attribute was None.'})        
         
         try:
-            creq = chained_request('test',  json_input=self.db.get(req.get_attribute('member_of_chain')))
+            creq = chained_request(json_input=self.db.get(req.get_attribute('member_of_chain')))
         except chained_request.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
             
@@ -172,7 +175,7 @@ class FlowToNextStep(RESTResource):
             return dumps({"results":str(ex)})
         
         try:
-            creq = chained_request('test',  json_input=self.db.get(vdata['prepid']))
+            creq = chained_request(json_input=self.db.get(vdata['prepid']))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return dumps({"results":str(ex)})        
@@ -193,8 +196,11 @@ class FlowToNextStep(RESTResource):
             
             if creq.flow(inputds,  inblack,  inwhite):
                 self.db.update(creq.json())
+
                 return dumps({"results":True})
+
             return dumps({"results":False})
+
         except chained_request.NotApprovedException as ex:
             return dumps({"results":str(ex)})
         except chained_request.ChainedRequestCannotFlowException as ex:
@@ -202,7 +208,7 @@ class FlowToNextStep(RESTResource):
         
     def flow(self,  chainid):
         try:
-            creq = chained_request('test',  json_input=self.db.get(chainid))
+            creq = chained_request(json_input=self.db.get(chainid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex)) 
             return dumps({"results":str(ex)})
@@ -228,7 +234,9 @@ class ApproveRequest(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
-        return self.multiple_approve(args[0],  int(args[1]))
+        if len(args) == 1:
+                return self.multiple_approve(args[0])
+        return self.multiple_approve(args[0], int(args[1]))
 
     def multiple_approve(self, rid, val=-1):
         if ',' in rid:
@@ -243,8 +251,10 @@ class ApproveRequest(RESTResource):
     def approve(self,  rid,  val=-1):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given chained_request id does not exist.'}
-        creq = chained_request('',  json_input=self.db.get(rid))
-        if not creq.approve(val):
+        creq = chained_request(json_input=self.db.get(rid))
+        try:
+            creq.approve(val)
+        except:
             return {"prepid": rid, "results":False}
         
         return {"prepid":rid, "results":self.db.update(creq.json())}

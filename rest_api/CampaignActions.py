@@ -14,39 +14,41 @@ class CreateCampaign(RESTResource):
         self.db_name = 'campaigns'
         self.db = database(self.db_name)
         self.cdb = database('chained_campaigns')
-        self.json = {}
+        self.campaign = None
 
     def PUT(self):
         return self.create_campaign(cherrypy.request.body.read().strip())
 
     def create_campaign(self, data):
         try:
-            self.json = campaign('TEST', json_input=loads(data)).json()
+            self.campaign = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
             return dumps({"results":False})
 
         #id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
         #self.json['prepid'] = loads(id)['prepid']
-        if not self.json['prepid']:
+        if not self.campaign.get_attribute('prepid'):
             self.logger.error('Invalid prepid: Prepid returned None')
             return dumps({"results":False})
 
-        self.json['_id'] = self.json['prepid']
-        
+        self.campaign.set_attribute('_id', self.request.get_attribute('prepid'))
+
+        self.campaign.update_history({'action':'created'})
+       
         # save to db
-        if not self.db.save(self.json):
+        if not self.db.save(self.campaign.json()):
             self.logger.error('Could not save object to database')
             return dumps({"results":False})
         
         # create dedicated chained campaign
-        self.create_chained_campaign(self.json['_id'],  self.json['energy'])
+        self.create_chained_campaign(self.campaign.get_attribute('_id'),  self.campaign.get_attribute('energy'))
 
         return dumps({"results":True})
     
     # creates a chained campaign containing only the given campaign
     def create_chained_campaign(self,  cid,  energy=-1):
 	if self.db.get(cid)['root'] < 1:
-	        dcc = chained_campaign('automatic')
+	        dcc = chained_campaign()
         	dcc.set_attribute('prepid', 'chain_'+cid)
 	        dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
         	dcc.set_attribute('energy',  energy)
@@ -57,7 +59,6 @@ class UpdateCampaign(RESTResource):
     def __init__(self):
         self.db_name = 'campaigns'
         self.db = database(self.db_name)
-        self.json = {}
         self.request = None
         
     def PUT(self):
@@ -65,19 +66,19 @@ class UpdateCampaign(RESTResource):
 
     def update_request(self, data):
         try:
-            self.request = campaign('TEST', json_input=loads(data))
+            self.request = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
             return dumps({"results":False})
         
         if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
         
-        self.json = self.request.json()
+        self.request.update_history({'action':'update'})
         
         return self.save_request()
 
     def save_request(self):
-        return dumps({"results":self.db.update(self.json)})
+        return dumps({"results":self.db.update(self.request.json())})
 
 class DeleteCampaign(RESTResource):
     def __init__(self):
@@ -178,9 +179,26 @@ class ToggleCampaign(RESTResource):
     def toggle_campaign(self,  rid):
         if not self.db.document_exists(rid):
             return dumps({"results":'Error: The given campaign id does not exist.'})
-        camp = campaign('',  json_input=self.db.get(rid))
+        camp = campaign(json_input=self.db.get(rid))
         camp.toggle_approval()
         
+        return dumps({"results":self.db.update(camp.json())})
+
+class ToggleCampaignStatus(RESTResource):
+    def __init__(self):
+        self.db = database('campaigns')
+
+    def GET(self,  *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.toggle_campaign(args[0])
+
+    def toggle_campaign(self,  rid):
+        if not self.db.document_exists(rid):
+            return dumps({"results":'Error: The given campaign id does not exist.'})
+        camp = campaign(json_input=self.db.get(rid))
+        camp.toggle_status()
+
         return dumps({"results":self.db.update(camp.json())})
     
 class ApproveCampaign(RESTResource):
@@ -206,7 +224,7 @@ class ApproveCampaign(RESTResource):
     def toggle_campaign(self,  rid,  index):
         if not self.db.document_exists(rid):
             return {"prepid": rid,  "results":'Error: The given campaign id does not exist.'}
-        camp = campaign('',  json_input=self.db.get(rid))
+        camp = campaign(json_input=self.db.get(rid))
         camp.approve(int(index))
         
         return {"prepid": rid, "results":self.db.update(camp.json())}
@@ -226,7 +244,7 @@ class GetCmsDriverForCampaign(RESTResource):
 
     def get_cmsDriver(self, data):
       try:
-        self.campaign = campaign('TEST', json_input=data)
+        self.campaign = campaign(json_input=data)
       except campaign.IllegalAttributeName as ex:
         return dumps({"results":''})
 

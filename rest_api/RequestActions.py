@@ -7,7 +7,6 @@ from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.request import request
-from json_layer.submission_details import submission_details
 from json_layer.action import action
 
 class ImportRequest(RESTResource):
@@ -16,61 +15,68 @@ class ImportRequest(RESTResource):
         self.db = database(self.db_name)
         self.adb = database('actions')
         self.cdb = database('campaigns')
-        self.json = {}
+        self.request = None
 
     def PUT(self):
         return self.import_request(cherrypy.request.body.read().strip())
 
     def import_request(self, data):
         try:
-            self.json = request('automatic', json_input=loads(data)).json()
+            self.request = request(json_input=loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
         self.logger.log('Building new request...')
-        
-        if '_id' in self.json and self.json['_id'] :
-            self.json['prepid'] = self.json['_id'] 
-        elif 'prepid' in self.json and self.json['prepid']:
-            self.json['_id'] = self.json['prepid']
+
+	# set '_id' and 'prepid' fields
+        if self.request.get_attribute('_id') :
+            self.request.set_attribute('prepid', self.request.get_attribute('_id')) 
+        elif self.request.get_attribute('prepid'):
+            self.request.set_attribute('_id', self.request.get_attribute('prepid'))
         else:
-            self.json['_id'] = self.json['prepid'] = ''
+            self.request.set_attribute('_id', '')
+            self.request.set_attribute('prepid','')
         
-        if self.db.document_exists(self.json['_id']):
-            self.logger.error('prepid %s already exists. Generating another...' % (self.json['_id']), level='warning')
+        if self.db.document_exists(self.request.get_attribute('_id')):
+            self.logger.error('prepid %s already exists. Generating another...' % (self.request.get_attribute('_id')), level='warning')
             
-            id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
-            self.json['prepid'] = loads(id)['prepid']
+            id = RequestPrepId().generate_prepid(self.request.get_attribute('pwg'), self.request.get_attribute('member_of_campaign'))
+            self.request.set_attribute('prepid', loads(id)['prepid'])
         
-            if not self.json['prepid']:
+            if not self.request.get_attribute('prepid'):
                 self.logger.error('prepid returned was None')
                 raise ValueError('Prepid returned was None')
-            self.json['_id'] = self.json['prepid']
+            self.request.set_attribute('_id', self.request.get_attribute('prepid'))
 
-        self.logger.log('New prepid: %s' % (self.json['prepid']))     
+        self.logger.log('New prepid: %s' % (self.request.get_attribute('prepid')))     
             
         
         # global tag ::All fix
         i = 0
-        for seq in self.json['sequences']:
+	seqs = self.request.get_attribute('sequences')
+        for seq in seqs:
             if '::All' not in seq['conditions']:
-                self.json['sequences'][i]['conditions'] += '::All'
+                seqs[i]['conditions'] += '::All'
             i += 1
+	self.request.set_attribute('sequences', seqs)
+
+        # update history
+        self.request.update_history({'action':'created'})
         
         # save to database
-        if not self.db.save(self.json):
+        if not self.db.save(self.request.json()):
             self.logger.error('Could not save results to database')
             return dumps({"results":False})
         
         # add an action to the action_db
         self.add_action()
         
-        return dumps({"results":self.json['_id']})
+        return dumps({"results":self.request.get_attribute('_id')})
         
     def add_action(self):
         # Check to see if the request is a root request
-        if self.json['mcdb_id'] != -1:
-            camp = self.json['member_of_campaign']
+        if self.request.get_attribute('mcdb_id') != -1:
+            camp = self.request.get_attribute('member_of_campaign')
             
             if not self.cdb.document_exists(camp):
                 return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
@@ -85,9 +91,9 @@ class ImportRequest(RESTResource):
         if not self.adb.document_exists(self.json['prepid']):
             # add a new action
             a= action('automatic')
-            a.set_attribute('prepid',  self.json['prepid'])
+            a.set_attribute('prepid',  self.request.get_attribute('prepid'))
             a.set_attribute('_id',  a.get_attribute('prepid'))
-            a.set_attribute('member_of_campaign',  self.json['member_of_campaign'])
+            a.set_attribute('member_of_campaign',  self.request.get_attribute('member_of_campaign'))
             a.find_chains()
             self.adb.save(a.json())
 
@@ -95,15 +101,17 @@ class UpdateRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
         self.db = database(self.db_name)
-        self.json = {}
         self.request = None
         
     def PUT(self):
         return self.update_request(cherrypy.request.body.read().strip())
 
     def update_request(self, data):
+        if '"_rev"' not in data:
+                self.logger.error('Could not locate the CouchDB revision number in object: %s' % (data))
+		return dumps({"results":False})
         try:
-                self.request = request('TEST', json_input=loads(data))
+                self.request = request(json_input=loads(data))
         except request.IllegalAttributeName as ex:
                 return dumps({"results":False})
 
@@ -112,12 +120,14 @@ class UpdateRequest(RESTResource):
             raise ValueError('Prepid returned was None')
 
         self.logger.log('Updating request %s...' % (self.request.get_attribute('prepid')))
+	
+	# update history
+	self.request.update_history({'action': 'update'})
             
-        self.json = self.request.json()
         return self.save_request()
 
     def save_request(self):
-        return dumps({"results":self.db.update(self.json)})
+        return dumps({"results":self.db.update(self.request.json())})
 
 class GetCmsDriverForRequest(RESTResource):
     def __init__(self):
@@ -134,7 +144,7 @@ class GetCmsDriverForRequest(RESTResource):
 
     def get_cmsDriver(self, data):
       try:
-        self.request = request('TEST', json_input=data)
+        self.request = request(json_input=data)
         #self.request.print_self()     
       except request.IllegalAttributeName as ex:
         return dumps({"results":''})
@@ -202,18 +212,16 @@ class ApproveRequest(RESTResource):
     def approve(self,  rid,  val=-1):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given request id does not exist.'}
-        req = request('',  json_input=self.db.get(rid))
-        if not req.approve(val):
-            return {"prepid": rid, "results":False}
+        req = request(json_input=self.db.get(rid))
 
-        hist = {}
-        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
-        hist['action'] = sys._getframe().f_code.co_name
-        hist['step'] = req.get_attribute('approvals')[-1]['approval_step']
+	self.logger.log('Approving request %s for step "%s"' % (rid, val))
 
-        req.update_history(hist)
-
-        return {"prepid" : rid, "results":self.db.update(req.json())}
+	try:
+        	req.approve(val)
+	except:
+		return {'prepid': rid, 'results':False}
+	
+        return {'prepid' : rid, 'results':self.db.update(req.json())}
 
 class ResetRequestApproval(RESTResource):
     def __init__(self):
@@ -235,24 +243,22 @@ class ResetRequestApproval(RESTResource):
         else:
             return dumps(self.reset(rid, val))
 
-
     def reset(self, rid, step=0):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given request id does not exist.'}
 
-        req = request('', json_input=self.db.get(rid))
-        if step >= len(req.get_attribute('approvals')) - 1:
+        req = request(json_input=self.db.get(rid))
+
+        appsteps = req.get_approval_steps()
+        app = req.get_attribute('approval')
+
+        if step >= appsteps.index(app):
             return {"prepid": rid, "results":'Error: Cannot reset higher approval step'}
 
-        if not req.approve(step):
+        try:
+            req.approve(step)
+        except:
             return {"prepid":rid, "results":False}
-
-        hist = {}
-        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
-        hist['action'] = sys._getframe().f_code.co_name
-        hist['step'] = req.get_attribute('approvals')[-1]['approval_step']
-
-        req.update_history(hist)
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -281,17 +287,12 @@ class SetStatus(RESTResource):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given request id does not exist.'}
 
-        req = request('', json_input=self.db.get(rid))
+        req = request(json_input=self.db.get(rid))
 
-        if not req.add_status(step):
+        try:
+            req.set_status(step)
+        except:
             return {"prepid": rid, "results":False}
-
-        hist = {}
-        hist['updater'] = submission_details().build(cherrypy.request.headers['ADFS-LOGIN'])
-        hist['action'] = sys._getframe().f_code.co_name
-        hist['step'] = req.get_attribute('status')
-
-        req.update_history(hist)
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -314,6 +315,10 @@ class InjectRequest(RESTResource):
         except ImportError:
             self.logger.error('Could not import "package_builder" module.', level='critical')
             return dumps({"results":'Error: Could not import "package_builder" module.'})        
-        req = self.db.get(id)
-        pb = package_builder(req_json=req)
+        req = request(self.db.get(id))
+        pb = package_builder(req_json=req.json())
+
+        # update history
+        req.update_history({'action':'inject'})
+	
         return dumps({"results": str(pb.build_package())})

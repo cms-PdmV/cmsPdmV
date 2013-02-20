@@ -3,7 +3,6 @@
 from couchdb_layer.prep_database import database
 from json_layer.request import request
 from json_layer.json_base import json_base
-from json_layer.submission_details import submission_details
 
 class action(json_base):
     class PrepIdNotDefinedException(Exception):
@@ -26,28 +25,18 @@ class action(json_base):
         def __str__(self):
             return 'Error: Chained Campaign '+ self.c + ' does not exist'
     
-    def __init__(self, author_name, author_cmsid=-1, author_inst_code='', author_project='', json_input={}):
+    def __init__(self, json_input={}):
         self._json_base__schema = {
             '_id':'',
             'prepid':'', 
             'member_of_campaign':'', 
             'chains': {},  # a dictionary holding the settings for each chain
-            'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project    ),
             }
         # update self according to json_input
-        self.__update(json_input)
-        self.__validate()
-
-    def __validate(self):
-        if not self._json_base__json:
-            return 
-        for key in self._json_base__schema:
-            if key not in self._json_base__json:
-                raise self.IllegalAttributeName(key)
-    
-    # for all parameters in json_input store their values 
-    # in self._json_base__json
-    def __update(self,  json_input):
+        self.update(json_input)
+        self.validate()
+	
+    def update(self,  json_input):
         self._json_base__json = {}
         if not json_input:
             self._json_base__json = self._json_base__schema
@@ -82,7 +71,7 @@ class action(json_base):
             raise self.PrepIdDoesNotExistException(self.get_attribute('prepid'))
         
         # get campaign id
-        req = request('test',  json_input=reqdb.get(self.get_attribute('prepid')))
+        req = request(json_input=reqdb.get(self.get_attribute('prepid')))
         
         # check if campaign exists
         campid = req.get_attribute('member_of_campaign')

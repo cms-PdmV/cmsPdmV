@@ -24,7 +24,7 @@ class CreateFlow(RESTResource):
         
     def create_flow(self, data):
         try:
-            self.f = flow('TEST', json_input=loads(data))
+            self.f = flow(json_input=loads(data))
         except flow.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
         except ValueError as ex:
@@ -36,7 +36,7 @@ class CreateFlow(RESTResource):
             return dumps({"results":'Error: PrepId was not defined.'})
 
         self.f.set_attribute('_id', self.f.get_attribute('prepid'))
-        self.f.approve(0)
+        #self.f.approve(0)
 
         self.logger.log('Creating new flow %s ...' % (self.f.get_attribute('_id')))
 	
@@ -53,6 +53,9 @@ class CreateFlow(RESTResource):
 			rp['sequences'].append({})
 
 	self.f.set_attribute('request_parameters', rp)
+
+	# update history
+        self.f.update_history({'action':'created'})
         
         # save the flow to db
         if not self.db.save(self.f.json()):
@@ -139,7 +142,7 @@ class CreateFlow(RESTResource):
         
         # iterate through all allowed campaigns and update the next field
         for c in allowed:
-            camp = campaign('',  json_input=self.cdb.get(c))
+            camp = campaign(json_input=self.cdb.get(c))
             try:
                 # append campaign
                 camp.add_next(next)
@@ -196,7 +199,7 @@ class CreateFlow(RESTResource):
                         continue
                     
                     # init a ccamp object based on the old
-                    ccamp = chained_campaign('',  json_input=cc)
+                    ccamp = chained_campaign(json_input=cc)
                     # disable it
                     ccamp.stop()
                     # update to db
@@ -211,7 +214,7 @@ class CreateFlow(RESTResource):
                     
                     # restart chained campaign
                     ccamp.start()
-                    
+
                     # remove CouchDB revision trash
                     new_ccamp = ccamp.json()
                     del new_ccamp['_rev']
@@ -222,7 +225,7 @@ class CreateFlow(RESTResource):
 
             # else if c is root campaign:
             if camp['root']==0 or camp['root']==-1:
-                ccamp = chained_campaign('automatic')
+                ccamp = chained_campaign()
                 # add allowed root
                 ccamp.add_campaign(c) # assume root. flow=None
                             
@@ -256,7 +259,7 @@ class CreateFlow(RESTResource):
         # for each action
         for ac in allacs:
             # init action object
-            a = action('',  json_input=ac)
+            a = action(json_input=ac)
             # calculate the available chains
             a.find_chains()
             # save to db
@@ -269,7 +272,6 @@ class UpdateFlow(RESTResource):
         self.cdb = database('campaigns')
         self.ccdb = database('chained_campaigns')
         self.adb = database('actions')        
-        self.json = {}
         self.f = None
         
     def PUT(self):
@@ -277,7 +279,7 @@ class UpdateFlow(RESTResource):
 
     def update_flow(self, data):
         try:
-            self.f = flow('TEST', json_input=loads(data))
+            self.f = flow(json_input=loads(data))
         except flow.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
         
@@ -356,7 +358,7 @@ class UpdateFlow(RESTResource):
         
         # iterate through all allowed campaigns and update the next field
         for c in allowed:
-            camp = campaign('',  json_input=self.cdb.get(c))
+            camp = campaign(json_input=self.cdb.get(c))
             try:
                 # append campaign
                 camp.add_next(next)
@@ -401,7 +403,7 @@ class UpdateFlow(RESTResource):
                         continue
 
                     # init a ccamp object based on the old
-                    ccamp = chained_campaign('',  json_input=cc)
+                    ccamp = chained_campaign(json_input=cc)
                     # disable it
                     ccamp.stop()
                     # update to db
@@ -421,7 +423,7 @@ class UpdateFlow(RESTResource):
 
             # else if c is root campaign:
             if camp['root']==0 or camp['root']==-1:
-                ccamp = chained_campaign('automatic')
+                ccamp = chained_campaign()
                 # add allowed root
                 ccamp.add_campaign(c) # assume root. flow=None
                             
@@ -429,7 +431,7 @@ class UpdateFlow(RESTResource):
                 ccamp.add_campaign(next,  self.f.get_attribute('prepid'))
             
                 # init campaign objects
-                camp = self.cdb.get(c)
+                camp = campaign(self.cdb.get(c))
                 # add meta (energy)
                 ccamp.set_attribute('energy', camp['energy'])
             
@@ -454,7 +456,7 @@ class UpdateFlow(RESTResource):
         # for each action
         for ac in allacs:
             # init action object
-            a = action('',  json_input=ac)
+            a = action(json_input=ac)
             # calculate the available chains
             a.find_chains()
             # save to db
@@ -537,7 +539,10 @@ class ApproveFlow(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
-        return self.multiple_approve(args[0],  args[1])
+        if len(args) == 1:
+                return self.multiple_approve(args[0])
+        return self.multiple_approve(args[0], int(args[1]))
+
 
     def multiple_approve(self, rid, val=-1):
         if ',' in rid:
@@ -552,8 +557,11 @@ class ApproveFlow(RESTResource):
     def approve(self,  rid,  val):
         if not self.db.document_exists(rid):
             return {"prepid" : rid, "results":'Error: The given flow id does not exist.'}
-        f = flow('',  json_input=self.db.get(rid))
-        if not f.approve(int(val)):
+        f = flow(json_input=self.db.get(rid))
+        
+	try:
+            f.approve(int(val))
+        except:
             return {"prepid": rid, "results":False}
         
         return {"prepid": rid, "results":self.db.update(f.json())}

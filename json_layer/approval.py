@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from json_base import json_base
-from submission_details import submission_details
+from json_base import submission_details
 
 class approval(json_base):
     class IllegalApprovalStep(Exception):
@@ -18,7 +18,7 @@ class approval(json_base):
         self._json_base__schema = {
             'index':-1,
             'approval_step':'',
-            'approver':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project) 
+            'approver':submission_details().build(author_name) 
         }
 
         # update self according to json_input

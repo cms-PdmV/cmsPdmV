@@ -5,7 +5,7 @@ import simplejson
 from request import request
 from campaign import campaign
 from approval import approval
-from submission_details import submission_details
+from json_base import submission_details
 from comment import comment
 
 # MySQL db and cursor for queries init

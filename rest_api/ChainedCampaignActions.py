@@ -15,14 +15,13 @@ class CreateChainedCampaign(RESTResource):
         self.db = database('chained_campaigns')
         self.adb = database('actions')
         self.ccamp = None
-        self.json = None
     
     def PUT(self):
                 return self.create_campaign(cherrypy.request.body.read().strip())
 
     def create_campaign(self, jsdata):
         try:
-            self.ccamp = chained_campaign('TEST', json_input=loads(jsdata))
+            self.ccamp = chained_campaign(json_input=loads(jsdata))
         except chained_campaign('').IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
 
@@ -35,6 +34,9 @@ class CreateChainedCampaign(RESTResource):
         
         # update actions db
         self.update_actions()
+
+	# update history
+	self.ccamp.update_history({'action':'created'})
         
         return dumps({"results":self.db.save(self.ccamp.json())})
     
@@ -67,14 +69,13 @@ class UpdateChainedCampaign(RESTResource):
         def __init__(self):
                 self.db = database('chained_campaigns')
                 self.ccamp = None
-                self.json = None
 
         def PUT(self):
                 return self.update_campaign(cherrypy.request.body.read().strip())
 
         def update_campaign(self, jsdata):
                 try:
-                        self.ccamp = chained_campaign('TEST', json_input=loads(jsdata))
+                        self.ccamp = chained_campaign(json_input=loads(jsdata))
                 except chained_campaign('').IllegalAttributeName as ex:
                         return dumps({"results":False})
 
@@ -83,6 +84,10 @@ class UpdateChainedCampaign(RESTResource):
                         return dumps({"results":False})
 
                 self.logger.log('Updating chained_campaign %...' % (self.ccamp.get_attribute('_id')))
+
+		# update history
+		self.ccamp.update_history({'action':'updated'})
+
                 return dumps({"results":self.db.update(self.ccamp.json())})
 
         
@@ -92,7 +97,7 @@ class AddRequestToChain(RESTResource):
         self.campaign_db = database('campaigns')
         self.chained_db = database('chained_requests')
         self.ccamp_db = database('chained_campaigns')
-        self.json = {}
+        self.campaign = None
 
     def POST(self, *args):
         if not args:
@@ -110,7 +115,7 @@ class AddRequestToChain(RESTResource):
             return dumps({"results":False}) 
         else:
             try:
-                chain = chained_request('', chained_request_json=self.chained_db.get(chainid))
+                chain = chained_request(chained_request_json=self.chained_db.get(chainid))
             except Exception as ex:
                 self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
                 return dumps({"results":False})
@@ -119,7 +124,7 @@ class AddRequestToChain(RESTResource):
             return dumps({"results":False})
         else:
             try:
-                camp = campaign('', campaign_json=self.campaign_db.get(campaignid))
+                camp = campaign(campaign_json=self.campaign_db.get(campaignid))
             except Exception as ex:
                 self.logger.error('Could not initialize campaign object. Reason: %s' % (ex))
                 return dumps({"results":False})
@@ -202,7 +207,7 @@ class GenerateChainedRequests(RESTResource):
  
         # init chained_campaign
         try:
-            cc = chained_campaign('',  json_input=self.ccdb.get(id))
+            cc = chained_campaign(json_input=self.ccdb.get(id))
         except Exception as ex:
             self.logger.error('Could not initialize chained_campaign object. Reason: %s' % (ex))
             return dumps({"results": str(ex)})
@@ -258,7 +263,7 @@ class Start(RESTResource):
 
         self.logger.log('Starting chained_campaign %s ...' % (ccid))        
 
-        cc = self.ccdb.get(ccid)
+        cc = chained_campaign(self.ccdb.get(ccid))
         cc.start()
         self.ccdb.update(cc.json())
 
@@ -280,7 +285,7 @@ class Stop(RESTResource):
 
         self.logger.log('Stopping chained_campaign %s ...' % (ccid))
         
-        cc = self.ccdb.get(ccid)
+        cc = chained_campaign(self.ccdb.get(ccid))
         cc.stop()
         self.ccdb.update(cc.json())
 

@@ -2,9 +2,6 @@
 
 from chained_request import chained_request
 from json_base import json_base
-from submission_details import submission_details
-from approval import approval
-from comment import comment
 from request import request
 from couchdb_layer.prep_database import database
 from rest_api.RequestChainId import RequestChainId
@@ -27,66 +24,40 @@ class chained_campaign(json_base):
         def __str__(self):
             return 'Error: Flow ' + self.f + ' does not exist.'
     
-    def __init__(self, author_name, author_cmsid=-1, author_inst_code='', author_project='', json_input={}):
+    def __init__(self, json_input={}):
         self._json_base__schema = {
             '_id':'',
             'prepid':'',
             'alias':'', 
             'energy':0,
             'campaigns':[], # list of lists [camp_id, flow]
-            'approvals':[],
+            #'approvals':[], # unecessary - remove 
             'description':'',
             'action_parameters':{}, 
             'www':'',
-            'submission_details':submission_details().build(author_name,  author_cmsid,  author_inst_code,  author_project    ),
+            'history':[],
             'comments':[], 
             'valid':True
             }
         
         # update self according to json_input
-        self.__update(json_input)
-        self.__validate()
+        self.update(json_input)
+        self.validate()
 
-    def __validate(self):
-        if not self._json_base__json:
-            return 
-        for key in self._json_base__schema:
-            if key not in self._json_base__json:
-                raise self.IllegalAttributeName(key)
-    
-    # for all parameters in json_input store their values 
-    # in self._json_base__json
-    def __update(self,  json_input):
-        self._json_base__json = {}
-        if not json_input:
-            self._json_base__json = self._json_base__schema
-        else:
-            for key in self._json_base__schema:
-                if key in json_input:
-                    self._json_base__json[key] = json_input[key]
-                else:
-                    self._json_base__json[key] = self._json_base__schema[key]
-            if '_rev' in json_input:
-                self._json_base__json['_rev'] = json_input['_rev']
-    
     # start() makes the chained campaign visible to the actions page
     def start(self):
         if self._json_base__json['valid']:
             return
+        self.update_history({'action':'start'})
         self._json_base__json['valid']=True
     
     # stop() makes the chained campaign invisible to the actions page
     def stop(self):
         if not self._json_base__json['valid']:
             return
+        self.update_history({'action':'stop'})
         self._json_base__json['valid']=False
 
-    def add_comment(self,author_name, comment, author_cmsid=-1, author_inst_code='', author_project=''):
-        comments = self.get_attribute('comments')
-        new_comment = comment(author_name,  author_cmsid,  author_inst_code,  author_project).build(comment)
-        comments.append(new_comment)
-        self.set_attribute('comments',  comments)
-    
     def add_campaign(self, campaign_id,  flow_name=None):
         self.logger.log('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id'))) 
 
@@ -145,7 +116,7 @@ class chained_campaign(json_base):
             return {}
         
         # init new creq
-        creq = chained_request('automatic')
+        creq = chained_request()
         
         # parse request id
         tok = root_request_id.split('-')
@@ -172,7 +143,7 @@ class chained_campaign(json_base):
         creq.set_attribute("dataset_name", req["dataset_name"])
         creq.set_attribute("pwg", req["pwg"])
         creq.set_attribute("priority", req["priority"] )
-        creq.approve(0)
+        #creq.approve(0)
         
         # set request parameters
         reqp = self.get_attribute('action_parameters')
@@ -186,6 +157,10 @@ class chained_campaign(json_base):
         
         # add root request to chain
         creq.set_attribute('chain',  [root_request_id])
+
+        # update history
+        creq.update_history({'action':'created'})
+        self.update_history({'action':'add request','step':creq.get_attribute('_id')})
         
         # save to database
         return creq.json()
