@@ -35,16 +35,16 @@ class SelectChain(RESTResource):
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given'})
             
-        return self.select_chain(args[0],  args[1],  args[2])
+        return self.select_chain(args[0],  args[1])
     
-    def select_chain(self, id,  chainid,  value):
+    def select_chain(self, id,  chainid):
         self.logger.log('Selecting chain %s for action %s...' % (chainid, id))
         # if action exists
         if self.db.document_exists(id):
             # initialize the object
             a = action(json_input=self.db.get(id))
             # and set it to 1 (default ?)
-            a.select_chain(chainid,  int(value))
+            a.select_chain(chainid)
             
             # save
             self.db.update(a.json())
@@ -105,7 +105,7 @@ class GenerateChainedRequests(RESTResource):
         
         # iterate through chains
         for cc in chains:
-            if chains[cc] > 0:
+            if chains[cc]:
                 # check if the chain already exists
                 accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
                 flag = False
@@ -160,7 +160,7 @@ class GenerateAllChainedRequests(RESTResource):
         
         # iterate through chains
         for cc in chains:
-            if chains[cc] > 0:
+            if chains[cc]:
                 # check if the chain already exists
                 accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
                 flag = False

@@ -25,10 +25,17 @@ class ReadInjectionLog(RESTResource):
 			return dumps({"results":'Error:Given prepid "%s" does not exist in the database.' % (pid)})
 
 		try:
-			lines = open(self.logfile).readlines()
+			data = open(self.logfile).read()
 		except IOError as ex:
 			self.logger.error('Could not access logs: "%s". Reason: %s' % (self.logfile, ex))
 			return dumps({"results":"Error: Could not access logs."})
+
+		important = data[data.rindex('## Logger instance retrieved'):]
+		if not important:
+			raise ValueError('Malformed logs. Could not detect start of injection.')
+
+		lines = important.rsplit('\n')
+
 		res = ''
 		for line in lines:
 			if pid in line:

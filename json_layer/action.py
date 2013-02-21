@@ -107,7 +107,7 @@ class action(json_base):
             if id in chains:
                 new_chains[id] = chains[id]
             else:
-                new_chains[id] = 0
+                new_chains[id] = False
         
         # make persistent
         self.set_attribute('chains',  new_chains)
@@ -115,13 +115,13 @@ class action(json_base):
         return True
 
     # select a chain ( set a priority block )
-    def select_chain(self,  cid,  value=1):
+    def select_chain(self,  cid):#,  value=1):
         if cid not in self.get_attribute('chains'):
             raise self.ChainedCampaignDoesNotExistException(cid)
         
         # set
         chains = self.get_attribute('chains')
-        chains[cid] = value
+        chains[cid] = True#value
         
         # make persistent
         self.set_attribute('chains',  chains)
@@ -135,7 +135,7 @@ class action(json_base):
         if cid not in chains:
             raise self.ChainedCampaignDoesNotExistException(cid)
         
-        chains[cid] = 0 # deselect = set 0
+        chains[cid] = False # deselect = set 0
         
         # make persistent
         self.set_attribute('chains',  chains)

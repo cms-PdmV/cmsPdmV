@@ -52,17 +52,17 @@ class ImportRequest(RESTResource):
             
         
         # global tag ::All fix
-        i = 0
-	seqs = self.request.get_attribute('sequences')
-        for seq in seqs:
-            if '::All' not in seq['conditions']:
-                seqs[i]['conditions'] += '::All'
-            i += 1
-	self.request.set_attribute('sequences', seqs)
+        #i = 0
+	#seqs = self.request.get_attribute('sequences')
+        #for seq in seqs:
+        #    if '::All' not in seq['conditions']:
+        #        seqs[i]['conditions'] += '::All'
+        #    i += 1
+	#self.request.set_attribute('sequences', seqs)
 
         # update history
         self.request.update_history({'action':'created'})
-        
+
         # save to database
         if not self.db.save(self.request.json()):
             self.logger.error('Could not save results to database')
@@ -88,7 +88,7 @@ class ImportRequest(RESTResource):
                 return
         
         # check to see if the action already exists
-        if not self.adb.document_exists(self.json['prepid']):
+        if not self.adb.document_exists(self.request.get_attribute('prepid')):
             # add a new action
             a= action('automatic')
             a.set_attribute('prepid',  self.request.get_attribute('prepid'))

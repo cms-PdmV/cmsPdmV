@@ -31,7 +31,7 @@ class CreateCampaign(RESTResource):
             self.logger.error('Invalid prepid: Prepid returned None')
             return dumps({"results":False})
 
-        self.campaign.set_attribute('_id', self.request.get_attribute('prepid'))
+        self.campaign.set_attribute('_id', self.campaign.get_attribute('prepid'))
 
         self.campaign.update_history({'action':'created'})
        

@@ -733,6 +733,9 @@ class package_builder:
             self.logger.inject('Could not list files in directory "%s". Reason: %s' % (tempy, ex), level='warning')
 
     def build_package(self):
+	# log new injection
+	self.logger.inject('## Logger instance retrieved', level='debug')
+
         #init configuration and package specific stuff
         self.init_package()
 

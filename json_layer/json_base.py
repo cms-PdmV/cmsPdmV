@@ -135,6 +135,20 @@ class json_base:
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action':'set status', 'step':self.__json['status']})
+
+
+    def add_comment(self, comment=''):
+        if not comment:
+            return
+        if 'comments' not in self.__json:
+            return 
+        comm = {'comment':comment}
+        comm['uploader'] = self.__get_submission_details()
+        comments = self.get_attribute('comments') 
+        comments.append(comm)
+        self.set_attribute('comments', comments)
+
+        return comments
         
     def json(self):
         return self.__json
@@ -193,7 +207,7 @@ class submission_details(json_base):
             datetime += str(localtime[i]).zfill(2) + '-' 
         return datetime.rstrip('-') 
 
-    def build(self, author_name='automatic', author_username='', author_email=''):
+    def build(self, author_username='automatic', author_name='', author_email=''):
         self.set_attribute('author_name', author_name)
         self.set_attribute('author_username', author_username)
         self.set_attribute('author_email', author_email)

@@ -13,7 +13,7 @@
 
 # globals
 couchhost=localhost:5984
-dblist="requests chained_requests campaigns chained_campaigns flows actions users"
+dblist="requests chained_requests campaigns chained_campaigns flows actions" #users"
 viewdir=/home/prep2/views
 datadir=/home/prep2/maintenance/reset/data
 

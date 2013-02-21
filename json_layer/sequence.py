@@ -112,8 +112,10 @@ class sequence(json_base):
         return "--"+str(attribute)
       elif self.get_attribute(attribute) == False:
         return ''
-      else :
-        return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))
+      elif self.get_attribute(attribute):
+	return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))
+      else:
+	return ''
 
     def build_cmsDriver(self):
       command = ' '
