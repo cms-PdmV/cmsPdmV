@@ -144,15 +144,20 @@ function resultsCtrl($scope, $http, $location){
   };
   $scope.next_approval = function(){
     console.log("to be approved:", $scope.selected_prepids.join());
-    $http({method:'PUT', url:'/restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
+    $http({method:'GET', url:'/restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
             alert("Success!");
         }).error(function(data,status){
             console.log(status);
             alert("Error while processing request. Code: "+status);
         });
   };
-  $scope.delete_multiple_objects = function(){
-    console.log("selected to delete:", $scope.selected_prepids, " will delete with updated API. DB: ", $scope.dbName)
+  $scope.previous_approval = function(){
+    $http({method:'GET', url:'/restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
+            alert("Success!");
+        }).error(function(data,status){
+            console.log(status);
+            alert("Error while processing request. Code: "+status);
+        });
   };
 }
 
@@ -248,5 +253,39 @@ testApp.directive("customHistory", function(){
         scope.show_info = ctrl.$viewValue;
       };
     }
+  }
+});
+testApp.directive("sequenceDisplay", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <div ng-hide="show_sequence">'+
+    '    <input type="button" value="Show" ng-click="getCmsDriver();show_sequence=true;">'+
+    '  </div>'+
+    '  <div ng-show="show_sequence">'+
+    '    <input type="button" value="Hide" ng-click="show_sequence=false;">'+
+    '    <ul>'+
+    '      <li ng-repeat="sequence in driver">{{sequence}}</li>'+
+    '    </ul>'+
+    '  </div>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_sequence = false;
+        scope.sequencePrepId = ctrl.$viewValue;
+//         scope.sequencePrepId = scope.dbName;
+      };
+      scope.getCmsDriver = function(){
+        if (scope.driver ===undefined){
+          var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.sequencePrepId);
+          promise.then(function(data){
+            scope.driver = data.data.results;
+          }, function(data){
+             alert("Error: ", data.status);
+        });
+       }
+     };
+   }
   }
 });

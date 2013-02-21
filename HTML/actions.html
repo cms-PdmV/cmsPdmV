@@ -41,8 +41,8 @@
     <div class="container">
       <div class="span12" style="overflow: auto">
         <div align="middle" style="margin-top: 20px;"><!--div for selecting a campaing -->
-            <select>
-              <option ng-repeat="campaign in campaigns" value="campaign">{{campaign}}</option>
+            <select ng-change="select_campaign();" ng-model="selectedOption" ng-options="value for value in campaigns">
+<!--               <option ng-repeat="campaign in campaigns" value="campaign">{{campaign}}</option> -->
             </select>
         </div><!--End of campaing SELECT -->
         
@@ -62,13 +62,17 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in actions_defaults" ng-show="column.select">
+          <th ng-repeat="column in actions_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
             {{column.text}}
+            <span ng-show="selectedCls(column.db_name)">
+              <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+              <i class="icon-chevron-down" ng-show="sort.descending"></i>
+            </span>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result">
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
           <td ng-repeat="value in actions_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">

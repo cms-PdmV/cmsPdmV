@@ -7,7 +7,7 @@
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"> </script>
-        <script src="scripts/controller.js"></script>
+        <script src="scripts/flows_controller.js"></script>
   </head> 
 
   <body ng-controller="resultsCtrl">
@@ -71,9 +71,20 @@
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit/flows/{{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
+                <a ng-href="edit2?db_name=flows&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
+              </div>
+              <div ng-switch-when="Allowed Campaigns">
+                <ul>
+                  <li ng-repeat="value in data[value.db_name]">{{value}}</li>
+                </ul>
+              </div>
+              <div ng-switch-when="Submission details">
+                <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
+                    <dt>{{key}}</dt>
+                    <dd>{{value}}</dd>                
+                </dl>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>

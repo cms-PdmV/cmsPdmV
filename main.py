@@ -6,14 +6,17 @@ from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign, ToggleCampaignStatus,  ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign,  ToggleCampaign,  ApproveCampaign, GetAllCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
-from rest_api.LogActions import ReadInjectionLog
+
+#to get campaign sequences
+from json_layer.sequence import sequence
+import json
 
 import logging
 import logging.handlers
@@ -84,6 +87,12 @@ def actions2( *args, **kwargs):
 @cherrypy.expose
 def index( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','index.html'))
+    
+@cherrypy.expose
+def getDefaultSequences(*args, **kwargs):
+    tmpSeq = sequence()._json_base__schema
+#    return "a"
+    return json.dumps(tmpSeq)
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -107,6 +116,7 @@ root.edit2 = edit2
 root.create = create
 root.actions = actions
 root.actions2 = actions2
+root.getDefaultSequences = getDefaultSequences
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -116,8 +126,6 @@ root.restapi.chained_requests = RESTResourceIndex()
 root.restapi.chained_campaigns = RESTResourceIndex()
 root.restapi.actions = RESTResourceIndex()
 root.restapi.flows = RESTResourceIndex()
-
-# read injection logs api
 
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
@@ -138,7 +146,6 @@ root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
 root.restapi.requests.status = SetStatus()
 root.restapi.requests.inject = InjectRequest()
-root.restapi.requests.injectlog = ReadInjectionLog()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -146,10 +153,8 @@ root.restapi.campaigns.update = UpdateCampaign()
 root.restapi.campaigns.delete = DeleteCampaign()
 root.restapi.campaigns.get = GetCampaign()
 root.restapi.campaigns.toggle = ToggleCampaign() # start/stop campaign
-root.restapi.campaigns.status = ToggleCampaignStatus()
 root.restapi.campaigns.approve = ApproveCampaign()
 root.restapi.campaigns.get_all = GetAllCampaigns()
-root.restapi.campaigns.get_cmsDrivers = GetCmsDriverForCampaign()
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()
@@ -195,12 +200,9 @@ maxBytes = getattr(log, "rot_maxBytes", 10000000)
 backupCount = getattr(log, "rot_backupCount", 1000)
 fname = getattr(log, "rot_error_file", "logs/error.log")
 
-logger = logging.getLogger()
-logger.setLevel(0)
-
 # Make a new RotatingFileHandler for the error log.
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-#h.setLevel(logging.DEBUG)
+h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter())
 log.error_log.addHandler(h)
 
@@ -210,16 +212,10 @@ logger.addHandler(h)
 
 # set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+ha.setLevel(logging.DEBUG)
 ha.setFormatter(prep2_formatter())
 logger = logging.getLogger("prep2_error")
 logger.addHandler(ha)
-
-# set up injection logger
-logger = logging.getLogger("prep2_inject")
-hi = logging.FileHandler('logs/inject.log', 'a')
-hi.setFormatter(prep2_formatter())
-
-logger.addHandler(hi)
 
 # Make a new RotatingFileHandler for the access log.
 fname = getattr(log, "rot_access_file", "logs/access.log")

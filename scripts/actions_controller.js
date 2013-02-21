@@ -4,8 +4,80 @@ function resultsCtrl($scope, $http, $location){
         {text:'Actions',select:true, db_name:'prepid'}
 //         {text:'Actions',select:true, db_name:''},
     ];
-    $scope.chained_campaigns = ["prepid"];
-    $scope.campaigns = [];
+//     $scope.chained_campaigns = ["prepid"];
+    $scope.campaigns = ["------"];
+    $scope.selectedOption = "------";
+     $scope.selected_campaign = "";
+//     $scope.watch("selected_campaign", function(){
+//        console.log("selected campaign pasikeite:", $scope.selected_campaign); 
+//     });
+    $scope.select_campaign = function(){
+        console.log("pasikeite campaign:", $scope.selectedOption);
+        console.log($scope.actions_defaults);
+        console.log($scope.chained_campaigns);
+        //set the well to have only ChainedCampaigns which includes selectedOption
+        if ($scope.selectedOption == "------"){ //if to show all chained campains -> push all to well values
+          console.log("selected to show all");
+          tmp = [{text:'Actions',select:true, db_name:'prepid'}];
+          _.each($scope.chained_campaigns, function(v){
+            tmp.push({text:v._id, select:true, db_name:v._id});
+            $scope.actions_defaults = tmp;
+          });
+        }
+        else{
+          console.log("if selected not ------");
+            var to_remove_list = [];
+            var to_add_list = [];
+          _.each($scope.chained_campaigns, function(chain_campaign){ //iterate all chained campaigns
+            for (i=0; i< chain_campaign.campaigns.length;i++){
+                if (_.isString(chain_campaign.campaigns[i])){
+                  if (chain_campaign.campaigns[i]== $scope.selectedOption){
+                      to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alaias});
+                      i = chain_campaign.campaigns.length+1;
+                  }else{
+//                       console.log("String: ",i," : ",to_add_list,to_remove_list, "pushing: ",chain_campaign._id);
+                      to_remove_list.push(chain_campaign._id);
+                }
+                }else{
+                if (_.indexOf(chain_campaign.campaigns[i],$scope.selectedOption) != -1){ //if chained campaing includes selected campaign
+                  to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alaias});
+                  i = chain_campaign.campaigns.length+1;
+                  if (_.indexOf(to_remove_list,chain_campaign._id) !=-1){
+                    to_remove_list = _.without(to_remove_list, chain_campaign._id);
+                  }
+                }
+                else{
+//                   console.log(i," : ",to_add_list,to_remove_list, "pushing: ",chain_campaign._id);
+                  if (_.indexOf(to_remove_list,chain_campaign._id) ==-1){
+                    to_remove_list.push(chain_campaign._id);
+                  }
+                }
+              }
+            }
+            console.log(to_add_list,to_remove_list);
+          });
+          $scope.actions_defaults = _.filter($scope.actions_defaults, function(element){ //filter all actions from well
+            if (element.text != 'Actions'){    //leave actions column
+              return (_.indexOf(to_remove_list, element.text) == -1) //if column not in to_add_list -> remove it (a.k.a its in to_be_removed list)
+            }else{
+              return true;
+            }             
+          });
+           _.each(to_add_list, function(element){ //add columns to the default actions. iterating 1by1
+             var add = true; //set default add value to true
+             _.each($scope.actions_defaults, function(action){ //iterate over actions to check if to-be added value isn't in it already
+                 if (action.text == element.id){ //if element is in actions
+                     add = false;  //then set add to FALSE
+                }
+            });
+             if (add){ //if we really desided to add an element -> lets add it. else - nothing to add.
+               $scope.actions_defaults.push({text:element.id, select:true, db_name:element.id});
+               add = false;
+             }
+           });
+        }
+    };
+    
     $scope.show_well = false;
     if($location.search()["page"] === undefined){
         $location.search("page", 0);
@@ -15,48 +87,25 @@ function resultsCtrl($scope, $http, $location){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
-    promise.then(function(data){
-//         console.log(data);
-        $scope.result = data.data.results; 
-        if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-//         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-            add = true;
-            _.each($scope.actions_defaults, function(column){
-            if (column.db_name == v){
-                add = false;
-            }
-         });
-            if (add){
-//                 $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
-        });
-        }
-        console.log($scope.actions_defaults);
-    }, function(){
-       console.log("Error"); 
-    });
     var promise = $http.get('search/?db_name=chained_campaigns&query=""&page=-1')
     promise.then(function(data){
+        $scope.chained_campaigns = data.data.results;
         _.each(data.data.results, function(v){
-            $scope.chained_campaigns.push(v._id);
+//             $scope.chained_campaigns.push(v._id);
             $scope.actions_defaults.push({text:v._id, select:true, db_name:v._id});
 //             console.log('chained',v._id);
         });
 //         console.log($scope.actions_defaults);
     });
-    
-    promise = $http.get('search/?db_name=campaigns&query=""&page=-1')
+
+    promise = $http.get('restapi/campaigns/get_all')
     promise.then(function(data){
         _.each(data.data.results, function(v){
-           $scope.campaigns.push(v.prepid); 
+           $scope.campaigns.push(v.value);
         });
 //         console.log($scope.campaigns);
     });
-    
+
   $scope.showing_well = function(){
         if ($scope.show_well){
           $scope.show_well = false;
@@ -71,8 +120,24 @@ function resultsCtrl($scope, $http, $location){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
-          console.log(data);
-          $scope.result = data.data.results;
+            $scope.result = data.data.results; 
+            if ($scope.result.length != 0){
+            columns = _.keys($scope.result[0]);
+            rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+            $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+            _.each(rejected, function(v){
+                add = true;
+                _.each($scope.actions_defaults, function(column){
+                if (column.db_name == v){
+                    add = false;
+                  }
+                });
+                if (add){
+//                     $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+                }
+              });
+            }
+//             console.log($scope.actions_defaults);
          }, function(){
              console.log("Error"); 
          });
@@ -90,8 +155,26 @@ function resultsCtrl($scope, $http, $location){
         $scope.list_page = current_page+1;
       }
   };
+  $scope.sort = {
+    column: 'prepid',
+    descending: false
+  };
+
+  $scope.selectedCls = function(column) {
+    return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
+  };
+    
+  $scope.changeSorting = function(column) {
+    var sort = $scope.sort;
+    if (sort.column == column){
+      sort.descending = !sort.descending;
+    }else{
+       sort.column = column;
+       sort.descending = false;
+     }
+  };
 }
-var testApp = angular.module('testApp',[]);
+var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customPrepId", function ($rootScope) {
     return {
         restrict: 'E',

@@ -7,7 +7,7 @@
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/controller.js"></script>
+        <script src="scripts/chainedCampaigns_controller.js"></script>
   </head>
   <body ng-controller="resultsCtrl">
     <div class="navbar">       <!--  place for NAV-BAR-->
@@ -76,9 +76,29 @@
                 <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete flow">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit/chained_campaigns/{{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
+                <a ng-href='edit2?db_name=chained_campaigns&query="prepid%3D%3D{{data._id}}' rel="tooltip" title="Edit details" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
+              </div>
+              <div ng-switch-when="Chain">
+                <ul>
+                  <li ng-repeat="element in data[value.db_name]"> 
+                  <div ng-switch on="_.isArray(element)">
+                    <div ng-switch-when="true">
+                        {{element.join(" : ")}}
+                    </div>
+                    <div ng-switch-default>
+                      {{element}}
+                    </div>
+                  </div>
+                  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="Submission details">
+                <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
+                    <dt>{{key}}</dt>
+                    <dd>{{value}}</dd>                
+                </dl>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>

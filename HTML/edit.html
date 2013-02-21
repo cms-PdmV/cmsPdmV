@@ -7,7 +7,9 @@
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/controller.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/edit_controller.js"></script>
+        
 </head>
 <body ng-controller="resultsCtrl">
   <div class="navbar navbar-static-top"> <!--  place for NAV-BAR-->
@@ -54,40 +56,50 @@
                 <div ng-switch on="column.text" style="width: 400px;">
                     <div ng-switch-when="Approvals">
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[0][column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" ></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form>
+                        </ng-form> 
                     </div>
                     <div ng-switch-when="Sequences">
-<!--                         <textarea type="text" ng-model="result[0][column.db_name]" style="width: 390px; height: 160px; margin-bottom: 0px;"></textarea> -->
-                        <ng-form name="fieldForm">
+<!--                        <ng-form name="fieldForm">
                           <div inline-editable ng-model="result[0][column.db_name]" ></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form>
+                        </ng-form>-->
+                      <div sequence-edit ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-when="Generators">
 <!--                         <textarea type="list" ng-model="result[0][column.db_name]" style="width: 390px; height: 160px; margin-bottom: 0px;"></textarea> -->
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[0][column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" ></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form>
                     </div>
                     <div ng-switch-when="Remarks">
 <!--                         <textarea type="text" ng-model="result[0][column.db_name]" style="width: 390px; height: 160px; margin-bottom: 0px;"></textarea> -->
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[0][column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" ></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form>
                     </div>
                     <div ng-switch-when="Submission details">
 <!--                         <textarea type="text" ng-model="result[0][column.db_name]" style="width: 390px; height: 160px; margin-bottom: 0px;"></textarea> -->
-                        <ng-form name="fieldForm">
+<!--                        <ng-form name="fieldForm">
                           <div inline-editable ng-model="result[0][column.db_name]" ></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form>
+                        </ng-form>-->
+                      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
+                        <dt>{{key}}</dt>
+                        <dd>{{value}}</dd>                
+                      </dl>
+                    </div>
+                    <div ng-switch-when=" Generator parameters">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" ></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
                     </div>
                     <div ng-switch-default style="width: 400px;">
-                        <textarea type="text" ng-model="result[0][column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;"></textarea>
+                        <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
                     </div>
                 </div>
               </form>
@@ -108,7 +120,7 @@
           </div>
         </div>
         <div class="span4" align="right">
-          <input type="button" class="btn" ng-click="delete_edit(result[0]['prepid'])" value="Delete" align="right"/>
+          <input type="button" class="btn" ng-click="delete_edit(result['prepid'])" value="Delete" align="right"/>
         </div>
       </div>
     </div><!--END of span12 -->
