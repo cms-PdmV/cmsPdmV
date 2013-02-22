@@ -95,8 +95,7 @@
                 <a ng-href="restapi/{{dbName}}/get_cmsDrivers/{{data.prepid}}" target="_blank">get cmsDriver</a>
               </div> OLDDD--> 
               <div ng-switch-when="Sequences">
-                <div sequence-display ng-model="data.prepid">
-                </div>
+                <div sequence-display ng-model="data.prepid"></div>
               </div>
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">

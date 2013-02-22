@@ -181,72 +181,40 @@ testApp.directive("customPrepId", function ($rootScope) {
         replace: true,
         require: "ngModel",
         link: function (scope, element, attr, ctrl) {
-            
-            var to_our = function (lst) {
-                 if (lst === undefined)
-                      return [];
-                
-                 var x =  { 0: lst, 1: lst[1], 2: lst[2] };
-//                     var x = {0: lst, 1:777, 2:7}
-                return x;
-            };
-            
-            var from_our = function (lst) {
-                var out = [];
-                if (lst[0] != undefined){
-                    out.push(parseInt(lst[0]));
-                    if (lst[2] != undefined){
-                        out.push(0); //put second element;
-                        out.push(parseInt(lst[2]));
-                    }
-                    if (lst[1] != undefined){
-                        out[1] = parseInt(lst[1]);
-                    }
-                }
-                return out;
-            };
-            
-            scope.makeInput = function (value) {
-                if (value) {
-                    $rootScope.$broadcast("closeCustomPrepId", []);
-                }
-                
-                scope.input_enabled = value;
-                console.log(ctrl.$viewValue);
-                scope.value = to_our(ctrl.$viewValue);
-//                  console.log(scope.value);
-            };
-            
-            scope.commit = function () {
-               ctrl.$setViewValue(from_our(scope.value)); 
-               scope.makeInput(false);
-            }
-            
-            scope.$on("closeCustomPrepId", function () {
-                if (scope.input_enabled)
-                    scope.makeInput(false);
-            });
-            
-            ctrl.$render = function () {
-                scope.makeInput(false);
-            };
+          ctrl.$render = function(){
+            scope.actionInfo = ctrl.$viewValue;
+            console.log(scope.actionInfo);
+            scope.displayBox = true;
+          };
+          scope.showInput = function(){
+            scope.displayBox = false;
+          };
+          scope.closeInput = function(){
+            scope.displayBox = true;
+            console.log(scope.displayBox);
+          };
         },
-        template: ""
-        + "<ng-form name='form'>"
-        + "<div ng-switch on='input_enabled'>"
-        + "  <span ng-switch-when='true'>"
-        + "    <select class='input-mini' ng-disabled='value[0] == undefined' ng-model=value[0] style='margin-bottom: 0px; margin-left: 2px;'>"
-        + "      <option ng-repeat='key in [0,1,2,3,4,5,6]' ng-selected ='value[0] == key'>{{key}}</option>"
-        + "    </select>"
-        + "    <input type='button' ng-class='{ \"btn-warning\": form.$invalid, \"btn-success\": form.$valid}' ng-disabled='!form.$valid' class='btn' ng-click='commit()' value='+' style='width: 17px; padding: 0px; height: 18px;' />"
-        + "    <input type='number' ng-model='value[1]' style='margin-bottom: 0px; width: 80px;'/>"
-        + "    <span class='input-append'>"
-        +"       <input type='number' ng-model='value[2]' style='margin-bottom: 0px; width: 25px;'/>"
-        +"       <span class='add-on'>%</span>"
-        +"     </span>"
-        + "  </span>"
-        + "  <span ng-switch-default ng-click='makeInput(true, form.$valid)'>{{ value[0] }} </br>{{ value[1] }} </br>{{ value[2] }} </span>"
-        + "</div>"
-        + "</ng-form>"
+        template:
+        '<div ng-switch="displayBox">'+
+        '  <div ng-switch-when="true">'+
+        '    <input type="checkbox" ng-disabled="actionInfo.member_of_campaign != selectedOption" ng-click="showInput();"/>'+
+        '  </div>'+
+        '  <div ng-switch-when="false">'+
+        '    <input type="button" class="btn" ng-click="closeInput();" value="-"/>'+
+        '    <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;">'+
+        '      <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected ="value[0] == key">{{key}}</option>'+
+        '    </select>'+
+        '    <input type="number" style="margin-bottom: 0px; width: 80px;"/>'+
+        '    <span class="input-append">'+
+        '      <input type="number" style="margin-bottom: 0px; width: 25px;"/>'+
+        '      <span class="add-on">%</span>'+
+        '    </span>'+
+        '  </div>'+
+        '  <text>'+
+        '{{actionInfo.member_of_campaign == selectedOption}}'+
+        '  {{actionInfo.member_of_campaign}}'+
+        '  {{selectedOption}}'+
+        '  </text>'+
+        '</div>'
     };
 });

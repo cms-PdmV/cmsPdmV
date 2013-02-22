@@ -86,7 +86,7 @@
               </a>
             </div>
             <div ng-switch-when="Sequences">
-              <a ng-href="restapi/{{dbName}}/get_cmsDrivers/{{data.prepid}}"  target="_blank">get cmsDriver</a>
+              <div sequence-display ng-model="data.prepid"></div>
             </div>
             <div ng-switch-when="Generators">
               <ul style="margin-bottom: 0px;">
@@ -107,6 +107,9 @@
                   {{generator}}
                 </li>
               </ul>
+            </div>
+            <div ng-switch-when="History">
+              <div custom-history ng-model="data[value.db_name]"></div>
             </div>
             <div ng-switch-default>{{data[value.db_name]}}</div>
           </div>

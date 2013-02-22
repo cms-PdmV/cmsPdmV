@@ -4,37 +4,16 @@ function resultsCtrl($scope, $http, $location){
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
         {text:'Status',select:true, db_name:'status'},
-        {text:'Approvals',select:true, db_name:'approvals'},
         {text:'Type',select:true, db_name:'type'},
         {text:'ProdType',select:true, db_name:'production_type'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
         {text:'Energy',select:true, db_name:'energy'}
     ];
-    $scope.requests_defaults = [
-        {text:'PrepId',select:true, db_name:'prepid'},
-        {text:'Actions',select:true, db_name:''},
-        {text:'Status',select:true, db_name:'status'},
-        {text:'Approvals',select:true, db_name:'approvals'},
-        {text:'MCDBId',select:true, db_name:'mcdb_id'},
-        {text:'DataSet Name',select:true, db_name:'dataset_name'},
-        {text:'SW Release',select:true, db_name:'cmssw_release'},
-        {text:'Type',select:true, db_name:'type'},
-    ];
-    $scope.flows_defaults = [
-        {text:'PrepId',select:true, db_name:'prepid'},
-        {text:'Actions',select:true, db_name:''},
-        {text:'Allowed Campaigns',select:true, db_name:'allowed_campaigns'},
-        {text:'Next Campaign',select:true, db_name:'next_campaign'},
-    ];
-    $scope.chainedCampaigns_defaults = [
-        {text:'PrepId',select:true, db_name:'prepid'},
-        {text:'Actions',select:true, db_name:''},
-        {text:'Chain',select:true, db_name:'campaigns'},
-        {text:'Energy',select:true, db_name:'energy'},
-    ];
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
+    $scope.dbName = $location.search()["db_name"];
+    $scope.new = {};
 //     $scope.update["value"] = false;
 //     console.log($location);
 //     $location.search("antanas", "antanas == \"'adasdasdasd'\"");
@@ -46,33 +25,6 @@ function resultsCtrl($scope, $http, $location){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
-    promise.then(function(data){
-        console.log(data);
-        $scope.result = data.data.results; 
-        if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-//         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-            add = true;
-            _.each($scope.defaults, function(column){
-            if (column.db_name == v){
-                add = false;
-            }
-         });
-            if (add){
-                $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-                $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-                $scope.flows_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-                $scope.chainedCampaigns_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
-        });
-        }
-        console.log($scope.requests_defaults);
-    }, function(){
-       console.log("Error"); 
-    });
     
     $scope.delete_object = function(db, value){
 //         $http({method: 'GET', url: '/someUrl'}).
@@ -140,12 +92,29 @@ function resultsCtrl($scope, $http, $location){
    $scope.$watch('list_page', function(){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
-          promise.then(function(data){
-          console.log(data);
-          $scope.result = data.data.results;
-         }, function(){
-             console.log("Error"); 
+       promise.then(function(data){
+        console.log(data);
+        $scope.result = data.data.results; 
+        if ($scope.result.length != 0){
+        columns = _.keys($scope.result[0]);
+        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+//         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+        _.each(rejected, function(v){
+            add = true;
+            _.each($scope.defaults, function(column){
+            if (column.db_name == v){
+                add = false;
+            }
          });
+            if (add){
+                $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+            }
+        });
+        }
+        console.log($scope.requests_defaults);
+    }, function(){
+       console.log("Error"); 
+    });
     });
     
   $scope.previous_page = function(current_page){
@@ -159,6 +128,10 @@ function resultsCtrl($scope, $http, $location){
         $location.search("page", current_page+1);
         $scope.list_page = current_page+1;
       }
+  };
+  $scope.submit_create = function(){
+    console.log($scope.new);    
+    alert('to be imporved');
   };
 }
 

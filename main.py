@@ -87,6 +87,9 @@ def actions2( *args, **kwargs):
 @cherrypy.expose
 def index( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','index.html'))
+@cherrypy.expose
+def create2( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','create.html'))
     
 @cherrypy.expose
 def getDefaultSequences(*args, **kwargs):
@@ -114,6 +117,7 @@ root.results = results
 root.edit = edit
 root.edit2 = edit2
 root.create = create
+root.create2 = create2
 root.actions = actions
 root.actions2 = actions2
 root.getDefaultSequences = getDefaultSequences

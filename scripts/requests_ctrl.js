@@ -3,7 +3,6 @@ function resultsCtrl($scope, $http, $location){
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
         {text:'Status',select:true, db_name:'status'},
-        {text:'Approvals',select:false, db_name:'approvals'},
         {text:'MCDBId',select:true, db_name:'mcdb_id'},
         {text:'DataSet Name',select:true, db_name:'dataset_name'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
