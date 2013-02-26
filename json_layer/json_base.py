@@ -140,13 +140,8 @@ class json_base:
     def add_comment(self, comment=''):
         if not comment:
             return
-        if 'comments' not in self.__json:
-            return 
-        comm = {'comment':comment}
-        comm['uploader'] = self.__get_submission_details()
-        comments = self.get_attribute('comments') 
-        comments.append(comm)
-        self.set_attribute('comments', comments)
+        comm = {'action': 'comment', 'step': comment}
+	self.update_history(comm)
 
         return comments
         

@@ -61,7 +61,7 @@ class CreateChainedCampaign(RESTResource):
             # avoid duplicate entries
             if cid not in a['chains']:
                 # append new chain id and set to 0
-                a['chains'][cid]=0
+                a['chains'][cid]['flag']=False
                 # save to db
                 self.adb.update(a)
 
@@ -83,7 +83,7 @@ class UpdateChainedCampaign(RESTResource):
                         self.logger.error('prepid returned was None')
                         return dumps({"results":False})
 
-                self.logger.log('Updating chained_campaign %...' % (self.ccamp.get_attribute('_id')))
+                self.logger.log('Updating chained_campaign %s ...' % (self.ccamp.get_attribute('_id')))
 
 		# update history
 		self.ccamp.update_history({'action':'updated'})
@@ -223,8 +223,8 @@ class GenerateChainedRequests(RESTResource):
         
         # find all actions that have selected this chained campaign
         for ract in rreqs:
-            if ract['chains'][id]:
-                if ract['chains'][id] > 0:
+            if ract['chains'][id] is not None:
+                if ract['chains'][id]['flag']:
                     # check if the chain already exists
                     accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+ract['_id']))
                     flag = False

@@ -289,10 +289,7 @@ class package_builder:
 
         # check if LHE
         elif  self.request.get_attribute('type') == 'LHE':
-            if self.request.get_attribute('mcdb_id') == -1:
-                self.wmagent_type = 'MonteCarlo'
-            else:
-                self.wmagent_type = 'MonteCarloFromGEN'
+            self.wmagent_type = 'LHEStepZero' #'MonteCarloFromGEN'
 
             if 'pileup' not in cmsDriver:
                 raise self.NotInitializedException('PileUp Scenario is not defined.')
@@ -536,8 +533,17 @@ class package_builder:
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
             command += ' --cfg_db_file configs.txt'
-            if int(self.mcdbid) == 0:
-              command += ' --events-per-job '+str(self.numberOfEventsPerJob)
+            if int(self.request.get_attribute('mcdb_id')) == 0:
+                configfile = open(self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('nameorfragment'), 'r')
+                for line in configfile:
+                    if 'nEvents' in line:
+                        line.rstrip('\n')
+                        numbers = re.findall(r'[0-9]+', line)
+                        self.numberOfEventsPerJob = numbers[len(numbers)-1]
+                        if not self.numberOfEventsPerJob:
+                            raise ValueError('Number of events per job could not be retrieved from: %s' % (self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('nameorfragment')))
+                print self.numberOfEventsPerJob
+                command += ' --events-per-job %s' % (self.numberOfEventsPerJob)
 
 
         # Else: ReDigi step

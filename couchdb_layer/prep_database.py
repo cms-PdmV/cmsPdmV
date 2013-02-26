@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from json_layer.request import request
 from tools.logger import logger as logfactory
 from json_layer.campaign import campaign
 from WMCore.Database.CMSCouch import Database
@@ -58,7 +57,7 @@ class database:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name 
         try:    
-            self.db = Database(db_name)
+            self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
             
@@ -354,6 +353,16 @@ class database:
         if not doc:
             self.logger.error('Tried to save empty document.', level='warning')
             return False
+
+
+	# TODO: Check if an object exists in the database and fail.
+
+        #if '_id' in doc:
+        #    self.logger.log('Using user-defined id: %s' % (doc['_id']))
+        #if self.__document_exists(doc):
+        #    self.logger.error('Failed to update document: %s' % (json.dumps(doc)))
+        #    return False
+
         try:
             self.db.commitOne(doc)
             return True

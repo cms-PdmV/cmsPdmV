@@ -44,7 +44,6 @@ class chained_request(json_base):
             'chain':[],
             'approval':self.get_approval_steps()[0],
             'step':0, 
-            'comments':[],
             'analysis_id':[],
             'pwg':'',
             'generators':'',

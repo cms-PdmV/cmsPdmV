@@ -105,7 +105,7 @@ class GenerateChainedRequests(RESTResource):
         
         # iterate through chains
         for cc in chains:
-            if chains[cc]:
+            if chains[cc]['flag']:
                 # check if the chain already exists
                 accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
                 flag = False
@@ -160,7 +160,7 @@ class GenerateAllChainedRequests(RESTResource):
         
         # iterate through chains
         for cc in chains:
-            if chains[cc]:
+            if chains[cc]['flag']:
                 # check if the chain already exists
                 accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
                 flag = False

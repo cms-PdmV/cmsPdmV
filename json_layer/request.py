@@ -2,9 +2,11 @@
 
 import copy
 
-from json_base import json_base
-from generator_parameters import generator_parameters
-from sequence import sequence
+from couchdb_layer.prep_database import database
+
+from json_layer.json_base import json_base
+from json_layer.generator_parameters import generator_parameters
+from json_layer.sequence import sequence
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -17,8 +19,15 @@ class request(json_base):
     def __init__(self, json_input={}):
 
         # detect approval steps
-        if 'mcdb_id' in json_input and int(json_input['mcdb_id']) != -1:
-            self._json_base__approvalsteps = ['approve', 'submit']
+        root = False
+        cdb = database('campaigns')
+        
+        if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
+            if cdb.document_exists(json_input['member_of_campaign']):
+                if cdb.get(json_input['member_of_campaign'])['root'] > 0:
+                    self._json_base__approvalsteps = ['approve', 'submit']
+            else:
+                raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
 
         self._json_base__schema = {
             '_id':'', 
@@ -40,7 +49,7 @@ class request(json_base):
             'cvs_tag':'',
             'pvt_flag':'',
             'pvt_comment':'',
-            'mcdb_id':'',
+            'mcdb_id':-1,
             'notes':'',
             'description':'',
             'remarks':'',
@@ -55,7 +64,6 @@ class request(json_base):
             'status':self.get_status_steps()[0],
             'type':'',
             'generators':'',
-            'comments':[],
             'sequences':[],
             'generator_parameters':[], 
             'reqmgr_name':[], # list of tuples (req_name, valid)

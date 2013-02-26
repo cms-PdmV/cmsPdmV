@@ -289,6 +289,9 @@ class UpdateFlow(RESTResource):
         
         # find out what is the change
         old = self.db.get(self.f.get_attribute('_id'))
+
+	# update history
+	self.f.update_history({'action': 'update'})
         
         # save to db
         if not self.db.update(self.f.json()):

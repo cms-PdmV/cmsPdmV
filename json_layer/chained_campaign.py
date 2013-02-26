@@ -36,7 +36,6 @@ class chained_campaign(json_base):
             'action_parameters':{}, 
             'www':'',
             'history':[],
-            'comments':[], 
             'valid':True
             }
         

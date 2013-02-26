@@ -53,7 +53,6 @@ class campaign(json_base):
                                  'root':-1, # -1: possible root, 0: root, 1: non-root 
                                  'sequences':[], # list of jsons of jsons
                                  'approval':self.get_approval_steps()[-1], 
-                                 'comments':[],
                                  'history':[]
                                  }
 

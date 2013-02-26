@@ -75,17 +75,18 @@ class ImportRequest(RESTResource):
         
     def add_action(self):
         # Check to see if the request is a root request
-        if self.request.get_attribute('mcdb_id') != -1:
-            camp = self.request.get_attribute('member_of_campaign')
-            
-            if not self.cdb.document_exists(camp):
-                return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+        camp = self.request.get_attribute('member_of_campaign')
+          
+        if not self.cdb.document_exists(camp):
+            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
                 
-            # get campaign
-            c = self.cdb.get(camp)
+        # get campaign
+        c = self.cdb.get(camp)
             
-            if c['root'] > 0:
-                return
+        if c['root'] > 0:
+            return
+        elif self.request.get_attribute('mcdb_id') > -1:
+            return 
         
         # check to see if the action already exists
         if not self.adb.document_exists(self.request.get_attribute('prepid')):

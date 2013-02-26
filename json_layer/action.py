@@ -107,7 +107,7 @@ class action(json_base):
             if id in chains:
                 new_chains[id] = chains[id]
             else:
-                new_chains[id] = False
+                new_chains[id] = {'flag' : False }
         
         # make persistent
         self.set_attribute('chains',  new_chains)
@@ -121,7 +121,7 @@ class action(json_base):
         
         # set
         chains = self.get_attribute('chains')
-        chains[cid] = True#value
+        chains[cid]['flag'] = True#value
         
         # make persistent
         self.set_attribute('chains',  chains)
@@ -135,7 +135,7 @@ class action(json_base):
         if cid not in chains:
             raise self.ChainedCampaignDoesNotExistException(cid)
         
-        chains[cid] = False # deselect = set 0
+        chains[cid]['flag'] = False # deselect = set 0
         
         # make persistent
         self.set_attribute('chains',  chains)
