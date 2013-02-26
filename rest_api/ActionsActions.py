@@ -10,6 +10,46 @@ from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
 
+class CreateAction(RESTResource):
+    def __init__(self):
+        self.db_name = 'actions'
+        self.db = database(self.db_name)
+	self.action = None
+
+    def PUT(self):
+        return self.import_request(cherrypy.request.body.read().strip())
+
+    def import_request(self, data):
+        try:
+            self.action = action(json_input=loads(data))
+        except request.IllegalAttributeName as ex:
+            return dumps({"results":False})
+
+        self.logger.log('Building new action by hand...')
+	
+	return dumps({'results':self.db.save(self.action.json())})
+
+
+class UpdateAction(RESTResource):
+    def __init__(self):
+        self.db_name = 'actions'
+        self.db = database(self.db_name)
+        self.action = None
+
+    def PUT(self):
+        return self.import_request(cherrypy.request.body.read().strip())
+
+    def import_request(self, data):
+        try:
+            self.action = action(json_input=loads(data))
+        except request.IllegalAttributeName as ex:
+            return dumps({"results":False})
+
+        self.logger.log('Updating action "%s" by hand...' % (self.action.get_attribute('_id')))
+
+        return dumps({'results':self.db.update(self.action.json())})
+
+
 class GetAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'

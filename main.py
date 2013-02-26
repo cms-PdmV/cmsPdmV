@@ -10,7 +10,7 @@ from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampa
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests
+from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
@@ -187,6 +187,8 @@ root.restapi.chained_requests.flow = FlowToNextStep()
 root.restapi.chained_requests.approve = ApproveChainedRequest()
 
 # REST Actions
+root.restapi.actions.save = CreateAction()
+root.restapi.actions.update = UpdateAction()
 root.restapi.actions.get = GetAction()
 root.restapi.actions.select = SelectChain()
 root.restapi.actions.deselect = DeSelectChain()
