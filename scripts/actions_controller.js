@@ -21,7 +21,18 @@ function resultsCtrl($scope, $http, $location){
           console.log("selected to show all");
           tmp = [{text:'Actions',select:true, db_name:'prepid'}];
           _.each($scope.chained_campaigns, function(v){
-            tmp.push({text:v._id, select:true, db_name:v._id});
+            var name = "";
+            if (v.alias != ""){
+              name = v.alias;
+            }else{
+              name = v._id;
+            }
+            if (v.valid){ //if chained campaign is valid then display ->
+              tmp.push({text:name, select:true, db_name:v._id});
+              
+            }else{
+              tmp.push({text:name, select:false, db_name:v._id});  //else display only if user checks in well
+             }
             $scope.actions_defaults = tmp;
           });
         }
@@ -33,7 +44,7 @@ function resultsCtrl($scope, $http, $location){
             for (i=0; i< chain_campaign.campaigns.length;i++){
                 if (_.isString(chain_campaign.campaigns[i])){
                   if (chain_campaign.campaigns[i]== $scope.selectedOption){
-                      to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alaias});
+                      to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alias, valid: chain_campaign.valid});
                       i = chain_campaign.campaigns.length+1;
                   }else{
 //                       console.log("String: ",i," : ",to_add_list,to_remove_list, "pushing: ",chain_campaign._id);
@@ -41,7 +52,7 @@ function resultsCtrl($scope, $http, $location){
                 }
                 }else{
                 if (_.indexOf(chain_campaign.campaigns[i],$scope.selectedOption) != -1){ //if chained campaing includes selected campaign
-                  to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alaias});
+                  to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alias, valid: chain_campaign.valid});
                   i = chain_campaign.campaigns.length+1;
                   if (_.indexOf(to_remove_list,chain_campaign._id) !=-1){
                     to_remove_list = _.without(to_remove_list, chain_campaign._id);
@@ -72,7 +83,15 @@ function resultsCtrl($scope, $http, $location){
                 }
             });
              if (add){ //if we really desided to add an element -> lets add it. else - nothing to add.
-               $scope.actions_defaults.push({text:element.id, select:true, db_name:element.id});
+//                var name = ""
+               if (element.alias != ""){
+                 element.id = element.alias;
+               }
+               if (element.valid){
+                 $scope.actions_defaults.push({text:element.id, select:true, db_name:element.id});
+               }else{
+                 $scope.actions_defaults.push({text:element.id, select:false, db_name:element.id});
+               }
                add = false;
              }
            });
@@ -216,7 +235,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
           };
           
           scope.commit = function(){
-//             ctrl.$viewValue.block_number = scope.toBeUpdated.block_number;
+             ctrl.$viewValue.block_number = parseInt(ctrl.$viewValue.block_number);
 //             ctrl.$viewValue.staged = scope.toBeUpdated.staged;
 //             ctrl.$viewValue.threshold = scope.toBeUpdated.threshold;
             scope.showInput();
@@ -245,11 +264,11 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '      </a>'+
          '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
-        '        <option ng-repeat="key in [0,1,2,3,4,5,6]">{{key}}</option>'+
+        '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
         '      </select>'+
-        '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.threshold"/>'+
+        '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged" />'+
         '      <span class="input-append">'+
-        '        <input type="number" style="margin-bottom: 0px; width: 25px;" ng-model="actionInfo.staged" ngMaxlength=3/>'+
+        '        <input type="number" style="margin-bottom: 0px; width: 25px; ng-model="actionInfo.threshold" />'+
         '        <span class="add-on">%</span>'+
         '      </span>'+
         '      <a ng-click="commit();">'+
