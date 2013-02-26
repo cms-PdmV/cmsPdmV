@@ -90,7 +90,7 @@ function resultsCtrl($scope, $http, $location){
     }
     var promise = $http.get('search/?db_name=chained_campaigns&query=""&page=-1')
     promise.then(function(data){
-//         $scope.chained_campaigns = data.data.results;
+         $scope.chained_campaigns = data.data.results;
         _.each(data.data.results, function(v){
             $scope.actions_defaults.push({text:v._id, select:true, db_name:v._id});
         });
