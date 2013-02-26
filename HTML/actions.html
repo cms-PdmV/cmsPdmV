@@ -72,7 +72,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending" ng-show="showingAction(data['member_of_campaign'])">
           <td ng-repeat="value in actions_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
@@ -88,13 +88,14 @@
                 {{data[value.db_name]}}
               </div>
               <div ng-switch-default>
-                <custom-prep-id ng-model="data"></custom-prep-id>
+                <custom-prep-id ng-model="data['chains'][value['text']]" ></custom-prep-id>
               </div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
+<!--    <pre>{{result | json}}</pre>-->
     <div class="pagination pagination-right">
       <ul>
         <li ng-class="{ disabled: list_page <= -1 }">
