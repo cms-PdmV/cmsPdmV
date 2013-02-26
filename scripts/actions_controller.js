@@ -85,12 +85,14 @@ function resultsCtrl($scope, $http, $location){
              if (add){ //if we really desided to add an element -> lets add it. else - nothing to add.
 //                var name = ""
                if (element.alias != ""){
-                 element.id = element.alias;
+                 name = element.alias;
+               }else{
+                 name = element.id;    
                }
                if (element.valid){
-                 $scope.actions_defaults.push({text:element.id, select:true, db_name:element.id});
+                 $scope.actions_defaults.push({text:name, select:true, db_name:element.id});
                }else{
-                 $scope.actions_defaults.push({text:element.id, select:false, db_name:element.id});
+                 $scope.actions_defaults.push({text:name, select:false, db_name:element.id});
                }
                add = false;
              }
@@ -111,7 +113,18 @@ function resultsCtrl($scope, $http, $location){
     promise.then(function(data){
          $scope.chained_campaigns = data.data.results;
         _.each(data.data.results, function(v){
-            $scope.actions_defaults.push({text:v._id, select:true, db_name:v._id});
+            var name = "";
+            if (v.alias != ""){
+              name = v.alias;
+            }else{
+              name = v._id;
+            }
+            if (v.valid){ //if chained campaign is valid then display ->
+              $scope.actions_defaults.push({text:name, select:true, db_name:v._id});  
+            }else{
+              $scope.actions_defaults.push({text:name, select:false, db_name:v._id});//else display only if user checks in well
+             }
+            
         });
     });
 
@@ -223,6 +236,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
 //             scope.chainCampaignValues = scope.chained_campaigns.member_of_campaign;
 //             scope.chainReqValues = scope.chained_campaigns.member_of_campaign;
             scope.actionInfo = ctrl.$viewValue;
+            scope.originalInfo = _.clone(scope.actionInfo);
             scope.toBeUpdated = {block_number: "", staged:"",threshold:""}; //define a variable to localy bind data
             scope.displayBox = false;
           };
@@ -234,13 +248,18 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
             };
           };
           
+          scope.close = function(){
+            scope.actionInfo = _.clone(scope.originalInfo);
+            scope.showInput();
+          };
+          
           scope.commit = function(){
              ctrl.$viewValue.block_number = parseInt(ctrl.$viewValue.block_number);
 //             ctrl.$viewValue.staged = scope.toBeUpdated.staged;
 //             ctrl.$viewValue.threshold = scope.toBeUpdated.threshold;
             scope.showInput();
 //             restapi/actions/update
-            $http({method:'GET', url:'/restapi/actions/update/',data:angular.toJson(scope.result)}).success(function(data,status){
+            $http({method:'PUT', url:'/restapi/actions/update/',data:angular.toJson(scope.result)}).success(function(data,status){
               console.log(data,status);
 //               $scope.update["success"] = data["results"];
 //               $scope.update["fail"] = false;
@@ -273,6 +292,9 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '      </span>'+
         '      <a ng-click="commit();">'+
         '        <i class="icon-envelope"></i>'+
+        '      </a>'+
+        '      <a ng-click="close();">'+
+        '        <i class="icon-minus"></i>'+
         '      </a>'+
         '    </div>'+
         '    <text>'+
