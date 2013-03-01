@@ -24,7 +24,7 @@ function resultsCtrl($scope, $http, $location){
     $scope.dbName = $location.search()["db_name"];
     
     $scope.delete_object = function(db, value){
-        $http({method:'DELETE', url:'/restapi/'+db+'/delete/'+value}).success(function(data,status){
+        $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
             if (data["results"]){
                 alert('Object was deleted successfully.');
@@ -39,7 +39,7 @@ function resultsCtrl($scope, $http, $location){
     $scope.submit_edit = function(){
         console.log("submit function");
         console.log($scope.result);
-        $http({method:'PUT', url:'/restapi/'+$location.search()["db_name"]+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
+        $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
             console.log(data,status);
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
@@ -143,7 +143,7 @@ function resultsCtrl($scope, $http, $location){
   };
   $scope.next_approval = function(){
     console.log("to be approved:", $scope.selected_prepids.join());
-    $http({method:'GET', url:'/restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
             alert("Success!");
         }).error(function(data,status){
             console.log(status);
@@ -151,7 +151,7 @@ function resultsCtrl($scope, $http, $location){
         });
   };
   $scope.previous_approval = function(){
-    $http({method:'GET', url:'/restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
             alert("Success!");
         }).error(function(data,status){
             console.log(status);
@@ -165,9 +165,7 @@ var testApp = angular.module('testApp', []).config(function($locationProvider){$
 testApp.directive("customApproval", function(){
     return{
         require: 'ngModel',
-        template: 
-//         '<textarea ng-model="whatever">'+
-//         '</textarea>',
+        template:
         '<div>'+
         '  <div ng-hide="display_table">'+
         '    <input type="button" value="Show" ng-click="display_approval()">'+
@@ -227,19 +225,22 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-    '          <th style="padding: 0px;">Step</th>'+
+//     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
-    '          <th style="padding: 0px;">cmsid</th>'+
     '        </tr>'+
     '      </thead>'+
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-    '          <td style="padding: 0px;">{{elem.step}}</td>'+
+//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
-    '          <td style="padding: 0px;">{{elem.updater.author_name}}</td>'+
-    '          <td style="padding: 0px;">{{elem.updater.author_cmsid}}</td>'+
+    '          <td style="padding: 0px;">'+
+    '              <div ng-switch="elem.updater.author_name">'+
+    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
+    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
+    '              </div>'+
+    '          </td>'+
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+

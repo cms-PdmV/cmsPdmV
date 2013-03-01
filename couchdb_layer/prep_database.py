@@ -58,6 +58,7 @@ class database:
         self.db_name = db_name 
         try:    
             self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
+#            self.db = Database(db_name) # for using private DB @localhost:5984
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
             

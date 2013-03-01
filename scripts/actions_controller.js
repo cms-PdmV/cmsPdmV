@@ -7,67 +7,53 @@ function resultsCtrl($scope, $http, $location){
     $scope.campaigns = ["------"];
     $scope.selectedOption = "------";
     $scope.selected_campaign = "";
+    $scope.generatingAllIcon = false;
 //     $scope.chained_requests = [];
 //     $scope.chained_campaigns = [];
 //     $scope.toBeUpdated = {};
 //     $scope.watch("selected_campaign", function(){
 //        console.log("selected campaign pasikeite:", $scope.selected_campaign); 
 //     });
+    $scope.getChainCampainTEXT = function(alias, id){
+        if (alias != ""){
+          return alias;
+        }else{
+          return id;
+        }
+    }
+    
     $scope.select_campaign = function(){
-        console.log($scope.actions_defaults);
-        console.log($scope.chained_campaigns);
+        $scope.rootCampaign = [];
         //set the well to have only ChainedCampaigns which includes selectedOption
         if ($scope.selectedOption == "------"){ //if to show all chained campains -> push all to well values
           console.log("selected to show all");
           tmp = [{text:'Actions',select:true, db_name:'prepid'}];
           _.each($scope.chained_campaigns, function(v){
-            var name = "";
-            if (v.alias != ""){
-              name = v.alias;
-            }else{
-              name = v._id;
-            }
-            if (v.valid){ //if chained campaign is valid then display ->
-              tmp.push({text:name, select:true, db_name:v._id});
-              
-            }else{
-              tmp.push({text:name, select:false, db_name:v._id});  //else display only if user checks in well
-             }
-            $scope.actions_defaults = tmp;
+            name = $scope.getChainCampainTEXT(v.alias,v._id);
+            tmp.push({text:name, select:v.valid, db_name:v._id});
           });
+          $scope.actions_defaults = tmp;
         }
         else{
           console.log("if selected not ------");
             var to_remove_list = [];
             var to_add_list = [];
-          _.each($scope.chained_campaigns, function(chain_campaign){ //iterate all chained campaigns
-            for (i=0; i< chain_campaign.campaigns.length;i++){
-                if (_.isString(chain_campaign.campaigns[i])){
-                  if (chain_campaign.campaigns[i]== $scope.selectedOption){
-                      to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alias, valid: chain_campaign.valid});
-                      i = chain_campaign.campaigns.length+1;
-                  }else{
-//                       console.log("String: ",i," : ",to_add_list,to_remove_list, "pushing: ",chain_campaign._id);
-                      to_remove_list.push(chain_campaign._id);
-                }
-                }else{
-                if (_.indexOf(chain_campaign.campaigns[i],$scope.selectedOption) != -1){ //if chained campaing includes selected campaign
-                  to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alias, valid: chain_campaign.valid});
-                  i = chain_campaign.campaigns.length+1;
-                  if (_.indexOf(to_remove_list,chain_campaign._id) !=-1){
-                    to_remove_list = _.without(to_remove_list, chain_campaign._id);
-                  }
-                }
-                else{
-//                   console.log(i," : ",to_add_list,to_remove_list, "pushing: ",chain_campaign._id);
-                  if (_.indexOf(to_remove_list,chain_campaign._id) ==-1){
-                    to_remove_list.push(chain_campaign._id);
-                  }
-                }
-              }
-            }
-            console.log(to_add_list,to_remove_list);
-          });
+             _.each($scope.chained_campaigns, function(chain_campaign){
+               var remove = true;
+               name = $scope.getChainCampainTEXT(chain_campaign.alias, chain_campaign._id);
+               for (i=0; i< chain_campaign.campaigns.length; i++){
+                 if (_.indexOf(chain_campaign.campaigns[i],$scope.selectedOption) != -1){ //if chained campaing includes selected campaign
+                   to_add_list.push({id:chain_campaign._id, alias:chain_campaign.alias, valid: chain_campaign.valid});
+                   i = chain_campaign.campaigns.length+1;
+                   $scope.rootCampaign.push(chain_campaign.campaigns[0][0]); //push a root campaigs name
+                   remove = false; //if we add a campaign that means we dont want it to be removed.
+                 }
+               }
+               if (remove){
+                 to_remove_list.push(name);
+               }
+             });
+          $scope.rootCampaign = _.uniq($scope.rootCampaign);
           $scope.actions_defaults = _.filter($scope.actions_defaults, function(element){ //filter all actions from well
             if (element.text != 'Actions'){    //leave actions column
               return (_.indexOf(to_remove_list, element.text) == -1) //if column not in to_add_list -> remove it (a.k.a its in to_be_removed list)
@@ -78,21 +64,15 @@ function resultsCtrl($scope, $http, $location){
            _.each(to_add_list, function(element){ //add columns to the default actions. iterating 1by1
              var add = true; //set default add value to true
              _.each($scope.actions_defaults, function(action){ //iterate over actions to check if to-be added value isn't in it already
-                 if (action.text == element.id){ //if element is in actions
+                 if (action.text == $scope.getChainCampainTEXT(element.alias,element.id)){ //if element is in actions
                      add = false;  //then set add to FALSE
                 }
             });
              if (add){ //if we really desided to add an element -> lets add it. else - nothing to add.
-//                var name = ""
-               if (element.alias != ""){
-                 name = element.alias;
-               }else{
-                 name = element.id;    
-               }
                if (element.valid){
-                 $scope.actions_defaults.push({text:name, select:true, db_name:element.id});
+                 $scope.actions_defaults.push({text:$scope.getChainCampainTEXT(element.alias,element.id), select:true, db_name:element.id});
                }else{
-                 $scope.actions_defaults.push({text:name, select:false, db_name:element.id});
+                 $scope.actions_defaults.push({text:$scope.getChainCampainTEXT(element.alias,element.id), select:false, db_name:element.id});
                }
                add = false;
              }
@@ -113,18 +93,7 @@ function resultsCtrl($scope, $http, $location){
     promise.then(function(data){
          $scope.chained_campaigns = data.data.results;
         _.each(data.data.results, function(v){
-            var name = "";
-            if (v.alias != ""){
-              name = v.alias;
-            }else{
-              name = v._id;
-            }
-            if (v.valid){ //if chained campaign is valid then display ->
-              $scope.actions_defaults.push({text:name, select:true, db_name:v._id});  
-            }else{
-              $scope.actions_defaults.push({text:name, select:false, db_name:v._id});//else display only if user checks in well
-             }
-            
+            $scope.actions_defaults.push({text:$scope.getChainCampainTEXT(v.alias,v._id), select:v.valid, db_name:v._id});
         });
     });
 
@@ -134,12 +103,6 @@ function resultsCtrl($scope, $http, $location){
            $scope.campaigns.push(v.value);
         });
     });
-//     promise = $http.get('search/?db_name=chained_requests&query=""&page=-1')
-//     promise.then(function(data){
-//        $scope.chained_requests = data.data.results;
-//     });
-// //     console.log("CR: ",$scope.chained_requests);
-// //     console.log("CC : ",$scope.chained_campaigns);
   $scope.showing_well = function(){
         if ($scope.show_well){
           $scope.show_well = false;
@@ -154,7 +117,7 @@ function resultsCtrl($scope, $http, $location){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
-            $scope.result = data.data.results; 
+            $scope.result = data.data.results;
             if ($scope.result.length != 0){
             columns = _.keys($scope.result[0]);
             rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
@@ -211,7 +174,7 @@ function resultsCtrl($scope, $http, $location){
     if ($scope.selectedOption == "------"){
         return true;
     }else{
-        if (member_of_campaign == $scope.selectedOption){
+        if (member_of_campaign == $scope.rootCampaign[0]){
             return true;
         }
         else{
@@ -223,6 +186,35 @@ function resultsCtrl($scope, $http, $location){
     console.log(member_of_campaign);
 //      console.log("CR: ",$scope.chained_requests);
 //      console.log("CC : ",$scope.chained_campaigns);
+  };
+  $scope.generateRequests = function(id){
+    console.log(id);
+    var generateUrl = "";
+    if ( id.indexOf("chain_") !=-1){
+        generateUrl = "/restapi/chained_campaigns/generate_chained_requests/"+id;
+    }else {
+        generateUrl = "/restapi/actions/generate_chained_requests/"+id;
+    };
+//      $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+    promise = $http.get(generateUrl);
+    promise.then(function(data){
+      console.log(data);
+    }, function(data){
+        alert("Error: ", data.status);
+    });
+  };
+  $scope.generateAllRequests = function(){
+    console.log("Generate all!");
+    $scope.generatingAllIcon = true;
+    generateUrl = "/restapi/actions/generate_all_chained_requests";
+    promise = $http.get(generateUrl);
+    promise.then(function(data){
+      $scope.generatingAllIcon = false;
+      console.log(data);
+    }, function(data){
+        $scope.generatingAllIcon = false;
+        alert("Error: ", data.status);
+    });
   };
 }
 var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
@@ -237,7 +229,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
 //             scope.chainReqValues = scope.chained_campaigns.member_of_campaign;
             scope.actionInfo = ctrl.$viewValue;
             scope.originalInfo = _.clone(scope.actionInfo);
-            scope.toBeUpdated = {block_number: "", staged:"",threshold:""}; //define a variable to localy bind data
+//             scope.toBeUpdated = {block_number: "", staged:"",threshold:""}; //define a variable to localy bind data
             scope.displayBox = false;
           };
           scope.showInput = function(){
@@ -276,7 +268,6 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-//         '    {{toBeUpdated | json}}'+
         '      <input type="checkbox" ng-model="actionInfo.flag"/>'+
         '      <a ng-click="showInput();" ng-hide="displayBox">'+
         '        <i class="icon-wrench"></i>'+
@@ -297,10 +288,6 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '        <i class="icon-minus"></i>'+
         '      </a>'+
         '    </div>'+
-        '    <text>'+
-//         '      {{actionInfo}}'+
-//         '      {{selectedOption}}'+
-        '    </text>'+
         '  </div>'+
         '  <div ng-switch-when="true">'+
         '  </div>'+

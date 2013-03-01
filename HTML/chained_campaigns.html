@@ -30,7 +30,7 @@
           </li>
           <li class="divider-vertical"></li>
           <li class="active">
-            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
+            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
@@ -70,7 +70,7 @@
                 <a ng-href="create/chained_requests/{{data.prepid}}" rel="tooltip" title="Create new request"  target="_blank">
                   <i class="icon-plus-sign"></i>
                 </a>
-                <a ng-href='results?db_name=chained_requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
+                <a ng-href='chained_requests2?db_name=chained_requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
                 <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete flow">
@@ -99,6 +99,9 @@
                     <dt>{{key}}</dt>
                     <dd>{{value}}</dd>                
                 </dl>
+              </div>
+              <div ng-switch-when="History">
+                <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>

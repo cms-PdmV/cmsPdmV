@@ -29,7 +29,7 @@
           </li>
           <li class="divider-vertical"></li>
           <li>
-            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
+            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
           </li>
           <li class="divider-vertical"></li>
           <li>
@@ -64,6 +64,19 @@
         <tr>
           <th ng-repeat="column in actions_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
             {{column.text}}
+            <span ng-switch="column.text">
+              <span ng-switch-when="Actions">
+                <a rel="tooltip" title="Generate all request" ng-click="generateAllRequests()" ng-hide="generatingAllIcon">
+                  <i class="icon-shopping-cart"></i>
+                </a>
+                <img ng-show="generatingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+              </span>
+              <span ng-switch-default>
+                <a rel="tooltip" title="Generate request" ng-click="generateRequests(column.db_name)">
+                  <i class="icon-shopping-cart"></i>
+                </a>
+               </span>
+            </span>
             <span ng-show="selectedCls(column.db_name)">
               <i class="icon-chevron-up" ng-hide="sort.descending"></i>
               <i class="icon-chevron-down" ng-show="sort.descending"></i>
@@ -77,6 +90,9 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 {{data[value.db_name]}}
+                <a rel="tooltip" title="Generate request" ng-click="generateRequests(data[value.db_name])">
+                  <i class="icon-shopping-cart"></i>
+                </a>
               </div>
               <div ng-switch-when="Submission details">
                 {{data[value.db_name]}}
@@ -95,7 +111,6 @@
         </tr>
       </tbody>
     </table>
-<!--    <pre>{{result | json}}</pre>-->
     <div class="pagination pagination-right">
       <ul>
         <li ng-class="{ disabled: list_page <= -1 }">

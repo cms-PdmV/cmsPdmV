@@ -3,11 +3,6 @@ function resultsCtrl($scope, $http, $location){
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
-        {text:'Status',select:true, db_name:'status'},
-        {text:'Type',select:true, db_name:'type'},
-        {text:'ProdType',select:true, db_name:'production_type'},
-        {text:'SW Release',select:true, db_name:'cmssw_release'},
-        {text:'Energy',select:true, db_name:'energy'}
     ];
     $scope.update = [];
     $scope.show_well = false;
@@ -133,45 +128,8 @@ function resultsCtrl($scope, $http, $location){
   };
 };
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
-  $scope.selectedPwg= 'BPH';
-  $scope.open = function (id) {
-    $scope.shouldBeOpen = true;
-    $scope.prepId = id;
-  };
-
-  $scope.close = function () {
-    $scope.selectedPwg= 'BPH';
-    $scope.shouldBeOpen = false;
-  };
-    $scope.save = function () {
-    console.log("saving modal info");
-    console.log($scope.selectedPwg, $scope.prepId);
-    $scope.shouldBeOpen = false;
-      $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
-        console.log(data, status);
-        $window.location.href ="edit2?db_name=requests&query="+data.results;
-      }).error(function(data,status){
-        alert("Error:"+ status);
-        console.log(data, status);
-      });
-    };
-    $scope.createCampaign = function(){
-      $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, stauts){
-        console.log(data, status);
-        alert("Output:"+data.results);
-//         $window.location.href ="edit2?db_name=campaigns&query="+data.results;
-      }).error(function(data,status){
-        alert("Error:"+ status);
-        console.log("createCampaign", status);
-      });
-      $scope.shouldBeOpen = false;
-  };
-
-  };
 // NEW for directive
-var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){
   return{
       require: 'ngModel',
@@ -211,7 +169,7 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-    '          <th style="padding: 0px;">Message</th>'+
+//     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
     '        </tr>'+
@@ -219,7 +177,7 @@ testApp.directive("customHistory", function(){
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-    '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
+//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">'+
     '              <div ng-switch="elem.updater.author_name">'+

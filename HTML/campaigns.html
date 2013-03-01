@@ -6,8 +6,9 @@
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
-         <script type="text/javascript" src="scripts/angular.min.js"></script>
-         <script src="scripts/controller.js"></script>     
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/controller.js"></script>     
 </head>
 
 <body ng-controller="resultsCtrl">
@@ -31,7 +32,7 @@
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a ng-href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
+          <a ng-href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
@@ -72,18 +73,36 @@
         <td ng-repeat="value in defaults" ng-show="value.select">
           <div ng-switch on="value.text">
             <div ng-switch-when="Actions">
-              <a ng-href="edit/campaigns/{{data.prepid}}" rel="tooltip" title="Create new request"  target="_blank">
-                <i class="icon-plus-sign"></i>
-              </a>
-              <a ng-href='results?db_name=requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
-                <i class="icon-folder-open"></i>
-              </a>
-              <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign">
-                <i class="icon-minus-sign"></i>
-              </a>
-              <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details"  target="_blank">
-                <i class="icon-wrench"></i>
-              </a>
+       <!--     MODAL -->
+                <div ng-controller="ModalDemoCtrl">
+                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank">
+                    <i class="icon-plus-sign"></i>
+                  </a>
+                  <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
+                    <i class="icon-folder-open"></i>
+                  </a>
+                  <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign">
+                    <i class="icon-minus-sign"></i>
+                  </a>
+                  <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details"  target="_blank">
+                    <i class="icon-wrench"></i>
+                  </a>
+                  <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+                    <div class="modal-header">
+                        <h4>Create a request</h4>
+                    </div>  <!--end oFda.f modal header-->
+                  <div class="modal-body">
+                    Create request for:{{prepId}} campaign
+                    <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
+                    </select>
+                  </div> <!--end of modal body-->
+                  <div class="modal-footer">
+                    <button class="btn btn-success" ng-click="save()">Create</button>
+                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                  </div> <!--end of modal footer-->
+                  </div>
+                </div> <!--end of modalControler DIV-->
+        <!--     END OF MODAL                 -->
             </div>
             <div ng-switch-when="Sequences">
               <div sequence-display ng-model="data.prepid"></div>
@@ -117,6 +136,26 @@
       </tr>
     </tbody>
   </table>
+<!--   <div> -->
+  <div class="span7" align="left">
+         <!--     MODAL -->
+                <div ng-controller="ModalDemoCtrl">
+                  <input type="button" class="btn" ng-click="open()" value="Create new campaign" align="left"/>
+                  <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+                    <div class="modal-header">
+                        <h4>Create a request</h4>
+                    </div>  <!--end oFda.f modal header-->
+                  <div class="modal-body">
+                    Campaign name: <input type="text" ng-model="campaignId"/>
+                  </div> <!--end of modal body-->
+                  <div class="modal-footer">
+                    <button class="btn btn-success" ng-click="createCampaign()">Create</button>
+                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                  </div> <!--end of modal footer-->
+                  </div>
+                </div> <!--end of modalControler DIV-->
+        <!--     END OF MODAL  -->
+  </div>
   <div class="pagination pagination-right">
     <ul>
       <li ng-class="{ disabled: list_page <= -1 }">
@@ -127,5 +166,6 @@
       </li>
     </ul>
   </div>
+<!--   </div> -->
 </body>
 </html>

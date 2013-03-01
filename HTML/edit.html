@@ -32,7 +32,7 @@
         </li>
         <li class="divider-vertical"></li>
         <li>
-          <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigs</a>
+          <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
         </li>
         <li class="divider-vertical"></li>
         <li>
@@ -92,7 +92,13 @@
                         <dd>{{value}}</dd>                
                       </dl>
                     </div>
-                    <div ng-switch-when=" Generator parameters">
+                    <div ng-switch-when="Generator parameters">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" ></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
+                    <div ng-switch-when="History">
                       <ng-form name="fieldForm">
                         <div inline-editable ng-model="result[column.db_name]" ></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>

@@ -29,6 +29,7 @@ class Page(object) :
 	def header(self):
 		header_tmpl = self.environment.get_template('header.tmpl')
 		return self.authenticator.get_login_box(cherrypy.request.headers['ADFS-LOGIN']) + header_tmpl.render({'title': self.title})
+#                return header_tmpl.render({'title': self.title}) #for private use
 
 	def footer(self):
 		return '<br><br><span class="footer">' + self.signature + '</span></html>'
