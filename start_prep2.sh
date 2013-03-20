@@ -15,6 +15,8 @@ if [ $? -eq 1 ]; then
     aklog
 fi
 
+kill -9 `ps -e -f  | grep main.py | grep python | awk '{print $2}'`
+
 # check CouchDB status
 couch_status=`/etc/init.d/couchdb status | grep running`
 

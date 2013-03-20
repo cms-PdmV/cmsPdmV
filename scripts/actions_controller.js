@@ -1,5 +1,15 @@
-function resultsCtrl($scope, $http, $location){ 
-    console.log($location.search());
+function resultsCtrl($scope, $http, $location, $window){
+    $scope.user = {name: "", role:""}
+// GET username and role
+    var promise = $http.get("restapi/users/get_roles");
+    promise.then(function(data){
+      $scope.user.name = data.data.username;
+      $scope.user.role = data.data.roles[0];
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
+       
     $scope.actions_defaults = [
         {text:'Actions',select:true, db_name:'prepid'}
 //         {text:'Actions',select:true, db_name:''},
@@ -8,12 +18,10 @@ function resultsCtrl($scope, $http, $location){
     $scope.selectedOption = "------";
     $scope.selected_campaign = "";
     $scope.generatingAllIcon = false;
-//     $scope.chained_requests = [];
-//     $scope.chained_campaigns = [];
-//     $scope.toBeUpdated = {};
-//     $scope.watch("selected_campaign", function(){
-//        console.log("selected campaign pasikeite:", $scope.selected_campaign); 
-//     });
+    
+    $scope.http_status = "";
+    $scope.showHttpStatus = false;
+
     $scope.getChainCampainTEXT = function(alias, id){
         if (alias != ""){
           return alias;
@@ -182,37 +190,87 @@ function resultsCtrl($scope, $http, $location){
         }
     }
   };
-  $scope.updatedValues = function(member_of_campaign){
-    console.log(member_of_campaign);
-//      console.log("CR: ",$scope.chained_requests);
-//      console.log("CC : ",$scope.chained_campaigns);
-  };
+  
   $scope.generateRequests = function(id){
     console.log(id);
     var generateUrl = "";
     if ( id.indexOf("chain_") !=-1){
-        generateUrl = "/restapi/chained_campaigns/generate_chained_requests/"+id;
+        generateUrl = "restapi/chained_campaigns/generate_chained_requests/"+id;
     }else {
-        generateUrl = "/restapi/actions/generate_chained_requests/"+id;
+        generateUrl = "restapi/actions/generate_chained_requests/"+id;
     };
 //      $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
     promise = $http.get(generateUrl);
     promise.then(function(data){
       console.log(data);
+      
+      $scope.http_status = id+" generated Successfully";
+      $scope.showHttpStatus = data.status;
+      $window.location.reload();
     }, function(data){
+        $scope.http_status = id+" generation Failed";
+        $scope.showHttpStatus = data.status;
         alert("Error: ", data.status);
     });
   };
   $scope.generateAllRequests = function(){
     console.log("Generate all!");
     $scope.generatingAllIcon = true;
-    generateUrl = "/restapi/actions/generate_all_chained_requests";
+    
+    generateUrl = "restapi/actions/generate_all_chained_requests";
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.generatingAllIcon = false;
       console.log(data);
+      
+      $scope.http_status = "All requests generated Successfully"
+      $scope.showHttpStatus = data.status;
+      $window.location.reload();
     }, function(data){
         $scope.generatingAllIcon = false;
+        
+        $scope.http_status = "All requests generation Failed";
+        $scope.showHttpStatus = data.status;
+        alert("Error: ", data.status);
+    });
+  };
+  $scope.refreshActions = function(id){
+    generateUrl = "restapi/actions/detect_chains/"+id;
+    promise = $http.get(generateUrl);
+    promise.then(function(data){
+      $scope.refreshingAllIcon = false;
+      console.log(data);
+      
+      $scope.http_status = id+" chain detected Successfully"
+      $scope.showHttpStatus = data.status;
+      $window.location.reload();
+    }, function(data){
+        $scope.refreshingAllIcon = false;
+        
+        $scope.http_status = id+ " chain detection Failed";
+        $scope.showHttpStatus = data.status;
+        alert("Error: ", data.status);
+    });
+  };
+
+  $scope.refreshActions = function(){
+    console.log("Detect all!");
+    $scope.refreshingAllIcon = true;
+    
+    generateUrl = "restapi/actions/detect_chains";
+    promise = $http.get(generateUrl);
+    promise.then(function(data){
+      $scope.refreshingAllIcon = false;
+      console.log(data);
+      
+      $scope.http_status = "All chains detected Successfully"
+      $scope.showHttpStatus = data.status;
+      $window.location.reload();
+    }, function(data){
+        $scope.refreshingAllIcon = false;
+        
+        $scope.http_status = "All chains detection Failed";
+        $scope.showHttpStatus = data.status;
         alert("Error: ", data.status);
     });
   };
@@ -227,65 +285,88 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
           ctrl.$render = function(){
 //             scope.chainCampaignValues = scope.chained_campaigns.member_of_campaign;
 //             scope.chainReqValues = scope.chained_campaigns.member_of_campaign;
-            scope.actionInfo = ctrl.$viewValue;
+            scope.column = scope.$eval(attr.chain);
+//             console.log(ctrl.$viewValue);
+            scope.actionInfo = ctrl.$viewValue['chains'][scope.column];
+//             console.log(ctrl.$viewValue);
             scope.originalInfo = _.clone(scope.actionInfo);
 //             scope.toBeUpdated = {block_number: "", staged:"",threshold:""}; //define a variable to localy bind data
             scope.displayBox = false;
+//             console.log(scope.$eval(attr.chain));
+            scope.anychanges = false;
           };
           scope.showInput = function(){
-            if (scope.displayBox){
-              scope.displayBox = false;
-            } else{
-              scope.displayBox = true;
-            };
+	          if (scope.actionInfo.flag){
+		          scope.displayBox = true;
+	          }
+	           else{
+		          scope.displayBox = false;
+	          }
+    	      //	    if (scope.displayBox){
+    	      //		  if (!scope.actionInfo.flag){
+    	      //		      scope.displayBox = false;
+    	      //		  }
+    	      //            } else{
+    	      //              scope.displayBox = true;
+    	      //            };
           };
-          
-          scope.close = function(){
-            scope.actionInfo = _.clone(scope.originalInfo);
-            scope.showInput();
-          };
-          
+          scope.open = function(){ scope.displayBox = true;};
+          scope.close = function(){ scope.displayBox = false; };
+	        scope.change = function() { 
+	          scope.anychanges;
+	        };
+
+	        scope.$watch("actionInfo",function(){
+            if (! _.isEqual(scope.actionInfo,scope.originalInfo)){
+              scope.anychanges = true;
+            }else{
+              scope.anychanges = false;
+            }
+          }, true);
+
           scope.commit = function(){
-             ctrl.$viewValue.block_number = parseInt(ctrl.$viewValue.block_number);
+             ctrl.$viewValue['chains'][scope.column].block_number = parseInt(ctrl.$viewValue['chains'][scope.column].block_number);
 //             ctrl.$viewValue.staged = scope.toBeUpdated.staged;
 //             ctrl.$viewValue.threshold = scope.toBeUpdated.threshold;
-            scope.showInput();
-//             restapi/actions/update
-            $http({method:'PUT', url:'/restapi/actions/update/',data:angular.toJson(scope.result)}).success(function(data,status){
-              console.log(data,status);
-//               $scope.update["success"] = data["results"];
-//               $scope.update["fail"] = false;
-//               $scope.update["status_code"] = status;
-            }).error(function(data,status){
-//               $scope.update["success"] = false;
-//               $scope.update["fail"] = true;
-//               $scope.update["status_code"] = status;
-                    alert("Error: ", status);
-            });
-            
+//            scope.showInput();
+            console.log(ctrl.$viewValue);
+            console.log(scope.actionInfo);
+             $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson(ctrl.$viewValue)}).success(function(data,status){
+               console.log(data,status);
+	             scope.displayBox = false;
+               scope.anychanges = false;
+             }).error(function(data,status){
+                     alert("Error: ", status);
+             });
           };
         },
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-        '      <input type="checkbox" ng-model="actionInfo.flag"/>'+
-        '      <a ng-click="showInput();" ng-hide="displayBox">'+
+	      // '      <a >'+
+	      // '        <i class="icon-refresh"></i>'+
+	      // '      </a>'+
+        '      <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()"/>'+
+        '      <a ng-click="open();" ng-hide="displayBox">'+
         '        <i class="icon-wrench"></i>'+
         '      </a>'+
-         '    <div ng-show="displayBox">'+
+        '      <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
+        '        <i class="icon-warning-sign"></i>'+
+        '      </a>'+
+        '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
         '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
         '      </select>'+
-        '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged" />'+
+        '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged"/>'+
         '      <span class="input-append">'+
-        '        <input type="number" style="margin-bottom: 0px; width: 25px; ng-model="actionInfo.threshold" />'+
+        '        <input type="number" style="margin-bottom: 0px; width: 25px; ng-model="actionInfo.threshold"/>'+
         '        <span class="add-on">%</span>'+
         '      </span>'+
-        '      <a ng-click="commit();">'+
-        '        <i class="icon-envelope"></i>'+
-        '      </a>'+
+	    //	'      <a ng-click="commit();">'+
+	    //	'        <i class="icon-refresh"></i>'+
+	    //	'      </a>'+
         '      <a ng-click="close();">'+
-        '        <i class="icon-minus"></i>'+
+        '        <i class="icon-remove"></i>'+
         '      </a>'+
         '    </div>'+
         '  </div>'+

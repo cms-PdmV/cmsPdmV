@@ -92,6 +92,9 @@ def index( *args, **kwargs):
 @cherrypy.expose
 def create2( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','create.html'))
+@cherrypy.expose
+def injectAndLog( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','injectAndLog.html'))
     
 @cherrypy.expose
 def getDefaultSequences(*args, **kwargs):
@@ -123,6 +126,7 @@ root.create2 = create2
 root.actions = actions
 root.actions2 = actions2
 root.getDefaultSequences = getDefaultSequences
+root.injectAndLog = injectAndLog
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()

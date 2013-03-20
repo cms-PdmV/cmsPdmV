@@ -8,12 +8,15 @@ class package_injector:
     logger = logfactory('prep2')
     hname = '' # name of the log handler
 
-    def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  batch=10):
+    def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'):
         self.tarball = str(tarball)
         self.prepid = self.tarball.rsplit('.tgz')[0]
         self.directory = str(directory)
-        self.cmssw_release = str(cmssw_release)
-        self.batch = str(batch)
+        if ":" in cmssw_release:
+            self.cmssw_release,self.arch = map(str, cmssw_release.split(':'))
+        else:
+            self.cmssw_release=str(self.cmssw_release)
+            self.arch = 'slc5_amd64_gcc462'
 
         self.ssh_client = None
         self.ssh_server = 'pdmvserv-test.cern.ch'#'lxplus.cern.ch'
@@ -55,12 +58,20 @@ class package_injector:
     def build_injection_script(self):
         script = ''
         script += 'cd '+self.directory + '\n'
-	#script += 'source /afs/cern.ch/project/gd/LCG-share/current_4.2/etc/profile.d/grid_env.sh\n'
-        #script += 'voms-proxy-init --debug\n'
         script += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
 	script += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem\n'
-	script += 'cd SubmissionTools/\n'
-        script += 'sh wmcontrol2_injection_procedure.sh '+self.directory+'/'+self.tarball+' '+self.cmssw_release+' nnazirid PREP '+self.batch +'\n'
+        script += 'set -o verbose \n'
+        script += 'export SCRAM_ARCH=%s \n'%(self.arch)
+        script += 'scram project CMSSW %s \n'%(self.cmssw_release)
+        script += 'cd %s \n'%(self.cmssw_release)
+        script += 'eval `scram runtime -sh` \n\n'
+        script += 'cd ../\n'
+        script += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        script += 'tar xvzf %s \n'%(self.tarball)
+        script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
+        script += 'ls -l \n'
+        script += 'chmod 755 injectAndApprove.sh \n'
+        script += './injectAndApprove.sh \n'
         
         try:
             f = open(self.directory+'inject-'+self.tarball+'.sh',  'w')

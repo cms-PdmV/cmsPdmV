@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
 <head>
-        <title>Campaigns page PREP2</title>
+        <title>Campaigns page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -39,6 +39,11 @@
           <a ng-href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
         </li>
       </ul>
+      <ul class="nav pull-right">
+        <li>
+          <a>{{user.name}} : {{user.role}}</a>
+        </li>
+      </ul>      
     </div>
   </div> <!--end of NAV Bar-->
   <div class="container">
@@ -47,6 +52,10 @@
         <span style="float: left;">
           <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
           <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+          <span ng-show="show_well == true">
+            <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+            <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+          </span>
         </span>      
         <span ng-repeat="value in defaults" ng-show="show_well">
           <label class="checkbox inline">
@@ -86,6 +95,15 @@
                   </a>
                   <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details"  target="_blank">
                     <i class="icon-wrench"></i>
+                  </a>
+                  <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" target="_blank">
+                    <i class="icon-repeat"></i>
+                  </a>
+                  <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step">
+                    <i class="icon-chevron-right"></i>
+                  </a>
+                  <a ng-click="next_status(data.prepid)" rel="tooltip" title="Toggle status">
+                    <i class="icon-flag"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
                     <div class="modal-header">
@@ -136,36 +154,46 @@
       </tr>
     </tbody>
   </table>
-<!--   <div> -->
-  <div class="span7" align="left">
-         <!--     MODAL -->
-                <div ng-controller="ModalDemoCtrl">
-                  <input type="button" class="btn" ng-click="open()" value="Create new campaign" align="left"/>
-                  <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
-                    <div class="modal-header">
-                        <h4>Create a request</h4>
-                    </div>  <!--end oFda.f modal header-->
-                  <div class="modal-body">
-                    Campaign name: <input type="text" ng-model="campaignId"/>
-                  </div> <!--end of modal body-->
-                  <div class="modal-footer">
-                    <button class="btn btn-success" ng-click="createCampaign()">Create</button>
-                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                  </div> <!--end of modal footer-->
-                  </div>
-                </div> <!--end of modalControler DIV-->
-        <!--     END OF MODAL  -->
+  <div class="row-fluid">
+    <div class="span5" style="margin-top:20px;">
+    <!--     MODAL -->
+      <div ng-controller="ModalDemoCtrl">
+        <input type="button" class="btn" ng-click="open()" value="Create new campaign" align="left"/>
+        <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+          <div class="modal-header">
+            <h4>Create a campaign</h4>
+          </div>  <!--end oFda.f modal header-->
+          <div class="modal-body">
+            Campaign name: <input type="text" ng-model="campaignId"/>
+          </div> <!--end of modal body-->
+          <div class="modal-footer">
+            <button class="btn btn-success" ng-click="createCampaign()">Create</button>
+            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+          </div> <!--end of modal footer-->
+        </div>
+      </div> <!--end of modalControler DIV-->
+    <!--     END OF MODAL  -->
+    </div>
+    <div class="span2" style="margin-top:20px;">
+      <div ng-show="update['success']">
+        Success. Status code:<font color="green">{{update['status_code']}}</font>
+      </div>
+      <div ng-show="update['fail']">
+        Fail. Status code:<font color="red">{{update['status_code']}}</font>
+      </div>
+    </div>
+    <div class="span5">
+      <div class="pagination pagination-right">
+        <ul>
+          <li ng-class="{ disabled: list_page <= -1 }">
+            <a ng-click="previous_page(list_page)">Prev</a>
+          </li>
+          <li ng-class="{ disabled: result.length == 0 }">
+            <a ng-click="next_page(list_page)">Next</a>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
-  <div class="pagination pagination-right">
-    <ul>
-      <li ng-class="{ disabled: list_page <= -1 }">
-        <a ng-click="previous_page(list_page)">Prev</a>
-      </li>
-      <li ng-class="{ disabled: result.length == 0 }">
-        <a ng-click="next_page(list_page)">Next</a>
-      </li>
-    </ul>
-  </div>
-<!--   </div> -->
 </body>
 </html>

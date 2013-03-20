@@ -27,19 +27,17 @@ class RequestPrepId(RESTResourceIndex):
 
         # get the list of the prepids with the same pwg and campaign name 
         res = map(lambda x: x['value'], self.db.query('prepid ~= '+pwg+'-'+campaign+'-*', page_num=-1))
+        #res = map(lambda x: x['value'], self.db.query('prepid ~= '+pwg+'-'+campaign+'-*', page_num=-1)) ##JR what is that ~=
         res = map(lambda x: x['prepid'], res)
         if not res:
             self.logger.log('Beginning new prepid family: %s' % (pwg+"-"+campaign+"-00001"), level='warning')
             return dumps({"prepid":pwg+"-"+campaign+"-00001"})
         
-        previous = 0
         sn = -1
         for pid in res:
-            this = int(pid.rsplit('-')[2])
-            if  this - previous > 1:
-                sn = previous+1
-                break
-            previous = this
+            thisSN = int(pid.rsplit('-')[2])
+            if  thisSN >= sn:
+                sn = thisSN+1
         
         if sn < 0:
             # increase the serial number of the last request by one

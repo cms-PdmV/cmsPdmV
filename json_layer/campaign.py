@@ -25,10 +25,10 @@ class campaign(json_base):
     def __init__(self, json_input={}):
 
         # set campaign approval steps
-        self._json_base__approvalsteps = ['start',  'stop']
+        self._json_base__approvalsteps = ['stop',  'start']
         
         # set campaign status
-        self._json_base__status = ['started', 'stopped']
+        self._json_base__status = ['stopped','started']
 
         self._json_base__schema = {
                                  '_id':'', 
@@ -76,10 +76,14 @@ class campaign(json_base):
 
     def build_cmsDrivers(self):
         cds = []
-        for step in self.get_attribute('sequences'):
+        for (stepindex,step) in enumerate(self.get_attribute('sequences')):
              stepcd = {}
              for key in step:
-                 cd = sequence(step[key]).build_cmsDriver()
+                 cdarg = sequence(step[key]).build_cmsDriver()
+                 fragment='NameOfFragment'
+                 if self.get_attribute('root')==1:
+                     fragment='step%d'%(stepindex+1)
+                 cd='cmsDriver.py %s %s'%(fragment, cdarg)
                  if cd:
                      stepcd[key] = cd
              cds.append(stepcd)

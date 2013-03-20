@@ -22,13 +22,24 @@ class chained_request(json_base):
             return 'Error: Chained request '+self.name+' cannot flow any further.'
     
     class NotApprovedException(Exception):
-        def __init__(self,  oname,  alevel):
+        def __init__(self,  oname,  alevel, allowed):
             self.name = str(oname)
             self.level = str(alevel)
-            chained_request.logger.error('%s has not been approved for level "%s"' % (self.name , self.level))
+            self.allowed = ' or '.join(map(lambda s : '"%s"'%s,allowed))
+            chained_request.logger.error('%s has not been approved for any of %s levels : "%s"' % (self.name , self.allowed, self.level))
 
         def __str__(self):
-            return 'Error: '+self.name+' has not been "'+self.level+'" approved.'
+            return 'Error: '+self.name+' is "'+self.level+'" approved. requires '+self.allowed
+
+    class NotInProperStateException(Exception):
+        def __init__(self,  oname,  alevel, allowed):
+            self.name = str(oname)
+            self.level = str(alevel)
+            self.allowed = ' or '.join(map(lambda s : '"%s"'%s,allowed))
+            chained_request.logger.error('%s has not reached status %s : "%s"' % (self.name , self.allowed, self.level))
+
+        def __str__(self):
+            return 'Error: '+self.name+' is in"'+self.level+'" status. requires '+self.allowed
         
     class CampaignStoppedException(NotApprovedException):
         def __init__(self,  oname):
@@ -39,6 +50,10 @@ class chained_request(json_base):
             return 'Error: '+self.name+' has been stopped.'
     
     def __init__(self, json_input={}):
+
+        self._json_base__approvalsteps = ['none','flow', 'submit']
+        self._json_base__status = ['new','started','done']
+
         self._json_base__schema = {
             '_id':'',
             'chain':[],
@@ -46,16 +61,16 @@ class chained_request(json_base):
             'step':0, 
             'analysis_id':[],
             'pwg':'',
-            'generators':'',
-            'priority':-1,
+            'generators':'', #prune
+            'priority':-1, #prune
             'prepid':'',
-            'alias':'', 
+            'alias':'', #prune
             'dataset_name':'',
             'total_events':-1,
             'history':[],
             'member_of_campaign':'',
-            'generator_parameters':[],
-            'request_parameters':{} # json with user prefs
+            'generator_parameters':[], #prune
+            'request_parameters':{} # json with user prefs #prune
             }
         # update self according to json_input
         self.update(json_input)
@@ -68,9 +83,6 @@ class chained_request(json_base):
     def flow_to_next_step(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
         self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))         
 
-        # increase step counter
-        step = int(self.get_attribute('step') )+ 1
-            
         # check sanity
         if not self.get_attribute('chain'):
             self.logger.error('chained_request %s has got no root' % (self.get_attribute('_id')))
@@ -80,12 +92,19 @@ class chained_request(json_base):
             rdb = database('requests')
             cdb = database('campaigns')
             ccdb = database('chained_campaigns')
+            crdb = database('chained_requests')
             fdb = database('flows')
         except database.DatabaseAccessError as ex:
             return False
-        
+
+        # where we are in the chain
+        stepIndex = int(self.get_attribute('step') )
+                    
         # get previous request id
-        root = self.get_attribute('chain')[step-1]
+        root = self.get_attribute('chain')[stepIndex]
+
+        # increase step counter        
+        stepIndex+=1
         
         # check if exists
         if not rdb.document_exists(root):
@@ -100,44 +119,51 @@ class chained_request(json_base):
         
         # get mother chained_campaign
         cc = ccdb.get(self.get_attribute('member_of_campaign'))
-        if step >= len(cc['campaigns']):
+        if stepIndex >= len(cc['campaigns']):
+            self.logger.error('chained_campaign %s does not allow any further flowing.' % (cc['prepid']), level='warning')
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'))
         
-        # check if request is approved
-        allowed_approvals = ['define',  'approve',  'submit']
+        # check if root request is approved
+        #allowed_approvals = ['define',  'approve',  'submit']
+        allowed_request_approvals = ['submit']
         
-        if req['approval'] not in allowed_approvals:
-                raise self.NotApprovedException(req['_id'], req['approval'])
-        
-        
+        if req['approval'] not in allowed_request_approvals:
+            raise self.NotApprovedException(req['_id'], req['approval'], allowed_request_approvals)
+
+        # JR : also check on the status of the root request
+        allowed_request_statuses = ['submitted','done']
+
+        if req['status'] not in allowed_request_statuses:
+            raise self.NotInProperStateException(req['_id'], req['status'], allowed_request_statuses)
+
         # find the flow responsible for this step
-        tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
+        #tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
         
         # since step has been increased at the beginning, only add 1
-        if len(tokstr) <= step+1:
-            self.logger.error('chained_campaign %s does not allow any further flowing.' % (cc['prepid']), level='warning')
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('prepid'))
+        #if len(tokstr) <= step+1:
+        #    self.logger.error('chained_campaign %s does not allow any further flowing.' % (cc['prepid']), level='warning')
+        #    raise self.ChainedRequestCannotFlowException(self.get_attribute('prepid'))
             
-        flowname = tokstr[step+1]
-        
+        #flowname = tokstr[step+1]
+        #JR: use the chained campaign internals for finding what to do
+        (next_camp,flowname) = cc['campaigns'][stepIndex]
+
+        # check if exists
         if not fdb.document_exists(flowname):
             return False
+        if not cdb.document_exists(next_camp):
+            return False        
         
         # get flow
         fl = flow(fdb.get(flowname)).json()
         
-        # check all approvals (if flow say yes -> allowing policy)
-        if fl['approval'] not in allowed_approvals:
-            if self.get_attribute('approval') not in allowed_approvals:
-                raise self.NotApprovedException(self.get_attribute('_id'),  self.get_attribute('approval'))
+        allowed_flow_approvals = ['flow','submit']
 
-        # get next campaign
-        next_camp = cc['campaigns'][step][0] # just the camp name, not the flow
-        
-        # check if exists
-        if not cdb.document_exists(next_camp):
-            return False
-        
+        # check all approvals (if flow say yes -> allowing policy)
+        if fl['approval'] not in allowed_flow_approvals:
+            if self.get_attribute('approval') not in allowed_flow_approvals:
+                raise self.NotApprovedException(self.get_attribute('_id'),  self.get_attribute('approval'), allowed_flow_approvals)
+
         # get campaign
         nc = cdb.get(next_camp)
         
@@ -145,10 +171,54 @@ class chained_request(json_base):
         if nc['status'] == 'stopped':
             raise self.CampaignStoppedException(str(next_camp)) 
         
+        ## JR: check that there is no already existing requests in the campaign, that corresponds to the same steps of campaign+flow up until now
+        alreadyExistingRequest=False
+        ## faking it : alreadyExistingRequest=request(rdb.get('JME-Fall11R1-00001'))
+        ## look up all chained requests that start from the same root request
+        
+        toMatch='.'.join(self.get_attribute('prepid').split('_')[1:][0:stepIndex+1])
+        accs = map(lambda x: x['value'],  crdb.query('root_request=='+self.get_attribute('chain')[0]))
+        for existing in accs:
+            #if existing['prepid']==self.get_attribute('prepid'): continue
+            # get a string truncated to the 
+            truncated = '.'.join(existing['prepid'].split('_')[1:][0:stepIndex+1])
+            if truncated == toMatch:
+                #we found a chained request that starts with all same steps
+                matchingcc = chained_request(crdb.get(existing['prepid']))
+                if len(matchingcc.get_attribute('chain'))<=stepIndex: 
+                       #found one, but it has not enough content either
+                       continue
+                else:
+                    matchingID=matchingcc.get_attribute('chain')[stepIndex]
+                    alreadyExistingRequest = request(rdb.get(matchingID))
+                    break
+
+        if alreadyExistingRequest!=False:
+            # if exist, hand it over to the chained request
+            chain = self.get_attribute("chain")
+            alreadyExistingID=alreadyExistingRequest.get_attribute('prepid')
+            self.logger.log('There is already the request "%s" that fits in the flowing of %s'%(alreadyExistingID,self.get_attribute("prepid")))
+            if not alreadyExistingID in chain:
+                chain.append(alreadyExistingID)
+                self.set_attribute("chain",chain)
+                self.update_history({'action':'flow', 'step':str(int(self.get_attribute('step'))+1)})
+                self.set_attribute('step',  stepIndex)
+
+            # and register to the lucky one that it is part of a second chained request
+            inchains=alreadyExistingRequest.get_attribute("member_of_chain")
+            if not self.get_attribute("prepid") in inchains:
+                inchains.append(self.get_attribute("prepid"))
+                alreadyExistingRequest.set_attribute("member_of_chain",inchains)
+                alreadyExistingRequest.update_history({'action':'flow'})
+                rdb.update(alreadyExistingRequest.json())
+            
+            return True
+            
+
         # use root request as template
         req['member_of_campaign'] = next_camp
         req['type'] = nc['type']
-        req['root'] = False
+        req['root'] = False #JR???
         
         # add the previous requests output_dataset name as input for the new
         if input_dataset: 
@@ -161,7 +231,7 @@ class chained_request(json_base):
         if block_white_list:
             req['block_white_list'] = block_white_list
         
-        # remove couchdb specific fields
+        # remove couchdb specific fields to not confuse it later with an existing document
         del req['_rev']
         del req['_id']
         
@@ -181,10 +251,11 @@ class chained_request(json_base):
 	if len(nc['sequences']) != len(fl['request_parameters']['sequences']):
 		self.logger.error('Detected inconsistency ! Campaign "%s" has different sequences defined than flow "%s". Aborting...' % (nc['_id'], fl['_id']), level='critical') 
 		raise IndexError('Sequences of campaign "%s" do not match those of flow "%s"' % (nc['_id'], fl['_id']))
-		
 
-	# copy the sequences of the flow
-	for i, step in enumerate(nc['sequences']):
+        ### this is an awfull copy/paste that I had to do because of cross import between request and chained_requests
+        def puttogether(nc,fl,new_req):
+            # copy the sequences of the flow
+            for i, step in enumerate(nc['sequences']):
 		flag = False # states that a sequence has been found
 		for name in step:
                         if name in fl['request_parameters']['sequences'][i]:
@@ -205,14 +276,15 @@ class chained_request(json_base):
 		if not flag:
 			new_req['sequences'].append(step['default'])
 	
-	# override request's parameters
-	for key in fl['request_parameters']:
-		if key == 'sequences':
-			continue
+	    # override request's parameters
+            for key in fl['request_parameters']:
+                if key == 'sequences':
+                    continue
 		else:
 			if key in new_req:
 				new_req[key] = fl['request_parameters'][key]
 		
+        puttogether(nc,fl,new_req)
 
         # update history and save request to database
         nre = request(new_req)
@@ -223,7 +295,7 @@ class chained_request(json_base):
         self.update_history({'action':'flow', 'step':str(int(self.get_attribute('step'))+1)})
         
         # finalize changes
-        self.set_attribute('step',  str(step))
+        self.set_attribute('step',  int(stepIndex))
         
         return True
 
@@ -257,7 +329,14 @@ class chained_request(json_base):
         req.set_attribute("dataset_name", self.get_attribute("dataset_name"))
         req.set_attribute("pwg", self.get_attribute("pwg"))
         req.set_attribute("priority", self.get_attribute("priority") )
-        
+        #JR clear the fragment in flowing: always
+        req.set_attribute('nameorfragment','')
+        req.set_attribute('cvs_tag','')
+        #JR
+        #clean the mcdbid in the flown request
+        #if req.get_attribute('mcdbid')>=0:
+        #    req.set_attribute('mcdbid',0)
+
         # get the new prepid and append it to the chain
         prepid = json.loads(RequestPrepId().generate_prepid(req.get_attribute("pwg"), req.get_attribute('member_of_campaign')))["prepid"]
         chain = self.get_attribute("chain")
@@ -277,6 +356,8 @@ class chained_request(json_base):
         
         req.set_attribute('_id', prepid)
         req.set_attribute('prepid',  prepid)
+        ## JR: add what the request is member of N.B: that breaks down if a digi-reco request has to be member of two chains (R1,R4)
+        req.set_attribute('member_of_chain',[self.get_attribute('_id')])
 
         # update history
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})

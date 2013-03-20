@@ -1,6 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
+        <title>Actions page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -36,6 +37,11 @@
             <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
           </li>                
         </ul>
+        <ul class="nav pull-right">
+          <li>
+            <a>{{user.name}} : {{user.role}}</a>
+          </li>
+        </ul>
       </div>
     </div> <!--END of navbar-->
     <div class="container">
@@ -63,17 +69,22 @@
       <thead>
         <tr>
           <th ng-repeat="column in actions_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-            {{column.text}}
             <span ng-switch="column.text">
               <span ng-switch-when="Actions">
+                {{column.text}}
                 <a rel="tooltip" title="Generate all request" ng-click="generateAllRequests()" ng-hide="generatingAllIcon">
-                  <i class="icon-shopping-cart"></i>
+                  <i class="icon-play"></i>
+                </a>
+                <a rel="tooltip" title="Refresh actions" ng-click="refreshActions()" ng-hide="refreshingAllIcon">
+                  <i class="icon-refresh"></i>
                 </a>
                 <img ng-show="generatingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
               </span>
               <span ng-switch-default>
+                <a ng-href='chained_requests2?db_name=chained_requests&query="member_of_campaign%3D%3D{{column.db_name}}"' target="_blank">{{column.text}}</a>
                 <a rel="tooltip" title="Generate request" ng-click="generateRequests(column.db_name)">
-                  <i class="icon-shopping-cart"></i>
+                  <i class="icon-play"></i>
                 </a>
                </span>
             </span>
@@ -89,9 +100,13 @@
           <td ng-repeat="value in actions_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                {{data[value.db_name]}}
+                <a ng-href='chained_requests2?db_name=chained_requests&query="root_request%3D%3D{{data[value.db_name]}}"' target="_blank">{{data[value.db_name]}}</a>
                 <a rel="tooltip" title="Generate request" ng-click="generateRequests(data[value.db_name])">
-                  <i class="icon-shopping-cart"></i>
+                  <i class="icon-play"></i>
+                </a>
+                <img ng-show="generatingIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <a rel="tooltip" title="Refresh action" ng-click="refreshSingleAction(data[value.db_name])" ng-hide="refreshingAllIcon">
+                  <i class="icon-refresh"></i>
                 </a>
               </div>
               <div ng-switch-when="Submission details">
@@ -104,22 +119,38 @@
                 {{data[value.db_name]}}
               </div>
               <div ng-switch-default>
-                <custom-prep-id ng-model="data['chains'][value['db_name']]" ></custom-prep-id>
+                <custom-prep-id chain="value['db_name']" ng-model="data"></custom-prep-id>
               </div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="pagination pagination-right">
-      <ul>
-        <li ng-class="{ disabled: list_page <= -1 }">
-          <a ng-click="previous_page(list_page)">Prev</a>
-        </li>
-        <li ng-class="{ disabled: result.length == 0 }">
-          <a ng-click="next_page(list_page)">Next</a>
-        </li>
-      </ul>
+    <div class="row-fluid">
+      <div class="span6" style="padding-top:20px;">
+        <div ng-show="showHttpStatus == 200">
+          <font color="green">
+            {{http_status}}
+          </div>
+        </font>
+        <div ng-show="showHttpStatus != 200">
+          <font color="red">
+            {{http_status}}
+          </font>
+        </div>
+      </div>
+      <div class="span6">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </body>
 </html>

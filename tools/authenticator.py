@@ -19,10 +19,14 @@ class authenticator:
 		self.set_limit(limit)
 	
 	# get the roles that are registered to a specific username
-	def get_user_roles(self, username):
+	def get_user_roles(self, username,email=None):
 		if not self.__db.document_exists(username):
 			return [self.__roles[0]]
-		return self.__db.get(username)['roles']
+		user=self.__db.get(username)
+		if email and ('email' not in user or user['email']!=email):
+			user['email']=email
+			self.__db.update(user)
+		return user['roles']
 	
 	# aux: get the list of __roles
 	def get_roles(self):

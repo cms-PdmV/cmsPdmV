@@ -11,10 +11,10 @@
                         "map" : "function(doc){ if(doc.energy) emit(doc.energy, doc);}"
                 },
                 "root" : {
-                        "map" : "function(doc){ if(doc.campaigns) emit(doc.campaigns[0], doc);}"
+                        "map" : "function(doc){ if(doc.campaigns) emit(doc.campaigns[0][0], doc);}"
                 },
                 "last_campaign" : {
-                        "map" : "function(doc) { if(doc.campaigns) emit(doc.campaigns[doc.campaigns.length-1], doc);}"
+                        "map" : "function(doc) { if(doc.campaigns) emit(doc.campaigns[doc.campaigns.length-1][0], doc);}"
                 }
         }
 }

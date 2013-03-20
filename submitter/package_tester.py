@@ -31,7 +31,8 @@ class package_tester:
         self.ssh_server = 'lxplus.cern.ch'#'pdmvserv-test.cern.ch'
         self.ssh_server_port = 22
         self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'#'/afs/cern.ch/user/n/nnazirid/private/credentials'
-        
+
+        self.scram_arch = None
         self.__build_ssh_client()
 
     def __build_logger(self):
@@ -147,13 +148,14 @@ class package_tester:
     def build_submit_script(self):
         infile = ''
         infile += '#!/bin/bash\n'
-        infile += 'export SCRAM_ARCH=slc5_amd64_gcc434\n'
-        infile += 'export myrel=' + self.request.get_attribute('cmssw_release') + '\n'
-        infile += 'rel=`echo $myrel | sed -e "s/CMSSW_//g" | sed -e "s/_patch.*//g" | awk -F _ \'{print $1$2$3}\'`\n'
-        infile += 'if [ $rel -gt 505 ]; then\n'
-        infile += '  export SCRAM_ARCH=slc5_amd64_gcc462\n'
-        infile += '  echo $SCRAM_ARCH\n'
-        infile += 'fi\n'
+        #infile += 'export SCRAM_ARCH=slc5_amd64_gcc434\n'
+        #infile += 'export myrel=' + self.request.get_attribute('cmssw_release') + '\n'
+        #infile += 'rel=`echo $myrel | sed -e "s/CMSSW_//g" | sed -e "s/_patch.*//g" | awk -F _ \'{print $1$2$3}\'`\n'
+        #infile += 'if [ $rel -gt 505 ]; then\n'
+        #infile += '  export SCRAM_ARCH=slc5_amd64_gcc462\n'
+        #infile += '  echo $SCRAM_ARCH\n'
+        #infile += 'fi\n'
+        infile += 'export SCRAM_ARCH=%s\n'%(self.scram_arch)
         infile += 'scram p CMSSW ' + self.request.get_attribute('cmssw_release') + '\n'
         infile += 'cd ' + self.request.get_attribute('cmssw_release') + '\n'
         infile += 'eval `scram runtime -sh`\n'

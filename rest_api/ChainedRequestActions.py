@@ -130,7 +130,7 @@ class AddRequestToChain(RESTResource):
             
         if not req.get_attribute("member_of_campaign"):
             self.logger.error('Attribute "member_of_campaign" attribute was None.')
-            return dumps({"results":'Error: "member_of_chain" attribute was None.'})        
+            return dumps({"results":'Error: "member_of_campaign" attribute was None.'})        
         
         try:
             creq = chained_request(json_input=self.db.get(req.get_attribute('member_of_chain')))
@@ -203,9 +203,11 @@ class FlowToNextStep(RESTResource):
 
         except chained_request.NotApprovedException as ex:
             return dumps({"results":str(ex)})
+        except chained_request.NotInProperStateException as ex:
+            return dumps({"results":str(ex)})
         except chained_request.ChainedRequestCannotFlowException as ex:
             return dumps({"results":str(ex)})
-        
+
     def flow(self,  chainid):
         try:
             creq = chained_request(json_input=self.db.get(chainid))
@@ -222,6 +224,8 @@ class FlowToNextStep(RESTResource):
                 return dumps({"results":True})
             return dumps({"results":False})
         except chained_request.NotApprovedException as ex:
+            return dumps({"results":str(ex)})
+        except chained_request.NotInProperStateException as ex:
             return dumps({"results":str(ex)})
         except chained_request.ChainedRequestCannotFlowException as ex:
             return dumps({"results":str(ex)})

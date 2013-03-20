@@ -113,7 +113,8 @@ class sequence(json_base):
       elif self.get_attribute(attribute) == False:
         return ''
       elif self.get_attribute(attribute):
-	return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))
+        #return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))
+	return "--"+attribute+" "+self.srepr(self.get_attribute(attribute))
       else:
 	return ''
 

@@ -1,14 +1,27 @@
-function resultsCtrl($scope, $http, $location){
+function resultsCtrl($scope, $http, $location, $window){
     $scope.flows_defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
+        {text:'Approval',select:true, db_name:'approval'},
         {text:'Allowed Campaigns',select:true, db_name:'allowed_campaigns'},
         {text:'Next Campaign',select:true, db_name:'next_campaign'},
     ];
-
+    $scope.user = {name: "", role:""}
+// GET username and role
+      var promise = $http.get("restapi/users/get_roles");
+       promise.then(function(data){
+        $scope.user.name = data.data.username;
+        $scope.user.role = data.data.roles[0];
+    }, function(data){
+        alert("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
+    $scope.dbName = $location.search()["db_name"];
+    $scope.underscore = _;
+    $scope.selectedAll = false;
 
     if($location.search()["page"] === undefined){
         page = 0;
@@ -24,14 +37,64 @@ function resultsCtrl($scope, $http, $location){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
             if (data["results"]){
-                alert('Object was deleted successfully.');
+                $scope.update["success"] = data.results;
+                $scope.update["fail"] = false;
+                $scope.update["status_code"] = status;
+                $window.location.reload();
             }else{
-                alert('Could not save data to database.');
+                $scope.update["success"] = false;
+                $scope.update["fail"] = true;
+                $scope.update["status_code"] = status;
             }
         }).error(function(status){
             alert('Error no.' + status + '. Could not delete object.');
         });
     };
+    $scope.next_step = function(prepid){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid}).success(function(data,status){
+        $scope.update["success"] = data.results;
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $window.location.reload();
+      }).error(function(status){
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
+      });
+    };
+
+    $scope.reset_flow = function(prepid){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid+'/0'}).success(function(data,status){
+        $scope.update["success"] = data.results;
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $window.location.reload();
+      }).error(function(status){
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
+      });
+    };
+
+    $scope.select_all_well = function(){
+      $scope.selectedCount = true;
+      var selectedCount = 0
+      _.each($scope.flows_defaults, function(elem){
+        if (elem.select){
+          selectedCount +=1;
+        }
+        elem.select = true;
+      });
+      if (selectedCount == _.size($scope.flows_defaults)){
+      _.each($scope.flows_defaults, function(elem){
+        elem.select = false;
+      });
+      $scope.flows_defaults[0].select = true; //set prepid to be enabled by default
+      $scope.flows_defaults[1].select = true; // set actions to be enabled
+      $scope.selectedCount = false;
+      }
+    };
+
     $scope.sort = {
         column: 'prepid',
         descending: false

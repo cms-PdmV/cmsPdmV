@@ -13,5 +13,8 @@ class GetUserRoles(RESTResource):
 
 	def get_user_role(self):
                 user = cherrypy.request.headers['ADFS-LOGIN']
-		role = self.authenticator.get_user_roles(user)
+		communicationLine=None
+		if 'REMOTE-USER' in cherrypy.request.headers:
+			communicationLine = cherrypy.request.headers['REMOTE-USER']
+		role = self.authenticator.get_user_roles(user,email=communicationLine)
 		return dumps({'username':user, 'roles':role})

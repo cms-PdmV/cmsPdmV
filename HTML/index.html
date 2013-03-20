@@ -1,16 +1,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
 <head>
-        <title>PREP2 index</title>
+        <title>McM index</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script type="text/javascript">var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);}); 
-</script>
+        <script type="text/javascript">var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+        function resultsCtrl($scope,$http,$location){
+          $scope.user = {name: "", role:""}
+          // GET username and role
+          var promise = $http.get("restapi/users/get_roles");
+          promise.then(function(data){
+            $scope.user.name = data.data.username;
+            $scope.user.role = data.data.roles[0];
+            }, function(data){
+              alert("Error getting user information. Error: "+data.status);
+            });
+          // Endo of user info request
+        };
+        </script>
 </head>
-<body>
+<body ng-controller="resultsCtrl">
   <div class="navbar navbar-static-top"> <!--  place for NAV-BAR-->
     <div class="navbar-inner">
       <ul class="nav">
@@ -38,11 +50,16 @@
           <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
         </li>                
       </ul>
+      <ul class="nav pull-right">
+        <li>
+          <a>{{user.name}} : {{user.role}}</a>
+        </li>
+      </ul>
     </div>
   </div> <!--END of navbar-->
   <div class="container">
     <div align="middle">
-      <h2>Prep 2.5.2 Home page - Beta version</h2>
+      <h2>McM Home page - Beta version</h2>
       <p> <font color="green">Cool</font> <b>stuff</b> hapens here</p>
       <p> Updated to use HTML5 links: exclude <b>#</b> from URL's </p>
     </div>

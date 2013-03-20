@@ -1,4 +1,14 @@
 function resultsCtrl($scope, $http, $location){
+    $scope.user = {name: "", role:""}
+// GET username and role
+    var promise = $http.get("restapi/users/get_roles");
+    promise.then(function(data){
+      $scope.user.name = data.data.username;
+      $scope.user.role = data.data.roles[0];
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
     $scope.defaults = [];
     $scope.underscore = _;
     $scope.update = [];
@@ -29,7 +39,7 @@ function resultsCtrl($scope, $http, $location){
     
     $scope.delete_object = function(db, value){
 //         $http({method: 'GET', url: '/someUrl'}).
-        $http({method:'DELETE', url:'/restapi/'+db+'/delete/'+value}).success(function(data,status){
+        $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
             if (data["results"]){
                 alert('Object was deleted successfully.');
@@ -44,7 +54,7 @@ function resultsCtrl($scope, $http, $location){
     $scope.submit_edit = function(){
         console.log("submit function");
         console.log($scope.result);
-        $http({method:'PUT', url:'/restapi/'+$location.search()["db_name"]+'/update/',data:angular.toJson($scope.result)}).success(function(data,status){
+        $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
             console.log(data,status);
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
@@ -164,9 +174,13 @@ var ModalDemoCtrl = function ($scope) {
     $scope.shouldBeOpen = false;
   };
   $scope.saveNewSequence = function(){
+    var shift = 0;
     if ($scope.dbName != "requests"){
-      $scope.driver[_.size($scope.result.sequences)+1] = {default: $scope.newSequence};
-      $scope.result.sequences[_.size($scope.result.sequences)+1] = {default: $scope.newSequence};
+      if (_.size($scope.result.sequences) != 0){
+        shift =1; //in case we are ading a new sequence not from 0 we must increase array index of sequences
+      }
+      $scope.driver[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
+      $scope.result.sequences[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
       console.log($scope.result.sequences, _.size($scope.result.sequences));
     }else{
       $scope.driver.push($scope.newSequence); //add a string to display in table
@@ -219,7 +233,7 @@ testApp.directive("sequenceEdit", function($http){
     '          </div>'+
     '          <div class="modal-body">'+
     '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(result.sequences[sequence_id]) | orderBy:key">'+
+    '              <div class="control-group" ng-repeat="key in underscore.keys(result.sequences[sequence_id])">'+
     '                <label class="control-label">{{key}}</label>'+
     '                <div class="controls">'+
     '                  <input type="text" ng-model="result.sequences[sequence_id][key]">'+
@@ -255,7 +269,7 @@ testApp.directive("sequenceEdit", function($http){
     '            </div>'+ //end oFda.f modal header
     '          <div class="modal-body">'+
     '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(elem) | orderBy:key">'+
+    '              <div class="control-group" ng-repeat="key in underscore.keys(elem) ">'+
     '                <div ng-switch on="key">'+
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
@@ -293,7 +307,7 @@ testApp.directive("sequenceEdit", function($http){
     '                     Required!</span>'+
     '                </div>'+
     '              </div>'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences) | orderBy:key">'+
+    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
     '                <div ng-switch on="key">'+
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
@@ -326,7 +340,7 @@ testApp.directive("sequenceEdit", function($http){
     '            </div>'+ //end oF  modal header
     '          <div class="modal-body">'+
     '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences) | orderBy:key">'+
+    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
     '                <div ng-switch on="key">'+
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
@@ -386,6 +400,50 @@ testApp.directive("sequenceEdit", function($http){
         console.log("pasikeite");
         console.log(scope.sequenceInfo);
       });
+    }
+  }
+});
+testApp.directive("customHistory", function(){
+  return {
+    require: 'ngModel',
+    template: 
+    '<div>'+
+    '  <div ng-hide="show_history">'+
+    '    <input type="button" value="Show" ng-click="show_history=true;">'+
+    '  </div>'+
+    '  <div ng-show="show_history">'+
+    '    <input type="button" value="Hide" ng-click="show_history=false;">'+
+    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
+    '      <thead>'+
+    '        <tr>'+
+    '          <th style="padding: 0px;">Action</th>'+
+//     '          <th style="padding: 0px;">Message</th>'+
+    '          <th style="padding: 0px;">Date</th>'+
+    '          <th style="padding: 0px;">User</th>'+
+    '        </tr>'+
+    '      </thead>'+
+    '      <tbody>'+
+    '        <tr ng-repeat="elem in show_info">'+
+    '          <td style="padding: 0px;">{{elem.action}}</td>'+
+//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
+    '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
+    '          <td style="padding: 0px;">'+
+    '              <div ng-switch="elem.updater.author_name">'+
+    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
+    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
+    '              </div>'+
+    '          </td>'+
+    '        </tr>'+
+    '      </tbody>'+
+    '    </table>'+
+    '  </div>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_history = false;
+        scope.show_info = ctrl.$viewValue;
+      };
     }
   }
 });

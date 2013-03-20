@@ -11,6 +11,8 @@ import cherrypy
 import logging
 from tools.logger import prep2_formatter, logger as logfactory
 from json_layer.request import request
+from json_layer.campaign import campaign
+from couchdb_layer.prep_database import database
 
 class package_builder:
 	
@@ -66,7 +68,7 @@ class package_builder:
             return 'Error: Package name given was NoneType'
 
 
-    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5):
+    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5, batch=10):
         
         # set time out to 2000 seconds
         cherrypy.response.timeout = 2000
@@ -82,6 +84,7 @@ class package_builder:
         self.closed = False
         self.__logfile = ''
         self.__verbose = 4
+        self.batchNumber = batch
 
         # list of different production steps (represented as a different element in the request's "sequences" property)
         self.__cmsDrivers = []
@@ -90,14 +93,15 @@ class package_builder:
         self.__build_command = ''
 
         # reqmgr config cache specifics
-        self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
+        #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
+        self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
         self.reqmgr_database = "reqmgr_config_cache"
         self.reqmgr_user = "pdmvserv" # generic uname and pword
         self.reqmgr_group = "ppd" # to be updated on the fly later (no worries)
 
         # config files
         self.__summary = None
-        self.__upload_configs = None
+        #self.__upload_configs = None
         self.__injectAndApprove = None
         self.__pyconfigs = []
 
@@ -128,7 +132,9 @@ class package_builder:
 
         # avoid large testing samples
         if self.events > 1000:
-            self.events = 50
+            truncatedTo=50
+            self.logger.inject('The run test should be on %d events, truncating to %d'%(self.events,truncatedTo), handler=self.hname)
+            self.events = truncatedTo
 
     # check and create all working directories
     def __check_directory(self):
@@ -142,8 +148,10 @@ class package_builder:
 
         # check if exists (and force)
         if os.path.exists(self.directory):
-            #self.logger.warning('Directory ' + directory + ' already exists.')
+            self.logger.error('Directory ' + self.directory + ' already exists.')
             return
+        else:
+            self.logger.log('Creating directory :'+self.directory)
 
         # recursively create any needed parents and the dir itself
         os.makedirs(self.directory)
@@ -206,7 +214,7 @@ class package_builder:
 
         # build path strings
         self.__summary = self.directory + 'summary.txt'
-        self.__upload_configs = self.directory + 'upload_configs.sh'
+        #self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
         self.logger.inject('Populating configuration files...', level='debug', handler=self.hname)
@@ -222,14 +230,14 @@ class package_builder:
         self.logger.inject('summary.txt file created', level='debug', handler=self.hname)
 
         # create upload_configs script
-        try:
-            uin = open(self.__upload_configs, 'w')
-            uin.write('#!/usr/bin/env bash\n')
-            uin.close()
-        except Exception as ex:
-            self.logger.inject('Could not create configuration injection file "%s". Reason: %s' % (self.__upload_configs, ex), level='error', handler=self.hname)
-
-        self.logger.inject('upload_configs.sh script created', level='debug', handler=self.hname)
+        #try:
+        #    uin = open(self.__upload_configs, 'w')
+        #    uin.write('#!/usr/bin/env bash\n')
+        #    uin.close()
+        #except Exception as ex:
+        #    self.logger.inject('Could not create configuration injection file "%s". Reason: %s' % (self.__upload_configs, ex), level='error', handler=self.hname)
+        #
+        #self.logger.inject('upload_configs.sh script created', level='debug', handler=self.hname)
 
         # create injectAndApprove.sh script
         try:
@@ -264,7 +272,7 @@ class package_builder:
 
     def init_package(self):
         self.__summary = self.directory + 'summary.txt'
-        self.__upload_configs = self.directory + 'upload_configs.sh'
+        #self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
         # initialize the config files
@@ -310,34 +318,20 @@ class package_builder:
             if 'conditions' not in cmsDriver:
                 raise self.NotInitializedException('Conditions are not defined.')
 
-    def __build_injection_command(self,  cmsDriver,  index):
-        command = 'inject-to-config-cache '
-        command += self.reqmgr_couchurl + ' '
-        command += self.reqmgr_database + ' '
-        command += self.reqmgr_user + ' '
-        command += self.reqmgr_group + ' '
-        command += "config_0_"+str(index)+"_cfg.py "
-        command += 'step'+str(index)+'_'+self.request.get_attribute('member_of_campaign') + ' '
-        command += '"step'+str(index)+'_'+self.request.get_attribute('member_of_campaign') + '" '
-        command += ' | grep DocID | awk \'{print \"config_0_'+str(index)+'_cfg.py \"$2}\'\n'
-        return command
-
     def __build_setup_script(self):
         # commands required for setting up the cms environ
-        #script = open(self.directory + 'setup.sh', 'w')
+
+        self.scram_arch='slc5_amd64_gcc434'
+        releasesplit=self.request.get_attribute('cmssw_release').split("_")
+        nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
+        if int(nrelease)>=510:
+            self.scram_arch='slc5_amd64_gcc462'
 
         infile = ''
         infile += '#!/bin/bash\n'
         infile += 'cd ' + os.path.abspath(self.directory + '../') + '\n'
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
-        infile += 'export SCRAM_ARCH=slc5_amd64_gcc434\n'
-        infile += 'export myrel=' + self.request.get_attribute('cmssw_release') + '\n'
-        infile += 'rel=`echo $myrel | sed -e "s/CMSSW_//g" | sed -e "s/_patch.*//g" | awk -F _ \'{print $1$2$3}\'`\n'
-        infile += 'if [ $rel -gt 505 ]; then\n'
-        infile += '  export SCRAM_ARCH=slc5_amd64_gcc462\n'
-        infile += '  echo $SCRAM_ARCH\n'
-        infile += 'fi\n'
-        #infile += 'export SCRAM_ARCH=slc5_ia32_gcc434\n'
+        infile += 'export SCRAM_ARCH=%s\n'%(self.scram_arch)
         infile += 'scram p CMSSW ' + self.request.get_attribute('cmssw_release') + '\n'
         infile += 'cd ' + self.request.get_attribute('cmssw_release') + '/src\n'
         infile += 'eval `scram runtime -sh`\n'
@@ -346,12 +340,9 @@ class package_builder:
         infile += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
         infile += "export CVS_PASSFILE=`pwd`/cvspass\n"
 
-        # build personal proxy (mainly for cvs)
-        #infile += 'source /afs/cern.ch/project/gd/LCG-share/current_3.2/etc/profile.d/grid_env.sh\n'
-        #infile += 'voms-proxy-init --debug\n'
 
         # checkout from cvs (if needed)
-        if self.request.get_attribute('nameorfragment') != None:
+        if self.request.get_attribute('nameorfragment') != '' and self.request.get_attribute('cvs_tag')!='':
             infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' ' + self.request.get_attribute('nameorfragment') + '\n'
 
         # previous counter
@@ -381,19 +372,18 @@ class package_builder:
             # finalize cmsDriver command
             res = cmsd
             res += ' --python_filename '+self.directory+'config_0_'+str(previous+1)+'_cfg.py '
-            res += '--fileout step'+str(previous+1)+'.root '
+            #JR res += '--fileout step'+str(previous+1)+'.root '
             if previous > 0:
-                res += '--filein file:step'+str(previous)+'.root '
+                #JR res += '--filein file:step'+str(previous)+'.root '
                 res += '--lazy_download '
-            res += '--no_exec --dump_python -n '+str(self.events)#str(self.request.get_attribute('total_events'))
+
+            ##JR it's going to be easier to look at things with no dump_python
+            #res += '--no_exec --dump_python -n '+str(self.events)#str(self.request.get_attribute('total_events'))
+            res += '--no_exec -n '+str(self.events)#str(self.request.get_attribute('total_events'))
             #infile += res
             cmsd_list += res + '\n'
 
             self.__pyconfigs.append('config_0_'+str(previous+1)+'_cfg.py')
-
-            # build injection commands and update the configurations
-            incomm = self. __build_injection_command(cmsd,  previous+1)
-            self.__update_configuration(self.__upload_configs,  incomm)
 
             previous += 1
 
@@ -427,20 +417,21 @@ class package_builder:
             return False
 
         # write full command to setup.sh
+        self.__setupFile = self.request.get_attribute('prepid')+'-setup.sh'
         try:
-            f = open(self.directory + os.path.pardir + '/'+'setup.sh',  'w')
+            f = open(self.directory + os.path.pardir + '/'+self.__setupFile,  'w')
             f.write(fullcommand)
             f.close()
         except IOError as ex:
             self.logger.inject('Could not access setup.sh script. IOError: %s' % (ex), level='critical', handler=self.hname)
             return False
         
-        self.logger.inject('Created "setup.sh" script.', level='debug', handler=self.hname)
+        self.logger.inject('Created "%s" script.'%(self.__setupFile), level='debug', handler=self.hname)
 
         # populate injectAndApprove.sh script
         self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())
 
-        return 'sh '+self.directory + os.path.pardir + '/'+'setup.sh'
+        return 'sh '+self.directory + os.path.pardir + '/'+self.__setupFile
 
     # determine different request options for them
     # to be saved in upload_configs.sh and injectAndApprove.sh
@@ -448,13 +439,13 @@ class package_builder:
     def __prepare_approve_command(self):
         # calculate the appropriate scram architecture
         # set scram env
-        scram_arch='slc5_amd64_gcc434'
+        #self.scram_arch='slc5_amd64_gcc434'
 
         #assumed CMSSW_X_Y_Z_*
-        releasesplit=self.request.get_attribute('cmssw_release').split("_")
-        nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
-        if int(nrelease)>=510:
-            scram_arch='slc5_amd64_gcc462'
+        #releasesplit=self.request.get_attribute('cmssw_release').split("_")
+        #nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
+        #if int(nrelease)>=510:
+        #    self.scram_arch='slc5_amd64_gcc462'
 
         # use the central installation of wmconrol
 	command = 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n' 
@@ -462,8 +453,8 @@ class package_builder:
         # if MonteCarlo analysis
         if self.wmagent_type == 'MonteCarlo':
             command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(scram_arch)
-            command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
+            command += ' --arch %s' %(self.scram_arch)
+            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
             command += ' --version %s' %("0") # dummy
 
             # set priority (only if it is defined)
@@ -480,20 +471,20 @@ class package_builder:
             # calculate eff dev
             command += ' --filter-eff %s' %( float(feff) * float(meff) )
 
-            command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
+            #command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
             command += ' --request-type %s' %(self.wmagent_type)
             command += ' --number-events %s' %(self.request.get_attribute('total_events'))
             command += ' --step1-cfg %s' %('config_0_1_cfg.py')
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            command += ' --cfg_db_file configs.txt'
+            #command += ' --cfg_db_file configs.txt'
 
         elif self.wmagent_type == 'MonteCarloFromGEN':
             command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(scram_arch)
+            command += ' --arch %s' %(self.scram_arch)
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
             command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
+            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
 
             # set priority (only if it is defined)
             if self.request.get_attribute('priority') >= 1:
@@ -502,7 +493,7 @@ class package_builder:
             command += ' --time-event %s' %(self.request.get_attribute('time_event'))
             command += ' --size-event %s' %(self.request.get_attribute('size_event'))
 
-            # calculate filter efficiency
+            # calculate filter efficienc
             feff = self.request.get_attribute('generator_parameters')[-1]['filter_efficiency']
             meff = self.request.get_attribute('generator_parameters')[-1]['match_efficiency']
 
@@ -513,16 +504,16 @@ class package_builder:
             command += ' --step1-cfg %s' %('config_0_1_cfg.py')
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            command += ' --cfg_db_file configs.txt'
+            #command += ' --cfg_db_file configs.txt'
             if self.request.get_attribute('input_block') != None:
                 command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
 
 
         elif self.wmagent_type == 'LHEStepZero':
             command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(scram_arch)
+            command += ' --arch %s' %(self.scram_arch)
             command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
+            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
             if self.request.get_attribute("priority") >= 1:
                 command += ' --priority %s' %(self.request.get_attribute("priority"))
             command += ' --time-event %s' %(self.request.get_attribute('time_event'))
@@ -532,7 +523,7 @@ class package_builder:
             command += ' --step1-cfg %s' %('config_0_1_cfg.py')
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            command += ' --cfg_db_file configs.txt'
+            #command += ' --cfg_db_file configs.txt'
             if int(self.request.get_attribute('mcdb_id')) == 0:
                 configfile = open(self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('nameorfragment'), 'r')
                 for line in configfile:
@@ -549,19 +540,19 @@ class package_builder:
         # Else: ReDigi step
         elif self.wmagent_type == 'ReDigi':
             command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(scram_arch)
+            command += ' --arch %s' %(self.scram_arch)
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
             command += ' --step1-cfg %s' %('config_0_1_cfg.py')
 
             command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s::All' %(self.request.get_attribute('sequences')[0]['conditions'])
+            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
             # set priority (only if it is defined)
             if self.request.get_attribute('priority') >= 1:
                 command += ' --priority %s' %(self.request.get_attribute("priority"))
 
             command += ' --request-type %s' %(self.wmagent_type)
             command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            command += ' --cfg_db_file configs.txt'
+            #command += ' --cfg_db_file configs.txt'
 
             # temp ev cont holder
             eventcontentlist = []
@@ -594,10 +585,12 @@ class package_builder:
             if self.request.get_attribute('input_block') != None:
                 command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
 
-
+        ##JR in order to inject into the testbed instead of the production machine
+        command += ' --wmtest '
+        
         command += ' --user %s' % (self.reqmgr_user)
         command += ' --group %s' % (self.reqmgr_group)
-        command += ' --batch mybatch'
+        command += ' --batch %s' % (self.batchNumber)
         command += '\n'
 
         return command
@@ -634,30 +627,37 @@ class package_builder:
 
         # Avoid faulty execution and inform the user.
         if not command:
-            self.logger.inject("%s FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
+            self.logger.inject("%s Preparation FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
             return False
 
         self.logger.inject('Executing setup scripts...', handler=self.hname)
 
         # spawn a subprocess to run it
-        p = subprocess.Popen([command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        p.wait()
+        
+        p = os.popen(command)
+        output = p.read()
+        retcode = p.close()
+
+        #p = subprocess.Popen([command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        #self.logger.inject('Waitin for setup scripts...', handler=self.hname)
+        #p.wait()
 
         # check for success
-        retcode = p.poll()
+        #retcode = p.poll()
+        #self.logger.inject('Poll the setup scripts...', handler=self.hname)
 
         # get results
-        output = p.stdout.read()
-        output += p.stderr.read()
+        #output = p.stdout.read()
+        #output += p.stderr.read()
 
         self.logger.inject(output, level='debug', handler=self.hname)
 
         # when you fail, you die
         if retcode:
-            self.logger.inject("%s FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
+            self.logger.inject("%s Creation FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
             return False
 
-        self.logger.inject("%s SUBMITTED" % (self.request.get_attribute('prepid')), handler=self.hname)
+        self.logger.inject("%s Creation SUCCESS" % (self.request.get_attribute('prepid')), handler=self.hname)
         self.__update_configuration(self.__summary,  self.__build_summary_string())
         self.__update_configuration(self.__summary, 'Total evts = ' + str(self.request.get_attribute('total_events')))
         return True
@@ -684,8 +684,8 @@ class package_builder:
         for filename in os.listdir(self.directory):
             if filename == 'summary.txt':
                 continue
-            if filename == 'upload_configs.sh':
-                continue
+            #if filename == 'upload_configs.sh':
+            #    continue
             if filename == 'injectAndApprove.sh':
                 continue
             if '.log' in filename:
@@ -750,19 +750,29 @@ class package_builder:
         if not flag:
             return False
         
+        ## JR find a way to skip testing in batch the request for digi-reco requests
         # test configuration
-        tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
-        if tester.test():
+        cdb = database('campaigns')
+        camp = campaign(cdb.get(self.request.get_attribute('member_of_campaign')))
+        if camp.get_attribute('root')==1:
             self.__tarobj.add(self.directory)
-            self.logger.inject('JOB successfully completed !', handler=self.hname)
-            print 'JOB completed successfully'
-            flag = True
-        
-        
+            self.logger.inject('Requests not from root or possible root campaigns do not need to be ran locally')
+            flag=True
         else:
-        #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
-            self.logger.inject('JOB Failed. Check tarball for details.', level='error', handler=self.hname) 
-            flag = False
+            self.logger.inject('Testing request for %d events'%(self.events))
+            tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
+            tester.scram_arch = self.scram_arch
+            if tester.test():
+                self.__tarobj.add(self.directory)
+                self.logger.inject('JOB successfully completed !', handler=self.hname)
+                #print 'JOB completed successfully'
+                flag = True
+        
+        
+            else:
+                #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
+                self.logger.inject('JOB Failed. Check tarball for details.', level='error', handler=self.hname) 
+                flag = False
 
         # clean directory
         #self.__clean_directory()    
@@ -777,7 +787,7 @@ class package_builder:
             self.logger.inject('Injecting...', handler=self.hname)
 
             # initialize injector object with the finalized tarball
-            injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release'))
+            injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
 
             if injector.inject():
                 self.logger.inject('Injection successful !', handler=self.hname)

@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
-        <title>Flows page PREP2</title>
+        <title>Flows page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -38,14 +38,23 @@
             <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
           </li>              
         </ul>
+        <ul class="nav pull-right">
+          <li>
+            <a>{{user.name}} : {{user.role}}</a>
+          </li>
+        </ul>
       </div>
     </div> <!--END of navbar-->
     <div class="container" >
       <div class="span12" style="overflow: auto">
         <div class="well"> <!--well for user to select table columns-->
           <span style="float: left;">
-            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
-            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well == false">
+            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well == true">
+            <span ng-show="show_well == true">
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </span>
           </span>        
           <span ng-repeat="value in flows_defaults" ng-show="show_well">
             <label class="checkbox inline">
@@ -74,6 +83,13 @@
                 <a ng-href="edit2?db_name=flows&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
+                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_blank">
+                  <i class="icon-repeat"></i>
+                </a>
+                <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" target="_blank">
+                  <i class="icon-chevron-right"></i>
+                </a>
+
               </div>
               <div ng-switch-when="Allowed Campaigns">
                 <ul>
@@ -86,6 +102,28 @@
                     <dd>{{value}}</dd>                
                 </dl>
               </div>
+              <div ng-switch-when="Request parameters">
+                <ul>
+                  <li ng-repeat="(key, param) in data[value.db_name]">
+                    {{key}}
+                    <ul ng-repeat="el in param">
+                        <div ng-switch on="underscore.size(el)">
+                          <div ng-switch-when="1">
+                            <li>Default</li>
+                          </div>
+                          <div ng-switch-default>
+                            <li ng-repeat="(sequence,variable) in el">
+                             {{sequence}}
+                              <ul>
+                                 <li ng-repeat="(x, y) in variable">{{x}} : {{y}}</li>
+                              </ul>
+                            </li>
+                          </div>
+                      </div>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
@@ -95,15 +133,29 @@
         </tr>
       </tbody>
     </table>
-    <div class="pagination pagination-right">
-      <ul>
-        <li ng-class="{ disabled: list_page <= -1 }">
-          <a ng-click="previous_page(list_page)">Prev</a>
-        </li>
-        <li ng-class="{ disabled: result.length == 0 }">
-          <a ng-click="next_page(list_page)">Next</a>
-        </li>
-      </ul>
+    <div class="row-fluid">
+      <div class="span5" style="margin-top:20px;">
+      </div>
+      <div class="span2" style="margin-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font>
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+        </div>
+      </div>
+      <div class="span5">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </body>
 </html>

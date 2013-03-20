@@ -209,6 +209,8 @@ class ApproveCampaign(RESTResource):
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
+        if len(args) < 2:
+            return self.multiple_toggle(args[0])
         return self.multiple_toggle(args[0],  args[1])
 
     def multiple_toggle(self, rid, val=0):
@@ -216,7 +218,7 @@ class ApproveCampaign(RESTResource):
             rlist = rid.rsplit(',')
             res = []
             for r in rlist:
-                 res.append(self.toggle_campaign(r, val))
+                res.append(self.toggle_campaign(r, val))
             return dumps(res)
         else:
             return dumps(self.toggle_campaign(rid, val))
@@ -226,8 +228,10 @@ class ApproveCampaign(RESTResource):
             return {"prepid": rid,  "results":'Error: The given campaign id does not exist.'}
         camp = campaign(json_input=self.db.get(rid))
         camp.approve(int(index))
-        
-        return {"prepid": rid, "results":self.db.update(camp.json())}
+        if int(index)==0:
+            camp.set_status(0)
+        res=self.db.update(camp.json())
+        return {"prepid": rid, "results": res, "approval" : camp.get_attribute('approval')}
 
 
 class GetCmsDriverForCampaign(RESTResource):

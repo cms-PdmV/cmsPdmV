@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
-        <title>Chained requests page PREP2</title>  
+        <title>Chained requests page McM</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -38,6 +38,11 @@
             <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
           </li>
         </ul>
+        <ul class="nav pull-right">
+          <li>
+            <a>{{user.name}} : {{user.role}}</a>
+          </li>
+        </ul>
       </div>
     </div> <!--END of navbar-->
     <div class="container" >
@@ -46,6 +51,10 @@
           <span style="float: left;">
             <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
             <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+            <span ng-show="show_well == true">
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </span>
           </span>        
           <span ng-repeat="value in defaults" ng-show="show_well">
             <label class="checkbox inline">
@@ -68,21 +77,40 @@
           <td ng-repeat="value in defaults" ng-show="value.select" style="min-width:100px;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-href="create/chained_requests/{{data.prepid}}" rel="tooltip" title="Create new request" target="_blank">
-                  <i class="icon-plus-sign"></i>
-                </a>
-                <a ng-href='results?db_name=chained_requests&query="member_of_campaign=={{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
-                  <i class="icon-folder-open"></i>
-                </a>
-                <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete flow">
+                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit/chained_campaigns/{{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
+                <a ng-href="edit2?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
                   <i class="icon-wrench"></i>
+                </a>
+		            <a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset">
+		              <i class="icon-repeat"></i>
+		            </a>
+                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step">
+                  <i class="icon-chevron-right"></i>
+                </a>
+                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_blank">
+                  <i class="icon-forward"></i>
                 </a>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
+              </div>
+              <div ng-switch-when="Chain">
+                 <span ng-repeat="chain in data[value.db_name]">
+                <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{chain}}"&page=0' target="_blank">{{chain}}</a>
+                  <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
+                    <a ng-switch-when="false">
+                      <i  class="icon-arrow-right"></i>
+                    </a>
+                    <a ng-switch-default><!-- on n-th(last) element display no arrow -->
+                      <i></i>
+                    </a>
+                  </span>
+                </span>
+              </div>
+              <div ng-switch-when="PrepId">
+                <a ng-href='chained_requests2?db_name=chained_requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
@@ -91,15 +119,29 @@
       </tbody>
 <!--        <pre>{{defaults}}</pre> -->
     </table>
-    <div class="pagination pagination-right">
-      <ul>
-        <li ng-class="{ disabled: list_page <= -1 }">
-          <a ng-click="previous_page(list_page)">Prev</a>
-        </li>
-        <li ng-class="{ disabled: result.length == 0 }">
-          <a ng-click="next_page(list_page)">Next</a>
-        </li>
-      </ul>
+    <div class="row-fluid">
+      <div class="span5" style="margin-top:20px;">
+      </div>
+      <div class="span2" style="margin-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font>
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+        </div>
+      </div> 
+      <div class="span5">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   </body>
 </html> 

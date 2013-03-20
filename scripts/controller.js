@@ -1,21 +1,31 @@
-function resultsCtrl($scope, $http, $location){
+function resultsCtrl($scope, $http, $location, $window){
 //     http://prep-test.cern.ch/search/?db_name=campaigns&query=%22%22&page=0
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
+	      {text:'Approval',select:true, db_name:'approval'},
         {text:'Status',select:true, db_name:'status'},
         {text:'Type',select:true, db_name:'type'},
-        {text:'ProdType',select:true, db_name:'production_type'},
+        //{text:'ProdType',select:true, db_name:'production_type'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
         {text:'Energy',select:true, db_name:'energy'}
     ];
+    $scope.user = {name: "", role:""}
+// GET username and role
+    var promise = $http.get("restapi/users/get_roles");
+    promise.then(function(data){
+      $scope.user.name = data.data.username;
+      $scope.user.role = data.data.roles[0];
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope.dbName = $location.search()["db_name"];
     $scope.new = {};
-//     $scope.update["value"] = false;
-//     console.log($location);
+
     if($location.search()["page"] === undefined){
         page = 0;
         $location.search("page", 0);
@@ -29,11 +39,21 @@ function resultsCtrl($scope, $http, $location){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
             if (data["results"]){
-                alert('Object was deleted successfully.');
+                $scope.update["success"] = true;
+                $scope.update["fail"] = false;
+                $scope.update["status_code"] = status;
+                $window.location.reload();
+//                 alert('Object was deleted successfully.');
             }else{
-                alert('Could not save data to database.');
+                $scope.update["success"] = false;
+                $scope.update["fail"] = true;
+                $scope.update["status_code"] = status;
+//                 alert('Could not save data to database.');
             }
         }).error(function(status){
+            $scope.update["success"] = false;
+            $scope.update["fail"] = true;
+            $scope.update["status_code"] = status;
             alert('Error no.' + status + '. Could not delete object.');
         });
     };
@@ -52,6 +72,30 @@ function resultsCtrl($scope, $http, $location){
             $scope.update["status_code"] = status;
         });
     };
+    $scope.select_all_well = function(){
+      $scope.selectedCount = true;
+      var selectedCount = 0
+      _.each($scope.defaults, function(elem){
+        if (elem.select){
+          selectedCount +=1;
+        }
+        elem.select = true;
+      });
+      if (selectedCount == _.size($scope.defaults)){
+      _.each($scope.defaults, function(elem){
+        elem.select = false;
+      });
+      $scope.defaults[0].select = true; //set prepid to be enabled by default
+      $scope.defaults[1].select = true; // set actions to be enabled
+      $scope.defaults[2].select = true; // set actions to be enabled
+      $scope.defaults[3].select = true; // set actions to be enabled
+      $scope.defaults[4].select = true; // set actions to be enabled
+      $scope.defaults[5].select = true; // set actions to be enabled
+      $scope.defaults[6].select = true; // set actions to be enabled
+      $scope.selectedCount = false;
+      }
+    };
+
     $scope.delete_edit = function(id){
         console.log("delete some from edit");
         $scope.delete_object($location.search()["db_name"], id);
@@ -86,7 +130,31 @@ function resultsCtrl($scope, $http, $location){
             $scope.show_well = true;
         }
     };    
-
+    $scope.single_step = function(step, prepid){
+      $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
+         $scope.update["success"] = data["results"];
+         $scope.update["fail"] = false;
+         $scope.update["status_code"] = data["results"];
+         $window.location.reload();
+      }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["status_code"] = status;
+      });
+    };
+    $scope.next_status = function(prepid){
+      $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
+         $scope.update["success"] = data["results"];
+         $scope.update["fail"] = false;
+         $scope.update["status_code"] = data["results"];
+         $window.location.reload();
+      }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["status_code"] = status;
+      });
+    };
+    
    $scope.$watch('list_page', function(){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
@@ -146,7 +214,6 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
     $scope.shouldBeOpen = false;
   };
     $scope.save = function () {
-    console.log("saving modal info");
     console.log($scope.selectedPwg, $scope.prepId);
     $scope.shouldBeOpen = false;
       $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
@@ -158,18 +225,21 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
       });
     };
     $scope.createCampaign = function(){
-      $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, stauts){
+      $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
         console.log(data, status);
-        alert("Output:"+data.results);
+        $scope.update["success"] = data.results;
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $window.location.reload();
 //         $window.location.href ="edit2?db_name=campaigns&query="+data.results;
       }).error(function(data,status){
-        alert("Error:"+ status);
-        console.log("createCampaign", status);
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
       });
       $scope.shouldBeOpen = false;
   };
-
-  };
+};
 // NEW for directive
 var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){
@@ -239,5 +309,48 @@ testApp.directive("customHistory", function(){
         scope.show_info = ctrl.$viewValue;
       };
     }
+  }
+});
+testApp.directive("sequenceDisplay", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <div ng-hide="show_sequence">'+
+    '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();show_sequence=true;">'+
+    '     <i class="icon-eye-open"></i>'+
+    '    </a>'+
+	//    '    <input type="button" value="Show" ng-click="getCmsDriver();show_sequence=true;">'+
+    '  </div>'+
+    '  <div ng-show="show_sequence">'+
+	//    '    <input type="button" value="Hide" ng-click="show_sequence=false;">'+
+    '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
+    '     <i class="icon-remove"></i>'+  
+    '    </a>'+     
+    '    <ul>'+
+    '      <li ng-repeat="sequence in driver">'+
+    '        <ul ng-repeat="(key,value) in sequence">'+
+    '          <li>{{key}}: {{value}}</li>'+
+    '        </ul>'+
+    '      </li>'+
+    '    </ul>'+
+    '  </div>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_sequence = false;
+        scope.sequencePrepId = ctrl.$viewValue;
+      };
+      scope.getCmsDriver = function(){
+        if (scope.driver ===undefined){
+          var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.sequencePrepId);
+          promise.then(function(data){
+            scope.driver = data.data.results;
+          }, function(data){
+             alert("Error: ", data.status);
+        });
+       }
+     };
+   }
   }
 });

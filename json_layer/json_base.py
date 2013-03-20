@@ -5,7 +5,7 @@ from tools.logger import logger as logfactory
 
 class json_base:
     __json = {}
-    __approvalsteps = ['validation',  'define',  'approve', 'submit']
+    __approvalsteps = ['none','validation',  'define',  'approve', 'submit']
     __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
     logger = logfactory("prep2")
 
@@ -40,9 +40,16 @@ class json_base:
     def validate(self):
         if not self.__json:
             return
+        #looks for keys that are missing, from the schema requirement
         for key in self.__schema:
             if key not in self.__json:
                 raise self.IllegalAttributeName(key)
+
+        ##JR: how to test exactness of information
+        #look for keys that are in extras to the schema requirement
+        #for key in self.__json:
+        #    if key not in self.__schema:
+        #        raise self.IllegalAttributeName(key)
 
     def update(self,  json_input):
         self._json_base__json = {}
@@ -108,7 +115,7 @@ class json_base:
 
         if self.__json['approval'] == self.__approvalsteps[next_step]:
             return
-
+        
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action':'approve', 'step':self.__json['approval']})
 

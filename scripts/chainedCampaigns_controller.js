@@ -1,16 +1,28 @@
- 
-function resultsCtrl($scope, $http, $location){
+function resultsCtrl($scope, $http, $location, $window){
     $scope.chainedCampaigns_defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
-        {text:'Chain',select:true, db_name:'campaigns'},
-        {text:'Energy',select:true, db_name:'energy'},
+	{text:'Alias',select:true, db_name:'alias'},
+        {text:'Campaigns',select:true, db_name:'campaigns'},
+        //{text:'Energy',select:true, db_name:'energy'},
     ];
-
+    $scope.user = {name: "", role:""}
+// GET username and role
+    var promise = $http.get("restapi/users/get_roles");
+    promise.then(function(data){
+      $scope.user.name = data.data.username;
+      $scope.user.role = data.data.roles[0];
+    },function(data){
+      console.log("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
+       
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
-    $scope._ = _;
+    $scope._ = _; //enable underscorejs to be accessed from HTML template
+    $scope.selectedAll = false;
+
     if($location.search()["page"] === undefined){
         page = 0;
         $location.search("page", 0);
@@ -19,15 +31,40 @@ function resultsCtrl($scope, $http, $location){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    
+    $scope.select_all_well = function(){
+      $scope.selectedCount = true;
+      var selectedCount = 0
+      _.each($scope.chainedCampaigns_defaults, function(elem){
+        if (elem.select){
+          selectedCount +=1;
+        }
+        elem.select = true;
+      });
+      if (selectedCount == _.size($scope.chainedCampaigns_defaults)){
+      _.each($scope.chainedCampaigns_defaults, function(elem){
+        elem.select = false;
+      });
+      $scope.chainedCampaigns_defaults[0].select = true; //set prepid to be enabled by default
+      $scope.chainedCampaigns_defaults[1].select = true; // set actions to be enabled
+      $scope.chainedCampaigns_defaults[2].select = true; // set actions to be enabled
+      $scope.chainedCampaigns_defaults[3].select = true; // set actions to be enabled
+      $scope.selectedCount = false;
+      }
+    };
+
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
             if (data["results"]){
-                alert('Object was deleted successfully.');
+                $scope.update["success"] = data.results;
+                $scope.update["fail"] = false;
+                $scope.update["status_code"] = status;
+                $window.location.reload();
             }else{
-                alert('Could not save data to database.');
+                $scope.update["success"] = false;
+                $scope.update["fail"] = true;
+                $scope.update["status_code"] = status;
             }
         }).error(function(status){
             alert('Error no.' + status + '. Could not delete object.');
@@ -99,9 +136,46 @@ function resultsCtrl($scope, $http, $location){
       }
   };
 }
+var ModalDemoCtrl = function ($scope, $http, $window) {
+  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
+  $scope.selectedPwg= 'BPH';
+  $scope.open = function (id) {
+    $scope.shouldBeOpen = true;
+    $scope.prepId = id;
+  };
 
+  $scope.close = function () {
+    $scope.selectedPwg= 'BPH';
+    $scope.shouldBeOpen = false;
+  };
+    $scope.save = function () {
+    console.log($scope.selectedPwg, $scope.prepId);
+    $scope.shouldBeOpen = false;
+      $http({method: 'PUT', url:'restapi/chained_requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
+        $window.location.href ="edit2?db_name=chained_requests&query="+data.results;
+      }).error(function(data,status){
+        alert("Error:"+ status);
+        console.log(data, status);
+      });
+    };
+    $scope.createChainedCampaign = function(){
+      $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
+        console.log(data, status);
+        $scope.update["success"] = data.results;
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $window.location.reload();
+//         $window.location.href ="edit2?db_name=campaigns&query="+data.results;
+      }).error(function(data,status){
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+      });
+      $scope.shouldBeOpen = false;
+  };
+};
 // NEW for directive
-var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',

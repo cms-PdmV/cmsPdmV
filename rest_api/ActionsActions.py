@@ -123,7 +123,8 @@ class GenerateChainedRequests(RESTResource):
         self.db = database('actions')
         self.ccdb = database('chained_campaigns')
         self.crdb = database('chained_requests')
-    
+        self.rdb = database('requests')
+
     def GET(self,  *args):
         if not args:
             self.logger.error('No arguments were given')
@@ -151,11 +152,18 @@ class GenerateChainedRequests(RESTResource):
                 flag = False
                 for acc in accs:
                     if cc == acc['_id'].split('-')[1]:
-                        flag = True
+                        flag = acc['_id']
                         break
                 
                 if flag:
-                    self.logger.error('A chained request already exists for chained_campaign %s' % (cc), level='warning')
+                    self.logger.error('A chained request "%s" already exists for chained_campaign %s' % (flag,cc), level='warning')
+                    ## then let the root request know that it is part of a chained request, in case not already done
+                    req = request(json_input=self.rdb.get(id))
+                    inchains=req.get_attribute('member_of_chain')
+                    if not flag in inchains:
+                        inchains.append(flag)
+                        req.set_attribute('member_of_chain',list(set(inchains)))
+                        self.rdb.update(req.json())
                     continue
                 
                 # init chained campaign
@@ -168,6 +176,12 @@ class GenerateChainedRequests(RESTResource):
                     return dumps({'results':False})
                     
                 self.ccdb.update(ccamp.json())
+                # then let the root request know that it is part of a chained request
+                req = request(json_input=self.rdb.get(id))
+                inchains=req.get_attribute('member_of_chain')
+                inchains.append(new_req['prepid'])
+                req.set_attribute('member_of_chain',list(set(inchains)))
+                self.rdb.update(req.json())
         
         return dumps({'results':True})
 
@@ -176,7 +190,8 @@ class GenerateAllChainedRequests(RESTResource):
         self.db = database('actions')
         self.ccdb = database('chained_campaigns')
         self.crdb = database('chained_requests')
-    
+        self.rdb = database('requests')
+
     def GET(self,  *args):
         return self.generate_requests()
         
@@ -206,11 +221,18 @@ class GenerateAllChainedRequests(RESTResource):
                 flag = False
                 for acc in accs:
                     if cc == acc['_id'].split('-')[1]:
-                        flag = True
+                        flag = acc['_id']
                         break
                 
                 if flag:
-                    self.logger.error('A chained request already exists for chained_campaign %s' % (cc), level='warning')
+                    self.logger.error('A chained request "%s" already exists for chained_campaign %s' % (flag,cc), level='warning')
+                    ## then let the root request know that it is part of a chained request, in case not already done
+                    req = request(json_input=self.rdb.get(id))
+                    inchains=req.get_attribute('member_of_chain')
+                    if not flag in inchains:
+                        inchains.append(flag)
+                        req.set_attribute('member_of_chain',list(set(inchains)))
+                        self.rdb.update(req.json())
                     continue
                 
                 # init chained campaign
@@ -223,6 +245,12 @@ class GenerateAllChainedRequests(RESTResource):
                     return dumps({'results':False})
                     
                 self.ccdb.update(ccamp.json())
+                # then let the root request know that it is part of a chained request
+                req = request(json_input=self.rdb.get(id))
+                inchains=req.get_attribute('member_of_chain')
+                inchains.append(new_req['prepid'])
+                req.set_attribute('member_of_chain',list(set(inchains)))
+                self.rdb.update(req.json())
         
         return dumps({'results':True})
             

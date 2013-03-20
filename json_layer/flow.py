@@ -5,6 +5,8 @@ from request import request
 
 class flow(json_base):
     def __init__(self, json_input={}):
+        self._json_base__approvalsteps = ['none','flow', 'submit']
+
         self._json_base__schema = {
             '_id':'',
             'prepid':'', 
@@ -16,6 +18,8 @@ class flow(json_base):
             'approval':self.get_approval_steps()[0] 
             }
         
+
+        ##JR. would that function ? self.__approvalsteps = [ 'flow' , 'inject' ]
         # update self according to json_input
         self.update(json_input)
         self.validate()

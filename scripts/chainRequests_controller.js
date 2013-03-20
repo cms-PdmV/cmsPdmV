@@ -1,16 +1,28 @@
-function resultsCtrl($scope, $http, $location){
-//     http://prep-test.cern.ch/search/?db_name=campaigns&query=%22%22&page=0
+function resultsCtrl($scope, $http, $location, $window){
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
+	      {text:'Approval',select:true, db_name:'approval'},
+	      {text:'Chain',select:true, db_name:'chain'},
     ];
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope.dbName = $location.search()["db_name"];
     $scope.new = {};
-//     $scope.update["value"] = false;
-//     console.log($location);
+    $scope.selectedAll = false;
+    $scope.user = {name: "", role:""}
+    $scope.underscore = _;
+
+// GET username and role
+      var promise = $http.get("restapi/users/get_roles");
+       promise.then(function(data){
+        $scope.user.name = data.data.username;
+        $scope.user.role = data.data.roles[0];
+    }, function(data){
+        alert("Error getting user information. Error: "+data.status);
+    });
+// Endo of user info request
     if($location.search()["page"] === undefined){
         page = 0;
         $location.search("page", 0);
@@ -32,6 +44,39 @@ function resultsCtrl($scope, $http, $location){
             alert('Error no.' + status + '. Could not delete object.');
         });
     };
+
+    $scope.single_step = function(step, prepid, extra=''){
+      $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid+extra}).success(function(data,status){
+         $scope.update["success"] = data["results"];
+         $scope.update["fail"] = false;
+         $scope.update["status_code"] = status;
+	 $window.location.reload();
+      }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["status_code"] = status;
+      });
+    };
+    $scope.select_all_well = function(){
+      $scope.selectedCount = true;
+      var selectedCount = 0
+      _.each($scope.defaults, function(elem){
+        if (elem.select){
+          selectedCount +=1;
+        }
+        elem.select = true;
+      });
+      if (selectedCount == _.size($scope.defaults)){
+      _.each($scope.defaults, function(elem){
+        elem.select = false;
+      });
+      $scope.defaults[0].select = true; //set prepid to be enabled by default
+      $scope.defaults[1].select = true; // set actions to be enabled
+      $scope.defaults[2].select = true; // set actions to be enabled
+      $scope.defaults[3].select = true; // set actions to be enabled
+      $scope.selectedCount = false;
+      }
+    };
     
     $scope.submit_edit = function(){
         console.log("submit function");
@@ -41,6 +86,7 @@ function resultsCtrl($scope, $http, $location){
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
             $scope.update["status_code"] = status;
+            $window.location.reload();
         }).error(function(data,status){
             $scope.update["success"] = false;
             $scope.update["fail"] = true;
@@ -122,9 +168,24 @@ function resultsCtrl($scope, $http, $location){
         $scope.list_page = current_page+1;
       }
   };
-  $scope.submit_create = function(){
-    console.log($scope.new);    
-    alert('to be imporved');
+  $scope.flowChainedRequest = function(prepid){
+    console.log("ChainRequest to flow: "+prepid);
+    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid);
+    promise.then(function(data){
+      console.log(data);
+      switch(data.data.results){
+          case true:
+              alert("Chained Request flow was successful!");
+              break;
+          case false:
+              alert("Could not save data to database.");
+              break;
+          default:
+              alert(data.data.results);
+    };
+    }, function(data){
+        alert("Error. Status: "+data.status);
+    });
   };
 };
 
