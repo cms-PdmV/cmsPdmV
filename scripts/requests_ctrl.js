@@ -10,7 +10,8 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Type',select:true, db_name:'type'},
         {text:'History',select:false, db_name:'history'},
     ];
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "", role:""};
+    $scope.filt = {};
 // GET username and role
       var promise = $http.get("restapi/users/get_roles");
        promise.then(function(data){
@@ -18,6 +19,12 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.user.role = data.data.roles[0];
     }, function(data){
         alert("Error getting user information. Error: "+data.status);
+    });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
     });
 // Endo of user info request
     $scope.update = [];
@@ -32,7 +39,14 @@ function resultsCtrl($scope, $http, $location, $window){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    $scope.dbName = $location.search()["db_name"];
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "requests";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
+    if($location.search()["query"] === undefined){
+      $location.search("query",'""');
+    }
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -52,10 +66,17 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
-         $scope.update["success"] = data["results"];
-         $scope.update["fail"] = false;
-         $scope.update["status_code"] = data["results"];
-         $window.location.reload();
+	      if (data['results']){
+		  $scope.update["success"] = data["results"];
+		  $scope.update["fail"] = false;
+		  $scope.update["status_code"] = data["results"];
+		  $window.location.reload();
+	      }
+	      else{
+		  $scope.update["fail"] = true;
+		  $scope.update["status_code"] = data['message'];
+	      }
+
       }).error(function(status){
          $scope.update["success"] = false;
          $scope.update["fail"] = true;
@@ -78,7 +99,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.submit_edit = function(){
         console.log("submit function");
         console.log($scope.result);
-        $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
+        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
             console.log(data,status);
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
@@ -133,7 +154,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.delete_edit = function(id){
         console.log("delete some from edit");
-        $scope.delete_object($location.search()["db_name"], id);
+        $scope.delete_object($scope.dbName, id);
     };
     $scope.display_approvals = function(data){
         console.log(data);
@@ -168,7 +189,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
    $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
         $scope.result = data.data.results; 
         if ($scope.result.length != 0){
@@ -225,8 +246,12 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.next_approval = function(){
     console.log("to be approved:", $scope.selected_prepids.join());
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
-            alert("Success!");
-	    $window.location.reload();
+	    if (data.results == true){
+		alert("Success!");
+		$window.location.reload();
+	    }else{
+		alert("Error"+data.message)
+		    }
         }).error(function(data,status){
             console.log(status);
             alert("Error while processing request. Code: "+status);
@@ -254,13 +279,43 @@ function resultsCtrl($scope, $http, $location, $window){
     _.each($scope.selected_prepids, function(elem){
       $window.open("injectAndLog?prepid="+elem);
     });
-    // $http({method:'GET', url:'restapi/'+$scope.dbName+'/inject/'+$scope.selected_prepids.join()}).success(function(data,status){
-    //         alert("Success!");
-	   //  $window.location.reload();
-    //     }).error(function(data,status){
-    //         console.log(status);
-    //         alert("Error while processing request. Code: "+status);
-    //     });
+  };
+  $scope.role = function(priority){
+    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+      return true;
+    }else{
+      return false;
+    }
+  };
+  $scope.approvalIcon = function(value){
+      icons = { 'none':'icon-off',
+		'validation' : 'icon-eye-open',
+		'define' : 'icon-check',
+		'approve' : 'icon-share',
+		'submit' : 'icon-ok'
+      }
+      if (icons[value]){
+	  return icons[value] ;
+      }
+      else{
+	  return value ;
+      }
+  };
+  $scope.statusIcon = function(value){
+      icons = {'new' :  'icon-edit',
+	       'validation' : 'icon-eye-open',
+	       'defined' : 'icon-check',
+	       'approved' : 'icon-share',
+	       'submitted' : 'icon-inbox',
+	       'injected' : 'icon-envelope',
+	       'done' : 'icon-ok'
+      }
+      if (icons[value]){
+	  return icons[value] ;
+      }
+      else{
+	  return value ;
+      }
   };
 }
 
@@ -332,6 +387,7 @@ testApp.directive("customHistory", function(){
 //     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
+    '          <th style="padding: 0px;">Step</th>'+
     '        </tr>'+
     '      </thead>'+
     '      <tbody>'+
@@ -345,6 +401,7 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
+    '          <td style="padding: 0px;">{{elem.step}}</td>'+
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
@@ -375,10 +432,10 @@ testApp.directive("sequenceDisplay", function($http){
     '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
     '     <i class="icon-remove"></i>'+
     '    </a>'+
-    '    <a rel="tooltip" title="Reset" ng-click="resetCmsDriver();">'+
+    '    <a rel="tooltip" title="Reset" ng-click="resetCmsDriver();"ng-hide="role(1);">'+
     '     <i class="icon-repeat"></i>'+
     '    </a>'+
-    '    <a rel="tooltip" title="Cast" ng-click="castCmsDriver()">'+
+    '    <a rel="tooltip" title="Cast" ng-click="castCmsDriver()" ng-hide="role(1);">'+
     '     <i class="icon-share"></i>'+
     '    </a>'+
     '    <ul>'+
@@ -407,4 +464,65 @@ testApp.directive("sequenceDisplay", function($http){
       scope.castCmsDriver = function(){	  scope.genericCmsDriver("/1");      };
    }
   }
+});
+testApp.directive("generatorParams", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <ul ng-repeat="param in all_data" ng-switch on="$index < all_data.length-1">'+
+    '    <li ng-switch-when="true">'+
+    '      <a ng-click="viewOldGenParam($index)" ng-hide="display_list.indexOf($index) != -1"><i class="icon-eye-open"></i></a>'+  //elements to be viewed on-click
+    '      <a ng-click="viewOldGenParam($index)" ng-show="display_list.indexOf($index) != -1"><i class="icon-eye-close"></i></a>'+  //elements to be viewed on-click
+    '      <span ng-show="display_list.indexOf($index) != -1">'+ //if index in list of possible views -> then display
+    '        <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
+    '          <dt>{{"cross section"}}</dt>'+
+    '          <dd>{{param["cross_section"]}}</dd>'+
+    '          <dt>{{"filter efficiency"}}</dt>'+
+    '          <dd>{{param["filter_efficiency"]}}</dd>'+
+    '          <dt>{{"filter efficiency error"}}</dt>'+
+    '          <dd>{{param["filter_efficiency_error"]}}</dd>'+
+    '          <dt>{{"match efficiency"}}</dt>'+
+    '          <dd>{{param["match_efficiency"]}}</dd>'+
+    '          <dt>{{"match efficiency error"}}</dt>'+
+    '          <dd>{{param["match_efficiency_error"]}}</dd>'+
+    '          <dt>{{"author username"}}</dt>'+
+    '          <dd>{{param["submission_details"]["author_username"]}}</dd>'+
+    '        </dl>'+
+    '      </span>'+
+    '    </li>'+
+    '    <li ng-switch-when="false">'+ //last parameter to be displayed all the time
+    '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
+    '        <dt>{{"cross section"}}</dt>'+
+    '        <dd>{{param["cross_section"]}}</dd>'+
+    '        <dt>{{"filter efficiency"}}</dt>'+
+    '        <dd>{{param["filter_efficiency"]}}</dd>'+
+    '        <dt>{{"filter efficiency error"}}</dt>'+
+    '        <dd>{{param["filter_efficiency_error"]}}</dd>'+
+    '        <dt>{{"match efficiency"}}</dt>'+
+    '        <dd>{{param["match_efficiency"]}}</dd>'+
+    '        <dt>{{"match efficiency error"}}</dt>'+
+    '        <dd>{{param["match_efficiency_error"]}}</dd>'+
+    '        <dt>{{"author username"}}</dt>'+
+    '        <dd>{{param["submission_details"]["author_username"]}}</dd>'+
+    '      </dl>'+
+    '    </li>'+
+    '  </ul>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.all_data = ctrl.$viewValue;
+        scope.display_list = [_.size(scope.all_data)-1];
+        scope.last_param = scope.all_data[_.size(scope.all_data)-1];
+      };
+      scope.viewOldGenParam = function(index){
+        if (_.contains(scope.display_list,index)){
+          scope.display_list = _.without(scope.display_list,index)
+        }else{
+          scope.display_list.push(index);
+        }
+        scope.display_list = _.uniq(scope.display_list);
+      };
+    }
+  };
 });

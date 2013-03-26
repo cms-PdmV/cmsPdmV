@@ -9,6 +9,7 @@ from json_layer.campaign import campaign
 from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
+from tools.priority import priority
 
 class CreateAction(RESTResource):
     def __init__(self):
@@ -25,8 +26,15 @@ class CreateAction(RESTResource):
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        self.logger.log('Building new action by hand...')
-	
+        self.logger.log('Building new action %s by hand...'%(self.action.get_attribute('_id')))
+        
+        self.action.inspect_priority()
+
+        rd = database('requests')
+        if rd.document_exists(self.action.get_attribute('prepid')):
+            r= request(rd.get(self.action.get_attribute('prepid')))
+            self.action.set_attribute('dataset_name',r.get_attribute('dataset_name'))
+
 	return dumps({'results':self.db.save(self.action.json())})
 
 
@@ -47,6 +55,42 @@ class UpdateAction(RESTResource):
 
         self.logger.log('Updating action "%s" by hand...' % (self.action.get_attribute('_id')))
 
+        self.action.inspect_priority()
+        """
+        ##JR: until put in the proper place
+        chains=self.action.get_attribute('chains')
+        crdb = database('chained_requests')
+        
+        ## solution with db query, which might make things extra slow at some point
+        #acrs = map(lambda x: x['value'],  crdb.query('root_request=='+self.action.get_attribute('_id')))
+        #for acr in acrs:
+        #    cr=chained_request(acr)
+        #    cc=cr.get_attribute('member_of_campaign')
+        #    if cc in chains and chains[cc]['flag'] and chains[cc]['block_number']:
+        #        cr.set_priority(chains[cc]['block_number'])
+        #        self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+        #    else:
+        #        self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+
+        ##alternative, using a new member of action['chains'][<cc>]['chains'] containing the list of chained request created for that action
+        #chains=self.action.get_attribute('chains')
+        for inchain in chains:
+            if chains[inchain]['flag']:
+                if 'chains' in chains[inchain]:
+                    for acr in chains[inchain]['chains']:
+                        cr=chained_request(crdb.get(acr))
+                        cc=cr.get_attribute('member_of_campaign')
+                        if chains[cc]['block_number']:
+                            cr.set_priority(chains[cc]['block_number'])
+                            self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+                        else:
+                            self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+        """
+        rd = database('requests')
+        if rd.document_exists(self.action.get_attribute('prepid')):
+            r= request(rd.get(self.action.get_attribute('prepid')))
+            self.action.set_attribute('dataset_name',r.get_attribute('dataset_name'))
+            
         return dumps({'results':self.db.update(self.action.json())})
 
 
@@ -139,11 +183,13 @@ class GenerateChainedRequests(RESTResource):
         self.logger.log('Generating all selected chained_requests for action %s' % (id)) 
         
         # init action
-        req = action(json_input=self.db.get(id))
-                
-        # get chains
-        chains = req.get_attribute('chains')
+        act = action(json_input=self.db.get(id))
         
+        act.inspect_priority()
+
+        # get chains
+        chains = act.get_attribute('chains')
+        hasChainsChanged=False
         # iterate through chains
         for cc in chains:
             if chains[cc]['flag']:
@@ -154,8 +200,15 @@ class GenerateChainedRequests(RESTResource):
                     if cc == acc['_id'].split('-')[1]:
                         flag = acc['_id']
                         break
-                
+
+                if not 'chains' in chains[cc]:
+                    chains[cc]['chains']=[]
+                    hasChainsChanged=True
                 if flag:
+                    #backward filling: could be removed at some point
+                    if not flag in chains[cc]['chains']:
+                        chains[cc]['chains'].append(flag)
+                        hasChainsChanged=True
                     self.logger.error('A chained request "%s" already exists for chained_campaign %s' % (flag,cc), level='warning')
                     ## then let the root request know that it is part of a chained request, in case not already done
                     req = request(json_input=self.rdb.get(id))
@@ -170,12 +223,18 @@ class GenerateChainedRequests(RESTResource):
                 ccamp = chained_campaign(json_input=self.ccdb.get(cc))
                 # create the chained request
                 new_req = ccamp.generate_request(id)
+                
+                chains[cc]['chains'].append(new_req['prepid'])
+                hasChainsChanged=True
+
                 # save to database
                 if not self.crdb.save(new_req):
                     self.logger.error('Could not save modified action %s to database.' % (id))  
                     return dumps({'results':False})
                     
+                ##I am not sure it is necessary to update the chained_campaign itself: legacy 
                 self.ccdb.update(ccamp.json())
+
                 # then let the root request know that it is part of a chained request
                 req = request(json_input=self.rdb.get(id))
                 inchains=req.get_attribute('member_of_chain')
@@ -183,6 +242,11 @@ class GenerateChainedRequests(RESTResource):
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 self.rdb.update(req.json())
         
+        if hasChainsChanged:
+            #the chains parameter might have changed
+            act.set_attribute('chains',chains)
+            self.db.update(act.json())
+
         return dumps({'results':True})
 
 class GenerateAllChainedRequests(RESTResource):
@@ -208,11 +272,13 @@ class GenerateAllChainedRequests(RESTResource):
             return dumps({'results':'Error: PrepId '+id+' does not exist in the database.'})
         
         # init action
-        req = action(json_input=self.db.get(id))
-                
+        act = action(json_input=self.db.get(id))
+
+        act.inspect_priority() 
         # get chains
-        chains = req.get_attribute('chains')
-        
+        chains = act.get_attribute('chains')
+        hasChainsChanged=False
+
         # iterate through chains
         for cc in chains:
             if chains[cc]['flag']:
@@ -223,8 +289,16 @@ class GenerateAllChainedRequests(RESTResource):
                     if cc == acc['_id'].split('-')[1]:
                         flag = acc['_id']
                         break
-                
+                    
+                if not 'chains' in chains[cc]:  
+                    chains[cc]['chains']=[]      
+                    hasChainsChanged=True     
+
                 if flag:
+                    #backward filling: could be removed at some point
+                    if not flag in chains[cc]['chains']:
+                        chains[cc]['chains'].append(flag)
+                        hasChainsChanged=True
                     self.logger.error('A chained request "%s" already exists for chained_campaign %s' % (flag,cc), level='warning')
                     ## then let the root request know that it is part of a chained request, in case not already done
                     req = request(json_input=self.rdb.get(id))
@@ -239,6 +313,9 @@ class GenerateAllChainedRequests(RESTResource):
                 ccamp = chained_campaign(json_input=self.ccdb.get(cc))
                 # create the chained request
                 new_req = ccamp.generate_request(id)
+
+                chains[cc]['chains'].append(new_req['prepid'])
+                hasChainsChanged=True
                 # save to database
                 if not self.crdb.save(new_req):
                     self.logger.error('Could not save newly created chained_request %s to database' % (id))
@@ -252,6 +329,11 @@ class GenerateAllChainedRequests(RESTResource):
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 self.rdb.update(req.json())
         
+        if hasChainsChanged: 
+            #the chains parameter might have changed 
+            act.set_attribute('chains',chains)        
+            self.db.update(act.json())   
+
         return dumps({'results':True})
             
         

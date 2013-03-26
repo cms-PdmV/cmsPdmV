@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from tools.logger import logger as logfactory
-from json_layer.campaign import campaign
-from WMCore.Database.CMSCouch import Database
+#from json_layer.campaign import campaign
+from WMCore.Database.CMSCouch import Database,CouchError
 import json
-
+import time
 
 class database:
     logger = logfactory("prep2")
@@ -52,13 +52,14 @@ class database:
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
             
-    def __init__(self,  db_name=''):
+    def __init__(self,  db_name='',url='http://preptest.cern.ch:5984/'):
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name 
         try:    
-            self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
-#            self.db = Database(db_name) # for using private DB @localhost:5984
+            self.db = Database(db_name, url=url)
+            #            self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
+            #            self.db = Database(db_name) # for using private DB @localhost:5984
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
             
@@ -72,7 +73,7 @@ class database:
             return False
        
     def get(self,  prepid=''):
-        self.logger.log('Looking for document "%s"...' % (prepid))
+        self.logger.log('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
         try:
             return self.db.document(id=prepid)
         except Exception as ex:
@@ -98,7 +99,7 @@ class database:
         return self.__id_exists(prepid=id)
 
     def document_exists(self, prepid=''):
-	self.logger.log('Checking existence of document "%s"...' % (prepid))
+	self.logger.log('Checking existence of document "%s" in "%s"...' % (prepid,self.db_name))
         return self.__id_exists(prepid) 
     
     def __id_exists(self,  prepid=''):
@@ -107,6 +108,10 @@ class database:
                 return True
             self.logger.error('Document "%s" does not exist.' % (prepid))
             return False  
+        except CouchError as ex:
+            self.logger.error('Document "%s" was not found on CouchError Reason: %s trying a second time with a time out' % (prepid, ex))
+            time.sleep(0.5)
+            return self.__id_exists(prepid)
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return False
@@ -127,7 +132,7 @@ class database:
 
     def update(self,  doc={}):
         if '_id' in doc:
-            self.logger.log('Updating document with id: %s' % (doc['_id']))
+            self.logger.log('Updating document "%s" in "%s"' % (doc['_id'],self.db_name))
         if self.__document_exists(doc):
             return self.save(doc)
         self.logger.error('Failed to update document: %s' % (json.dumps(doc)))         

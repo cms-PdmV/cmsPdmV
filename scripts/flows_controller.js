@@ -15,11 +15,24 @@ function resultsCtrl($scope, $http, $location, $window){
     }, function(data){
         alert("Error getting user information. Error: "+data.status);
     });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
 // Endo of user info request
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
-    $scope.dbName = $location.search()["db_name"];
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "flows";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
+    if($location.search()["query"] === undefined){
+      $location.search("query",'""');
+    }
     $scope.underscore = _;
     $scope.selectedAll = false;
 
@@ -125,7 +138,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
    $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+page)
       promise.then(function(data){
         console.log(data);
         $scope.result = data.data.results; 
@@ -159,6 +172,13 @@ function resultsCtrl($scope, $http, $location, $window){
         $location.search("page", current_page+1);
         $scope.list_page = current_page+1;
       }
+  };
+  $scope.role = function(priority){
+    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+      return true;
+    }else{
+      return false;
+    }
   };
 }
 

@@ -12,6 +12,7 @@ import logging
 from tools.logger import prep2_formatter, logger as logfactory
 from json_layer.request import request
 from json_layer.campaign import campaign
+from json_layer.batch import batch
 from couchdb_layer.prep_database import database
 
 class package_builder:
@@ -68,7 +69,7 @@ class package_builder:
             return 'Error: Package name given was NoneType'
 
 
-    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5, batch=10):
+    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5):
         
         # set time out to 2000 seconds
         cherrypy.response.timeout = 2000
@@ -84,7 +85,44 @@ class package_builder:
         self.closed = False
         self.__logfile = ''
         self.__verbose = 4
-        self.batchNumber = batch
+
+        #JR
+        ## figure out the batch number from the batch DB
+        ### this should all be under some db class somewhere !!!
+        bdb = database('batches')
+        if req_json['flown_with']:
+            self.batchName = req_json['flown_with']+'_'+req_json['member_of_campaign']
+        else:
+            self.batchName = req_json['member_of_campaign']
+
+        #find the last open batch
+        #res = map(lambda x: x['value'], bdb.query('prepid ~= %s-*'%(self.batchName), page_num=-1))
+        #### doing the query by hand    
+        res = map(lambda x: x['value'], bdb.query(query='',page_num=-1))
+        ## filter to have the ones of that family, that are NEW
+        res_new = filter(lambda x: x['prepid'].split('-')[0] == self.batchName and x['status']=='new', res)
+        ##get only the serial number of those
+        res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
+
+        ##find out the next one
+        if not res_new:
+            ##no open batch of this kind
+            res_next = filter(lambda x: x['prepid'].split('-')[0].endswith('_%s'%(req_json['member_of_campaign'])) , res) 
+            if not res_next:
+                ## not even a document with *_<campaign>-* existing: ---> creating a new family
+                self.batchNumber=1
+            else:
+                ## pick up the last+1 serial number of *_<campaign>-*  family
+                self.batchNumber=max(map(lambda x: int(x['prepid'].split('-')[-1]), res_next)) + 1
+        else:
+            ## pick up the last serial number of that family
+            self.batchNumber=max(res_new)
+
+        self.batchName+='-%05d'%(self.batchNumber)
+        if not bdb.document_exists(self.batchName):
+            newBatch = batch({'_id':self.batchName,'prepid':self.batchName})
+            newBatch.update_history({'action':'created'})
+            bdb.save(newBatch.json())
 
         # list of different production steps (represented as a different element in the request's "sequences" property)
         self.__cmsDrivers = []
@@ -107,6 +145,7 @@ class package_builder:
 
         # There is a not-Initialized exception that is not handled
         self.directory = directory
+        self.careOfExistingDirectory = True
         self.__check_directory() # check directory sanity
 
         # init logger
@@ -122,13 +161,14 @@ class package_builder:
         # the matching and filter efficiencies
         if self.request.get_attribute('generator_parameters'):
             match = float(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
-            filter = float(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            if match > -1 and filter > -1:
-                self.events = int(math.fabs(events / (match*filter)))
+            filter_eff = float(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
+            if match > -1 and filter_eff > -1:
+                self.events = int(math.fabs(events / (match*filter_eff)))
             else:
                 self.events = int(math.fabs(events))
         else:
-            self.events = math.fabs(int(events))
+            #self.events = math.fabs(int(events))
+            self.events = int(math.fabs(events))
 
         # avoid large testing samples
         if self.events > 1000:
@@ -149,12 +189,13 @@ class package_builder:
         # check if exists (and force)
         if os.path.exists(self.directory):
             self.logger.error('Directory ' + self.directory + ' already exists.')
-            return
+            if self.careOfExistingDirectory:
+                return
         else:
             self.logger.log('Creating directory :'+self.directory)
 
-        # recursively create any needed parents and the dir itself
-        os.makedirs(self.directory)
+            # recursively create any needed parents and the dir itself
+            os.makedirs(self.directory)
 
 
     def __build_logger(self):
@@ -247,7 +288,7 @@ class package_builder:
         except Exception as ex:
             self.logger.inject('Could not create injection file "%s". Reason: %s' % (self.__injectAndApprove, ex), level='error', handler=self.hname)
 
-        self.logger.inject('injectAndApprove.sh script created', level='debug', handler=self.hname)
+        self.logger.inject('injectAndApprove.sh script recreated for further appending', level='debug', handler=self.hname)
 
     # takes a path to a configuration file and a new line
     # appends the line to the end of the configuration
@@ -289,25 +330,28 @@ class package_builder:
             if 'conditions' not in cmsDriver:
                 raise self.NotInitializedException('Conditions are not defined.')
 
-            if not self.request.get_attribute('cvs_tag'):
-                raise self.NotInitializedException('No CVS Production Tag is defined.')
+            if not self.request.get_attribute('cvs_tag') and not self.request.get_attribute('fragment') and not self.request.get_attribute('name_of_fragment'):
+                raise self.NotInitializedException('No CVS Production Tag is defined. No fragement name, No fragment text')
 
             #if not self.request.get_attribute('input_filename'):
             #    raise self.NotInitializedException('Input Dataset name is not defined.')
 
         # check if LHE
-        elif  self.request.get_attribute('type') == 'LHE':
+        elif  self.request.get_attribute('type') in ['LHE','LHEStepZero']:
             self.wmagent_type = 'LHEStepZero' #'MonteCarloFromGEN'
 
-            if 'pileup' not in cmsDriver:
-                raise self.NotInitializedException('PileUp Scenario is not defined.')
+            #if 'pileup' not in cmsDriver:
+            #    raise self.NotInitializedException('PileUp Scenario is not defined.')
 
-            if 'NoPileUp' not in cmsDriver:
-                if not self.request.get_attribute('pileup_dataset_name'):
-                    raise self.NotInitializedException('A pileup dataset name has not been provided.')
+            #if 'NoPileUp' not in cmsDriver:
+            #    if not self.request.get_attribute('pileup_dataset_name'):
+            #        raise self.NotInitializedException('A pileup dataset name has not been provided.')
 
-            if not self.request.get_attribute('cvs_tag'):
-                raise self.NotInitializedException('No CVS Production Tag is defined.')
+            #if not self.request.get_attribute('cvs_tag') :
+            #    raise self.NotInitializedException('No CVS Production Tag is defined.')
+            if not (self.request.get_attribute('cvs_tag') and self.request.get_attribute('name_of_fragment')) and not self.request.get_attribute('fragment') and self.request.get_attribute('mcdb_id')<=0:
+                raise self.NotInitializedException('No CVS Production Tag is defined. No fragement name, No fragment text')
+
 
         # check if MCReproc
         elif self.request.get_attribute('type') == 'MCReproc':
@@ -340,10 +384,27 @@ class package_builder:
         infile += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
         infile += "export CVS_PASSFILE=`pwd`/cvspass\n"
 
-
+        #if self.request.get_attribute('mcdb_id'):
+        #    infile += "cmsLHEtoEOSManager.py -l %d \n "%(self.request.get_attribute('mcdb_id'))
         # checkout from cvs (if needed)
-        if self.request.get_attribute('nameorfragment') != '' and self.request.get_attribute('cvs_tag')!='':
-            infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' ' + self.request.get_attribute('nameorfragment') + '\n'
+        if self.request.get_attribute('name_of_fragment') != '' and self.request.get_attribute('cvs_tag')!='':
+            infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' ' + self.request.get_attribute('name_of_fragment') + '\n'
+        
+
+        ##copy the fragment directly from the DB into a file
+        if self.request.get_attribute('fragment'):
+            ## the fragment is directly put in the request.
+            
+            fragmentFile=self.directory + '/'+(self.request.get_fragment().split('/')[-1])
+            f = open(fragmentFile,'w')
+            f.write(self.request.get_attribute('fragment'))
+            f.close()
+            ##somehow mkdirhier is unknown
+            #infile += 'mkdirhier Configuration/GenProduction/python/ \n'
+            infile += 'mkdir -p Configuration \n'
+            infile += 'mkdir -p Configuration/GenProduction \n'
+            infile += 'mkdir -p Configuration/GenProduction/python \n'
+            infile += 'mv %s Configuration/GenProduction/python/ \n'%(fragmentFile)
 
         # previous counter
         previous = 0
@@ -358,7 +419,7 @@ class package_builder:
             except self.NotInitializedException as ex:
                 return False
 
-            # check if customization is needed
+            # check if customization is needed to check it out from cvs
             if '--customise' in cmsd:
                 cust = cmsd.split('--customise=')[1].split(' ')[0]
                 toks = cust.split('.')
@@ -429,7 +490,8 @@ class package_builder:
         self.logger.inject('Created "%s" script.'%(self.__setupFile), level='debug', handler=self.hname)
 
         # populate injectAndApprove.sh script
-        self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())
+        ## JR try moving downstream
+        #self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())
 
         return 'sh '+self.directory + os.path.pardir + '/'+self.__setupFile
 
@@ -448,22 +510,34 @@ class package_builder:
         #    self.scram_arch='slc5_amd64_gcc462'
 
         # use the central installation of wmconrol
-	command = 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n' 
+        command = ''
+        #command += '#!/usr/bin/env bash\n' 
+	command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n' 
+
+
+        command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
+        command += ' --arch %s' %(self.scram_arch)
+        command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
+        command += ' --version %s' %(self.request.get_attribute('version'))
+        if self.request.get_attribute('priority') >= 1:
+            command += ' --priority %s' %(self.request.get_attribute("priority"))
+        command += ' --time-event %s' %(self.request.get_attribute('time_event'))
+        command += ' --size-event %s' %(self.request.get_attribute('size_event'))
+        command += ' --request-type %s' %(self.wmagent_type)
+        command += ' --step1-cfg %s' %('config_0_1_cfg.py')
+        command += ' --request-id %s' %(self.request.get_attribute('prepid'))
+
+        ##JR in order to inject into the testbed instead of the production machine
+        command += ' --wmtest '
+        command += ' --user %s' % (self.reqmgr_user)
+        command += ' --group %s' % (self.reqmgr_group)
+        command += ' --batch %s' % (self.batchNumber)
+
+        if self.request.get_attribute('process_string'):
+            command += ' --process-string '+self.request.get_attribute('process_string')
 
         # if MonteCarlo analysis
         if self.wmagent_type == 'MonteCarlo':
-            command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(self.scram_arch)
-            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
-            command += ' --version %s' %("0") # dummy
-
-            # set priority (only if it is defined)
-            if self.request.get_attribute('priority') >= 1:
-                command += ' --priority %s' %(self.request.get_attribute("priority"))
-
-            command += ' --time-event %s' %(self.request.get_attribute('time_event'))
-            command += ' --size-event %s' %(self.request.get_attribute('size_event'))
-
             # calculate filter efficiency
             feff = self.request.get_attribute('generator_parameters')[-1]['filter_efficiency']
             meff = self.request.get_attribute('generator_parameters')[-1]['match_efficiency']
@@ -471,28 +545,10 @@ class package_builder:
             # calculate eff dev
             command += ' --filter-eff %s' %( float(feff) * float(meff) )
 
-            #command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
-            command += ' --request-type %s' %(self.wmagent_type)
             command += ' --number-events %s' %(self.request.get_attribute('total_events'))
-            command += ' --step1-cfg %s' %('config_0_1_cfg.py')
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
-            command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            #command += ' --cfg_db_file configs.txt'
 
         elif self.wmagent_type == 'MonteCarloFromGEN':
-            command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(self.scram_arch)
-            command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
-            command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
-
-            # set priority (only if it is defined)
-            if self.request.get_attribute('priority') >= 1:
-                command += ' --priority %s' %(self.request.get_attribute("priority"))
-
-            command += ' --time-event %s' %(self.request.get_attribute('time_event'))
-            command += ' --size-event %s' %(self.request.get_attribute('size_event'))
-
             # calculate filter efficienc
             feff = self.request.get_attribute('generator_parameters')[-1]['filter_efficiency']
             meff = self.request.get_attribute('generator_parameters')[-1]['match_efficiency']
@@ -500,97 +556,81 @@ class package_builder:
             # calculate eff dev
             command += ' --filter-eff %s' %( float(feff) * float(meff) )
 
-            command += ' --request-type %s' %(self.wmagent_type)
-            command += ' --step1-cfg %s' %('config_0_1_cfg.py')
-            command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
-            command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            #command += ' --cfg_db_file configs.txt'
-            if self.request.get_attribute('input_block') != None:
-                command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
+            command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
+
+            if self.request.get_attribute('block_white_list'):
+                command += ' --blocks "'+','.join(self.request.get_attribute('block_white_list'))+'"'
+            if self.request.get_attribute('block_black_list'):
+                command += ' --blocks_black "'+','.join(self.request.get_attribute('block_black_list'))+'"'
 
 
         elif self.wmagent_type == 'LHEStepZero':
-            command += 'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(self.scram_arch)
-            command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
-            if self.request.get_attribute("priority") >= 1:
-                command += ' --priority %s' %(self.request.get_attribute("priority"))
-            command += ' --time-event %s' %(self.request.get_attribute('time_event'))
-            command += ' --size-event %s' %(self.request.get_attribute('size_event'))
+
             command += ' --number-events %s' %(self.request.get_attribute('total_events'))
-            command += ' --request-type %s' %(self.wmagent_type)
-            command += ' --step1-cfg %s' %('config_0_1_cfg.py')
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
-            command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            #command += ' --cfg_db_file configs.txt'
-            if int(self.request.get_attribute('mcdb_id')) == 0:
-                configfile = open(self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('nameorfragment'), 'r')
+
+            if self.request.get_attribute('mcdb_id') == 0:
+                ### this file does not exists at this point ...
+                configfile = open(self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('name_of_fragment'), 'r')
                 for line in configfile:
                     if 'nEvents' in line:
                         line.rstrip('\n')
                         numbers = re.findall(r'[0-9]+', line)
                         self.numberOfEventsPerJob = numbers[len(numbers)-1]
                         if not self.numberOfEventsPerJob:
-                            raise ValueError('Number of events per job could not be retrieved from: %s' % (self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('nameorfragment')))
+                            raise ValueError('Number of events per job could not be retrieved from: %s' % (self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('name_of_fragment')))
                 print self.numberOfEventsPerJob
                 command += ' --events-per-job %s' % (self.numberOfEventsPerJob)
 
 
         # Else: ReDigi step
         elif self.wmagent_type == 'ReDigi':
-            command +=  'wmcontrol.py --release %s' %(self.request.get_attribute('cmssw_release'))
-            command += ' --arch %s' %(self.scram_arch)
+
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
-            command += ' --step1-cfg %s' %('config_0_1_cfg.py')
-
-            command += ' --version %s' %("0") # dummy
-            command += ' --conditions %s' %(self.request.get_attribute('sequences')[0]['conditions'])
-            # set priority (only if it is defined)
-            if self.request.get_attribute('priority') >= 1:
-                command += ' --priority %s' %(self.request.get_attribute("priority"))
-
-            command += ' --request-type %s' %(self.wmagent_type)
-            command += ' --request-id %s' %(self.request.get_attribute('prepid'))
-            #command += ' --cfg_db_file configs.txt'
+            ## if PU dataset name is defined : add it
+            if self.request.get_attribute('pileup_dataset_name'):
+                command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
 
             # temp ev cont holder
             eventcontentlist = []
 
             for cmsDriver in self.__cmsDrivers:
-                if 'pileup' in cmsDriver:
-                    if 'NoPileUp' in cmsDriver:
-                        continue
-                    else:
-                        command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
+                ## check for pileup dataset ??? why ?
+                #if 'pileup' in cmsDriver:
+                #    if 'NoPileUp' in cmsDriver:
+                #        continue
+                #    else:
+                #        command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
 
-                # get the first event content of every defined sequence and use it as output
-                eventcontent = cmsDriver.split('--eventcontent')[1].split(' ')[0]
+                # get the first event content of every defined sequence and use it as output to the next step...
+                eventcontent = cmsDriver.split('--eventcontent')[1].split()[0] + 'output'
                 if ',' in eventcontent:
                     eventcontent = eventcontent.split(',')[0] + 'output'
 
                 eventcontentlist.append(eventcontent)
+                
+            keeps = self.request.get_attribute('keep_output')
+            if not keeps[-1]:
+                raise ValueError('Is not set to save the output of last task')
 
-
-            for i in range(len(eventcontentlist)):
-                if len(eventcontentlist) > 1 and i < len(eventcontentlist)-1:
+            for (i,content) in enumerate(eventcontentlist):
+                if keeps[i]:
                     command += ' --keep-step'+str(i+1)+' True'
+
+                #if len(eventcontentlist) > 1 and i < len(eventcontentlist)-1:
+                #    command += ' --keep-step'+str(i+1)+' True'
                 if i > 0:
                     command += ' --step'+str(i+1)+'-cfg config_0_'+str(i+1)+'_cfg.py'
+                # set the output of 
                 if i < len(eventcontentlist)-1:
-                    command += ' --step'+str(i+1)+'-output '+eventcontentlist[i]
+                    command += ' --step'+str(i+1)+'-output '+content
 
-            if self.request.get_attribute('process_string') != None:
-                command += ' --process-string '+self.request.get_attribute('process_string')
-            if self.request.get_attribute('input_block') != None:
-                command += ' --blocks "'+self.request.get_attribute('input_block')+'"'
 
-        ##JR in order to inject into the testbed instead of the production machine
-        command += ' --wmtest '
-        
-        command += ' --user %s' % (self.reqmgr_user)
-        command += ' --group %s' % (self.reqmgr_group)
-        command += ' --batch %s' % (self.batchNumber)
+            if self.request.get_attribute('block_white_list'):
+                command += ' --blocks "'+','.join(self.request.get_attribute('block_white_list'))+'"'
+            if self.request.get_attribute('block_black_list'):
+                command += ' --blocks_black "'+','.join(self.request.get_attribute('block_black_list'))+'"'
+
         command += '\n'
 
         return command
@@ -603,8 +643,9 @@ class package_builder:
         summarystring += '\t' + str(self.request.get_attribute('total_events'))
         summarystring += '\t' + str(self.request.get_attribute('time_event'))
         summarystring += '\t' + str(self.request.get_attribute('size_event'))
-        summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-        summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
+        if self.request.get_attribute('generator_parameters'):
+            summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
+            summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
         summarystring += '\t' + str(self.request.get_attribute('dataset_name'))
         summarystring += '\t' + str(self.__cmsDrivers[0].split('--conditions')[1].split(' ')[0])
         for pyc in self.__pyconfigs:
@@ -614,7 +655,7 @@ class package_builder:
             summarystring += '\t' + self.request.get_attribute('input_filename')
 
         if self.request.get_attribute('type') == 'LHE':
-            summarystring += '\t' + self.request.get_attribute('nameorfragment').split('/')[-1] + '\t' + self.request.get_attribute('mcdb_id')
+            summarystring += '\t' + self.request.get_attribute('name_of_fragment').split('/')[-1] + '\t' + str(self.request.get_attribute('mcdb_id'))
 
         return summarystring + '\n'
 
@@ -650,6 +691,8 @@ class package_builder:
         #output = p.stdout.read()
         #output += p.stderr.read()
 
+        self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())    
+
         self.logger.inject(output, level='debug', handler=self.hname)
 
         # when you fail, you die
@@ -675,7 +718,8 @@ class package_builder:
         self.__tarobj.close()
 
         # delete directory
-        #self.__delete_directory()
+        if self.careOfExistingDirectory:
+            self.__delete_directory()
 
     # clean work directory for tarification
     def __clean_directory(self):
@@ -792,6 +836,37 @@ class package_builder:
             if injector.inject():
                 self.logger.inject('Injection successful !', handler=self.hname)
                 flag = True
+                if injector.requestNames:
+                    
+                    added=[]
+                    for request in injector.requestNames:
+                        added.append({'name':request,'content':{'pdmv_prep_id':self.request.get_attribute('prepid') }})
+                    ## put it in the request object
+                    requests=self.request.get_attribute('reqmgr_name')
+                    requests.extend(added)
+                    self.request.set_attribute('reqmgr_name',requests)
+                    #BTW: the status is set only if there is actually a request in the request manager !
+                    self.request.set_status()
+                    
+                    ##put it also in the batch DB
+                    bdb = database('batches')
+                    b=batch(bdb.get(self.batchName))
+                    b.add_requests(added)
+                    note=[]
+
+                    if self.request.get_attribute('extension'):
+                        note.append(' is an extension')
+                    if len(self.request.get_attribute('reqmgr_name'))>1: #>1 because you just added that submission request a few lines above
+                        note.append(' is a resubmission')
+                    if len(note):
+                        b.add_notes('\n%s: %s'%(self.request.get_attribute('prepid'),
+                                              ','.join(note)))
+                    b.update_history({'action':'updated'})
+
+                    ##save all only at the end with all suceeding to not have half/half
+                    rdb = database('requests')
+                    rdb.update(self.request.json())
+                    bdb.update(b.json())
             else:
                 self.logger.inject('Injection failed :( ', level='warning', handler=self.hname)
                 flag = False

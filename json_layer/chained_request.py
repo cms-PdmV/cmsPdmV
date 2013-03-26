@@ -3,6 +3,7 @@ from request import request
 from flow import flow
 from couchdb_layer.prep_database import database
 import json
+from tools.priority import priority
 
 class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):
@@ -61,16 +62,16 @@ class chained_request(json_base):
             'step':0, 
             'analysis_id':[],
             'pwg':'',
-            'generators':'', #prune
-            'priority':-1, #prune
+            #'generators':'', #prune
+            #'priority':-1, #prune
             'prepid':'',
-            'alias':'', #prune
+            #'alias':'', #prune
             'dataset_name':'',
             'total_events':-1,
             'history':[],
             'member_of_campaign':'',
-            'generator_parameters':[], #prune
-            'request_parameters':{} # json with user prefs #prune
+            #'generator_parameters':[], #prune
+            #'request_parameters':{} # json with user prefs #prune
             }
         # update self according to json_input
         self.update(json_input)
@@ -223,6 +224,14 @@ class chained_request(json_base):
         # add the previous requests output_dataset name as input for the new
         if input_dataset: 
             req['input_filename'] = input_dataset
+        """
+        else:
+            ## JR we should find a way of getting that info from the previous request
+            ### the naming is really awkward here ...
+            lastFound=None
+            for previous_wma in req['requests']:
+                if 'pdmv_dataset' in previous_wma
+        """        
             
         # add a block black and white list
         if block_black_list:
@@ -238,6 +247,9 @@ class chained_request(json_base):
         # register it to the chain
         new_req = self.add_request(req)
         
+        #set the flow_with parameter
+        new_req['flown_with'] = flowname
+
         # get the sequences
 	new_req['sequences'] = []
 
@@ -317,21 +329,27 @@ class chained_request(json_base):
         
         chain_specific = ['threshold',  'block_number',  'staged']
         
-        if len(self.get_attribute('request_parameters')) > 0:
-            changes = self.get_attribute('request_parameters')
-            for key in changes:
-                if key not in chain_specific:
-                    req.set_attribute(key, changes[key])
+        ## JR remove from schema
+        ##this was removed as part of cleaning things up
+        #if len(self.get_attribute('request_parameters')) > 0:
+        #    changes = self.get_attribute('request_parameters')
+        #    for key in changes:
+        #        if key not in chain_specific:
+        #            req.set_attribute(key, changes[key])
 
         # get the chain and inherit
-        req.set_attribute("generators", self.get_attribute("generators"))
+        #req.set_attribute("generators", self.get_attribute("generators"))
         req.set_attribute("total_events", self.get_attribute("total_events"))
         req.set_attribute("dataset_name", self.get_attribute("dataset_name"))
         req.set_attribute("pwg", self.get_attribute("pwg"))
-        req.set_attribute("priority", self.get_attribute("priority") )
+        #JR removed from schema req.set_attribute("priority", self.get_attribute("priority") )
         #JR clear the fragment in flowing: always
-        req.set_attribute('nameorfragment','')
+        req.set_attribute('name_of_fragment','')
         req.set_attribute('cvs_tag','')
+        req.set_attribute('fragment','')
+        req.set_attribute('history',[])
+        req.set_attribute('reqmgr_name',[])
+
         #JR
         #clean the mcdbid in the flown request
         #if req.get_attribute('mcdbid')>=0:
@@ -344,7 +362,8 @@ class chained_request(json_base):
             chain = []
         flag = False
         for pid in chain:
-            if req.get_attribute('member_of_campaign') in pid:
+            #if req.get_attribute('member_of_campaign') in pid:
+            if pid.split('-')[1] == req.get_attribute('member_of_campaign'):
                 flag = True
                 break
                 
@@ -353,7 +372,11 @@ class chained_request(json_base):
             self.set_attribute("chain", chain)
         else:
             raise self.CampaignAlreadyInChainException(req.get_attribute('member_of_campaign'))
-        
+
+        ## reset the status and approval chain
+        req.set_status(0)
+        req.approve(0)
+
         req.set_attribute('_id', prepid)
         req.set_attribute('prepid',  prepid)
         ## JR: add what the request is member of N.B: that breaks down if a digi-reco request has to be member of two chains (R1,R4)
@@ -367,3 +390,11 @@ class chained_request(json_base):
         #req.approve(0)
         return req.json()
 
+    def set_priority(self,level):
+        rdb = database('requests')
+        for r in self.get_attribute('chain'):
+            req=request(rdb.get(r))
+            #set to the maximum priority
+            req.set_attribute('priority', max(req.get_attribute('priority'),  priority().priority(level)))
+            rdb.update(req.json())
+        

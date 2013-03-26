@@ -1,0 +1,48 @@
+<div class="navbar navbar-static-top" style="margin-bottom: 20px;"><!--  place for NAV-BAR-->
+  <div class="navbar-inner">
+    <ul class="nav">
+      <li ng-class='{ "active": dbName=="campaigns"}'>
+        <a href='campaigns2' target="_self">Campaigns</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="requests"}'>
+        <a href='requests2' target="_self">Requests</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="flows"}'>
+        <a href='flows2' target="_self">Flows</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="actions"}'>
+        <a href='actions2' target="_self">Actions</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="chained_campaigns"}'>
+        <a href='chained_campaigns2' target="_self">Chained campaigns</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="chained_requests"}'>
+        <a href='chained_requests2' target="_self">Chained requests</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="batches"}'>
+        <a href='batches' target="_self">Batches</a>
+      </li>
+      <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="users"}'>
+        <a href='users' target="_self">Users</a>
+      </li>
+      <li class="divider-vertical" ng-hide="role(4);"></li>
+      <li ng-hide="role(4);">
+        <a href='admin/_utils/' target="_self">Admin</a>
+      </li>
+      <li class="divider-vertical" ></li>
+      <li> <a href='https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM' target="_blank">Help<a/></li>
+    </ul>
+    <ul class="nav pull-right">
+      <li>
+        <a>{{user.name}} : {{user.role}}</a>
+      </li>
+    </ul>
+  </div>
+</div> <!--END of navbar-->

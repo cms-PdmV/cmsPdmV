@@ -1,18 +1,18 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
-        <title>Chained requests page McM</title>  
+        <title>Batches page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
-        <script src="scripts/chainRequests_controller.js"></script>
+        <script src="scripts/batches_controller.js"></script>
   </head>
   <body ng-controller="resultsCtrl">
-    <div ng-include="'HTML/navbar_template.html'"></div>
-    <div class="container" >
+    <div ng-include src="'HTML/navbar_template.html'"></div>
+    <div class="container">
       <div class="span12" style="overflow: auto">
         <div class="well"> <!--well for user to select table columns-->
           <span style="float: left;">
@@ -23,7 +23,7 @@
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
             </span>
           </span>        
-          <span ng-repeat="value in defaults" ng-show="show_well">
+          <span ng-repeat="value in batches_defaults" ng-show="show_well">
             <label class="checkbox inline">
               <input type="checkbox" ng-model="value.select"> {{value.text}}
             </label>
@@ -34,64 +34,66 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select">
-            {{column.text}}
+          <th ng-repeat="column in batches_defaults" ng-show="column.select" style="white-space: nowrap;" ng-switch on="column.text">
+	    <div ng-switch-when="Actions"  ng-hide="role(1);">
+              {{column.text}}
+	    </div>
+	    <div ng-switch-default>
+              {{column.text}}
+	    </div>
           </th>
         </tr>
       </thead>
       <tbody>
         <tr ng-repeat="data in result">
-          <td ng-repeat="value in defaults" ng-show="value.select" style="min-width:100px;">
+          <td ng-repeat="value in batches_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions">
-                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
-                  <i class="icon-minus-sign"></i>
-                </a>
-                <a ng-href="edit2?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
-                  <i class="icon-wrench"></i>
-                </a>
-		<a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
-		  <i class="icon-repeat"></i>
-		</a>
-                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(3);">
-                  <i class="icon-chevron-right"></i>
-                </a>
-                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_blank" ng-hide="role(3);">
-                  <i class="icon-forward"></i>
-                </a>
+              <div ng-switch-when="Actions" ng-hide="role(1);">
+                <div ng-controller="ModalDemoCtrl">
+                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to the world" ng-hide="role(3);">
+                    <i class="icon-envelope"></i>
+                  </a>
+                  <a ng-click='delete_object("batches", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(3);">
+                    <i class="icon-minus-sign"></i>
+                  </a>
+                  <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
+                    <div class="modal-header">
+                      <h4>Announce batch: {{data.prepid}}</h4>
+                    </div>  <!--end of modal header-->
+                  <div class="modal-body">
+                    Aditional notes:
+                    <textarea ng-model="mailContent"></textarea>
+                  </div> <!--end of modal body-->
+                  <div class="modal-footer">
+                    <button class="btn btn-success" ng-click="save()">Announce</button>
+                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                  </div> <!--end of modal footer-->
+                  </div>
+                </div> <!--end of modalControler DIV-->
+        <!--     END OF MODAL                 -->  
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
-              <div ng-switch-when="Chain">
-                 <span ng-repeat="chain in data[value.db_name]">
-                <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{chain}}"&page=0' target="_blank">{{chain}}</a>
-                  <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
-                    <a ng-switch-when="false">
-                      <i  class="icon-arrow-right"></i>
-                    </a>
-                    <a ng-switch-default><!-- on n-th(last) element display no arrow -->
-                      <i></i>
-                    </a>
-                  </span>
-                </span>
-              </div>
-              <div ng-switch-when="PrepId">
-                <a ng-href='chained_requests2?db_name=chained_requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' target="_self">{{data[value.db_name]}}</a>
+              <div ng-switch-when="Requests">
+              	<ul>
+              	  <li ng-repeat="elem in data[value.db_name]">
+		    <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details" target="_blank">{{elem.name}}</a>
+		  </li>
+              	</ul>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
           </td>
         </tr>
       </tbody>
-<!--        <pre>{{defaults}}</pre> -->
     </table>
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
       </div>
       <div class="span2" style="margin-top:20px;">
         <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font>
+          Success. Status code:<font color="green">{{update['status_code']}}</font>.Results: {{update['results']}}
         </div>
         <div ng-show="update['fail']">
           Fail. Status code:<font color="red">{{update['status_code']}}</font>
@@ -111,4 +113,4 @@
       </div>
     </div>
   </body>
-</html> 
+</html>

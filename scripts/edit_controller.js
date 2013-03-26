@@ -1,10 +1,16 @@
-function resultsCtrl($scope, $http, $location){
-    $scope.user = {name: "", role:""}
+function resultsCtrl($scope, $http, $location, $window){
+    $scope.user = {name: "quest", role:"user"}
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
       $scope.user.name = data.data.username;
       $scope.user.role = data.data.roles[0];
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
     },function(data){
       alert("Error getting user information. Error: "+data.status);
     });
@@ -14,94 +20,110 @@ function resultsCtrl($scope, $http, $location){
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
-    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Reqmgr name", 
-                                "Pileup dataset name", "Pwg", "Completed events", "Status", 
-                                "Type", "Priority", "Completion date"]; //user non-editable columns
     $scope.dbName = $location.search()["db_name"];
-    if($location.search()["page"] === undefined){
-        page = 0;
-        $location.search("page", 0);
-        $scope.list_page = 0;
+    if ($scope.dbName == "campaigns"){
+      $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status"];
+    }else if($scope.dbName == "requests"){
+      // get the editable -> set false in list
+      $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Type", "Priority", "Completion date"]; //user non-editable columns
+      var promise = $http.get("restapi/requests/editable/"+$location.search()["query"])
+      promise.then(function(data){
+        $scope.parseEditableObject(data.data.results);
+      });
     }else{
-        page = $location.search()["page"];
-        $scope.list_page = parseInt(page);
+      $scope.not_editable_list = [];
+    }
+
+    if($location.search()["page"] === undefined){
+      page = 0;
+      $location.search("page", 0);
+      $scope.list_page = 0;
+    }else{
+      page = $location.search()["page"];
+      $scope.list_page = parseInt(page);
     }
 //          var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
     var promise = $http.get("getDefaultSequences");
     promise.then(function(data){
-        console.log(data.data);
-        $scope.default_sequences = data.data;
+      $scope.default_sequences = data.data;
 //         $scope.default_sequences = $scope.default_sequences.split(",");
     }, function(){ alert("Error"); });
-       console.log($scope.default_sequences);
     
-    $scope.default_sequences = 
+    $scope.parseEditableObject = function(editable){
+      _.each(editable, function(elem,key){
+        if (elem == false){
+          if (key[0] != "_"){ //if its not mandatory couchDB values eg. _id,_rev
+            column_name = key[0].toUpperCase()+key.substring(1).replace(/\_/g,' ')
+            if($scope.not_editable_list.indexOf(column_name) ==-1){
+              $scope.not_editable_list.push(column_name);
+            }
+          }
+        }
+      });
+    };
     
     $scope.delete_object = function(db, value){
-//         $http({method: 'GET', url: '/someUrl'}).
-        $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-            console.log(data,status);
-            if (data["results"]){
-                alert('Object was deleted successfully.');
-            }else{
-                alert('Could not save data to database.');
-            }
-        }).error(function(status){
-            alert('Error no.' + status + '. Could not delete object.');
-        });
+      $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
+        if (data["results"]){
+          alert('Object was deleted successfully.');
+        }else{
+          alert('Could not save data to database.');
+        }
+      }).error(function(status){
+        alert('Error no.' + status + '. Could not delete object.');
+      });
     };
     
     $scope.submit_edit = function(){
-        console.log("submit function");
-        console.log($scope.result);
-        $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
-            console.log(data,status);
-            $scope.update["success"] = data["results"];
-            $scope.update["fail"] = false;
-            $scope.update["status_code"] = status;
-        }).error(function(data,status){
-            $scope.update["success"] = false;
-            $scope.update["fail"] = true;
-            $scope.update["status_code"] = status;
-        });
+      $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
+        $scope.update["success"] = data["results"];
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $window.location.reload();
+      }).error(function(data,status){
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
+      });
     };
     $scope.delete_edit = function(id){
-        console.log("delete some from edit");
-        $scope.delete_object($location.search()["db_name"], id);
+      $scope.delete_object($location.search()["db_name"], id);
     };
     $scope.display_approvals = function(data){
-        console.log(data);
     };
-       $scope.sort = {
-        column: 'prepid',
-        descending: false
+    $scope.sort = {
+      column: 'prepid',
+      descending: false
     };
-
+    $scope.role = function(priority){
+	if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+	    return true;
+	}else{
+	    return false;
+	}
+    };
     $scope.selectedCls = function(column) {
-        return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
+      return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
     };
     
     $scope.changeSorting = function(column) {
-        var sort = $scope.sort;
-        if (sort.column == column) {
-            sort.descending = !sort.descending;
-        } else {
-            sort.column = column;
-            sort.descending = false;
-        }
+      var sort = $scope.sort;
+      if (sort.column == column){
+        sort.descending = !sort.descending;
+      }else{
+        sort.column = column;
+        sort.descending = false;
+      }
     };
   $scope.showing_well = function(){
-        if ($scope.show_well){
-          $scope.show_well = false;
-        }
-        else{
-            console.log("true");
-            $scope.show_well = true;
-        }
-    };    
+    if ($scope.show_well){
+      $scope.show_well = false;
+    }else{
+      $scope.show_well = true;
+    }  
+  };
 
    $scope.$watch('list_page', function(){
-     console.log("modified");
      var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
      promise.then(function(data){
        console.log(data);
@@ -121,23 +143,21 @@ function resultsCtrl($scope, $http, $location){
            }
          });
        }
-       console.log($scope.requests_defaults);
      }, function(){ alert("Error"); });
    });
     
   $scope.previous_page = function(current_page){
-      if (current_page >-1){
-        $location.search("page", current_page-1);
-        $scope.list_page = current_page-1;
-      }
+    if (current_page >-1){
+      $location.search("page", current_page-1);
+      $scope.list_page = current_page-1;
+    }
   };
   $scope.next_page = function(current_page){
-      if ($scope.result.length !=0){
-        $location.search("page", current_page+1);
-        $scope.list_page = current_page+1;
-      }
+    if ($scope.result.length !=0){
+      $location.search("page", current_page+1);
+      $scope.list_page = current_page+1;
+    }
   };
-  
 }
 var ModalDemoCtrl = function ($scope) {
   $scope.open = function (number) {
@@ -151,11 +171,6 @@ var ModalDemoCtrl = function ($scope) {
     $scope.seqModalInfo = _.clone($scope.sequenceInfo[number]);
   };
     $scope.save = function () {
-    console.log("saving modal info");
-    console.log($scope.sequenceInfo);
-    console.log($scope.sequencesOriginal);
-    console.log($scope.seqModalInfo);
-//     $scope.sequenceInfo[$scope.sequenceNum] = $scope.seqModalInfo;
     $scope.result.sequences = $scope.sequenceInfo;
     $scope.shouldBeOpen = false;
   };
@@ -165,7 +180,6 @@ var ModalDemoCtrl = function ($scope) {
     $scope.newSequence = $scope.default_sequences;
   };
   $scope.saveNewSubform = function(index){
-    console.log($scope.newSequenceName, $scope.newSequence, index);
     if ($scope.dbName !="requests"){
       $scope.result.sequences[index][$scope.newSequenceName] = $scope.newSequence;
     }else{
@@ -181,11 +195,51 @@ var ModalDemoCtrl = function ($scope) {
       }
       $scope.driver[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
       $scope.result.sequences[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
-      console.log($scope.result.sequences, _.size($scope.result.sequences));
     }else{
       $scope.driver.push($scope.newSequence); //add a string to display in table
-       $scope.result.sequences.push($scope.newSequence); //add to original data -> to be commited
+      $scope.result.sequences.push($scope.newSequence); //add to original data -> to be commited
     }
+  };
+}
+var genParamModalCtrl = function($scope, $http) {
+  $scope.openGenParam = function(index) {
+    $scope.modalOpen = true;
+    $scope.modal_data = _.clone($scope.genParam_data[index]);
+  };
+
+  $scope.closeGenParam = function(index) {
+    $scope.modalOpen = false;
+  };
+    $scope.saveGenParam = function(index) {
+    $scope.modalOpen = false;
+    _.each($scope.modal_data, function(key,elem){
+      if (_.isString(key) && elem !="$$hashKey"){ //ignore: submission details object, angularjs $$hashKey
+        $scope.genParam_data[index][elem] = parseFloat(key);
+      }
+    });
+  };
+
+  //methods for adding a new Gen Param.
+  $scope.openAddParam = function(){
+    $scope.addParamLoad = true;
+    var promise = $http.get("restapi/"+ $scope.dbName+"/default_generator_params/"+$scope.result["prepid"]);
+    promise.then(function(data){
+      $scope.new_gen_params = data.data.results;
+      $scope.addParamLoad = false;
+      $scope.addParamModal = true;
+    }, function(){ alert("Error getting new generator parameters"); });
+  };
+  $scope.saveAddParam = function(){
+    $scope.addParamModal = false;
+    _.each($scope.new_gen_params, function(key,elem){
+      if (elem != "submission_details"){ //ignore: submission details object, angularjs $$hashKey
+        $scope.new_gen_params[elem] = parseFloat(key);
+      }
+    });
+    $scope.genParam_data.push($scope.new_gen_params);
+  };
+  $scope.closeAddParam = function(){
+    $scope.addParamModal = false;
   };
 };
 // NEW for directive
@@ -194,25 +248,26 @@ testApp.directive("inlineEditable", function(){
   return{
       require: 'ngModel',
       template: 
-      '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;">'+
+      '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;" ng-disabled="not_editable_list.indexOf(formColumn)!=-1">'+
       '</textarea>',
-      link: function(scope, element, attrs, ctrl){
+      link: function(scope, element, attr, ctrl){
        
        ctrl.$render = function () {
-            scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
+         scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
+         scope.formColumn = scope.$eval(attr.column);
        }
-       
+//        scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Reqmgr name", "Pileup dataset name", "Pwg", "Completed events", "Status", "Type", "Priority", "Completion date"]; //user non-editable columns
        scope.update = function () {
-           var object = null;
-           try {
-               object = JSON.parse(scope.whatever_value);
-               ctrl.$setViewValue(scope.whatever_value);
-               ctrl.$setValidity("bad_json", true);
-           } catch (err) {
-               ctrl.$setValidity("bad_json", false);
-           }
+         var object = null;
+         try{
+           object = JSON.parse(scope.whatever_value);
+           ctrl.$setViewValue(object);
+           ctrl.$setValidity("bad_json", true);
+         }catch (err){
+           ctrl.$setValidity("bad_json", false);
+         }
        }
-    }
+     }
   }
 });
 testApp.directive("sequenceEdit", function($http){
@@ -222,9 +277,13 @@ testApp.directive("sequenceEdit", function($http){
     '<div >'+
     '  <ul ng-switch="dbName">'+
     '  <div ng-switch-when="requests">'+
+    '        <a rel="tooltip" title="Display sequences" ng-click="displaySequences();">'+
+    '          <i class="icon-eye-open"></i>'+
+    '        </a>'+
+    '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="role(1);">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
     '        <div modal="shouldBeOpen" close="close()">'+
@@ -246,10 +305,11 @@ testApp.directive("sequenceEdit", function($http){
     '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
     '          </div>'+
     '       </div>'+
-    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);">'+
+    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="role(1);">'+
     '        <i class="icon-remove-sign"></i>'+
     '      </a>'+
     '    </li>'+
+    '    </div>'+
     '  </div>'+
     '  <div ng-switch-default>'+
     '    <li ng-repeat="(key,value) in driver">'+
@@ -260,7 +320,7 @@ testApp.directive("sequenceEdit", function($http){
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <li>{{name}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);">'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="role(1);">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -290,7 +350,7 @@ testApp.directive("sequenceEdit", function($http){
     '      </div>'+ //end of modalControler DIV
     ///END OF MODAL
     '        <div ng-controller="ModalDemoCtrl">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();">'+ //add sequence for Campaign
+    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);">'+ //add sequence for Campaign
     '            <i class="icon-plus"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -331,7 +391,7 @@ testApp.directive("sequenceEdit", function($http){
     '  </ul>'+
     //ADD NEW SEQUENCE MODAL
     '        <div ng-controller="ModalDemoCtrl">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();">'+ //add sequence
+    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);">'+ //add sequence
     '            <i class="icon-plus"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -359,13 +419,9 @@ testApp.directive("sequenceEdit", function($http){
     '          </div>'+ //end of modal footer
     '        </div>'+
     //end OF MODAL
-//     '  <a rel="tooltip" title="Add new sequence" ng-click="addSequence();">'+
-//     '    <i class="icon-plus"></i>'+
-//     '  </a>'+
     '</div>',
     link: function(scope, element, attrs, ctrl){
-      ctrl.$render = function(){
-        
+      ctrl.$render = function(){ 
         scope.show_sequence = false;
         if(scope.dbName == "requests"){
           if (!scope.sequencesOriginal){
@@ -379,27 +435,13 @@ testApp.directive("sequenceEdit", function($http){
             scope.sequencesOriginal = _.clone(scope.result.sequences);
             scope.driver = scope.sequencesOriginal;
         }
-        console.log(scope.driver);
-          scope.sequenceInfo = ctrl.$viewValue;
-          scope.sequencesOriginal = _.clone(scope.result.sequences);
-      };
-      scope.editSequence = function(elem){
-        alert("Not yet implemented "+elem);
+        scope.sequenceInfo = ctrl.$viewValue;
+        scope.sequencesOriginal = _.clone(scope.result.sequences);
       };
       scope.removeSequence = function(elem){
-//         console.log(scope.result[0].sequence);
         scope.driver.splice(elem,1); //remove sequence from display
         scope.result.sequences.splice(elem,1); //remove the value from original sequences
-        alert("Not yet implemented "+elem);
       };
-      scope.addSequence = function(){
-        alert("Not yet implemented");
-      };
-      
-      scope.$watch('sequenceInfo', function(){
-        console.log("pasikeite");
-        console.log(scope.sequenceInfo);
-      });
     }
   }
 });
@@ -443,6 +485,114 @@ testApp.directive("customHistory", function(){
       ctrl.$render = function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
+      };
+    }
+  }
+});
+testApp.directive("generatorParams", function($http){
+  return {
+    require: 'ngModel',
+    template: 
+    '<div ng-controller="genParamModalCtrl">'+
+    '  <ul ng-repeat="elem in genParam_data">'+
+    '    <li>'+
+    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
+        ///MODAL
+    '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
+    '            <div class="modal-header">'+
+    '              <h4>Generator parameters editer</h4>'+
+    '            </div>'+ //end of modal header
+    '          <div class="modal-body">'+
+    '            <form class="form-horizontal">'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Cross section</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.cross_section">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.filter_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.filter_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.match_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.match_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '            </form>'+
+    '          </div>'+ //end of modal body
+    '          <div class="modal-footer">'+
+    '            <button class="btn btn-success" ng-click="saveGenParam($index)">Save</button>'+
+    '            <button class="btn btn-warning cancel" ng-click="closeGenParam($index)">Cancel</button>'+
+    '          </div>'+ //end of modal footer
+    ///END OF MODAL
+    '    </li>'+
+    '  </ul>'+
+    '      <a ng-click="openAddParam()" ng-hide="addParamLoad"><i class="icon-plus"></i></a>'+
+    '      <img ng-show="addParamLoad" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
+    '      <div modal="addParamModal" close = "closeAddParam()">'+
+    '            <div class="modal-header">'+
+    '              <h4>Add Generator parameters</h4>'+
+    '            </div>'+ //end of modal header
+    '          <div class="modal-body">'+
+    '            <form class="form-horizontal">'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Cross section</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="new_gen_params.cross_section">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="new_gen_params.filter_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="new_gen_params.filter_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="new_gen_params.match_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="new_gen_params.match_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '            </form>'+
+    '          </div>'+ //end of modal body
+    '          <div class="modal-footer">'+
+    '            <button class="btn btn-success" ng-click="saveAddParam()">Save</button>'+
+    '            <button class="btn btn-warning cancel" ng-click="closeAddParam()">Cancel</button>'+
+    '          </div>'+ //end of modal footer
+    ///END OF MODAL
+    '</div>'+
+    '',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.genParam_data = ctrl.$viewValue;
       };
     }
   }

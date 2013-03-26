@@ -11,40 +11,7 @@
         <script src="scripts/chainedCampaigns_controller.js"></script>
   </head>
   <body ng-controller="resultsCtrl">
-    <div class="navbar">       <!--  place for NAV-BAR-->
-      <div class="navbar-inner">
-        <ul class="nav">
-          <li>
-            <a href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li class="active">
-            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
-          </li>
-        </ul>
-        <ul class="nav pull-right">
-          <li>
-            <a>{{user.name}} : {{user.role}}</a>
-          </li>
-        </ul>
-      </div>
-    </div> <!--END of navbar-->
+    <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
       <div class="span12" style="overflow: auto">
         <div class="well"> <!--well for user to select table columns-->
@@ -78,16 +45,16 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_blank">
+                  <a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_blank" ng-hide="role(1);">
                     <i class="icon-plus-sign"></i>
                   </a>
                   <a ng-href='chained_requests2?db_name=chained_requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
                     <i class="icon-folder-open"></i>
                   </a>
-                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete flow">
+                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit2?db_name=chained_campaigns&query={{data._id}}' rel="tooltip" title="Edit details" target="_blank">
+                  <a ng-href='edit2?db_name=chained_campaigns&query={{data._id}}' rel="tooltip" title="Edit details" target="_blank" ng-hide="role(1);">
                     <i class="icon-wrench"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
@@ -111,14 +78,17 @@
                 <ul>
                   <li ng-repeat="element in data[value.db_name]"> 
                   <div ng-switch on="_.isArray(element)">
-                    <div ng-switch-when="true">
-                        <!-- {{element.join(" : ")}} -->
-                      {{element[1]}}
-                      <a>
-                        <i class="icon-arrow-right"></i>
-                      </a>
-                      {{element[0]}}
-                    </div>
+		    <div ng-switch-wken="true" ng-switch on="element[1]!=null;">
+                      <div ng-switch-when="true">
+			<a ng-href='flows2?db_name=flows&query="prepid%3D%3D{{element[1]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{element[1]}}</a>
+			<a>
+                          <i class="icon-arrow-right"></i>
+			</a>
+			<a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
+                      </div>
+		      <div ng-switch-when="false">
+			<a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
+		      </div>
                     <div ng-switch-default>
                       <a>
                         <i class="icon-arrow-right"></i>

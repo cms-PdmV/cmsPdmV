@@ -1,5 +1,13 @@
 function resultsCtrl($scope, $http, $location, $window){
     $scope.user = {name: "", role:""}
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "actions";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
+    if($location.search()["query"] === undefined){
+      $location.search("query",'""');
+    }
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -8,10 +16,16 @@ function resultsCtrl($scope, $http, $location, $window){
     },function(data){
       alert("Error getting user information. Error: "+data.status);
     });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
 // Endo of user info request
        
     $scope.actions_defaults = [
-        {text:'Actions',select:true, db_name:'prepid'}
+    //  {text:'Actions',select:true, db_name:'prepid'}
 //         {text:'Actions',select:true, db_name:''},
     ];
     $scope.campaigns = ["------"];
@@ -35,15 +49,17 @@ function resultsCtrl($scope, $http, $location, $window){
         //set the well to have only ChainedCampaigns which includes selectedOption
         if ($scope.selectedOption == "------"){ //if to show all chained campains -> push all to well values
           console.log("selected to show all");
-          tmp = [{text:'Actions',select:true, db_name:'prepid'}];
-          _.each($scope.chained_campaigns, function(v){
-            name = $scope.getChainCampainTEXT(v.alias,v._id);
-            tmp.push({text:name, select:v.valid, db_name:v._id});
-          });
+          var tmp = [];
+          //tmp = [{text:'Actions',select:true, db_name:'prepid'}];
+          // _.each($scope.chained_campaigns, function(v){
+          //   name = $scope.getChainCampainTEXT(v.alias,v._id);    // add all columns to table. if want to overload browser -> uncomment
+          //   tmp.push({text:name, select:v.valid, db_name:v._id});
+          // });
           $scope.actions_defaults = tmp;
         }
         else{
           console.log("if selected not ------");
+            $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'}];
             var to_remove_list = [];
             var to_add_list = [];
              _.each($scope.chained_campaigns, function(chain_campaign){
@@ -100,15 +116,15 @@ function resultsCtrl($scope, $http, $location, $window){
     var promise = $http.get('search/?db_name=chained_campaigns&query=""&page=-1')
     promise.then(function(data){
          $scope.chained_campaigns = data.data.results;
-        _.each(data.data.results, function(v){
-            $scope.actions_defaults.push({text:$scope.getChainCampainTEXT(v.alias,v._id), select:v.valid, db_name:v._id});
-        });
+        // _.each(data.data.results, function(v){
+        //     $scope.actions_defaults.push({text:$scope.getChainCampainTEXT(v.alias,v._id), select:v.valid, db_name:v._id});
+        // });
     });
 
     promise = $http.get('restapi/campaigns/get_all')
     promise.then(function(data){
         _.each(data.data.results, function(v){
-           $scope.campaigns.push(v.value);
+           $scope.campaigns.push(v.key);
         });
     });
   $scope.showing_well = function(){
@@ -123,7 +139,7 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
             $scope.result = data.data.results;
             if ($scope.result.length != 0){
@@ -183,10 +199,10 @@ function resultsCtrl($scope, $http, $location, $window){
         return true;
     }else{
         if (member_of_campaign == $scope.rootCampaign[0]){
-            return true;
+          return true;
         }
         else{
-            return false;
+          return false;
         }
     }
   };
@@ -252,7 +268,6 @@ function resultsCtrl($scope, $http, $location, $window){
         alert("Error: ", data.status);
     });
   };
-
   $scope.refreshActions = function(){
     console.log("Detect all!");
     $scope.refreshingAllIcon = true;
@@ -273,6 +288,13 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.showHttpStatus = data.status;
         alert("Error: ", data.status);
     });
+  };
+  $scope.role = function(priority){
+    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+      return true;
+    }else{
+      return false;
+    }
   };
 }
 var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
@@ -302,13 +324,6 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
 	           else{
 		          scope.displayBox = false;
 	          }
-    	      //	    if (scope.displayBox){
-    	      //		  if (!scope.actionInfo.flag){
-    	      //		      scope.displayBox = false;
-    	      //		  }
-    	      //            } else{
-    	      //              scope.displayBox = true;
-    	      //            };
           };
           scope.open = function(){ scope.displayBox = true;};
           scope.close = function(){ scope.displayBox = false; };
@@ -343,15 +358,15 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-	      // '      <a >'+
-	      // '        <i class="icon-refresh"></i>'+
-	      // '      </a>'+
         '      <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()"/>'+
-        '      <a ng-click="open();" ng-hide="displayBox">'+
+        '      <a ng-click="open();" ng-hide="displayBox || role(3);" title="Edit action parameters">'+
         '        <i class="icon-wrench"></i>'+
         '      </a>'+
         '      <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
         '        <i class="icon-warning-sign"></i>'+
+        '      </a>'+
+        '      <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests2?query=prepid%3D%3D{{cr}}" target="_blank">'+
+        '        <i class="icon-globe"></i>'+
         '      </a>'+
         '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
@@ -362,9 +377,6 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '        <input type="number" style="margin-bottom: 0px; width: 25px; ng-model="actionInfo.threshold"/>'+
         '        <span class="add-on">%</span>'+
         '      </span>'+
-	    //	'      <a ng-click="commit();">'+
-	    //	'        <i class="icon-refresh"></i>'+
-	    //	'      </a>'+
         '      <a ng-click="close();">'+
         '        <i class="icon-remove"></i>'+
         '      </a>'+

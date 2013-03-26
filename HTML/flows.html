@@ -11,40 +11,7 @@
   </head> 
 
   <body ng-controller="resultsCtrl">
-    <div class="navbar">       <!--  place for NAV-BAR-->
-      <div class="navbar-inner">
-        <ul class="nav">
-          <li>
-            <a href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li class="active">
-            <a href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
-          </li>
-          <li class="divider-vertical"></li>
-          <li>
-            <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
-          </li>              
-        </ul>
-        <ul class="nav pull-right">
-          <li>
-            <a>{{user.name}} : {{user.role}}</a>
-          </li>
-        </ul>
-      </div>
-    </div> <!--END of navbar-->
+    <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
       <div class="span12" style="overflow: auto">
         <div class="well"> <!--well for user to select table columns-->
@@ -67,8 +34,13 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in flows_defaults" ng-show="column.select">
+          <th ng-repeat="column in flows_defaults" ng-show="column.select" ng-switch on="column.text">
+	    <div ng-switch-when="Actions" ng-hide="role(1);">
+	      {{column.text}}
+	    </div>
+	    <div ng-switch-default>
             {{column.text}}
+	    </div>
           </th>
         </tr>
       </thead>
@@ -76,8 +48,8 @@
         <tr ng-repeat="data in result">
           <td ng-repeat="value in flows_defaults" ng-show="value.select" style="min-width:100px;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions">
-                <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow">
+              <div ng-switch-when="Actions" ng-hide="role(1);">
+                <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href="edit2?db_name=flows&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
@@ -93,7 +65,16 @@
               </div>
               <div ng-switch-when="Allowed Campaigns">
                 <ul>
-                  <li ng-repeat="value in data[value.db_name]">{{value}}</li>
+                  <li ng-repeat="value in data[value.db_name]">
+		    <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{value}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{value}}</a>
+		  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="Next Campaign">
+		<ul>
+		  <li> 
+		    <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
+		  </li>
                 </ul>
               </div>
               <div ng-switch-when="Submission details">

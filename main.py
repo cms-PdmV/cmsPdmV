@@ -5,7 +5,7 @@ from web_apps.Edit import Edit
 from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest,  ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest,  ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
@@ -14,7 +14,8 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
-from rest_api.UserActions import GetUserRoles
+from rest_api.UserActions import GetUserRoles, GetAllRoles, GetAllUsers, AddRole, ChangeRole
+from rest_api.BatchActions import GetBatch, GetAllBatches, AnnounceBatch, GetIndex
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -95,11 +96,15 @@ def create2( *args, **kwargs):
 @cherrypy.expose
 def injectAndLog( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','injectAndLog.html'))
-    
+@cherrypy.expose
+def users( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','users.html'))
+@cherrypy.expose
+def batches( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','batches.html'))
 @cherrypy.expose
 def getDefaultSequences(*args, **kwargs):
     tmpSeq = sequence()._json_base__schema
-#    return "a"
     return json.dumps(tmpSeq)
 ### END OF UPDATED METHODS###
 # root
@@ -127,6 +132,8 @@ root.actions = actions
 root.actions2 = actions2
 root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
+root.users = users
+root.batches = batches
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -137,6 +144,7 @@ root.restapi.chained_campaigns = RESTResourceIndex()
 root.restapi.actions = RESTResourceIndex()
 root.restapi.flows = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
+root.restapi.batches = RESTResourceIndex()
 
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
@@ -148,6 +156,10 @@ root.restapi.users = RESTResourceIndex()
 
 # REST User actions
 root.restapi.users.get_roles = GetUserRoles()
+root.restapi.users.get_all_roles = GetAllRoles()
+root.restapi.users.get_all_users = GetAllUsers()
+root.restapi.users.add_role = AddRole()
+root.restapi.users.change_role = ChangeRole()
 
 # REST request actions
 root.restapi.requests.save = ImportRequest()
@@ -155,13 +167,15 @@ root.restapi.requests.update = UpdateRequest()
 root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
+root.restapi.requests.get_fragment = GetFragmentForRequest()
 root.restapi.requests.request_prepid = RequestPrepId()
 root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
 root.restapi.requests.status = SetStatus()
 root.restapi.requests.inject = InjectRequest()
 root.restapi.requests.injectlog = ReadInjectionLog()
-
+root.restapi.requests.editable = GetEditable()
+root.restapi.requests.default_generator_params = GetDefaultGenParams()
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
 root.restapi.campaigns.update = UpdateCampaign()
@@ -206,6 +220,12 @@ root.restapi.flows.save = CreateFlow()
 root.restapi.flows.update = UpdateFlow()
 root.restapi.flows.delete = DeleteFlow()
 root.restapi.flows.approve = ApproveFlow()
+
+# REST Batches Actions
+root.restapi.batches.get_batch = GetBatch()
+root.restapi.batches.get_all_batches = GetAllBatches()
+root.restapi.batches.announce = AnnounceBatch()
+root.restapi.batches.index = GetIndex()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')

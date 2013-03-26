@@ -2,6 +2,7 @@
 
 import cherrypy
 from tools.logger import logger as logfactory
+from tools.authenticator import authenticator
 
 class json_base:
     __json = {}
@@ -9,6 +10,19 @@ class json_base:
     __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
     logger = logfactory("prep2")
 
+    class WrongApprovalSequence(Exception):
+        def __init__(self,status,approval,message=''):
+            self.text='It is illegale to approve %s in status %s. %s'%(approval,status,message)
+            json_base.logger.error(self.text)
+        def __str__(self):
+            return self.text
+
+    class WrongStatusSequence(Exception):
+        def __init__(self,status,approval,message=''):
+            self.text='It is illegale to change status %s in approval %s. %s'%(status,approval,message)
+            json_base.logger.error(self.text)
+        def __str__(self):
+            return self.text
 
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
@@ -35,7 +49,7 @@ class json_base:
     def __init__(self,  json={}):
         if json:
             self.__json = json
-        self.__schema = {}  
+        self.__schema = {}
 
     def validate(self):
         if not self.__json:
@@ -49,7 +63,8 @@ class json_base:
         #look for keys that are in extras to the schema requirement
         #for key in self.__json:
         #    if key not in self.__schema:
-        #        raise self.IllegalAttributeName(key)
+        #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
+
 
     def update(self,  json_input):
         self._json_base__json = {}
@@ -58,7 +73,10 @@ class json_base:
         else:
             for key in self._json_base__schema:
                 if key in json_input:
-                    self._json_base__json[key] = json_input[key]
+                    try:
+                        self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
+                    except:
+                        self._json_base__json[key]  = json_input[key]
                 else:
                     self._json_base__json[key] = self._json_base__schema[key]
             if '_rev' in json_input:
@@ -97,6 +115,14 @@ class json_base:
             raise self.IllegalAttributeName(attribute)
         return self.__json[attribute]
 
+    def get_current_user_role_level(self):
+        auth =authenticator()
+        updater_user=self._json_base__get_submission_details()
+        updater=updater_user['author_username']
+        self.current_user_email = updater_user['author_email']
+        self.current_user_level,self.current_user_role=auth.get_user_roles_index(updater)
+        #return self.current_user_level
+
     def approve(self, step=-1):
         if 'approval' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
@@ -110,12 +136,21 @@ class json_base:
         else:
             next_step = step
 
+        ## if at the end of the change
         if next_step == len(self.__approvalsteps):
             return
 
+        ## already in the next step
         if self.__json['approval'] == self.__approvalsteps[next_step]:
             return
         
+        ## is it allowed to move on
+        fcn='ok_to_move_to_approval_%s'%(self.__approvalsteps[next_step])
+        if hasattr(self,fcn):
+            self.logger.log('Calling %s '%(fcn))
+            ## that function should through if not approvable
+            getattr(self,fcn)()
+
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action':'approve', 'step':self.__json['approval']})
 
@@ -138,7 +173,7 @@ class json_base:
         if self.__json['status'] == self.__status[next_step]:
             return
 
-        self.logger.log('Updating the status for request %s...' % (self.get_attribute('_id')))
+        self.logger.log('Updating the status for object %s...' % (self.get_attribute('_id')))
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action':'set status', 'step':self.__json['status']})

@@ -13,7 +13,8 @@ class flow(json_base):
             'next_campaign':'', 
             'allowed_campaigns':[], 
             'request_parameters':{}, 
-            'description':'',
+            #'description':'',
+            'notes':'',
             'history':[],
             'approval':self.get_approval_steps()[0] 
             }

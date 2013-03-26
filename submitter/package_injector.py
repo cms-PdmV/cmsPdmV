@@ -71,6 +71,8 @@ class package_injector:
         script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
         script += 'ls -l \n'
         script += 'chmod 755 injectAndApprove.sh \n'
+        ## just to have a look at the wmcontrol from within the logger
+        script += 'grep wmcontrol injectAndApprove.sh \n'
         script += './injectAndApprove.sh \n'
         
         try:
@@ -161,7 +163,12 @@ class package_injector:
         if error:
             self.logger.inject('Errors returned: %s' % (error), handler=self.hname, level='error')
 
-
-        self.logger.inject('Injection output: %s' % (stdout.read()), handler=self.hname)
+        fullOutPutText=stdout.read()
+        self.requestNames=[]
+        for line in fullOutPutText.split('\n'):
+            if line.startswith('Injected workflow:'):
+                self.requestNames.append(line.split()[2])
+                
+        self.logger.inject('Injection output: %s' % (fullOutPutText), handler=self.hname)
 
         return True

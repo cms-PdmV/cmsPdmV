@@ -29,12 +29,13 @@ class chained_campaign(json_base):
             '_id':'',
             'prepid':'',
             'alias':'', 
-            'energy':0,
+            #'energy':0,
             'campaigns':[], # list of lists [camp_id, flow]
             #'approvals':[], # unecessary - remove 
-            'description':'',
+            #'description':'',
+            'notes':'',
             'action_parameters':{}, 
-            'www':'',
+            #'www':'',
             'history':[],
             'valid':True
             }
@@ -137,11 +138,11 @@ class chained_campaign(json_base):
         # set the default values that will be carried over to the next step in the chain
         req = rdb.get(root_request_id)
         
-        creq.set_attribute("generators", req["generators"])
+        #creq.set_attribute("generators", req["generators"])
         creq.set_attribute("total_events", req["total_events"])
         creq.set_attribute("dataset_name", req["dataset_name"])
         creq.set_attribute("pwg", req["pwg"])
-        creq.set_attribute("priority", req["priority"] )
+        #creq.set_attribute("priority", req["priority"] )
         #creq.approve(0)
         
         # set request parameters

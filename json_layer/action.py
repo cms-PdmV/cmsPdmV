@@ -3,6 +3,7 @@
 from couchdb_layer.prep_database import database
 from json_layer.request import request
 from json_layer.json_base import json_base
+from json_layer.chained_request import chained_request
 
 class action(json_base):
     class PrepIdNotDefinedException(Exception):
@@ -30,6 +31,8 @@ class action(json_base):
             '_id':'',
             'prepid':'', 
             'member_of_campaign':'', 
+            'dataset_name':'',
+            'analysis_id':[],
             'chains': {},  # a dictionary holding the settings for each chain
             }
         # update self according to json_input
@@ -124,7 +127,7 @@ class action(json_base):
         
         # set
         chains = self.get_attribute('chains')
-        chains[cid]['flag'] = True#value
+        chains[cid]['flag'] = True #value
         
         # make persistent
         self.set_attribute('chains',  chains)
@@ -159,3 +162,38 @@ class action(json_base):
         
         # persistent
         self.set_attribute('chains',  new_chains)
+        
+    def inspect_priority(self):
+        ##JR: until put in the proper place
+        chains=self.get_attribute('chains')
+        crdb = database('chained_requests')
+        
+        ## solution with db query, which might make things extra slow at some point
+        #acrs = map(lambda x: x['value'],  crdb.query('root_request=='+self.action.get_attribute('_id')))
+        #for acr in acrs:
+        #    cr=chained_request(acr)
+        #    cc=cr.get_attribute('member_of_campaign')
+        #    if cc in chains and chains[cc]['flag'] and chains[cc]['block_number']:
+        #        cr.set_priority(chains[cc]['block_number'])
+        #        self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+        #    else:
+        #        self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+
+        ##alternative, using a new member of action['chains'][<cc>]['chains'] containing the list of chained request created for that action
+        #chains=self.action.get_attribute('chains')
+        for inchain in chains:
+            if chains[inchain]['flag']:
+                if 'chains' in chains[inchain]:
+                    for acr in chains[inchain]['chains']:
+                        cr=chained_request(crdb.get(acr))
+                        cc=cr.get_attribute('member_of_campaign')
+                        if chains[cc]['block_number']:
+                            cr.set_priority(chains[cc]['block_number'])
+                            self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+                        else:
+                            self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+
+        rd = database('requests')
+        if rd.document_exists(self.get_attribute('prepid')):
+            r= request(rd.get(self.get_attribute('prepid')))
+            self.set_attribute('dataset_name',r.get_attribute('dataset_name'))

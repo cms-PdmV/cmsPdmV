@@ -12,41 +12,11 @@
         
 </head>
 <body ng-controller="resultsCtrl">
-  <div class="navbar navbar-static-top"> <!--  place for NAV-BAR-->
-    <div class="navbar-inner">
-      <ul class="nav">
-        <li>
-          <a href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
-        </li>                
-      </ul>
-      <ul class="nav pull-right">
-        <li>
-          <a>{{user.name}} : {{user.role}}</a>
-        </li>
-      </ul>      
-    </div>
-  </div> <!--END of navbar-->
-  <div class="container" >
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <div class="container" ng-show="role(1);">
+    <b>You have not enough permission to access this ressource.</b>
+  </div>
+  <div class="container" ng-hide="role(1);">
     <div class="span12">
       <table class="table table-bordered table-stripped" style="margin-top: 30px;">
         <thead>
@@ -61,7 +31,7 @@
                 <div ng-switch on="column.text" style="width: 400px;">
                     <div ng-switch-when="Approvals">
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form> 
                     </div>
@@ -70,13 +40,19 @@
                     </div>
                     <div ng-switch-when="Generators">
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form>
                     </div>
-                    <div ng-switch-when="Remarks">
+                    <div ng-switch-when="Notes">
                         <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" ></div>
+                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                          <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                        </ng-form>
+                    </div>
+                    <div ng-switch-when="Fragment">
+                        <ng-form name="fieldForm">
+                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form>
                     </div>
@@ -88,7 +64,7 @@
                     </div>
                     <div ng-switch-when="Generator parameters">
                       <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" ></div>
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
@@ -96,7 +72,22 @@
                       <div custom-history ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-when="Valid">
-                      <input type="checkbox" ng-checked="result[column.db_name]">
+                      <input type="checkbox" ng-model="result[column.db_name]">
+                    </div>
+                    <div ng-switch-when="Request parameters">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
+                    <div ng-switch-when="Reqmgr name">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
+                    <div ng-switch-when="Generator parameters">
+                      <div generator-params ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-default style="width: 400px;">
                         <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
@@ -108,8 +99,8 @@
         </tbody>
       </table>
       <div>
-        <div class="span4" align="left">
-          <input type="button" class="btn" ng-click="submit_edit()" value="Commit" align="left"/>
+        <div class="span4" align="left" ng-hide="role(1);">
+          <input type="button" class="btn" ng-click="submit_edit()" value="Commit" align="left" ng-hide="role(1);"/>
         </div>
         <div class="span3">
           <div ng-show="update['success']">
@@ -119,8 +110,8 @@
             Update failed. Status code:<font color="red">{{update['status_code']}}</font>
           </div>
         </div>
-        <div class="span4" align="right">
-          <input type="button" class="btn" ng-click="delete_edit(result['prepid'])" value="Delete" align="right"/>
+        <div class="span4" align="right" ng-hide="role(3);">
+          <input type="button" class="btn" ng-click="delete_edit(result['prepid'])" value="Delete" align="right" ng-hide="role(3);"/>
         </div>
       </div>
     </div><!--END of span12 -->

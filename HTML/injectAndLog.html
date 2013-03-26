@@ -13,9 +13,7 @@
   	<div class="container">
       <div class="hero-unit" align="center">
         <form ng-hide="buttonHide" name="injectForm">
-      	  <input type="text" class="input-medium search-query" required ng-model="batchNumber" name="input" placeholder="Batch number">
-          <button class="btn btn-large btn-danger" type="button" ng-click="inject();" ng-disabled="injectForm.input.$error.required">GO!</button>
-          <span class="error" ng-show="injectForm.input.$error.required">Batch number required!</span>
+          <button class="btn btn-large btn-danger" type="button" ng-click="inject();">GO!</button>
         </form>
 	    <text>{{injection}}
 	    </text>

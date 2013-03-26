@@ -9,6 +9,7 @@ from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 #from json_layer.action import action
+#from tools.authenticator import authenticator
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -17,6 +18,7 @@ class request(json_base):
             request.logger.error('Duplicate Approval Step: Request has already been %s approved' % (self.__approval))
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
+
 
     def __init__(self, json_input={}):
 
@@ -37,79 +39,164 @@ class request(json_base):
             'prepid':'',
             'history':[],  
             'priority':0,
-            'completion_date':'', 
+            #'completion_date':'', 
             'cmssw_release':'',
             'input_filename':'',
             'pwg':'',
             'validation':'',
             'dataset_name':'',
             'pileup_dataset_name':'',
-            'www':'',
+            #'www':'',
             'process_string':'',
-            'input_block':'',
+            'extension': False,
+            #'input_block':'',
             'block_black_list':[], 
             'block_white_list':[], 
             'cvs_tag':'',
-            'pvt_flag':'',
-            'pvt_comment':'',
+            #'pvt_flag':'',
+            #'pvt_comment':'',
             'mcdb_id':-1,
             'notes':'',
-            'description':'',
-            'remarks':'',
+            #'description':'',
+            #'remarks':'',
+            'notes':'',
             'completed_events':-1,
             'total_events':-1,
             'member_of_chain':[],
             'member_of_campaign':'',
+            'flown_with':'',
             'time_event':-1,
             'size_event':-1,
-            'nameorfragment':'', 
+            #'nameorfragment':'', 
+            'name_of_fragment':'',
+            'fragment':'',
+            'config_id':[],
             'version':0,
             'status':self.get_status_steps()[0],
             'type':'',
+            'keep_output':[], ## list of booleans
             'generators':'',
             'sequences':[],
             'generator_parameters':[], 
             'reqmgr_name':[], # list of tuples (req_name, valid)
-            'approval':self.get_approval_steps()[0]
+            'approval':self.get_approval_steps()[0],
+            'analysis_id':[],
             }
-            
         # update self according to json_input
         self.update(json_input)
         self.validate()
+        self.get_current_user_role_level()
+
+##JR: not used and not necessary
+    #def add_sequence(self,
+    #          steps=[],
+    #          nameorfragment='',
+    #          conditions='',
+    #          eventcontent=[],
+    #          datatier=[],
+    #          beamspot='',
+    #          customise=[],
+    #          filtername='',
+    #          geometry='',
+    #          magField='',
+    #          pileup='NoPileUp',
+    #          datamix='NODATAMIXER',
+    #          scenario='',
+    #          processName='',
+    #          harvesting='',
+    #          particle_table='',
+    #          inputCommands='',
+    #          dropDescendant=False,
+    #          donotDropOnInput=True,
+    #          restoreRNDSeeds='',
+    #          slhc=''):
+    #    seq = sequence()
+    #    seq.build(steps, nameorfragment, conditions, eventcontent, datatier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
+    #    sequences = self.get_attribute('sequences')
+    #    index = len(sequences) + 1
+    #    seq.set_attribute('index', index)
+    #    sequences.append(seq.json())
+    #    self.set_attribute('sequences', sequences)
+
+    def get_editable(self):
+        editable= {}
+        if self.get_attribute('status')!='new': ## after being new, very limited can be done on it
+            for key in self._json_base__schema:
+                editable[key]=False
+            if self.current_user_level!=0: ## not a simple user
+                for key in ['generator_parameters','notes']:
+                    editable[key]=True
+            if self.current_user_level>3: ## only for admins
+                for key in ['completed_events','reqmgr_name','member_of_chain','config_id']:
+                    editable[key]=True
+        else:
+            for key in self._json_base__schema:
+                editable[key]=True
+
+        return editable
+
+    def ok_to_move_to_approval_validation(self):
+        if self.current_user_level==0:
+            ##not allowed to do so
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+
+        if self.get_attribute('status')!='new':
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
+        ## a state machine should come along and submit jobs for validation, then set the status to validation once on-going
+        # for now: hard-wire the toggling
+        self.set_status()
+
+    def ok_to_move_to_approval_define(self):
+        if self.current_user_level==0:
+            ##not allowed to do so 
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+        ## we could restrict certain step to certain role level
+        #if self.current_user_role != 'generator_contact':
+        #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user role %s'%(self.current_user_role))
+
+        if self.get_attribute('status')!='validation':
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
+        ## a state machine should come along and create the configuration. check the filter efficiency, and set information back
+        # then toggle the status
+        self.set_status()
+
+    def ok_to_move_to_approval_approve(self):
+        if self.current_user_level<=1:
+            ##not allowed to do so 
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+
+        if self.get_attribute('status')!='defined':
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
         
-    def add_sequence(self,
-              steps=[],
-              nameorfragment='',
-              conditions='',
-              eventcontent=[],
-              datatier=[],
-              beamspot='',
-              customise=[],
-              filtername='',
-              geometry='',
-              magField='',
-              pileup='NoPileUp',
-              datamix='NODATAMIXER',
-              scenario='',
-              processName='',
-              harvesting='',
-              particle_table='',
-              inputCommands='',
-              dropDescendant=False,
-              donotDropOnInput=True,
-              restoreRNDSeeds='',
-              slhc=''):
-        seq = sequence()
-        seq.build(steps, nameorfragment, conditions, eventcontent, datatier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
-        sequences = self.get_attribute('sequences')
-        index = len(sequences) + 1
-        seq.set_attribute('index', index)
-        sequences.append(seq.json())
-        self.set_attribute('sequences', sequences)
-   
+        ## from defined status, with generator convener approval (?should this be removed???)
+        # this one will probably stay hard-wired, unless we decide on something very specific, like resource estimation: a state machine would come along, check, raise alarms, or set to approved
+        self.set_status()
+
+    def ok_to_move_to_approval_submit(self):
+        if self.current_user_level<=2:
+            ##not allowed to do so                                                                                                                                                                                                                                                  
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+
+        if self.get_attribute('status')!='approved':
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
+        
+        ## the request manager could pull out those requests approved to be submitted
+        ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
+        # remains to the production manager to announce the batch the requests are part of
+        #### not settting any status forward
+        
+
+    def get_fragment(self):
+        #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
+        fragment=self.get_attribute('name_of_fragment')
+        if self.get_attribute('fragment') and not fragment:
+            fragment='Configuration/GenProduction/python/%s-fragment.py'%(self.get_attribute('prepid'))
+        return fragment
+
     def build_cmsDriver(self, sequenceindex):
 
-      fragment=self.get_attribute('nameorfragment').decode('utf-8')
+      fragment=self.get_fragment()
+          
       ##JR
       if fragment=='':
           fragment='step%d'%(sequenceindex+1)
@@ -158,13 +245,17 @@ class request(json_base):
               ## not member of any chain, that's should happen only before one defines
               flownWith=None
           else:
-              crdb = database('chained_requests')
-              ccdb = database('chained_campaigns')
               fdb = database('flows')
-              cr = crdb.get(inchains[0])
-              cc = ccdb.get(cr['member_of_campaign'])
-              indexInChain = cr['chain'].index(self.get_attribute('prepid'))
-              flownWith = fdb.get(cc['campaigns'][indexInChain][1])
+              if not self.get_attribute('flown_with'):
+                  ##legacy to be removed once all request have a flown with parameter
+                  crdb = database('chained_requests')
+                  ccdb = database('chained_campaigns')
+                  cr = crdb.get(inchains[0])
+                  cc = ccdb.get(cr['member_of_campaign'])
+                  indexInChain = cr['chain'].index(self.get_attribute('prepid'))
+                  flownWith = fdb.get(cc['campaigns'][indexInChain][1])
+                  self.set_attribute('flown_with',cc['campaigns'][indexInChain][1])
+              flownWith = fdb.get(self.get_attribute('flown_with'))
 
           camp = cdb.get(self.get_attribute('member_of_campaign'))
           self.set_attribute('cmssw_release',camp['cmssw_release'])
@@ -208,6 +299,9 @@ class request(json_base):
 			if key in new_req:
 				new_req[key] = fl['request_parameters'][key]
           if flownWith:
+              #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
+              #                                                                       camp['prepid'],
+              #                                                                       new_req['prepid']))
               puttogether(camp,flownWith,new_req)
           else:
               for i in range(len(camp['sequences'])):
@@ -222,9 +316,13 @@ class request(json_base):
           self.set_attribute('cmssw_release','')
           self.set_attribute('pileup_dataset_name','')
           freshSeq=[]
+          freshKeep=[]
           for i in range(len(self.get_attribute('sequences'))):
               freshSeq.append(sequence().json())
+              freshKeep.append(False)
+          freshKeep[-1]=True
           self.set_attribute('sequences',freshSeq)
+          self.set_attribute('keep_output',freshKeep)
           ##then itself in DB
           rdb = database('requests')
           rdb.update(self.json())
@@ -237,12 +335,19 @@ class request(json_base):
       return commands  
 
     
-    def update_generator_parameters(self, generator_parameters={}):
-        if not generator_parameters:
-            return
+    def update_generator_parameters(self):#, generator_parameters={}):
+        #if not generator_parameters:
+        #    return
         gens = self.get_attribute('generator_parameters')
-        generator_parameters['version']=len(gens)+1
-        self.set_attribute('generator_parameters',  gens.append(generator_parameters))
+        if not len (gens):
+            genInfo = generator_parameters()
+        else:
+            genInfo = generator_parameters(gens[-1])
+            genInfo.set_attribute('submission_details', self._json_base__get_submission_details())
+            genInfo.set_attribute('version', genInfo.get_attribute('version')+1)
+
+        gens.append(genInfo.json())
+        self.set_attribute('generator_parameters',  gens)
 
 ## could not put that method here from RequestActions.py, because of cyclic dependence request <-> action
 ## maybe we could do something later on 

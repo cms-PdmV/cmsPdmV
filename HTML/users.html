@@ -1,14 +1,14 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
   <head>
-        <title>Chained requests page McM</title>  
+        <title>Users page McM</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
-        <script src="scripts/chainRequests_controller.js"></script>
+        <script src="scripts/users_controller.js"></script>
   </head>
   <body ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
@@ -34,64 +34,54 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select">
-            {{column.text}}
+           <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)" ng-switch on="column.text">
+	     <div ng-switch-when="Actions" ng-hide="role(1);">
+               {{column.text}}
+               <span ng-show="selectedCls('value.'+column.db_name)">
+		 <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+		 <i class="icon-chevron-down" ng-show="sort.descending"></i>
+               </span>
+	     </div>
+	     <div ng-switch-default>
+               {{column.text}}
+               <span ng-show="selectedCls('value.'+column.db_name)">
+		 <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+		 <i class="icon-chevron-down" ng-show="sort.descending"></i>
+               </span>
+	     </div>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result">
-          <td ng-repeat="value in defaults" ng-show="value.select" style="min-width:100px;">
-            <div ng-switch on="value.text">
-              <div ng-switch-when="Actions">
-                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
-                  <i class="icon-minus-sign"></i>
+      	<tr ng-repeat="user in result | orderBy:sort.column: sort.descending">
+      	  <td ng-repeat="data in defaults" ng-show="data.select">
+      	    <div ng-switch on="data.text">
+              <div ng-switch-when="Actions" ng-hide="role(1);">
+                <a rel="tooltip" title="Increase user role" ng-click="changeRole(user['value']['username'],1)" ng-hide="role(4);">
+                  <i class="icon-thumbs-up"></i>
                 </a>
-                <a ng-href="edit2?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
-                  <i class="icon-wrench"></i>
-                </a>
-		<a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
-		  <i class="icon-repeat"></i>
-		</a>
-                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(3);">
-                  <i class="icon-chevron-right"></i>
-                </a>
-                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_blank" ng-hide="role(3);">
-                  <i class="icon-forward"></i>
+                <a rel="tooltip" title="Lower user role" ng-click="changeRole(user['value']['username'],-1)" ng-hide="role(4);">
+                  <i class="icon-thumbs-down"></i>
                 </a>
               </div>
-              <div ng-switch-when="History">
-                <div custom-history ng-model="data[value.db_name]"></div>
-              </div>
-              <div ng-switch-when="Chain">
-                 <span ng-repeat="chain in data[value.db_name]">
-                <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{chain}}"&page=0' target="_blank">{{chain}}</a>
-                  <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
-                    <a ng-switch-when="false">
-                      <i  class="icon-arrow-right"></i>
-                    </a>
-                    <a ng-switch-default><!-- on n-th(last) element display no arrow -->
-                      <i></i>
-                    </a>
-                  </span>
-                </span>
-              </div>
-              <div ng-switch-when="PrepId">
-                <a ng-href='chained_requests2?db_name=chained_requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' target="_self">{{data[value.db_name]}}</a>
-              </div>
-              <div ng-switch-default>{{data[value.db_name]}}</div>
-            </div>
-          </td>
-        </tr>
+      	      <div ng-switch-when="Roles">
+                {{user["value"][data.db_name].join()}}
+      	      </div>
+      	      <div ng-switch-default>
+    		        {{user["value"][data.db_name]}}
+      	      </div>
+      	    </div>
+      	  </td>
+      	</tr>
       </tbody>
-<!--        <pre>{{defaults}}</pre> -->
     </table>
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
+        <input type="button" class="btn" ng-click="addMe()" value="Add me!" align="left"/>
       </div>
       <div class="span2" style="margin-top:20px;">
         <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font>
+          Success. Status code:<font color="green">{{update['status_code']}}</font>. Results: {{update['results']}}
         </div>
         <div ng-show="update['fail']">
           Fail. Status code:<font color="red">{{update['status_code']}}</font>

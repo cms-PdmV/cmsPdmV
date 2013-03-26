@@ -4,12 +4,12 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
     console.log($scope.prepid);
     $scope.injection = "";
     $scope.logInfo = "";
-    $scope.batchNumber = $location.search()["batchNum"];
+    // $scope.batchNumber = $location.search()["batchNum"];
 
     $scope.inject = function(){
       $scope.buttonHide= true;
       $scope.getLog();
-      var promise1 = $http.get('restapi/requests/inject/'+$scope.prepid+'/'+$scope.batchNumber)
+      var promise1 = $http.get('restapi/requests/inject/'+$scope.prepid)
       promise1.then(function(data){
         console.log(data);
         $scope.injection = data.data;
@@ -33,14 +33,6 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
           });
         }, 3000);
     };
-
-    $scope.$watch("batchNumber", function(){
-      if ($scope.batchNumber === undefined){ //if no batch number -> remove param from url
-        $location.search("batchNum", null);
-      }else{
-        $location.search("batchNum", $scope.batchNumber); //else put input value to URL
-      };
-    });
 
 }
 var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});

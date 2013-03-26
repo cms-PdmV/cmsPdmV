@@ -1,62 +1,43 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp">
 <head>
-        <title>McM index</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        
-        <script type="text/javascript" src="scripts/underscore.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script type="text/javascript">var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
-        function resultsCtrl($scope,$http,$location){
-          $scope.user = {name: "", role:""}
-          // GET username and role
-          var promise = $http.get("restapi/users/get_roles");
-          promise.then(function(data){
-            $scope.user.name = data.data.username;
-            $scope.user.role = data.data.roles[0];
-            }, function(data){
-              alert("Error getting user information. Error: "+data.status);
-            });
-          // Endo of user info request
-        };
-        </script>
+  <title>McM</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+       
+  <script type="text/javascript" src="scripts/underscore.js"></script>
+  <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript">
+  var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+  function resultsCtrl($scope,$http,$location){
+    $scope.user = {name: "", role:""}
+    // GET username and role
+    var promise = $http.get("restapi/users/get_roles");
+    promise.then(function(data){
+      $scope.user.name = data.data.username;
+      $scope.user.role = data.data.roles[0];
+    }, function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
+    // Endo of user info request
+    $scope.role = function(priority){
+      if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+        return true;
+      }else{
+        return false;
+      }
+    };
+  };
+  </script>
 </head>
 <body ng-controller="resultsCtrl">
-  <div class="navbar navbar-static-top"> <!--  place for NAV-BAR-->
-    <div class="navbar-inner">
-      <ul class="nav">
-        <li>
-          <a href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
-        </li>                
-      </ul>
-      <ul class="nav pull-right">
-        <li>
-          <a>{{user.name}} : {{user.role}}</a>
-        </li>
-      </ul>
-    </div>
-  </div> <!--END of navbar-->
+  <div ng-include="'HTML/navbar_template.html'"></div>
   <div class="container">
     <div align="middle">
       <h2>McM Home page - Beta version</h2>

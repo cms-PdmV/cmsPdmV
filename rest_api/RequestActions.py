@@ -7,9 +7,10 @@ from json import loads,dumps
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
+from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.action import action
-
+from json_layer.generator_parameters import generator_parameters
 
 class ImportRequest(RESTResource):
     def __init__(self):
@@ -25,15 +26,15 @@ class ImportRequest(RESTResource):
     ## duplicate version to be centralized in a unique class
     def add_action(self):
         # Check to see if the request is a root request
-        camp = self.request.get_attribute('member_of_campaign')
+        #camp = self.request.get_attribute('member_of_campaign')
           
-        if not self.cdb.document_exists(camp):
-            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+        #if not self.cdb.document_exists(camp):
+        #    return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
                 
         # get campaign
-        c = self.cdb.get(camp)
+        #self.c = self.cdb.get(camp)
         
-        if (c['root'] > 0) or (c['root'] <=0 and int(self.request.get_attribute('mcdb_id')) > -1):
+        if (self.campaign['root'] > 0) or (self.campaign['root'] <=0 and int(self.request.get_attribute('mcdb_id')) > -1):
             ## c['root'] > 0 
             ##            :: not a possible root --> no action in the table
             ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
@@ -85,12 +86,22 @@ class ImportRequest(RESTResource):
 
         self.logger.log('New prepid: %s' % (self.request.get_attribute('prepid')))     
 
-        ## JR
-        # drag a few things in the request from the campaign
-        #camp = self.request.get_attribute('member_of_campaign')
-        #if not self.cdb.document_exists(camp):
-        #    return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
-        ## get campaign                                                                                                                                                                                                                                                             
+        
+
+        # check that the campaign it belongs to exsits
+        camp = self.request.get_attribute('member_of_campaign')
+        if not self.cdb.document_exists(camp):
+            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+        ## get campaign                                                                                                                 
+        self.campaign = self.cdb.get(camp)
+
+        ## put a generator info by default in case of possible root request
+        if self.campaign['root'] <=0:
+            self.request.update_generator_parameters()
+            
+        ##cast the campaign parameters into the request: knowing that those can be edited at will later
+        self.request.build_cmsDrivers(cast=1)
+
         #c = self.cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
         #for item in tobeDraggedInto:
@@ -133,10 +144,10 @@ class UpdateRequest(RESTResource):
         # get campaign
         c = self.cdb.get(camp)
         
-        if (c['root'] > 0) or (c['root'] <=0 and int(self.request.get_attribute('mcdb_id')) > -1):
-            ## c['root'] > 0 
+        if (c['root'] ==1) or (c['root'] ==-1 and self.request.get_attribute('mcdb_id') > -1):
+            ## c['root'] ==1
             ##            :: not a possible root --> no action in the table
-            ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
+            ## c['root'] ==-1 and self.request.get_attribute('mcdb_id') > -1 
             ##            ::a possible root and mcdbid=0 (import from WMLHE) or mcdbid>0 (imported from PLHE) --> no action on the table
             if self.adb.document_exists(self.request.get_attribute('prepid')):
                 ## check that there was no already inserted actions, and remove it in that case
@@ -146,12 +157,18 @@ class UpdateRequest(RESTResource):
         # check to see if the action already exists
         if not self.adb.document_exists(self.request.get_attribute('prepid')):
             # add a new action
-            a= action('automatic')
+            a= action()##JR ?? 'automatic')
             a.set_attribute('prepid',  self.request.get_attribute('prepid'))
             a.set_attribute('_id',  a.get_attribute('prepid'))
             a.set_attribute('member_of_campaign',  self.request.get_attribute('member_of_campaign'))
+            a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
             a.find_chains()
             self.logger.log('Adding an action for %s'%(self.request.get_attribute('prepid')))
+            self.adb.save(a.json())
+        else:
+            ## propagating the dataset_name: over saving object ?
+            a = action(self.adb.get(self.request.get_attribute('prepid')))
+            a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
             self.adb.save(a.json())
 
     def update_request(self, data):
@@ -204,7 +221,39 @@ class GetCmsDriverForRequest(RESTResource):
         
       return dumps({"results":self.request.build_cmsDrivers(cast=cast)}) 
       
+class GetFragmentForRequest(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
 
+    def GET(self, *args):
+      if not args:
+        self.logger.error('No arguments were given')
+        return dumps({"results":'Error: No arguments were given.'})
+      v=True
+      if len(args)>1:
+          v=False
+      return self.get_fragment(self.db.get(prepid=args[0]),v)
+
+    def get_fragment(self, data, view):
+      try:
+        self.request = request(json_input=data)
+      except request.IllegalAttributeName as ex:
+        return dumps({"results":''})
+      
+      fragmentText=self.request.get_attribute('fragment')
+      if view:
+          fragmentHTML=""
+          for line in fragmentText.split('\n'):
+              blanks=""
+              while line.startswith(' '):
+                  blanks+="&nbsp;"
+                  line=line[1:]
+              line=blanks+line
+              fragmentHTML+=line.replace("\t","&nbsp;&nbsp;&nbsp;&nbsp;")+"<br>"
+          return fragmentHTML
+      else:
+          return fragmentText
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -269,10 +318,15 @@ class ApproveRequest(RESTResource):
 
 	self.logger.log('Approving request %s for step "%s"' % (rid, val))
 
+        #req.approve(val)
 	try:
         	req.approve(val)
-	except:
-		return {'prepid': rid, 'results':False}
+	except request.WrongApprovalSequence as ex:
+            return {'prepid': rid, 'results':False, 'message' : str(ex)}
+        except request.WrongStatusSequence as ex:
+            return {"prepid":rid, "results":False, 'message' : str(ex)}
+        except:
+            return {'prepid': rid, 'results':False, 'message' : 'Unknonw error'}
 	
         return {'prepid' : rid, 'approval' : req.get_attribute('approval') ,'results':self.db.update(req.json())}
 
@@ -312,8 +366,12 @@ class ResetRequestApproval(RESTResource):
             req.approve(step)
             if step==0:
                 req.set_status(0)
+        except request.WrongApprovalSequence as ex:
+            return {"prepid":rid, "results":False, 'message' : str(ex)}
+        except request.WrongStatusSequence as ex:
+            return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
-            return {"prepid":rid, "results":False}
+            return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -346,8 +404,10 @@ class SetStatus(RESTResource):
 
         try:
             req.set_status(step)
+        except request.WrongStatusSequence as ex:
+            return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
-            return {"prepid": rid, "results":False}
+            return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -363,13 +423,9 @@ class InjectRequest(RESTResource):
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         
-        if len(args)<2:
-            batch=999 # the one for testing
-        else:
-            batch=args[1]
-        return self.inject_request(ids=args[0],batch=batch)
+        return self.inject_request(ids=args[0])
 
-    def inject_request(self, ids, batch=0):
+    def inject_request(self, ids):
         try:
             from submitter.package_builder import package_builder
         except ImportError:
@@ -377,26 +433,29 @@ class InjectRequest(RESTResource):
             return dumps({"results":'Error: Could not import "package_builder" module.'})        
 
         res=[]
-        for id in ids.split(','):
-            req = request(self.db.get(id))
+        for pid in ids.split(','):
+            req = request(self.db.get(pid))
             if req.get_attribute('status')!='approved':
-                res.append({"prepid": id, "results": False,"message":"The request is in status %s, while approved is required"%(req.get_attribute('status'))})
+                res.append({"prepid": pid, "results": False,"message":"The request is in status %s, while approved is required"%(req.get_attribute('status'))})
                 continue
+            if not req.get_attribute('member_of_chain'):
+                res.append({"prepid": pid, "results": False,"message":"The request is not member of any chain"})
+                continue
+
             pb=None
             try:
-                pb = package_builder(req_json=req.json(),
-                                     batch=batch)
+                pb = package_builder(req_json=req.json())
             except:
                 message = "Errors in making the request : \n"+ traceback.format_exc()
                 self.logger.error(message)
-                res.append({"prepid": id, "results" : message})
+                res.append({"prepid": pid, "results" : message})
                 continue
             try:
                 res_sub=str(pb.build_package())
             except:
                 message = "Errors in building the request : \n"+ traceback.format_exc()
                 self.logger.error(message)
-                res.append({"prepid": id, "results" : message})
+                res.append({"prepid": pid, "results" : message})
                 continue
 
             res.append({"results": res_sub})
@@ -406,3 +465,37 @@ class InjectRequest(RESTResource):
             return dumps(res)
         else:
             return dumps(res[0])
+
+
+class GetEditable(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('Request/GetEditable: No arguments were given')
+            return dumps({"results":'Error: No arguments were given'})
+        return self.get_editable(args[0])
+
+    def get_editable(self, prepid):
+        request_in_db = request(self.db.get(prepid=prepid))
+        editable= request_in_db.get_editable()
+        return dumps({"results":editable})
+        
+class GetDefaultGenParams(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":'Error: No arguments were given'})
+
+        return self.get_default_params(args[0])
+
+    def get_default_params(self,prepid):
+        request_in_db = request(self.db.get(prepid=prepid))
+        request_in_db.update_generator_parameters()
+        return dumps({"results":request_in_db.get_attribute('generator_parameters')[-1]})

@@ -5,7 +5,7 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Actions',select:true, db_name:''},
 	      {text:'Approval',select:true, db_name:'approval'},
         {text:'Status',select:true, db_name:'status'},
-        {text:'Type',select:true, db_name:'type'},
+        //{text:'Type',select:true, db_name:'type'},
         //{text:'ProdType',select:true, db_name:'production_type'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
         {text:'Energy',select:true, db_name:'energy'}
@@ -19,11 +19,24 @@ function resultsCtrl($scope, $http, $location, $window){
     },function(data){
       alert("Error getting user information. Error: "+data.status);
     });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
+    });
 // Endo of user info request
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
-    $scope.dbName = $location.search()["db_name"];
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "campaigns";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
+    if($location.search()["query"] === undefined){
+      $location.search("query",'""');
+    }
     $scope.new = {};
 
     if($location.search()["page"] === undefined){
@@ -61,7 +74,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.submit_edit = function(){
         console.log("submit function");
         console.log($scope.result);
-        $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
+        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
             console.log(data,status);
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
@@ -98,7 +111,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.delete_edit = function(id){
         console.log("delete some from edit");
-        $scope.delete_object($location.search()["db_name"], id);
+        $scope.delete_object($scope.dbName, id);
     };
     $scope.display_approvals = function(data){
         console.log(data);
@@ -157,7 +170,7 @@ function resultsCtrl($scope, $http, $location, $window){
     
    $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
        promise.then(function(data){
         console.log(data);
         $scope.result = data.data.results; 
@@ -198,6 +211,13 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.submit_create = function(){
     console.log($scope.new);    
     alert('to be imporved');
+  };
+  $scope.role = function(priority){
+    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+      return true;
+    }else{
+      return false;
+    }
   };
 };
 
@@ -330,7 +350,7 @@ testApp.directive("sequenceDisplay", function($http){
     '    <ul>'+
     '      <li ng-repeat="sequence in driver">'+
     '        <ul ng-repeat="(key,value) in sequence">'+
-    '          <li>{{key}}: {{value}}</li>'+
+    '          <li><b>{{key}}</b>: {{value}}</li>'+
     '        </ul>'+
     '      </li>'+
     '    </ul>'+

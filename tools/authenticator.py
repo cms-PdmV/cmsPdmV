@@ -26,8 +26,20 @@ class authenticator:
 		if email and ('email' not in user or user['email']!=email):
 			user['email']=email
 			self.__db.update(user)
+		role=None
+		while not role:
+			try:
+				role = user['roles']
+			except:
+				## how to print an error from here ?
+				user=self.__db.get(username)
+				pass
 		return user['roles']
-	
+
+	def get_user_roles_index(self,username,email=None):
+		r=self.get_user_roles(username,email)[0]
+		return self.__roles.index(r),r
+
 	# aux: get the list of __roles
 	def get_roles(self):
 		return self.__roles

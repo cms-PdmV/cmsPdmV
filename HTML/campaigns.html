@@ -12,40 +12,7 @@
 </head>
 
 <body ng-controller="resultsCtrl">
-  <div class="navbar"><!--  place for NAV-BAR-->
-    <div class="navbar-inner">
-      <ul class="nav">
-        <li class="active">
-          <a ng-href='campaigns2?db_name=campaigns&query=""&page=0' target="_self">Campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a ng-href='requests2?db_name=requests&query=""&page=0' target="_self">Requests</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a ng-href='flows2?db_name=flows&query=""&page=0' target="_self">Flows</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a ng-href='actions2?db_name=actions&query=""&page=0' target="_self">Actions</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a ng-href='chained_campaigns2?db_name=chained_campaigns&query=""&page=0' target="_self">Chained campaigns</a>
-        </li>
-        <li class="divider-vertical"></li>
-        <li>
-          <a ng-href='chained_requests2?db_name=chained_requests&query=""&page=0' target="_self">Chained requests</a>
-        </li>
-      </ul>
-      <ul class="nav pull-right">
-        <li>
-          <a>{{user.name}} : {{user.role}}</a>
-        </li>
-      </ul>      
-    </div>
-  </div> <!--end of NAV Bar-->
+  <div ng-include="'HTML/navbar_template.html'"></div>
   <div class="container">
     <div class="span12">
       <div class="well">
@@ -68,12 +35,21 @@
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
-        <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-          {{column.text}} 
-          <span ng-show="selectedCls(column.db_name)">
-            <i class="icon-chevron-up" ng-show="sort.descending"></i>
-            <i class="icon-chevron-down" ng-hide="sort.descending"></i>
-          </span>
+        <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text">
+	  <div ng-switch-when="Actions" ng-hide="role(1);">
+            {{column.text}} 
+            <span ng-show="selectedCls(column.db_name)">
+              <i class="icon-chevron-up" ng-show="sort.descending"></i>
+              <i class="icon-chevron-down" ng-hide="sort.descending"></i>
+            </span>
+	  </div>
+	  <div ng-switch-default>
+            {{column.text}} 
+            <span ng-show="selectedCls(column.db_name)">
+              <i class="icon-chevron-up" ng-show="sort.descending"></i>
+              <i class="icon-chevron-down" ng-hide="sort.descending"></i>
+            </span>
+	  </div>
         </th>
       </tr>
     </thead>
@@ -81,28 +57,32 @@
       <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
         <td ng-repeat="value in defaults" ng-show="value.select">
           <div ng-switch on="value.text">
-            <div ng-switch-when="Actions">
+
+	    <div ng-switch-when="PrepId">
+	      <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_blank">{{data.prepid}}</a>
+	    </div>
+            <div ng-switch-when="Actions" ng-hide="role(1);">
        <!--     MODAL -->
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank">
+                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank" ng-hide="role(1);">
                     <i class="icon-plus-sign"></i>
                   </a>
-                  <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
+<!--                  <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
                     <i class="icon-folder-open"></i>
-                  </a>
-                  <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign">
+                  </a> -->
+                  <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details"  target="_blank">
+                  <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_blank">
                     <i class="icon-wrench"></i>
                   </a>
-                  <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" target="_blank">
+                  <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_blank">
                     <i class="icon-repeat"></i>
                   </a>
-                  <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step">
+                  <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
                     <i class="icon-chevron-right"></i>
                   </a>
-                  <a ng-click="next_status(data.prepid)" rel="tooltip" title="Toggle status">
+                  <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
                     <i class="icon-flag"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
@@ -145,6 +125,13 @@
                 </li>
               </ul>
             </div>
+            <div ng-switch-when="Next">
+              <ul style="margin-bottom: 0px;">
+                <li ng-repeat="campaign in data[value.db_name]">
+                  <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{campaign}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{campaign}}</a>
+                </li>
+              </ul>
+            </div>
             <div ng-switch-when="History">
               <div custom-history ng-model="data[value.db_name]"></div>
             </div>
@@ -158,7 +145,7 @@
     <div class="span5" style="margin-top:20px;">
     <!--     MODAL -->
       <div ng-controller="ModalDemoCtrl">
-        <input type="button" class="btn" ng-click="open()" value="Create new campaign" align="left"/>
+        <input type="button" class="btn" ng-click="open()" value="Create new campaign" ng-hide="role(3);" align="left"/>
         <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
           <div class="modal-header">
             <h4>Create a campaign</h4>

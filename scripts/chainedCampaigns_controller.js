@@ -2,11 +2,19 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.chainedCampaigns_defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
-	{text:'Alias',select:true, db_name:'alias'},
+        {text:'Alias',select:true, db_name:'alias'},
         {text:'Campaigns',select:true, db_name:'campaigns'},
         //{text:'Energy',select:true, db_name:'energy'},
     ];
     $scope.user = {name: "", role:""}
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "chained_campaigns";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
+    if($location.search()["query"] === undefined){
+      $location.search("query",'""');
+    }
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -14,6 +22,12 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.user.role = data.data.roles[0];
     },function(data){
       console.log("Error getting user information. Error: "+data.status);
+    });
+    var promise = $http.get("restapi/users/get_all_roles");
+    promise.then(function(data){
+      $scope.all_roles = data.data;
+    },function(data){
+      alert("Error getting user information. Error: "+data.status);
     });
 // Endo of user info request
        
@@ -52,7 +66,6 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     };
 
-    
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             console.log(data,status);
@@ -100,7 +113,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
    $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+page)
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+page)
       promise.then(function(data){
         console.log(data);
         $scope.result = data.data.results; 
@@ -134,6 +147,13 @@ function resultsCtrl($scope, $http, $location, $window){
         $location.search("page", current_page+1);
         $scope.list_page = current_page+1;
       }
+  };
+  $scope.role = function(priority){
+    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+      return true;
+    }else{
+      return false;
+    }
   };
 }
 var ModalDemoCtrl = function ($scope, $http, $window) {
