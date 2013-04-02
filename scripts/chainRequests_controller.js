@@ -8,6 +8,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
+    $scope.filt = {};
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "chained_requests";
     }else{
@@ -26,14 +27,9 @@ function resultsCtrl($scope, $http, $location, $window){
        promise.then(function(data){
         $scope.user.name = data.data.username;
         $scope.user.role = data.data.roles[0];
+        $scope.user.roleIndex = parseInt(data.data.role_index);
     }, function(data){
         alert("Error getting user information. Error: "+data.status);
-    });
-    var promise = $http.get("restapi/users/get_all_roles");
-    promise.then(function(data){
-      $scope.all_roles = data.data;
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
     });
 // Endo of user info request
     if($location.search()["page"] === undefined){
@@ -47,7 +43,6 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-            console.log(data,status);
             if (data["results"]){
                 alert('Object was deleted successfully.');
             }else{
@@ -92,10 +87,7 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     
     $scope.submit_edit = function(){
-        console.log("submit function");
-        console.log($scope.result);
         $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
-            console.log(data,status);
             $scope.update["success"] = data["results"];
             $scope.update["fail"] = false;
             $scope.update["status_code"] = status;
@@ -107,11 +99,7 @@ function resultsCtrl($scope, $http, $location, $window){
         });
     };
     $scope.delete_edit = function(id){
-        console.log("delete some from edit");
         $scope.delete_object($location.search()["db_name"], id);
-    };
-    $scope.display_approvals = function(data){
-        console.log(data);
     };
        $scope.sort = {
         column: 'prepid',
@@ -136,16 +124,13 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.show_well = false;
         }
         else{
-            console.log("true");
             $scope.show_well = true;
         }
     };    
 
    $scope.$watch('list_page', function(){
-      console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
        promise.then(function(data){
-        console.log(data);
         $scope.result = data.data.results; 
         if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
@@ -163,9 +148,8 @@ function resultsCtrl($scope, $http, $location, $window){
             }
         });
         }
-        console.log($scope.requests_defaults);
     }, function(){
-       console.log("Error"); 
+       alert("Error"); 
     });
     });
     
@@ -182,10 +166,8 @@ function resultsCtrl($scope, $http, $location, $window){
       }
   };
   $scope.flowChainedRequest = function(prepid){
-    console.log("ChainRequest to flow: "+prepid);
     var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid);
     promise.then(function(data){
-      console.log(data);
       switch(data.data.results){
           case true:
               alert("Chained Request flow was successful!");
@@ -202,11 +184,54 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.role = function(priority){
-    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
       return true;
     }else{
       return false;
     }
+  };
+  $scope.selected_prepids = [];
+  $scope.add_to_selected_list = function(prepid){
+    if (_.contains($scope.selected_prepids, prepid)){
+        $scope.selected_prepids = _.without($scope.selected_prepids,prepid)
+    }else
+        $scope.selected_prepids.push(prepid);
+  };
+  $scope.multiple_step = function(step, extra=''){
+    if ($scope.selected_prepids.length > 0){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/'+step+'/'+$scope.selected_prepids.join()+extra}).success(function(data,status){
+         $scope.update["success"] = true;
+         $scope.update["result"] = data;
+         $scope.update["fail"] = false;
+         $scope.update["status_code"] = status;
+         // $window.location.reload();
+      }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["result"] = data;
+         $scope.update["status_code"] = status;
+      });
+    }else{
+      alert("No requests selected");
+    };
+  };
+  $scope.multiple_flow = function(){
+    if ($scope.selected_prepids.length > 0){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/flow/'+$scope.selected_prepids.join()}).success(function(data,status){
+         $scope.update["success"] = true;
+         $scope.update["result"] = data;
+         $scope.update["fail"] = false;
+         $scope.update["status_code"] = status;
+         // $window.location.reload();
+      }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["result"] = data;
+         $scope.update["status_code"] = status;
+      });
+    }else{
+      alert("No requests selected");
+    };
   };
 };
 

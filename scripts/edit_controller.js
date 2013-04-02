@@ -5,15 +5,16 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
       $scope.user.name = data.data.username;
       $scope.user.role = data.data.roles[0];
+      $scope.user.roleIndex = parseInt(data.data.role_index);
     },function(data){
       alert("Error getting user information. Error: "+data.status);
     });
-    var promise = $http.get("restapi/users/get_all_roles");
-    promise.then(function(data){
-      $scope.all_roles = data.data;
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
+    // var promise = $http.get("restapi/users/get_all_roles");
+    // promise.then(function(data){
+    //   $scope.all_roles = data.data;
+    // },function(data){
+    //   alert("Error getting user information. Error: "+data.status);
+    // });
 // Endo of user info request
     $scope.defaults = [];
     $scope.underscore = _;
@@ -42,12 +43,6 @@ function resultsCtrl($scope, $http, $location, $window){
       page = $location.search()["page"];
       $scope.list_page = parseInt(page);
     }
-//          var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
-    var promise = $http.get("getDefaultSequences");
-    promise.then(function(data){
-      $scope.default_sequences = data.data;
-//         $scope.default_sequences = $scope.default_sequences.split(",");
-    }, function(){ alert("Error"); });
     
     $scope.parseEditableObject = function(editable){
       _.each(editable, function(elem,key){
@@ -96,11 +91,11 @@ function resultsCtrl($scope, $http, $location, $window){
       descending: false
     };
     $scope.role = function(priority){
-	if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
-	    return true;
-	}else{
-	    return false;
-	}
+	    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
+	      return true;
+	    }else{
+	      return false;
+	    }
     };
     $scope.selectedCls = function(column) {
       return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
@@ -243,7 +238,7 @@ var genParamModalCtrl = function($scope, $http) {
   };
 };
 // NEW for directive
-var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){
   return{
       require: 'ngModel',
@@ -276,11 +271,14 @@ testApp.directive("sequenceEdit", function($http){
     template:
     '<div >'+
     '  <ul ng-switch="dbName">'+
-    '  <div ng-switch-when="requests">'+
-    '        <a rel="tooltip" title="Display sequences" ng-click="displaySequences();">'+
-    '          <i class="icon-eye-open"></i>'+
-    '        </a>'+
-    '   <div ng-show="showSequences">'+
+    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-hide="showSequences">'+
+    '     <i class="icon-eye-open"></i>'+
+    '   </a>'+
+    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-show="showSequences">'+
+    '     <i class="icon-eye-close"></i>'+
+    '   </a>'+
+    '  <div ng-switch-when="requests" ng-show="showSequences">'+
+    // '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="role(1);">'+
@@ -309,9 +307,9 @@ testApp.directive("sequenceEdit", function($http){
     '        <i class="icon-remove-sign"></i>'+
     '      </a>'+
     '    </li>'+
-    '    </div>'+
+    // '   </div>'+
     '  </div>'+
-    '  <div ng-switch-default>'+
+    '  <div ng-switch-default ng-show="showSequences">'+
     '    <li ng-repeat="(key,value) in driver">'+
     '      <ul>'+
     '        {{key}}'+
@@ -350,9 +348,16 @@ testApp.directive("sequenceEdit", function($http){
     '      </div>'+ //end of modalControler DIV
     ///END OF MODAL
     '        <div ng-controller="ModalDemoCtrl">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);">'+ //add sequence for Campaign
-    '            <i class="icon-plus"></i>'+
+    '          <span ng-hide="showAddNewModal">'+
+    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="role(1);" >'+ //button to get default sequences, and make plus-sign available
+    '            <i class="icon-zoom-in"></i>'+
     '          </a>'+
+    '          </span>'+
+    '          <span ng-show="showAddNewModal">'+
+    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);" >'+ //add sequence
+    '              <i class="icon-plus"></i>'+
+    '            </a>'+
+    '          </span>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
     '            <div class="modal-header">'+
     '              <h4>Sequence add modal</h4>'+
@@ -390,57 +395,88 @@ testApp.directive("sequenceEdit", function($http){
     '  </div>'+
     '  </ul>'+
     //ADD NEW SEQUENCE MODAL
-    '        <div ng-controller="ModalDemoCtrl">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);">'+ //add sequence
-    '            <i class="icon-plus"></i>'+
-    '          </a>'+
-    '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
-    '            <div class="modal-header">'+
-    '              <h4>Sequence add modal</h4>'+
-    '            </div>'+ //end oF  modal header
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
-    '                <div ng-switch on="key">'+
-    '                  <div ng-switch-when="$$hashKey"></div>'+
-    '                  <div ng-switch-default>'+
-    '                    <label class="control-label">{{key}}</label>'+
-    '                    <div class="controls">'+
-    '                      <input type="text" ng-model="newSequence[key]">'+
-    '                    </div>'+
-    '                  </div>'+
-    '                </div>'+
+    '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+
+    '  <span ng-hide="showAddNewModal">'+
+    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="role(1);" >'+ //button to get default sequences, and make plus-sign available
+    '      <i class="icon-zoom-in"></i>'+
+    '    </a>'+
+    '  </span>'+
+    '  <span ng-show="showAddNewModal">'+
+    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);" >'+ //add sequence
+    '      <i class="icon-plus"></i>'+
+    '    </a>'+
+    '  </span>'+
+    '  <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
+    '    <div class="modal-header">'+
+    '      <h4>Sequence add modal</h4>'+
+    '    </div>'+ //end oF  modal header
+    '    <div class="modal-body">'+
+    '      <form class="form-horizontal" name="sequenceForm">'+
+    '        <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
+    '          <div ng-switch on="key">'+
+    '            <div ng-switch-when="$$hashKey"></div>'+
+    '            <div ng-switch-default>'+
+    '              <label class="control-label">{{key}}</label>'+
+    '              <div class="controls">'+
+    '                <input type="text" ng-model="newSequence[key]">'+
     '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveNewSequence();shouldBeOpen = false;">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '          </div>'+ //end of modal footer
+    '            </div>'+
+    '          </div>'+
     '        </div>'+
+    '      </form>'+
+    '    </div>'+ //end of modal body
+    '    <div class="modal-footer">'+
+    '      <button class="btn btn-success" ng-click="saveNewSequence();shouldBeOpen = false;">Save</button>'+
+    '      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '    </div>'+ //end of modal footer
+    '  </div>'+
     //end OF MODAL
     '</div>',
     link: function(scope, element, attrs, ctrl){
       ctrl.$render = function(){ 
-        scope.show_sequence = false;
+        scope.showSequences = false;
+        scope.showAddNewModal = false;
+        scope.default_sequences = {};
+      };
+      scope.removeSequence = function(elem){
+        scope.driver.splice(elem,1); //remove sequence from display
+        scope.result.sequences.splice(elem,1); //remove the value from original sequences
+      };
+      scope.displaySequences = function(){
+        if (scope.showSequences){ //if shown then -> HIDE;
+          scope.showSequences = false;
+        }else{
+          scope.showSequences = true; //if hidden -> then display sequences, get the cmsDrivers;
         if(scope.dbName == "requests"){
-          if (!scope.sequencesOriginal){
+          if (!scope.sequencesOriginal){ //if requests and sequences haven't been requested already
             var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
             promise.then(function(data){
               scope.driver = data.data.results;
               scope.sequencesOriginal = _.clone(scope.result.sequences);
             }, function(data){ alert("Error: ", data.status); });
           }
-        }else{
+        }else{  //just clone the original sequences -> in case user edited and didnt saved.
             scope.sequencesOriginal = _.clone(scope.result.sequences);
             scope.driver = scope.sequencesOriginal;
         }
         scope.sequenceInfo = ctrl.$viewValue;
         scope.sequencesOriginal = _.clone(scope.result.sequences);
+        }
       };
-      scope.removeSequence = function(elem){
-        scope.driver.splice(elem,1); //remove sequence from display
-        scope.result.sequences.splice(elem,1); //remove the value from original sequences
+      scope.showAddSequencePlus = function(){
+        if (scope.showAddNewModal){
+          scope.showAddNewModal = false;
+        }else{
+          scope.showAddNewModal = true;
+          if (_.keys(scope.default_sequences).length == 0){ //get default sequences list if it hasn't been already done
+            scope.gettingDefaultSequences = true;
+            var promise = $http.get("getDefaultSequences");
+            promise.then(function(data){
+              scope.default_sequences = data.data;
+              scope.gettingDefaultSequences = true;
+            }, function(){ alert("Error"); });
+          }
+        }
       };
     }
   }
@@ -494,8 +530,8 @@ testApp.directive("generatorParams", function($http){
     require: 'ngModel',
     template: 
     '<div ng-controller="genParamModalCtrl">'+
-    '  <ul ng-repeat="elem in genParam_data">'+
-    '    <li>'+
+    '  <ul ng-repeat="elem in genParam_data" ng-switch on="$index < genParam_data.length-1">'+
+    '    <li ng-switch-when="true">'+ //when not the last element display only wrentch
     '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
         ///MODAL
     '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
@@ -541,6 +577,23 @@ testApp.directive("generatorParams", function($http){
     '            <button class="btn btn-warning cancel" ng-click="closeGenParam($index)">Cancel</button>'+
     '          </div>'+ //end of modal footer
     ///END OF MODAL
+    '    </li>'+
+    '    <li ng-switch-when="false">'+ //when last gen param to be shown
+    '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
+    '        <dt>{{"cross section"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["cross_section"]}}</dd>'+
+    '        <dt>{{"filter efficiency"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["filter_efficiency"]}}</dd>'+
+    '        <dt>{{"filter efficiency error"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["filter_efficiency_error"]}}</dd>'+
+    '        <dt>{{"match efficiency"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["match_efficiency"]}}</dd>'+
+    '        <dt>{{"match efficiency error"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["match_efficiency_error"]}}</dd>'+
+    '        <dt>{{"author username"}}</dt>'+
+    '        <dd>{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
+    '      </dl>'+
+    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
     '    </li>'+
     '  </ul>'+
     '      <a ng-click="openAddParam()" ng-hide="addParamLoad"><i class="icon-plus"></i></a>'+

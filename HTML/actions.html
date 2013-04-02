@@ -67,11 +67,11 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show request {{data[value.db_name]}}" target="_blank">
-		  {{data[value.db_name]}}
-		</a>  {{data['dataset_name']}}
-		<a ng-href='chained_requests2?db_name=chained_requests&query="root_request%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_blank">
-		  <i class="icon-folder-open"></i>
-		</a>
+		              {{data[value.db_name]}}
+		            </a>  {{data['dataset_name']}}
+		            <a ng-href='chained_requests2?db_name=chained_requests&query="root_request%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_blank">
+		              <i class="icon-folder-open"></i>
+		            </a>
                 <a rel="tooltip" title="Generate chained requests" ng-click="generateRequests(data[value.db_name])" ng-hide="role(3);">
                   <i class="icon-play"></i>
                 </a>
@@ -99,19 +99,38 @@
       </tbody>
     </table>
     <div class="row-fluid">
-      <div class="span6" style="padding-top:20px;">
-        <div ng-show="showHttpStatus == 200">
-          <font color="green">
-            {{http_status}}
-          </div>
-        </font>
-        <div ng-show="showHttpStatus != 200">
-          <font color="red">
-            {{http_status}}
-          </font>
+      <div class="span5" style="margin-top:20px;" ng-hide="role(1);">
+        Place for multiple selection
+        <a ng-click="toggleMultipleInput();" ng-hide="showMultipleInput || role(3);" title="Edit action parameters for selected actions">
+          <i class="icon-wrench"></i>
+        </a>
+        <a ng-show="multipleChanged" ng-click="commitMultipleSelection();" rel="tooltip" title="Values updated. Commit?">
+          <i class="icon-warning-sign"></i>
+        </a>
+        <img ng-show="updatingMultipleActions" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+        <div ng-show="showMultipleInput">
+          <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="multipleSelection.block_number">
+            <option ng-repeat="key in [0,1,2,3,4,5,6]">{{key}}</option>
+          </select>
+          <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="multipleSelection.staged"/>
+          <span class="input-append">
+            <input type="number" style="margin-bottom: 0px; width: 25px;" ng-model="multipleSelection.threshold"/>
+            <span class="add-on">%</span>
+          </span>
+          <a ng-click="toggleMultipleInput();">
+            <i class="icon-remove"></i>
+          </a>
         </div>
       </div>
-      <div class="span6">
+      <div class="span2" style="padding-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font> Result: {{update['result']}}
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font> Result: {{update['result']}}
+        </div>
+      </div>
+      <div class="span5">
         <div class="pagination pagination-right">
           <ul>
             <li ng-class="{ disabled: list_page <= -1 }">

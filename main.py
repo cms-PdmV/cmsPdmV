@@ -5,12 +5,12 @@ from web_apps.Edit import Edit
 from web_apps.Create import Create
 from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest,  ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction
+from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
@@ -168,6 +168,7 @@ root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
 root.restapi.requests.get_fragment = GetFragmentForRequest()
+root.restapi.requests.get_setup = GetSetupForRequest()
 root.restapi.requests.request_prepid = RequestPrepId()
 root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
@@ -213,6 +214,7 @@ root.restapi.actions.deselect = DeSelectChain()
 root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
 root.restapi.actions.detect_chains = DetectChains()
 root.restapi.actions.generate_all_chained_requests = GenerateAllChainedRequests()
+root.restapi.actions.update_multiple = UpdateMultipleActions()
 
 # REST Flow Actions
 root.restapi.flows.get = GetFlow()

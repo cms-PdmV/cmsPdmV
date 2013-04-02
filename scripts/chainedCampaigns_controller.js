@@ -20,14 +20,9 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
       $scope.user.name = data.data.username;
       $scope.user.role = data.data.roles[0];
+      $scope.user.roleIndex = parseInt(data.data.role_index);
     },function(data){
       console.log("Error getting user information. Error: "+data.status);
-    });
-    var promise = $http.get("restapi/users/get_all_roles");
-    promise.then(function(data){
-      $scope.all_roles = data.data;
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
     });
 // Endo of user info request
        
@@ -149,7 +144,7 @@ function resultsCtrl($scope, $http, $location, $window){
       }
   };
   $scope.role = function(priority){
-    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
       return true;
     }else{
       return false;

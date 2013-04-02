@@ -394,7 +394,9 @@ class chained_request(json_base):
         rdb = database('requests')
         for r in self.get_attribute('chain'):
             req=request(rdb.get(r))
-            #set to the maximum priority
-            req.set_attribute('priority', max(req.get_attribute('priority'),  priority().priority(level)))
-            rdb.update(req.json())
+            ##only those that can still be changed
+            if not req.get_attribute('status') in ['submitted','done']:
+                #set to the maximum priority
+                req.set_attribute('priority', max(req.get_attribute('priority'),  priority().priority(level)))
+                rdb.update(req.json())
         

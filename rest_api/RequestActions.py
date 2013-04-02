@@ -131,7 +131,11 @@ class UpdateRequest(RESTResource):
         self.request = None
         
     def PUT(self):
-        return self.update_request(cherrypy.request.body.read().strip())
+        try:
+            res=self.update_request(cherrypy.request.body.read().strip())
+            return res
+        except:
+            return dumps({'results':False,'message':'Exception'})
 
     ## duplicate version to be centralized in a unique class
     def add_action(self):
@@ -179,10 +183,21 @@ class UpdateRequest(RESTResource):
                 self.request = request(json_input=loads(data))
         except request.IllegalAttributeName as ex:
                 return dumps({"results":False})
-
+        
         if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
+
+        ## operate a check on whether it can be changed
+        previous_version =  request(self.db.get(self.request.get_attribute('prepid')))
+        editable = previous_version.get_editable()
+        for (key,right) in editable.items():
+            #self.logger.log('%s: %s vs %s : %s'%(key,previous_version.get_attribute(key),self.request.get_attribute(key),right))
+            if (previous_version.get_attribute(key) != self.request.get_attribute(key)) and right==False:
+                self.logger.error('Illegal change of parameter, %s: %s vs %s : %s'%(key,previous_version.get_attribute(key),self.request.get_attribute(key),right))
+                return dumps({"results":False,'message':'Illegal change of parameter'})
+                #raise ValueError('Illegal change of parameter')
+        
 
         self.logger.log('Updating request %s...' % (self.request.get_attribute('prepid')))
 
@@ -254,6 +269,27 @@ class GetFragmentForRequest(RESTResource):
           return fragmentHTML
       else:
           return fragmentText
+
+class GetSetupForRequest(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+      if not args:
+        self.logger.error('No arguments were given')
+        return dumps({"results":'Error: No arguments were given.'})
+      return self.get_fragment(self.db.get(prepid=args[0]))
+
+    def get_fragment(self, data):
+      try:
+        self.request = request(json_input=data)
+      except request.IllegalAttributeName as ex:
+        return dumps({"results":False})
+      
+      setupText = self.request.get_setup_file()
+      return setupText
+
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -410,6 +446,13 @@ class SetStatus(RESTResource):
             return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
+
+class TestRequest(RESTResource):
+    ## a rest api to make a creation test of a request
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+        
 
 class InjectRequest(RESTResource):
     def __init__(self):

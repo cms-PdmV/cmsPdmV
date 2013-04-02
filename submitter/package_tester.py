@@ -5,6 +5,7 @@ import re
 
 import logging
 from tools.logger import logger as logfactory, prep2_formatter
+from tools.ssh_executor import ssh_executor
 
 class package_tester:
     logger = logfactory('prep2')
@@ -27,13 +28,14 @@ class package_tester:
         if not self.pyconfigs:
             return
         
-        self.ssh_client = None
-        self.ssh_server = 'lxplus.cern.ch'#'pdmvserv-test.cern.ch'
-        self.ssh_server_port = 22
-        self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'#'/afs/cern.ch/user/n/nnazirid/private/credentials'
+        self.ssh_exec = ssh_executor(directory,self.hname)
+        #s self.ssh_client = None
+        #s self.ssh_server = 'lxplus.cern.ch'#'pdmvserv-test.cern.ch'
+        #s self.ssh_server_port = 22
+        #s self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'#'/afs/cern.ch/user/n/nnazirid/private/credentials'
 
         self.scram_arch = None
-        self.__build_ssh_client()
+        #s self.__build_ssh_client()
 
     def __build_logger(self):
 
@@ -137,6 +139,9 @@ class package_tester:
                 
     
     def __remote_exec(self,  cmd=''):
+        #s giving that away to ssh executor
+        return self.ssh_exec.execute(cmd)
+
         if not cmd:
             return None,  None,  None
         try:
@@ -295,7 +300,8 @@ class package_tester:
 #            return None
 
     def test(self):
-        if not self.ssh_client:
+        #if not self.ssh_client:
+        if not self.ssh_exec:
             self.logger.inject('SSH Client was not initialized. Aborting...', level='error', handler=self.hname)
             raise NoneTypeError('SSH Client was not initialized. Aborting...')
         

@@ -14,6 +14,7 @@ from json_layer.request import request
 from json_layer.campaign import campaign
 from json_layer.batch import batch
 from couchdb_layer.prep_database import database
+from tools.ssh_executor import ssh_executor
 
 class package_builder:
 	
@@ -176,6 +177,8 @@ class package_builder:
             self.logger.inject('The run test should be on %d events, truncating to %d'%(self.events,truncatedTo), handler=self.hname)
             self.events = truncatedTo
 
+        self.ssh_exec = ssh_executor(self.directory,self.hname)
+
     # check and create all working directories
     def __check_directory(self):
 
@@ -254,21 +257,21 @@ class package_builder:
         self.logger.inject('Initializing configuration files...', handler=self.hname)
 
         # build path strings
-        self.__summary = self.directory + 'summary.txt'
+        #self.__summary = self.directory + 'summary.txt'
         #self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
         self.logger.inject('Populating configuration files...', level='debug', handler=self.hname)
 
         # create summary
-        try:
-            sin = open(self.__summary, 'w')
-            sin.write('request ID\tRelease\tEventcontent\tPriority\tEvents\ttime\tsize\tfilterEff\tmatchingEff\tdatasetName\tGlobalTag\tconfigurations\n')
-            sin.close()
-        except Exception as ex:
-            self.logger.inject('Could not create summary file "%s". Reason: %s' % (self.__summary, ex), level='error', handler=self.hname)
+        #try:
+        #    sin = open(self.__summary, 'w')
+        #    sin.write('request ID\tRelease\tEventcontent\tPriority\tEvents\ttime\tsize\tfilterEff\tmatchingEff\tdatasetName\tGlobalTag\tconfigurations\n')
+        #    sin.close()
+        #except Exception as ex:
+        #    self.logger.inject('Could not create summary file "%s". Reason: %s' % (self.__summary, ex), level='error', handler=self.hname)
 
-        self.logger.inject('summary.txt file created', level='debug', handler=self.hname)
+        #self.logger.inject('summary.txt file created', level='debug', handler=self.hname)
 
         # create upload_configs script
         #try:
@@ -312,7 +315,7 @@ class package_builder:
             self.logger.inject('Could not update configuration file "%s". Reason: %s' % (configuration, ex), level='error', handler=self.hname)
 
     def init_package(self):
-        self.__summary = self.directory + 'summary.txt'
+        #self.__summary = self.directory + 'summary.txt'
         #self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
@@ -320,6 +323,7 @@ class package_builder:
         self.__init_configuration()
 
     def __validate_configuration(self,  cmsDriver):
+
         # check if Prod
         if self.request.get_attribute('type') == 'Prod':
             if self.request.get_attribute('mcdb_id') == -1:
@@ -365,6 +369,10 @@ class package_builder:
     def __build_setup_script(self):
         # commands required for setting up the cms environ
 
+        self.scram_arch=self.request.get_scram_arch()
+        infile = self.request.get_setup_file(self.directory)
+
+        """
         self.scram_arch='slc5_amd64_gcc434'
         releasesplit=self.request.get_attribute('cmssw_release').split("_")
         nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
@@ -373,6 +381,7 @@ class package_builder:
 
         infile = ''
         infile += '#!/bin/bash\n'
+        infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
         infile += 'cd ' + os.path.abspath(self.directory + '../') + '\n'
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
         infile += 'export SCRAM_ARCH=%s\n'%(self.scram_arch)
@@ -390,29 +399,40 @@ class package_builder:
         if self.request.get_attribute('name_of_fragment') != '' and self.request.get_attribute('cvs_tag')!='':
             infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' ' + self.request.get_attribute('name_of_fragment') + '\n'
         
-
         ##copy the fragment directly from the DB into a file
         if self.request.get_attribute('fragment'):
+
             ## the fragment is directly put in the request.
-            
-            fragmentFile=self.directory + '/'+(self.request.get_fragment().split('/')[-1])
-            f = open(fragmentFile,'w')
-            f.write(self.request.get_attribute('fragment'))
-            f.close()
+            ### fragmentFile=self.directory + '/'+(self.request.get_fragment().split('/')[-1])
+            ### f = open(fragmentFile,'w')
+            ### f.write(self.request.get_attribute('fragment'))
+            ### f.close()
             ##somehow mkdirhier is unknown
-            #infile += 'mkdirhier Configuration/GenProduction/python/ \n'
-            infile += 'mkdir -p Configuration \n'
-            infile += 'mkdir -p Configuration/GenProduction \n'
-            infile += 'mkdir -p Configuration/GenProduction/python \n'
-            infile += 'mv %s Configuration/GenProduction/python/ \n'%(fragmentFile)
+
+            #infile += 'mkdir -p Configuration \n'
+            #infile += 'mkdir -p Configuration/GenProduction \n'
+            #infile += 'mkdir -p Configuration/GenProduction/python \n'
+            ### infile += 'mv %s Configuration/GenProduction/python/ \n'%(fragmentFile)
+            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 --create-dirs -o %s \n'%(self.request.get_attribute('prepid'),self.request.get_fragment())
+            #infile += 'mkdirhier Configuration/GenProduction/python/ \n'%
+            #infile += 'mkdirhier %s \n'%('/'.join(self.request.get_fragment().split('/')[0:-1]))
+            #infile += 'wget --load-cookies ~/private/cookie.txt -q --no-check-certificate https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 -O %s \n'%(self.request.get_attribute('prepid'),self.request.get_fragment())
+        """
 
         # previous counter
         previous = 0
 
         # validate and build cmsDriver commands
-        cmsd_list = ''
-        for cmsd in self.__cmsDrivers:
 
+
+        cmsd_list = ''
+        self.wmagent_type = self.request.get_wmagent_type()
+        
+        if not self.request.verify_sanity():
+            return False
+
+        for cmsd in self.__cmsDrivers:
+            """
             # validate the configuration for each cmsDriver
             try:
                 self.__validate_configuration(cmsd)
@@ -430,7 +450,8 @@ class package_builder:
                 if 'GenProduction' in cname:
                     infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
 
-            # finalize cmsDriver command
+
+            # tweak a bit more finalize cmsDriver command
             res = cmsd
             res += ' --python_filename '+self.directory+'config_0_'+str(previous+1)+'_cfg.py '
             #JR res += '--fileout step'+str(previous+1)+'.root '
@@ -443,16 +464,17 @@ class package_builder:
             res += '--no_exec -n '+str(self.events)#str(self.request.get_attribute('total_events'))
             #infile += res
             cmsd_list += res + '\n'
-
+            """
             self.__pyconfigs.append('config_0_'+str(previous+1)+'_cfg.py')
-
             previous += 1
 
+        """
         infile += '\nscram b\n'
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
         infile += 'cd ../../\n'
+        """
 
         self.logger.inject(infile, level='debug', handler=self.hname)
 
@@ -592,8 +614,10 @@ class package_builder:
                 command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
 
             # temp ev cont holder
-            eventcontentlist = []
-
+            eventcontentlist = self.request.get_first_output()
+            
+            """
+            ##shipped back to request object 
             for cmsDriver in self.__cmsDrivers:
                 ## check for pileup dataset ??? why ?
                 #if 'pileup' in cmsDriver:
@@ -608,7 +632,8 @@ class package_builder:
                     eventcontent = eventcontent.split(',')[0] + 'output'
 
                 eventcontentlist.append(eventcontent)
-                
+            """
+    
             keeps = self.request.get_attribute('keep_output')
             if not keeps[-1]:
                 raise ValueError('Is not set to save the output of last task')
@@ -675,9 +700,23 @@ class package_builder:
 
         # spawn a subprocess to run it
         
-        p = os.popen(command)
-        output = p.read()
-        retcode = p.close()
+        #s p = os.popen(command)
+        #s output = p.read()
+        #s retcode = p.close()
+        
+        #use it via ssh instead of running it locally
+        stdin, stdout, stderr = self.ssh_exec.execute(command)
+        output=stdout.read()
+        retcode=0
+        if not stdin and not stdout and not stderr:
+            retcode = -1
+
+        ## this below does not function 
+        #for error in stderr.read().split('\n'):
+        #    if error:
+        #        self.logger.inject('Got stderr\n%s'%(error))
+        #        retcode = -1
+                
 
         #p = subprocess.Popen([command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         #self.logger.inject('Waitin for setup scripts...', handler=self.hname)
@@ -701,8 +740,8 @@ class package_builder:
             return False
 
         self.logger.inject("%s Creation SUCCESS" % (self.request.get_attribute('prepid')), handler=self.hname)
-        self.__update_configuration(self.__summary,  self.__build_summary_string())
-        self.__update_configuration(self.__summary, 'Total evts = ' + str(self.request.get_attribute('total_events')))
+        #self.__update_configuration(self.__summary,  self.__build_summary_string())
+        #self.__update_configuration(self.__summary, 'Total evts = ' + str(self.request.get_attribute('total_events')))
         return True
 
     # clean up

@@ -34,13 +34,20 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select">
+          <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
             {{column.text}}
+            <!-- <div> -->
+              <span ng-show="selectedCls(column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              </span>
+                <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
+<!--             </div> -->
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result">
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
           <td ng-repeat="value in defaults" ng-show="value.select" style="min-width:100px;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
@@ -50,15 +57,16 @@
                 <a ng-href="edit2?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
-		<a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
-		  <i class="icon-repeat"></i>
-		</a>
+		            <a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
+		              <i class="icon-repeat"></i>
+		            </a>
                 <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
                 <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_blank" ng-hide="role(3);">
                   <i class="icon-forward"></i>
                 </a>
+                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
@@ -84,17 +92,26 @@
           </td>
         </tr>
       </tbody>
-<!--        <pre>{{defaults}}</pre> -->
     </table>
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
+        Multiple selection buttons
+        <a ng-click="multiple_step('approve','/0')" rel="tooltip" ng-hide="role(3);" title="Reset selected requests">
+         <i class="icon-repeat"></i>
+        </a>
+        <a ng-click="multiple_step('approve')" rel="tooltip" title="Next step for selected requests" ng-hide="role(3);">
+         <i class="icon-chevron-right"></i>
+        </a>
+        <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests">
+         <i class="icon-forward"></i>
+        </a>
       </div>
       <div class="span2" style="margin-top:20px;">
         <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font>
+          Success. Status code:<font color="green">{{update['status_code']}}</font> Result:{{update["result"]}}
         </div>
         <div ng-show="update['fail']">
-          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+          Fail. Status code:<font color="red">{{update['status_code']}}</font> Result:{{update["result"]}}
         </div>
       </div> 
       <div class="span5">

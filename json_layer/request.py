@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import copy
+import os 
 
 from couchdb_layer.prep_database import database
 
@@ -124,7 +125,7 @@ class request(json_base):
             for key in self._json_base__schema:
                 editable[key]=False
             if self.current_user_level!=0: ## not a simple user
-                for key in ['generator_parameters','notes']:
+                for key in ['generator_parameters','notes','history']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
                 for key in ['completed_events','reqmgr_name','member_of_chain','config_id']:
@@ -233,7 +234,7 @@ class request(json_base):
 
     def build_cmsDrivers(self,cast=0):
       commands = []
-      if cast==1:
+      if cast==1 and self.get_attribute('status')=='new':
           cdb = database('campaigns')
 
           inchains = self.get_attribute('member_of_chain')
@@ -311,7 +312,7 @@ class request(json_base):
           rdb = database('requests')
           #rdb.update(self.json())
           rdb.update(new_req)
-      elif  cast==-1:
+      elif  cast==-1 and self.get_attribute('status')=='new':
           ## a way of resetting the sequence and necessary parameters
           self.set_attribute('cmssw_release','')
           self.set_attribute('pileup_dataset_name','')
@@ -323,7 +324,7 @@ class request(json_base):
           freshKeep[-1]=True
           self.set_attribute('sequences',freshSeq)
           self.set_attribute('keep_output',freshKeep)
-          ##then itself in DB
+          ##then update itself in DB
           rdb = database('requests')
           rdb.update(self.json())
           
@@ -383,3 +384,119 @@ class request(json_base):
 #            a.find_chains()
 #            adb.save(a.json())
 #        return True
+
+    def get_scram_arch(self):
+        scram_arch='slc5_amd64_gcc434'
+        releasesplit=self.get_attribute('cmssw_release').split("_")
+        nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
+        if int(nrelease)>=510:
+            scram_arch='slc5_amd64_gcc462'
+        return scram_arch
+    
+    def get_setup_file(self,directory='',events=10):
+        
+        infile = ''
+        infile += '#!/bin/bash\n'
+        if self.get_attribute('fragment'):
+            infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
+        if directory:
+            infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
+        infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
+        infile += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
+        infile += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        infile += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        infile += 'eval `scram runtime -sh`\n'
+
+        infile += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
+        infile += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
+        infile += "export CVS_PASSFILE=`pwd`/cvspass\n"
+
+        # checkout from cvs (if needed)
+        if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
+            infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + '\n'
+        
+        ##copy the fragment directly from the DB into a file
+        if self.get_attribute('fragment'):
+            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+
+        # previous counter
+        previous = 0
+
+        # validate and build cmsDriver commands
+        cmsd_list = ''
+        for cmsd in self.build_cmsDrivers():
+
+            # check if customization is needed to check it out from cvs
+            if '--customise' in cmsd:
+                cust = cmsd.split('--customise=')[1].split(' ')[0]
+                toks = cust.split('.')
+                cname = toks[0]
+                cfun = toks[1]
+
+                # add customization
+                if 'GenProduction' in cname:
+                    infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
+            # tweak a bit more finalize cmsDriver command
+            res = cmsd
+            res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
+            #JR res += '--fileout step'+str(previous+1)+'.root '
+            if previous > 0:
+                #JR res += '--filein file:step'+str(previous)+'.root '
+                res += '--lazy_download '
+
+            ##JR it's going to be easier to look at things with no dump_python
+            #res += '--no_exec --dump_python -n '+str(self.events)#str(self.request.get_attribute('total_events'))
+            res += '--no_exec -n '+str(events)#str(self.request.get_attribute('total_events'))
+            #infile += res
+            cmsd_list += res + '\n'
+
+            previous += 1
+
+        infile += '\nscram b\n'
+        infile += cmsd_list
+        # since it's all in a subshell, there is
+        # no need for directory traversal (parent stays unaffected)
+        infile += 'cd ../../\n'
+        return infile
+
+    def get_first_output(self):
+        eventcontentlist = []
+        for cmsDriver in self.build_cmsDrivers():
+            eventcontent = cmsDriver.split('--eventcontent')[1].split()[0] + 'output'
+            if ',' in eventcontent:
+                eventcontent = eventcontent.split(',')[0] + 'output'
+            eventcontentlist.append(eventcontent)
+        return eventcontentlist
+
+    def get_wmagent_type(self):
+        if self.get_attribute('type') == 'Prod':
+            if self.get_attribute('mcdb_id') == -1:
+                return 'MonteCarlo'
+            else:
+                return 'MonteCarloFromGEN'
+        elif  self.get_attribute('type') in ['LHE','LHEStepZero']:
+            return 'LHEStepZero' 
+        elif self.get_attribute('type') == 'MCReproc':
+            return 'ReDigi'
+
+        return ''
+
+
+    def verify_sanity(self):
+        ###check whether there are missing bits and pieces in the request
+        ##maybe raise instead of just returning false
+        wma_type= self.get_wmagent_type()
+        if wma_type in ['MonteCarloFromGEN','ReDigi'] and not self.get_attribute('input_filename'):
+            raise Exception('Input Dataset name is not defined.')
+            #return False
+        if wma_type in ['MonteCarlo','MonteCarloFromGEN','LHEStepZero']:
+            if not self.get_attribute('cvs_tag') and not self.get_attribute('fragment') and not self.get_attribute('name_of_fragment'):
+                if wma_type=='LHEStepZero' and self.get_attribute('mcdb_id')<=0:
+                    raise Exception('No CVS Production Tag is defined. No fragement name, No fragment text')
+                    #return False
+        for cmsDriver in self.build_cmsDrivers():
+            if not 'conditions' in cmsDriver:
+                raise Exception('Conditions are not defined in %s'%(cmsDriver))
+                #return False
+
+        return True

@@ -18,7 +18,8 @@ class GetUserRoles(RESTResource):
 		if 'REMOTE-USER' in cherrypy.request.headers:
 			communicationLine = cherrypy.request.headers['REMOTE-USER']
 		role = self.authenticator.get_user_roles(user,email=communicationLine)
-		return dumps({'username':user, 'roles':role})
+		role_index = self.authenticator.get_roles().index(role[0])
+		return dumps({'username':user, 'roles':role, 'role_index':  role_index})
 
 class GetAllRoles(RESTResource):
 	def __init__(self):
@@ -79,12 +80,14 @@ class ChangeRole(RESTResource):
         doc = self.db.get(username)
         current_role = doc["roles"][0]
         if action == '-1':
-            if current_role != 'user':
+            if current_role != 'user': #if not the lowest role -> then him lower himself
                 doc["roles"] = [self.all_roles[self.all_roles.index(current_role)-1]]
                 return dumps({"results":self.db.update(doc)})
-            return dumps({"results":username+" already is user"})
+            return dumps({"results":username+" already is user"}) #else return that hes already a user
         if action == '1':
-            if len(self.all_roles) != self.all_roles.index(current_role)+1:
+            if current_role != "admistrator":
+                return dumps({"results":"Only administrators can upgrade roles"})
+            if len(self.all_roles) != self.all_roles.index(current_role)+1: #if current role is not the top one
                 doc["roles"] = [self.all_roles[self.all_roles.index(current_role)+1]]
                 return dumps({"results":self.db.update(doc)})
             return dumps({"results":username+" already has top role"})

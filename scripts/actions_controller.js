@@ -13,12 +13,7 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
       $scope.user.name = data.data.username;
       $scope.user.role = data.data.roles[0];
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
-    var promise = $http.get("restapi/users/get_all_roles");
-    promise.then(function(data){
-      $scope.all_roles = data.data;
+      $scope.user.roleIndex = parseInt(data.data.role_index);
     },function(data){
       alert("Error getting user information. Error: "+data.status);
     });
@@ -32,8 +27,11 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selectedOption = "------";
     $scope.selected_campaign = "";
     $scope.generatingAllIcon = false;
+    $scope.selected_prepids = [];
+    $scope.multipleSelection = {};
+    $scope.update = [];
     
-    $scope.http_status = "";
+    // $scope.http_status = "";
     $scope.showHttpStatus = false;
 
     $scope.getChainCampainTEXT = function(alias, id){
@@ -153,9 +151,9 @@ function resultsCtrl($scope, $http, $location, $window){
                     add = false;
                   }
                 });
-                if (add){
+//                if (add){
 //                     $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-                }
+//                }
               });
             }
 //             console.log($scope.actions_defaults);
@@ -220,12 +218,16 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
       console.log(data);
       
-      $scope.http_status = id+" generated Successfully";
-      $scope.showHttpStatus = data.status;
+      $scope.update['status_code'] = data.status;
+      $scope.update['success'] = true;
+      $scope.update['fail'] = false;
+      $scope.update['result'] = id+" generated Successfully";
       $window.location.reload();
     }, function(data){
-        $scope.http_status = id+" generation Failed";
-        $scope.showHttpStatus = data.status;
+        $scope.update['status_code'] = data.status;
+        $scope.update['fail'] = true;
+        $scope.update['success'] = false;
+        $scope.update['result'] = id+" generation Failed";
         alert("Error: ", data.status);
     });
   };
@@ -239,14 +241,16 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.generatingAllIcon = false;
       console.log(data);
       
-      $scope.http_status = "All requests generated Successfully"
-      $scope.showHttpStatus = data.status;
+      $scope.update['success'] = true;
+      $scope.update['fail'] = false;
+      $scope.update['result'] = "All requests generated Successfully";
+      $scope.update['status_code'] = data.status;
       $window.location.reload();
     }, function(data){
-        $scope.generatingAllIcon = false;
-        
-        $scope.http_status = "All requests generation Failed";
-        $scope.showHttpStatus = data.status;
+        $scope.update['fail'] = true;
+        $scope.update['success'] = false;
+        $scope.update['result'] = "All requests generation Failed";
+        $scope.update['status_code'] = data.status;
         alert("Error: ", data.status);
     });
   };
@@ -257,14 +261,18 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.refreshingAllIcon = false;
       console.log(data);
       
-      $scope.http_status = id+" chain detected Successfully"
-      $scope.showHttpStatus = data.status;
+      $scope.update['success'] = true;
+      $scope.update['fail'] = false;
+      $scope.update['result'] = id+" chain detected Successfully";
+      $scope.update['status_code'] = data.status;
       $window.location.reload();
     }, function(data){
         $scope.refreshingAllIcon = false;
         
-        $scope.http_status = id+ " chain detection Failed";
-        $scope.showHttpStatus = data.status;
+        $scope.update['fail'] = true;
+        $scope.update['success'] = false;
+        $scope.update['result'] = id+ " chain detection Failed";
+        $scope.update['status_code'] = data.status;
         alert("Error: ", data.status);
     });
   };
@@ -278,22 +286,66 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.refreshingAllIcon = false;
       console.log(data);
       
-      $scope.http_status = "All chains detected Successfully"
-      $scope.showHttpStatus = data.status;
+      $scope.update['success'] = true;
+      $scope.update['fail'] = false;
+      $scope.update['result'] = "All chains detected Successfully";
+      $scope.update['status_code'] = data.status;
       $window.location.reload();
     }, function(data){
         $scope.refreshingAllIcon = false;
         
-        $scope.http_status = "All chains detection Failed";
-        $scope.showHttpStatus = data.status;
+        $scope.update['fail'] = true;
+        $scope.update['success'] = false;
+        $scope.update['result'] = "All chains detection Failed";
+        $scope.update['status_code'] = data.status;
         alert("Error: ", data.status);
     });
   };
   $scope.role = function(priority){
-    if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
+    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
       return true;
     }else{
       return false;
+    }
+  };
+  $scope.toggleMultipleInput = function(){
+    if ($scope.showMultipleInput){
+      $scope.showMultipleInput = false;
+    }else{
+      $scope.multipleSelection["block_number"] = 0;
+      $scope.showMultipleInput = true;
+    }
+  };
+  $scope.$watch('multipleSelection', function(){
+    if ($scope.multipleSelection['block_number'] !== undefined){
+      $scope.multipleChanged = true;
+    }
+  }, true);
+  $scope.commitMultipleSelection = function(){
+    $scope.updatingMultipleActions = true;
+    $scope.multipleSelection["block_number"] = parseInt($scope.multipleSelection["block_number"]);
+    var dataToSend = {"actions": $scope.selected_prepids, "values":$scope.multipleSelection}
+    if ($scope.selected_prepids.length == 0){
+      alert("You have selected 0 actions from table");
+    }else{
+      console.log($scope.multipleSelection);
+      //lets send the data to server WOOOO
+      $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update_multiple',data:JSON.stringify(dataToSend)}).success(function(data,status){
+        $scope.updatingMultipleActions = false;
+        $scope.update['success'] = true;
+        $scope.update['fail'] = false;
+        $scope.update['result'] = data;
+        $scope.update['status_code'] = status;
+        // $window.location.reload();
+      }).error(function(data,status){
+        $scope.updatingMultipleActions = false;
+        $scope.update['fail'] = true;
+        $scope.update['success'] = false;
+        $scope.update['result'] = data;
+        $scope.update['status_code'] = status;
+      });
+      $scope.multipleChanged = false;
+      $scope.toggleMultipleInput();
     }
   };
 }
@@ -310,6 +362,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
             scope.column = scope.$eval(attr.chain);
 //             console.log(ctrl.$viewValue);
             scope.actionInfo = ctrl.$viewValue['chains'][scope.column];
+            scope.prepid = ctrl.$viewValue['prepid'];
 //             console.log(ctrl.$viewValue);
             scope.originalInfo = _.clone(scope.actionInfo);
 //             scope.toBeUpdated = {block_number: "", staged:"",threshold:""}; //define a variable to localy bind data
@@ -354,27 +407,46 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
                      alert("Error: ", status);
              });
           };
+          scope.add_to_selected_list = function(prepid){
+            var selected = {};
+            selected['prepid'] = prepid;
+            selected['column'] = scope.column;
+            console.log(selected);
+            console.log(scope.selected_prepids.indexOf(selected));
+            console.log(_.contains(scope.selected_prepids, selected));
+            var exists = false;
+            _.each(scope.selected_prepids, function(v){
+              if (v['prepid'] == prepid && v['column'] == scope.column){ //if exists in array then lets remove
+                scope.selected_prepids.splice(scope.selected_prepids.indexOf(v),1);
+                exists = true;
+              }
+            });
+            if (!exists){
+              scope.selected_prepids.push(selected);
+            }
+          };
         },
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-        '      <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()"/>'+
-        '      <a ng-click="open();" ng-hide="displayBox || role(3);" title="Edit action parameters">'+
-        '        <i class="icon-wrench"></i>'+
-        '      </a>'+
-        '      <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
-        '        <i class="icon-warning-sign"></i>'+
-        '      </a>'+
-        '      <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests2?query=prepid%3D%3D{{cr}}" target="_blank">'+
-        '        <i class="icon-globe"></i>'+
-        '      </a>'+
+        '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()"/>'+
+        '    <a ng-click="open();" ng-hide="displayBox || role(3);" title="Edit action parameters">'+
+        '      <i class="icon-wrench"></i>'+
+        '    </a>'+
+        '    <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
+        '      <i class="icon-warning-sign"></i>'+
+        '    </a>'+
+        '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests2?query=prepid%3D%3D{{cr}}" target="_blank">'+
+        '      <i class="icon-globe"></i>'+
+        '    </a >'+
+        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list"/>'+
         '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
         '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
         '      </select>'+
         '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged"/>'+
         '      <span class="input-append">'+
-        '        <input type="number" style="margin-bottom: 0px; width: 25px; ng-model="actionInfo.threshold"/>'+
+        '        <input type="number" style="margin-bottom: 0px; width: 25px;" ng-model="actionInfo.threshold"/>'+
         '        <span class="add-on">%</span>'+
         '      </span>'+
         '      <a ng-click="close();">'+

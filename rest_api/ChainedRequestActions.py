@@ -164,8 +164,18 @@ class FlowToNextStep(RESTResource):
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given.'})
-        
-        return self.flow(args[0])
+        return self.multiple_flow(args[0])
+        #return self.flow(args[0]) #old flow only for single request
+
+    def multiple_flow(self, rid):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.flow(r))
+            return dumps(res)
+        else:
+            return dumps(self.flow(rid))
     
     def flow2(self,  data):
         try:

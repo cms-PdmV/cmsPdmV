@@ -15,7 +15,7 @@ class CreateAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
         self.db = database(self.db_name)
-	self.action = None
+        self.action = None
 
     def PUT(self):
         return self.import_request(cherrypy.request.body.read().strip())
@@ -93,6 +93,38 @@ class UpdateAction(RESTResource):
             
         return dumps({'results':self.db.update(self.action.json())})
 
+class UpdateMultipleActions(RESTResource):
+    def __init__(self):
+        self.db_name = 'actions'
+        self.db = database(self.db_name)
+        self.single_updater = UpdateAction()
+        self.action_getter = GetAction()
+
+    def PUT(self):
+        self.logger.log('Updating multiple actions')
+        data = loads(cherrypy.request.body.read().strip())
+        output = []
+        for elem in data["actions"]:
+            single_action = loads(self.action_getter.get_request(elem["prepid"]))["results"]
+            #self.logger.error(single_action)
+            single_action["chains"][elem["column"]]["block_number"] = data["values"]["block_number"]
+            if "staged" in data["values"]: #if staged in new values
+                if data["values"]["staged"] == None:  #if None -> user should want it to be deleted
+                    del single_action["chains"][elem["column"]]["staged"]
+                else:  #and not a None
+                    single_action["chains"][elem["column"]]["staged"] = data["values"]["staged"]
+            elif "staged" in single_action["chains"][elem["column"]]: #if staged not in update then delete from chain
+                del single_action["chains"][elem["column"]]["staged"]
+            if "threshold" in data["values"]: 
+                if data["values"]["staged"] == None:
+                    del single_action["chains"][elem["column"]]["threshold"]
+                else:
+                    single_action["chains"][elem["column"]]["threshold"] = data["values"]["threshold"]
+            elif "threshold" in single_action["chains"][elem["column"]]: #if threshold not in update then delete from chain
+                del single_action["chains"][elem["column"]]["threshold"]
+            self.logger.error(single_action)    
+            output += [self.single_updater.import_request(dumps(single_action))]
+        return dumps({"results": output})
 
 class GetAction(RESTResource):
     def __init__(self):
