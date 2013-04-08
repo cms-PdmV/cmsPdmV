@@ -34,27 +34,27 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in chainedCampaigns_defaults" ng-show="column.select">
+          <th ng-repeat="column in chainedCampaigns_defaults" ng-show="column.select" style="white-space: nowrap;">
             {{column.text}}
           </th>
         </tr>
       </thead>
       <tbody>
         <tr ng-repeat="data in result">
-          <td ng-repeat="value in chainedCampaigns_defaults" ng-show="value.select" style="min-width:100px;">
+          <td ng-repeat="value in chainedCampaigns_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
                   <a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_blank" ng-hide="role(1);">
                     <i class="icon-plus-sign"></i>
                   </a>
-                  <a ng-href='chained_requests2?db_name=chained_requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
+                  <a ng-href='chained_requests?db_name=chained_requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests" target="_self">
                     <i class="icon-folder-open"></i>
                   </a>
                   <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit2?db_name=chained_campaigns&query={{data._id}}' rel="tooltip" title="Edit details" target="_blank" ng-hide="role(1);">
+                  <a ng-href='edit?db_name=chained_campaigns&query={{data._id}}' rel="tooltip" title="Edit details" target="_blank" ng-hide="role(1);">
                     <i class="icon-wrench"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
@@ -80,14 +80,14 @@
                   <div ng-switch on="_.isArray(element)">
 		    <div ng-switch-wken="true" ng-switch on="element[1]!=null;">
                       <div ng-switch-when="true">
-			<a ng-href='flows2?db_name=flows&query="prepid%3D%3D{{element[1]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{element[1]}}</a>
+			<a ng-href='flows?db_name=flows&query="prepid%3D%3D{{element[1]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{element[1]}}</a>
 			<a>
                           <i class="icon-arrow-right"></i>
 			</a>
-			<a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
+			<a ng-href='campaigns?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
                       </div>
 		      <div ng-switch-when="false">
-			<a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
+			<a ng-href='campaigns?db_name=campaigns&query="prepid%3D%3D{{element[0]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
 		      </div>
                     <div ng-switch-default>
                       <a>

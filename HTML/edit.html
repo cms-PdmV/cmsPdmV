@@ -6,7 +6,7 @@
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
-        <link href="scripts/codemirror-3.11/theme/monokai.css" rel="stylesheet">
+        <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
@@ -57,12 +57,6 @@
                           <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                         </ng-form>
                     </div>
-		                <!-- <div ng-switch-when="Fragment">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
-                    </div> -->
                     <div ng-switch-when="Submission details">
                       <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
                         <dt>{{key}}</dt>
@@ -97,10 +91,10 @@
                       <div generator-params ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-when="Fragment">
-                      <textarea ui-codemirror="{theme:'monokai'}" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                      <textarea ui-codemirror="{ theme:'eclipse', readOnly:'editableFragment()'}" ng-model="result[column.db_name]"></textarea>
                     </div>
                     <div ng-switch-default style="width: 400px;">
-                      <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-hide="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                      <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
                     </div>
                 </div>
               </form>

@@ -43,7 +43,6 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-            console.log(data,status);
             if (data["results"]){
                 $scope.update["success"] = data.results;
                 $scope.update["fail"] = false;
@@ -126,16 +125,13 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.show_well = false;
         }
         else{
-            console.log("true");
             $scope.show_well = true;
         }
     };    
 
    $scope.$watch('list_page', function(){
-      console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+page)
       promise.then(function(data){
-        console.log(data);
         $scope.result = data.data.results; 
         if ($scope.result.length != 0){
           columns = _.keys($scope.result[0]);

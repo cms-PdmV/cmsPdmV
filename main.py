@@ -1,11 +1,11 @@
-from web_apps.Page import Page
+#from web_apps.Page import Page
 from web_apps.Search import Search
-from web_apps.Results import Results
-from web_apps.Edit import Edit
-from web_apps.Create import Create
-from web_apps.Actions import Actions
+#from web_apps.Results import Results
+#from web_apps.Edit import Edit
+#from web_apps.Create import Create
+#from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams, CloneRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
@@ -30,68 +30,68 @@ import os
 # Initialize Web UI Page Objects
 
 # home (root)
-home = Page(title='Prep 2.0.1 - Alpha version', result='<div class="list" id="result_list"></div>', signature='PREP v.2.0.1 - CherryPy v.3.2.2')
-home.render_template('main.tmpl')
+#home = Page(title='Prep 2.0.1 - Alpha version', result='<div class="list" id="result_list"></div>', signature='PREP v.2.0.1 - CherryPy v.3.2.2')
+#home.render_template('main.tmpl')
 
 # campaigns
-campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-campaigns.render_template('campaigns.tmpl')
+#campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#campaigns.render_template('campaigns.tmpl')
 
 # requests
-requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-requests.render_template('requests.tmpl')
+#requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#requests.render_template('requests.tmpl')
 
 # chained campaigns
-chained_campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-chained_campaigns.render_template('chained_campaigns.tmpl')
+#chained_campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#chained_campaigns.render_template('chained_campaigns.tmpl')
 
 # chained requests
-chained_requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-chained_requests.render_template('chained_requests.tmpl')
+#chained_requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#chained_requests.render_template('chained_requests.tmpl')
 
 # flows
-flows = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-flows.render_template('flows.tmpl')
+#flows = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#flows.render_template('flows.tmpl')
 
 # Web apps - Results, Edit, Create
-results = Results(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-edit = Edit(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-create = Create(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-actions = Actions(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-actions.render_template('actions.tmpl')
+#results = Results(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#edit = Edit(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#create = Create(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#actions = Actions(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
+#actions.render_template('actions.tmpl')
 
 file_location = os.path.dirname(__file__)
 
 ###UPDATED METHODS##
 @cherrypy.expose
-def campaigns2( *args, **kwargs):
+def campaigns_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','campaigns.html'))
 
 @cherrypy.expose
-def requests2( *args, **kwargs):
+def requests_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','requests.html'))
 
 @cherrypy.expose
-def edit2( *args, **kwargs):
+def edit_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','edit.html'))
     
 @cherrypy.expose
-def flows2( *args, **kwargs):
+def flows_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','flows.html'))
 @cherrypy.expose
-def chained_campaigns2( *args, **kwargs):
+def chained_campaigns_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','chained_campaigns.html'))
 @cherrypy.expose
-def chained_requests2( *args, **kwargs):
+def chained_requests_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','chained_requests.html'))
 @cherrypy.expose
-def actions2( *args, **kwargs):
+def actions_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','actions.html'))
 @cherrypy.expose
 def index( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','index.html'))
 @cherrypy.expose
-def create2( *args, **kwargs):
+def create_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','create.html'))
 @cherrypy.expose
 def injectAndLog( *args, **kwargs):
@@ -113,23 +113,23 @@ root = index
 
 # web apps (relevant to interface)
 root.search = Search()
-root.campaigns = campaigns
-root.campaigns2 = campaigns2
-root.chained_campaigns = chained_campaigns
-root.chained_campaigns2 = chained_campaigns2
-root.chained_requests = chained_requests
-root.chained_requests2 = chained_requests2
-root.requests = requests
-root.requests2 = requests2
-root.flows = flows
-root.flows2 = flows2
-root.results = results
-root.edit = edit
-root.edit2 = edit2
-root.create = create
-root.create2 = create2
-root.actions = actions
-root.actions2 = actions2
+#root.campaigns = campaigns
+root.campaigns = campaigns_html
+#root.chained_campaigns = chained_campaigns
+root.chained_campaigns = chained_campaigns_html
+#root.chained_requests = chained_requests
+root.chained_requests = chained_requests_html
+#root.requests = requests
+root.requests = requests_html
+#root.flows = flows
+root.flows = flows_html
+#root.results = results
+#root.edit = edit
+root.edit = edit_html
+#root.create = create
+root.create = create_html
+#root.actions = actions
+root.actions = actions_html
 root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
 root.users = users
@@ -165,6 +165,7 @@ root.restapi.users.change_role = ChangeRole()
 root.restapi.requests.save = ImportRequest()
 root.restapi.requests.update = UpdateRequest()
 root.restapi.requests.delete = DeleteRequest()
+root.restapi.requests.clone = CloneRequest()
 root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
 root.restapi.requests.get_fragment = GetFragmentForRequest()

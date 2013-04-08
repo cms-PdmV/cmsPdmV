@@ -12,7 +12,7 @@ from json_layer.request import request
 from json_layer.action import action
 from json_layer.generator_parameters import generator_parameters
 
-class ImportRequest(RESTResource):
+class RequestRESTResource(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
         self.db = database(self.db_name)
@@ -20,8 +20,13 @@ class ImportRequest(RESTResource):
         self.cdb = database('campaigns')
         self.request = None
 
-    def PUT(self):
-        return self.import_request(cherrypy.request.body.read().strip())
+    def set_campaign(self):
+        # check that the campaign it belongs to exsits
+        camp = self.request.get_attribute('member_of_campaign')
+        if not self.cdb.document_exists(camp):
+            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+        ## get campaign                   
+        self.campaign = self.cdb.get(camp)
 
     ## duplicate version to be centralized in a unique class
     def add_action(self):
@@ -57,10 +62,12 @@ class ImportRequest(RESTResource):
 
     def import_request(self, data):
         try:
-            self.request = request(json_input=loads(data))
+            #self.request = request(json_input=loads(data))
+            self.request = request(json_input=data)
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
+        self.set_campaign()
         self.logger.log('Building new request...')
 
 	# set '_id' and 'prepid' fields
@@ -88,19 +95,13 @@ class ImportRequest(RESTResource):
 
         
 
-        # check that the campaign it belongs to exsits
-        camp = self.request.get_attribute('member_of_campaign')
-        if not self.cdb.document_exists(camp):
-            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
-        ## get campaign                                                                                                                 
-        self.campaign = self.cdb.get(camp)
-
         ## put a generator info by default in case of possible root request
         if self.campaign['root'] <=0:
             self.request.update_generator_parameters()
             
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
-        self.request.build_cmsDrivers(cast=1)
+        if not self.request.get_attribute('sequences'):
+            self.request.build_cmsDrivers(cast=1)
 
         #c = self.cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
@@ -121,59 +122,62 @@ class ImportRequest(RESTResource):
         self.add_action()
 
         return dumps({"results":self.request.get_attribute('_id')})
-        
-class UpdateRequest(RESTResource):
+
+    
+class CloneRequest(RequestRESTResource):
     def __init__(self):
-        self.db_name = 'requests'
-        self.db = database(self.db_name)
-        self.adb = database('actions')
-        self.cdb = database('campaigns')
-        self.request = None
+        RequestRESTResource.__init__(self)
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":'Error: No arguments were given.'})
+        return self.clone_request(args[0])
+
+    def clone_request(self, pid):
+        new_pid=None
+        
+        if self.db.document_exists(pid):
+            new_json = self.db.get(pid)
+            del new_json['_id']
+            del new_json['_rev']
+            del new_json['prepid']
+            del new_json['approval']
+            del new_json['status']
+            new_json['history']=[]
+            new_json['config_id']=[]
+            new_json['member_of_chain']=[]
+            new_json['version']=0
+            new_json['generator_parameters']=[]
+
+            return self.import_request(new_json)
+            #new_pid = self.import_request(new_json)['results']
+
+        if new_pid:
+            return dumps({"results":True,"prepid":new_pid})
+        else:
+            return dumps({"results":False})
+
+    
+class ImportRequest(RequestRESTResource):
+    def __init__(self):
+        RequestRESTResource.__init__(self)
+
+    def PUT(self):
+        return self.import_request(loads(cherrypy.request.body.read().strip()))
+
+        
+class UpdateRequest(RequestRESTResource):
+    def __init__(self):
+        RequestRESTResource.__init__(self)
         
     def PUT(self):
         try:
             res=self.update_request(cherrypy.request.body.read().strip())
             return res
         except:
+            self.logger.error('Failed to update a request from API')
             return dumps({'results':False,'message':'Exception'})
-
-    ## duplicate version to be centralized in a unique class
-    def add_action(self):
-        # Check to see if the request is a root request
-        camp = self.request.get_attribute('member_of_campaign')
-          
-        if not self.cdb.document_exists(camp):
-            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
-                
-        # get campaign
-        c = self.cdb.get(camp)
-        
-        if (c['root'] ==1) or (c['root'] ==-1 and self.request.get_attribute('mcdb_id') > -1):
-            ## c['root'] ==1
-            ##            :: not a possible root --> no action in the table
-            ## c['root'] ==-1 and self.request.get_attribute('mcdb_id') > -1 
-            ##            ::a possible root and mcdbid=0 (import from WMLHE) or mcdbid>0 (imported from PLHE) --> no action on the table
-            if self.adb.document_exists(self.request.get_attribute('prepid')):
-                ## check that there was no already inserted actions, and remove it in that case
-                self.adb.delete(self.request.get_attribute('prepid'))
-            return
-        
-        # check to see if the action already exists
-        if not self.adb.document_exists(self.request.get_attribute('prepid')):
-            # add a new action
-            a= action()##JR ?? 'automatic')
-            a.set_attribute('prepid',  self.request.get_attribute('prepid'))
-            a.set_attribute('_id',  a.get_attribute('prepid'))
-            a.set_attribute('member_of_campaign',  self.request.get_attribute('member_of_campaign'))
-            a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
-            a.find_chains()
-            self.logger.log('Adding an action for %s'%(self.request.get_attribute('prepid')))
-            self.adb.save(a.json())
-        else:
-            ## propagating the dataset_name: over saving object ?
-            a = action(self.adb.get(self.request.get_attribute('prepid')))
-            a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
-            self.adb.save(a.json())
 
     def update_request(self, data):
         if '"_rev"' not in data:
@@ -202,12 +206,13 @@ class UpdateRequest(RESTResource):
         self.logger.log('Updating request %s...' % (self.request.get_attribute('prepid')))
 
         # check on the action 
+        self.set_campaign()
         self.add_action()
         	
 	# update history
 	self.request.update_history({'action': 'update'})
-            
-        return self.save_request()
+
+        return  self.save_request()
 
     def save_request(self):
         return dumps({"results":self.db.update(self.request.json())})

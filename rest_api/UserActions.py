@@ -85,8 +85,8 @@ class ChangeRole(RESTResource):
                 return dumps({"results":self.db.update(doc)})
             return dumps({"results":username+" already is user"}) #else return that hes already a user
         if action == '1':
-            if current_role != "admistrator":
-                return dumps({"results":"Only administrators can upgrade roles"})
+#            if current_role != "admistrator":
+            return dumps({"results":"Only administrators can upgrade roles"})
             if len(self.all_roles) != self.all_roles.index(current_role)+1: #if current role is not the top one
                 doc["roles"] = [self.all_roles[self.all_roles.index(current_role)+1]]
                 return dumps({"results":self.db.update(doc)})

@@ -34,7 +34,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+          <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" style="white-space: nowrap;">
             {{column.text}}
             <!-- <div> -->
               <span ng-show="selectedCls(column.db_name)">
@@ -48,13 +48,13 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in defaults" ng-show="value.select" style="min-width:100px;">
+          <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit2?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
+                <a ng-href="edit?db_name=chained_requests&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
 		            <a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
@@ -73,7 +73,7 @@
               </div>
               <div ng-switch-when="Chain">
                  <span ng-repeat="chain in data[value.db_name]">
-                <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{chain}}"&page=0' target="_blank">{{chain}}</a>
+                <a ng-href='requests?db_name=requests&query="prepid%3D%3D{{chain}}"&page=0' target="_blank">{{chain}}</a>
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
                     <a ng-switch-when="false">
                       <i  class="icon-arrow-right"></i>
@@ -85,7 +85,7 @@
                 </span>
               </div>
               <div ng-switch-when="PrepId">
-                <a ng-href='chained_requests2?db_name=chained_requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' target="_self">{{data[value.db_name]}}</a>
+                <a ng-href='chained_requests?db_name=chained_requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>

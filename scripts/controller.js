@@ -233,7 +233,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
     $scope.shouldBeOpen = false;
       $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
         console.log(data, status);
-        $window.location.href ="edit2?db_name=requests&query="+data.results;
+        $window.location.href ="edit?db_name=requests&query="+data.results;
       }).error(function(data,status){
         alert("Error:"+ status);
         console.log(data, status);
@@ -246,7 +246,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
         $scope.update["fail"] = false;
         $scope.update["status_code"] = status;
         $window.location.reload();
-//         $window.location.href ="edit2?db_name=campaigns&query="+data.results;
+//         $window.location.href ="edit?db_name=campaigns&query="+data.results;
       }).error(function(data,status){
           $scope.update["success"] = false;
           $scope.update["fail"] = true;

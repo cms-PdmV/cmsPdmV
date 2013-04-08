@@ -23,14 +23,17 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.chained_campaigns = [];
     $scope.dbName = $location.search()["db_name"];
     if ($scope.dbName == "campaigns"){
-      $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status"];
+	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
-      $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Type", "Priority", "Completion date"]; //user non-editable columns
+	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$location.search()["query"])
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
       });
+    }
+    else if($scope.dbName == "chained_requests"){
+      $scope.not_editable_list = ["Prepid", "Chain"];
     }else{
       $scope.not_editable_list = [];
     }
@@ -46,9 +49,11 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.parseEditableObject = function(editable){
       _.each(editable, function(elem,key){
+        console.log(key +" : " +elem);
         if (elem == false){
           if (key[0] != "_"){ //if its not mandatory couchDB values eg. _id,_rev
             column_name = key[0].toUpperCase()+key.substring(1).replace(/\_/g,' ')
+            console.log(column_name);
             if($scope.not_editable_list.indexOf(column_name) ==-1){
               $scope.not_editable_list.push(column_name);
             }
@@ -74,7 +79,11 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["status_code"] = status;
-        $window.location.reload();
+	if ($scope.update["success"] == false){
+	    $scope.update["fail"] = true;
+	}else{
+	    $window.location.reload();
+	}
       }).error(function(data,status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -152,6 +161,10 @@ function resultsCtrl($scope, $http, $location, $window){
       $location.search("page", current_page+1);
       $scope.list_page = current_page+1;
     }
+  };
+  $scope.editableFragment = function(){
+    console.log($scope.not_editable_list.indexOf('Fragment') !=-1);
+    return $scope.not_editable_list.indexOf('Fragment')!=-1;
   };
 }
 var ModalDemoCtrl = function ($scope) {

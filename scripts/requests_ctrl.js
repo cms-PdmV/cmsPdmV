@@ -65,7 +65,10 @@ function resultsCtrl($scope, $http, $location, $window){
 		  $scope.update["success"] = data["results"];
 		  $scope.update["fail"] = false;
 		  $scope.update["status_code"] = data["results"];
-		  $window.location.reload();
+		  if (step=='clone'){
+		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["results"]
+		  }else{
+		      $window.location.reload();}
 	      }
 	      else{
 		  $scope.update["fail"] = true;
@@ -263,7 +266,7 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.status_toggle = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/status/'+$scope.selected_prepids.join()}).success(function(data,status){
-            alert("Success!");
+      alert("Success!");
 	    $window.location.reload();
         }).error(function(data,status){
             console.log(status);
@@ -311,6 +314,18 @@ function resultsCtrl($scope, $http, $location, $window){
       else{
 	  return value ;
       }
+  };
+  $scope.clone = function(prepid){
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/clone/'+prepid}).success(function(data,status){
+      $scope.update["success"] = data["results"];
+      $scope.update["fail"] = false;
+      $scope.update["status_code"] = data["results"];
+      $window.location.reload();
+      }).error(function(status){
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
+      });
   };
 }
 

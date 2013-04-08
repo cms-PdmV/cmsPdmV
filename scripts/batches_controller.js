@@ -108,7 +108,7 @@ function resultsCtrl($scope, $http, $location, $window){
         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
         _.each(rejected, function(v){
             add = true;
-            _.each($scope.defaults, function(column){
+            _.each($scope.batches_defaults, function(column){
             if (column.db_name == v){
                 add = false;
             }
@@ -151,7 +151,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
       $scope.update["results"] = data.results;
       $scope.update["status_code"] = status;
       $window.location.reload();
-      //   $window.location.href ="edit2?db_name=requests&query="+data.results;
+      //   $window.location.href ="edit?db_name=requests&query="+data.results;
     }).error(function(data,status){
       alert("Error:"+ status);
       $scope.update["success"] = false;

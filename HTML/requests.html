@@ -34,7 +34,7 @@
     <table class="table table-bordered table-stripped" style="owerflow:auto;">
       <thead>
         <tr>
-          <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text">
+          <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions" ng-hide="role(1);">
               {{column.text}}
               <span ng-show="selectedCls(column.db_name)">
@@ -55,21 +55,27 @@
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" style="white-space: nowrap;">
           <td ng-repeat="value in requests_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <a ng-click='delete_object("requests", data.prepid)' rel="tooltip" ng-hide="role(3);" title="Delete request">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href='edit2?db_name=requests&query={{data.prepid}}' rel="tooltip" title="Edit details" target="_blank">
+                <a ng-href='edit?db_name=requests&query={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
                 <a ng-click="single_step('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" target="_blank">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step">
+                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);">
                   <i class="icon-chevron-right"></i>
+                </a>
+		<a ng-href='restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get Setup" target="_blank">
+		  <i class="icon-download"></i>
+		</a>
+                <a ng-click="clone(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Clone Request">
+                  <i class="icon-share-alt"></i>
                 </a>
                 <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
                   <i class="icon-flag"></i>
@@ -89,7 +95,7 @@
                 {{data[value.db_name]}}
               </div>
               <div ng-switch-when="PrepId">
-                <a ng-href='requests2?db_name=requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+                <a ng-href='requests?db_name=requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Approvals">
                 <div custom-approval ng-model="data[value.db_name]"></div>
@@ -110,7 +116,7 @@
                 </ul>
               </div>
               <div ng-switch-when="Flown with">
-                <a ng-href='flows2?db_name=flows&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='flows?db_name=flows&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
@@ -130,7 +136,7 @@
               <div ng-switch-when="Member of chain">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="chain in data[value.db_name]">
-                    <a ng-href='chained_requests2?db_name=chained_requests&query="prepid%3D%3D{{chain}}"' rel="tooltip" title="View details of the chain" target="_blank">{{chain}}</a>
+                    <a ng-href='chained_requests?db_name=chained_requests&query="prepid%3D%3D{{chain}}"' rel="tooltip" title="View details of the chain" target="_blank">{{chain}}</a>
                   </li>
                 </ul>
               </div>
@@ -140,7 +146,7 @@
                 </a>
               </div>
               <div ng-switch-when="Member of campaign">
-                <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='campaigns?db_name=campaigns&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>

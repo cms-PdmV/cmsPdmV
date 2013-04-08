@@ -429,17 +429,17 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-        '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()"/>'+
+        '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()" ng-disabled="role(1);"/>'+
         '    <a ng-click="open();" ng-hide="displayBox || role(3);" title="Edit action parameters">'+
         '      <i class="icon-wrench"></i>'+
         '    </a>'+
         '    <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
         '      <i class="icon-warning-sign"></i>'+
         '    </a>'+
-        '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests2?query=prepid%3D%3D{{cr}}" target="_blank">'+
+        '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests?query=prepid%3D%3D{{cr}}" target="_blank">'+
         '      <i class="icon-globe"></i>'+
         '    </a >'+
-        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list"/>'+
+        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list" ng-disabled="role(1);"/>'+
         '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
         '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+

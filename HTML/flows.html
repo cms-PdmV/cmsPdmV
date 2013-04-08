@@ -34,7 +34,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in flows_defaults" ng-show="column.select" ng-switch on="column.text">
+          <th ng-repeat="column in flows_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
 	    <div ng-switch-when="Actions" ng-hide="role(1);">
 	      {{column.text}}
 	    </div>
@@ -46,7 +46,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result">
-          <td ng-repeat="value in flows_defaults" ng-show="value.select" style="min-width:100px;">
+          <td ng-repeat="value in flows_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
@@ -83,11 +83,14 @@
                     <dd>{{value}}</dd>                
                 </dl>
               </div>
-              <div ng-switch-when="Request parameters">
+               <div ng-switch-when="Request parameters">
                 <ul>
                   <li ng-repeat="(key, param) in data[value.db_name]">
-                    {{key}}
-                    <ul ng-repeat="el in param">
+                    <div ng-switch on="key">
+                    
+                    <div ng-switch-when="sequences">
+                      {{key}}
+                      <ul ng-repeat="el in param">
                         <div ng-switch on="underscore.size(el)">
                           <div ng-switch-when="1">
                             <li>Default</li>
@@ -100,8 +103,13 @@
                               </ul>
                             </li>
                           </div>
-                      </div>
-                    </ul>
+                        </div>
+                      </ul>
+                    </div>
+                    <div ng-switch-default>
+                      {{key}} : {{param}}
+                    </div>
+                  </div>
                   </li>
                 </ul>
               </div>

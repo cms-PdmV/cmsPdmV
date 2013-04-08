@@ -35,45 +35,45 @@
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
-        <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text">
-	  <div ng-switch-when="Actions" ng-hide="role(1);">
+        <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text" style="white-space: nowrap;">
+	        <div ng-switch-when="Actions" ng-hide="role(1);">
             {{column.text}} 
             <span ng-show="selectedCls(column.db_name)">
               <i class="icon-chevron-up" ng-show="sort.descending"></i>
               <i class="icon-chevron-down" ng-hide="sort.descending"></i>
             </span>
-	  </div>
-	  <div ng-switch-default>
+	        </div>
+	        <div ng-switch-default>
             {{column.text}} 
             <span ng-show="selectedCls(column.db_name)">
               <i class="icon-chevron-up" ng-show="sort.descending"></i>
               <i class="icon-chevron-down" ng-hide="sort.descending"></i>
             </span>
-	  </div>
+	        </div>
         </th>
       </tr>
     </thead>
     <tbody>
       <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
-        <td ng-repeat="value in defaults" ng-show="value.select">
+        <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
           <div ng-switch on="value.text">
 
 	    <div ng-switch-when="PrepId">
-	      <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_blank">{{data.prepid}}</a>
+	      <a ng-href='requests?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_blank">{{data.prepid}}</a>
 	    </div>
             <div ng-switch-when="Actions" ng-hide="role(1);">
        <!--     MODAL -->
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank" ng-hide="role(1);">
+                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank" ng-hide="role(1) || data['root']==1;">
                     <i class="icon-plus-sign"></i>
                   </a>
-<!--                  <a ng-href='requests2?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
+<!--                  <a ng-href='requests?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
                     <i class="icon-folder-open"></i>
                   </a> -->
                   <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit2?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_blank">
+                  <a ng-href='edit?db_name=campaigns&query={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_blank">
                     <i class="icon-wrench"></i>
                   </a>
                   <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_blank">
@@ -128,7 +128,7 @@
             <div ng-switch-when="Next">
               <ul style="margin-bottom: 0px;">
                 <li ng-repeat="campaign in data[value.db_name]">
-                  <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{campaign}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{campaign}}</a>
+                  <a ng-href='campaigns?db_name=campaigns&query="prepid%3D%3D{{campaign}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{campaign}}</a>
                 </li>
               </ul>
             </div>
