@@ -119,9 +119,26 @@ class json_base:
         auth =authenticator()
         updater_user=self._json_base__get_submission_details()
         updater=updater_user['author_username']
+        self.current_user =None
+        if updater != 'automatic':
+            self.current_user = updater
         self.current_user_email = updater_user['author_email']
         self.current_user_level,self.current_user_role=auth.get_user_roles_index(updater)
         #return self.current_user_level
+
+    def get_actors(self,N=-1,what='author_username'):
+        actors=[]
+        for (n,step) in enumerate(self.get_attribute('history')):
+            ## stop when asked
+            if N>0 and N==n: 
+                break
+            try:
+                actors.append(step['updater'][what])
+            except:
+                pass
+        return list(set(actors))
+
+
 
     def approve(self, step=-1):
         if 'approval' not in self.__schema:
@@ -154,7 +171,7 @@ class json_base:
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action':'approve', 'step':self.__json['approval']})
 
-    def set_status(self, step=-1):
+    def set_status(self, step=-1,to_status=None):
         if 'status' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 

@@ -14,8 +14,8 @@
     <div class="container">
       <div class="span12" style="overflow: auto">
         <div align="middle" style="margin-top: 20px;"><!--div for selecting a campaing -->
-            <select ng-change="select_campaign();" ng-model="selectedOption" ng-options="value for value in campaigns">
-            </select>
+            <select ng-change="select_campaign();" ng-model="selectedOption" ng-options="value for value in campaigns"></select>
+            <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
         </div><!--End of campaing SELECT -->
         
         <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
@@ -34,61 +34,70 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in actions_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" style="white-space: nowrap;">
+          <th ng-repeat="column in actions_defaults" ng-show="column.select"  style="white-space: nowrap;">
             <span ng-switch="column.text">
               <span ng-switch-when="Actions">
                 {{column.text}}
-                <a rel="tooltip" title="Generate all chained request" ng-click="generateAllRequests()" ng-hide="generatingAllIcon || role(3);" style="">
+                <a rel="tooltip" title="Generate all chained requests" ng-click="generateAllRequests()" ng-hide="generatingAllIcon || role(3);" style="">
                   <i class="icon-play"></i>
                 </a>
                 <img ng-show="generatingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                <a rel="tooltip" title="Refresh actions" ng-click="refreshActions()" ng-hide="refreshingAllIcon ||  role(3);">
+                <a rel="tooltip" title="Refresh all actions" ng-click="refreshActions()" ng-hide="refreshingAllIcon ||  role(3);">
                   <i class="icon-refresh"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <!-- SORTING lines -->
+                <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                    <i class="icon-resize-vertical"></i>
+                </a>
+                <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                  <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                  <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+                </span>
+                <!-- END OF: SORTING lines -->
+                <input type="text" class="input-mini" ng-model="filt['prepid']">
               </span>
               <span ng-switch-default>
-                <a ng-href='chained_requests?db_name=chained_requests&query="member_of_campaign%3D%3D{{column.db_name}}"' target="_blank">{{column.text}}</a>
-                <a rel="tooltip" title="Generate request" ng-click="generateRequests(column.db_name)">
+                <a ng-href='chained_campaigns?query="prepid%3D%3D{{column.db_name}}"' rel="tooltip" title="Show {{column.db_name}}" target="_blank">{{column.text}}</a>
+		            <a ng-href='chained_requests?query="member_of_campaign%3D%3D{{column.db_name}}"' rel="tooltip" title="Show requests in chained campaign {{column.db_name}}" target="_blank">
+		              <i class="icon-folder-open"></i>
+		            </a>
+                <a rel="tooltip" title="Generate chained requests for {{column.db_name}}" ng-click="generateRequests(column.db_name)" ng-hide="role(3);">
                   <i class="icon-play"></i>
                 </a>
+                <!-- SORTING lines -->
+                <a rel="tooltip" title="Sort" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-hide="selectedCls(column.db_name)">
+                  <i class="icon-resize-vertical"></i>
+                </a>
+                <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                  <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                  <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+                </span>
+                <!-- END OF: SORTING lines -->
                </span>
-            </span>
-            <span ng-show="selectedCls(column.db_name)">
-              <i class="icon-chevron-up" ng-hide="sort.descending"></i>
-              <i class="icon-chevron-down" ng-show="sort.descending"></i>
             </span>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending" ng-show="showingAction(data['member_of_campaign'])" >
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" ng-show="showingAction(data['member_of_campaign'])" >
           <td ng-repeat="value in actions_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-href='requests?db_name=requests&query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show request {{data[value.db_name]}}" target="_blank">
+                <a ng-href='requests?query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show request {{data[value.db_name]}}" target="_blank">
 		              {{data[value.db_name]}}
 		            </a>  {{data['dataset_name']}}
-		            <a ng-href='chained_requests?db_name=chained_requests&query="root_request%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_blank">
+		            <a ng-href='chained_requests?query="root_request%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_blank">
 		              <i class="icon-folder-open"></i>
 		            </a>
-                <a rel="tooltip" title="Generate chained requests" ng-click="generateRequests(data[value.db_name])" ng-hide="role(3);">
+                <a rel="tooltip" title="Generate chained requests for {{data[value.db_name]}}" ng-click="generateRequests(data[value.db_name])" ng-hide="role(3);">
                   <i class="icon-play"></i>
                 </a>
                 <img ng-show="generatingIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                <a rel="tooltip" title="Refresh action" ng-click="refreshSingleAction(data[value.db_name])" ng-hide="refreshingAllIcon || role(3);">
+                <a rel="tooltip" title="Refresh action {{data[value.db_name]}}" ng-click="refreshSingleAction(data[value.db_name])" ng-hide="refreshingAllIcon || role(3);">
                   <i class="icon-refresh"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-              </div>
-              <div ng-switch-when="Submission details">
-                {{data[value.db_name]}}
-              </div>
-              <div ng-switch-when="Member of campaign">
-                {{data[value.db_name]}}
-              </div>
-              <div ng-switch-when="Chains">
-                {{data[value.db_name]}}
               </div>
               <div ng-switch-default>
                 <custom-prep-id chain="value['db_name']" ng-model="data"></custom-prep-id>

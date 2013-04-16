@@ -13,7 +13,8 @@ class package_tester:
 
     def __init__(self,  request_object,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  pyconfigs=[]):
         self.request = request_object
-        
+        self.configurationLogFiles = []
+
         if not self.request:
             raise NoneTypeException('Request object passed was None.')
 
@@ -74,15 +75,19 @@ class package_tester:
         if not self.directory:
             self.directory = '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'#'/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/'
         
-        self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
-        
+        if not self.request.get_attribute('prepid') in self.directory:
+            self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
+
+        if not self.directory.endswith('/'):
+            self.directory+='/'
+
         # check if exists (and force)
         if os.path.exists(self.directory):
             return
             
         # recursively create any needed parents and the dir itself
         os.makedirs(self.directory)
-    
+    """
     def __build_ssh_client(self):
         self.ssh_client = paramiko.SSHClient()
         paramiko.util.log_to_file(self.directory + self.request.get_attribute('prepid')+'_ssh_.log', 10) 
@@ -137,7 +142,7 @@ class package_tester:
         
         return username,  password
                 
-    
+    """
     def __remote_exec(self,  cmd=''):
         #s giving that away to ssh executor
         return self.ssh_exec.execute(cmd)
@@ -149,7 +154,7 @@ class package_tester:
         except SSHException as ex:
             self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
             return None,  None,  None
-            
+        
     def build_submit_script(self):
         infile = ''
         infile += '#!/bin/bash\n'
@@ -167,9 +172,13 @@ class package_tester:
         infile += 'cd ../\n'
         
         for step in self.pyconfigs:
-            logname = os.path.abspath(self.directory + os.path.pardir+ '/' + step + ".log")
-            infile += "cmsRun " + os.path.abspath(self.directory + os.path.pardir + '/' + step) + " &> " + logname
+            #logname = os.path.abspath(self.directory + os.path.pardir+ '/' + step + ".log")
+            #infile += "cmsRun " + os.path.abspath(self.directory + os.path.pardir + '/' + step) + " &> " + logname
+            logname = os.path.abspath(self.directory + step + ".log")
+            infile += "cmsRun " + os.path.abspath(self.directory + step) + " &> " + logname
             infile += ' || exit $? ;\n'
+            self.configurationLogFiles.append(logname)
+
         
         try:
             script = open(self.directory+'run_test.sh',  'w')
@@ -202,7 +211,7 @@ class package_tester:
         if not cmd:
             return False
 
-        self.logger.inject('submission command: %s' % (cmd), level='debug', handler=self.hname)
+        self.logger.inject('submission command: \n%s' % (cmd), level='debug', handler=self.hname)
         
         stdin,  stdout,  stderr = self.__remote_exec(cmd)
         
@@ -210,7 +219,7 @@ class package_tester:
             return False
         
         self.logger.inject(stdout.read(), handler=self.hname)
-        self.logger.inject('SSH remote execution stderr stream: "%s"' % (stderr.read()), handler=self.hname, level='debug')
+        self.logger.inject('SSH remote execution stderr stream: \n%s' % (stderr.read()), handler=self.hname, level='debug')
         
         return True
     
@@ -269,21 +278,36 @@ class package_tester:
                 return True
             elif 'Exited with ' in line:
                 self.logger.inject('workflow batch test returned: %s' % (line), level='error', handler=self.hname)
+                #self.__read_job_error('.out')
                 self.__read_job_error()
+                self.__read_job_log_file()
                 return False
 
         self.logger.inject('Could not obtain status from logfile "%s.out". Error stream dump: %s' % (self.directory + self.request.get_attribute('prepid'), stderr.read()), level='error', handler=self.hname)
         return None
 
-    def __read_job_error(self):
-        stdin, stdout, stderr = self.__remote_exec('cat %s.err' % (self.directory + self.request.get_attribute('prepid')))
+    def __read_job_log_file(self):
+        for log in self.configurationLogFiles:
+            stdin, stdout, stderr = self.__remote_exec('cat %s'%(log))
+            if not stdin and not stdout and not stderr:
+                continue
+            data = stdout.read()
+            if data.strip():
+                self.logger.inject('Configuration test %s log: \n %s'%(log,data))
+                
+    def __read_job_error(self,extension='.err'):
+        stdin, stdout, stderr = self.__remote_exec('cat %s%s' % (self.directory + self.request.get_attribute('prepid'),extension))
 
         if not stdin and not stdout and not stderr:
             return
 
         data = stdout.read()
         if data.strip():
-	    self.logger.inject('job error dump: %s' % (data), level='error', handler=self.hname)
+	    self.logger.inject('Job %s file dump: \n%s' % (extension,data), level='error', handler=self.hname)
+        ##JR
+        #or line by line...
+        ##for line in data.strip().split('\n'):
+        ##    self.logger.inject(line)
 
 #    def get_job_resulta(self):
 #        try:

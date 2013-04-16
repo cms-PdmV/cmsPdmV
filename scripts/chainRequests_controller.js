@@ -19,7 +19,7 @@ function resultsCtrl($scope, $http, $location, $window){
     }
     $scope.new = {};
     $scope.selectedAll = false;
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user"}
     $scope.underscore = _;
 
 // GET username and role
@@ -53,16 +53,16 @@ function resultsCtrl($scope, $http, $location, $window){
         });
     };
 
-    $scope.single_step = function(step, prepid, extra=''){
+    $scope.single_step = function(step, prepid, extra){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid+extra}).success(function(data,status){
-         $scope.update["success"] = data["results"];
-         $scope.update["fail"] = false;
-         $scope.update["status_code"] = status;
-	 $window.location.reload();
+        $scope.update["success"] = data["results"];
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+	      $window.location.reload();
       }).error(function(status){
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
       });
     };
     $scope.select_all_well = function(){
@@ -127,7 +127,20 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.show_well = true;
         }
     };    
-
+  $scope.approvalIcon = function(value){
+      icons = { 'none':'icon-off',
+		//'validation' : 'icon-eye-open',
+		//		'define' : 'icon-check',
+		'flow' : 'icon-share',
+		'submit' : 'icon-ok'
+      }
+      if (icons[value]){
+	  return icons[value] ;
+      }
+      else{
+	  return "icon-question-sign" ;
+      }
+  };
    $scope.$watch('list_page', function(){
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
        promise.then(function(data){
@@ -197,14 +210,14 @@ function resultsCtrl($scope, $http, $location, $window){
     }else
         $scope.selected_prepids.push(prepid);
   };
-  $scope.multiple_step = function(step, extra=''){
+  $scope.multiple_step = function(step, extra){
     if ($scope.selected_prepids.length > 0){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/'+step+'/'+$scope.selected_prepids.join()+extra}).success(function(data,status){
          $scope.update["success"] = true;
          $scope.update["result"] = data;
          $scope.update["fail"] = false;
          $scope.update["status_code"] = status;
-         // $window.location.reload();
+         $window.location.reload();
       }).error(function(status){
          $scope.update["success"] = false;
          $scope.update["fail"] = true;
@@ -222,7 +235,7 @@ function resultsCtrl($scope, $http, $location, $window){
          $scope.update["result"] = data;
          $scope.update["fail"] = false;
          $scope.update["status_code"] = status;
-         // $window.location.reload();
+         $window.location.reload();
       }).error(function(status){
          $scope.update["success"] = false;
          $scope.update["fail"] = true;
@@ -232,6 +245,16 @@ function resultsCtrl($scope, $http, $location, $window){
     }else{
       alert("No requests selected");
     };
+  };
+  $scope.toggleAll = function(){
+    if ($scope.selected_prepids.length != $scope.result.length){
+      _.each($scope.result, function(v){
+        $scope.selected_prepids.push(v.prepid);
+      });
+      $scope.selected_prepids = _.uniq($scope.selected_prepids);
+    }else{
+      $scope.selected_prepids = [];
+    }
   };
 };
 

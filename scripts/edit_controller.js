@@ -1,5 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.user = {name: "quest", role:"user"}
+    $scope.user = {name: "guest", role:"user"}
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -22,6 +22,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope.dbName = $location.search()["db_name"];
+    $scope.prepid = $location.search()["query"];
     if ($scope.dbName == "campaigns"){
 	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
     }else if($scope.dbName == "requests"){
@@ -33,8 +34,11 @@ function resultsCtrl($scope, $http, $location, $window){
       });
     }
     else if($scope.dbName == "chained_requests"){
-      $scope.not_editable_list = ["Prepid", "Chain"];
-    }else{
+	$scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];
+    }else if($scope.dbName == "chained_campaigns"){
+      $scope.not_editable_list = ["Prepid", "Campaigns"];
+    }
+    else{
       $scope.not_editable_list = [];
     }
 
@@ -49,11 +53,9 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.parseEditableObject = function(editable){
       _.each(editable, function(elem,key){
-        console.log(key +" : " +elem);
         if (elem == false){
           if (key[0] != "_"){ //if its not mandatory couchDB values eg. _id,_rev
             column_name = key[0].toUpperCase()+key.substring(1).replace(/\_/g,' ')
-            console.log(column_name);
             if($scope.not_editable_list.indexOf(column_name) ==-1){
               $scope.not_editable_list.push(column_name);
             }
@@ -130,7 +132,6 @@ function resultsCtrl($scope, $http, $location, $window){
    $scope.$watch('list_page', function(){
      var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
      promise.then(function(data){
-       console.log(data);
        $scope.result = data.data.results;
        if ($scope.result.length != 0){
          columns = _.keys($scope.result);
@@ -163,8 +164,18 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
   $scope.editableFragment = function(){
-    console.log($scope.not_editable_list.indexOf('Fragment') !=-1);
     return $scope.not_editable_list.indexOf('Fragment')!=-1;
+  };
+  $scope.hideSequence = function(roleNumber){
+    if ($scope.role(roleNumber)){
+      return true; //if we hide by role -> hide
+    }else{ //else we check if sequence is in editable list
+      if ($scope.not_editable_list.indexOf("Sequences")!=-1){
+        return true; //if its in list -> hide
+      }else{
+        return false; //else let be displayed: ng-hide=false
+      }
+    }
   };
 }
 var ModalDemoCtrl = function ($scope) {
@@ -294,7 +305,7 @@ testApp.directive("sequenceEdit", function($http){
     // '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="role(1);">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1);">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
     '        <div modal="shouldBeOpen" close="close()">'+
@@ -316,7 +327,7 @@ testApp.directive("sequenceEdit", function($http){
     '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
     '          </div>'+
     '       </div>'+
-    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="role(1);">'+
+    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);">'+
     '        <i class="icon-remove-sign"></i>'+
     '      </a>'+
     '    </li>'+
@@ -331,7 +342,7 @@ testApp.directive("sequenceEdit", function($http){
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <li>{{name}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="role(1);">'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -362,12 +373,12 @@ testApp.directive("sequenceEdit", function($http){
     ///END OF MODAL
     '        <div ng-controller="ModalDemoCtrl">'+
     '          <span ng-hide="showAddNewModal">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="role(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-zoom-in"></i>'+
     '          </a>'+
     '          </span>'+
     '          <span ng-show="showAddNewModal">'+
-    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);" >'+ //add sequence
+    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
     '              <i class="icon-plus"></i>'+
     '            </a>'+
     '          </span>'+
@@ -410,12 +421,12 @@ testApp.directive("sequenceEdit", function($http){
     //ADD NEW SEQUENCE MODAL
     '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+
     '  <span ng-hide="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="role(1);" >'+ //button to get default sequences, and make plus-sign available
+    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
     '      <i class="icon-zoom-in"></i>'+
     '    </a>'+
     '  </span>'+
     '  <span ng-show="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="role(1);" >'+ //add sequence
+    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
     '      <i class="icon-plus"></i>'+
     '    </a>'+
     '  </span>'+
@@ -607,6 +618,48 @@ testApp.directive("generatorParams", function($http){
     '        <dd>{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
     '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
+    '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
+    '            <div class="modal-header">'+
+    '              <h4>Generator parameters editer</h4>'+
+    '            </div>'+ //end of modal header
+    '          <div class="modal-body">'+
+    '            <form class="form-horizontal">'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Cross section</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.cross_section">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.filter_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Filter efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.filter_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.match_efficiency">'+
+    '                </div>'+
+    '              </div>'+
+    '              <div class="control-group">'+
+    '                <label class="control-label">Match efficiency error</label>'+
+    '                <div class="controls">'+
+    '                  <input type="text" ng-model="modal_data.match_efficiency_error">'+
+    '                </div>'+
+    '              </div>'+
+    '            </form>'+
+    '          </div>'+ //end of modal body
+    '          <div class="modal-footer">'+
+    '            <button class="btn btn-success" ng-click="saveGenParam($index)">Save</button>'+
+    '            <button class="btn btn-warning cancel" ng-click="closeGenParam($index)">Cancel</button>'+
+    '          </div>'+ //end of modal footer
     '    </li>'+
     '  </ul>'+
     '      <a ng-click="openAddParam()" ng-hide="addParamLoad"><i class="icon-plus"></i></a>'+

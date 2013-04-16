@@ -119,6 +119,19 @@ class request(json_base):
     #    sequences.append(seq.json())
     #    self.set_attribute('sequences', sequences)
 
+
+    def set_status(self, step=-1,to_status=None):
+        ## call the base
+        json_base.set_status(self)
+        ## and set the last_status of each chained_request I am member of, last
+        crdb= database('chained_requests')
+        for inchain in self.get_attribute('member_of_chain'):
+            if crdb.document_exists(inchain):
+                chain=crdb.get(inchain)
+                if chain['chain'][-1] == self.get_attribute('prepid'):
+                    chain['last_status'] = self.get_attribute('status')
+                    crdb.save(chain)
+        
     def get_editable(self):
         editable= {}
         if self.get_attribute('status')!='new': ## after being new, very limited can be done on it
@@ -166,8 +179,12 @@ class request(json_base):
             ##not allowed to do so 
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
 
-        if self.get_attribute('status')!='defined':
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
+        if 'defined' in self._json_base__status:
+            if self.get_attribute('status')!='defined':
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
+        else:
+            if self.get_attribute('status')!='new':
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
         
         ## from defined status, with generator convener approval (?should this be removed???)
         # this one will probably stay hard-wired, unless we decide on something very specific, like resource estimation: a state machine would come along, check, raise alarms, or set to approved
@@ -264,7 +281,7 @@ class request(json_base):
           self.set_attribute('type',camp['type'])
           ## putting things together from the campaign+flow
           freshSeq=[]
-          
+          freshKeep=[]
           ##JR
           ## there is a method in the chained_requests that needs to be put in common, as a static method for example: although, this could create circulare dependencies....
           new_req = self.json()
@@ -309,6 +326,10 @@ class request(json_base):
                       fresh = sequence(camp['sequences'][i]["default"])
                       freshSeq.append(fresh.json())
               self.set_attribute('sequences',freshSeq)
+          for i in range(len(camp['sequences'])):
+                      freshKeep.append(False)
+          freshKeep[-1]=True
+          self.set_attribute('keep_output',freshKeep)              
           rdb = database('requests')
           #rdb.update(self.json())
           rdb.update(new_req)
@@ -403,7 +424,11 @@ class request(json_base):
             infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
         infile += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
+        infile += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
+        infile += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
+        infile += 'else\n'
         infile += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        infile += 'fi\n'
         infile += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
         infile += 'eval `scram runtime -sh`\n'
 
@@ -417,7 +442,7 @@ class request(json_base):
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
 
         # previous counter
         previous = 0
@@ -428,7 +453,7 @@ class request(json_base):
 
             # check if customization is needed to check it out from cvs
             if '--customise' in cmsd:
-                cust = cmsd.split('--customise=')[1].split(' ')[0]
+                cust = cmsd.split('--customise ')[1].split(' ')[0]
                 toks = cust.split('.')
                 cname = toks[0]
                 cfun = toks[1]
@@ -449,6 +474,18 @@ class request(json_base):
             res += '--no_exec -n '+str(events)#str(self.request.get_attribute('total_events'))
             #infile += res
             cmsd_list += res + '\n'
+
+
+            ## gen valid configs
+            # to be refined using the information of the campaign
+            steps=cmsd.split('--step')[1].split()[0]
+            if steps.startswith('GEN'):
+                genvalid = cmsd
+                genvalid += '--step GEN,VALIDATION:genvalid_all --datatier DQM --eventcontent DQM --fileout file:genvalid.root --no_exec --mc -n 1000 --python_filename %sgenvalid.py'%(directory)
+                cmsd_list += '\n\n'
+                cmsd_list += genvalid + '\n'
+                cmsd_list += 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+
 
             previous += 1
 
@@ -500,3 +537,4 @@ class request(json_base):
                 #return False
 
         return True
+

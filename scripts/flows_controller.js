@@ -6,7 +6,7 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Allowed Campaigns',select:true, db_name:'allowed_campaigns'},
         {text:'Next Campaign',select:true, db_name:'next_campaign'},
     ];
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user"}
 // GET username and role
       var promise = $http.get("restapi/users/get_roles");
        promise.then(function(data){

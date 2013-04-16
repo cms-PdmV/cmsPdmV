@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="eng" ng-app="testApp">
+  <head>
+        <title>Injection status page McM</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/injection_controller.js"></script>
+  </head>
+  <body ng-controller="resultsCtrl">
+  	<div ng-include="'HTML/navbar_template.html'"></div>
+  	<table class="table table-bordered table-stripped">
+      <thead>
+      	<tr style="white-space: nowrap;">
+      	  <th>PrepId</th>
+      	  <th>Status</th>
+      	  <th>10 lines of log</th>
+      	  <th>Full log</th>
+      	</tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="elem in data" style="white-space: nowrap;">
+          <td><a ng-ref='requests?query="prepid%3D%3D{{elem['prepid']}}"' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}
+	  </a></td>
+          <td>
+	    <span ng-switch="elem['status']">
+	      <img ng-switch-when="submitted" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-green.gif" rel="tooltip" title="Sucess"/>
+	      <img ng-switch-when="approved" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
+	      <img ng-switch-when="undefined" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
+              <img ng-switch-default ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-red.gif" rel="tooltip" title="Fail"/>
+
+		{{elem['status']}} 
+	    </span>
+            <img ng-show="elem['checking_status']" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+          </td>
+          <td>
+            <text ng-bind-html-unsafe="elem['log']"></text>
+            <img ng-show="elem['checking_log']" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+          </td>
+          <td>
+            <a ng-href="restapi/requests/injectlog/{{elem['prepid']}}" rel="tooltip" title="Full log" target="_blank">
+              <i class="icon-book"></i>
+            </a>
+          </td>
+        </tr>
+      </tbody>
+  	</table>
+	<!--{{prepid}}-->
+	<!--<text ng-show="nextUpdate">Next line update in {{timeToUpdate}} seconds</text>-->
+    <!-- <div ng-click="reload();">
+      <i class="icon-refresh"></i>
+    </div>-->
+    <text ng-show="prepid.length==0"> No more status update to be done. The batch submission has completed.</text>
+  </body>
+</html>

@@ -5,8 +5,8 @@
         <a href='campaigns' target="_self">Campaigns</a>
       </li>
       <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="requests"}'>
-        <a href='requests' target="_self">Requests</a>
+      <li ng-class='{ "active": dbName=="chained_campaigns"}'>
+        <a href='chained_campaigns' target="_self">Chained campaigns</a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="flows"}'>
@@ -17,8 +17,8 @@
         <a href='actions' target="_self">Actions</a>
       </li>
       <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="chained_campaigns"}'>
-        <a href='chained_campaigns' target="_self">Chained campaigns</a>
+      <li ng-class='{ "active": dbName=="requests"}'>
+        <a href='requests' target="_self">Requests</a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="chained_requests"}'>
@@ -35,6 +35,10 @@
       <li class="divider-vertical" ng-hide="role(4);"></li>
       <li ng-hide="role(4);">
         <a href='admin/_utils/' target="_self">Admin</a>
+      </li>
+      <li class="divider-vertical" ></li>
+      <li>
+	<a href='http://cms-pdmv.web.cern.ch/cms-pdmv/prep2/' target="_blank">Status</a>
       </li>
       <li class="divider-vertical" ></li>
       <li> 

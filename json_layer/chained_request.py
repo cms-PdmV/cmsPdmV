@@ -53,7 +53,7 @@ class chained_request(json_base):
     def __init__(self, json_input={}):
 
         self._json_base__approvalsteps = ['none','flow', 'submit']
-        self._json_base__status = ['new','started','done']
+        #self._json_base__status = ['new','started','done']
 
         self._json_base__schema = {
             '_id':'',
@@ -72,6 +72,7 @@ class chained_request(json_base):
             'member_of_campaign':'',
             #'generator_parameters':[], #prune
             #'request_parameters':{} # json with user prefs #prune
+            'last_status':'none'
             }
         # update self according to json_input
         self.update(json_input)
@@ -162,6 +163,7 @@ class chained_request(json_base):
 
         # check all approvals (if flow say yes -> allowing policy)
         if fl['approval'] not in allowed_flow_approvals:
+            # if flow says No -> check on the chained request itself
             if self.get_attribute('approval') not in allowed_flow_approvals:
                 raise self.NotApprovedException(self.get_attribute('_id'),  self.get_attribute('approval'), allowed_flow_approvals)
 
@@ -222,6 +224,20 @@ class chained_request(json_base):
         req['root'] = False #JR???
         
         # add the previous requests output_dataset name as input for the new
+        ## get the input dataset from the previous request
+        ## turn this into a DB object in the far future ?
+        # a call to the stats DB ?
+        if len(req['reqmgr_name']):
+            lastrequest=req['reqmgr_name'][-1]
+            if 'content' in lastrequest and 'pdmv_dataset_name' in lastrequest['content']:
+                input_dataset = lastrequest['content']['pdmv_dataset_name']
+            else:
+                statsDB = database('stats',url='http://cms-pdmv-golem.cern.ch:5984/')
+                if statsDB.document_exists(lastrequest['name']):
+                    latestStatus = statsDB.get(lastrequest['name'])
+                    input_dataset = latestStatus['pdmv_dataset_name']
+                    
+
         if input_dataset: 
             req['input_filename'] = input_dataset
         """
@@ -264,7 +280,15 @@ class chained_request(json_base):
 		self.logger.error('Detected inconsistency ! Campaign "%s" has different sequences defined than flow "%s". Aborting...' % (nc['_id'], fl['_id']), level='critical') 
 		raise IndexError('Sequences of campaign "%s" do not match those of flow "%s"' % (nc['_id'], fl['_id']))
 
+        ## put the keep output in order: could be overwritten later by the flow
+        new_req['keep_output']=[]
+        for s in nc['sequences']:
+            new_req['keep_output'].append(False)
+        new_req['keep_output'][-1] = True
+
         ### this is an awfull copy/paste that I had to do because of cross import between request and chained_requests
+
+
         def puttogether(nc,fl,new_req):
             # copy the sequences of the flow
             for i, step in enumerate(nc['sequences']):
@@ -298,8 +322,12 @@ class chained_request(json_base):
 		
         puttogether(nc,fl,new_req)
 
-        # update history and save request to database
         nre = request(new_req)
+        #JR toggle approval of the request until we reached the desired 
+        # maximum approval level max(flow,chained_request) in ['none','flow','submit']
+        ## TO BE INSERTED HERE, in a Thread object, so as to not hold the request back
+
+        # update history and save request to database
 	nre.update_history({'action':'flow'})
         rdb.save(nre.json())
 

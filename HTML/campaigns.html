@@ -36,7 +36,7 @@
     <thead>
       <tr>
         <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text" style="white-space: nowrap;">
-	        <div ng-switch-when="Actions" ng-hide="role(1);">
+	        <div ng-switch-when="Actions">
             {{column.text}} 
             <span ng-show="selectedCls(column.db_name)">
               <i class="icon-chevron-up" ng-show="sort.descending"></i>
@@ -57,19 +57,19 @@
       <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
         <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
           <div ng-switch on="value.text">
-
-	    <div ng-switch-when="PrepId">
-	      <a ng-href='requests?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_blank">{{data.prepid}}</a>
-	    </div>
-            <div ng-switch-when="Actions" ng-hide="role(1);">
+	          <div ng-switch-when="PrepId">
+	          <!--<a ng-href='requests?query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_blank">{{data.prepid}}</a>-->
+	           <a ng-href='campaigns?query="prepid%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}</a>
+	          </div>
+            <div ng-switch-when="Actions">
        <!--     MODAL -->
                 <div ng-controller="ModalDemoCtrl">
                   <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_blank" ng-hide="role(1) || data['root']==1;">
                     <i class="icon-plus-sign"></i>
                   </a>
-<!--                  <a ng-href='requests?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests"  target="_self">
+		  <a ng-href='requests?db_name=requests&query="member_of_campaign%3D%3D{{data.prepid}}"&page=0' rel="tooltip" title="Show requests in {{data.prepid}}"  target="_self">
                     <i class="icon-folder-open"></i>
-                  </a> -->
+                  </a>
                   <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
@@ -135,6 +135,20 @@
             <div ng-switch-when="History">
               <div custom-history ng-model="data[value.db_name]"></div>
             </div>
+	          <div ng-switch-when="Pileup dataset name">
+	            <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_blank">{{data[value.db_name]}}</a>
+	          </div>
+	          <div ng-switch-when="Root">
+	            <i class="icon-ok" ng-show="data[value.db_name]==0" rel="tooltip" title="Yes"></i>
+	            <i class="icon-ok-sign" ng-show="data[value.db_name]==-1" rel="tooltip" title="Possible"></i>
+	            <i class="icon-remove" ng-show="data[value.db_name]==1" rel="tooltip" title="No"></i>
+	          </div>
+	          <div ng-switch-when="Approval">
+	            <a ng-href='campaigns?query="approval%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all campaigns in approval {{data[value.db_name]}}" targer="_blank">{{data[value.db_name]}}</a>
+	          </div>
+	          <div ng-switch-when="Status">
+	            <a ng-href='campaigns?query="status%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="Show all campaigns in status {{data[value.db_name]}}" targer="_blank">{{data[value.db_name]}}</a>
+	          </div>
             <div ng-switch-default>{{data[value.db_name]}}</div>
           </div>
         </td>

@@ -5,7 +5,7 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetEditable, GetDefaultGenParams, CloneRequest
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
@@ -106,6 +106,9 @@ def batches( *args, **kwargs):
 def getDefaultSequences(*args, **kwargs):
     tmpSeq = sequence()._json_base__schema
     return json.dumps(tmpSeq)
+@cherrypy.expose
+def injection_status( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','injection_status.html'))
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -134,6 +137,7 @@ root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
 root.users = users
 root.batches = batches
+root.injection_status = injection_status
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -146,6 +150,13 @@ root.restapi.flows = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.batches = RESTResourceIndex()
 
+## create a restriction-free urls, with limited capabilities
+root.public = RESTResourceIndex()
+root.public.restapi = RESTResourceIndex()
+root.public.restapi.requests = RESTResourceIndex()
+root.public.restapi.requests.get_fragment = GetFragmentForRequest()
+root.public.restapi.requests.get_setup = GetSetupForRequest()
+root.public.restapi.requests.get_status = GetStatus()
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
 
@@ -178,6 +189,8 @@ root.restapi.requests.inject = InjectRequest()
 root.restapi.requests.injectlog = ReadInjectionLog()
 root.restapi.requests.editable = GetEditable()
 root.restapi.requests.default_generator_params = GetDefaultGenParams()
+root.restapi.requests.register = RegisterUser()
+
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
 root.restapi.campaigns.update = UpdateCampaign()

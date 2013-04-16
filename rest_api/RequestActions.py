@@ -11,6 +11,8 @@ from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.action import action
 from json_layer.generator_parameters import generator_parameters
+from threading import Thread
+from submitter.package_builder import package_builder
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -39,7 +41,7 @@ class RequestRESTResource(RESTResource):
         # get campaign
         #self.c = self.cdb.get(camp)
         
-        if (self.campaign['root'] > 0) or (self.campaign['root'] <=0 and int(self.request.get_attribute('mcdb_id')) > -1):
+        if (self.campaign['root'] > 0) or (self.campaign['root'] <0 and int(self.request.get_attribute('mcdb_id')) > -1):
             ## c['root'] > 0 
             ##            :: not a possible root --> no action in the table
             ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
@@ -55,10 +57,17 @@ class RequestRESTResource(RESTResource):
             a= action('automatic')
             a.set_attribute('prepid',  self.request.get_attribute('prepid'))
             a.set_attribute('_id',  a.get_attribute('prepid'))
+            a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
             a.set_attribute('member_of_campaign',  self.request.get_attribute('member_of_campaign'))
             a.find_chains()
             self.logger.log('Adding an action for %s'%(self.request.get_attribute('prepid')))
             self.adb.save(a.json())
+        else:
+            a=action(self.adb.get(self.request.get_attribute('prepid')))
+            if a.get_attribute('dataset_name') != self.request.get_attribute('dataset_name'):
+                a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
+                self.logger.log('Updating an action for %s'%(self.request.get_attribute('prepid')))
+                self.adb.save(a.json())
 
     def import_request(self, data):
         try:
@@ -250,9 +259,9 @@ class GetFragmentForRequest(RESTResource):
       if not args:
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
-      v=True
+      v=False
       if len(args)>1:
-          v=False
+          v=True
       return self.get_fragment(self.db.get(prepid=args[0]),v)
 
     def get_fragment(self, data, view):
@@ -416,6 +425,36 @@ class ResetRequestApproval(RESTResource):
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
+
+class GetStatus(RESTResource):
+    def __init__(self):
+        self.db = database('requests')
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+
+        return self.multiple_status(args[0])
+
+    def multiple_status(self, rid):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.status(r))
+            return dumps(res)
+        else:
+            return dumps(self.status(rid))
+
+    def status(self, rid):
+        if not self.db.document_exists(rid):
+            return {"prepid": rid, "results":'Error: The given request id does not exist.'}
+
+        req = request(json_input=self.db.get(rid))
+
+        #return {"prepid":rid, "results":req.get_attribute('status')}
+        return {rid: req.get_attribute('status')}
+
 class SetStatus(RESTResource):
     def __init__(self):
         self.db = database('requests')
@@ -448,7 +487,7 @@ class SetStatus(RESTResource):
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
-            return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
+            return {"prepid":rid, "results":False, 'message' : 'Unknow error'+traceback.format_exc()}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -466,12 +505,86 @@ class InjectRequest(RESTResource):
         self.db_name = 'requests'
         self.db = database(self.db_name)
 
+    class INJECTOR(Thread):
+        def __init__(self,pid,log):
+            Thread.__init__(self)
+            self.logger = log
+            self.db = database('requests')
+            self.act_on_pid=[]
+            self.res=[]
+            if not self.db.document_exists(pid):
+                self.res.append({"prepid": pid, "results": False,"message":"The request %s does not exist"%(pid)})
+                return
+            req = request(self.db.get(pid))
+            if req.get_attribute('status')!='approved':
+                self.res.append({"prepid": pid, "results": False,"message":"The request is in status %s, while approved is required"%(req.get_attribute('status'))})
+                return
+            if req.get_attribute('approval')!='submit':
+                self.res.append({"prepid": pid, "results": False,"message":"The request is in approval %s, while submit is required"%(req.get_attribute('approval'))})
+                return
+            if not req.get_attribute('member_of_chain'):
+                self.res.append({"prepid": pid, "results": False,"message":"The request is not member of any chain"})
+                return
+
+            self.act_on_pid.append(pid)
+            self.res.append({"prepid": pid, "results": True, "message":"The request %s is being forked"%(pid)})
+
+        def run(self):
+            if len(self.act_on_pid):
+                self.res=[]
+            for pid in self.act_on_pid:
+                req = request(self.db.get(pid))
+                pb=None
+                try:
+                    pb = package_builder(req_json=req.json())
+                except:
+                    message = "Errors in making the request : \n"+ traceback.format_exc()
+                    self.logger.error(message)
+                    self.res.append({"prepid": pid, "results" : False, "message": message})
+                    continue
+                try:
+                    res_sub=pb.build_package()
+                except:
+                    message = "Errors in building the request : \n"+ traceback.format_exc()
+                    self.logger.error(message)
+                    self.res.append({"prepid": pid, "results" : False , "message": message})
+                    continue
+
+                self.res.append({"prepid": pid,"results": res_sub})
+                # update history
+                req.update_history({'action':'inject'})
+                
+        def status(self):
+            return self.res
+
     def GET(self, *args):
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         
-        return self.inject_request(ids=args[0])
+        res=[]
+        forking=(len(args)>1)
+        forks=[]
+        ids=args[0].split(',')
+        for pid in ids:
+            forks.append(self.INJECTOR(pid,self.logger))
+            if forking:
+                self.logger.log('Forking the injection of request %s ' % (pid))
+                res.extend(forks[-1].status())
+                ##forks the process directly
+                forks[-1].start()
+            else:
+                ##makes you wait until it goes
+                self.logger.log('Running the injection of request %s ' % (pid))
+                forks[-1].run()
+                res.extend(forks[-1].status())
+        
+        if len(res)>1:
+            return dumps(res)
+        elif len(res)==0:
+            return dumps({"results":False})
+        else:
+            return dumps(res)
 
     def inject_request(self, ids):
         try:
@@ -496,19 +609,20 @@ class InjectRequest(RESTResource):
             except:
                 message = "Errors in making the request : \n"+ traceback.format_exc()
                 self.logger.error(message)
-                res.append({"prepid": pid, "results" : message})
+                res.append({"prepid": pid, "results" : False, "message":message})
                 continue
             try:
-                res_sub=str(pb.build_package())
+                res_sub=pb.build_package()
             except:
                 message = "Errors in building the request : \n"+ traceback.format_exc()
                 self.logger.error(message)
-                res.append({"prepid": pid, "results" : message})
+                res.append({"prepid": pid, "results" : False, "message":message})
                 continue
 
-            res.append({"results": res_sub})
+            res.append({"prepid": pid, "results": res_sub})
             # update history
-            req.update_history({'action':'inject'})
+            ## does not have any effect since we do not save the object 
+            #req.update_history({'action':'inject'})
         if len(res)>1:
             return dumps(res)
         else:
@@ -547,3 +661,31 @@ class GetDefaultGenParams(RESTResource):
         request_in_db = request(self.db.get(prepid=prepid))
         request_in_db.update_generator_parameters()
         return dumps({"results":request_in_db.get_attribute('generator_parameters')[-1]})
+
+class RegisterUser(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.udb = database('users')
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":False, 'message':'Error: No arguments were given'})
+        
+        return self.register_user(args[0])
+    
+    def register_user(self,pid):
+        request_in_db = request(self.rdb.get(pid))
+        current_user = request_in_db.current_user
+        if not current_user or not self.udb.document_exists(current_user):
+            return dumps({"results":False,'message':"You (%s) are not a registered user to McM, correct this first"%(current_user)})
+
+        if current_user in request_in_db.get_actors():
+            return dumps({"results":False,'message':"%s already in the list of people for notification of %s"%(current_user,pid)})
+        
+        self.logger.error('list of users %s'%(request_in_db.get_actors()))
+        self.logger.error('current actor %s'%(current_user))
+
+        request_in_db.update_history({'action':'register','step':current_user})
+        self.rdb.save(request_in_db.json())
+        return dumps({"results":True,'message':'You (%s) are registered to %s'%(current_user,pid)})

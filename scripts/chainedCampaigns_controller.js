@@ -6,7 +6,7 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Campaigns',select:true, db_name:'campaigns'},
         //{text:'Energy',select:true, db_name:'energy'},
     ];
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user"}
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "chained_campaigns";
     }else{
@@ -105,13 +105,27 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.show_well = true;
         }
     };    
-
+   
+   $scope.filterResults = function(){
+     var data =_.filter($scope.result, function(element){
+       return element["valid"];
+     });
+     if ($scope.role(3)){
+       return data;
+     }else{
+       return $scope.result;
+     }
+   };
    $scope.$watch('list_page', function(){
       console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+page)
       promise.then(function(data){
         console.log(data);
         $scope.result = data.data.results; 
+	// remove those with valid = False when !role(3);
+      // $scope.valid_result = _.filter(data.data.results, function(element){
+      //   return element["valid"];
+      //  });
         if ($scope.result.length != 0){
           columns = _.keys($scope.result[0]);
           rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown

@@ -17,9 +17,13 @@ class ReadInjectionLog(RESTResource):
 		if not args:
 			self.logger.error('No arguments were given')
 			return dumps({"results":'Error: No arguments were given'})
-		return self.read_logs(args[0])
+		pid = args[0]
+		nlines=-1
+		if len(args)>1:
+			nlines=int(args[1])
+		return self.read_logs(pid,nlines)
 
-	def read_logs(self, pid):
+	def read_logs(self, pid,nlines):
 		if not self.db.document_exists(pid):
 			self.logger.error('Given prepid "%s" does not exist in the database.' % (pid))
 			return dumps({"results":'Error:Given prepid "%s" does not exist in the database.' % (pid)})
@@ -34,10 +38,11 @@ class ReadInjectionLog(RESTResource):
 		if not important:
 			raise ValueError('Malformed logs. Could not detect start of injection.')
 
-		lines = important.rsplit('\n')
-
+		lines = filter(lambda l: pid in l, important.rsplit('\n'))
+		
+		if (nlines>0):
+			lines = lines[-nlines:]
 		res = ''
 		for line in lines:
-			if pid in line:
-				res += '%s<br>' % (line.replace('<breakline>', '<br>'))
+			res += '%s<br>' % (line.replace('<breakline>', '<br>'))
 		return res

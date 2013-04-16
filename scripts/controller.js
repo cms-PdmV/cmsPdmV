@@ -3,14 +3,16 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
-	      {text:'Approval',select:true, db_name:'approval'},
-        {text:'Status',select:true, db_name:'status'},
+	//{text:'Approval',select:true, db_name:'approval'},
+        //{text:'Status',select:true, db_name:'status'},
         //{text:'Type',select:true, db_name:'type'},
         //{text:'ProdType',select:true, db_name:'production_type'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
-        {text:'Energy',select:true, db_name:'energy'}
+        {text:'Energy',select:true, db_name:'energy'},
+	{text:'Next',select:true, db_name:'next'},
+	{text:'Notes',select:true, db_name:'notes'}
     ];
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user"}
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){

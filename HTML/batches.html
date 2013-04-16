@@ -50,7 +50,7 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to the world" ng-hide="role(3);">
+                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';">
                     <i class="icon-envelope"></i>
                   </a>
                   <a ng-click='delete_object("batches", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(3);">
@@ -72,14 +72,17 @@
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->  
               </div>
+	      <div ng-switch-when="Notes">
+		<textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px; height: {{data[value.db_name].length}}px"></textarea>
+	      </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-when="Requests">
               	<ul>
               	  <li ng-repeat="elem in data[value.db_name]">
-		                <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details" target="_blank">{{elem.name}}</a>
-		              </li>
+		    <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_blank">{{elem.name}}</a>, <a ng-href='requests?query="prepid%3D%3D{{elem.content.pdmv_prep_id}}"' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_blank">{{elem.content.pdmv_prep_id}}</a>
+		  </li>
               	</ul>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>

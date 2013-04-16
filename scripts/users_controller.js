@@ -5,7 +5,7 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Email', select:false, db_name:'email'},
         {text:'Roles', select:true, db_name:'roles'}
     ];
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user"};
     $scope.update = [];
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");

@@ -91,7 +91,31 @@
                       <div generator-params ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-when="Fragment">
-                      <textarea ui-codemirror="{ theme:'eclipse', readOnly:'editableFragment()'}" ng-model="result[column.db_name]"></textarea>
+                      <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
+                        <span ng-switch-when="true">
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ng-model="result[column.db_name]"></textarea>
+                        </span>
+                        <span ng-switch-when="false">
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ng-model="result[column.db_name]"></textarea>
+                        </span>
+                      </span>
+                    </div>
+                    <div ng-switch-when="Keep output">
+                      <ul ng-repeat="elem in result[column.db_name]">
+                        <li>
+                          Step {{ $index}}:
+                          <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                        </li>
+                      </ul>
+                    </div>
+                    <div ng-switch-when="Extension">
+                      <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                    </div>
+                    <div ng-switch-when="Action parameters">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
                     </div>
                     <div ng-switch-default style="width: 400px;">
                       <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
@@ -106,6 +130,11 @@
         <div class="span4" align="left" ng-hide="role(1);">
           <input type="button" class="btn" ng-click="submit_edit()" value="Commit" align="left" ng-hide="role(1);"/>
         </div>
+	      <div>
+	        <a ng-href='{{dbName}}?query="prepid%3D%3D{{prepid}}"' target="_self">
+	          <i class="icon-eye-open"></i>
+          </a>
+	      </div>
         <div class="span3">
           <div ng-show="update['success']">
             Updated. Status code:<font color="green">{{update['status_code']}}</font>

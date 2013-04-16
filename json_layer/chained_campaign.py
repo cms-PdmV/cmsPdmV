@@ -126,7 +126,10 @@ class chained_campaign(json_base):
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
-        
+        ##inherit the approval of the chained_campaign
+        ## approval is not a member of chained campaign 
+        # creq.set_attribute('approval', self.get_attribute('approval'))
+
         # generate new chain id
         id = RequestChainId().generate_id(creq.get_attribute('pwg'), creq.get_attribute('member_of_campaign'))
         creq.set_attribute('prepid',loads(id)['results'])

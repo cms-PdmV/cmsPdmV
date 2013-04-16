@@ -281,6 +281,22 @@ class GenerateChainedRequests(RESTResource):
 
         return dumps({'results':True})
 
+class GenerateAllChainedRequests(GenerateChainedRequests):
+    def __init__(self):
+        GenerateChainedRequests.__init__(self)
+        
+    def GET(self,  *args):
+        return self.generate_requests()
+    
+    def generate_requests(self):
+        self.logger.log('Generating all possible (and selected) chained_requests...')
+        allacs = self.db.get_all(-1) # no pagination
+        for a in allacs:
+            self.generate_request(a['key'])
+        
+        return dumps({'results':True})
+
+"""
 class GenerateAllChainedRequests(RESTResource):
     def __init__(self):
         self.db = database('actions')
@@ -367,7 +383,7 @@ class GenerateAllChainedRequests(RESTResource):
             self.db.update(act.json())   
 
         return dumps({'results':True})
-            
+"""            
         
 class DetectChains(RESTResource):
     def __init__(self):

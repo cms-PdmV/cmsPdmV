@@ -135,8 +135,8 @@ class package_builder:
         #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
         self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
         self.reqmgr_database = "reqmgr_config_cache"
-        self.reqmgr_user = "pdmvserv" # generic uname and pword
-        self.reqmgr_group = "ppd" # to be updated on the fly later (no worries)
+        self.reqmgr_user = "pdmvserv" 
+        self.reqmgr_group = "ppd" 
 
         # config files
         self.__summary = None
@@ -146,7 +146,7 @@ class package_builder:
 
         # There is a not-Initialized exception that is not handled
         self.directory = directory
-        self.careOfExistingDirectory = True
+        self.careOfExistingDirectory = False
         self.__check_directory() # check directory sanity
 
         # init logger
@@ -193,6 +193,7 @@ class package_builder:
         if os.path.exists(self.directory):
             self.logger.error('Directory ' + self.directory + ' already exists.')
             if self.careOfExistingDirectory:
+                raise self.NotInitializedException('Data directory %s already exists'%(self.directory))
                 return
         else:
             self.logger.log('Creating directory :'+self.directory)
@@ -555,8 +556,7 @@ class package_builder:
         command += ' --group %s' % (self.reqmgr_group)
         command += ' --batch %s' % (self.batchNumber)
 
-        if self.request.get_attribute('process_string'):
-            command += ' --process-string '+self.request.get_attribute('process_string')
+        processString = self.request.get_attribute('process_string')
 
         # if MonteCarlo analysis
         if self.wmagent_type == 'MonteCarlo':
@@ -603,7 +603,10 @@ class package_builder:
                             raise ValueError('Number of events per job could not be retrieved from: %s' % (self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('name_of_fragment')))
                 print self.numberOfEventsPerJob
                 command += ' --events-per-job %s' % (self.numberOfEventsPerJob)
-
+            else:
+                if not processString:
+                    processString=''
+                processString+='STEP0ATCERN'
 
         # Else: ReDigi step
         elif self.wmagent_type == 'ReDigi':
@@ -655,6 +658,11 @@ class package_builder:
                 command += ' --blocks "'+','.join(self.request.get_attribute('block_white_list'))+'"'
             if self.request.get_attribute('block_black_list'):
                 command += ' --blocks_black "'+','.join(self.request.get_attribute('block_black_list'))+'"'
+
+
+
+        if processString:
+            command += ' --process-string '+processString
 
         command += '\n'
 
@@ -709,6 +717,10 @@ class package_builder:
         output=stdout.read()
         retcode=0
         if not stdin and not stdout and not stderr:
+            retcode = -1
+        sterr=stderr.read()
+        if len(sterr):
+            self.logger.inject("%s Preparation FAILED with :\n %s" % (self.request.get_attribute('prepid'),sterr), level='error', handler=self.hname)
             retcode = -1
 
         ## this below does not function 
@@ -847,14 +859,14 @@ class package_builder:
             tester.scram_arch = self.scram_arch
             if tester.test():
                 self.__tarobj.add(self.directory)
-                self.logger.inject('JOB successfully completed !', handler=self.hname)
+                self.logger.inject('Runtime Test Job successfully completed !', handler=self.hname)
                 #print 'JOB completed successfully'
                 flag = True
         
         
             else:
                 #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
-                self.logger.inject('JOB Failed. Check tarball for details.', level='error', handler=self.hname) 
+                self.logger.inject('Runtime Test Job Failed. Check logs for details.', level='error', handler=self.hname) 
                 flag = False
 
         # clean directory
@@ -904,8 +916,11 @@ class package_builder:
 
                     ##save all only at the end with all suceeding to not have half/half
                     rdb = database('requests')
+                    self.request.update_history({'action':'inject'})
                     rdb.update(self.request.json())
                     bdb.update(b.json())
+                    for request in added:
+                        self.logger.inject('Request %s send to %s'%(request,self.batchName))
             else:
                 self.logger.inject('Injection failed :( ', level='warning', handler=self.hname)
                 flag = False

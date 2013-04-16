@@ -1,5 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window){
-  $scope.user = {name: "quest", role:"user"}
+  $scope.user = {name: "guest", role:"user"}
   if ($location.search()["db_name"] === undefined){
     $scope.dbName = "batches";
   }else{

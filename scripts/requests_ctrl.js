@@ -5,13 +5,13 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Approval',select:true, db_name:'approval'},
         {text:'Status',select:true, db_name:'status'},
         {text:'MCDBId',select:true, db_name:'mcdb_id'},
-        {text:'DataSet Name',select:true, db_name:'dataset_name'},
+        {text:'Dataset name',select:true, db_name:'dataset_name'},
         {text:'SW Release',select:true, db_name:'cmssw_release'},
         {text:'Type',select:true, db_name:'type'},
         {text:'History',select:false, db_name:'history'},
     ];
-    $scope.user = {name: "", role:""};
-    $scope.filt = {};
+    $scope.user = {name: "guest", role:"user"}
+    $scope.filt = {}; //define an empty filter
 // GET username and role
       var promise = $http.get("restapi/users/get_roles");
        promise.then(function(data){
@@ -45,7 +45,6 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-            console.log(data,status);
             if (data["results"]){
               $scope.update["success"] = data["results"];
               $scope.update["fail"] = false;
@@ -123,6 +122,25 @@ function resultsCtrl($scope, $http, $location, $window){
       });
     };
 
+    $scope.register = function(prepid){
+	    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+prepid}).success(function(data,status){
+		    $scope.update["success"] = data["results"];
+		    if (data["results"]){
+		      $scope.update["fail"] = false;
+		      $scope.update["status_code"] = data["results"];
+		      alert('Success');
+		      $window.location.reload();
+		    }else{
+		      $scope.update["fail"] = true;
+		      alert(data["message"]);
+		      $scope.update["status_code"] = 0;
+		    }
+	      }).error(function(status){
+		      $scope.update["success"] = false;
+		      $scope.update["fail"] = true;
+		      $scope.update["status_code"] = status;
+		    });
+      };
 
     $scope.select_all_well = function(){
       $scope.selectedCount = true;
@@ -273,10 +291,39 @@ function resultsCtrl($scope, $http, $location, $window){
             alert("Error while processing request. Code: "+status);
         });
   };
+
+
+  $scope.register_several = function(){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+$scope.selected_prepids.join()}).success(function(data,status){
+	      alert("Success!");
+	      $window.location.reload();
+	  }).error(function(data,status){
+		  console.log(status);
+		  alert("Error while processing request. Code: "+status);
+	      });
+  };
+
   $scope.submit_many = function(){
-    _.each($scope.selected_prepids, function(elem){
-      $window.open("injectAndLog?prepid="+elem);
-    });
+    /* submit many requests. On successfully submited ones open a status watching page*/
+
+    if($scope.selected_prepids.length == 0 ){
+      alert("You have selected no requests for multiple actions");
+      return;
+    }
+    $scope.processingRequest = true;
+    var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/1");
+      promise.then(function(data){
+        $scope.processingRequest = false;
+        $scope.injectModalData = data.data;
+        $scope.successfullSubmits = _.filter($scope.injectModalData, function(element){
+          return element["results"] == true;
+        });
+        $scope.openModal();
+        // return data.data;
+      },function(){
+        $scope.processingRequest = false;
+        alert("Error while submiting");
+      });
   };
   $scope.role = function(priority){
     if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
@@ -286,18 +333,17 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
   $scope.approvalIcon = function(value){
-      icons = { 'none':'icon-off',
-		'validation' : 'icon-eye-open',
-		'define' : 'icon-check',
-		'approve' : 'icon-share',
-		'submit' : 'icon-ok'
-      }
-      if (icons[value]){
-	  return icons[value] ;
-      }
-      else{
-	  return value ;
-      }
+    icons = { 'none':'icon-off',
+		  'validation' : 'icon-eye-open',
+		  'define' : 'icon-check',
+		  'approve' : 'icon-share',
+		  'submit' : 'icon-ok'
+    }
+    if (icons[value]){
+	    return icons[value];
+    }else{
+	    return  "icon-question-sign";
+    }
   };
   $scope.statusIcon = function(value){
       icons = {'new' :  'icon-edit',
@@ -312,7 +358,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	  return icons[value] ;
       }
       else{
-	  return value ;
+	  return "icon-question-sign" ;
       }
   };
   $scope.clone = function(prepid){
@@ -320,6 +366,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = data["results"];
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data["results"];
+      $window.open("edit?db_name=requests&query="+$scope.update["status_code"]);
       $window.location.reload();
       }).error(function(status){
         $scope.update["success"] = false;
@@ -327,10 +374,52 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["status_code"] = status;
       });
   };
-}
+  $scope.toggleAll = function(){
+    if ($scope.selected_prepids.length != $scope.result.length){
+      _.each($scope.result, function(v){
+        $scope.selected_prepids.push(v.prepid);
+      });
+      $scope.selected_prepids = _.uniq($scope.selected_prepids);
+    }else{
+      $scope.selected_prepids = [];
+    }
+  };
+  /* Multiple selection modal actions*/
+    $scope.submissionModal = false;
+  $scope.openModal = function (){
+    $scope.submissionModal = true;
+  };
+
+  $scope.closeModal = function () {
+    $scope.submissionModal = false;
+  };
+  $scope.openInjectStatus = function(){
+    
+    var prepids = [];
+    _.each($scope.successfullSubmits, function(element){
+      prepids.push(element["prepid"]);
+    });
+    $window.open("injection_status?prepid="+prepids.join());
+    $scope.submissionModal = false;
+  };
+  /* --Modal actions END--*/
+
+  $scope.update_filtered = function(){
+    $scope.test_display = _.clone($scope.result);
+      _.each($scope.filt, function(filter_column, key){
+    });
+  };
+  $scope.$watch("filt", function(){
+    $scope.update_filtered();
+    _.each($scope.filt, function(v,k){
+      console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
+    });
+  },true);
+
+};
 
 // NEW for directive
-var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customApproval", function(){
     return{
         require: 'ngModel',

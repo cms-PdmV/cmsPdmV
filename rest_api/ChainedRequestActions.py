@@ -188,7 +188,7 @@ class FlowToNextStep(RESTResource):
             creq = chained_request(json_input=self.db.get(vdata['prepid']))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-            return dumps({"results":str(ex)})        
+            return dumps({"results":str(ex)})
 
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
     
@@ -223,7 +223,7 @@ class FlowToNextStep(RESTResource):
             creq = chained_request(json_input=self.db.get(chainid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex)) 
-            return dumps({"results":str(ex)})
+            return {"results":str(ex)}
 
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
         
@@ -231,14 +231,14 @@ class FlowToNextStep(RESTResource):
         try:
             if creq.flow():
                 self.db.update(creq.json())
-                return dumps({"results":True})
-            return dumps({"results":False})
+                return {"results":True}
+            return {"results":False}
         except chained_request.NotApprovedException as ex:
-            return dumps({"results":str(ex)})
+            return {"results":str(ex)}
         except chained_request.NotInProperStateException as ex:
-            return dumps({"results":str(ex)})
+            return {"results":str(ex)}
         except chained_request.ChainedRequestCannotFlowException as ex:
-            return dumps({"results":str(ex)})
+            return {"results":str(ex)}
 
 class ApproveRequest(RESTResource):
     def __init__(self):

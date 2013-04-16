@@ -48,7 +48,7 @@
         <tr ng-repeat="data in result">
           <td ng-repeat="value in flows_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions" ng-hide="role(1);">
+              <div ng-switch-when="Actions" ng-hide="role(3);">
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
                   <i class="icon-minus-sign"></i>
                 </a>

@@ -1,7 +1,6 @@
 function resultsCtrl($scope, $http, $location, $timeout, $window){
     $scope.buttonHide = false;
     $scope.prepid = $location.search()["prepid"];
-    console.log($scope.prepid);
     $scope.injection = "";
     $scope.logInfo = "";
     // $scope.batchNumber = $location.search()["batchNum"];
@@ -11,13 +10,11 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
       $scope.getLog();
       var promise1 = $http.get('restapi/requests/inject/'+$scope.prepid)
       promise1.then(function(data){
-        console.log(data);
         $scope.injection = data.data;
         $scope.injectError = false;
       }, function(data){ //if there was an error in inject request
       	$scope.injection = data.data;
       	$scope.injectError = true;
-      	console.log(data);
       });
     };
     $scope.getLog = function(){
@@ -26,7 +23,6 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
           promise.then(function(data){
             $scope.logInfo = data.data;
             window.scrollTo(0, document.body.scrollHeight); //scroll to bottom of the page
-            console.log(data);
             if ($scope.injection == ""){
               $scope.getLog();
             }

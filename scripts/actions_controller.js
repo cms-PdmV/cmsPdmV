@@ -1,5 +1,7 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.user = {name: "", role:""}
+    $scope.user = {name: "guest", role:"user", roleIndex:1};
+    $scope.pendingHTTP = true;
+    $scope.filt = {}; //define an empty filter
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
     }else{
@@ -25,7 +27,8 @@ function resultsCtrl($scope, $http, $location, $window){
     ];
     $scope.campaigns = ["------"];
     $scope.selectedOption = "------";
-    $scope.selected_campaign = "";
+    //not used ? JR    $scope.selected_campaign = "";
+
     $scope.generatingAllIcon = false;
     $scope.selected_prepids = [];
     $scope.multipleSelection = {};
@@ -33,6 +36,19 @@ function resultsCtrl($scope, $http, $location, $window){
     
     // $scope.http_status = "";
     $scope.showHttpStatus = false;
+
+    //watch selectedOption -> to change it corespondigly in URL
+    $scope.$watch("selectedOption", function(){
+      $location.search("select",$scope.selectedOption); 
+    });
+
+    //watch length of pending HTTP requests -> if there are display loading;
+    $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
+      if (v == 0){
+        $scope.pendingHTTP = false;
+      }else
+      $scope.pendingHTTP = true;
+    });
 
     $scope.getChainCampainTEXT = function(alias, id){
         if (alias != ""){
@@ -101,7 +117,7 @@ function resultsCtrl($scope, $http, $location, $window){
            });
         }
     };
-    
+
     $scope.show_well = false;
     if($location.search()["page"] === undefined){
         $location.search("page", 0);
@@ -123,8 +139,20 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
         _.each(data.data.results, function(v){
            $scope.campaigns.push(v.key);
+
         });
+
+	if ($location.search()["select"] === undefined){
+	    $location.search("select",$scope.selectedOption);
+	}else{
+	    //console.log("with a selected");
+	    //	    console.log($scope.campaigns);
+	    $scope.selectedOption = $location.search()["select"];	
+	    $scope.select_campaign();
+	}
     });
+
+
   $scope.showing_well = function(){
         if ($scope.show_well){
           $scope.show_well = false;
@@ -429,17 +457,24 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         template:
         '<div ng-switch="actionInfo === "undefined"">'+
         '  <div ng-switch-when="false">'+
-        '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()" ng-disabled="role(1);"/>'+
+        '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()" ng-disabled="role(3);" rel="tooltip" title="Set the action for {{column}} on {{prepid}}"/>'+
         '    <a ng-click="open();" ng-hide="displayBox || role(3);" title="Edit action parameters">'+
         '      <i class="icon-wrench"></i>'+
         '    </a>'+
-        '    <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Values updated. Commit?">'+
+        '    <a ng-show="anychanges" ng-click="commit();" rel="tooltip" title="Save updated values for {{prepid}}">'+
         '      <i class="icon-warning-sign"></i>'+
         '    </a>'+
-        '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Chained request {{cr}}" ng-href="chained_requests?query=prepid%3D%3D{{cr}}" target="_blank">'+
-        '      <i class="icon-globe"></i>'+
-        '    </a >'+
-        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list" ng-disabled="role(1);"/>'+
+        '<div ng-show="role(3);">'+
+        '  <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number" ng-disabled="true">'+
+        '    <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
+        '  </select>'+
+        '  <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged" ng-disabled="true"/>'+
+        '  <span class="input-append">'+
+        '    <input type="number" style="margin-bottom: 0px; width: 25px;" ng-model="actionInfo.threshold" ng-disabled="true"/>'+
+        '    <span class="add-on">%</span>'+
+        '  </span>'+
+        '</div>'+
+        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list" ng-hide="role(3);"/>'+
         '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
         '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
@@ -453,6 +488,9 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '        <i class="icon-remove"></i>'+
         '      </a>'+
         '    </div>'+
+        '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Show chained request {{cr}}" ng-href="chained_requests?query=prepid%3D%3D{{cr}}" target="_blank">'+
+        '      <i class="icon-check"></i>'+
+        '    </a >'+
         '  </div>'+
         '  <div ng-switch-when="true">'+
         '  </div>'+
