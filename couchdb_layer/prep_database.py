@@ -5,6 +5,7 @@ from tools.logger import logger as logfactory
 from WMCore.Database.CMSCouch import Database,CouchError
 import json
 import time
+import os
 
 class database:
     logger = logfactory("prep2")
@@ -52,7 +53,13 @@ class database:
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
             
-    def __init__(self,  db_name='',url='http://preptest.cern.ch:5984/'):
+    def __init__(self,  db_name='',url=None):
+        host = os.environ['HOSTNAME'] 
+        if url == None:
+            if host == 'preptest':
+                url = 'http://preptest.cern.ch:5984/'
+            elif host == 'cms-pdmv-mcm':
+                url = 'http://cms-pdmv-mcm:5984/'
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name 
