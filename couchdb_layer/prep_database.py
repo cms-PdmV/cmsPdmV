@@ -59,7 +59,7 @@ class database:
             if host == 'preptest':
                 url = 'http://preptest.cern.ch:5984/'
             elif host == 'cms-pdmv-mcm':
-                url = 'http://cms-pdmv-mcm:5984/'
+                url = 'http://cms-pdmv-mcm-db:5984/'
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name 
