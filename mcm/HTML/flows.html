@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="eng" ng-app="testApp">
+  <head>
+        <title>Flows page McM</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"> </script>
+        <script src="scripts/flows_controller.js"></script>
+  </head> 
+
+  <body ng-controller="resultsCtrl">
+    <div ng-include="'HTML/navbar_template.html'"></div>
+    <div class="container" >
+      <div class="span12" style="overflow: auto">
+        <div class="well"> <!--well for user to select table columns-->
+          <span style="float: left;">
+            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well == false">
+            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well == true">
+            <span ng-show="show_well == true">
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </span>
+          </span>        
+          <span ng-repeat="value in flows_defaults" ng-show="show_well">
+            <label class="checkbox inline">
+              <input type="checkbox" ng-model="value.select"> {{value.text}}
+            </label>
+          </span>
+        </div><!--end of well for table columns-->
+      </div>
+    </div><!--End of container-->
+    <table class="table table-bordered table-stripped">
+      <thead>
+        <tr>
+          <th ng-repeat="column in flows_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+	    <div ng-switch-when="Actions" ng-hide="role(1);">
+	      {{column.text}}
+	    </div>
+	    <div ng-switch-default>
+            {{column.text}}
+	    </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="data in result">
+          <td ng-repeat="value in flows_defaults" ng-show="value.select" style="white-space: nowrap;">
+            <div ng-switch on="value.text">
+              <div ng-switch-when="Actions" ng-hide="role(3);">
+                <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
+                  <i class="icon-minus-sign"></i>
+                </a>
+                <a ng-href="edit2?db_name=flows&query={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_blank">
+                  <i class="icon-repeat"></i>
+                </a>
+                <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" target="_blank">
+                  <i class="icon-chevron-right"></i>
+                </a>
+
+              </div>
+              <div ng-switch-when="Allowed Campaigns">
+                <ul>
+                  <li ng-repeat="value in data[value.db_name]">
+		    <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{value}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{value}}</a>
+		  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="Next Campaign">
+		<ul>
+		  <li> 
+		    <a ng-href='campaigns2?db_name=campaigns&query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
+		  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="Submission details">
+                <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
+                    <dt>{{key}}</dt>
+                    <dd>{{value}}</dd>                
+                </dl>
+              </div>
+               <div ng-switch-when="Request parameters">
+                <ul>
+                  <li ng-repeat="(key, param) in data[value.db_name]">
+                    <div ng-switch on="key">
+                    
+                    <div ng-switch-when="sequences">
+                      {{key}}
+                      <ul ng-repeat="el in param">
+                        <div ng-switch on="underscore.size(el)">
+                          <div ng-switch-when="1">
+                            <li>Default</li>
+                          </div>
+                          <div ng-switch-default>
+                            <li ng-repeat="(sequence,variable) in el">
+                             {{sequence}}
+                              <ul>
+                                 <li ng-repeat="(x, y) in variable">{{x}} : {{y}}</li>
+                              </ul>
+                            </li>
+                          </div>
+                        </div>
+                      </ul>
+                    </div>
+                    <div ng-switch-default>
+                      {{key}} : {{param}}
+                    </div>
+                  </div>
+                  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="History">
+                <div custom-history ng-model="data[value.db_name]"></div>
+              </div>
+              <div ng-switch-default>{{data[value.db_name]}}</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="row-fluid">
+      <div class="span5" style="margin-top:20px;">
+      </div>
+      <div class="span2" style="margin-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font>
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+        </div>
+      </div>
+      <div class="span5">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

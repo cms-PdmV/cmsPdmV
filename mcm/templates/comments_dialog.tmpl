@@ -1,0 +1,19 @@
+<script>
+	var comments_json = {
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""},
+            'message':''
+            }
+</script>
+<script>
+	$(document).ready(function() {
+		$("#comments_dialog").hide();
+	});
+</script>
+
+<div id='comments_dialog' class="ui-widget">
+	<label for='comments_author_name'>Author name: </label>
+	<input class="ui-widget-content" id='comments_author_name' type='text' placeholder='author_name'>
+	<label for='comments_message'>Message: </label> 
+	<textarea class="ui-widget-content" id='comments_message' cols=20 rows=10 placeholder='message'></textarea>
+</div>
+

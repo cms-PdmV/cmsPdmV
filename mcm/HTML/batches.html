@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="eng" ng-app="testApp">
+  <head>
+        <title>Batches page McM</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/batches_controller.js"></script>
+  </head>
+  <body ng-controller="resultsCtrl">
+    <div ng-include src="'HTML/navbar_template.html'"></div>
+    <div class="container">
+      <div class="span12" style="overflow: auto">
+        <div class="well"> <!--well for user to select table columns-->
+          <span style="float: left;">
+            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
+            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+            <span ng-show="show_well == true">
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </span>
+          </span>        
+          <span ng-repeat="value in batches_defaults" ng-show="show_well">
+            <label class="checkbox inline">
+              <input type="checkbox" ng-model="value.select"> {{value.text}}
+            </label>
+          </span>
+        </div><!--end of well for table columns-->
+      </div> <!--End of span12-->
+    </div> <!--End of container-->
+    <table class="table table-bordered table-stripped">
+      <thead>
+        <tr>
+          <th ng-repeat="column in batches_defaults" ng-show="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
+	    <div ng-switch-when="Actions"  ng-hide="role(1);">
+              {{column.text}}
+	    </div>
+	    <div ng-switch-default>
+              {{column.text}}
+	    </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="data in result">
+          <td ng-repeat="value in batches_defaults" ng-show="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
+            <div ng-switch on="value.text">
+              <div ng-switch-when="Actions" ng-hide="role(1);">
+                <div ng-controller="ModalDemoCtrl">
+                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';">
+                    <i class="icon-envelope"></i>
+                  </a>
+                  <a ng-click='delete_object("batches", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(3);">
+                    <i class="icon-minus-sign"></i>
+                  </a>
+                  <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
+                    <div class="modal-header">
+                      <h4>Announce batch: {{data.prepid}}</h4>
+                    </div>  <!--end of modal header-->
+                  <div class="modal-body">
+                    Aditional notes:
+                    <textarea ng-model="mailContent"></textarea>
+                  </div> <!--end of modal body-->
+                  <div class="modal-footer">
+                    <button class="btn btn-success" ng-click="save()">Announce</button>
+                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                  </div> <!--end of modal footer-->
+                  </div>
+                </div> <!--end of modalControler DIV-->
+        <!--     END OF MODAL                 -->  
+              </div>
+	      <div ng-switch-when="Notes">
+		<textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px; height: {{data[value.db_name].length}}px"></textarea>
+	      </div>
+              <div ng-switch-when="History">
+                <div custom-history ng-model="data[value.db_name]"></div>
+              </div>
+              <div ng-switch-when="Requests">
+              	<ul>
+              	  <li ng-repeat="elem in data[value.db_name]">
+		    <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_blank">{{elem.name}}</a>, <a ng-href='requests?query="prepid%3D%3D{{elem.content.pdmv_prep_id}}"' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_blank">{{elem.content.pdmv_prep_id}}</a>
+		  </li>
+              	</ul>
+              </div>
+              <div ng-switch-default>{{data[value.db_name]}}</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="row-fluid">
+      <div class="span5" style="margin-top:20px;">
+      </div>
+      <div class="span2" style="margin-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font>.Results: {{update['results']}}
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+        </div>
+      </div> 
+      <div class="span5">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

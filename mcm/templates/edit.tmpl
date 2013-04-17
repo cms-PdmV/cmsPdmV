@@ -1,0 +1,213 @@
+<script>
+	var comments_json = {
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""},
+            'message':''
+            }
+</script>
+<script>
+	$(document).ready(function() {
+		$("#comments_dialog").hide();
+	});
+</script>
+
+<div id='comments_dialog' class="ui-widget">
+	<label for='comments_author_name'>Author name: </label><br>
+	<input class="ui-widget-content" id='comments_author_name' type='text' placeholder='author_name'>
+	<label for='comments_message'>Message: </label> <br>
+	<textarea class="ui-widget-content" id='comments_message' cols=20 rows=10 placeholder='message'></textarea>
+</div>
+
+<script>
+	var generator_parameters_json = { 
+            'version':0, 
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""}, 
+            'cross_section':-1.0,
+            'filter_efficiency':-1.0,
+            'filter_efficiency_error':-1.0,
+            'match_efficiency':-1.0,
+            'match_efficiency_error':-1.0
+            };
+
+</script>
+<script>
+	$(document).ready(function() {
+                $("#generator_parameters_dialog").hide();
+        });
+</script>
+<div id="generator_parameters_dialog" class="ui-widget">
+	<label for='generator_parameters_author_name'>Name</label><br>
+	<input type="text" id="generator_parameters_author_name" class="ui-widget-content">
+	<label for='generator_parameters_cross_section'>Cross Section</label><br>
+	<input type="text" id="generator_parameters_cross_section" class="ui-widget-content">
+ 	<label for='generator_parameters_filter_efficiency'>Filter Efficiency</label><br>
+        <input type="text" id="generator_parameters_filter_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_filter_efficiency_error'>Filter Efficiency Error</label><br>
+        <input type="text" id="generator_parameters_filter_efficiency_error" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency'>Match Efficiency</label><br>
+        <input type="text" id="generator_parameters_match_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency_error'>Match Efficiency Error</label><br>
+        <input type="text" id="generator_parameters_match_efficiency_error" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#generators_dialog").hide();
+	});
+</script>
+<div id="generators_dialog" class="ui-widget">
+	<label for='generators_generators'>Generators</label><br>
+    <input type="text" id="generators_generators" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#type_dialog").hide();
+	});
+</script>
+<div id="type_dialog" class="ui-widget">
+	<label for='type_type'>Type</label><br>
+    <input type="text" id="type_type" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#process_string_dialog").hide();
+	});
+</script>
+<div id="process_string_dialog" class="ui-widget">
+	<label for='process_string_process_string'>Process String</label><br>
+    <input type="text" id="process_string_process_string" class="ui-widget-content">
+</div>
+<script>
+	$(document).ready(function() {
+		$("#cmssw_release_dialog").hide();
+	});
+</script>
+<div id="cmssw_release_dialog" class="ui-widget">
+	<label for='cmssw_release_cmssw_release'>CMSSW Release</label><br>
+    <input type="text" id="cmssw_release_cmssw_release" class="ui-widget-content">
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#campaigns_dialog").hide();
+		ajax_search("campaigns", "", -1, function(data) {
+			$.each(data, function(i,v) {
+			    if (v["root"] == 0 || v["root"] == -1)
+    				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#campaigns_campaigns");
+			});
+			addHover("li");
+			$("#campaigns_campaigns").selectable({selected: function(events, ui){update_json_object("campaigns", ui.selected.id);}});
+		}, function(data){alert(data);});
+	});
+</script>
+<div id='campaigns_dialog' class="ui-widget">
+	<label for='campaigns_campaigns'>Choose a campaign</label><br>
+	<ol id='campaigns_campaigns' class="ui-widget-content"></ol>
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#allowed_campaigns_dialog").hide();
+		ajax_search("campaigns", "", -1, function(data) {
+			$.each(data, function(i,v) {
+				$("<li id='"+v["prepid"]+"'>"+v["prepid"]+"</li>").appendTo("#allowed_campaigns_allowed_campaigns");
+			});
+			addHover("li");
+			$("#allowed_campaigns_allowed_campaigns").selectable({selected: function(events, ui){update_json_object("allowed_campaigns", ui.selected.id);}});
+		}, function(data){alert(data);});
+	});
+</script>
+<div id='allowed_campaigns_dialog' class="ui-widget">
+	<label for='allowed_campaigns_allowed_campaigns'>Choose a campaign</label><br>
+	<ol id='allowed_campaigns_allowed_campaigns' class="ui-widget-content"></ol>
+</div>
+
+<script>
+	var sequences_json = { 
+            'index':-1,
+            'step':[], 
+            'conditions':'',
+            'event_content':[],
+            'data_tier':[], 
+            'beamspot':'',
+            'customise':'',
+            'filtername':'',
+            'geometry':'', 
+            'magField':'', 
+            'pileup':'', 
+            'datamix':'', 
+            'scenario':'',
+            'processName':'',
+            'harvesting':'',
+            'particle_table':'',
+            'inputCommands':'',
+            'dropDescendant':false,
+            'donotDropOnInput':'',
+            'restoreRNDSeeds':'',
+            'slhc':''
+            };
+
+</script>
+<script>
+	$(document).ready(function() {
+                $("#sequences_dialog").hide();
+        });
+</script>
+<div id="sequences_dialog" class="ui-widget">
+    <label for="sequences_index"><b>Index</b></label><br>
+    <input type="text" class="ui-widget-content" id="sequences_index"><br>
+    <label for="sequences_name"><b>Name</b></label><br>
+    <input type="text" class="ui-widget-content" id="sequences_name"><br>
+	<label for="sequences_step">Step</label><br>
+	<input type="text" id="sequences_step" class="ui-widget-content"><br>
+	<label for="sequences_conditions">Conditions</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_conditions"><br>
+	<label for="sequences_event_content">Event Content</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_event_content"><br>
+	<label for="sequences_data_tier">Data Tier</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_data_tier"><br>
+	<label for="sequences_beamspot">Beamspot</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_beamspot"><br>
+	<label for="sequences_customise">Customise</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_customise"><br>
+	<label for="sequences_filtername">Filter Name</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_filtername"><br>
+	<label for="sequences_geometry">Geometry</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_geometry"><br>
+	<label for="sequences_magField">Magnetic Field</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_magField"><br>
+	<label for="sequences_pileup">PileUp Scenario</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_pileup"><br>
+	<label for="sequences_datamix">Data Mixer Scenario</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_datamix"><br>
+	<label for="sequences_scenario">Scenario</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_scenario"><br>
+	<label for="sequences_processName">Process Name</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_processName"><br>
+	<label for="sequences_harvesting">Harvesting</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_harvesting"><br>
+	<label for="sequences_particle_table">Particle Table</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_particle_table"><br>
+	<label for="sequences_inputCommands">Input Commands</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_inputCommands"><br><br>
+	<label for="sequences_dropDescendant">Drop Descendant</label>
+	<input type="checkbox" class="ui-widget-content" id="sequences_dropDescendant"><br><br>
+	<label for="sequences_donotDropOnInput">Don't Drop Out</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_donotDropOnInput"><br>
+	<label for="sequences_restoreRNDSeeds">Restore RND Seeds</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_restoreRNDSeeds"><br>
+	<label for="sequences_slhc">SLHC</label><br>
+	<input type="text" class="ui-widget-content" id="sequences_slhc"><br>
+</div>
+
+<script>
+	$(document).ready(function() {
+		$("#approvals_dialog").hide();
+		/*$("<option value=0>New</option>").appendTo("#approvals_approvals");
+		$("<option value=1>Flow</option>").appendTo("#approvals_approvals");		
+		$("<option value=2>Inject</option>").appendTo("#approvals_approvals");		
+		$("<option value=3>Approve</option>").appendTo("#approvals_approvals");		*/
+	});
+</script>
+<div id='approvals_dialog' class="ui-widget">
+	<label for='approvals_approvals'>Approve:</label><br>
+	<select id='approvals_approvals' class="ui-widget-content"></select>
+</div>

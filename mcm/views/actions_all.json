@@ -1,0 +1,17 @@
+{
+  "_id" : "_design/actions",
+  "views" : {
+                "all" : {
+                        "map" : "function(doc){ if(doc._id) emit(doc._id,doc);}"
+                },
+                "prepid" : {
+                        "map" : "function(doc){ if(doc._id) emit(doc._id, doc);}"
+                },
+                "chains" : {
+                        "map" : "function(doc){ if(doc.chains) emit(doc.chains, doc);}"
+                },
+                "member_of_campaign" : {
+                        "map" : "function(doc){ if(doc.member_of_campaign) emit(doc.member_of_campaign, doc);}"
+                }
+        }
+}

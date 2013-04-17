@@ -1,0 +1,31 @@
+<script>
+	var generator_parameters_json = { 
+            'version':0, 
+            'submission_details':{"author_name":"", "submission_date":" ", "author_cms_id":"", "author_inst_code":"",  "author_project":""}, 
+            'cross_section':-1.0,
+            'filter_efficiency':-1.0,
+            'filter_efficiency_error':-1.0,
+            'match_efficiency':-1.0,
+            'match_efficiency_error':-1.0
+            };
+
+</script>
+<script>
+	$(document).ready(function() {
+                $("#generator_parameters_dialog").hide();
+        });
+</script>
+<div id="generator_parameters_dialog" class="ui-widget">
+	<label for='generator_parameters_author_name'>Name</label>
+	<input type="text" id="generator_parameters_author_name" class="ui-widget-content">
+	<label for='generator_parameters_cross_section'>Cross Section</label>
+	<input type="text" id="generator_parameters_cross_section" class="ui-widget-content">
+ 	<label for='generator_parameters_filter_efficiency'>Filter Efficiency</label>
+        <input type="text" id="generator_parameters_filter_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_filter_efficiency_error'>Filter Efficiency Error</label>
+        <input type="text" id="generator_parameters_filter_efficiency_error" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency'>Match Efficiency</label>
+        <input type="text" id="generator_parameters_match_efficiency" class="ui-widget-content">
+	<label for='generator_parameters_match_efficiency_error'>Match Efficiency Error</label>
+        <input type="text" id="generator_parameters_match_efficiency_error" class="ui-widget-content">
+</div>

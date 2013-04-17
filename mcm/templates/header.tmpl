@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<head>
+
+<!-- css -->
+<link rel="stylesheet" href="/css/prep_basic.css" />
+<!-- link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/jquery.ui.all.css" / -->
+
+<!-- jquery -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
+<script type="text/javascript" src="/scripts/jqueryui-superthemeswitcher/jquery.themeswitcher.js"></script>
+
+<!-- prep script -->
+<script type="text/javascript" src="/scripts/search_form.js"></script>
+<script type="text/javascript" src="/scripts/web_api.js"></script>
+<script type="text/javascript" src="/scripts/navigation_menu.js"></script>
+<script type="text/javascript" src="/scripts/actions_api.js"></script>
+
+<script type="text/javascript">
+// themeroller
+$(document).ready(function() {
+				$('#switcher').themeswitcher({ loadTheme : 'Pepper Grinder' , imgpath : '/scripts/images/'});
+				//$("#panel").tabs();
+				$("#navigation_placeholder").hide();
+				$("#search_placeholder").hide();
+				});
+</script>				
+
+<div id="switcher"></div> 
+<div id="panel" class="ui-widget">
+	<h1 class="ui-widget-header ui-corner-all">
+		<a id="home_button" href="/" title="home" class="iconholder ui-state-default ui-corner-all">
+			<span class="ui-icon ui-icon-home"></span>
+		</a>
+		{{ title }} 
+
+		<a href="javascript:search_form();" id="search_button"  class="iconholder ui-state-default ui-corner-all" >
+			<span class="ui-icon ui-icon-search"></span>
+		</a>	
+		<a href="javascript:navigate();" id="navigate_button"  class="iconholder ui-state-default ui-corner-all" >
+			<span class="ui-icon ui-icon-arrowreturnthick-1-e"></span>
+		</a>	
+	</h1>
+</div>
+<div id="search_placeholder" class="ui-widget">
+{% include "search_form.tmpl" %}
+</div>
+<div id="navigation_placeholder" class="ui-widget">
+{% include "navigation_menu.tmpl" %}
+</div>
+</head>

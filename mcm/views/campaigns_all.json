@@ -1,0 +1,14 @@
+{
+  "_id" : "_design/campaigns",
+  "views" : {
+                "all" : {
+                        "map" : "function(doc){ if(doc.prepid) emit(doc.prepid,doc);}"
+                },
+                "prepid" : {
+                        "map" : "function(doc){ if(doc.prepid) emit(doc.prepid,doc.prepid);}"
+                },
+                "type" : {
+                        "map" : "function(doc){ if(doc.type) emit(doc.type, doc);}"
+                }
+        }
+}

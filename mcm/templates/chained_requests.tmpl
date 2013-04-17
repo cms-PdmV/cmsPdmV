@@ -1,0 +1,14 @@
+<body>
+<script>
+        $(document).ready(function(){
+                $("#db_input").attr("value", "chained_requests");
+                $("<a id='create_new_button' class='iconholder' href='#'><span class='ui-icon ui-icon-plus'></span>Create chained request</a>").appendTo("#next_previous_button_div");
+                $("#create_new_button").button().click(function () { window.location = "/create/chained_requests/None"; }); 
+                get_results("object_list");
+                });
+</script>
+
+{% include "inputs.tmpl" %}
+<h2>Chained Requests:</h2>
+{% include "object_list.tmpl" %}
+</body>

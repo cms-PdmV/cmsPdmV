@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="eng" ng-app="testApp">
+  <head>
+        <title>Users page McM</title>  
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/users_controller.js"></script>
+  </head>
+  <body ng-controller="resultsCtrl">
+    <div ng-include="'HTML/navbar_template.html'"></div>
+    <div class="container" >
+      <div class="span12" style="overflow: auto">
+        <div class="well"> <!--well for user to select table columns-->
+          <span style="float: left;">
+            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
+            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
+            <span ng-show="show_well == true">
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </span>
+          </span>        
+          <span ng-repeat="value in defaults" ng-show="show_well">
+            <label class="checkbox inline">
+              <input type="checkbox" ng-model="value.select"> {{value.text}}
+            </label>
+          </span>
+        </div><!--end of well for table columns-->
+      </div> <!--End of span12-->
+    </div> <!--End of container-->
+    <table class="table table-bordered table-stripped">
+      <thead>
+        <tr>
+          <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)" ng-switch on="column.text">
+	          <div ng-switch-when="Actions" ng-hide="role(1);">
+              {{column.text}}
+              <span ng-show="selectedCls('value.'+column.db_name)">
+		            <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+		            <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              </span>
+	          </div>
+	          <div ng-switch-default>
+              {{column.text}}
+              <span ng-show="selectedCls('value.'+column.db_name)">
+		            <i class="icon-chevron-up" ng-hide="sort.descending"></i>
+		            <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              </span>
+	          </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+      	<tr ng-repeat="user in result | orderBy:sort.column: sort.descending">
+      	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
+      	    <div ng-switch on="data.text">
+              <div ng-switch-when="Actions" ng-hide="role(4);">
+                <a rel="tooltip" title="Increase user role" ng-click="changeRole(user['value']['username'],1)" ng-hide="role(4);">
+                  <i class="icon-thumbs-up"></i>
+                </a>
+                <a rel="tooltip" title="Lower user role" ng-click="changeRole(user['value']['username'],-1)" ng-hide="role(4);">
+                  <i class="icon-thumbs-down"></i>
+                </a>
+              </div>
+      	      <div ng-switch-when="Roles">
+                {{user["value"][data.db_name].join()}}
+      	      </div>
+      	      <div ng-switch-default>
+    		        {{user["value"][data.db_name]}}
+      	      </div>
+      	    </div>
+      	  </td>
+      	</tr>
+      </tbody>
+    </table>
+    <div class="row-fluid">
+      <div class="span5" style="margin-top:20px;">
+        <input type="button" class="btn" ng-click="addMe()" value="Add me!" align="left"/>
+      </div>
+      <div class="span2" style="margin-top:20px;">
+        <div ng-show="update['success']">
+          Success. Status code:<font color="green">{{update['status_code']}}</font>. Results: {{update['results']}}
+        </div>
+        <div ng-show="update['fail']">
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
+        </div>
+      </div> 
+      <div class="span5">
+        <div class="pagination pagination-right">
+          <ul>
+            <li ng-class="{ disabled: list_page <= -1 }">
+              <a ng-click="previous_page(list_page)">Prev</a>
+            </li>
+            <li ng-class="{ disabled: result.length == 0 }">
+              <a ng-click="next_page(list_page)">Next</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html> 
