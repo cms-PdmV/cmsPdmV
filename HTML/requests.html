@@ -94,7 +94,7 @@
               </div>
               <div ng-switch-when="Status" align="center">
                 <i class="{{statusIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='requests?query="status%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+		<a ng-href='requests?query="status%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
               </div>
 	            <div ng-switch-when="Input filename">
 		            <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_blank">{{data[value.db_name]}}</a>
@@ -160,6 +160,10 @@
                   </li>
                 </ul>
               </div>
+	      <div ng-switch-when="Name of fragment">
+		<a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}' target="_blank" ng-hide='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+		<a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["cvs_tag"]}}&content-type=text%2Fplain' target="_blank" ng-show='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+	      </div>
               <div ng-switch-when="Fragment">
                 <a ng-href='restapi/requests/get_fragment/{{data.prepid}}/0' rel="tooltip" title="View fragment" ng-hide="!data[value.db_name] || data[value.db_name]=='';" target="_blank">
                   <i class="icon-fullscreen"></i>

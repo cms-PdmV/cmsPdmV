@@ -5,7 +5,7 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
@@ -190,6 +190,7 @@ root.restapi.requests.injectlog = ReadInjectionLog()
 root.restapi.requests.editable = GetEditable()
 root.restapi.requests.default_generator_params = GetDefaultGenParams()
 root.restapi.requests.register = RegisterUser()
+root.restapi.requests.migrate = MigrateRequest()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -201,6 +202,7 @@ root.restapi.campaigns.approve = ApproveCampaign()
 root.restapi.campaigns.get_all = GetAllCampaigns()
 root.restapi.campaigns.status = ToggleCampaignStatus()
 root.restapi.campaigns.get_cmsDrivers = GetCmsDriverForCampaign()
+root.restapi.campaigns.migrate = MigratePage()
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()

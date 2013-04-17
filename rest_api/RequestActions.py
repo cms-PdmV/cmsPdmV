@@ -10,6 +10,7 @@ from RequestPrepId import RequestPrepId
 from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.action import action
+from json_layer.campaign import campaign
 from json_layer.generator_parameters import generator_parameters
 from threading import Thread
 from submitter.package_builder import package_builder
@@ -225,6 +226,74 @@ class UpdateRequest(RequestRESTResource):
 
     def save_request(self):
         return dumps({"results":self.db.update(self.request.json())})
+
+class MigratePage(RequestRESTResource):
+    def __init__(self):  
+        RequestRESTResource.__init__(self)       
+        
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":False,"message":'Error: No arguments were given.'})
+        prep_campaign=args[0]
+        html='<html><body>This is the migration page for %s'%(prep_campaign)
+        html+='</body></html>'
+        return html
+    
+class MigrateRequest(RequestRESTResource):
+    def __init__(self):
+        RequestRESTResource.__init__(self)
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":False,"message":'Error: No arguments were given.'})
+        return self.migrate_from_prep(args[0])
+
+    def migrate_from_prep(self,pid):
+
+        ## get the campaign name
+        prep_campaign=pid.split('-')[1]
+        mcm_campaign = prep_campaign.replace('_','')
+        
+        if not self.cdb.document_exists(mcm_campaign):
+            return dumps({"results":False,"message":'no campaign %s exists in McM to migrate %s'%(mcm_campaign,pid)})
+        camp = campaign(self.cdb.get(mcm_campaign))
+
+        from sync.get_request import prep_scraper
+        prep = prep_scraper()
+        mcm_requests = prep.get(pid)
+        if not len(mcm_requests):
+            return dumps({"results":False,"message":"no conversions for prepid %s"%(pid)})
+        mcm_request= mcm_requests[0]
+        try:
+            mcm_r = request(mcm_request)
+        except:
+            return dumps({"results":False,"message":"json does not cast into request type <br> %s"%(mcm_request)})
+
+        ## make the sequences right ? NO, because that cast also the conditions ...
+        #mcm_r.build_cmsDrivers(cast=-1)
+        #mcm_r.build_cmsDrivers(cast=1)
+
+        mcm_r.update_history({'action':'migrated'})
+        if not self.db.document_exists(mcm_r.get_attribute('prepid')):
+            statsDB = database('stats',url='http://cms-pdmv-golem.cern.ch:5984/')
+            mcm_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%pid,page_num=-1))
+            mcm_r.set_attribute('reqmgr_name', mcm_rr)
+            #if not len(mcm_rr):
+            #    return dumps({"results":False,"message":"found no request in the request in the stats DB ... %s"%(len(allstats))})
+
+            saved = self.db.save(mcm_r.json())
+        else:
+            return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
+        
+        if saved:
+            return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
+        else:
+            return dumps({"results":saved,"message":"could not save converted prepid %s in McM"%(pid)})
+
+        #return dumps({"results":True,"message":"not implemented"})
+
 
 class GetCmsDriverForRequest(RESTResource):
     def __init__(self):
