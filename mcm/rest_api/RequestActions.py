@@ -144,11 +144,17 @@ class CloneRequest(RequestRESTResource):
             return dumps({"results":'Error: No arguments were given.'})
         return self.clone_request(args[0])
 
-    def clone_request(self, pid):
+    def PUT(self):
+        data=loads(cherrypy.request.body.read().strip())
+        pid=data['prepid']
+        return self.clone_request(pid,data)
+
+    def clone_request(self, pid,data={}):
         new_pid=None
         
         if self.db.document_exists(pid):
             new_json = self.db.get(pid)
+            new_json.update(data)
             del new_json['_id']
             del new_json['_rev']
             del new_json['prepid']
@@ -469,7 +475,7 @@ class ResetRequestApproval(RESTResource):
         else:
             return dumps(self.reset(rid, val))
 
-    def reset(self, rid, step=0):
+    def reset(self, rid, val=0):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given request id does not exist.'}
 
@@ -478,13 +484,13 @@ class ResetRequestApproval(RESTResource):
         appsteps = req.get_approval_steps()
         app = req.get_attribute('approval')
 
-        if step > appsteps.index(app):
+        if val > appsteps.index(app):
             return {"prepid": rid, "results":'Error: Cannot reset higher approval step %s:%s -> %s'%(app,appsteps.index(app),step)}
 
         try:
-            req.approve(step)
-            if step==0:
-                req.set_status(0)
+            req.approve(val)
+            if val==0:
+                req.set_status(step=val,with_notification=True)
         except request.WrongApprovalSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except request.WrongStatusSequence as ex:
@@ -552,7 +558,8 @@ class SetStatus(RESTResource):
         req = request(json_input=self.db.get(rid))
 
         try:
-            req.set_status(step)
+            ## set the status with a notification if done via the rest api
+            req.set_status(step,with_notification=True)
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
@@ -610,6 +617,7 @@ class InjectRequest(RESTResource):
                     message = "Errors in making the request : \n"+ traceback.format_exc()
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False, "message": message})
+                    req.notify('Submission failed for request %s'%(pid),message)
                     continue
                 try:
                     res_sub=pb.build_package()
@@ -617,6 +625,7 @@ class InjectRequest(RESTResource):
                     message = "Errors in building the request : \n"+ traceback.format_exc()
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False , "message": message})
+                    req.notify('Submission failed for request %s'%(pid),message)
                     continue
 
                 self.res.append({"prepid": pid,"results": res_sub})
@@ -731,6 +740,33 @@ class GetDefaultGenParams(RESTResource):
         request_in_db.update_generator_parameters()
         return dumps({"results":request_in_db.get_attribute('generator_parameters')[-1]})
 
+class NotifyUser(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+
+    def PUT(self):
+        data = loads(cherrypy.request.body.read().strip())
+        # read a message from data
+        message = data['message']
+        pids = data['prepids']
+        results=[]
+        for pid in pids:
+            if not self.rdb.document_exists(pid):
+                return results.append({"results":False,"message":"%s does not exists"%(pid)})
+        
+            req = request(self.rdb.get(pid))
+            # notify the actors of the request
+            req.notify('Communication about request %s'%(pid),
+                       message)
+            # update history with "notification"
+            req.update_history({'action':'notify','step':message})
+            if not self.rdb.save(req.json()):
+                return results.append({"results":False,"message":"Could not save %s"%(pid)})
+            
+            results.append({"results":True,"message":"Notification send for %s"%(pid)})
+        return dumps(results)
+    
+
 class RegisterUser(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
@@ -758,3 +794,23 @@ class RegisterUser(RESTResource):
         request_in_db.update_history({'action':'register','step':current_user})
         self.rdb.save(request_in_db.json())
         return dumps({"results":True,'message':'You (%s) are registered to %s'%(current_user,pid)})
+
+class GetActors(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":False, 'message':'Error: No arguments were given'})
+        if len(args)>1:
+            return self.show_user(args[0],args[1])
+        return self.show_user(args[0])
+
+    def show_user(self,pid,what=None):
+        request_in_db = request(self.rdb.get(pid))
+        if what:
+            return dumps(request_in_db.get_actors(what=what))
+        else:
+            return dumps(request_in_db.get_actors())
+

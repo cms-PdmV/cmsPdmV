@@ -21,6 +21,8 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selectedAll = false;
     $scope.user = {name: "guest", role:"user"}
     $scope.underscore = _;
+    $scope.puce= {};
+    $scope.r_status = {};
 
 // GET username and role
       var promise = $http.get("restapi/users/get_roles");
@@ -41,6 +43,49 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.list_page = parseInt(page);
     }
     
+    $scope.load_puce = function(prepid){
+	for (i=0;i<$scope.result.length;i++){
+	    if ($scope.result[i].prepid == prepid ){
+		chains = $scope.result[i].chain;
+		//console.log("Found chain",chains);
+		for (i=0; i<chains.length; i++){
+		    prepid=chains[i];
+		    // if already present. remove it to redisplay properly
+		    if (_.keys($scope.puce).indexOf(prepid)!=-1 && $scope.puce [ prepid ]!= undefined ){
+			$scope.puce [ prepid ] = undefined;
+			$scope.r_status [ prepid ] = undefined;
+		    }else{
+			$scope.puce[prepid] = 'processing-bg.gif';
+			$http({method:'GET', url: 'public/restapi/requests/get_status/'+prepid}).success(function(data,status){
+				r_prepid=_.keys(data)[0];
+				r_status = data[r_prepid];
+				$scope.r_status[ r_prepid ] = r_status;
+				status_map = { 'done' : 'led-green.gif',
+					       'submitted' : 'led-orange.gif',
+					       'new' : 'led-red.gif',
+				}
+				if (status_map[r_status]){
+				    $scope.puce[ r_prepid ] = status_map[r_status];}
+				else{
+				    $scope.puce[ r_prepid ] = 'icon-question-sign';
+				}
+				//console.log("puce",$scope.puce);
+			    }).error(function(status){
+				    alert('cannot get status for '+r_prepid);
+				});
+		    }
+		}
+	    }
+	}
+
+	//i = $scope.result.indexOf(prepid);
+	//this_one=$scope.result[i];
+	//console.log($scope.result)
+	//	console.log(prepid,i,this_one);
+	//["puce"] = ['icon-signal','icon-signal'];
+    };
+
+
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
             if (data["results"]){
@@ -246,6 +291,15 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("No requests selected");
     };
   };
+  
+  $scope.multiple_load = function(){
+      console.log($scope.selected_prepids);
+      for (i_load=0; i_load< $scope.selected_prepids.length; i_load++){
+	  console.log("each",$scope.selected_prepids[i_load]);
+	  $scope.load_puce( $scope.selected_prepids[i_load] );
+      }
+  };
+
   $scope.toggleAll = function(){
     if ($scope.selected_prepids.length != $scope.result.length){
       _.each($scope.result, function(v){

@@ -3,6 +3,7 @@
 import cherrypy
 from tools.logger import logger as logfactory
 from tools.authenticator import authenticator
+from tools.communicator import communicator
 
 class json_base:
     __json = {}
@@ -50,6 +51,9 @@ class json_base:
         if json:
             self.__json = json
         self.__schema = {}
+
+    def setup(self):
+        self.com = communicator()
 
     def validate(self):
         if not self.__json:
@@ -128,21 +132,31 @@ class json_base:
 
     def get_actors(self,N=-1,what='author_username'):
         actors=[]
+        #that's a way of removing history ...
+        ban=['nnazirid']
         for (n,step) in enumerate(self.get_attribute('history')):
             ## stop when asked
             if N>0 and N==n: 
                 break
             try:
-                actors.append(step['updater'][what])
+                if not step['updater']['author_username'] in ban:
+                    actors.append(step['updater'][what])
             except:
                 pass
         return list(set(actors))
 
 
 
-    def approve(self, step=-1):
+    def approve(self, step=-1,to_approval=None):
         if 'approval' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
+
+        if to_approval:
+            if not to_approval in self.__approvalsteps:
+                self.logger.error('cannot set approval to %s because it is unknown %s allowed'%(to_approval,self.__approvalsteps))
+            else:
+                #override step, whatever it is
+                step = self.__approvalsteps.index(to_approval)
 
         next_step = 0
         if step < 0:
@@ -164,33 +178,51 @@ class json_base:
         ## is it allowed to move on
         fcn='ok_to_move_to_approval_%s'%(self.__approvalsteps[next_step])
         if hasattr(self,fcn):
-            self.logger.log('Calling %s '%(fcn))
+            #self.logger.log('Calling %s '%(fcn))
             ## that function should through if not approvable
             getattr(self,fcn)()
+            self.notify('Approval %s for %s %s'%(self.__approvalsteps[next_step],
+                                                self.__class__.__name__,
+                                                self.get_attribute('prepid')),
+                        'no body'#str(self.json())
+                        )
 
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action':'approve', 'step':self.__json['approval']})
 
-    def set_status(self, step=-1,to_status=None):
+    def set_status(self, step=-1,with_notification=False,to_status=None):
         if 'status' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 
+        #self.logger.log('Updating to step %s'%(step))
         next_step = 0
-        if step < 0:
+        if to_status:
+            if not to_status in self.__status:
+                self.logger.error('cannot set status to %s because it is unknown %s allowed'%(to_status,self.__status))
+            else:
+                #override step, whatever it is
+                step=self.__status.index(to_status)
+
+        if step < 0: # not specified: move to next logical status
             lst = self.__json['status']
             next_step = self.__status.index(lst) + 1
-        elif step >= len(self.__status):
+        elif step >= len(self.__status): # specified outside boundary
             raise self.IllegalStatusStep(step)
         else:
+            #specified
             next_step = step
 
         if next_step == len(self.__status):
+            self.logger.error('Updating to step %s means going to the last status or %s'%(next_step,str(self.__status)))
             return
 
         if self.__json['status'] == self.__status[next_step]:
             return
 
-        self.logger.log('Updating the status for object %s...' % (self.get_attribute('_id')))
+        #self.logger.log('Updating the status for object %s to %s...' % (self.get_attribute('_id'), self.__status[next_step]))
+        if with_notification:
+            self.notify('Status changed for request %s to %s'%(self.get_attribute('prepid'), self.__status[next_step]),
+                        'no message')
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action':'set status', 'step':self.__json['status']})
@@ -232,6 +264,38 @@ class json_base:
 
     def get_status_steps(self):
             return self.__status
+
+    def notify(self,
+               subject,message,
+               who=[],
+               actors=True,
+               service=True,
+               HN=False):
+
+        dest=map(lambda i:i, who)
+        if actors:
+            #add the actors to the object
+            dest.extend( self.get_actors(what='author_email') )
+        if service:
+            #let the service know at any time
+            dest.append('pdmv.service@cern.ch')
+        if HN:
+            ## back bone HN notification ?
+            dest.append('hn-cms-hnTest@cern.ch')
+
+        #be sure to not have duplicates
+        dest=list(set(dest))
+
+        if not len(dest):
+            dest.append('pdmv.service@cern.ch')
+            subject+='. And no destination was set'
+
+        self.logger.log('Notification %s send to %s'%(subject,', '.join(dest)))
+        self.com.sendMail(dest,
+                          subject,
+                          message,
+                          self.current_user_email
+                          )
         
 
 class submission_details(json_base):
@@ -268,3 +332,5 @@ class submission_details(json_base):
         self.set_attribute('submission_date', self.__get_datetime())
         return self._json_base__json
 
+
+        

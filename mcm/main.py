@@ -5,7 +5,7 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
@@ -154,9 +154,11 @@ root.restapi.batches = RESTResourceIndex()
 root.public = RESTResourceIndex()
 root.public.restapi = RESTResourceIndex()
 root.public.restapi.requests = RESTResourceIndex()
+root.public.restapi.requests.get = GetRequest()
 root.public.restapi.requests.get_fragment = GetFragmentForRequest()
 root.public.restapi.requests.get_setup = GetSetupForRequest()
 root.public.restapi.requests.get_status = GetStatus()
+root.public.restapi.requests.get_actors = GetActors()
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
 
@@ -177,10 +179,10 @@ root.restapi.requests.save = ImportRequest()
 root.restapi.requests.update = UpdateRequest()
 root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.clone = CloneRequest()
-root.restapi.requests.get = GetRequest()
+#root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
-root.restapi.requests.get_fragment = GetFragmentForRequest()
-root.restapi.requests.get_setup = GetSetupForRequest()
+#root.restapi.requests.get_fragment = GetFragmentForRequest()
+#root.restapi.requests.get_setup = GetSetupForRequest()
 root.restapi.requests.request_prepid = RequestPrepId()
 root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
@@ -190,6 +192,7 @@ root.restapi.requests.injectlog = ReadInjectionLog()
 root.restapi.requests.editable = GetEditable()
 root.restapi.requests.default_generator_params = GetDefaultGenParams()
 root.restapi.requests.register = RegisterUser()
+root.restapi.requests.notify = NotifyUser()
 root.restapi.requests.migrate = MigrateRequest()
 
 # REST Campaign Actions

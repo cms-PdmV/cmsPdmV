@@ -10,8 +10,9 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Type',select:true, db_name:'type'},
         {text:'History',select:false, db_name:'history'},
     ];
-    $scope.user = {name: "guest", role:"user"}
+    $scope.user = {name: "guest", role:"user",roleIndex:0}
     $scope.filt = {}; //define an empty filter
+    $scope.notify_text = "";
 // GET username and role
       var promise = $http.get("restapi/users/get_roles");
        promise.then(function(data){
@@ -22,8 +23,9 @@ function resultsCtrl($scope, $http, $location, $window){
         alert("Error getting user information. Error: "+data.status);
     });
 // Endo of user info request
-    $scope.update = [];
+    $scope.update = {};
     $scope.show_well = false;
+    $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
 
     if($location.search()["page"] === undefined){
@@ -205,7 +207,13 @@ function resultsCtrl($scope, $http, $location, $window){
 
    $scope.$watch('list_page', function(){
       console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+      console.log($location.url());
+      var query = ""
+      _.each($location.search(), function(value,key){
+        query += "&"+key+"="+value
+      });
+      console.log(query);
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
           promise.then(function(data){
         $scope.result = data.data.results; 
         if ($scope.result.length != 0){
@@ -402,7 +410,47 @@ function resultsCtrl($scope, $http, $location, $window){
     $window.open("injection_status?prepid="+prepids.join());
     $scope.submissionModal = false;
   };
-  /* --Modal actions END--*/
+  $scope.getLocation = function(){
+    return $location.url();    
+  };
+  /* Notify modal actions */
+  $scope.notifyUsers = function(prepid){
+    $scope.notify_Modal = true;
+    $scope.notify_prepid = prepid;
+  };
+  $scope.closeNotifyModal = function(){
+    $scope.notify_Modal = false;
+  };
+  $scope.Notify = function(){
+    if ($scope.selected_prepids.length != 0){
+//      console.log("multiple");
+      $scope.notify_prepid = $scope.selected_prepids;
+    }else{
+      $scope.notify_prepid = [$scope.notify_prepid];
+//      console.log("single");
+    }
+    $scope.loadNotify = true;
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: $scope.notify_prepid, message: $scope.notify_text})}).success(function(data,status){
+      console.log(data);
+      $scope.loadNotify = false;
+      $scope.update["success"] = true;
+      $scope.update["fail"] = false;
+      $scope.update["message"] = data[0]["message"];
+      $scope.update["status_code"] = status;
+      $scope.notify_prepid = "";
+      $scope.notify_Modal = false;
+      $scope.notify_text = "";
+      $scope.notify_prepid = [];
+//      $window.location.reload();
+    }).error(function(data,status){
+      $scope.loadNotify = false;
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
+
+  };
+  /* --Modals actions END--*/
 
   $scope.update_filtered = function(){
     $scope.test_display = _.clone($scope.result);

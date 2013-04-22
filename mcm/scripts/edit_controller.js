@@ -1,5 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.user = {name: "guest", role:"user"}
+    $scope.user = {name: "guest", role:"user",roleIndex:0}
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -130,7 +130,7 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
    $scope.$watch('list_page', function(){
-     var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
+     var promise = $http.get("public/restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
      promise.then(function(data){
        $scope.result = data.data.results;
        if ($scope.result.length != 0){

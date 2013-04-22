@@ -63,6 +63,14 @@
                 </a>
 
               </div>
+	      <div ng-switch-when="PrepId">
+                <a ng-href='flows?query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+		<a ng-href="admin/_utils/document.html?flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
+              </div>
+              <div ng-switch-when="Approval" align="center">
+                <i class="{{approvalIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
+		<a ng-href='flows?query="approval%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show all flows in approval {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+              </div>
               <div ng-switch-when="Allowed Campaigns">
                 <ul>
                   <li ng-repeat="value in data[value.db_name]">

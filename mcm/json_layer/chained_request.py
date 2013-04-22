@@ -113,7 +113,8 @@ class chained_request(json_base):
             return False
         
         # actually get root request
-        req = request(rdb.get(root)).json()
+        initial_req = request(rdb.get(root))
+        req = initial_req.json()
             
         # get the campaign in the next step
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
@@ -161,6 +162,10 @@ class chained_request(json_base):
         
         allowed_flow_approvals = ['flow','submit']
 
+
+        ###### cascade of checks
+        # if flow allows -> do it
+        ## else if chained_request allows -> do it
         # check all approvals (if flow say yes -> allowing policy)
         if fl['approval'] not in allowed_flow_approvals:
             # if flow says No -> check on the chained request itself
@@ -331,11 +336,21 @@ class chained_request(json_base):
 	nre.update_history({'action':'flow'})
         rdb.save(nre.json())
 
+        self.set_attribute('last_status', nre.get_attribute('status'))
         # update local history
         self.update_history({'action':'flow', 'step':str(int(self.get_attribute('step'))+1)})
         
         # finalize changes
         self.set_attribute('step',  int(stepIndex))
+        # send notification
+        initial_req.notify('Flow for request %s in %s'%(initial_req.get_attribute('prepid'),next_camp),
+                           'The request %s has been flown within %s into campaign %s using %s creating the new request %s as part of %s'%(initial_req.get_attribute('prepid'),
+                                                                                                                                         self.get_attribute('member_of_campaign'),
+                                                                                                                                         next_camp,
+                                                                                                                                         flowname,
+                                                                                                                                         nre.get_attribute('prepid'),
+                                                                                                                                         self.get_attribute('prepid')))
+                    
         
         return True
 
@@ -398,18 +413,33 @@ class chained_request(json_base):
         if not flag:
             chain.append(prepid)
             self.set_attribute("chain", chain)
+            #self.logger.log('Adding %s to the chain %s'%(prepid,chain))
         else:
             raise self.CampaignAlreadyInChainException(req.get_attribute('member_of_campaign'))
-
-        ## reset the status and approval chain
-        req.set_status(0)
-        req.approve(0)
 
         req.set_attribute('_id', prepid)
         req.set_attribute('prepid',  prepid)
         ## JR: add what the request is member of N.B: that breaks down if a digi-reco request has to be member of two chains (R1,R4)
         req.set_attribute('member_of_chain',[self.get_attribute('_id')])
 
+        ## reset the status and approval chain
+        req.set_status(0)
+        req.approve(0)
+
+        ### mode the approval of the new request to the approval of the chained request
+        if not req.is_root:
+            self.logger.log('The newly created request %s is not root, the chained request has approval %s'%(req.get_attribute('prepid'),
+                                                                                                             self.get_attribute('approval')
+                                                                                                                 ))
+            
+            #if self.get_attribute('approval') == 'approve':
+                #toggle the request approval to 'approved'?
+                
+            if self.get_attribute('approval') == 'submit':
+                req.set_status(to_status='approved')
+                req.approve(to_approval='submit')
+
+            
         # update history
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         self.update_history({'action':'add request', 'step':req.get_attribute('_id')})

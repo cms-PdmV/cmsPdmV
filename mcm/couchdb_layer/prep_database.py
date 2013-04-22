@@ -60,6 +60,7 @@ class database:
                 url = 'http://preptest.cern.ch:5984/'
             elif host == 'cms-pdmv-mcm':
                 url = 'http://cms-pdmv-mcm-db:5984/'
+        #self.logger.log('I chose the url %s'%(url))
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name 
@@ -377,8 +378,9 @@ class database:
         #    return False
 
         try:
-            self.db.commitOne(doc)
-            return True
+            #self.logger.error('Document is %s %s'%(doc['_id'],doc))
+            #self.logger.error(self.db.commitOne(doc))
+            return self.db.commitOne(doc)
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False

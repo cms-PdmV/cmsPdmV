@@ -20,18 +20,18 @@ class request(json_base):
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
 
-
     def __init__(self, json_input={}):
 
         # detect approval steps
-        root = False
+        self.is_root = False
         cdb = database('campaigns')
-        
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
             if cdb.document_exists(json_input['member_of_campaign']):
                 if cdb.get(json_input['member_of_campaign'])['root'] > 0:
                     self._json_base__approvalsteps = ['none','approve', 'submit']
                     self._json_base__status = ['new','approved','submitted','done']
+                else:
+                    self.is_root = True
             else:
                 raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
 
@@ -84,6 +84,7 @@ class request(json_base):
             'analysis_id':[],
             }
         # update self according to json_input
+        self.setup()
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
@@ -120,9 +121,9 @@ class request(json_base):
     #    self.set_attribute('sequences', sequences)
 
 
-    def set_status(self, step=-1,to_status=None):
+    def set_status(self, step=-1,with_notification=False,to_status=None):
         ## call the base
-        json_base.set_status(self)
+        json_base.set_status(self,step,with_notification)
         ## and set the last_status of each chained_request I am member of, last
         crdb= database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
@@ -538,3 +539,21 @@ class request(json_base):
 
         return True
 
+
+    def get_actors(self,N=-1,what='author_username'):
+        #get the actors from itself, and all others it is related to
+        actors=json_base.get_actors(self,N,what)
+        crdb=database('chained_requests')
+        lookedat=[]
+        for cr in self.get_attribute('member_of_chain'):
+            crr = crdb.get(cr)
+            for other in crr['chain']:
+            #limit to those before this one ? NO, the comment could go backward as it could go "forward"
+            #for other in crr['chain'][0:crr['chain'].index(self.get_attribute('prepid'))]:
+                rdb = database('requests')
+                other_r = request(rdb.get(other))
+                lookedat.append(other_r.get_attribute('prepid'))
+                actors.extend(json_base.get_actors(other_r,N,what))
+        #self.logger.log('Looked at %s'%(str(lookedat)))
+        actors = list(set(actors))
+        return actors

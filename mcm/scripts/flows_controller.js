@@ -39,7 +39,17 @@ function resultsCtrl($scope, $http, $location, $window){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    
+    $scope.approvalIcon = function(value){
+	icons = { 'none':'icon-off',
+		  'flow' : 'icon-share',
+		  'submit' : 'icon-ok'
+	}
+	if (icons[value]){
+	    return icons[value];
+	}else{
+	    return  "icon-question-sign";
+	}
+    };    
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){

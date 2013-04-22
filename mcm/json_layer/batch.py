@@ -1,6 +1,5 @@
 from couchdb_layer.prep_database import database
 from json_layer.json_base import json_base
-from tools.communicator import communicator
 
 class batch(json_base):
     def __init__(self, json_input={}):
@@ -13,11 +12,11 @@ class batch(json_base):
             'status':self.get_status_steps()[0],
             'requests':[]
             }
-        
+        self.setup()
         self.update(json_input)
         self.validate()
-        self.com = communicator()
-        
+        self.get_current_user_role_level()
+
     def add_requests(self,a_list):
         b_requests=self.get_attribute('requests')
         b_requests.extend(a_list)
@@ -66,11 +65,11 @@ class batch(json_base):
         
         self.get_current_user_role_level()
 
-        self.com.sendMail(['vlimant@cern.ch'],
-                          subject,
-                          message,
-                          self.current_user_email
-                          )
+        self.notify(subject,
+                    message,
+                    #who should be data operation HN
+                    who=['vlimant@cern.ch','hn-cms-hnTest@cern.ch']
+                    )
 
         ## toggle the status
         ### only when we are sure it functions self.set_status()

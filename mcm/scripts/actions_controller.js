@@ -10,6 +10,7 @@ function resultsCtrl($scope, $http, $location, $window){
     if($location.search()["query"] === undefined){
       $location.search("query",'""');
     }
+    
 // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -39,7 +40,9 @@ function resultsCtrl($scope, $http, $location, $window){
 
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
-      $location.search("select",$scope.selectedOption); 
+      if ($scope.selectedOption != "------"){
+          $location.search("select",$scope.selectedOption);
+      }
     });
 
     //watch length of pending HTTP requests -> if there are display loading;
@@ -62,7 +65,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.rootCampaign = [];
         //set the well to have only ChainedCampaigns which includes selectedOption
         if ($scope.selectedOption == "------"){ //if to show all chained campains -> push all to well values
-          console.log("selected to show all");
+          //console.log("selected to show all");
           var tmp = [];
           //tmp = [{text:'Actions',select:true, db_name:'prepid'}];
           // _.each($scope.chained_campaigns, function(v){
@@ -72,7 +75,7 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.actions_defaults = tmp;
         }
         else{
-          console.log("if selected not ------");
+          //console.log("if selected not ------");
             $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'}];
             var to_remove_list = [];
             var to_add_list = [];
@@ -145,7 +148,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	if ($location.search()["select"] === undefined){
 	    $location.search("select",$scope.selectedOption);
 	}else{
-	    //console.log("with a selected");
+            //console.log("with a selected");
 	    //	    console.log($scope.campaigns);
 	    $scope.selectedOption = $location.search()["select"];	
 	    $scope.select_campaign();
@@ -164,7 +167,7 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     
     $scope.$watch('list_page', function(){
-      console.log("modified");
+      //console.log("modified");
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
           promise.then(function(data){
             $scope.result = data.data.results;
@@ -234,7 +237,7 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   
   $scope.generateRequests = function(id){
-    console.log(id);
+    //console.log(id);
     var generateUrl = "";
     if ( id.indexOf("chain_") !=-1){
         generateUrl = "restapi/chained_campaigns/generate_chained_requests/"+id;
@@ -244,7 +247,7 @@ function resultsCtrl($scope, $http, $location, $window){
 //      $http.get("search/?"+ "db_name="+$location.search()["db_name"]+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
     promise = $http.get(generateUrl);
     promise.then(function(data){
-      console.log(data);
+      //console.log(data);
       
       $scope.update['status_code'] = data.status;
       $scope.update['success'] = true;
@@ -260,14 +263,14 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.generateAllRequests = function(){
-    console.log("Generate all!");
+    //console.log("Generate all!");
     $scope.generatingAllIcon = true;
     
     generateUrl = "restapi/actions/generate_all_chained_requests";
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.generatingAllIcon = false;
-      console.log(data);
+      //console.log(data);
       
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
@@ -287,7 +290,7 @@ function resultsCtrl($scope, $http, $location, $window){
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.refreshingAllIcon = false;
-      console.log(data);
+      //console.log(data);
       
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
@@ -305,14 +308,14 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.refreshActions = function(){
-    console.log("Detect all!");
+    //console.log("Detect all!");
     $scope.refreshingAllIcon = true;
     
     generateUrl = "restapi/actions/detect_chains";
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.refreshingAllIcon = false;
-      console.log(data);
+      //console.log(data);
       
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
@@ -356,7 +359,7 @@ function resultsCtrl($scope, $http, $location, $window){
     if ($scope.selected_prepids.length == 0){
       alert("You have selected 0 actions from table");
     }else{
-      console.log($scope.multipleSelection);
+      //console.log($scope.multipleSelection);
       //lets send the data to server WOOOO
       $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update_multiple',data:JSON.stringify(dataToSend)}).success(function(data,status){
         $scope.updatingMultipleActions = false;
@@ -425,10 +428,10 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
 //             ctrl.$viewValue.staged = scope.toBeUpdated.staged;
 //             ctrl.$viewValue.threshold = scope.toBeUpdated.threshold;
 //            scope.showInput();
-            console.log(ctrl.$viewValue);
-            console.log(scope.actionInfo);
+            //console.log(ctrl.$viewValue);
+            //console.log(scope.actionInfo);
              $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson(ctrl.$viewValue)}).success(function(data,status){
-               console.log(data,status);
+               //console.log(data,status);
 	             scope.displayBox = false;
                scope.anychanges = false;
              }).error(function(data,status){
@@ -439,9 +442,9 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
             var selected = {};
             selected['prepid'] = prepid;
             selected['column'] = scope.column;
-            console.log(selected);
-            console.log(scope.selected_prepids.indexOf(selected));
-            console.log(_.contains(scope.selected_prepids, selected));
+            //console.log(selected);
+            //console.log(scope.selected_prepids.indexOf(selected));
+            //console.log(_.contains(scope.selected_prepids, selected));
             var exists = false;
             _.each(scope.selected_prepids, function(v){
               if (v['prepid'] == prepid && v['column'] == scope.column){ //if exists in array then lets remove

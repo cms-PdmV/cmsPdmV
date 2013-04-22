@@ -230,7 +230,13 @@ class FlowToNextStep(RESTResource):
         # if the chained_request can flow, do it
         try:
             if creq.flow():
-                self.db.update(creq.json())
+                #self.logger.log('After flow method and before save the chain is: %s'%(creq.get_attribute('chain')))
+                #self.logger.log('After flow method and before save the chain is: %s'%(creq.json()['chain']))
+                #self.db.save(creq.json())
+                self.db.update(creq.json()) #does not seem to save properly the changes...
+                #self.logger.log('After saving the chain is: %s'%(creq.get_attribute('chain')))
+                #creq_aftershave = chained_request(json_input=self.db.get(chainid))
+                #self.logger.log('After saving the chain is: %s'%(creq_aftershave.get_attribute('chain')))
                 return {"results":True}
             return {"results":False}
         except chained_request.NotApprovedException as ex:

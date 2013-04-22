@@ -176,12 +176,35 @@ class transformer:
         co = req_json['conditions']
         if co and ';' in co:
             co = co.split(';')[0]
+        if not co.endswith(':All'):
+            co+=':All'
 
-
-        new['sequences'] = [{"slhc": "", "pileup": pu, "beamspot": "", "magField": "", "step": self.                 splitPrep1String(req_json['sequence1']), "datatier": '', "scenario": "","geometry": "", "customise": cust1, "datamix": req_json['dataMixerScenario'], "eventcontent": self.splitPrep1String(req_json['eventcontent']),"conditions": co}]
+        new['sequences'] = [{"slhc": "",
+                             "pileup": pu,
+                             "beamspot": "",
+                             "magField": "",
+                             "step": self.splitPrep1String(req_json['sequence1']),
+                             "datatier": '',
+                             "scenario": "",
+                             "geometry": "",
+                             "customise": cust1,
+                             "datamix": req_json['dataMixerScenario'],
+                             "eventcontent": self.splitPrep1String(req_json['eventcontent']),
+                             "conditions": co}]
 
         if req_json['sequence2']:
-            new['sequences'].append({"slhc": "", "pileup": pu, "beamspot": "", "magField": "", "step": self.splitPrep1String(req_json['sequence2']), "datatier": '', "scenario": "", "geometry": "", "customise": cust2, "datamix": "", "eventcontent": self.splitPrep1String(req_json['eventcontent']), "conditions": co})
+            new['sequences'].append({"slhc": "",
+                                     "pileup": pu,
+                                     "beamspot": "",
+                                     "magField": "",
+                                     "step": self.splitPrep1String(req_json['sequence2']),
+                                     "datatier": '',
+                                     "scenario": "",
+                                     "geometry": "",
+                                     "customise": cust2,
+                                     "datamix": "",
+                                     "eventcontent": self.splitPrep1String(req_json['eventcontent']),
+                                     "conditions": co})
 
         for i, seq in enumerate(new['sequences']):
             for att in seq:
@@ -192,11 +215,18 @@ class transformer:
                     if att in se2:
                         seq[att] = se2[att]
 
+        ## copy a few things from the campaign sequences as it is in McM
         camp = self.get_campaign(new['member_of_campaign'])
         for i, seqs in enumerate(camp['sequences']):
             for att in seqs['default']:
-                if att == 'sequence' or att == 'conditions':
+                ##do not copy over the sequence of conditions
+                #if att == 'conditions':
+                #    continue
+                #if att == 'sequence':
+                #    continue                
+                if not att in ['eventcontent','datatier']:
                     continue
+
                 new['sequences'][i][att] = seqs['default'][att]
 
 
@@ -287,7 +317,10 @@ class transformer:
 
     def get_campaign(self, cid):
         try:
-            return json.loads(open('sync/campaigns/%s.json' % (cid)).read())
+            from couchdb_layer.prep_database import database
+            cdb=database('campaigns')
+            return cdb.get(cid)
+            #return json.loads(open('sync/campaigns/%s.json' % (cid)).read())
         except:
             return {}
 
