@@ -226,6 +226,8 @@ class chained_request(json_base):
         # use root request as template
         req['member_of_campaign'] = next_camp
         req['type'] = nc['type']
+        req['cmssw_release'] = nc['cmssw_release']
+        req['pileup_dataset_name'] = nc['pileup_dataset_name']
         req['root'] = False #JR???
         
         # add the previous requests output_dataset name as input for the new
@@ -237,7 +239,8 @@ class chained_request(json_base):
             if 'content' in lastrequest and 'pdmv_dataset_name' in lastrequest['content']:
                 input_dataset = lastrequest['content']['pdmv_dataset_name']
             else:
-                statsDB = database('stats',url='http://cms-pdmv-golem.cern.ch:5984/')
+                ## this is already a soft linking to the stats DB
+                statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
                 if statsDB.document_exists(lastrequest['name']):
                     latestStatus = statsDB.get(lastrequest['name'])
                     input_dataset = latestStatus['pdmv_dataset_name']
@@ -326,9 +329,11 @@ class chained_request(json_base):
 				new_req[key] = fl['request_parameters'][key]
 		
         puttogether(nc,fl,new_req)
+        
 
         nre = request(new_req)
-        #JR toggle approval of the request until we reached the desired 
+
+         #JR toggle approval of the request until we reached the desired 
         # maximum approval level max(flow,chained_request) in ['none','flow','submit']
         ## TO BE INSERTED HERE, in a Thread object, so as to not hold the request back
 
