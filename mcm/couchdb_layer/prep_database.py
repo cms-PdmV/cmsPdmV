@@ -6,6 +6,7 @@ from WMCore.Database.CMSCouch import Database,CouchError
 import json
 import time
 import os
+from tools.locator import locator
 
 class database:
     logger = logfactory("prep2")
@@ -56,9 +57,10 @@ class database:
     def __init__(self,  db_name='',url=None):
         host = os.environ['HOSTNAME'] 
         if url == None:
-            if host == 'preptest':
+            l_type =locator()
+            if l_type.isDev():
                 url = 'http://preptest.cern.ch:5984/'
-            elif host == 'cms-pdmv-mcm':
+            else:
                 url = 'http://cms-pdmv-mcm-db:5984/'
         #self.logger.log('I chose the url %s'%(url))
         if not db_name:
@@ -160,7 +162,7 @@ class database:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False        
         
-    def get_all(self, page_num=0): 
+    def get_all(self, page_num=-1): 
         try:
             limit, skip = self.__pagify(page_num)
             if limit >= 0 and skip >= 0: 
@@ -173,7 +175,7 @@ class database:
     
     def query(self,  query='', page_num=0):
         if not query:
-            return self.get_all()
+            return self.get_all(page_num)
         try:   
             return self.__query(query, page=page_num)
         except Exception as ex:
@@ -380,7 +382,9 @@ class database:
         try:
             #self.logger.error('Document is %s %s'%(doc['_id'],doc))
             #self.logger.error(self.db.commitOne(doc))
-            return self.db.commitOne(doc)
+            ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
+            self.db.commitOne(doc)
+            return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
