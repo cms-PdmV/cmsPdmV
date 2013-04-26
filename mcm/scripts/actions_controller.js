@@ -1,26 +1,10 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.user = {name: "guest", role:"user", roleIndex:1};
-    $scope.pendingHTTP = true;
     $scope.filt = {}; //define an empty filter
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
     }else{
       $scope.dbName = $location.search()["db_name"];
     }
-    if($location.search()["query"] === undefined){
-      $location.search("query",'""');
-    }
-    
-// GET username and role
-    var promise = $http.get("restapi/users/get_roles");
-    promise.then(function(data){
-      $scope.user.name = data.data.username;
-      $scope.user.role = data.data.roles[0];
-      $scope.user.roleIndex = parseInt(data.data.role_index);
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
-// Endo of user info request
        
     $scope.actions_defaults = [
     //  {text:'Actions',select:true, db_name:'prepid'}
@@ -34,23 +18,12 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selected_prepids = [];
     $scope.multipleSelection = {};
     $scope.update = [];
-    
-    // $scope.http_status = "";
-    $scope.showHttpStatus = false;
 
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
       if ($scope.selectedOption != "------"){
           $location.search("select",$scope.selectedOption);
       }
-    });
-
-    //watch length of pending HTTP requests -> if there are display loading;
-    $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
-      if (v == 0){
-        $scope.pendingHTTP = false;
-      }else
-      $scope.pendingHTTP = true;
     });
 
     $scope.getChainCampainTEXT = function(alias, id){
@@ -130,7 +103,7 @@ function resultsCtrl($scope, $http, $location, $window){
         page = $location.search()["page"];
         $scope.list_page = parseInt(page);
     }
-    var promise = $http.get('search/?db_name=chained_campaigns&query=""&page=-1')
+    var promise = $http.get('search/?db_name=chained_campaigns&page=-1')
     promise.then(function(data){
          $scope.chained_campaigns = data.data.results;
         // _.each(data.data.results, function(v){
@@ -168,7 +141,14 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.$watch('list_page', function(){
       //console.log("modified");
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()["query"]+"&page="+$scope.list_page)
+      //      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&page="+$scope.list_page)
+      var query = ""
+      _.each($location.search(), function(value,key){
+	      if (key != 'select'){
+		  query += "&"+key+"="+value
+	      }
+	  });
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
           promise.then(function(data){
             $scope.result = data.data.results;
             if ($scope.result.length != 0){
@@ -332,13 +312,7 @@ function resultsCtrl($scope, $http, $location, $window){
         alert("Error: ", data.status);
     });
   };
-  $scope.role = function(priority){
-    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
-      return true;
-    }else{
-      return false;
-    }
-  };
+
   $scope.toggleMultipleInput = function(){
     if ($scope.showMultipleInput){
       $scope.showMultipleInput = false;
@@ -358,6 +332,7 @@ function resultsCtrl($scope, $http, $location, $window){
     var dataToSend = {"actions": $scope.selected_prepids, "values":$scope.multipleSelection}
     if ($scope.selected_prepids.length == 0){
       alert("You have selected 0 actions from table");
+      $scope.updatingMultipleActions = false;
     }else{
       //console.log($scope.multipleSelection);
       //lets send the data to server WOOOO
