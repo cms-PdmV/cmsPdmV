@@ -25,7 +25,8 @@ class sequence(json_base):
             'dropDescendant':False,
             'donotDropOnInput':'',
             'restoreRNDSeeds':'',
-            'slhc':''} 
+            'slhc':'',
+            'extra':''} 
 
         # update self according to json_input
         self.__update(json_input)
@@ -51,6 +52,7 @@ class sequence(json_base):
                 else:
                     self._json_base__json[key] = self._json_base__schema[key]
 
+    """  
     def build(self,  
               steps=[],  
               conditions='',  
@@ -94,6 +96,7 @@ class sequence(json_base):
         self.set_attribute('restoreRNDSeeds', restoreRNDSeeds)
         self.set_attribute('slhc', slhc)
         return self._json_base__json
+        """
 
     def srepr(self,arg):
       if isinstance(arg, basestring): # Python 3: isinstance(arg, str)
@@ -105,18 +108,20 @@ class sequence(json_base):
 
     def to_command_line(self, attribute):
       if attribute == 'index':
-        return ''
+          return ''
       if self.get_attribute(attribute) == '':
-        return ''
+          return ''
       elif self.get_attribute(attribute) == True:
-        return "--"+str(attribute)
+          return "--"+str(attribute)
       elif self.get_attribute(attribute) == False:
-        return ''
+          return ''
+      elif attribute == 'extra' and self.get_attribute(attribute):
+          return self.get_attribute(attribute)
       elif self.get_attribute(attribute):
         #return "--"+attribute+"="+self.srepr(self.get_attribute(attribute))
-	return "--"+attribute+" "+self.srepr(self.get_attribute(attribute))
+          return "--"+attribute+" "+self.srepr(self.get_attribute(attribute))
       else:
-	return ''
+          return ''
 
     def build_cmsDriver(self):
       command = ' '
