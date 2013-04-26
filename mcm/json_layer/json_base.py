@@ -133,7 +133,7 @@ class json_base:
     def get_actors(self,N=-1,what='author_username'):
         actors=[]
         #that's a way of removing history ...
-        ban=['nnazirid']
+        ban=['nnazirid','automatic']
         for (n,step) in enumerate(self.get_attribute('history')):
             ## stop when asked
             if N>0 and N==n: 
