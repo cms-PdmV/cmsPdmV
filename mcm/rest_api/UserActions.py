@@ -75,7 +75,8 @@ class ChangeRole(RESTResource):
         self.db_name = 'users'
         self.db = database(self.db_name)
         self.all_roles = self.authenticator.get_roles()
-
+	self.access_limit = 3
+	
     def change_role(self, username, action):
         doc = self.db.get(username)
         current_user = self.db.get(cherrypy.request.headers['ADFS-LOGIN'])
