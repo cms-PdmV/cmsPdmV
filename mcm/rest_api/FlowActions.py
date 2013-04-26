@@ -235,7 +235,8 @@ class CreateFlow(RESTResource):
                 # init campaign objects
                 camp = self.cdb.get(c)
                 # add meta (energy)
-                ccamp.set_attribute('energy', camp['energy'])
+                ## JR: this is not a member any-more
+                #ccamp.set_attribute('energy', camp['energy'])
             
                 # add a prepid
                 if fid:
