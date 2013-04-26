@@ -11,10 +11,11 @@ class RESTResource(object):
 	authenticator = auth_obj(limit=3)
 	#logger = cherrypy.log
 	logger = logfactory('rest')
-
+	access_limit = None
+		
 	def __init__(self, content=''):
 		self.content = content
-	
+			
 	@cherrypy.expose
 	def default(self, *vpath, **params):
 
@@ -23,7 +24,10 @@ class RESTResource(object):
 		if not method:
 			raise cherrypy.HTTPError(405, "Method not implemented.")
 		
-		if cherrypy.request.method == 'GET':
+		if self.access_limit:
+			self.logger.log('Setting access limit to %s'%self.access_limit)
+			self.authenticator.set_limit(self.access_limit)
+		elif cherrypy.request.method == 'GET':
 			self.authenticator.set_limit(0)
 		elif cherrypy.request.method == 'PUT':
 			self.authenticator.set_limit(1)
@@ -75,13 +79,15 @@ class RESTResourceIndex(RESTResource):
 		self.res = ""
 		self.data = data
 		if not self.data:
-			self.data = {'PUT':[('import_request','Request JSON', 'Import a request to the database')], 'GET':[('get_request', 'prepid', 'Retrieve a request from the database'), ('request_prepid', 'Pwg, Campaign Name', 'Generates the next available PREP_ID from the database'), ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')], 'DELETE':[('delete_request', 'prepid', 'Delete a request from the database')]}
+			self.data = {'PUT':[('import_request','Request JSON', 'Import a request to the database')], 
+				     'GET':[('get_request', 'prepid', 'Retrieve a request from the database'), ('request_prepid', 'Pwg, Campaign Name', 'Generates the next available PREP_ID from the database'), ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')], 
+				     'DELETE':[('delete_request', 'prepid', 'Delete a request from the database and that\'s it ')]}
 	
 	def GET(self):
 		return self.index()
 
 	def index(self):
-		self.res = '<h1>REST API for PREP<h2>'
+		self.res = '<h1>REST API for McM<h2>'
 		self.res += "<ul>"
 		for method in self.data:
 			self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
@@ -90,6 +96,10 @@ class RESTResourceIndex(RESTResource):
 				self.res += "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>"
 			self.res += "</table></li>"
 		self.res += "</ul>"
+		#self.res += ", ".join(self.__dict__.keys())
+		#for key in self.__dict__.keys():
+		#		self.res += " %s, "% (key)
+
 		return self.res
 					
 	
