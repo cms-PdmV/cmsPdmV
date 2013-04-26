@@ -3,12 +3,16 @@ import os
 
 import logging
 from tools.logger import prep2_formatter, logger as logfactory
+from tools.locator import locator
 
 class package_injector:
     logger = logfactory('prep2')
     hname = '' # name of the log handler
 
-    def __init__(self,  tarball,  cmssw_release, directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'):
+    def __init__(self,  tarball,  cmssw_release, directory=None):
+        if not directory:
+            l_type=locator()
+            directory = l_type.workLocation()
         self.tarball = str(tarball)
         self.prepid = self.tarball.rsplit('.tgz')[0]
         self.directory = str(directory)
@@ -76,6 +80,7 @@ class package_injector:
         script += './injectAndApprove.sh \n'
         
         try:
+            self.logger.inject('Writing injection script to '+self.directory+'inject-'+self.tarball+'.sh')
             f = open(self.directory+'inject-'+self.tarball+'.sh',  'w')
             f.write(script)
             f.close()
@@ -159,16 +164,29 @@ class package_injector:
         if not stdin and not stdout and not stderr:
             return False
 
+        fullOutPutText=stdout.read()        
         error = stderr.read()
-        if error:
+        Exceptions = []
+        for line in error.split('\n'):
+            if '[wmcontrol exception]' in line:
+                Exceptions.append(line)
+        #self.logger.inject('Just for the eyes %s'%( error ))
+        #if error:
+        if len(Exceptions):
+            self.logger.inject('Executed \n %s'%(fullOutPutText), handler=self.hname, level='error')
             self.logger.inject('Errors returned: %s' % (error), handler=self.hname, level='error')
+            return False
 
-        fullOutPutText=stdout.read()
+
         self.requestNames=[]
         for line in fullOutPutText.split('\n'):
             if line.startswith('Injected workflow:'):
                 self.requestNames.append(line.split()[2])
-                
+        
+        if not len(self.requestNames):
+            self.logger.inject('There were no request manager name recorded \n %s'%(fullOutPutText),level='error', handler=self.hname)
+            return False
+
         self.logger.inject('Injection output: %s' % (fullOutPutText), handler=self.hname)
 
         return True
