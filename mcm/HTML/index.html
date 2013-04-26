@@ -10,7 +10,9 @@
   <script type="text/javascript">
   var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
   function resultsCtrl($scope,$http,$location){
-    $scope.user = {name: "", role:""}
+    $scope.selectedDB = "------";
+    $scope.possibleDBs = ["requests","flows","chained_campaigns","actions","users","campaigns","batches","chained_requests"];
+    $scope.user = {name: "", role:"", roleIndex:0};
     // GET username and role
     var promise = $http.get("restapi/users/get_roles");
     promise.then(function(data){
@@ -44,5 +46,9 @@
       <p> <font color="green">Cool</font> <b>stuff</b> hapens here</p>
       <p> Updated to use HTML5 links: exclude <b>#</b> from URL's </p>
     </div>
+<!--  <span>
+    <select ng-model="selectedDB" ng-options="value for value in possibleDBs"></select>
+    <input type"text" nd-model="search_query" class="input-xlarge">
+  </span>-->
   </div><!--End of container -->
 </body>
