@@ -8,9 +8,11 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/main_controller.js"></script>
         <script src="scripts/batches_controller.js"></script>
   </head>
-  <body ng-controller="resultsCtrl">
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
     <div ng-include src="'HTML/navbar_template.html'"></div>
     <div class="container">
       <div class="span12" style="overflow: auto">
@@ -35,26 +37,46 @@
       <thead>
         <tr>
           <th ng-repeat="column in batches_defaults" ng-show="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
-	    <div ng-switch-when="Actions"  ng-hide="role(1);">
+            <div ng-switch-when="Actions"  ng-hide="role(1);">
               {{column.text}}
-	    </div>
-	    <div ng-switch-default>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                  <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+              </span>
+              <!-- END OF: SORTING lines -->
+              <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
+            </div>
+            <div ng-switch-default>
               {{column.text}}
-	    </div>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+              </span>
+              <!-- END OF: SORTING lines -->
+              <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result">
+        <tr ng-repeat="data in result  | orderBy:sort.column: sort.descending | filter: filt">
           <td ng-repeat="value in batches_defaults" ng-show="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';">
-                    <i class="icon-envelope"></i>
-                  </a>
                   <a ng-click='delete_object("batches", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
+                  </a>
+                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';">
+                    <i class="icon-envelope"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
                     <div class="modal-header">
@@ -72,17 +94,27 @@
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->  
               </div>
-	      <div ng-switch-when="Notes">
-		<textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px; height: {{data[value.db_name].length}}px"></textarea>
-	      </div>
+              <div ng-switch-when="PrepId">
+                <a ng-href='{{getLocation()}}&prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+                <a ng-href="admin/_utils/document.html?batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
+              </div>
+              <div ng-switch-when="Notes">
+                <textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px; height: {{data[value.db_name].length}}px"></textarea>
+              </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
+	      <div ng-switch-when="Status">
+		<a ng-href='batches?status={{data[value.db_name]}}' target="_blank" rel="tooltip" title="View batches in status {{data[value.db_name]}}">{{data[value.db_name]}}</a>
+	      </div>
               <div ng-switch-when="Requests">
               	<ul>
               	  <li ng-repeat="elem in data[value.db_name]">
-		    <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_blank">{{elem.name}}</a>, <a ng-href='requests?query="prepid%3D%3D{{elem.content.pdmv_prep_id}}"' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_blank">{{elem.content.pdmv_prep_id}}</a>
-		  </li>
+                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_blank">{{elem.name}}</a>
+                    <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_blank">{{elem.name}}</a>
+		                ,
+                    <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_blank">{{elem.content.pdmv_prep_id}}</a>
+                  </li>
               	</ul>
               </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
@@ -95,6 +127,10 @@
       <div class="span5" style="margin-top:20px;">
       </div>
       <div class="span2" style="margin-top:20px;">
+        <span ng-show="got_results">
+          Found {{ result.length}} results
+        </span>
+        <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
         <div ng-show="update['success']">
           Success. Status code:<font color="green">{{update['status_code']}}</font>.Results: {{update['results']}}
         </div>
@@ -115,5 +151,6 @@
         </div>
       </div>
     </div>
+  </span>
   </body>
 </html>
