@@ -22,13 +22,18 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope.dbName = $location.search()["db_name"];
-    $scope.prepid = $location.search()["query"];
+    $scope.prepid = $location.search()["prepid"];
+    //console.log($scope.prepid);
+    if ($scope.prepid === undefined){
+	$scope.prepid = $location.search()["query"];
+    }
+    
     if ($scope.dbName == "campaigns"){
 	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
 	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date"]; //user non-editable columns
-      var promise = $http.get("restapi/requests/editable/"+$location.search()["query"])
+      var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
       });
@@ -130,7 +135,7 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
    $scope.$watch('list_page', function(){
-     var promise = $http.get("public/restapi/"+ $location.search()["db_name"]+"/get/"+$location.search()["query"])
+     var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
      promise.then(function(data){
        $scope.result = data.data.results;
        if ($scope.result.length != 0){
