@@ -22,6 +22,7 @@ class RequestRESTResource(RESTResource):
         self.adb = database('actions')
         self.cdb = database('campaigns')
         self.request = None
+        self.access_limit = 3
 
     def set_campaign(self):
         # check that the campaign it belongs to exsits
@@ -32,7 +33,7 @@ class RequestRESTResource(RESTResource):
         self.campaign = self.cdb.get(camp)
 
     ## duplicate version to be centralized in a unique class
-    def add_action(self):
+    def add_action(self,force=False):
         # Check to see if the request is a root request
         #camp = self.request.get_attribute('member_of_campaign')
           
@@ -42,7 +43,7 @@ class RequestRESTResource(RESTResource):
         # get campaign
         #self.c = self.cdb.get(camp)
         
-        if (self.campaign['root'] > 0) or (self.campaign['root'] <0 and int(self.request.get_attribute('mcdb_id')) > -1):
+        if (not force) and ((self.campaign['root'] > 0) or (self.campaign['root'] <0 and int(self.request.get_attribute('mcdb_id')) > -1)):
             ## c['root'] > 0 
             ##            :: not a possible root --> no action in the table
             ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
@@ -55,7 +56,8 @@ class RequestRESTResource(RESTResource):
         # check to see if the action already exists
         if not self.adb.document_exists(self.request.get_attribute('prepid')):
             # add a new action
-            a= action('automatic')
+            #a= action('automatic')
+            a= action()
             a.set_attribute('prepid',  self.request.get_attribute('prepid'))
             a.set_attribute('_id',  a.get_attribute('prepid'))
             a.set_attribute('dataset_name', self.request.get_attribute('dataset_name'))
@@ -221,13 +223,16 @@ class UpdateRequest(RequestRESTResource):
 
         self.logger.log('Updating request %s...' % (self.request.get_attribute('prepid')))
 
-        # check on the action 
-        self.set_campaign()
-        self.add_action()
+        if len(self.request.get_attribute('history')) and 'action' in self.request.get_attribute('history')[0] and self.request.get_attribute('history')[0]['action'] == 'migrated':
+            self.logger.log('Not changing the actions for %s as it has been migrated'%(self.request.get_attribute('prepid')))
+            pass
+        else:
+            # check on the action 
+            self.set_campaign()
+            self.add_action()
         	
 	# update history
 	self.request.update_history({'action': 'update'})
-
         return  self.save_request()
 
     def save_request(self):
@@ -273,7 +278,7 @@ class MigrateRequest(RequestRESTResource):
             return dumps({"results":False,"message":"no conversions for prepid %s"%(pid)})
         mcm_request= mcm_requests[0]
         try:
-            mcm_r = request(mcm_request)
+            self.request = mcm_r = request(mcm_request)
         except:
             return dumps({"results":False,"message":"json does not cast into request type <br> %s"%(mcm_request)})
 
@@ -283,17 +288,44 @@ class MigrateRequest(RequestRESTResource):
 
         mcm_r.update_history({'action':'migrated'})
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
-            statsDB = database('stats',url='http://cms-pdmv-golem.cern.ch:5984/')
-            mcm_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%pid,page_num=-1))
+            statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
+            ### do a manual search
+            #stats_rr = map(lambda x: x['value'], statsDB.query(query="",page_num=-1))
+            #stats_rr = filter(lambda r : pid in r['pdmv_request_name'], stats_rr)
+            ###if you believe in the prepid member ... which is not reliable for resub
+            stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%pid,page_num=-1))
+            mcm_rr=[]
+            for stats_r in stats_rr:
+                ## there are two ways here: either make a full copy in McM ---> bad, or implement soft linking for the information that is required
+                
+                #mcm_rr.append( { 'content' : stats_r,
+                #                 'name' : stats_r['pdmv_request_name']})
+                
+                keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list']
+                mcm_content={}
+                for k in keys_to_import:
+                    mcm_content[k] = stats_r[k]
+                mcm_rr.append( { 'content' : mcm_content,
+                                 'name' : stats_r['pdmv_request_name']})
+
             mcm_r.set_attribute('reqmgr_name', mcm_rr)
             #if not len(mcm_rr):
             #    return dumps({"results":False,"message":"found no request in the request in the stats DB ... %s"%(len(allstats))})
 
             saved = self.db.save(mcm_r.json())
+
+            ## force to add an action on those requests
+            #it might be that later on, upon update of the request that the action get deleted
+            if mcm_r.get_attribute('member_of_campaign') in ['Summer12','Summer12WMLHE']:
+                self.set_campaign()
+                self.add_action(force=True)            
         else:
             return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
-        
+
         if saved:
+            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="https://cms-pdmv-dev.cern.ch/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
+                                                                                                                                                                                                                                                                          mcm_r.get_attribute('prepid'),mcm_r.get_attribute('prepid'))
+            return html
             return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
         else:
             return dumps({"results":saved,"message":"could not save converted prepid %s in McM"%(pid)})
@@ -533,6 +565,7 @@ class GetStatus(RESTResource):
 class SetStatus(RESTResource):
     def __init__(self):
         self.db = database('requests')
+        self.access_limit = 3
 
     def GET(self, *args):
         if not args:
@@ -580,6 +613,7 @@ class InjectRequest(RESTResource):
         self.authenticator.set_limit(4)
         self.db_name = 'requests'
         self.db = database(self.db_name)
+        self.access_limit = 3
 
     class INJECTOR(Thread):
         def __init__(self,pid,log):
@@ -615,6 +649,7 @@ class InjectRequest(RESTResource):
                     pb = package_builder(req_json=req.json())
                 except:
                     message = "Errors in making the request : \n"+ traceback.format_exc()
+                    self.logger.inject(message)
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False, "message": message})
                     req.notify('Submission failed for request %s'%(pid),message)
@@ -623,6 +658,7 @@ class InjectRequest(RESTResource):
                     res_sub=pb.build_package()
                 except:
                     message = "Errors in building the request : \n"+ traceback.format_exc()
+                    self.logger.inject(message)
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False , "message": message})
                     req.notify('Submission failed for request %s'%(pid),message)
