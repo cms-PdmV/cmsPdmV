@@ -8,9 +8,11 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script src="scripts/main_controller.js"></script>
         <script src="scripts/users_controller.js"></script>
   </head>
-  <body ng-controller="resultsCtrl">
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
       <div class="span12" style="overflow: auto">
@@ -34,20 +36,30 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select" ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)" ng-switch on="column.text">
+          <th ng-repeat="column in defaults" ng-show="column.select" ng-switch on="column.text">
 	          <div ng-switch-when="Actions" ng-hide="role(1);">
               {{column.text}}
-              <span ng-show="selectedCls('value.'+column.db_name)">
-		            <i class="icon-chevron-up" ng-hide="sort.descending"></i>
-		            <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls('value.'+column.db_name)"  ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)">
+                <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls('value.'+column.db_name)" ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
+              <!-- END OF: SORTING lines -->
 	          </div>
 	          <div ng-switch-default>
               {{column.text}}
-              <span ng-show="selectedCls('value.'+column.db_name)">
-		            <i class="icon-chevron-up" ng-hide="sort.descending"></i>
-		            <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls('value.'+column.db_name)"  ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)">
+                <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls('value.'+column.db_name)" ng-class="selectedCls('value.'+column.db_name)" ng-click="changeSorting('value.'+column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
+              <!-- END OF: SORTING lines -->
 	          </div>
           </th>
         </tr>
@@ -80,6 +92,10 @@
         <input type="button" class="btn" ng-click="addMe()" value="Add me!" align="left"/>
       </div>
       <div class="span2" style="margin-top:20px;">
+        <span ng-show="got_results">
+          Found {{ result.length}} results
+        </span>
+        <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
         <div ng-show="update['success']">
           Success. Status code:<font color="green">{{update['status_code']}}</font>. Results: {{update['results']}}
         </div>
@@ -100,5 +116,6 @@
         </div>
       </div>
     </div>
+  </span>
   </body>
 </html> 
