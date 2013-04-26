@@ -15,6 +15,7 @@ from json_layer.campaign import campaign
 from json_layer.batch import batch
 from couchdb_layer.prep_database import database
 from tools.ssh_executor import ssh_executor
+from tools.locator import locator
 
 class package_builder:
 	
@@ -70,8 +71,11 @@ class package_builder:
             return 'Error: Package name given was NoneType'
 
 
-    def __init__(self,  req_json=None,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  events=5):
-        
+    def __init__(self,  req_json=None,  directory=None,  events=5):
+        if not directory:
+            l_type=locator()
+            directory = l_type.workLocation()
+
         # set time out to 2000 seconds
         cherrypy.response.timeout = 2000
         
@@ -100,15 +104,16 @@ class package_builder:
         #res = map(lambda x: x['value'], bdb.query('prepid ~= %s-*'%(self.batchName), page_num=-1))
         #### doing the query by hand    
         res = map(lambda x: x['value'], bdb.query(query='',page_num=-1))
+        res_this = filter(lambda x: x['prepid'].split('-')[0] == self.batchName, res)
         ## filter to have the ones of that family, that are NEW
-        res_new = filter(lambda x: x['prepid'].split('-')[0] == self.batchName and x['status']=='new', res)
+        res_new = filter(lambda x: x['status']=='new', res_this)
         ##get only the serial number of those
         res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
 
         ##find out the next one
         if not res_new:
             ##no open batch of this kind
-            res_next = filter(lambda x: x['prepid'].split('-')[0].endswith('_%s'%(req_json['member_of_campaign'])) , res) 
+            res_next = filter(lambda x: x['prepid'].split('-')[0].endswith(req_json['member_of_campaign']) , res) 
             if not res_next:
                 ## not even a document with *_<campaign>-* existing: ---> creating a new family
                 self.batchNumber=1
@@ -122,6 +127,18 @@ class package_builder:
         self.batchName+='-%05d'%(self.batchNumber)
         if not bdb.document_exists(self.batchName):
             newBatch = batch({'_id':self.batchName,'prepid':self.batchName})
+            notes=""
+            cdb = database('campaigns')
+            mcm_c = cdb.get(req_json['member_of_campaign'])
+            if mcm_c['notes']:
+                notes+="Notes about the campaign:\n"+mcm_c['notes']+"\n"
+            if req_json['flown_with']:
+                fdb = database('flows')
+                mcm_f = fdb.get(req_json['flown_with'])
+                if mcm_f['notes']:
+                    notes+="Notes about the flow:\n"+mcm_f['notes']+"\n"
+            if notes:
+                newBatch.set_attribute('notes',notes)
             newBatch.update_history({'action':'created'})
             bdb.save(newBatch.json())
 
@@ -133,7 +150,7 @@ class package_builder:
 
         # reqmgr config cache specifics
         #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
-        self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
+        #self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
         self.reqmgr_database = "reqmgr_config_cache"
         self.reqmgr_user = "pdmvserv" 
         self.reqmgr_group = "ppd" 
@@ -551,7 +568,9 @@ class package_builder:
         command += ' --request-id %s' %(self.request.get_attribute('prepid'))
 
         ##JR in order to inject into the testbed instead of the production machine
-        command += ' --wmtest '
+        l_type = locator()
+        if l_type.isDev(): 
+            command += ' --wmtest '
         command += ' --user %s' % (self.reqmgr_user)
         command += ' --group %s' % (self.reqmgr_group)
         command += ' --batch %s' % (self.batchNumber)
@@ -879,11 +898,12 @@ class package_builder:
         
         # inject config to couch
         if flag:
-            self.logger.inject('Injecting...', handler=self.hname)
+            self.logger.inject('Creating Injection...', handler=self.hname)
 
             # initialize injector object with the finalized tarball
             injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
 
+            self.logger.inject('Injecting...', handler=self.hname)
             if injector.inject():
                 self.logger.inject('Injection successful !', handler=self.hname)
                 flag = True
@@ -920,9 +940,16 @@ class package_builder:
                     rdb.update(self.request.json())
                     bdb.update(b.json())
                     for request in added:
-                        self.logger.inject('Request %s send to %s'%(request,self.batchName))
+                        self.logger.inject('Request %s send to %s'%(request['name'],self.batchName))
             else:
-                self.logger.inject('Injection failed :( ', level='warning', handler=self.hname)
+                self.logger.inject('Injection failed', level='warning', handler=self.hname)
+                ## rewind the request status & approval
+                #self.request.approve(to_approval='approve')
+                self.request.set_status(0)
+                self.request.approve(0)
+                rdb = database('requests')
+                self.request.update_history({'action':'failed'})
+                rdb.update(self.request.json())
                 flag = False
 
         return flag
