@@ -11,7 +11,10 @@ class package_tester:
     logger = logfactory('prep2')
     hname = '' # handler's name
 
-    def __init__(self,  request_object,  directory='/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/',  pyconfigs=[]):
+    def __init__(self,  request_object,  directory=None,  pyconfigs=[]):
+        if not directory:
+            l_type=locator()
+            directory = l_type.workLocation()
         self.request = request_object
         self.configurationLogFiles = []
 
