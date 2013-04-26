@@ -1,31 +1,20 @@
 function resultsCtrl($scope, $http, $location, $window){
-  $scope.user = {name: "guest", role:"user"}
   if ($location.search()["db_name"] === undefined){
     $scope.dbName = "batches";
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
-  if($location.search()["query"] === undefined){
-  	$location.search("query",'""');
-  }
+
   $scope.update = [];
-// GET username and role
-  var promise = $http.get("restapi/users/get_roles");
-  promise.then(function(data){
-    $scope.user.name = data.data.username;
-    $scope.user.role = data.data.roles[0];
-    $scope.user.roleIndex = parseInt(data.data.role_index);
-  },function(data){
-    alert("Error getting user information. Error: "+data.status);
-  });
-// Endo of user info request
-       
+  $scope.filt = {}; //define an empty filter
+  
   $scope.batches_defaults = [
     {text:'PrepId',select:true, db_name:'prepid'},
     {text:'Actions',select:false, db_name:''},
+    {text:'Status',select:true, db_name:'status'},
     {text:'Requests',select:true, db_name:'requests'},
     {text:'Notes',select:true, db_name:'notes'},
-    {text:'Status',select:true, db_name:'status'},
+
   ];
 
   $scope.show_well = false;
@@ -37,6 +26,7 @@ function resultsCtrl($scope, $http, $location, $window){
     page = $location.search()["page"];
     $scope.list_page = parseInt(page);
   }
+
   $scope.showing_well = function(){
     if ($scope.show_well){
       $scope.show_well = false;
@@ -44,12 +34,14 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.show_well = true;
      }
   };
+
   $scope.previous_page = function(current_page){
     if (current_page >-1){
       $location.search("page", current_page-1);
       $scope.list_page = current_page-1;
     }
   };
+
   $scope.next_page = function(current_page){
     if ($scope.result.length !=0){
       $location.search("page", current_page+1);
@@ -74,13 +66,7 @@ function resultsCtrl($scope, $http, $location, $window){
        sort.descending = false;
      }
   };
-  $scope.role = function(priority){
-    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
-      return true;
-    }else{
-      return false;
-    }
-  };
+
   $scope.select_all_well = function(){
     $scope.selectedCount = true;
     var selectedCount = 0
@@ -98,10 +84,25 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selectedCount = false;
     }
   };
+
+  //watch length of pending HTTP requests -> if there are display loading;
+  $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
+    if (v == 0){  //if HTTP requests pending == 0
+      $scope.pendingHTTP = false;
+    }else{
+      $scope.pendingHTTP = true;
+    }
+  });
+
   $scope.$watch('list_page', function(){
-    console.log("modified");
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&query="+$location.search()['query']+"&page="+$scope.list_page)
+    var query = ""
+      _.each($location.search(), function(value,key){
+        query += "&"+key+"="+value
+    });
+    $scope.got_results = false; //to display/hide the 'found n results' while reloading
+    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
     promise.then(function(data){
+      $scope.got_results = true;
       $scope.result = data.data.results; 
       if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
@@ -129,6 +130,7 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("Batch to be announced:"+prepid);
     };
 };
+
 var ModalDemoCtrl = function ($scope, $http, $window) {
   $scope.mailContent = "";
   $scope.open = function (id) {
@@ -141,11 +143,8 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
     $scope.mailContent = "";
   };
   $scope.save = function () {
-    console.log($scope.prepId, $scope.mailContent);
     $scope.shouldBeOpen = false;
-    console.log({prepid: $scope.prepId, notes: $scope.mailContent});
     $http({method: 'PUT', url:'restapi/batches/announce', data:{prepid: $scope.prepId, notes: $scope.mailContent}}).success(function(data, status){
-      console.log(data, status);
       $scope.update["success"] = true;
       $scope.update["fail"] = false;
       $scope.update["results"] = data.results;
@@ -157,7 +156,6 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
       $scope.update["status_code"] = status;
-      console.log(data, status);
     });
     $scope.mailContent = "";
   };
