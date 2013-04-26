@@ -10,31 +10,22 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Type',select:true, db_name:'type'},
         {text:'History',select:false, db_name:'history'},
     ];
-    $scope.user = {name: "guest", role:"user",roleIndex:0}
+
     $scope.filt = {}; //define an empty filter
     $scope.notify_text = "";
-// GET username and role
-      var promise = $http.get("restapi/users/get_roles");
-       promise.then(function(data){
-        $scope.user.name = data.data.username;
-        $scope.user.role = data.data.roles[0];
-        $scope.user.roleIndex = parseInt(data.data.role_index);
-    }, function(data){
-        alert("Error getting user information. Error: "+data.status);
-    });
-// Endo of user info request
     $scope.update = {};
     $scope.show_well = false;
     $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
+    $scope.dataset_list= {};
 
     if($location.search()["page"] === undefined){
-        page = 0;
-        $location.search("page", 0);
-        $scope.list_page = 0;
+      page = 0;
+      $location.search("page", 0);
+      $scope.list_page = 0;
     }else{
-        page = $location.search()["page"];
-        $scope.list_page = parseInt(page);
+      page = $location.search()["page"];
+      $scope.list_page = parseInt(page);
     }
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "requests";
@@ -42,8 +33,9 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.dbName = $location.search()["db_name"];
     }
     if($location.search()["query"] === undefined){
-      $location.search("query",'""');
+	//$location.search("query",'""');
     }
+
     
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -84,44 +76,46 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     $scope.next_status = function(prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
-         $scope.update["success"] = data["results"];
-         $scope.update["fail"] = false;
-         $scope.update["status_code"] = data["results"];
-         $window.location.reload();
+        $scope.update["success"] = data["results"];
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = data["results"];
+        $window.location.reload();
       }).error(function(status){
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
       });
-    };
-    
-    $scope.submit_edit = function(){
-        console.log("submit function");
-        console.log($scope.result);
-        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
-            console.log(data,status);
-            $scope.update["success"] = data["results"];
-            $scope.update["fail"] = false;
-            $scope.update["status_code"] = status;
-	    $window.location.reload();
-        }).error(function(data,status){
-            $scope.update["success"] = false;
-            $scope.update["fail"] = true;
-            $scope.update["status_code"] = status;
-        });
     };
 
     $scope.submit = function (prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/inject/'+prepid}).success(function(data,status){
-         $scope.update["success"] = data["results"];
-         $scope.update["fail"] = false;
-         $scope.update["status_code"] = data["results"];
-	 //         $window.location.reload();
+        $scope.update["success"] = data["results"];
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = data["results"];
+	 //        $window.location.reload();
       }).error(function(status){
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
       });
+    };
+
+    $scope.load_dataset_list = function (req_name){
+	console.log('trying to get the dataset list for',req_name)
+	//	var promise = $http.get('http://cms-pdmv-golem.cern.ch:5984/stats/'+req_name);
+	//	promise.then(function(data){
+	//		console.log(data);
+	//	    });
+	//getfrom='http://cms-pdmv-golem.cern.ch:5984/stats/'+req_name;
+	getfrom='https://cms-pdmv-dev.cern.ch/stats/admin/stats/'+req_name;
+	$http({method:'GET', url: getfrom}).success(function(data,status){
+		//console.log('loaded',getfrom);
+		$scope.dataset_list[req_name] = data.pdmv_dataset_list;
+		//console.log(data);
+		//console.log($scope.dataset_list[req_name]);
+	    }).error(function(status){
+		    console.log(getfrom,' --> error');
+		});
     };
 
     $scope.register = function(prepid){
@@ -165,7 +159,6 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.requests_defaults[5].select = true; // set actions to be enabled
       $scope.requests_defaults[6].select = true; // set actions to be enabled
       $scope.requests_defaults[7].select = true; // set actions to be enabled
-      $scope.requests_defaults[8].select = true; // set actions to be enabled
       $scope.selectedCount = false;
       }
     };
@@ -174,48 +167,48 @@ function resultsCtrl($scope, $http, $location, $window){
         console.log("delete some from edit");
         $scope.delete_object($scope.dbName, id);
     };
-    $scope.display_approvals = function(data){
-        console.log(data);
-    };
-       $scope.sort = {
-        column: 'prepid',
-        descending: false
+
+    $scope.sort = {
+      column: 'prepid',
+      descending: false
     };
 
     $scope.selectedCls = function(column) {
-        return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
+      return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
     };
     
     $scope.changeSorting = function(column) {
-        var sort = $scope.sort;
-        if (sort.column == column) {
-            sort.descending = !sort.descending;
-        } else {
-            sort.column = column;
-            sort.descending = false;
-        }
+      var sort = $scope.sort;
+      if (sort.column == column) {
+        sort.descending = !sort.descending;
+      }else{
+        sort.column = column;
+        sort.descending = false;
+      }
     };
   $scope.showing_well = function(){
-        if ($scope.show_well){
-          $scope.show_well = false;
-        }
-        else{
-            console.log("true");
-            $scope.show_well = true;
-        }
-    };    
+    if ($scope.show_well){
+      $scope.show_well = false;
+    }
+    else{
+      $scope.show_well = true;
+    }
+   };
 
    $scope.$watch('list_page', function(){
-      console.log("modified");
-      console.log($location.url());
       var query = ""
       _.each($location.search(), function(value,key){
         query += "&"+key+"="+value
       });
-      console.log(query);
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
-          promise.then(function(data){
-        $scope.result = data.data.results; 
+      $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      promise.then(function(data){
+        $scope.result = data.data.results;
+        $scope.got_results = true;
+	      if ($scope.result === undefined ){
+          alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
+          return; //stop doing anything if results are undefined
+        }
         if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
@@ -224,7 +217,7 @@ function resultsCtrl($scope, $http, $location, $window){
             add = true;
             _.each($scope.requests_defaults, function(column){
             if (column.db_name == v){
-                add = false;
+              add = false;
             }
          });
             if (add){
@@ -232,27 +225,26 @@ function resultsCtrl($scope, $http, $location, $window){
             }
         });
         }
-        console.log($scope.requests_defaults);
          }, function(){
-             console.log("Error"); 
+             alert("Error getting information");
          });
     });
-    
+
   $scope.previous_page = function(current_page){
-      if (current_page >-1){
-        $location.search("page", current_page-1);
-        $scope.list_page = current_page-1;
-      }
+    if (current_page >-1){
+      $location.search("page", current_page-1);
+      $scope.list_page = current_page-1;
+    }
   };
+
   $scope.next_page = function(current_page){
-      if ($scope.result.length !=0){
-        $location.search("page", current_page+1);
-        $scope.list_page = current_page+1;
-      }
+    if ($scope.result.length !=0){
+      $location.search("page", current_page+1);
+      $scope.list_page = current_page+1;
+    }
   };
   $scope.showapproval = false;
   $scope.showApprovals = function(){
-      console.log("Approvals click");
       if ($scope.showapproval){
           $scope.showapproval = false;
     }
@@ -268,7 +260,6 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.selected_prepids.push(prepid);
   };
   $scope.next_approval = function(){
-    console.log("to be approved:", $scope.selected_prepids.join());
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    if (data.results == true){
 		alert("Success!");
@@ -277,7 +268,6 @@ function resultsCtrl($scope, $http, $location, $window){
 		alert("Error"+data.message)
 		    }
         }).error(function(data,status){
-            console.log(status);
             alert("Error while processing request. Code: "+status);
         });
   };
@@ -286,7 +276,6 @@ function resultsCtrl($scope, $http, $location, $window){
             alert("Success!");
 	    $window.location.reload();
         }).error(function(data,status){
-            console.log(status);
             alert("Error while processing request. Code: "+status);
         });
   };
@@ -295,7 +284,6 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("Success!");
 	    $window.location.reload();
         }).error(function(data,status){
-            console.log(status);
             alert("Error while processing request. Code: "+status);
         });
   };
@@ -306,9 +294,8 @@ function resultsCtrl($scope, $http, $location, $window){
 	      alert("Success!");
 	      $window.location.reload();
 	  }).error(function(data,status){
-		  console.log(status);
 		  alert("Error while processing request. Code: "+status);
-	      });
+	  });
   };
 
   $scope.submit_many = function(){
@@ -318,10 +305,10 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("You have selected no requests for multiple actions");
       return;
     }
-    $scope.processingRequest = true;
+    $scope.pendingHTTP = true;
     var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/1");
       promise.then(function(data){
-        $scope.processingRequest = false;
+        $scope.pendingHTTP = false;
         $scope.injectModalData = data.data;
         $scope.successfullSubmits = _.filter($scope.injectModalData, function(element){
           return element["results"] == true;
@@ -329,17 +316,11 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.openModal();
         // return data.data;
       },function(){
-        $scope.processingRequest = false;
+        $scope.pendingHTTP = false;
         alert("Error while submiting");
       });
   };
-  $scope.role = function(priority){
-    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
-      return true;
-    }else{
-      return false;
-    }
-  };
+
   $scope.approvalIcon = function(value){
     icons = { 'none':'icon-off',
 		  'validation' : 'icon-eye-open',
@@ -353,6 +334,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	    return  "icon-question-sign";
     }
   };
+
   $scope.statusIcon = function(value){
       icons = {'new' :  'icon-edit',
 	       'validation' : 'icon-eye-open',
@@ -410,9 +392,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $window.open("injection_status?prepid="+prepids.join());
     $scope.submissionModal = false;
   };
-  $scope.getLocation = function(){
-    return $location.url();    
-  };
+
   /* Notify modal actions */
   $scope.notifyUsers = function(prepid){
     $scope.notify_Modal = true;
@@ -431,7 +411,6 @@ function resultsCtrl($scope, $http, $location, $window){
     }
     $scope.loadNotify = true;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: $scope.notify_prepid, message: $scope.notify_text})}).success(function(data,status){
-      console.log(data);
       $scope.loadNotify = false;
       $scope.update["success"] = true;
       $scope.update["fail"] = false;
@@ -457,12 +436,12 @@ function resultsCtrl($scope, $http, $location, $window){
       _.each($scope.filt, function(filter_column, key){
     });
   };
-  $scope.$watch("filt", function(){
-    $scope.update_filtered();
-    _.each($scope.filt, function(v,k){
-      console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
-    });
-  },true);
+  // $scope.$watch("filt", function(){
+  //   $scope.update_filtered();
+  //   _.each($scope.filt, function(v,k){
+  //     console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
+  //   });
+  // },true);
 
 };
 
