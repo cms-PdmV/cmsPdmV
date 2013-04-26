@@ -51,14 +51,16 @@ class Search(object):
 		query=''
 		query_list=[]
 		page=0
-		if 'test' in args:
-			return simplejson.dumps([{"toto":"tutu"}])
+		manual_keys=['db_name','query','page']
 		if 'db_name' in args:
 			db_name=args['db_name']
+			args.pop('db_name')
 		if 'query' in args:
 			query=args['query']
+			args.pop('query')
 		if 'page' in args:
 			page=args['page']
+			args.pop('page')
 		# retrieve the _design/object document
 		odb=database(db_name)
 		design = odb.get('_design/%s'%(db_name))
@@ -66,7 +68,10 @@ class Search(object):
 		for key in allowed_key_search:
 			if key in args:
 				query_list.append('%s==%s'%(key,args[key]))
+				args.pop(key)
 
+		if len(args):
+			return simplejson.dumps(args)
 		return self.search(db_name, query, page, query_list)
 
 	search.exposed = True	
