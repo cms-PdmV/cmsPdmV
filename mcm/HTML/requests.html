@@ -8,9 +8,11 @@
          <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/angular.min.js"></script>
          <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+         <script src="scripts/main_controller.js"></script>
          <script src="scripts/requests_ctrl.js"></script>
 </head>
-  <body ng-controller="resultsCtrl">
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
       <div class="span12" style="overflow: auto">
@@ -34,21 +36,31 @@
     <table class="table table-bordered table-stripped" style="owerflow:auto;">
       <thead>
         <tr>
-          <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions">
               {{column.text}}
-              <span ng-show="selectedCls(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
+              <!-- END OF: SORTING lines -->
               <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
             </div>
             <div ng-switch-default>
               {{column.text}}
-              <span ng-show="selectedCls(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending"></i>
+              <!-- SORTING lines -->
+              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-resize-vertical"></i>
+              </a>
+              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
+                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
+              <!-- END OF: SORTING lines -->
               <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
             </div>
           </th>
@@ -62,7 +74,7 @@
                 <a ng-click='delete_object("requests", data.prepid)' rel="tooltip" ng-hide="role(4);" title="Delete request">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href='edit?db_name=requests&query={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_blank">
+                <a ng-href='edit?db_name=requests&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
                 <a ng-click="clone(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Clone Request">
@@ -74,24 +86,24 @@
                 <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);">
                   <i class="icon-chevron-right"></i>
                 </a>
-		<a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionnary" target="_blank">
-		  <i class="icon-download-alt"></i>
-		</a>
-	        <a ng-href='public/restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get Setup" target="_blank">
-		  <i class="icon-download"></i>
-		</a>
-		<a ng-click="register(data.prepid)" rel="tooltip" title="Register to the request {{data.prepid}}">
-		  <i class="icon-map-marker"></i>
-		</a>
+                <a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionnary" target="_blank">
+                  <i class="icon-download-alt"></i>
+                </a>
+                <a ng-href='public/restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get Setup" target="_blank">
+                  <i class="icon-download"></i>
+                </a>
+                <a ng-click="register(data.prepid)" rel="tooltip" title="Register to the request {{data.prepid}}">
+                  <i class="icon-map-marker"></i>
+                </a>
                 <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify">
                   <i class="icon-envelope"></i>
                 </a>
                 <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
                   <i class="icon-flag"></i>
                 </a>
-		<a ng-href='actions?query="prepid%3D%3D{{data.prepid}}"&page=0&select={{data.member_of_campaign}}' rel="tooltip" ng-hide="role(3);" title="View action on this request" target="_blank"> 
-		   <i class="icon-zoom-in"></i>
-		</a>
+                <a ng-href='actions?prepid={{data.prepid}}&select={{data.member_of_campaign}}' rel="tooltip" title="View action on this request" target="_blank"> 
+                  <i class="icon-zoom-in"></i>
+                </a>
                 <a ng-href="injectAndLog?prepid={{data.prepid}}" rel="tooltip" title="Submit" ng-hide="role(3);" target="_blank">
                   <i class="icon-play-circle"></i>
                 </a>
@@ -99,11 +111,11 @@
               </div>
               <div ng-switch-when="Approval" align="center">
                 <i class="{{approvalIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='{{getLocation()}}&approval={{data[value.db_name]}}' rel="tooltip" title="Show all requests in approval {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='{{getLocation()}}&approval={{data[value.db_name]}}' rel="tooltip" title="Show all requests in approval {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Status" align="center">
                 <i class="{{statusIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		<a ng-href='requests?query="status%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='{{getLocation()}}&status={{data[value.db_name]}}' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Input filename">
                 <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_blank">{{data[value.db_name]}}</a>
@@ -112,19 +124,19 @@
                 <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Dataset name">
-                <a ng-href='requests?query="dataset_name%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
-                <a ng-href='chained_requests?query="dataset_name%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show chained requests for {{data[value.db_name]}}" target="_blank"><i class="icon-folder-open"></i></a>
+                <a ng-href='{{getLocation()}}&dataset_name={{data[value.db_name]}}' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='chained_requests?dataset_name={{data[value.db_name]}}' rel="tooltip" title="Show chained requests for {{data[value.db_name]}}" target="_blank"><i class="icon-folder-open"></i></a>
               </div>
               <div ng-switch-when="MCDBId" ng-hide="data[value.db_name]<=0">
-                <a ng-href='requests?query="mcdbid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="Show requests for mcdb ID {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='{{getLocation()}}&mcdbid={{data[value.db_name]}}' rel="tooltip" title="Show requests for mcdb ID {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="PrepId">
-                <a ng-href='requests?query="prepid%3D%3D{{data[value.db_name]}}"&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-		<a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_blank"><i class="icon-user"></i></a>
-		<a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
+                <a ng-href='{{getLocation()}}&prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+		            <a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_blank"><i class="icon-user"></i></a>
+		            <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
               </div>
-	      <div ng-switch-when="Pwg"> 
-		<a ng-href='requests?query="pwg%3D%3D{{data[value.db_name]}}"&page=0't rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+	            <div ng-switch-when="Pwg"> 
+		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
 	            </div>
               <div ng-switch-when="Approvals">
                 <div custom-approval ng-model="data[value.db_name]"></div>
@@ -135,7 +147,7 @@
               <div ng-switch-when="Extension" ng-show="data[value.db_name]" align="center">
                 <i class="icon-ok"></i>
               </div>
-	      <div ng-switch-when="Keep output" align="center">
+	            <div ng-switch-when="Keep output" align="center">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="keep in data[value.db_name]">
                     <i class="icon-ok-sign" ng-show="keep"></i>
@@ -146,14 +158,13 @@
               <div ng-switch-when="Config id">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="req in data[value.db_name]">
-                    <a ng-repeat="configid in req" ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_blank">
-                      <i class="icon-th"></i>
-                    </a>
+                    <a ng-show="isDevMachine();" ng-repeat="configid in req" ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_blank"><i class="icon-th"></i></a>
+                    <a ng-show="!isDevMachine();" ng-repeat="configid in req" ng-href='https://cmsweb.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_blank"><i class="icon-th"></i></a>
                   </li>
                 </ul>
               </div>
               <div ng-switch-when="Flown with">
-                <a ng-href='flows?query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the flow" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='flows?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the flow" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
@@ -167,21 +178,21 @@
               <div ng-switch-when="Member of chain">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="chain in data[value.db_name]">
-                    <a ng-href='chained_requests?query="prepid%3D%3D{{chain}}"' rel="tooltip" title="View details of the chain" target="_blank">{{chain}}</a>
+                    <a ng-href='chained_requests?prepid={{chain}}' rel="tooltip" title="View details of the chain" target="_blank">{{chain}}</a>
                   </li>
                 </ul>
               </div>
-	      <div ng-switch-when="Name of fragment">
-		<a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}' target="_blank" ng-hide='data["cvs_tag"];'>{{data[value.db_name]}}</a>
-		<a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["cvs_tag"]}}&content-type=text%2Fplain' target="_blank" ng-show='data["cvs_tag"];'>{{data[value.db_name]}}</a>
-	      </div>
+	            <div ng-switch-when="Name of fragment">
+		            <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}' target="_blank" ng-hide='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+		            <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["cvs_tag"]}}&content-type=text%2Fplain' target="_blank" ng-show='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+	            </div>
               <div ng-switch-when="Fragment">
                 <a ng-href='public/restapi/requests/get_fragment/{{data.prepid}}/0' rel="tooltip" title="View fragment" ng-hide="!data[value.db_name] || data[value.db_name]=='';" target="_blank">
                   <i class="icon-fullscreen"></i>
                 </a>
               </div>
               <div ng-switch-when="Member of campaign">
-                <a ng-href='campaigns?query="prepid%3D%3D{{data[value.db_name]}}"' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
+                <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign" target="_blank">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
@@ -189,15 +200,19 @@
               <div ng-switch-when="Reqmgr name">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="rqmngr in data[value.db_name]">
-                    <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>,
-		                <a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank">stats</a>
-				<!--				<a ng-click='if (!show) show=true;'>
-				  <i class='icon-eye-open'></i></a>-->
-				            <ul style="margin-bottom: 0px;" ng-show='true;'>
-				              <li ng-repeat='DS in rqmngr["content"]["pdmv_dataset_list"]'>
-				                <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}}in DAS" target="_blank">{{DS}}</a>
+                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
+                    <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
+                    ,<a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank">stats</a>
+                    <!-- <a ng-click='if (!show) show=true;'>
+                      <i class='icon-eye-open'></i>
+                    </a>-->
+		      <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='dataset_list[rqmngr["name"]]' rel="tooltip" title="Load output datasets for {{rqmngr['name']}}"> <i class="icon-eye-open"></i></a>
+                    <ul style="margin-bottom: 0px;" ng-show='true;'>
+                      <!-- <li ng-repeat='DS in rqmngr["content"]["pdmv_dataset_list"]'>-->
+                      <li ng-repeat='DS in dataset_list[rqmngr["name"]]'>
+                        <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}}in DAS" target="_blank">{{DS}}</a>
                       </li>
-			         	    </ul>
+                    </ul>
                   </li>
                 </ul>
               </div>
@@ -226,7 +241,7 @@
         <div modal="submissionModal" close="closeModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
           <div class="modal-header">
             <h4>Submitted requests</h4>
-          </div>  <!--end oFda.f modal header-->
+          </div>  <!--end of modal header-->
           <div class="modal-body">
             <text>
               <div ng-repeat="elem in injectModalData">
@@ -264,11 +279,14 @@
         <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify selected prepids">
           <i class="icon-envelope"></i>
         </a>
-        <input type="button" value="ToggleAll" ng-click="toggleAll()">
+        <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;">
       </span>
       </div>
       <div class="span2" style="margin-top:20px;">
-        <img ng-show="processingRequest" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+        <span ng-show="got_results">
+          Found {{ result.length}} results
+        </span>
+        <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
         <div ng-show="update['success']">
           Success. Status code:<font color="green">{{update['status_code']}}</font> Message: {{update['message']}}
         </div>
@@ -289,5 +307,6 @@
         </div>
       </div>
     </div>
+  </span>  
   </body>
 </html>
