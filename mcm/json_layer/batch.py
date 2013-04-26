@@ -1,5 +1,6 @@
 from couchdb_layer.prep_database import database
 from json_layer.json_base import json_base
+from tools.locator import locator
 
 class batch(json_base):
     def __init__(self, json_input={}):
@@ -55,7 +56,11 @@ class batch(json_base):
         message+="\n"
         message+="Link to the batch:\n"
         #message+="https://cms-pdmv.cern.ch/mcm/batches/%s\n"%(self.get_attribute('prepid'))
-        message+='https://cms-pdmv.cern.ch/mcm/batches?query=prepid%%3D%%3D%s \n\n'%(self.get_attribute('prepid'))
+        l_type = locator()
+        if l_type.isDev():
+            message+='https://cms-pdmv-dev.cern.ch/mcm/batches?prepid=%s \n\n'%(self.get_attribute('prepid'))
+        else:
+            message+='https://cms-pdmv.cern.ch/mcm/batches?prepid=%s \n\n'%(self.get_attribute('prepid'))
         if current_notes:
             message+="Additional comments for this batch:\n"+current_notes+'\n\n'
         message+="Thank you,\n"+user
