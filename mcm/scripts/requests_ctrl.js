@@ -17,7 +17,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.show_well = false;
     $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
-    $scope.dataset_list= {};
+    $scope.stats_cache = {};
 
     if($location.search()["page"] === undefined){
       page = 0;
@@ -110,7 +110,9 @@ function resultsCtrl($scope, $http, $location, $window){
 	getfrom='https://cms-pdmv-dev.cern.ch/stats/admin/stats/'+req_name;
 	$http({method:'GET', url: getfrom}).success(function(data,status){
 		//console.log('loaded',getfrom);
-		$scope.dataset_list[req_name] = data.pdmv_dataset_list;
+		$scope.stats_cache [req_name] = data;
+		//		$scope.dataset_list[req_name] = data.pdmv_dataset_list;
+		//		$scope.n_events[req_name] = data.pdmv_evts_in_DAS;
 		//console.log(data);
 		//console.log($scope.dataset_list[req_name]);
 	    }).error(function(status){
@@ -137,6 +139,19 @@ function resultsCtrl($scope, $http, $location, $window){
 		      $scope.update["status_code"] = status;
 		    });
       };
+
+    $scope.loadStats = function(){	
+	for (i=0;i<$scope.result.length;i++){
+	    if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
+		for (i_r=0;i_r!=$scope.result[i].reqmgr_name.length;i_r++){
+		    //console.log($scope.result[i].reqmgr_name[i_r].name);
+		    $scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name);
+		}
+	    }
+	    
+	}
+	
+    };
 
     $scope.select_all_well = function(){
       $scope.selectedCount = true;
