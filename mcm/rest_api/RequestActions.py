@@ -316,7 +316,7 @@ class MigrateRequest(RequestRESTResource):
 
             ## force to add an action on those requests
             #it might be that later on, upon update of the request that the action get deleted
-            if mcm_r.get_attribute('member_of_campaign') in ['Summer12','Summer12WMLHE']:
+            if camp.get_attribute('root') <=0:
                 self.set_campaign()
                 self.add_action(force=True)            
         else:
