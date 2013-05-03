@@ -16,6 +16,7 @@ class flow(json_base):
             #'description':'',
             'notes':'',
             'history':[],
+            #'label':'', ## something that one needs to add in the processing string ?
             'approval':self.get_approval_steps()[0] 
             }
         
