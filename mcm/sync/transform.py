@@ -230,7 +230,12 @@ class transformer:
                 new['sequences'][i][att] = seqs['default'][att]
 
 
-        new['generator_parameters'] = [{'version':0, 'submission_details':{'author_username':'automatic'}, 'cross_section':req_json['crossSection'], 'filter_efficiency': req_json['filterEff'], 'filter_efficiency_error': req_json['filterEffError'], 'match_efficiency': req_json['matchEff'], 'match_efficiency_error': -1}]
+        new['generator_parameters'] = [{'version':0, 'submission_details':{'author_username':'automatic'}, 
+                                        'cross_section':float(req_json['crossSection']), 
+                                        'filter_efficiency': float(req_json['filterEff']),
+                                        'filter_efficiency_error': float(req_json['filterEffError']), 
+                                        'match_efficiency': float(req_json['matchEff']),
+                                        'match_efficiency_error': -1.}]
 
         new['reqmgr_name'] = []
 
