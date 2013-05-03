@@ -202,14 +202,16 @@
                   <li ng-repeat="rqmngr in data[value.db_name]">
                     <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
                     <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
-                    ,<a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank">stats</a>
+                    ,<a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank">stats</a>
                     <!-- <a ng-click='if (!show) show=true;'>
                       <i class='icon-eye-open'></i>
                     </a>-->
-		      <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='dataset_list[rqmngr["name"]]' rel="tooltip" title="Load output datasets for {{rqmngr['name']}}"> <i class="icon-eye-open"></i></a>
-                    <ul style="margin-bottom: 0px;" ng-show='true;'>
-                      <!-- <li ng-repeat='DS in rqmngr["content"]["pdmv_dataset_list"]'>-->
-                      <li ng-repeat='DS in dataset_list[rqmngr["name"]]'>
+		    <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='stats_cache[rqmngr["name"]]' rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>
+		    <a ng-show='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_blank"> 
+		      {{stats_cache[rqmngr["name"]].pdmv_evts_in_DAS}} events
+		      <img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
+                    <Ul style="margin-bottom: 0px;" ng-show='true;'>
+                      <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
                         <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}}in DAS" target="_blank">{{DS}}</a>
                       </li>
                     </ul>
@@ -279,6 +281,9 @@
         <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify selected prepids">
           <i class="icon-envelope"></i>
         </a>
+	<a ng-click="loadStats()" rel="tooltip" title="Load statistics">
+	  <i class="icon-eye-open"></i>
+	</a>
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;">
       </span>
       </div>
