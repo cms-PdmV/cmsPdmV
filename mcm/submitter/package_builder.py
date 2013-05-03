@@ -623,6 +623,7 @@ class package_builder:
                 print self.numberOfEventsPerJob
                 command += ' --events-per-job %s' % (self.numberOfEventsPerJob)
             else:
+                command += ' --lhe '
                 if not processString:
                     processString=''
                 processString+='STEP0ATCERN'
