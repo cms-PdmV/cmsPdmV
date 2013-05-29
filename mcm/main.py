@@ -14,7 +14,7 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
-from rest_api.UserActions import GetUserRoles, GetAllRoles, GetAllUsers, AddRole, ChangeRole
+from rest_api.UserActions import GetUserRoles, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser
 from rest_api.BatchActions import GetBatch, GetAllBatches, AnnounceBatch, GetIndex
 
 #to get campaign sequences
@@ -173,6 +173,7 @@ root.restapi.users.get_all_roles = GetAllRoles()
 root.restapi.users.get_all_users = GetAllUsers()
 root.restapi.users.add_role = AddRole()
 root.restapi.users.change_role = ChangeRole()
+root.restapi.users.get = GetUser()
 
 # REST request actions
 root.restapi.requests.save = ImportRequest()
