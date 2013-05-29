@@ -53,10 +53,13 @@ class GetUser(RESTResource):
     def GET(self, *args):
 	    return dumps({"results":self.db.get( args[0])})
 
-    def get_Users(self):
-   	    # roles = self.authenticator.get_roles()
-   	    return dumps({"results":self.db.get_all()})
-	    # return dumps("test")
+class SaveUser(RESTResource):
+    def __init__(self):
+	    self.db_name = 'users'
+	    self.db = database(self.db_name)
+	    
+    def PUT(self):
+	    return dumps({"results":self.db.save( loads(cherrypy.request.body.read().strip()))})
 
 class AddRole(RESTResource):
     def __init__(self):
