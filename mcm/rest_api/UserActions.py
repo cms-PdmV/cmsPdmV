@@ -45,6 +45,19 @@ class GetAllUsers(RESTResource):
    	    return dumps({"results":self.db.get_all()})
 	    # return dumps("test")
 
+class GetUser(RESTResource):
+    def __init__(self):
+	    self.db_name = 'users'
+	    self.db = database(self.db_name)
+	    
+    def GET(self, *args):
+	    return dumps({"results":self.db.get( args[0])})
+
+    def get_Users(self):
+   	    # roles = self.authenticator.get_roles()
+   	    return dumps({"results":self.db.get_all()})
+	    # return dumps("test")
+
 class AddRole(RESTResource):
     def __init__(self):
         self.db_name = 'users'
