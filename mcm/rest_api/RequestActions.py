@@ -22,7 +22,7 @@ class RequestRESTResource(RESTResource):
         self.adb = database('actions')
         self.cdb = database('campaigns')
         self.request = None
-        self.access_limit = 3
+        self.access_limit = 1
 
     def set_campaign(self):
         # check that the campaign it belongs to exsits
@@ -139,6 +139,7 @@ class RequestRESTResource(RESTResource):
 class CloneRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.access_limit = 1 ## maybe that is wrong
 
     def GET(self, *args):
         if not args:
@@ -180,7 +181,8 @@ class CloneRequest(RequestRESTResource):
 class ImportRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
-
+        self.access_limit = 1 ## maybe that is wrong
+        
     def PUT(self):
         return self.import_request(loads(cherrypy.request.body.read().strip()))
 
@@ -323,7 +325,7 @@ class MigrateRequest(RequestRESTResource):
             return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
 
         if saved:
-            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="https://cms-pdmv-dev.cern.ch/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
+            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
                                                                                                                                                                                                                                                                           mcm_r.get_attribute('prepid'),mcm_r.get_attribute('prepid'))
             return html
             return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
@@ -400,7 +402,11 @@ class GetSetupForRequest(RESTResource):
       if not args:
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
-      return self.get_fragment(self.db.get(prepid=args[0]))
+      pid = args[0]
+      if self.db.document_exists(pid):
+          return self.get_fragment(self.db.get(prepid=pid))
+      else:
+          return dumps({"results":False,"message":"%s does not exists"%(pid)})
 
     def get_fragment(self, data):
       try:
@@ -483,7 +489,7 @@ class ApproveRequest(RESTResource):
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
-            return {'prepid': rid, 'results':False, 'message' : 'Unknonw error'}
+            return {'prepid': rid, 'results':False, 'message' : traceback.format_exc()}
 	
         return {'prepid' : rid, 'approval' : req.get_attribute('approval') ,'results':self.db.update(req.json())}
 
@@ -528,7 +534,7 @@ class ResetRequestApproval(RESTResource):
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
-            return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
+            return {"prepid":rid, "results":False, 'message' : traceback.format_exc()}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
@@ -637,6 +643,9 @@ class InjectRequest(RESTResource):
                 return
 
             self.act_on_pid.append(pid)
+            ## this is a line that allows to brows back the logs efficiently
+            self.logger.inject('## Logger instance retrieved', level='info', handler = pid)
+
             self.res.append({"prepid": pid, "results": True, "message":"The request %s is being forked"%(pid)})
 
         def run(self):
@@ -649,19 +658,19 @@ class InjectRequest(RESTResource):
                     pb = package_builder(req_json=req.json())
                 except:
                     message = "Errors in making the request : \n"+ traceback.format_exc()
-                    self.logger.inject(message)
+                    self.logger.inject(message, handler = pid)
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False, "message": message})
-                    req.notify('Submission failed for request %s'%(pid),message)
+                    req.test_failure(message)
                     continue
                 try:
                     res_sub=pb.build_package()
                 except:
                     message = "Errors in building the request : \n"+ traceback.format_exc()
-                    self.logger.inject(message)
+                    self.logger.inject(message, handler = pid)
                     self.logger.error(message)
                     self.res.append({"prepid": pid, "results" : False , "message": message})
-                    req.notify('Submission failed for request %s'%(pid),message)
+                    req.test_failure(message)
                     continue
 
                 self.res.append({"prepid": pid,"results": res_sub})
@@ -699,49 +708,6 @@ class InjectRequest(RESTResource):
             return dumps({"results":False})
         else:
             return dumps(res)
-
-    def inject_request(self, ids):
-        try:
-            from submitter.package_builder import package_builder
-        except ImportError:
-            self.logger.error('Could not import "package_builder" module.', level='critical')
-            return dumps({"results":'Error: Could not import "package_builder" module.'})        
-
-        res=[]
-        for pid in ids.split(','):
-            req = request(self.db.get(pid))
-            if req.get_attribute('status')!='approved':
-                res.append({"prepid": pid, "results": False,"message":"The request is in status %s, while approved is required"%(req.get_attribute('status'))})
-                continue
-            if not req.get_attribute('member_of_chain'):
-                res.append({"prepid": pid, "results": False,"message":"The request is not member of any chain"})
-                continue
-
-            pb=None
-            try:
-                pb = package_builder(req_json=req.json())
-            except:
-                message = "Errors in making the request : \n"+ traceback.format_exc()
-                self.logger.error(message)
-                res.append({"prepid": pid, "results" : False, "message":message})
-                continue
-            try:
-                res_sub=pb.build_package()
-            except:
-                message = "Errors in building the request : \n"+ traceback.format_exc()
-                self.logger.error(message)
-                res.append({"prepid": pid, "results" : False, "message":message})
-                continue
-
-            res.append({"prepid": pid, "results": res_sub})
-            # update history
-            ## does not have any effect since we do not save the object 
-            #req.update_history({'action':'inject'})
-        if len(res)>1:
-            return dumps(res)
-        else:
-            return dumps(res[0])
-
 
 class GetEditable(RESTResource):
     def __init__(self):
