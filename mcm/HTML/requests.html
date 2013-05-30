@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app="testApp">
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
         <title>Requests page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -8,6 +8,16 @@
          <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/angular.min.js"></script>
          <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+         <!--[IF IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+           </script>
+         <![endif]-->
+         <![if !IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+           </script>
+         <![endif]>
          <script src="scripts/main_controller.js"></script>
          <script src="scripts/requests_ctrl.js"></script>
 </head>
@@ -27,7 +37,7 @@
           </div>
           <span ng-repeat="value in requests_defaults" ng-show="show_well" style="width:160px;float:inline;">
             <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select"> {{value.text}}
+              <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
             </label>
           </span>
         </div><!--end of well for table columns-->
@@ -71,19 +81,28 @@
           <td ng-repeat="value in requests_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-click='delete_object("requests", data.prepid)' rel="tooltip" ng-hide="role(4);" title="Delete request">
+                <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(4);" title="Delete request">
                   <i class="icon-minus-sign"></i>
                 </a>
+                <!--[IF IE]>
+                <a ng-href='edit#?db_name=requests&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_blank">
+                  <i class="icon-wrench"></i>
+                </a>
+                <![endif]-->
+                <![if !IE]>
                 <a ng-href='edit?db_name=requests&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_blank">
                   <i class="icon-wrench"></i>
                 </a>
+                <![endif]>
                 <a ng-click="clone(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Clone Request">
                   <i class="icon-share-alt"></i>
                 </a>
-                <a ng-click="single_step('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" target="_blank">
+		<!-- I commented this one out because I do not want gen contacts to go back and forth on validation+defined steps-->
+                <!--- <a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-show="!role(3) || data.status=='validation';" target="_blank">-->
+		<a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" target="_blank">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);">
+                <a ng-click="open_isSureModal('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);">
                   <i class="icon-chevron-right"></i>
                 </a>
                 <a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionnary" target="_blank">
@@ -98,7 +117,7 @@
                 <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify">
                   <i class="icon-envelope"></i>
                 </a>
-                <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
+                <a ng-click="open_isSureModal('toggle',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
                   <i class="icon-flag"></i>
                 </a>
                 <a ng-href='actions?prepid={{data.prepid}}&select={{data.member_of_campaign}}' rel="tooltip" title="View action on this request" target="_blank"> 
@@ -200,30 +219,40 @@
               <div ng-switch-when="Reqmgr name">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="rqmngr in data[value.db_name]">
-                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
-                    <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details </a>
-                    ,<a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank">stats</a>
-                    <!-- <a ng-click='if (!show) show=true;'>
-                      <i class='icon-eye-open'></i>
-                    </a>-->
-		    <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='stats_cache[rqmngr["name"]]' rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>
-		    <a ng-show='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_blank"> 
-		      {{stats_cache[rqmngr["name"]].pdmv_evts_in_DAS}} events
-		      <img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
-                    <Ul style="margin-bottom: 0px;" ng-show='true;'>
-                      <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
-                        <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}}in DAS" target="_blank">{{DS}}</a>
-                      </li>
-                    </ul>
-                  </li>
-                </ul>
-              </div>
+                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details</a>
+                    <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_blank">details</a>
+                    ,<a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_blank"> stats</a>
+                    <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='stats_cache[rqmngr["name"]]' rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>
+                    <a ng-show='underscore.isObject(stats_cache[rqmngr["name"]])' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_blank"> 
+                      {{stats_cache[rqmngr["name"]].pdmv_evts_in_DAS}} events
+                      <img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
+                      <b><font color='red' ng-show='stats_cache[rqmngr["name"]] && !underscore.isObject(stats_cache[rqmngr["name"]])'> Error 404: Not Found</font></b>
+                      <ul style="margin-bottom: 0px;" ng-show='true;'>
+                        <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
+                          <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}}in DAS" target="_blank">{{DS}}</a>
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
               <div ng-switch-default align="center">{{data[value.db_name]}}</div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
+    <!-- Are you Sure MODAL-->
+    <div modal="isSure_Modal" close="closeisSureModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
+      <div class="modal-header">
+        <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
+      </div>  <!--end oFda.f modal header-->
+      <div class="modal-footer">
+        <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
+        <button class="btn btn-warning" ng-click="sureTotoggle()">Yes</button>
+        <button class="btn btn-success" ng-click="closeisSureModal()">No</button>
+      </div> <!--end of modal footer-->
+    </div>
+    <!-- END of Notify MODAL-->
     <!-- Notify MODAL-->
     <div modal="notify_Modal" close="closeNotifyModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
       <div class="modal-header">
@@ -234,7 +263,7 @@
       </div> <!--end of modal body-->
       <div class="modal-footer">
         <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-        <button class="btn btn-success" ng-click="Notify()" ng-disabled="notify_text.length == 0" ng-hide="loadNotify">SPAM!</button>
+        <button class="btn btn-success" ng-click="Notify()" ng-disabled="notify_text.length == 0" ng-hide="loadNotify">Notify</button>
         <button class="btn btn-warning cancel" ng-click="closeNotifyModal()">Close</button>
       </div> <!--end of modal footer-->
     </div>
@@ -281,9 +310,9 @@
         <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify selected prepids">
           <i class="icon-envelope"></i>
         </a>
-	<a ng-click="loadStats()" rel="tooltip" title="Load statistics">
-	  <i class="icon-eye-open"></i>
-	</a>
+        <a ng-click="loadStats()" rel="tooltip" title="Load statistics">
+          <i class="icon-eye-open"></i>
+        </a>
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;">
       </span>
       </div>
