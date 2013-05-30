@@ -34,7 +34,9 @@ class ReadInjectionLog(RESTResource):
 			self.logger.error('Could not access logs: "%s". Reason: %s' % (self.logfile, ex))
 			return dumps({"results":"Error: Could not access logs."})
 
-		important = data[data.rindex('## Logger instance retrieved'):]
+		#important = data[data.rindex('## Logger instance retrieved'):]
+		## needs this otherwise, simultaneous submission would be truncated to the last to write ## Logger instance retrieved
+		important = data[data.rindex('[%s] ## Logger instance retrieved'%(pid)):]
 		if not important:
 			raise ValueError('Malformed logs. Could not detect start of injection.')
 
