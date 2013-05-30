@@ -2,6 +2,7 @@
 
 from tools.authenticator import authenticator as auth_obj
 from tools.logger import logger as logfactory
+from tools.locator import locator
 import logging
 import logging.handlers
 import cherrypy
@@ -46,11 +47,12 @@ class RESTResource(object):
 			if key.lower() in findHeaders:
 				loweredHeaders[key.lower()]=cherrypy.request.headers[key]
 				
+		l_type=locator()
 		if not 'adfs-login' in loweredHeaders:
 			#meaning we are going public, only allow GET.
-			if cherrypy.request.method != 'GET': 
+			if cherrypy.request.method != 'GET' or not l_type.isDev(): 
 				raise cherrypy.HTTPError(403, 'User credentials were not provided.')
-			self.logger.error(cherrypy.request.headers)
+			#self.logger.error('adfs-login not found: \n'+str(cherrypy.request.headers))
 		else:
 			#self.logger.error("User name found: -%s-"%(loweredHeaders['adfs-login']))
 			if not self.authenticator.can_access(loweredHeaders['adfs-login']):
