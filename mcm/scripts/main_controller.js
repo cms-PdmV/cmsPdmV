@@ -1,4 +1,15 @@
 function mainCtrl($scope, $http, $location, $window){
+  var browserName=navigator.appName;
+  if (browserName == 'Microsoft Internet Explorer'){
+    // console.log('fOUND ie');
+    if ($window.location.href.indexOf('#') == -1){
+      var newLocation = $window.location.href.replace(/\#/g,''); //for safety remove all # to not add ##?
+      newLocation = newLocation.replace('?','#?');
+     // $location.hash(newLocation.split('?')[1]);
+     $window.location.href = newLocation;
+    }
+  }
+  // console.log(browserName);
   $scope.user = {name: "guest", role:"user",roleIndex:0};
 
 // GET username and role
@@ -34,5 +45,4 @@ function mainCtrl($scope, $http, $location, $window){
     }else
       $scope.pendingHTTP = true;
   });
-
 };
