@@ -142,7 +142,7 @@ class request(json_base):
                 for key in ['generator_parameters','notes','history']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
-                for key in ['completed_events','reqmgr_name','member_of_chain','config_id']:
+                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation']:
                     editable[key]=True
         else:
             for key in self._json_base__schema:
@@ -157,6 +157,41 @@ class request(json_base):
 
         if self.get_attribute('status')!='new':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
+
+        if not self.get_attribute('dataset_name') or ' ' in self.get_attribute('dataset_name'):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The dataset name is invalid: either null string or containing blanks')
+
+        gen_p = self.get_attribute('generator_parameters')
+        if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
+
+        if self.get_attribute('time_event') <=0 or self.get_attribute('size_event')<=0:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The time per event or size per event are invalid: negative or null')
+
+        if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'))):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
+
+        rdb=database('requests')
+        similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
+        
+        if len(similar_ds)>1:
+            if len(similar_ds)>2:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name in that campaign')
+            if similar_ds[0]['extension'] == similar_ds[1]['extension']:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, and they are not extension of each other')
+        
+        if not len(self.get_attribute('member_of_chain')):
+            #not part of any chains ...
+            if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+        else:
+            crdb = database('chained_requests')
+            for cr in self.get_attribute('member_of_chain'):
+                mcm_cr = crdb.get(cr)
+                if mcm_cr['chain'].index( self.get_attribute('prepid') ) ==0:
+                    if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
+                        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains; this is not allowed')
+
         ## a state machine should come along and submit jobs for validation, then set the status to validation once on-going
         # for now: hard-wire the toggling
         self.set_status()
@@ -164,13 +199,14 @@ class request(json_base):
     def ok_to_move_to_approval_define(self):
         if self.current_user_level==0:
             ##not allowed to do so 
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'define','bad user admin level %s'%(self.current_user_level))
         ## we could restrict certain step to certain role level
         #if self.current_user_role != 'generator_contact':
         #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user role %s'%(self.current_user_role))
 
         if self.get_attribute('status')!='validation':
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'define')
+
         ## a state machine should come along and create the configuration. check the filter efficiency, and set information back
         # then toggle the status
         self.set_status()
@@ -178,7 +214,7 @@ class request(json_base):
     def ok_to_move_to_approval_approve(self):
         if self.current_user_level<=1:
             ##not allowed to do so 
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','bad user admin level %s'%(self.current_user_level))
 
         if 'defined' in self._json_base__status:
             if self.get_attribute('status')!='defined':
@@ -187,6 +223,10 @@ class request(json_base):
             if self.get_attribute('status')!='new':
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
         
+        # maybe too early in the chain of approvals
+        #if not len(self.get_attribute('member_of_chain')):
+        #    raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','This request is not part of any chain yet')
+
         ## from defined status, with generator convener approval (?should this be removed???)
         # this one will probably stay hard-wired, unless we decide on something very specific, like resource estimation: a state machine would come along, check, raise alarms, or set to approved
         self.set_status()
@@ -196,9 +236,13 @@ class request(json_base):
             ##not allowed to do so                                                                                                                                                                                                                                                  
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
 
+
         if self.get_attribute('status')!='approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
         
+        if not len(self.get_attribute('member_of_chain')):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
+
         ## the request manager could pull out those requests approved to be submitted
         ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
         # remains to the production manager to announce the batch the requests are part of
@@ -349,7 +393,7 @@ class request(json_base):
           ##then update itself in DB
           rdb = database('requests')
           rdb.update(self.json())
-          
+
       for i in range(len(self.get_attribute('sequences'))):
         cd = self.build_cmsDriver(i)
         if cd:
@@ -408,19 +452,27 @@ class request(json_base):
 #        return True
 
     def get_scram_arch(self):
-        scram_arch='slc5_amd64_gcc434'
-        releasesplit=self.get_attribute('cmssw_release').split("_")
-        nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
-        if int(nrelease)>=510:
-            scram_arch='slc5_amd64_gcc462'
-        return scram_arch
+        #economise to call many times.
+        if hasattr(self,'scram_arch'):
+            return self.scram_arch
+        self.scram_arch=None
+        release_to_find=self.get_attribute('cmssw_release')
+        import xml.dom.minidom
+        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure https://cmstags.cern.ch/tc/ReleasesXML/?anytype=1').read())
+        
+        for arch in xml_data.documentElement.getElementsByTagName("architecture"):
+            scram_arch = arch.getAttribute('name')
+            for project in arch.getElementsByTagName("project"):
+                release = str(project.getAttribute('label'))
+                if release == release_to_find:
+                    self.scram_arch = scram_arch
+        return self.scram_arch
     
     def get_setup_file(self,directory='',events=10):
-        
         infile = ''
         infile += '#!/bin/bash\n'
-        if self.get_attribute('fragment'):
-            infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
+        #if self.get_attribute('fragment'):
+        #    infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
         if directory:
             infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
@@ -433,23 +485,31 @@ class request(json_base):
         infile += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
         infile += 'eval `scram runtime -sh`\n'
 
-        infile += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
-        infile += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
-        infile += "export CVS_PASSFILE=`pwd`/cvspass\n"
-
+        def initCvs():
+            txt=''
+            if not initCvs.cvsInit:
+                txt += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
+                txt += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
+                txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
+            initCvs.cvsInit=True
+            return txt
+        initCvs.cvsInit = False
         # checkout from cvs (if needed)
         if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
+            infile+=initCvs()
             infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + '\n'
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            #infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            infile += 'curl --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
 
         # previous counter
         previous = 0
 
         # validate and build cmsDriver commands
         cmsd_list = ''
+        
         for cmsd in self.build_cmsDrivers():
 
             # check if customization is needed to check it out from cvs
@@ -461,10 +521,12 @@ class request(json_base):
 
                 # add customization
                 if 'GenProduction' in cname:
+                    infile += initCvs()
                     infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
             # tweak a bit more finalize cmsDriver command
             res = cmsd
-            res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
+            #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
+            res += ' --python_filename '+directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py '
             #JR res += '--fileout step'+str(previous+1)+'.root '
             if previous > 0:
                 #JR res += '--filein file:step'+str(previous)+'.root '
@@ -476,19 +538,55 @@ class request(json_base):
             #infile += res
             cmsd_list += res + '\n'
 
-
-            ## gen valid configs
-            # to be refined using the information of the campaign
-            steps=cmsd.split('--step')[1].split()[0]
-            if steps.startswith('GEN'):
-                genvalid = cmsd
-                genvalid += '--step GEN,VALIDATION:genvalid_all --datatier DQM --eventcontent DQM --fileout file:genvalid.root --no_exec --mc -n 1000 --python_filename %sgenvalid.py'%(directory)
-                cmsd_list += '\n\n'
-                cmsd_list += genvalid + '\n'
-                cmsd_list += 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
-
-
             previous += 1
+
+        ## gen valid configs
+        # to be refined using the information of the campaign
+        firstSequence = self.get_attribute('sequences')[0]
+        firstStep = firstSequence['step'][0]
+        harvesting_and_dqm_upload='cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+        valid_sequence = None
+        n_to_valid=10000 #get it differently than that
+        val_sentence=self.get_attribute('validation')
+        if val_sentence:
+            val_parameters=map( lambda spl: tuple(spl.split(':',1)), val_sentence.split(','))
+            for (k,a) in val_parameters:
+                if k == 'nEvents':
+                    n_to_valid = int(a)
+                
+        if firstStep == 'GEN':
+
+            cmsd_list += '\n\n'
+            valid_sequence = sequence( firstSequence )
+            valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
+            valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
+            valid_sequence.set_attribute( 'datatier' , ['DQM'])
+
+        elif firstStep in ['LHE','NONE']:
+            cmsd_list += '\n\n'
+            valid_sequence = sequence( firstSequence )
+            ## when integrated properly
+            if firstStep=='LHE':
+                valid_sequence.set_attribute( 'step', [firstStep,'USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
+            else:
+                valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
+            valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
+            valid_sequence.set_attribute( 'datatier' , ['DQM'])
+            
+        if valid_sequence:
+            ## until we have full integration in the release
+            infile += initCvs()
+            cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
+            cmsd_list +='cvs co -r HEAD GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py 2> /dev/null \n'
+            cmsd_list +='\nscram b -j5 \n'
+
+            genvalid_request = request( self.json() )
+            genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
+            cmsd_list += '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec \n'%(genvalid_request.build_cmsDriver(0),
+                                                                                                          n_to_valid,
+                                                                                                          directory)
+            ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
+            cmsd_list += harvesting_and_dqm_upload            
 
         infile += '\nscram b\n'
         infile += cmsd_list
@@ -557,3 +655,12 @@ class request(json_base):
         #self.logger.log('Looked at %s'%(str(lookedat)))
         actors = list(set(actors))
         return actors
+
+    def test_failure(self,message,rewind=False):
+        if rewind:
+            self.set_status(0)
+            self.approve(0)
+        self.update_history({'action':'failed'})
+        self.notify('Submission failed for request %s'%(self.get_attribute('prepid')), message)
+        rdb = database('requests')
+        rdb.update(self.json())
