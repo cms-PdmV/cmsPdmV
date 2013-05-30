@@ -345,7 +345,10 @@ class package_builder:
         # check if Prod
         if self.request.get_attribute('type') == 'Prod':
             if self.request.get_attribute('mcdb_id') == -1:
-                self.wmagent_type = 'MonteCarlo'
+                if self.request.get_attribute('input_filename'):
+                    self.wmagent_type = 'MonteCarloFromGEN'
+                else:
+                    self.wmagent_type = 'MonteCarlo'
             else:
                 self.wmagent_type = 'MonteCarloFromGEN'
 
@@ -483,7 +486,8 @@ class package_builder:
             #infile += res
             cmsd_list += res + '\n'
             """
-            self.__pyconfigs.append('config_0_'+str(previous+1)+'_cfg.py')
+            #self.__pyconfigs.append('config_0_'+str(previous+1)+'_cfg.py')
+            self.__pyconfigs.append(self.request.get_attribute('prepid')+'_'+str(previous+1)+'_cfg.py')
             previous += 1
 
         """
@@ -564,7 +568,8 @@ class package_builder:
         command += ' --time-event %s' %(self.request.get_attribute('time_event'))
         command += ' --size-event %s' %(self.request.get_attribute('size_event'))
         command += ' --request-type %s' %(self.wmagent_type)
-        command += ' --step1-cfg %s' %('config_0_1_cfg.py')
+        #command += ' --step1-cfg %s' %('config_0_1_cfg.py')
+        command += ' --step1-cfg %s' %(self.request.get_attribute('prepid')+'_1_cfg.py')
         command += ' --request-id %s' %(self.request.get_attribute('prepid'))
 
         ##JR in order to inject into the testbed instead of the production machine
@@ -598,6 +603,8 @@ class package_builder:
             command += ' --filter-eff %s' %( float(feff) * float(meff) )
 
             command += ' --input-ds %s' %(self.request.get_attribute('input_filename'))
+
+            command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
 
             if self.request.get_attribute('block_white_list'):
                 command += ' --blocks "'+','.join(self.request.get_attribute('block_white_list'))+'"'
@@ -668,7 +675,8 @@ class package_builder:
                 #if len(eventcontentlist) > 1 and i < len(eventcontentlist)-1:
                 #    command += ' --keep-step'+str(i+1)+' True'
                 if i > 0:
-                    command += ' --step'+str(i+1)+'-cfg config_0_'+str(i+1)+'_cfg.py'
+                    #command += ' --step'+str(i+1)+'-cfg config_0_'+str(i+1)+'_cfg.py'
+                    command += ' --step'+str(i+1)+'-cfg '+self.request.get_attribute('prepid')+'_'+str(i+1)+'_cfg.py'
                 # set the output of 
                 if i < len(eventcontentlist)-1:
                     command += ' --step'+str(i+1)+'-output '+content
@@ -721,7 +729,7 @@ class package_builder:
 
         # Avoid faulty execution and inform the user.
         if not command:
-            self.logger.inject("%s Preparation FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
+            self.logger.inject("%s Command Preparation FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
             return False
 
         self.logger.inject('Executing setup scripts...', handler=self.hname)
@@ -738,30 +746,12 @@ class package_builder:
         retcode=0
         if not stdin and not stdout and not stderr:
             retcode = -1
-        sterr=stderr.read()
+        sterr=stderr.read() ## this contains much more than what it should
         if len(sterr):
             self.logger.inject("%s Preparation FAILED with :\n %s" % (self.request.get_attribute('prepid'),sterr), level='error', handler=self.hname)
             retcode = -1
 
-        ## this below does not function 
-        #for error in stderr.read().split('\n'):
-        #    if error:
-        #        self.logger.inject('Got stderr\n%s'%(error))
-        #        retcode = -1
-                
-
-        #p = subprocess.Popen([command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        #self.logger.inject('Waitin for setup scripts...', handler=self.hname)
-        #p.wait()
-
-        # check for success
-        #retcode = p.poll()
-        #self.logger.inject('Poll the setup scripts...', handler=self.hname)
-
-        # get results
-        #output = p.stdout.read()
-        #output += p.stderr.read()
-
+        #move it lower ? higher ? within a try/except ?
         self.__update_configuration(self.__injectAndApprove,  self.__prepare_approve_command())    
 
         self.logger.inject(output, level='debug', handler=self.hname)
@@ -769,6 +759,7 @@ class package_builder:
         # when you fail, you die
         if retcode:
             self.logger.inject("%s Creation FAILED" % (self.request.get_attribute('prepid')), level='error', handler=self.hname)
+            self.request.test_failure(sterr)
             return False
 
         self.logger.inject("%s Creation SUCCESS" % (self.request.get_attribute('prepid')), handler=self.hname)
@@ -855,7 +846,7 @@ class package_builder:
 
     def build_package(self):
 	# log new injection
-	self.logger.inject('## Logger instance retrieved', level='debug')
+	#self.logger.inject('## Logger instance retrieved', level='debug')
 
         #init configuration and package specific stuff
         self.init_package()
@@ -902,13 +893,19 @@ class package_builder:
             self.logger.inject('Creating Injection...', handler=self.hname)
 
             # initialize injector object with the finalized tarball
+            injector = None
+            #try:
             injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
+            #except:
+            #    self.logger.inject('Injection failed', level='warning', handler=self.hname)
+            #    self.request.test_failure(message)
+            #    flag = False
 
             self.logger.inject('Injecting...', handler=self.hname)
             if injector.inject():
-                self.logger.inject('Injection successful !', handler=self.hname)
-                flag = True
                 if injector.requestNames:
+                    self.logger.inject('Injection successful !', handler=self.hname)
+                    flag = True
                     
                     added=[]
                     for request in injector.requestNames:
@@ -918,7 +915,7 @@ class package_builder:
                     requests.extend(added)
                     self.request.set_attribute('reqmgr_name',requests)
                     #BTW: the status is set only if there is actually a request in the request manager !
-                    self.request.set_status()
+                    self.request.set_status(with_notification=True)
                     
                     ##put it also in the batch DB
                     bdb = database('batches')
@@ -942,15 +939,15 @@ class package_builder:
                     bdb.update(b.json())
                     for request in added:
                         self.logger.inject('Request %s send to %s'%(request['name'],self.batchName))
+                else:
+                    message='Injection has succeeded but no request manager names were registered. Check with administrators'
+                    self.logger.inject(message, level='warning', handler=self.hname)
+                    self.request.test_failure(message)
+
             else:
-                self.logger.inject('Injection failed', level='warning', handler=self.hname)
-                ## rewind the request status & approval
-                #self.request.approve(to_approval='approve')
-                self.request.set_status(0)
-                self.request.approve(0)
-                rdb = database('requests')
-                self.request.update_history({'action':'failed'})
-                rdb.update(self.request.json())
+                message='Injection failed'
+                self.logger.inject(message, level='warning', handler=self.hname)
+                self.request.test_failure(message)
                 flag = False
 
         return flag
