@@ -174,39 +174,48 @@ class rest_formatter(logging.Formatter):
                 return logging.Formatter.format(self, record)
 
 class logger:
-	def __init__(self, logger_name='prep2', error_log='logs/error.log', access_log='logs/access.log'):
+	def __init__(self, logger_name='mcm'):# those are not used, error_log='logs/error.log', access_log='logs/access.log'):
 		self.error_logger = logging.getLogger(logger_name+'_error')
-		self.inject_logger = logging.getLogger('prep2_inject')
+		self.inject_logger = logging.getLogger(logger_name+'_inject')
 
+		## those are the handlers for seperate log files when requried
 		self.inject_handlers = {}
+		## those are logging in the log/inject.log for central browsing
+		self.inject_central_handlers = {}
 		#self.access_logger =logging.getLogger(logger_name+'_access')
 
 	def add_inject_handler(self, name='', handler=None):
 		if name and handler and name not in self.inject_handlers:
 			self.inject_handlers[name] = handler
+			#hi = logging.FileHandler('logs/inject.log', 'a')
+			#hi.setFormatter(inject_formatter(name))
+			#self.inject_handlers[name+'_central'] = hi
+		if name and name not in self.inject_central_handlers:
 			hi = logging.FileHandler('logs/inject.log', 'a')
 			hi.setFormatter(inject_formatter(name))
-
-			self.inject_handlers[name+'_central'] = hi
+			self.inject_central_handlers[name] = hi
 
 	def remove_inject_handler(self, name=''):
 		if name and name in self.inject_handlers:
 			self.inject_handlers[name].close()
-			self.inject_handlers[name+'_central'].close()
-
 			del self.inject_handlers[name]
-			del self.inject_handlers[name+'_central']
+		if name and name in self.inject_central_handlers:
+			self.inject_central_handlers[name].close()
+			del self.inject_central_handlers[name]
 
 	def error(self, msg='', level='error'):
 		if msg:
-			if level == 'warning':
-				self.error_logger.warning(msg)
-			elif level == 'error':
-				self.error_logger.error(msg)
-			elif level == 'critical':
-				self.error_logger.critical(msg)
-			else:
-				self.error_logger.error(msg)
+			#could throw based on error in level
+			getattr(self.error_logger,level)(msg)
+			##replace the if elif with just one line
+			#if level == 'warning':
+			#	self.error_logger.warning(msg)
+			#elif level == 'error':
+			#	self.error_logger.error(msg)
+		        #elif level == 'critical':
+			#	self.error_logger.critical(msg)
+			#else:
+			#	self.error_logger.error(msg)
 
 	
 	#def access(self, msg='', level='debug'):
@@ -220,31 +229,41 @@ class logger:
 
 	def log(self, msg='', level='info'):
 		if msg:
-			if level == 'info':
-				self.error_logger.info(msg)
-                        elif level == 'debug':
-                                self.error_logger.debug(msg)
-                        else:
-                                self.error_logger.info(msg)   
+			#could throw based on error in level
+			getattr(self.error_logger,level)(msg)
+			#if level == 'info':
+			#	self.error_logger.info(msg)
+                        #elif level == 'debug':
+                        #        self.error_logger.debug(msg)
+                        #else:
+                        #        self.error_logger.info(msg)   
 
 
 	def inject(self, msg='', level='info', handler=''):
 		if handler in self.inject_handlers:
 			self.inject_logger.addHandler(self.inject_handlers[handler])
-			self.inject_logger.handlers[0] = self.inject_handlers[handler+'_central']
-
+		if handler and not handler in self.inject_central_handlers:
+			self.add_inject_handler(name=handler)
+		if handler in self.inject_central_handlers:
+			if len(self.inject_logger.handlers):
+				self.inject_logger.handlers[0] = self.inject_central_handlers[handler]
+			else:
+				self.inject_logger.addHandler(self.inject_central_handlers[handler])
+			
 	        if msg:
 				msg = msg.replace('\n', '<breakline>')
-				if level == 'info':
-					self.inject_logger.info(msg)
-				elif level == 'debug':
-					self.inject_logger.debug(msg)
-				elif level == 'warning':
-					self.inject_logger.warning(msg)
-				elif level == 'error':
-					self.inject_logger.error(msg)
-				elif level == 'critical':
-					self.inject_logger.critical(msg)
+				##replace the if elif with just one line
+				getattr(self.inject_logger,level)(msg)
+				#if level == 'info':
+				#        self.inject_logger.info(msg)
+				#elif level == 'debug':
+				#	self.inject_logger.debug(msg)
+				#elif level == 'warning':
+				#	self.inject_logger.warning(msg)
+				#elif level == 'error':
+			        #	self.inject_logger.error(msg)
+				#elif level == 'critical':
+				#	self.inject_logger.critical(msg)
 				try:
 					self.inject_logger.removeHandler(self.inject_handlers[handler])
 					#self.inject_logger.removeHandler(self.inject_handlers[handler+'_central'])
