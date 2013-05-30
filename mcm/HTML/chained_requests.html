@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app="testApp">
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
         <title>Chained requests page McM</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -8,6 +8,16 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+         <!--[IF IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
+          </script>
+         <![endif]-->
+         <![if !IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+           </script>
+         <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/chainRequests_controller.js"></script>
   </head>
@@ -27,7 +37,7 @@
           </span>        
           <span ng-repeat="value in defaults" ng-show="show_well">
             <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select"> {{value.text}}
+              <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
             </label>
           </span>
         </div><!--end of well for table columns-->
