@@ -10,7 +10,7 @@ class ssh_executor:
     logger = logfactory('prep2')
     hname = '' # handler's name
 
-    def __init__(self,directory,prepid,server='lxplus.cern.ch'):
+    def __init__(self,directory,prepid,server='lxplus5.cern.ch'):
         self.ssh_client = None
         self.ssh_server = server
         self.ssh_server_port = 22
