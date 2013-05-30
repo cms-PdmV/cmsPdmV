@@ -6,8 +6,8 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Status',select:true, db_name:'status'},
         {text:'MCDBId',select:true, db_name:'mcdb_id'},
         {text:'Dataset name',select:true, db_name:'dataset_name'},
-        {text:'SW Release',select:true, db_name:'cmssw_release'},
-        {text:'Type',select:true, db_name:'type'},
+        //{text:'SW Release',select:false, db_name:'cmssw_release'},
+        //{text:'Type',select:false, db_name:'type'},
         {text:'History',select:false, db_name:'history'},
     ];
 
@@ -18,7 +18,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
-
+    $scope.underscore = _;
     if($location.search()["page"] === undefined){
       page = 0;
       $location.search("page", 0);
@@ -116,6 +116,7 @@ function resultsCtrl($scope, $http, $location, $window){
 		//console.log(data);
 		//console.log($scope.dataset_list[req_name]);
 	    }).error(function(status){
+        $scope.stats_cache [req_name] = "Not found";
 		    console.log(getfrom,' --> error');
 		});
     };
@@ -213,7 +214,9 @@ function resultsCtrl($scope, $http, $location, $window){
    $scope.$watch('list_page', function(){
       var query = ""
       _.each($location.search(), function(value,key){
-        query += "&"+key+"="+value
+      if (key!= 'shown'){
+        query += "&"+key+"="+value;
+      }
       });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
@@ -239,11 +242,39 @@ function resultsCtrl($scope, $http, $location, $window){
                 $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
             }
         });
+        if ($location.search()["shown"] !== undefined){
+          binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+          _.each($scope.requests_defaults, function(column){
+            column_index = $scope.requests_defaults.indexOf(column);
+            binary_bit = binary_shown.charAt(column_index);
+            if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+              if (binary_bit == 1){
+                column.select = true;
+              }else{
+                column.select = false;
+              }
+            }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+              column.select = false;
+            }
+          });
+        }
         }
          }, function(){
              alert("Error getting information");
          });
     });
+
+  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
+    var bin_string = ""; //reconstruct from begining
+    _.each($scope.requests_defaults, function(column){ //iterate all columns
+      if(column.select){
+        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
+      }else{
+        bin_string ="0"+bin_string;
+      }
+    });
+    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
+  };
 
   $scope.previous_page = function(current_page){
     if (current_page >-1){
@@ -276,15 +307,15 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.next_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
-	    if (data.results == true){
-		alert("Success!");
-		$window.location.reload();
+	    if (status == 200){
+		    alert("Success!");
+		    $window.location.reload();
 	    }else{
-		alert("Error"+data.message)
-		    }
-        }).error(function(data,status){
-            alert("Error while processing request. Code: "+status);
-        });
+		    alert("Error: "+data+" "+status);
+		  }
+    }).error(function(data,status){
+      alert("Error while processing request. Code: "+status);
+    });
   };
   $scope.previous_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
@@ -389,6 +420,36 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.selected_prepids = [];
     }
   };
+  /*Is Sure modal actions*/
+  $scope.open_isSureModal = function(action, prepid){
+    $scope.isSure_Modal = true;
+    $scope.toggle_prepid = prepid;
+    $scope.modal_action = action;
+  };
+  $scope.closeisSureModal = function(){
+    $scope.isSure_Modal = false;
+  };
+  $scope.sureTotoggle = function(){
+    $scope.isSure_Modal = false;
+    switch ($scope.modal_action){
+      case "toggle":
+        $scope.next_status($scope.toggle_prepid);
+        break;
+      case "approve":
+        $scope.single_step('approve',$scope.toggle_prepid);
+        break;
+      case "reset":
+        $scope.single_step('reset',$scope.toggle_prepid);
+        break;
+      case "delete":
+        $scope.delete_object('requests', $scope.toggle_prepid);
+        break;
+      default:
+        // alert to announce that uknown action is asked???
+        break;
+    }
+  };
+
   /* Multiple selection modal actions*/
     $scope.submissionModal = false;
   $scope.openModal = function (){
@@ -461,7 +522,7 @@ function resultsCtrl($scope, $http, $location, $window){
 };
 
 // NEW for directive
-var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+// var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customApproval", function(){
     return{
         require: 'ngModel',
