@@ -1,38 +1,22 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.user = {name: "guest", role:"user",roleIndex:0}
-// GET username and role
-    var promise = $http.get("restapi/users/get_roles");
-    promise.then(function(data){
-      $scope.user.name = data.data.username;
-      $scope.user.role = data.data.roles[0];
-      $scope.user.roleIndex = parseInt(data.data.role_index);
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
-    // var promise = $http.get("restapi/users/get_all_roles");
-    // promise.then(function(data){
-    //   $scope.all_roles = data.data;
-    // },function(data){
-    //   alert("Error getting user information. Error: "+data.status);
-    // });
-// Endo of user info request
+
     $scope.defaults = [];
     $scope.underscore = _;
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
+
     $scope.dbName = $location.search()["db_name"];
     $scope.prepid = $location.search()["prepid"];
-    //console.log($scope.prepid);
     if ($scope.prepid === undefined){
-	$scope.prepid = $location.search()["query"];
+      $scope.prepid = $location.search()["query"];
     }
-    
+
     if ($scope.dbName == "campaigns"){
-	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
+	    $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
-	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date"]; //user non-editable columns
+	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed Events"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
@@ -267,7 +251,7 @@ var genParamModalCtrl = function($scope, $http) {
   };
 };
 // NEW for directive
-var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+//var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){
   return{
       require: 'ngModel',
