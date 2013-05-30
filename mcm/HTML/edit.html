@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app="testApp">
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
         <title>Edit page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -11,6 +11,17 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+         <!--[IF IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+           </script>
+         <![endif]-->
+         <![if !IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+           </script>
+         <![endif]>
+        <script src="scripts/main_controller.js"></script>
         <script src="scripts/edit_controller.js"></script>
 
         <script src="scripts/codemirror-3.11/lib/codemirror.js"></script>
@@ -18,13 +29,17 @@
         <script src="scripts/angular-ui.min.js"></script>
         
 </head>
-<body ng-controller="resultsCtrl">
+<body ng-controller="mainCtrl">
+  <span ng-controller="resultsCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <div class="container" ng-show="role(1);">
     <b>You have not enough permission to access this ressource.</b>
   </div>
-  <div class="container" ng-hide="role(1);">
-    <div class="span12">
+  <div class="container">
+    <div class="span12" align="middle">
+      <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+    </div>
+    <div class="span12" ng-hide="role(1);">
       <table class="table table-bordered table-stripped" style="margin-top: 30px;">
         <thead>
         </thead>
@@ -131,9 +146,9 @@
           <input type="button" class="btn" ng-click="submit_edit()" value="Commit" align="left" ng-hide="role(1);"/>
         </div>
 	      <div>
-	        <a ng-href='{{dbName}}?query="prepid%3D%3D{{prepid}}"' target="_self">
+	        <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_self">View Request
 	          <i class="icon-eye-open"></i>
-          </a>
+		</a>
 	      </div>
         <div class="span3">
           <div ng-show="update['success']">
@@ -149,5 +164,6 @@
       </div>
     </div><!--END of span12 -->
   </div>
+</span>
 </body>
 </html>
