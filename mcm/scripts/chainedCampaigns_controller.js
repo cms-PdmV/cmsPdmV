@@ -104,7 +104,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.$watch('list_page', function(){
       var query = ""
       _.each($location.search(), function(value,key){
-        query += "&"+key+"="+value
+      if (key!= 'shown'){
+        query += "&"+key+"="+value;
+      }
       });
     $scope.got_results = false; //to display/hide the 'found n results' while reloading
     var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
@@ -134,10 +136,38 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.chainedCampaigns_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
           }
         });
+        if ($location.search()["shown"] !== undefined){
+          binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+          _.each($scope.chainedCampaigns_defaults, function(column){
+            column_index = $scope.chainedCampaigns_defaults.indexOf(column);
+            binary_bit = binary_shown.charAt(column_index);
+            if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+              if (binary_bit == 1){
+                column.select = true;
+              }else{
+                column.select = false;
+              }
+            }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+              column.select = false;
+            }
+          });
+        }
       }
     }, function(){ alert("Error getting information"); });
   });
-    
+
+  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
+    var bin_string = ""; //reconstruct from begining
+    _.each($scope.chainedCampaigns_defaults, function(column){ //iterate all columns
+      if(column.select){
+        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
+      }else{
+        bin_string ="0"+bin_string;
+      }
+    });
+    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
+  };
+
   $scope.previous_page = function(current_page){
     if (current_page >-1){
       $location.search("page", current_page-1);
@@ -190,7 +220,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
 };
 
 // NEW for directive
-var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+// var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
