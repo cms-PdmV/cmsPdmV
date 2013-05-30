@@ -325,7 +325,7 @@ class MigrateRequest(RequestRESTResource):
             return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
 
         if saved:
-            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
+            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
                                                                                                                                                                                                                                                                           mcm_r.get_attribute('prepid'),mcm_r.get_attribute('prepid'))
             return html
             return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
