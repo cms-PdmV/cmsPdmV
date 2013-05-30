@@ -3,6 +3,7 @@ import os
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
+from tools.locator import locator
 
 class communicator:
     def __init__(self):
@@ -23,7 +24,10 @@ class communicator:
         msg['From'] = sender
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
-        msg['Subject'] =subject
+        if locator().isDev():
+            msg['Subject'] ='[McM-dev] '+subject
+        else:
+            msg['Subject'] ='[McM] '+subject
         try:
             msg.attach(MIMEText(text))
             smtpObj = smtplib.SMTP()
