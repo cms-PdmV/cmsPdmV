@@ -169,11 +169,12 @@ class json_base:
 
         ## if at the end of the change
         if next_step == len(self.__approvalsteps):
-            return
+            raise self.IllegalApprovalStep(next_step)
 
         ## already in the next step
         if self.__json['approval'] == self.__approvalsteps[next_step]:
             return
+            #raise self.IllegalApprovalStep(self.__json['approval'])
         
         ## is it allowed to move on
         fcn='ok_to_move_to_approval_%s'%(self.__approvalsteps[next_step])
