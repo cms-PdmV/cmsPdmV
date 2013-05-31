@@ -10,6 +10,10 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.flow import flow
 from json_layer.action import action
 
+class FlowRESTResource(RESTResource):
+    pass
+
+
 class CreateFlow(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
@@ -48,8 +52,9 @@ class CreateFlow(RESTResource):
 	# then use this one (if it is wrong, it will fail upon flowing)
 	if 'sequences' not in rp:
                 rp['sequences'] = []
-		camp = self.cdb.get(nc)
-		for seq in camp['sequences']:
+                if nc:
+                    camp = self.cdb.get(nc)
+                    for seq in camp['sequences']:
 			rp['sequences'].append({})
 
 	self.f.set_attribute('request_parameters', rp)
@@ -61,7 +66,11 @@ class CreateFlow(RESTResource):
         if not self.db.save(self.f.json()):
             self.logger.error('Could not save newly created flow %s to database.' % (self.f.get_attribute('_id')))  
             return dumps({"results":False})
-        
+
+        #return right away instead of trying and failing on missing next or allowed
+        if not nc or not len(self.f.get_attribute('allowed_campaigns')):
+            return dumps({"results": True})
+
         # update all relevant campaigns with the "Next" parameter
         try:
             self.update_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
