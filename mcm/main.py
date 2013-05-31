@@ -5,8 +5,8 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
@@ -175,6 +175,7 @@ root.restapi.users.add_role = AddRole()
 root.restapi.users.change_role = ChangeRole()
 root.restapi.users.get = GetUser()
 root.restapi.users.save = SaveUser()
+root.restapi.users.update = SaveUser()
 
 # REST request actions
 root.restapi.requests.save = ImportRequest()
@@ -196,6 +197,7 @@ root.restapi.requests.default_generator_params = GetDefaultGenParams()
 root.restapi.requests.register = RegisterUser()
 root.restapi.requests.notify = NotifyUser()
 root.restapi.requests.migrate = MigrateRequest()
+root.restapi.requests.inspect = InspectStatus()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -208,6 +210,7 @@ root.restapi.campaigns.get_all = GetAllCampaigns()
 root.restapi.campaigns.status = ToggleCampaignStatus()
 root.restapi.campaigns.get_cmsDrivers = GetCmsDriverForCampaign()
 root.restapi.campaigns.migrate = MigratePage()
+root.restapi.campaigns.listall = ListAllCampaigns()
 
 # REST Chained Campaign Actions
 root.restapi.chained_campaigns.save = CreateChainedCampaign()
