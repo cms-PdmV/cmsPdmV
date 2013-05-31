@@ -197,17 +197,27 @@ class UpdateRequest(RequestRESTResource):
             return res
         except:
             self.logger.error('Failed to update a request from API')
-            return dumps({'results':False,'message':'Exception'})
+            return dumps({'results':False,'message':'Failed to update a request from API'})
 
     def update_request(self, data):
-        if '"_rev"' not in data:
+        data = loads (data)
+        if '_rev' not in data:
                 self.logger.error('Could not locate the CouchDB revision number in object: %s' % (data))
-		return dumps({"results":False})
-        try:
-                self.request = request(json_input=loads(data))
-        except request.IllegalAttributeName as ex:
-                return dumps({"results":False})
+		return dumps({"results":False, 'message' : 'could not locate revision number in the object'})
         
+        if not self.db.document_exists( data['_id'] ):
+            return dumps({"results":False, 'message' : 'request %s does not exist'%( data['_id']) })
+        else:
+            if self.db.get(data['_id']) ['_rev'] != data['_rev']:
+                return dumps({"results":False, 'message' : 'revision clash'})
+
+        try:
+                self.request = request(json_input=data)
+        except request.IllegalAttributeName as ex:
+                return dumps({"results":False, 'message' : 'Mal-formatted request json in input'})
+        
+        
+
         if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
@@ -290,6 +300,8 @@ class MigrateRequest(RequestRESTResource):
 
         mcm_r.update_history({'action':'migrated'})
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
+            mcm_r.get_stats()
+            """
             statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
             ### do a manual search
             #stats_rr = map(lambda x: x['value'], statsDB.query(query="",page_num=-1))
@@ -313,7 +325,7 @@ class MigrateRequest(RequestRESTResource):
             mcm_r.set_attribute('reqmgr_name', mcm_rr)
             #if not len(mcm_rr):
             #    return dumps({"results":False,"message":"found no request in the request in the stats DB ... %s"%(len(allstats))})
-
+            """
             saved = self.db.save(mcm_r.json())
 
             ## force to add an action on those requests
@@ -488,6 +500,8 @@ class ApproveRequest(RESTResource):
             return {'prepid': rid, 'results':False, 'message' : str(ex)}
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
+        except request.IllegalApprovalStep as ex:
+            return {"prepid":rid, "results": False, 'message' : str(ex)}
         except:
             return {'prepid': rid, 'results':False, 'message' : traceback.format_exc()}
 	
@@ -533,6 +547,8 @@ class ResetRequestApproval(RESTResource):
             return {"prepid":rid, "results":False, 'message' : str(ex)}
         except request.WrongStatusSequence as ex:
             return {"prepid":rid, "results":False, 'message' : str(ex)}
+        except request.IllegalApprovalStep as ex:
+            return {"prepid":rid, "results":False, 'message' : str(ex)}
         except:
             return {"prepid":rid, "results":False, 'message' : traceback.format_exc()}
 
@@ -567,6 +583,28 @@ class GetStatus(RESTResource):
 
         #return {"prepid":rid, "results":req.get_attribute('status')}
         return {rid: req.get_attribute('status')}
+
+class InspectStatus(RESTResource):
+    def __init__(self):
+        self.db = database('requests')
+        self.access_limit = 3
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.multiple_inspect(args[0])
+
+    def multiple_inspect(self, rid):
+        rlist=rid.rsplit(',')
+        res = []
+        for r in rlist:
+            mcm_r = request( self.db.get( r ) )
+            if mcm_r:
+                res.append( mcm_r.inspect() ) 
+            else:
+                res.append( {"prepid": r, "results":False, 'message' : '%s does not exists'%(r)})
+        return dumps(res)
+
 
 class SetStatus(RESTResource):
     def __init__(self):
@@ -754,7 +792,7 @@ class NotifyUser(RESTResource):
         results=[]
         for pid in pids:
             if not self.rdb.document_exists(pid):
-                return results.append({"results":False,"message":"%s does not exists"%(pid)})
+                return results.append({"prepid" : pid,"results":False,"message":"%s does not exists"%(pid)})
         
             req = request(self.rdb.get(pid))
             # notify the actors of the request
@@ -763,9 +801,9 @@ class NotifyUser(RESTResource):
             # update history with "notification"
             req.update_history({'action':'notify','step':message})
             if not self.rdb.save(req.json()):
-                return results.append({"results":False,"message":"Could not save %s"%(pid)})
+                return results.append({"prepid" : pid, "results":False,"message":"Could not save %s"%(pid)})
             
-            results.append({"results":True,"message":"Notification send for %s"%(pid)})
+            results.append({"prepid" : pid,"results":True,"message":"Notification send for %s"%(pid)})
         return dumps(results)
     
 
@@ -778,24 +816,33 @@ class RegisterUser(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False, 'message':'Error: No arguments were given'})
-        
-        return self.register_user(args[0])
+        return self.multiple_register( args[0]) ;
+
+    def multiple_register(self, rid):
+        if ',' in rid:
+            rlist = rid.rsplit(',')
+            res = []
+            for r in rlist:
+                 res.append(self.register_user(r))
+            return dumps(res)
+        else:
+            return dumps(self.register_user(rid))
     
     def register_user(self,pid):
         request_in_db = request(self.rdb.get(pid))
         current_user = request_in_db.current_user
         if not current_user or not self.udb.document_exists(current_user):
-            return dumps({"results":False,'message':"You (%s) are not a registered user to McM, correct this first"%(current_user)})
+            return {"prepid" : pid, "results":False,'message':"You (%s) are not a registered user to McM, correct this first"%(current_user)}
 
         if current_user in request_in_db.get_actors():
-            return dumps({"results":False,'message':"%s already in the list of people for notification of %s"%(current_user,pid)})
+            return {"prepid" : pid, "results":False,'message':"%s already in the list of people for notification of %s"%(current_user,pid)}
         
         self.logger.error('list of users %s'%(request_in_db.get_actors()))
         self.logger.error('current actor %s'%(current_user))
 
         request_in_db.update_history({'action':'register','step':current_user})
         self.rdb.save(request_in_db.json())
-        return dumps({"results":True,'message':'You (%s) are registered to %s'%(current_user,pid)})
+        return {"prepid" : pid, "results":True,'message':'You (%s) are registered to %s'%(current_user,pid)}
 
 class GetActors(RESTResource):
     def __init__(self):
