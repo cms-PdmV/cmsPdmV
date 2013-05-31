@@ -18,7 +18,11 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
+    $scope.action_report= {};
+    $scope.action_status= {};
     $scope.underscore = _;
+
+
     if($location.search()["page"] === undefined){
       page = 0;
       $location.search("page", 0);
@@ -35,11 +39,39 @@ function resultsCtrl($scope, $http, $location, $window){
     if($location.search()["query"] === undefined){
 	//$location.search("query",'""');
     }
-
     
+    $scope.set_fail = function(status){
+	$scope.update["success"] = false;
+	$scope.update["fail"] = true; 
+	$scope.update["status_code"] = status; 
+    };
+    $scope.set_success = function(status){
+	$scope.update["success"] = true;
+	$scope.update["fail"] = false; 
+	$scope.update["status_code"] = status; 
+	$window.location.reload();
+    };
+    
+    $scope.parse_one = function( report ){
+	$scope.action_status[report['prepid']] = report['results'];
+	if ( report ['results'] == true){
+	    $scope.action_report[report['prepid']] = 'OK';
+	    return false;
+	}else{
+	    $scope.action_report[report['prepid']] = report['message'];
+	    return true;
+	}
+    };
+    $scope.parse_one_only = function (report,status){
+	if ($scope.parse_one( data )){
+	    $scope.set_fail(status);}
+	else{
+	    $scope.set_success(status);}
+    };
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-            if (data["results"]){
+		$scope.parse_one_only(data,status);
+	    /*if (data["results"]){		
               $scope.update["success"] = data["results"];
               $scope.update["fail"] = false;
               $scope.update["status_code"] = status;
@@ -47,13 +79,15 @@ function resultsCtrl($scope, $http, $location, $window){
               $scope.update["success"] = false;
               $scope.update["fail"] = true;
               $scope.update["status_code"] = status;
-            }
+	      }*/
         }).error(function(status){
-            alert('Error no.' + status + '. Could not delete object.');
+		$scope.set_fail(status);
+		//alert('Error no.' + status + '. Could not delete object.');
         });
     };
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
+
 	      if (data['results']){
 		  $scope.update["success"] = data["results"];
 		  $scope.update["fail"] = false;
@@ -76,19 +110,25 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     $scope.next_status = function(prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
-        $scope.update["success"] = data["results"];
+		$scope.parse_one_only(data,status);
+		/*$scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["status_code"] = data["results"];
-        $window.location.reload();
+	$scope.action_report[prepid] = data["message"];
+	$window.location.reload();*/
       }).error(function(status){
+	      $scope.set_fail(status);
+	      /*
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
         $scope.update["status_code"] = status;
+	$scope.action_report[prepid] = data[status];*/
       });
     };
-
+    /*
     $scope.submit = function (prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/inject/'+prepid}).success(function(data,status){
+	      
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["status_code"] = data["results"];
@@ -99,22 +139,11 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["status_code"] = status;
       });
     };
-
+    */
     $scope.load_dataset_list = function (req_name){
-	console.log('trying to get the dataset list for',req_name)
-	//	var promise = $http.get('http://cms-pdmv-golem.cern.ch:5984/stats/'+req_name);
-	//	promise.then(function(data){
-	//		console.log(data);
-	//	    });
-	//getfrom='http://cms-pdmv-golem.cern.ch:5984/stats/'+req_name;
-	getfrom='https://cms-pdmv-dev.cern.ch/stats/admin/stats/'+req_name;
+	getfrom='/stats/admin/stats/'+req_name;
 	$http({method:'GET', url: getfrom}).success(function(data,status){
-		//console.log('loaded',getfrom);
 		$scope.stats_cache [req_name] = data;
-		//		$scope.dataset_list[req_name] = data.pdmv_dataset_list;
-		//		$scope.n_events[req_name] = data.pdmv_evts_in_DAS;
-		//console.log(data);
-		//console.log($scope.dataset_list[req_name]);
 	    }).error(function(status){
         $scope.stats_cache [req_name] = "Not found";
 		    console.log(getfrom,' --> error');
@@ -123,21 +152,24 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.register = function(prepid){
 	    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+prepid}).success(function(data,status){
-		    $scope.update["success"] = data["results"];
+		    $scope.parse_one_only(data,status);
+		    /*		    $scope.update["success"] = data["results"];
 		    if (data["results"]){
 		      $scope.update["fail"] = false;
 		      $scope.update["status_code"] = data["results"];
 		      alert('Success');
-		      $window.location.reload();
+		      //$window.location.reload();
 		    }else{
 		      $scope.update["fail"] = true;
 		      alert(data["message"]);
 		      $scope.update["status_code"] = 0;
-		    }
+		      }*/
+
 	      }).error(function(status){
-		      $scope.update["success"] = false;
+		      $scope.set_fail(status);
+		      /*		      $scope.update["success"] = false;
 		      $scope.update["fail"] = true;
-		      $scope.update["status_code"] = status;
+		      $scope.update["status_code"] = status;*/
 		    });
       };
 
@@ -305,30 +337,47 @@ function resultsCtrl($scope, $http, $location, $window){
     }else
         $scope.selected_prepids.push(prepid);
   };
+
+  $scope.parse_report = function(data,status){
+	    to_reload=true;
+	    for (i=0;i<data.length;i++){
+		$scope.action_status[data[i]['prepid']] = data[i]['results'];
+		if ($scope.parse_one ( data[i] )){
+		    to_reload=false;
+		}
+	    }
+	    if (to_reload == true)
+		{
+		    $scope.set_success(status);
+		}
+	    else
+		{
+		    $scope.set_fail(status);
+		}
+  };
   $scope.next_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
-	    if (status == 200){
-		    alert("Success!");
-		    $window.location.reload();
-	    }else{
-		    alert("Error: "+data+" "+status);
-		  }
+	    $scope.parse_report(data,status);
+
     }).error(function(data,status){
-      alert("Error while processing request. Code: "+status);
+	    $scope.set_fail(status);
     });
   };
   $scope.previous_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
-            alert("Success!");
-	    $window.location.reload();
+	    $scope.parse_report(data,status);	    
+            //alert("Success!");
+	    //	    $window.location.reload();
         }).error(function(data,status){
-            alert("Error while processing request. Code: "+status);
+		$scope.set_fail(status);
+		//alert("Error while processing request. Code: "+status);
         });
   };
   $scope.status_toggle = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/status/'+$scope.selected_prepids.join()}).success(function(data,status){
-      alert("Success!");
-	    $window.location.reload();
+	    $scope.parse_report(data,status);
+	    //alert("Success!");
+	    //$window.location.reload();
         }).error(function(data,status){
             alert("Error while processing request. Code: "+status);
         });
@@ -337,8 +386,9 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.register_several = function(){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+$scope.selected_prepids.join()}).success(function(data,status){
-	      alert("Success!");
-	      $window.location.reload();
+	      $scope.parse_report(data,status);	    
+	    //alert("Success!");
+	    //$window.location.reload();
 	  }).error(function(data,status){
 		  alert("Error while processing request. Code: "+status);
 	  });
@@ -488,10 +538,12 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.loadNotify = true;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: $scope.notify_prepid, message: $scope.notify_text})}).success(function(data,status){
       $scope.loadNotify = false;
+
       $scope.update["success"] = true;
       $scope.update["fail"] = false;
-      $scope.update["message"] = data[0]["message"];
       $scope.update["status_code"] = status;
+      $scope.update["message"] = data[0]["message"];
+
       $scope.notify_prepid = "";
       $scope.notify_Modal = false;
       $scope.notify_text = "";
@@ -499,9 +551,7 @@ function resultsCtrl($scope, $http, $location, $window){
 //      $window.location.reload();
     }).error(function(data,status){
       $scope.loadNotify = false;
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
+      $scope.set_fail(status);
     });
 
   };
