@@ -40,6 +40,7 @@ function mainCtrl($scope, $http, $location, $window){
   };
   //watch length of pending HTTP requests -> if there are display loading;
   $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
+    $scope.pendingHTTPLenght = v;
     if (v == 0){  //if HTTP requests pending == 0
       $scope.pendingHTTP = false;
     }else
