@@ -21,7 +21,11 @@ class communicator:
         
 
         msg = MIMEMultipart()
-        msg['From'] = sender
+        if not sender:
+            #it could happen that message are send after forking, threading and there's no current user anymore
+            msg['From'] = 'pdmvserv@cern.ch'
+        else:
+            msg['From'] = sender
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
         if locator().isDev():
