@@ -2,47 +2,48 @@
   <div class="navbar-inner">
     <ul class="nav">
       <li ng-class='{ "active": dbName=="campaigns"}'>
-        <a href='campaigns' target="_self">Campaign <i class="icon-book"></i></a>
+        <a ng-href='campaigns' target="_self">Campaign <i class="icon-book"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="chained_campaigns"}'>
-        <a href='chained_campaigns' target="_self">Chained campaign <i class="icon-align-right"></i></a>
+        <a ng-href='chained_campaigns' target="_self">Chained campaign <i class="icon-align-right"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="flows"}'>
-        <a href='flows' target="_self">Flow <i class="icon-magnet"></i></a>
+        <a ng-href='flows' target="_self">Flow <i class="icon-magnet"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="actions"}'>
-        <a href='actions' target="_self">Action <i class="icon-qrcode"></i></a>
+        <a ng-href='actions' target="_self">Action <i class="icon-qrcode"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="requests"}'>
-        <a href='requests' target="_self">Request <i class="icon-folder-open"></i></a>
+        <a ng-href='requests' target="_self">Request <i class="icon-folder-open"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="chained_requests"}'>
-        <a href='chained_requests' target="_self">Chained request <i class="icon-indent-left"></i></a>
+        <a ng-href='chained_requests' target="_self">Chained request <i class="icon-indent-left"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="batches"}'>
-        <a href='batches' target="_self">Batch <i class="icon-tags"></i></a>
+        <a ng-href='batches' target="_self">Batch <i class="icon-tags"></i></a>
       </li>
       <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="users"}'>
-        <a href='users' target="_self">User <i class="icon-user"></i></a>
+        <a ng-href='users' target="_self">User <i class="icon-user"></i></a>
       </li>
       <li class="divider-vertical" ng-hide="role(4);"></li>
       <li ng-hide="role(4);">
-        <a href='admin/_utils/' target="_self">Admin <i class="icon-star"></i></a>
+        <a ng-href='admin/_utils/' target="_self">Admin <i class="icon-star"></i></a>
       </li>
       <li class="divider-vertical" ></li>
       <li>
-        <a href='http://cms-pdmv.web.cern.ch/cms-pdmv/McM/prod-dev' target="_blank">Status</a>
+        <a ng-hide="isDevMachine();" ng-href='http://cms-pdmv.web.cern.ch/cms-pdmv/McM/prod-dev' target="_blank">Status</a>
+        <a ng-show="isDevMachine();" ng-href='http://cms-pdmv.web.cern.ch/cms-pdmv/McM/prod' target="_blank">Status</a>
       </li>
       <li class="divider-vertical" ></li>
       <li> 
-        <a href='https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM' target="_blank">Help <i class="icon-question-sign"></i></a>
+        <a ng-href='https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM' target="_blank">Help <i class="icon-question-sign"></i></a>
       </li>
       <li class="divider-vertical" ></li>
       <li> 
