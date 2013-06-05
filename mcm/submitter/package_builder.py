@@ -86,7 +86,7 @@ class package_builder:
             return
 
         self.__flags = []
-        self.__tarobj = None
+        #self.__tarobj = None
         self.closed = False
         self.__logfile = ''
         self.__verbose = 4
@@ -151,12 +151,12 @@ class package_builder:
         # reqmgr config cache specifics
         #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
         #self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
-        self.reqmgr_database = "reqmgr_config_cache"
-        self.reqmgr_user = "pdmvserv" 
-        self.reqmgr_group = "ppd" 
+        #self.reqmgr_database = "reqmgr_config_cache"
+        #self.reqmgr_user = "pdmvserv" 
+        #self.reqmgr_group = "ppd" 
 
         # config files
-        self.__summary = None
+        #self.__summary = None
         #self.__upload_configs = None
         self.__injectAndApprove = None
         self.__pyconfigs = []
@@ -172,7 +172,7 @@ class package_builder:
 
         # initialize tarball
         self.tarball = None
-        self.__init_tarball()
+        #self.__init_tarball()
 
         # the number of events to be tested.
         # for generation requests, I need to take into consideration
@@ -209,6 +209,7 @@ class package_builder:
         # check if exists (and force)
         if os.path.exists(self.directory):
             self.logger.error('Directory ' + self.directory + ' already exists.')
+            self.logger.error( os.popen('echo %s; ls -f %s'%(self.directory, self.directory)).read())
             if self.careOfExistingDirectory:
                 raise self.NotInitializedException('Data directory %s already exists'%(self.directory))
                 return
@@ -250,6 +251,7 @@ class package_builder:
 
         self.logger.inject('full debugging information in ' + repr(self.__logfile), handler=self.hname)
 
+    """
     # check and init the tarball
     def __init_tarball(self):
         if self.directory:
@@ -266,6 +268,8 @@ class package_builder:
         self.logger.inject('Tarball : %s' % (self.tarball), handler=self.hname)
 
         return self.__tarobj
+    """
+
 
     # initialize configuration files for packaging
     def __init_configuration(self):
@@ -275,31 +279,9 @@ class package_builder:
         self.logger.inject('Initializing configuration files...', handler=self.hname)
 
         # build path strings
-        #self.__summary = self.directory + 'summary.txt'
-        #self.__upload_configs = self.directory + 'upload_configs.sh'
         self.__injectAndApprove = self.directory + 'injectAndApprove.sh'
 
         self.logger.inject('Populating configuration files...', level='debug', handler=self.hname)
-
-        # create summary
-        #try:
-        #    sin = open(self.__summary, 'w')
-        #    sin.write('request ID\tRelease\tEventcontent\tPriority\tEvents\ttime\tsize\tfilterEff\tmatchingEff\tdatasetName\tGlobalTag\tconfigurations\n')
-        #    sin.close()
-        #except Exception as ex:
-        #    self.logger.inject('Could not create summary file "%s". Reason: %s' % (self.__summary, ex), level='error', handler=self.hname)
-
-        #self.logger.inject('summary.txt file created', level='debug', handler=self.hname)
-
-        # create upload_configs script
-        #try:
-        #    uin = open(self.__upload_configs, 'w')
-        #    uin.write('#!/usr/bin/env bash\n')
-        #    uin.close()
-        #except Exception as ex:
-        #    self.logger.inject('Could not create configuration injection file "%s". Reason: %s' % (self.__upload_configs, ex), level='error', handler=self.hname)
-        #
-        #self.logger.inject('upload_configs.sh script created', level='debug', handler=self.hname)
 
         # create injectAndApprove.sh script
         try:
@@ -358,22 +340,10 @@ class package_builder:
             if not self.request.get_attribute('cvs_tag') and not self.request.get_attribute('fragment') and not self.request.get_attribute('name_of_fragment'):
                 raise self.NotInitializedException('No CVS Production Tag is defined. No fragement name, No fragment text')
 
-            #if not self.request.get_attribute('input_filename'):
-            #    raise self.NotInitializedException('Input Dataset name is not defined.')
-
         # check if LHE
         elif  self.request.get_attribute('type') in ['LHE','LHEStepZero']:
             self.wmagent_type = 'LHEStepZero' #'MonteCarloFromGEN'
 
-            #if 'pileup' not in cmsDriver:
-            #    raise self.NotInitializedException('PileUp Scenario is not defined.')
-
-            #if 'NoPileUp' not in cmsDriver:
-            #    if not self.request.get_attribute('pileup_dataset_name'):
-            #        raise self.NotInitializedException('A pileup dataset name has not been provided.')
-
-            #if not self.request.get_attribute('cvs_tag') :
-            #    raise self.NotInitializedException('No CVS Production Tag is defined.')
             if not (self.request.get_attribute('cvs_tag') and self.request.get_attribute('name_of_fragment')) and not self.request.get_attribute('fragment') and self.request.get_attribute('mcdb_id')<=0:
                 raise self.NotInitializedException('No CVS Production Tag is defined. No fragement name, No fragment text')
 
@@ -393,53 +363,6 @@ class package_builder:
         self.scram_arch=self.request.get_scram_arch()
         infile = self.request.get_setup_file(self.directory)
 
-        """
-        self.scram_arch='slc5_amd64_gcc434'
-        releasesplit=self.request.get_attribute('cmssw_release').split("_")
-        nrelease=releasesplit[1]+releasesplit[2]+releasesplit[3]
-        if int(nrelease)>=510:
-            self.scram_arch='slc5_amd64_gcc462'
-
-        infile = ''
-        infile += '#!/bin/bash\n'
-        infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
-        infile += 'cd ' + os.path.abspath(self.directory + '../') + '\n'
-        infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
-        infile += 'export SCRAM_ARCH=%s\n'%(self.scram_arch)
-        infile += 'scram p CMSSW ' + self.request.get_attribute('cmssw_release') + '\n'
-        infile += 'cd ' + self.request.get_attribute('cmssw_release') + '/src\n'
-        infile += 'eval `scram runtime -sh`\n'
-
-        infile += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
-        infile += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
-        infile += "export CVS_PASSFILE=`pwd`/cvspass\n"
-
-        #if self.request.get_attribute('mcdb_id'):
-        #    infile += "cmsLHEtoEOSManager.py -l %d \n "%(self.request.get_attribute('mcdb_id'))
-        # checkout from cvs (if needed)
-        if self.request.get_attribute('name_of_fragment') != '' and self.request.get_attribute('cvs_tag')!='':
-            infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' ' + self.request.get_attribute('name_of_fragment') + '\n'
-        
-        ##copy the fragment directly from the DB into a file
-        if self.request.get_attribute('fragment'):
-
-            ## the fragment is directly put in the request.
-            ### fragmentFile=self.directory + '/'+(self.request.get_fragment().split('/')[-1])
-            ### f = open(fragmentFile,'w')
-            ### f.write(self.request.get_attribute('fragment'))
-            ### f.close()
-            ##somehow mkdirhier is unknown
-
-            #infile += 'mkdir -p Configuration \n'
-            #infile += 'mkdir -p Configuration/GenProduction \n'
-            #infile += 'mkdir -p Configuration/GenProduction/python \n'
-            ### infile += 'mv %s Configuration/GenProduction/python/ \n'%(fragmentFile)
-            infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 --create-dirs -o %s \n'%(self.request.get_attribute('prepid'),self.request.get_fragment())
-            #infile += 'mkdirhier Configuration/GenProduction/python/ \n'%
-            #infile += 'mkdirhier %s \n'%('/'.join(self.request.get_fragment().split('/')[0:-1]))
-            #infile += 'wget --load-cookies ~/private/cookie.txt -q --no-check-certificate https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s/0 -O %s \n'%(self.request.get_attribute('prepid'),self.request.get_fragment())
-        """
-
         # previous counter
         previous = 0
 
@@ -453,50 +376,8 @@ class package_builder:
             return False
 
         for cmsd in self.__cmsDrivers:
-            """
-            # validate the configuration for each cmsDriver
-            try:
-                self.__validate_configuration(cmsd)
-            except self.NotInitializedException as ex:
-                return False
-
-            # check if customization is needed to check it out from cvs
-            if '--customise' in cmsd:
-                cust = cmsd.split('--customise=')[1].split(' ')[0]
-                toks = cust.split('.')
-                cname = toks[0]
-                cfun = toks[1]
-
-                # add customization
-                if 'GenProduction' in cname:
-                    infile += 'cvs co -r ' + self.request.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
-
-
-            # tweak a bit more finalize cmsDriver command
-            res = cmsd
-            res += ' --python_filename '+self.directory+'config_0_'+str(previous+1)+'_cfg.py '
-            #JR res += '--fileout step'+str(previous+1)+'.root '
-            if previous > 0:
-                #JR res += '--filein file:step'+str(previous)+'.root '
-                res += '--lazy_download '
-
-            ##JR it's going to be easier to look at things with no dump_python
-            #res += '--no_exec --dump_python -n '+str(self.events)#str(self.request.get_attribute('total_events'))
-            res += '--no_exec -n '+str(self.events)#str(self.request.get_attribute('total_events'))
-            #infile += res
-            cmsd_list += res + '\n'
-            """
-            #self.__pyconfigs.append('config_0_'+str(previous+1)+'_cfg.py')
             self.__pyconfigs.append(self.request.get_attribute('prepid')+'_'+str(previous+1)+'_cfg.py')
             previous += 1
-
-        """
-        infile += '\nscram b\n'
-        infile += cmsd_list
-        # since it's all in a subshell, there is
-        # no need for directory traversal (parent stays unaffected)
-        infile += 'cd ../../\n'
-        """
 
         self.logger.inject(infile, level='debug', handler=self.hname)
 
@@ -576,8 +457,9 @@ class package_builder:
         l_type = locator()
         if l_type.isDev(): 
             command += ' --wmtest '
-        command += ' --user %s' % (self.reqmgr_user)
-        command += ' --group %s' % (self.reqmgr_group)
+        #command += ' --user %s' % (self.reqmgr_user)
+        command += ' --user pdmvserv '
+        command += ' --group ppd '
         command += ' --batch %s' % (self.batchNumber)
 
         processString = self.request.get_attribute('process_string')
@@ -696,6 +578,7 @@ class package_builder:
 
         return command
 
+    """
     def __build_summary_string(self):
         summarystring = str(self.request.get_attribute('prepid'))
         summarystring += '\t' + str(self.request.get_attribute('cmssw_release'))
@@ -719,6 +602,7 @@ class package_builder:
             summarystring += '\t' + self.request.get_attribute('name_of_fragment').split('/')[-1] + '\t' + str(self.request.get_attribute('mcdb_id'))
 
         return summarystring + '\n'
+    """
 
     # Spawns a subprocess to execute the setup script
     # and to produce the config files. If it fails, it
@@ -777,12 +661,13 @@ class package_builder:
         self.logger.remove_inject_handler(self.hname)
 
         # clean streams
-        self.__tarobj.close()
+        #self.__tarobj.close()
 
         # delete directory
         if self.careOfExistingDirectory:
             self.__delete_directory()
 
+    """
     # clean work directory for tarification
     def __clean_directory(self):
         self.logger.inject('Cleaning up directory ...', level='debug', handler=self.hname)
@@ -823,9 +708,12 @@ class package_builder:
                 except Exception as ex:
                     self.logger.inject('Could not delete "%s". Reason: %s' % (filename, ex), level='error', handler=self.hname)
 
+    """
+
     # delete working directory
     def __delete_directory(self):
         import shutil
+        self.logger.error('I am trying to remove the directory %s'%( self.directory ))
 
         # clean configuration files & execution leftovers
         try:
@@ -854,6 +742,7 @@ class package_builder:
         flag = self.build_configuration()
 
         if not flag:
+            self.close()
             return False
         
         ## JR find a way to skip testing in batch the request for digi-reco requests
@@ -861,7 +750,7 @@ class package_builder:
         cdb = database('campaigns')
         camp = campaign(cdb.get(self.request.get_attribute('member_of_campaign')))
         if camp.get_attribute('root')==1:
-            self.__tarobj.add(self.directory)
+            #self.__tarobj.add(self.directory)
             self.logger.inject('Requests not from root or possible root campaigns do not need to be ran locally')
             flag=True
         else:
@@ -869,7 +758,7 @@ class package_builder:
             tester = package_tester(self.request,  self.directory,  self.__pyconfigs)
             tester.scram_arch = self.scram_arch
             if tester.test():
-                self.__tarobj.add(self.directory)
+                #self.__tarobj.add(self.directory)
                 self.logger.inject('Runtime Test Job successfully completed !', handler=self.hname)
                 #print 'JOB completed successfully'
                 flag = True
@@ -880,11 +769,15 @@ class package_builder:
                 self.logger.inject('Runtime Test Job Failed. Check logs for details.', level='error', handler=self.hname) 
                 flag = False
 
+        if not flag:
+            self.close()
+            return False
+
         # clean directory
         #self.__clean_directory()    
 
         # clean up
-        self.close()
+        #self.close()
 
 	#flag = True
         
@@ -895,7 +788,8 @@ class package_builder:
             # initialize injector object with the finalized tarball
             injector = None
             #try:
-            injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
+            #injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
+            injector = package_injector(self.request.get_attribute('prepid'),  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
             #except:
             #    self.logger.inject('Injection failed', level='warning', handler=self.hname)
             #    self.request.test_failure(message)
