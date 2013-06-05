@@ -187,11 +187,14 @@ class json_base:
             self.notify('Approval %s for %s %s'%(self.__approvalsteps[next_step],
                                                 self.__class__.__name__,
                                                 self.get_attribute('prepid')),
-                        'no body'#str(self.json())
+                        self.textified()
                         )
 
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action':'approve', 'step':self.__json['approval']})
+
+    def textified(self):
+        return 'no body'
 
     def set_status(self, step=-1,with_notification=False,to_status=None):
         if 'status' not in self.__schema:
