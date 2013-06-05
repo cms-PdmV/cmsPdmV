@@ -434,22 +434,31 @@ class DeleteRequest(RESTResource):
         self.db_name = 'requests'
         self.db = database(self.db_name)
         self.adb = database('actions')
-    
+        self.crdb = database('chained_requests')
+
     def DELETE(self, *args):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False})
         return self.delete_request(args[0])
     
-    def delete_request(self, id):
-        # delete actions
-        self.delete_action(id)
+    def delete_request(self, pid):
+        # delete actions !
+        self.delete_action(pid)
         
-        return dumps({"results":self.db.delete(id)})
+        # delete chained requests !
+        #self.delete_chained_requests(self,pid):
+
+        return dumps({"results":self.db.delete(pid)})
     
     def delete_action(self,  pid):
         if self.adb.document_exists(pid):
             self.adb.delete(pid)
+
+    def delete_chained_requests(self, pid):
+        mcm_crs = map(lambda x: x['value'], self.crdb.query('contains=='+pid))
+        for doc in mcm_crs:
+            self.crdb.delete(doc['prepid'])
 
 class GetRequest(RESTResource):
     def __init__(self):
@@ -603,7 +612,10 @@ class InspectStatus(RESTResource):
                 res.append( mcm_r.inspect() ) 
             else:
                 res.append( {"prepid": r, "results":False, 'message' : '%s does not exists'%(r)})
-        return dumps(res)
+        if len(res)>1:
+            return dumps(res)
+        else:
+            return dumps(res[0])
 
 
 class SetStatus(RESTResource):
