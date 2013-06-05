@@ -40,17 +40,18 @@ function resultsCtrl($scope, $http, $location, $window){
 	//$location.search("query",'""');
     }
     
-    $scope.set_fail = function(status){
-	$scope.update["success"] = false;
-	$scope.update["fail"] = true; 
-	$scope.update["status_code"] = status; 
-    };
-    $scope.set_success = function(status){
-	$scope.update["success"] = true;
-	$scope.update["fail"] = false; 
-	$scope.update["status_code"] = status; 
-	$window.location.reload();
-    };
+  $scope.set_fail = function(status){
+    $scope.update["success"] = false;
+    $scope.update["fail"] = true; 
+    $scope.update["status_code"] = status; 
+  };
+
+  $scope.set_success = function(status){
+	  $scope.update["success"] = true;
+	  $scope.update["fail"] = false; 
+	  $scope.update["status_code"] = status; 
+	  $scope.getData();
+  };
     
     $scope.parse_one = function( report ){
 	$scope.action_status[report['prepid']] = report['results'];
@@ -59,11 +60,12 @@ function resultsCtrl($scope, $http, $location, $window){
 	    return false;
 	}else{
 	    $scope.action_report[report['prepid']] = report['message'];
+	    console.log( report )
 	    return true;
 	}
     };
     $scope.parse_one_only = function (report,status){
-	if ($scope.parse_one( data )){
+	if ($scope.parse_one( report )){
 	    $scope.set_fail(status);}
 	else{
 	    $scope.set_success(status);}
@@ -71,35 +73,30 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
 		$scope.parse_one_only(data,status);
-	    /*if (data["results"]){		
-              $scope.update["success"] = data["results"];
-              $scope.update["fail"] = false;
-              $scope.update["status_code"] = status;
-            }else{
-              $scope.update["success"] = false;
-              $scope.update["fail"] = true;
-              $scope.update["status_code"] = status;
-	      }*/
         }).error(function(status){
 		$scope.set_fail(status);
-		//alert('Error no.' + status + '. Could not delete object.');
         });
     };
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
 
+	      $scope.action_status[data['prepid']] = data['results'];
 	      if (data['results']){
 		  $scope.update["success"] = data["results"];
 		  $scope.update["fail"] = false;
 		  $scope.update["status_code"] = data["results"];
+		  $scope.action_report[data['prepid']] = 'OK';
 		  if (step=='clone'){
 		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["results"]
 		  }else{
-		      $window.location.reload();}
+		      //$window.location.reload();
+		      console.log('I want to reload');
+		  }
 	      }
 	      else{
 		  $scope.update["fail"] = true;
 		  $scope.update["status_code"] = data['message'];
+		  $scope.action_report[data['prepid']] = data['message'];
 	      }
 
       }).error(function(status){
@@ -173,6 +170,14 @@ function resultsCtrl($scope, $http, $location, $window){
 		    });
       };
 
+    $scope.inspect = function(prepid){
+	$http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+prepid}).success(function(data,status){
+		$scope.parse_one_only(data,status);
+	    }).error(function(status){
+		    $scope.set_fail(status);
+		});
+    };
+
     $scope.loadStats = function(){	
 	for (i=0;i<$scope.result.length;i++){
 	    if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
@@ -243,36 +248,36 @@ function resultsCtrl($scope, $http, $location, $window){
     }
    };
 
-   $scope.$watch('list_page', function(){
-      var query = ""
-      _.each($location.search(), function(value,key){
+  $scope.getData = function(){
+    var query = ""
+    _.each($location.search(), function(value,key){
       if (key!= 'shown'){
         query += "&"+key+"="+value;
       }
-      });
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
-      promise.then(function(data){
-        $scope.result = data.data.results;
-        $scope.got_results = true;
-	      if ($scope.result === undefined ){
-          alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
-          return; //stop doing anything if results are undefined
-        }
-        if ($scope.result.length != 0){
+    });
+    $scope.got_results = false; //to display/hide the 'found n results' while reloading
+    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+    promise.then(function(data){
+      $scope.result = data.data.results;
+      $scope.got_results = true;
+      if ($scope.result === undefined ){
+        alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
+        return; //stop doing anything if results are undefined
+      }
+      if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+        $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
         _.each(rejected, function(v){
-            add = true;
-            _.each($scope.requests_defaults, function(column){
+          add = true;
+          _.each($scope.requests_defaults, function(column){
             if (column.db_name == v){
               add = false;
             }
-         });
-            if (add){
-                $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
+          });
+          if (add){
+            $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+          }
         });
         if ($location.search()["shown"] !== undefined){
           binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
@@ -290,11 +295,15 @@ function resultsCtrl($scope, $http, $location, $window){
             }
           });
         }
-        }
-         }, function(){
-             alert("Error getting information");
-         });
+      }
+    },function(){
+      alert("Error getting information");
     });
+  };
+
+  $scope.$watch('list_page', function(){
+    $scope.getData();
+  });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
@@ -394,6 +403,14 @@ function resultsCtrl($scope, $http, $location, $window){
 	  });
   };
 
+  $scope.inspect_many = function(){ 
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+$scope.selected_prepids.join()}).success(function(data,status){
+	      $scope.parse_report(data,status);
+	  }).error(function(data,status){
+                  alert("Error while processing request. Code: "+status);
+	      });
+  };
+
   $scope.submit_many = function(){
     /* submit many requests. On successfully submited ones open a status watching page*/
 
@@ -453,7 +470,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data["results"];
       $window.open("edit?db_name=requests&query="+$scope.update["status_code"]);
-      $window.location.reload();
+      $scope.getData();
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
