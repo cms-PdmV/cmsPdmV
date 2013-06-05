@@ -274,7 +274,8 @@ class package_tester:
             return False
 
         data = stdout.read()
-        lines = re.split(r'(\n+)', data)
+        lines = data.split('\n')
+        #JR lines = re.split(r'(\n+)', data)
 
         for line in lines:
             if 'Successfully completed.' in line:
@@ -341,6 +342,8 @@ class package_tester:
         while not self.monitor_job_status():
             time.sleep(10)
             
+        #wait for afs to sync the .out file
+        time.sleep(10)
         result = self.get_job_result()
         
         if not result:
