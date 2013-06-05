@@ -128,7 +128,15 @@ class campaign(json_base):
        if ststeps.index(st) == 1:
             self.set_status(0)
        elif ststeps.index(st) == 0:
-            self.set_status(1)
+           ## make a few checks here
+           if self.get_attribute('energy')<0:
+               raise Exception('Cannot start a campaign with negative energy')
+           if not self.get_attribute('cmssw_release'):
+               raise Exception('Cannot start a campaign with no release')
+           if not self.get_attribute('type'):
+               raise Exception('Cannot start a campaign with no type')
+           
+           self.set_status(1)
        else:
            raise NotImplementedError('Could not toggle status for object %s' % (self.get_attribute('_id')))
 
