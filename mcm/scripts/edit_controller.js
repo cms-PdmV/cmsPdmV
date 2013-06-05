@@ -13,19 +13,27 @@ function resultsCtrl($scope, $http, $location, $window){
     }
 
     if ($scope.dbName == "campaigns"){
-	    $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval"];
+	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
-	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed Events"]; //user non-editable columns
+      $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed Events"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
       });
     }
     else if($scope.dbName == "chained_requests"){
-	$scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];
+      $scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];
     }else if($scope.dbName == "chained_campaigns"){
       $scope.not_editable_list = ["Prepid", "Campaigns"];
+    }else if($scope.dbName == "flows"){
+      $scope.not_editable_list = ["Prepid", "Approval"];
+      var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+        promise.then(function(data){
+        $scope.allCampaigns = data.data.results;
+      },function(){
+        alert("Error getting all campaign list for flows");
+      });
     }
     else{
       $scope.not_editable_list = [];
@@ -69,11 +77,12 @@ function resultsCtrl($scope, $http, $location, $window){
       $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
+        $scope.update["message"] = data["message"];
         $scope.update["status_code"] = status;
 	if ($scope.update["success"] == false){
 	    $scope.update["fail"] = true;
 	}else{
-	    $window.location.reload();
+	    $scope.getData();
 	}
       }).error(function(data,status){
         $scope.update["success"] = false;
@@ -117,27 +126,30 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.show_well = true;
     }  
   };
+  $scope.getData = function(){
+    var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
+    promise.then(function(data){
+      $scope.result = data.data.results;
+      if ($scope.result.length != 0){
+        columns = _.keys($scope.result);
+        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+        _.each(rejected, function(v){
+          add = true;
+          _.each($scope.defaults, function(column){
+            if (column.db_name == v){
+              add = false;
+            }
+          });
+          if (add){
+            $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+          }
+        });
+      }
+    }, function(){ alert("Error getting information"); });
+  };
 
    $scope.$watch('list_page', function(){
-     var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
-     promise.then(function(data){
-       $scope.result = data.data.results;
-       if ($scope.result.length != 0){
-         columns = _.keys($scope.result);
-         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-         _.each(rejected, function(v){
-           add = true;
-           _.each($scope.defaults, function(column){
-             if (column.db_name == v){
-               add = false;
-             }
-           });
-           if (add){
-             $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-           }
-         });
-       }
-     }, function(){ alert("Error"); });
+    $scope.getData();
    });
     
   $scope.previous_page = function(current_page){
@@ -185,11 +197,12 @@ var ModalDemoCtrl = function ($scope) {
   $scope.openNewSubSequence = function(){
     $scope.shouldBeOpen = true;
     $scope.newSequenceName = "";
-    $scope.newSequence = $scope.default_sequences;
+    $scope.newSequence = _.clone($scope.default_sequences);
   };
   $scope.saveNewSubform = function(index){
     if ($scope.dbName !="requests"){
       $scope.result.sequences[index][$scope.newSequenceName] = $scope.newSequence;
+      $scope.driver[index][$scope.newSequenceName] = $scope.newSequence;
     }else{
       $scope.result.sequences[index].push($scope.newSequence);
     };
@@ -198,9 +211,9 @@ var ModalDemoCtrl = function ($scope) {
   $scope.saveNewSequence = function(){
     var shift = 0;
     if ($scope.dbName != "requests"){
-      if (_.size($scope.result.sequences) != 0){
-        shift =1; //in case we are ading a new sequence not from 0 we must increase array index of sequences
-      }
+    //  if (_.size($scope.result.sequences) != 0){
+    //    shift =1; //in case we are ading a new sequence not from 0 we must increase array index of sequences
+    //  }
       $scope.driver[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
       $scope.result.sequences[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
     }else{
@@ -330,9 +343,12 @@ testApp.directive("sequenceEdit", function($http){
     '      <ul ng-repeat="(name,elem) in value">'+
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <li>{{name}}'+
+    '        <li>{{CMSdriver[key][name]}}'+
     '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);">'+
     '            <i class="icon-wrench"></i>'+
+    '          </a>'+
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
     '            <div class="modal-header">'+
@@ -360,10 +376,14 @@ testApp.directive("sequenceEdit", function($http){
     '        </li>'+
     '      </div>'+ //end of modalControler DIV
     ///END OF MODAL
-    '        <div ng-controller="ModalDemoCtrl">'+
+    '      </ul>'+
+    '        <div ng-controller="ModalDemoCtrl">'+ //add new sub-sequence
     '          <span ng-hide="showAddNewModal">'+
     '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-zoom-in"></i>'+
+    '          </a>'+
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          </span>'+
     '          <span ng-show="showAddNewModal">'+
@@ -403,12 +423,11 @@ testApp.directive("sequenceEdit", function($http){
     '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
     '          </div>'+ //end of modal footer
     '        </div>'+
-    '      </ul>'+
     '    </li>'+
     '  </div>'+
     '  </ul>'+
     //ADD NEW SEQUENCE MODAL
-    '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+
+    '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+ //add new sequence to sequence list
     '  <span ng-hide="showAddNewModal">'+
     '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
     '      <i class="icon-zoom-in"></i>'+
@@ -455,6 +474,16 @@ testApp.directive("sequenceEdit", function($http){
         scope.driver.splice(elem,1); //remove sequence from display
         scope.result.sequences.splice(elem,1); //remove the value from original sequences
       };
+      scope.removeSubSequence = function(key, name){
+        delete scope.driver[key][name];
+        if (scope.result.sequences[key] != null){
+          delete scope.result.sequences[key][name];
+        }
+        if (_.keys(scope.driver[key]).length == 1){ //$$hashkey dosent count
+          scope.driver.splice(key,1);
+          scope.result.sequences.splice(key,1);
+        };
+      };
       scope.displaySequences = function(){
         if (scope.showSequences){ //if shown then -> HIDE;
           scope.showSequences = false;
@@ -469,8 +498,15 @@ testApp.directive("sequenceEdit", function($http){
             }, function(data){ alert("Error: ", data.status); });
           }
         }else{  //just clone the original sequences -> in case user edited and didnt saved.
-            scope.sequencesOriginal = _.clone(scope.result.sequences);
-            scope.driver = scope.sequencesOriginal;
+          if (!scope.sequencesOriginal){ //if requests and sequences haven't been requested already
+            var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
+            promise.then(function(data){
+              scope.CMSdriver = data.data.results;
+              scope.sequencesOriginal = _.clone(scope.result.sequences);
+            }, function(data){ alert("Error: ", data.status); });
+          }
+          scope.sequencesOriginal = _.clone(scope.result.sequences);
+          scope.driver = scope.sequencesOriginal;
         }
         scope.sequenceInfo = ctrl.$viewValue;
         scope.sequencesOriginal = _.clone(scope.result.sequences);
@@ -538,6 +574,46 @@ testApp.directive("customHistory", function(){
     }
   }
 });
+testApp.directive("selectCampaign", function($http){
+  return{
+      require: 'ngModel',
+      template: 
+      // '{{allowedCampaigns.join(";")}}'+
+      '<div>'+
+      '  <a ng-repeat="elem in allowedCampaigns" ng-click="removeAllowedCampaign(elem)">{{elem}}<i class="icon-minus"></i></a>'+ //display allowed campaign list with possibility to remove it
+      '</div>'+
+      '<a ng-click="displaySelect();" ng-hide="selectACampaign && all_campaigns.length ==1"><i class="icon-plus"></i></a>'+ //options to add a new campaign from available list
+      '<select ng-change="allowCampaign();" ng-model="toAllow" ng-options="value for value in all_campaigns" ng-show="selectACampaign && all_campaigns.length !=1"></select>'
+      ,
+      link: function(scope, element, attr, ctrl){
+        ctrl.$render = function () {
+          scope.selected_column = attr.value;
+          scope.allowedCampaigns = ctrl.$viewValue;
+          scope.all_campaigns = _.difference(scope.allCampaigns, scope.allCampaigns);
+          scope.all_campaigns.push("------");
+
+        }
+        scope.displaySelect = function(){
+          var notAllowedlist = _.clone(scope.allowedCampaigns); //get a deepcopy of allowed campaigns
+          notAllowedlist.push(scope.result['next_campaign']); // push next campaign so exlude list
+          scope.all_campaigns = _.difference(scope.allCampaigns, notAllowedlist); //get only those that are not in allowed campaigns & next_campaign
+          scope.all_campaigns.push("------");
+          scope.toAllow = "------"; //by default preselected value 
+          scope.selectACampaign = true;
+        };
+        scope.allowCampaign = function(){
+          scope.allowedCampaigns.push(scope.toAllow); //push a selected value
+          scope.selectACampaign = false;
+        }
+        scope.removeAllowedCampaign = function(campaign_name){
+          scope.allowedCampaigns = _.without(scope.allowedCampaigns, campaign_name);
+          scope.all_campaigns.push(campaign_name);
+          // scope.allowedCampaigns.push(campaign_name); //push a selected value
+        }
+      }
+  }
+});
+
 testApp.directive("generatorParams", function($http){
   return {
     require: 'ngModel',
