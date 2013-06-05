@@ -171,6 +171,10 @@ class request(json_base):
         if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'))):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
+        if self.get_attribute('total_events') < 0:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
+
+
         rdb=database('requests')
         similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
         
@@ -180,10 +184,15 @@ class request(json_base):
             if similar_ds[0]['extension'] == similar_ds[1]['extension']:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, and they are not extension of each other')
         
+
+        ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+                self.logger.error(self.get_attribute('status')+' validation'+'The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+                ##do not make it a n exception yet
+                #raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
@@ -253,6 +262,7 @@ class request(json_base):
         #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
         fragment=self.get_attribute('name_of_fragment')
         if self.get_attribute('fragment') and not fragment:
+            #fragment='Configuration/GenProduction/python/%s_fragment.py'%(self.get_attribute('prepid').replace('-','_'))
             fragment='Configuration/GenProduction/python/%s-fragment.py'%(self.get_attribute('prepid'))
         return fragment
 
@@ -502,7 +512,7 @@ class request(json_base):
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
             #infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
-            infile += 'curl --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            infile += 'curl -s --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
 
         # previous counter
         previous = 0
@@ -572,7 +582,11 @@ class request(json_base):
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
-            
+        
+        ##############
+        ## switch it off there
+        ##############
+        valid_sequence = None
         if valid_sequence:
             ## until we have full integration in the release
             infile += initCvs()
@@ -664,3 +678,61 @@ class request(json_base):
         self.notify('Submission failed for request %s'%(self.get_attribute('prepid')), message)
         rdb = database('requests')
         rdb.update(self.json())
+
+    def get_stats(self, keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr']):
+        #existing ra
+        mcm_rr=self.get_attribute('reqmgr_name')
+        statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
+        stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%self.get_attribute('prepid') ,page_num=-1))
+        one_new=False
+        for stats_r in stats_rr:
+            ## only add it if not present yet
+            if not stats_r['pdmv_request_name'] in map(lambda d : d['name'], mcm_rr):
+                mcm_content={}
+                if not len(keys_to_import):
+                    keys_to_import = stats_r.keys()
+                for k in keys_to_import:
+                    mcm_content[k] = stats_r[k]
+                mcm_rr.append( { 'content' : mcm_content,
+                                 'name' : stats_r['pdmv_request_name']})
+                one_new=True
+        if one_new:
+            # order those requests properly
+            ### FIXME
+            #then set it back if at least one new    
+            self.set_attribute('reqmgr_name', mcm_rr)
+
+    def inspect(self):
+        ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
+        not_good = {"prepid": self.get_attribute('prepid'), "results":False}
+        # only if you are in submitted
+        if self.get_attribute('status') != 'submitted':
+            not_good.update( {'message' : 'cannot inspect a request in %s status'%(self.get_attribute('status'))} )
+            return not_good
+
+        ## get fresh up to date stats
+        self.get_stats()
+        mcm_rr = self.get_attribute('reqmgr_name')
+        if len(mcm_rr):
+            if ('pdmv_status_in_DAS' in mcm_rr[-1]['content'] and 'pdmv_status_from_reqmngr' in mcm_rr[-1]['content']):
+                if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] == 'announced':
+                    self.set_status(with_notification=True)
+                    db = database( 'requests')
+                    saved = db.save( self.json() )
+                    if saved:
+                        return {"prepid": self.get_attribute('prepid'), "results":True}
+                    else:
+                        not_good.update( {'message' : "Set status to %s could not be saved in DB"%(self.get_attribute('status'))})
+                        return not_good
+                else:
+                    not_good.update( {'message' : "last request %s is not ready"%(mcm_rr[-1]['name'])})
+                    return not_good
+            else:
+                not_good.update( {'message' : "last request %s is malformed %s"%(mcm_rr[-1]['name'],
+                                                                                 mcm_rr[-1]['content'])})
+                return not_good
+        else:
+            ## add a reset acion here, in case in prod instance ?
+            not_good.update( {'message' : " there are no requests in request manager. Please invsetigate!"})
+            return not_good
+
