@@ -38,7 +38,7 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.update["success"] = true;
           $scope.update["fail"] = false;
           $scope.update["status_code"] = status;
-          $window.location.reload();
+          $scope.getData();
 //                 alert('Object was deleted successfully.');
         }else{
           $scope.update["success"] = false;
@@ -111,7 +111,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["status_code"] = data["results"];
-        $window.location.reload();
+        $scope.getData();
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -123,20 +123,19 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["status_code"] = data["results"];
-        $window.location.reload();
+        $scope.getData();
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
         $scope.update["status_code"] = status;
       });
     };
-
-    $scope.$watch('list_page', function(){
+    $scope.getData = function(){
       var query = ""
       _.each($location.search(), function(value,key){
-      if (key!= 'shown'){
-        query += "&"+key+"="+value;
-      }
+        if (key!= 'shown'){
+          query += "&"+key+"="+value;
+        }
       });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
@@ -182,9 +181,13 @@ function resultsCtrl($scope, $http, $location, $window){
           });
         }
         }
-    }, function(){
-       alert("Error getting information");
+      }, function(){
+        alert("Error getting information");
       });
+    };
+
+    $scope.$watch('list_page', function(){
+      $scope.getData();
     });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -214,7 +217,7 @@ function resultsCtrl($scope, $http, $location, $window){
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
+    $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG'];
   $scope.selectedPwg= 'BPH';
   $scope.open = function (id) {
     $scope.shouldBeOpen = true;
@@ -242,7 +245,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
         $scope.update["success"] = data.results;
         $scope.update["fail"] = false;
         $scope.update["status_code"] = status;
-        $window.location.reload();
+        $scope.getData();
 //         $window.location.href ="edit?db_name=campaigns&query="+data.results;
       }).error(function(data,status){
           $scope.update["success"] = false;
