@@ -6,6 +6,7 @@ from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.campaign import campaign
+from json_layer.request import request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.flow import flow
 
@@ -31,6 +32,10 @@ class CreateCampaign(RESTResource):
             self.logger.error('Invalid prepid: Prepid returned None')
             return dumps({"results":False})
 
+        if '_' in self.campaign.get_attribute('prepid'):
+            self.logger.error('Invalid campaign name %s'%(self.campaign.get_attribute('prepid')))
+            return dumps({"results":False})
+
         self.campaign.set_attribute('_id', self.campaign.get_attribute('prepid'))
 
         self.campaign.update_history({'action':'created'})
@@ -51,7 +56,7 @@ class CreateCampaign(RESTResource):
 	        dcc = chained_campaign()
         	dcc.set_attribute('prepid', 'chain_'+cid)
 	        dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
-        	dcc.set_attribute('energy',  energy)
+        	#dcc.set_attribute('energy',  energy)
 	        dcc.add_campaign(cid) # flow_name = None
         	self.cdb.save(dcc.json())
 
@@ -197,9 +202,11 @@ class ToggleCampaignStatus(RESTResource):
         if not self.db.document_exists(rid):
             return dumps({"results":'Error: The given campaign id does not exist.'})
         camp = campaign(json_input=self.db.get(rid))
-        camp.toggle_status()
-
-        return dumps({"results":self.db.update(camp.json())})
+        try:
+            camp.toggle_status()
+            return dumps({"results":self.db.update(camp.json())})
+        except:
+            return dumps({"results":False})
     
 class ApproveCampaign(RESTResource):
     def __init__(self):
@@ -254,3 +261,45 @@ class GetCmsDriverForCampaign(RESTResource):
 
       return dumps({"results":self.campaign.build_cmsDrivers()})
 
+class ListAllCampaigns(RESTResource):
+    def __init__(self):
+        self.db_name = 'campaigns'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+      return self.listAll()
+
+    def listAll(self):
+      all_campaigns = self.db.raw_query("prepid")
+      prepids_list = map(lambda x:x['id'], all_campaigns)
+      return dumps({"results": prepids_list})
+
+class InspectRequests(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.access_limit = 3
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.multiple_inspect(args[0])
+
+    def multiple_inspect(self, cid):
+        clist=list(set(cid.rsplit(',')))
+        res = []
+        for c in clist:
+
+            rlist = self.rdb.queries( ["member_of_campaign==%s"%( c ),
+                                       "status==submitted"] )
+            for r in rlist:
+                mcm_r = request( r )
+                if mcm_r:
+                    res.append( mcm_r.inspect() ) 
+                else:
+                    res.append( {"prepid": r, "results":False, 'message' : '%s does not exists'%(r)})
+        if len(res)>1:
+            return dumps(res)
+        elif len(res):
+            return dumps(res[0])
+        else:
+            return dumps([])
