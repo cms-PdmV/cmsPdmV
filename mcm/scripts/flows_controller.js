@@ -45,7 +45,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["success"] = data.results;
         $scope.update["fail"] = false;
         $scope.update["status_code"] = status;
-        $window.location.reload();
+        $scope.getData();
       }else{
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -61,7 +61,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = data.results;
       $scope.update["fail"] = false;
       $scope.update["status_code"] = status;
-      $window.location.reload();
+      $scope.getData();
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
@@ -74,7 +74,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = data.results;
       $scope.update["fail"] = false;
       $scope.update["status_code"] = status;
-      $window.location.reload();
+      $scope.getData();
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
@@ -130,10 +130,9 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.show_well = true;
     }
   };
-
-  $scope.$watch('list_page', function(){
+  $scope.getData = function(){
     var query = ""
-      _.each($location.search(), function(value,key){
+    _.each($location.search(), function(value,key){
       if (key!= 'shown'){
         query += "&"+key+"="+value;
       }
@@ -180,6 +179,9 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       }
     }, function(){ alert("Error getting information"); });
+  };
+  $scope.$watch('list_page', function(){
+  $scope.getData();
   });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -207,8 +209,32 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.list_page = current_page+1;
     }
   };
-}
+};
+var ModalDemoCtrl = function ($scope, $http, $window) {
+  $scope.open = function () {
+    $scope.shouldBeOpen = true;
+  };
 
+  $scope.close = function () {
+    $scope.shouldBeOpen = false;
+  };
+
+  $scope.createFlow = function(){
+    $http({method: 'PUT', url:'restapi/flows/save/', data:{prepid: $scope.flowId}}).success(function(data, status){
+      $scope.update["success"] = data.results;
+      $scope.update["fail"] = false;
+      $scope.update["status_code"] = status;
+      $scope.getData();
+// //    $window.location.href ="edit?db_name=campaigns&query="+data.results;
+     }).error(function(data,status){
+         // console.log(data,status);
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["status_code"] = status;
+     });
+    $scope.shouldBeOpen = false;
+  };
+};
 // NEW for directive
 //var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
