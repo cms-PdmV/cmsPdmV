@@ -80,11 +80,11 @@
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
           <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions" ng-hide="role(1);">
+              <div ng-switch-when="Actions">
                 <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(4);">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
+                <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
                 <a ng-click="load_puce(data.prepid)" rel="tooltip" title="Load short view">
@@ -96,20 +96,20 @@
                 <a ng-click="single_step('approve',data.prepid, '')" rel="tooltip" title="Next step" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
-                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_blank" ng-hide="role(3);">
+                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
                   <i class="icon-forward"></i>
                 </a>
-                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(3);">
+                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
+                <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
+                <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-when="Chain">
-                <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_blank">
-                  <i class='icon-folder-open'></i>
-                </a>
+                <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_self"><i class='icon-indent-left'></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
-                  <a ng-hide='puce[chain]' ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_blank">{{chain}}</a>
+                  <a ng-hide='puce[chain]' ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}<i class="icon-folder-open"></i></a>
                   <img ng-show="puce[chain]" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
@@ -123,11 +123,11 @@
                 </span>
               </div>
               <div ng-switch-when="Short view">
-                <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_blank">
+                <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_self">
                   <i class='icon-folder-open'></i>
                 </a>
                 <span ng-repeat="chain in data[value.db_name]">
-                  <a ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_blank">{{chain}}</a>
+                  <a ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}</a>
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
                     <a ng-switch-when="false">
                       <i  class="icon-arrow-right"></i>
@@ -140,25 +140,26 @@
 	            </div>
               <div ng-switch-when="PrepId">
                 <a ng-href='chained_requests?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="Show only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-                <a ng-href="admin/_utils/document.html?chained_requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
+                <a ng-href="admin/_utils/document.html?chained_requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
               </div>
 	            <div ng-switch-when="Pwg">
-		            <a ng-href='chained_requests?pwg={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+		            <a ng-href='chained_requests?pwg={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
 	            <div ng-switch-when="Member of campaign">
-		            <a ng-href='chained_campaigns?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="Show chained campaign {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+		            <a ng-href='chained_requests?member_of_campaign={{data[value.db_name]}}&page=0' rel="tooltip" title="View chained requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-indent-left"></i></a>
+		            <a ng-href='chained_campaigns?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="Show chained campaign {{data[value.db_name]}}" target="_self"><i class="icon-align-right"></i></a>
 	            </div>
 	            <div ng-switch-when="Approval" align="center">
 		            <i class="{{approvalIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='chained_requests?approval={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained requests in approval {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+		            <a ng-href='chained_requests?approval={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained requests in approval {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
 	            <div ng-switch-when="Last status" align="center">
 		            <i class="{{statusIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='chained_requests?status={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained request with last status {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
+		            <a ng-href='chained_requests?status={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained request with last status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
 	            <div ng-switch-when="Dataset name">
-		            <a ng-href='chained_requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show chained requests for {{data[value.db_name]}}" target="_blank">{{data[value.db_name]}}</a>
-		            <a ng-href='requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_blank"><i class="icon-folder-open"></i></a>
+		            <a ng-href='chained_requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show chained requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-indent-left"></i></a>
+		            <a ng-href='requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_self"><i class="icon-folder-open"></i></a>
 	            </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
@@ -189,10 +190,10 @@
         </span>
         <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
         <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font> Result:{{update["result"]}}
+          Success. Status code:<font color="green">{{update['status_code']}}</font>
         </div>
         <div ng-show="update['fail']">
-          Fail. Status code:<font color="red">{{update['status_code']}}</font> Result:{{update["result"]}}
+          Fail. Status code:<font color="red">{{update['status_code']}}</font>
         </div>
       </div> 
       <div class="span5">
