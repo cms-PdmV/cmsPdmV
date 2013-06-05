@@ -208,14 +208,14 @@ class GenerateChainedRequests(RESTResource):
         
         return self.generate_request(args[0])
     
-    def generate_request(self,  id):
-        if not self.db.document_exists(id):
-            return dumps({'results':'Error: PrepId '+id+' does not exist in the database.'})
+    def generate_request(self,  pid):
+        if not self.db.document_exists(pid):
+            return dumps({'results':'Error: PrepId '+pid+' does not exist in the database.'})
         
-        self.logger.log('Generating all selected chained_requests for action %s' % (id)) 
+        self.logger.log('Generating all selected chained_requests for action %s' % (pid)) 
         
         # init action
-        act = action(json_input=self.db.get(id))
+        act = action(json_input=self.db.get(pid))
         
         act.inspect_priority()
 
@@ -226,7 +226,7 @@ class GenerateChainedRequests(RESTResource):
         for cc in chains:
             if chains[cc]['flag']:
                 # check if the chain already exists
-                accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+id))
+                accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+pid))
                 flag = False
                 for acc in accs:
                     if cc == acc['_id'].split('-')[1]:
@@ -243,7 +243,7 @@ class GenerateChainedRequests(RESTResource):
                         hasChainsChanged=True
                     self.logger.error('A chained request "%s" already exists for chained_campaign %s' % (flag,cc), level='warning')
                     ## then let the root request know that it is part of a chained request, in case not already done
-                    req = request(json_input=self.rdb.get(id))
+                    req = request(json_input=self.rdb.get(pid))
                     inchains=req.get_attribute('member_of_chain')
                     if not flag in inchains:
                         inchains.append(flag)
@@ -254,21 +254,21 @@ class GenerateChainedRequests(RESTResource):
                 # init chained campaign
                 ccamp = chained_campaign(json_input=self.ccdb.get(cc))
                 # create the chained request
-                new_req = ccamp.generate_request(id)
+                new_req = ccamp.generate_request(pid)
                 
                 chains[cc]['chains'].append(new_req['prepid'])
                 hasChainsChanged=True
 
                 # save to database
                 if not self.crdb.save(new_req):
-                    self.logger.error('Could not save modified action %s to database.' % (id))  
+                    self.logger.error('Could not save modified action %s to database.' % (pid))  
                     return dumps({'results':False})
                     
                 ##I am not sure it is necessary to update the chained_campaign itself: legacy 
                 self.ccdb.update(ccamp.json())
 
                 # then let the root request know that it is part of a chained request
-                req = request(json_input=self.rdb.get(id))
+                req = request(json_input=self.rdb.get(pid))
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_req['prepid'])
                 req.set_attribute('member_of_chain',list(set(inchains)))
