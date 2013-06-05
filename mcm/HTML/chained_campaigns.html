@@ -55,28 +55,28 @@
         <tr ng-repeat="data in filterResults()">
           <td ng-repeat="value in chainedCampaigns_defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-	            <div ng-switch-when="PrepId">
-		            <a ng-href='chained_campaigns?prepid={{data.prepid}}"&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}</a>
-		            <a ng-href="admin/_utils/document.html?chained_campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_blank" ng-hide="role(3);"><i class="icon-star"></i></a>
-	            </div>
+	      <div ng-switch-when="PrepId">
+		<a ng-href='chained_campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-align-right"></i></a>
+		<a ng-href="admin/_utils/document.html?chained_campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
+	      </div>
 	            <div ng-switch-when="Valid" align="center">
-		            <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_blank">
+		            <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
 		              <i class="icon-ok" ng-show="data.valid"></i>
 		              <i class="icon-remove" ng-show="!data.valid"></i>
 		            </a>
 	            </div>
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_blank" ng-hide="role(3);">
+                  <a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_self" ng-hide="role(3);">
                     <i class="icon-plus-sign"></i>
                   </a>
-                  <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
-                    <i class="icon-folder-open"></i>
+                  <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
+                    <i class="icon-indent-left"></i>
                   </a>
                   <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3);">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_blank" ng-hide="role(3);">
+                  <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                     <i class="icon-wrench"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
@@ -100,17 +100,20 @@
                 <ul>
                   <li ng-repeat="element in data[value.db_name]"> 
                     <div ng-switch on="_.isArray(element)">
-  		              <div ng-switch-when="true" ng-switch on="element[1]!=null;">
-                      <div ng-switch-when="true">
-    			              <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of the flow" target="_blank">{{element[1]}}</a>
-    			              <a>
-                          <i class="icon-arrow-right"></i>
-    			              </a>
-    			              <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
-                      </div>
-    		              <div ng-switch-when="false">
-    			              <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of the campaign" target="_blank">{{element[0]}}</a>
-    		              </div>
+  		      <div ng-switch-when="true" ng-switch on="element[1]!=null;">
+			<div ng-switch-when="true">
+    			  <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="icon-align-right"></i></a>
+    			  <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="icon-magnet"></i></a>
+    			  <a>
+                            <i class="icon-arrow-right"></i>
+    			  </a>
+    			  <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
+    			  <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+			</div>
+    		        <div ng-switch-when="false">
+    			  <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
+    			  <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+    		        </div>
                       <div ng-switch-default>
                         <a>
                           <i class="icon-arrow-right"></i>
