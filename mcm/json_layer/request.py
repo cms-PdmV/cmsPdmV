@@ -679,28 +679,55 @@ class request(json_base):
         rdb = database('requests')
         rdb.update(self.json())
 
-    def get_stats(self, keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr']):
-        #existing ra
+    def get_stats(self,
+                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr'],
+                  override_id=None):
+        #existing rwma
         mcm_rr=self.get_attribute('reqmgr_name')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
-        stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%self.get_attribute('prepid') ,page_num=-1))
+
+        def transfer( stats_r , keys_to_import):
+            mcm_content={}
+            if not len(keys_to_import):
+                keys_to_import = stats_r.keys()
+            for k in keys_to_import:
+                mcm_content[k] = stats_r[k]            
+            return mcm_content
+
+        ####
+        ## update all existing
+        for rwma_i in range(len(mcm_rr)):
+            rwma = mcm_rr[rwma_i]
+            if not statsDB.document_exists( rwma['name'] ):
+                self.logger.error('the request %s is linked in McM already, but is not in stats DB'%(rwma['name']))
+                ## very likely, this request was aborted, rejected, or failed
+                ## should we be removing it ?
+                continue
+            stats_r = statsDB.get( rwma['name'] )
+            mcm_content=transfer( stats_r , keys_to_import )
+            mcm_rr[rwma_i]['content'] = mcm_content
+
+        ####
+        ## look for new ones
+        look_for_what = self.get_attribute('prepid')
+        if override_id:
+            look_for_what = override_id
+        stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%(look_for_what) ,page_num=-1))
+        #self.logger.error('found %s'%(stats_rr))
         one_new=False
         for stats_r in stats_rr:
             ## only add it if not present yet
             if not stats_r['pdmv_request_name'] in map(lambda d : d['name'], mcm_rr):
-                mcm_content={}
-                if not len(keys_to_import):
-                    keys_to_import = stats_r.keys()
-                for k in keys_to_import:
-                    mcm_content[k] = stats_r[k]
+                mcm_content=transfer( stats_r , keys_to_import)
                 mcm_rr.append( { 'content' : mcm_content,
                                  'name' : stats_r['pdmv_request_name']})
                 one_new=True
-        if one_new:
+
+        #if one_new:
             # order those requests properly
             ### FIXME
             #then set it back if at least one new    
-            self.set_attribute('reqmgr_name', mcm_rr)
+        self.set_attribute('reqmgr_name', mcm_rr)
 
     def inspect(self):
         ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
