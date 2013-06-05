@@ -202,12 +202,13 @@ class GenerateChainedRequests(RESTResource):
             return dumps({"results":'Error: No arguments were given'})
         return self.generate_requests(args[0])
     
-    def generate_requests(self,  id):
-        self.logger.log('Generating all selected chained_requests for chained_campaign %s...' % (id))       
+    def generate_requests(self,  pid):
+        self.logger.log('Generating all selected chained_requests for chained_campaign %s...' % (pid))       
  
         # init chained_campaign
         try:
-            cc = chained_campaign(json_input=self.ccdb.get(id))
+            disable=me
+            cc = chained_campaign(json_input=self.ccdb.get(pid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_campaign object. Reason: %s' % (ex))
             return dumps({"results": str(ex)})
@@ -223,26 +224,31 @@ class GenerateChainedRequests(RESTResource):
         
         # find all actions that have selected this chained campaign
         for ract in rreqs:
-            if ract['chains'][id] is not None:
-                if ract['chains'][id]['flag']:
+            if ract['chains'][pid] is not None:
+                if ract['chains'][pid]['flag']:
                     # check if the chain already exists
                     accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+ract['_id']))
                     flag = False
+                    which_one=None
                     for acc in accs:
                         if id == acc['_id'].split('-')[1]:
                             flag = True
+                            which_one= acc['_id']
                             break
                 
                     if flag:
-                        self.logger.error('A chained_request with the id %s already exists' % (id), level='warning')
+                        self.logger.error('A chained_request with the id %s already exists' % ( which_one ), level='warning')
                         continue
                     
                     # create the chained requests
                     new_req = cc.generate_request(ract['prepid'])
                     # save to database
                     self.crdb.save(new_req)
+                    ## this somehow fails because there has been changes already !
                     self.ccdb.update(cc.json())
-                    
+                    ### need to go in the generate_chaine_requests of the ActionActions
+
+
         return dumps({"results":True})
 
 # starts the chained campaign
