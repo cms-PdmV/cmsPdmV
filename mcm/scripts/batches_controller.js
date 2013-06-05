@@ -93,10 +93,9 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.pendingHTTP = true;
     }
   });
-
-  $scope.$watch('list_page', function(){
+  $scope.getData = function(){
     var query = ""
-      _.each($location.search(), function(value,key){
+    _.each($location.search(), function(value,key){
       if (key!= 'shown'){
         query += "&"+key+"="+value;
       }
@@ -140,6 +139,9 @@ function resultsCtrl($scope, $http, $location, $window){
     }, function(){
        alert("Error getting main information");
       });
+  };
+  $scope.$watch('list_page', function(){
+  $scope.getData();
     });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -161,6 +163,26 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.announce = function(prepid){
       alert("Batch to be announced:"+prepid);
     };
+  /*Is Sure modal actions*/
+  $scope.open_isSureModal = function(action, prepid){
+    $scope.isSure_Modal = true;
+    $scope.toggle_prepid = prepid;
+    $scope.modal_action = action;
+  };
+  $scope.closeisSureModal = function(){
+    $scope.isSure_Modal = false;
+  };
+  $scope.sureTotoggle = function(){
+    $scope.isSure_Modal = false;
+    switch ($scope.modal_action){
+      case "delete":
+        $scope.delete_object('batches', $scope.toggle_prepid);
+        break;
+      default:
+        // alert to announce that uknown action is asked???
+        break;
+    }
+  };
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
@@ -181,7 +203,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
       $scope.update["fail"] = false;
       $scope.update["results"] = data.results;
       $scope.update["status_code"] = status;
-      $window.location.reload();
+      $scope.getData();
       //   $window.location.href ="edit?db_name=requests&query="+data.results;
     }).error(function(data,status){
       alert("Error:"+ status);
