@@ -52,7 +52,7 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.update["success"] = data.results;
           $scope.update["fail"] = false;
           $scope.update["status_code"] = status;
-          $window.location.reload();
+          $scope.getData();
         }else{
           $scope.update["success"] = false;
           $scope.update["fail"] = true;
@@ -100,14 +100,13 @@ function resultsCtrl($scope, $http, $location, $window){
       return $scope.result;
     }
   };
-
-  $scope.$watch('list_page', function(){
-      var query = ""
-      _.each($location.search(), function(value,key){
+  $scope.getData = function(){
+  var query = ""
+    _.each($location.search(), function(value,key){
       if (key!= 'shown'){
         query += "&"+key+"="+value;
       }
-      });
+    });
     $scope.got_results = false; //to display/hide the 'found n results' while reloading
     var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
     promise.then(function(data){
@@ -117,10 +116,6 @@ function resultsCtrl($scope, $http, $location, $window){
         alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
         return; //stop doing anything if results are undefined
       }
-	// remove those with valid = False when !role(3);
-      // $scope.valid_result = _.filter(data.data.results, function(element){
-      //   return element["valid"];
-      //  });
       if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
@@ -153,7 +148,10 @@ function resultsCtrl($scope, $http, $location, $window){
           });
         }
       }
-    }, function(){ alert("Error getting information"); });
+    }, function(){ alert("Error getting information"); });  
+  };
+  $scope.$watch('list_page', function(){
+    $scope.getData();
   });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -208,7 +206,7 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
       $scope.update["success"] = data.results;
       $scope.update["fail"] = false;
       $scope.update["status_code"] = status;
-      $window.location.reload();
+      $scope.getData();
 //         $window.location.href ="edit?db_name=campaigns&query="+data.results;
     }).error(function(data,status){
       $scope.update["success"] = false;
