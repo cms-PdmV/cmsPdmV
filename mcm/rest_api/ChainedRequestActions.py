@@ -237,14 +237,14 @@ class FlowToNextStep(RESTResource):
                 #self.logger.log('After saving the chain is: %s'%(creq.get_attribute('chain')))
                 #creq_aftershave = chained_request(json_input=self.db.get(chainid))
                 #self.logger.log('After saving the chain is: %s'%(creq_aftershave.get_attribute('chain')))
-                return {"results":True}
-            return {"results":False}
+                return {"prepid":chainid,"results":True}
+            return {"prepid":chainid,"results":False, "message":"Failed to flow."}
         except chained_request.NotApprovedException as ex:
-            return {"results":str(ex)}
+            return {"prepid":chainid,"results":False, "message":str(ex)}
         except chained_request.NotInProperStateException as ex:
-            return {"results":str(ex)}
+            return {"prepid":chainid,"results":False, "message":str(ex)}
         except chained_request.ChainedRequestCannotFlowException as ex:
-            return {"results":str(ex)}
+            return {"prepid":chainid,"results":False, "message":str(ex)}
 
 class ApproveRequest(RESTResource):
     def __init__(self):
@@ -274,7 +274,11 @@ class ApproveRequest(RESTResource):
         creq = chained_request(json_input=self.db.get(rid))
         try:
             creq.approve(val)
-        except:
-            return {"prepid": rid, "results":False}
-        
-        return {"prepid":rid, "results":self.db.update(creq.json())}
+        except Exception as ex:
+            return {"prepid": rid, "results":False, 'message' : str(ex)} 
+
+        saved = self.db.update(creq.json())
+        if saved:
+            return {"prepid":rid, "results":True}
+        else:
+            return {"prepid":rid, "results":False , 'message': 'unable to save the updated chained request'}
