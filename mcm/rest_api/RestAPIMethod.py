@@ -100,7 +100,7 @@ class RESTResourceIndex(RESTResource):
 		self.res += "</ul>"
 		#self.res += ", ".join(self.__dict__.keys())
 		#for key in self.__dict__.keys():
-		#		self.res += " %s, "% (key)
+	        #			self.res += " %s, "% (key)
 
 		return self.res
 					
