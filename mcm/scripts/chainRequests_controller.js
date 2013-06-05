@@ -21,6 +21,8 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.puce= {};
   $scope.r_status = {};
   $scope.selected_prepids = [];
+  $scope.action_report= {};
+  $scope.action_status= {};
 
   if($location.search()["page"] === undefined){
     page = 0;
@@ -85,14 +87,9 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.single_step = function(step, prepid, extra){
     $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid+extra}).success(function(data,status){
-      $scope.update["success"] = data["results"];
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-	    $window.location.reload();
+      $scope.parse_report([data],status);
     }).error(function(status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
+      $scope.set_fail(status);
     });
   };
 
@@ -115,19 +112,6 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.defaults[3].select = true; // set actions to be enabled
       $scope.selectedCount = false;
     }
-  };
-    
-  $scope.submit_edit = function(){
-    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/update/',data:JSON.stringify($scope.result[1])}).success(function(data,status){
-      $scope.update["success"] = data["results"];
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $window.location.reload();
-    }).error(function(data,status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
   };
 
   $scope.delete_edit = function(id){
@@ -175,9 +159,9 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.$watch('list_page', function(){
+  $scope.getData = function(){
     var query = ""
-      _.each($location.search(), function(value,key){
+    _.each($location.search(), function(value,key){
       if (key!= 'shown'){
         query += "&"+key+"="+value;
       }
@@ -219,9 +203,12 @@ function resultsCtrl($scope, $http, $location, $window){
           });
         }
       }
-    }, function(){
+    },function(){
        alert("Error getting information");
     });
+  };
+  $scope.$watch('list_page', function(){
+    $scope.getData();
   });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -253,19 +240,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.flowChainedRequest = function(prepid){
     var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid);
     promise.then(function(data){
-      switch(data.data.results){
-        case true:
-          alert("Chained Request flow was successful!");
-          break;
-        case false:
-          alert("Could not save data to database.");
-          break;
-        default:
-          alert(data.data.results);
-      };
-      $window.location.reload();
+      $scope.parse_report([data.data],status);
     }, function(data){
-      alert("Error. Status: "+data.status);
+      $scope.set_fail(data.status);
     });
   };
 
@@ -279,16 +256,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.multiple_step = function(step, extra){
     if ($scope.selected_prepids.length > 0){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/'+step+'/'+$scope.selected_prepids.join()+extra}).success(function(data,status){
-        $scope.update["success"] = true;
-        $scope.update["result"] = data;
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = status;
-        $window.location.reload();
+        $scope.parse_report(data,status);
       }).error(function(status){
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["result"] = data;
-        $scope.update["status_code"] = status;
+        $scope.set_fail(status);
       });
     }else{
       alert("No requests selected");
@@ -298,16 +268,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.multiple_flow = function(){
     if ($scope.selected_prepids.length > 0){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/flow/'+$scope.selected_prepids.join()}).success(function(data,status){
-        $scope.update["success"] = true;
-        $scope.update["result"] = data;
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = status;
-        $window.location.reload();
+        $scope.parse_report(data,status);
       }).error(function(status){
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["result"] = data;
-        $scope.update["status_code"] = status;
+        $scope.set_fail(status);
       });
     }else{
       alert("No requests selected");
@@ -330,35 +293,44 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.selected_prepids = [];
     }
   };
+  $scope.parse_report = function(data,status){
+    to_reload=true;
+    for (i=0;i<data.length;i++){
+    $scope.action_status[data[i]['prepid']] = data[i]['results'];
+    if ( data[i]['results'] == true)
+        {
+      $scope.action_report[data[i]['prepid']] = 'OK';
+        }
+    else
+        {
+      $scope.action_report[data[i]['prepid']] = data[i]['message'];
+      to_reload=false;
+        }
+      }      
+      if (to_reload == true)
+    {
+        $scope.set_success(status);
+    }
+      else
+    {
+        $scope.set_fail(status);
+    }
+  };
+  $scope.set_fail = function(status){
+    $scope.update["success"] = false;
+    $scope.update["fail"] = true; 
+    $scope.update["status_code"] = status; 
+  };
+  $scope.set_success = function(status){
+    $scope.update["success"] = true;
+    $scope.update["fail"] = false; 
+    $scope.update["status_code"] = status; 
+    $scope.getData();
+  };
 };
 
 // NEW for directive
 // var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
-testApp.directive("inlineEditable", function(){
-  return{
-      require: 'ngModel',
-      template: 
-      '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;">'+
-      '</textarea>',
-      link: function(scope, element, attrs, ctrl){
-       
-       ctrl.$render = function () {
-            scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
-       }
-       
-       scope.update = function () {
-           var object = null;
-           try {
-               object = JSON.parse(scope.whatever_value);
-               ctrl.$setViewValue(scope.whatever_value);
-               ctrl.$setValidity("bad_json", true);
-           } catch (err) {
-               ctrl.$setValidity("bad_json", false);
-           }
-       }
-    }
-  }
-});
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
