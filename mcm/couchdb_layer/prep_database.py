@@ -6,6 +6,7 @@ from WMCore.Database.CMSCouch import Database,CouchError
 import json
 import time
 import os
+import copy
 from tools.locator import locator
 
 class database:
@@ -182,7 +183,44 @@ class database:
             self.logger.error('Could not load view for query: <%s> . Reason: %s' % (query, ex))
             return []
 
+    def unique_res(self,query_result):
+        docids = map(lambda doc : doc['_id'] , query_result)
+        docids_s = list(set(docids))
+        if len(docids) != len(docids_s):
+            docids_s = []
+            return_dict= copy.deepcopy( query_result )
+            for doc in query_result:
+                if not doc['_id'] in docids_s:
+                    docids_s.append(doc['_id'])
+                else:
+                    return_dict.remove(doc)		
+            return return_dict
+        return query_result
+
+    def queries( self, query_list):
+        ##page_nume does not matter 
+        if not len(query_list):
+            return self.get_all(page_num)
+        try:
+
+            results_list=[]
+            ##make each query separately and retrieve only the doc with counting == len(query_list)
+            for (i,query_item) in enumerate(query_list):
+                res = self.query(query_item, page_num=-1)
+                query_result = self.unique_res( map(lambda r : r['value'], res) )
+                if i!=0:
+                    ## get only the one already in the intersection
+                    id_list = map(lambda doc : doc['_id'], results_list)
+                    results_list = filter(lambda doc : doc['_id'] in id_list, query_result)
+                else:
+                    results_list= query_result
+            return results_list
+        except Exception as ex:
+            self.logger.error('Could not load view for queris: <%s> . Reason: %s' % ('<br>'.join(query_list), ex))
+            return []
+
     def __extract_operators(self,  query=''):
+
         if not query:
             self.logger.error('Empty query', level='warning')
             return ()
@@ -262,8 +300,9 @@ class database:
     def __query(self, query='', page=0, limit=20):
         t_par = []
         results = []
-        if ',' in query:
-             t_par = query.rsplit(',')
+        #what is that , split for ???
+        #if ',' in query:
+        #     t_par = query.rsplit(',')
         if not t_par:
              t_par = [query]
         if len(t_par) == 1:          
@@ -307,9 +346,14 @@ class database:
         opts = {} 
         
         # default the composite key search
-        if '[' in val and ']' in val:
+        #if '[' in val and ']' in val:
+        if val.startswith('[') and val.endswith(']'):
             if op == '==':
-                opts['key'] = val
+                try:                    
+                    e=eval(val)
+                    opts['key'] = e
+                except:
+                    opts['key'] = val
             return opts
         
         # handle alphanumeric key ranges
@@ -383,7 +427,8 @@ class database:
             #self.logger.error('Document is %s %s'%(doc['_id'],doc))
             #self.logger.error(self.db.commitOne(doc))
             ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
-            self.db.commitOne(doc)
+            saved = self.db.commitOne(doc)
+            self.logger.error('Commit One says : %s'%(saved))
             return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
