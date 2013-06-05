@@ -24,9 +24,33 @@
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/edit_controller.js"></script>
 
-        <script src="scripts/codemirror-3.11/lib/codemirror.js"></script>
-        <script src="scripts/codemirror-3.11/mode/python/python.js"></script>
+        <!-- // <script src="scripts/codemirror-3.11/lib/codemirror.js"></script> -->
+        <!-- // <script src="scripts/codemirror-3.11/mode/python/python.js"></script> -->
+        <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
         <script src="scripts/angular-ui.min.js"></script>
+
+        <style type="text/css">
+        .bs-docs-sidenav > li > a:hover {
+          background-color: #F5F5F5;
+        }
+        .bs-docs-sidenav > li > a {
+          border: 1px solid #E5E5E5;
+          display: block;
+          margin: 0 0 -1px;
+          padding: 8px 14px;
+        }
+        .bs-docs-sidenav {
+          background-color: #FFFFFF;
+          border-radius: 6px 6px 6px 6px;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.067);
+          margin: 30px 0 0;
+          padding: 0;
+          width: 228px;
+        }
+        .affix {
+          position: fixed;
+        }
+        </style>
         
 </head>
 <body ng-controller="mainCtrl">
@@ -35,11 +59,44 @@
   <div class="container" ng-show="role(1);">
     <b>You have not enough permission to access this ressource.</b>
   </div>
-  <div class="container">
-    <div class="span12" align="middle">
-      <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+  <div class="container-fluid">
+    <div class="span3 bs-docs-sidebar"> <!--  sidebar span -->
+      <ul class="nav nav-list bs-docs-sidenav affix">
+        <li class="" ng-hide="role(1);">
+          <a ng-click="submit_edit()">
+            <i class="icon-chevron-right"></i>
+            Commit
+          </a>
+        </li>
+        <li class="">
+          <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_blank">
+            <i class="icon-chevron-right"></i>
+            View
+          </a>
+        </li>
+        <li class="" ng-hide="role(3);">
+          <a ng-click="delete_edit(result['prepid'])">
+            <i class="icon-chevron-right"></i>
+            Delete
+          </a>
+        </li>
+        <li>
+          <a ng-show="update['success']">
+            Updated. Status code:<font color="green">{{update['status_code']}}</font>
+          </a>
+          <a ng-show="update['fail']">
+            Update failed. Status code:<font color="red">{{update['message']}}</font>
+          </a>
+        </li>
+        <li class="" ng-show="pendingHTTP">
+          <a ng-click="delete_edit(result['prepid'])">
+            <img ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+            Pending {{ pendingHTTPLenght }} HTTP request(-s)
+          </a>
+        </li>
+      </ul>
     </div>
-    <div class="span12" ng-hide="role(1);">
+    <div class="span9" ng-hide="role(1);">
       <table class="table table-bordered table-stripped" style="margin-top: 30px;">
         <thead>
         </thead>
@@ -119,7 +176,7 @@
                       <ul ng-repeat="elem in result[column.db_name]">
                         <li>
                           Step {{ $index +1 }}:
-                          <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                          <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1 || $index ==(result[column.db_name].length-1)">
                         </li>
                       </ul>
                     </div>
@@ -132,6 +189,12 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
+                    <div ng-switch-when="Allowed campaigns">
+                      <div select-campaign ng-model="result[column.db_name]"></div>
+                    </div>
+                    <div ng-switch-when="Next campaign">
+                      <select ng-model="result[column.db_name]" ng-options="value for value in allCampaigns"></select>
+                    </div>
                     <div ng-switch-default style="width: 400px;">
                       <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
                     </div>
@@ -141,28 +204,7 @@
           </tr>
         </tbody>
       </table>
-      <div>
-        <div class="span4" align="left" ng-hide="role(1);">
-          <input type="button" class="btn" ng-click="submit_edit()" value="Commit" align="left" ng-hide="role(1);"/>
-        </div>
-	      <div>
-	        <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_self">View Request
-	          <i class="icon-eye-open"></i>
-		</a>
-	      </div>
-        <div class="span3">
-          <div ng-show="update['success']">
-            Updated. Status code:<font color="green">{{update['status_code']}}</font>
-          </div>
-          <div ng-show="update['fail']">
-            Update failed. Status code:<font color="red">{{update['status_code']}}</font>
-          </div>
-        </div>
-        <div class="span4" align="right" ng-hide="role(3);">
-          <input type="button" class="btn" ng-click="delete_edit(result['prepid'])" value="Delete" align="right" ng-hide="role(3);"/>
-        </div>
-      </div>
-    </div><!--END of span12 -->
+    </div><!--END of span12-->
   </div>
 </span>
 </body>
