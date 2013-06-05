@@ -69,8 +69,8 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.show_well = true;
     }
   };
-    
-  $scope.$watch('list_page', function(){
+
+  $scope.getData = function(){
     var query = ""
     _.each($location.search(), function(value,key){
       if (key!= 'shown'){
@@ -99,9 +99,6 @@ function resultsCtrl($scope, $http, $location, $window){
         });
         if ($location.search()["shown"] !== undefined){
           binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-          // for(i=0;i<$scope.defaults.length-binary_shown.length;i++){
-          //   binary_shown += "0";
-          // }
           _.each($scope.defaults, function(column){
             column_index = $scope.defaults.indexOf(column);
             binary_bit = binary_shown.charAt(column_index);
@@ -119,7 +116,10 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     },function(){
        alert("Error getting information");
-    });
+    });  
+  };
+  $scope.$watch('list_page', function(){
+    $scope.getData();
   });
   
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -169,7 +169,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = true;
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data.status;
-      $window.location.reload();
+      $scope.getData();
     },function(data, status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
@@ -178,5 +178,4 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 };
 
-// NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
