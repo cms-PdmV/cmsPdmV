@@ -98,8 +98,10 @@ class json_base:
         hist.append(history)
         self.set_attribute('history', hist)
 
-        if 'version' in self.__json:
-            self.set_attribute('version', int(self.get_attribute('version')) + 1)
+        ## there is really no need to update the version number here.
+        # the version number is meant for when we have resubmission and stuff !
+        #if 'version' in self.__json:
+        #    self.set_attribute('version', int(self.get_attribute('version')) + 1)
 
     def __get_submission_details(self):
         if cherrypy.request.headers:
