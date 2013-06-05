@@ -300,7 +300,7 @@ class MigrateRequest(RequestRESTResource):
 
         mcm_r.update_history({'action':'migrated'})
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
-            mcm_r.get_stats()
+            mcm_r.get_stats(override_id = pid)
             """
             statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
             ### do a manual search
