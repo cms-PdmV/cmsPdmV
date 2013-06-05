@@ -1,6 +1,7 @@
 from json_base import json_base
 from request import request
 from flow import flow
+
 from couchdb_layer.prep_database import database
 import json
 from tools.priority import priority
@@ -96,6 +97,8 @@ class chained_request(json_base):
             ccdb = database('chained_campaigns')
             crdb = database('chained_requests')
             fdb = database('flows')
+            adb = database('actions')
+
         except database.DatabaseAccessError as ex:
             return False
 
@@ -114,6 +117,7 @@ class chained_request(json_base):
         
         # actually get root request
         initial_req = request(rdb.get(root))
+        pc = cdb.get( initial_req.get_attribute('member_of_campaign') )
         req = initial_req.json()
             
         # get the campaign in the next step
@@ -229,6 +233,7 @@ class chained_request(json_base):
         req['cmssw_release'] = nc['cmssw_release']
         req['pileup_dataset_name'] = nc['pileup_dataset_name']
         req['root'] = False #JR???
+        req['version']=0
         
         # add the previous requests output_dataset name as input for the new
         ## get the input dataset from the previous request
@@ -257,6 +262,19 @@ class chained_request(json_base):
                 if 'pdmv_dataset' in previous_wma
         """        
             
+        ## check whether we went from a possible root to non-root request
+        if nc['root'] ==1 and pc['root'] !=1:
+            #in this case, if there are staged number requirements, let's use it
+            original_action = adb.get( self.get_attribute('chain')[0] )
+            if self.get_attribute('member_of_campaign') in original_action['chains']:
+                my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
+                if 'staged' in my_action_item:
+                    req['total_events'] = my_action_item['staged']
+                elif 'threshold' in my_action_item:
+                    req['total_events'] = req['total_events'] * float( my_action_item['threshold'])  / 100.
+
+        #self.logger.error( 'we arrived here and req = %s' % (str( req)))
+
         # add a block black and white list
         if block_black_list:
             req['block_black_list'] = block_black_list
@@ -387,7 +405,7 @@ class chained_request(json_base):
 
         # get the chain and inherit
         #req.set_attribute("generators", self.get_attribute("generators"))
-        req.set_attribute("total_events", self.get_attribute("total_events"))
+        #req.set_attribute("total_events", self.get_attribute("total_events")) ## this was taken earlier, with staged number in consideration
         req.set_attribute("dataset_name", self.get_attribute("dataset_name"))
         req.set_attribute("pwg", self.get_attribute("pwg"))
         #JR removed from schema req.set_attribute("priority", self.get_attribute("priority") )
