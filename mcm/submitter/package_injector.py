@@ -9,12 +9,13 @@ class package_injector:
     logger = logfactory('prep2')
     hname = '' # name of the log handler
 
-    def __init__(self,  tarball,  cmssw_release, directory=None):
+    def __init__(self,  prepid,  cmssw_release, directory=None):
         if not directory:
             l_type=locator()
             directory = l_type.workLocation()
-        self.tarball = str(tarball)
-        self.prepid = self.tarball.rsplit('.tgz')[0]
+        #jr self.tarball = str(tarball)
+        #self.prepid = self.tarball.rsplit('.tgz')[0]
+        self.prepid = prepid
         self.directory = str(directory)
         if ":" in cmssw_release:
             self.cmssw_release,self.arch = map(str, cmssw_release.split(':'))
@@ -71,8 +72,9 @@ class package_injector:
         script += 'eval `scram runtime -sh` \n\n'
         script += 'cd ../\n'
         script += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        script += 'tar xvzf %s \n'%(self.tarball)
-        script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
+        #jrscript += 'tar xvzf %s \n'%(self.tarball)
+        #jr script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
+        script += 'cd %s \n '%(self.prepid)
         script += 'ls -l \n'
         script += 'chmod 755 injectAndApprove.sh \n'
         ## just to have a look at the wmcontrol from within the logger
@@ -80,8 +82,8 @@ class package_injector:
         script += './injectAndApprove.sh \n'
         
         try:
-            self.logger.inject('Writing injection script to '+self.directory+'inject-'+self.tarball+'.sh')
-            f = open(self.directory+'inject-'+self.tarball+'.sh',  'w')
+            self.logger.inject('Writing injection script to '+self.directory+'inject-'+self.prepid+'.sh')
+            f = open(self.directory+'inject-'+self.prepid+'.sh',  'w')
             f.write(script)
             f.close()
         except IOError as ex:
@@ -159,7 +161,7 @@ class package_injector:
             return False
 
 
-        stdin,  stdout,  stderr = self.__remote_exec('sh '+self.directory+'inject-'+self.tarball+'.sh')
+        stdin,  stdout,  stderr = self.__remote_exec('sh '+self.directory+'inject-'+self.prepid+'.sh')
 
         if not stdin and not stdout and not stderr:
             return False
