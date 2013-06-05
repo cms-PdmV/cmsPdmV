@@ -149,44 +149,33 @@ function resultsCtrl($scope, $http, $location, $window){
         }
     };
     
-    $scope.$watch('list_page', function(){
-      //console.log("modified");
-      //      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+"&page="+$scope.list_page)
-      var query = ""
-      _.each($location.search(), function(value,key){
-	      if (key == 'select'){
-          if(value !='------'){
-		        query += "&member_of_campaign="+value;
-          }
-	      }
-        else if(key != 'starts'){
-          query += "&"+key+"="+value;
-        };
-	  });
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
-          promise.then(function(data){
-            $scope.result = data.data.results;
-            if ($scope.result.length != 0){
-            columns = _.keys($scope.result[0]);
-            rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-            $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-//             _.each(rejected, function(v){
-//                 add = true;
-//                 _.each($scope.actions_defaults, function(column){
-//                 if (column.db_name == v){
-//                     add = false;
-//                   }
-//                 });
-// //                if (add){
-// //                     $scope.actions_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-// //                }
-//               });
-            }
-//             console.log($scope.actions_defaults);
-         }, function(){
-             console.log("Error"); 
-         });
+  $scope.getData = function(){
+  var query = ""
+    _.each($location.search(), function(value,key){
+      if (key == 'select'){
+        if(value !='------'){
+          query += "&member_of_campaign="+value;
+        }
+      }
+      else if(key != 'starts'){
+        query += "&"+key+"="+value;
+      };
     });
+    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
+    promise.then(function(data){
+      $scope.result = data.data.results;
+      if ($scope.result.length != 0){
+        columns = _.keys($scope.result[0]);
+        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+        $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+      }
+    },function(){
+        alert("Error getting data.");
+    });
+  };
+  $scope.$watch('list_page', function(){
+    $scope.getData();
+  });
     
   $scope.previous_page = function(current_page){
       if (current_page >-1){
@@ -248,7 +237,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
       $scope.update['result'] = id+" generated Successfully";
-      $window.location.reload();
+      $scope.getData();
     }, function(data){
         $scope.update['status_code'] = data.status;
         $scope.update['fail'] = true;
@@ -271,7 +260,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update['fail'] = false;
       $scope.update['result'] = "All requests generated Successfully";
       $scope.update['status_code'] = data.status;
-      $window.location.reload();
+      $scope.getData();
     }, function(data){
         $scope.update['fail'] = true;
         $scope.update['success'] = false;
@@ -291,7 +280,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update['fail'] = false;
       $scope.update['result'] = id+" chain detected Successfully";
       $scope.update['status_code'] = data.status;
-      $window.location.reload();
+      $scope.getData();
     }, function(data){
         $scope.refreshingAllIcon = false;
         
@@ -316,7 +305,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update['fail'] = false;
       $scope.update['result'] = "All chains detected Successfully";
       $scope.update['status_code'] = data.status;
-      $window.location.reload();
+      $scope.getData();
     }, function(data){
         $scope.refreshingAllIcon = false;
         
@@ -357,7 +346,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update['fail'] = false;
         $scope.update['result'] = data;
         $scope.update['status_code'] = status;
-        // $window.location.reload();
+        $scope.getData();
       }).error(function(data,status){
         $scope.updatingMultipleActions = false;
         $scope.update['fail'] = true;
@@ -482,7 +471,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '      </a>'+
         '    </div>'+
         '    <a ng-repeat="cr in actionInfo.chains" rel="tooltip" title="Show chained request {{cr}}" ng-href="chained_requests?query=prepid%3D%3D{{cr}}" target="_blank">'+
-        '      <i class="icon-check"></i>'+
+        '      <i class="icon-indent-left"></i>'+
         '    </a >'+
         '  </div>'+
         '  <div ng-switch-when="true">'+
