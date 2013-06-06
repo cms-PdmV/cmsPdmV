@@ -261,29 +261,16 @@ class GetCmsDriverForCampaign(RESTResource):
 
       return dumps({"results":self.campaign.build_cmsDrivers()})
 
-class ListAllCampaigns(RESTResource):
+class CampaignsRESTResource(RESTResource):
     def __init__(self):
-        self.db_name = 'campaigns'
-        self.db = database(self.db_name)
-
-    def GET(self, *args):
-      return self.listAll()
+        self.cdb = database('campaigns')
+        self.rdb = database('requests')
 
     def listAll(self):
-      all_campaigns = self.db.raw_query("prepid")
+      all_campaigns = self.cdb.raw_query("prepid")
       prepids_list = map(lambda x:x['id'], all_campaigns)
-      return dumps({"results": prepids_list})
-
-class InspectRequests(RESTResource):
-    def __init__(self):
-        self.rdb = database('requests')
-        self.access_limit = 3
-
-    def GET(self, *args):
-        if not args:
-            return dumps({"results":'Error: No arguments were given'})
-        return self.multiple_inspect(args[0])
-
+      return prepids_list
+        
     def multiple_inspect(self, cid):
         clist=list(set(cid.rsplit(',')))
         res = []
@@ -303,3 +290,34 @@ class InspectRequests(RESTResource):
             return dumps(res[0])
         else:
             return dumps([])
+    
+class ListAllCampaigns(CampaignsRESTResource):
+    def __init__(self):
+        CampaignsRESTResource.__init__(self)
+
+    def GET(self, *args):
+        return dumps({"results": self.listAll()})
+
+
+class InspectRequests(CampaignsRESTResource):
+    def __init__(self):
+        CampaignsRESTResource.__init__(self)
+        self.access_limit = 3
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.multiple_inspect(args[0])
+
+class InspectCampaigns(CampaignsRESTResource):
+    def __init__(self):
+        CampaignsRESTResource.__init__(self)
+        self.access_limit = 3
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        if args[0] != 'all':
+            return dumps({"results":'Error: Incorrect argument provided'})
+
+        return self.multiple_inspect( ','.join(self.listAll()) )
