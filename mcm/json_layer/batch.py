@@ -70,10 +70,14 @@ class batch(json_base):
         
         self.get_current_user_role_level()
 
+        to_who = ['pdmvserv@cern.ch']
+        if l_type.isDev():
+            to_who.append( 'hn-cms-hnTest@cern.ch' )
+        else:
+            to_who.append( 'hn-cms-dataopsrequests@cern.ch' )
         self.notify(subject,
                     message,
-                    #who should be data operation HN
-                    who=['vlimant@cern.ch','hn-cms-hnTest@cern.ch']
+                    who=to_who
                     )
 
         ## toggle the status
