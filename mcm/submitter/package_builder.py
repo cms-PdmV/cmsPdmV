@@ -72,8 +72,8 @@ class package_builder:
 
 
     def __init__(self,  req_json=None,  directory=None,  events=5):
+        l_type=locator()
         if not directory:
-            l_type=locator()
             directory = l_type.workLocation()
 
         # set time out to 2000 seconds
@@ -163,7 +163,14 @@ class package_builder:
 
         # There is a not-Initialized exception that is not handled
         self.directory = directory
+        if l_type.isDev():
+            self.careOfExistingDirectory = False
+        else:
+            ## care of existing diretories in prod instance so as to limit the amount of space taken by the submissions 
+            self.careOfExistingDirectory = True
+        ## override it ANYWAYS to false
         self.careOfExistingDirectory = False
+
         self.__check_directory() # check directory sanity
 
         # init logger
@@ -525,6 +532,9 @@ class package_builder:
             if self.request.get_attribute('pileup_dataset_name'):
                 command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
 
+            ## provide the total number of events requested: by default it is the amount in the input dataset.
+            # and wmcontrol / wma should understand that we want partial statistics if that number is lower than expected
+            command += ' --number-events %s' %(self.request.get_attribute('total_events'))
             # temp ev cont holder
             eventcontentlist = self.request.get_first_output()
             
