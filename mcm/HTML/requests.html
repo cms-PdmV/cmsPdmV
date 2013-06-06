@@ -126,7 +126,7 @@
                 <a ng-href="injectAndLog?prepid={{data.prepid}}" rel="tooltip" title="Submit" ng-hide="role(3);" target="_self">
                   <i class="icon-play-circle"></i>
                 </a>
-                <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title"Inspect status">
+                <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of this request">
                   <i class="icon-screenshot"></i>
                 </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
