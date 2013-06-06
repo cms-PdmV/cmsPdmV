@@ -216,8 +216,9 @@ class GenerateChainedRequests(RESTResource):
         
         # init action
         act = action(json_input=self.db.get(pid))
-        
-        act.inspect_priority()
+ 
+        ##this needs to go AFTER the chained requests are generated
+        #act.inspect_priority()
 
         # get chains
         chains = act.get_attribute('chains')
@@ -278,6 +279,9 @@ class GenerateChainedRequests(RESTResource):
             #the chains parameter might have changed
             act.set_attribute('chains',chains)
             self.db.update(act.json())
+
+        #and set priorities properly to all requests concerned
+        act.inspect_priority()
 
         return dumps({'results':True})
 
