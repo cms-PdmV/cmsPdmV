@@ -485,17 +485,25 @@ class request(json_base):
         #    infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
         if directory:
             ## go into the request directory itself to setup the release, since we cannot submit more than one at a time ...
-            #infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
-            infile += 'cd ' + os.path.abspath(directory) + '\n'
+            infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
+
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
         infile += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
         makeRel =''
-        infile += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
-        infile += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
-        infile += 'else\n'
-        infile += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
-        infile += 'fi\n'
-        infile += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
+        makeRel += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
+        makeRel += 'else\n'
+        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        makeRel += 'fi\n'
+        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        ##create a release directory "at the root" if not already existing
+        infile += makeRel
+        if directory:
+            ##create a release directory "in the request" directory if not already existing 
+            infile += 'cd ' + os.path.abspath(directory) + '\n'
+            infile += makeRel 
+
+        ## setup from the last release directory used
         infile += 'eval `scram runtime -sh`\n'
 
         def initCvs():
@@ -609,7 +617,13 @@ class request(json_base):
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
+
         infile += 'cd ../../\n'
+        ## if there was a release setup, jsut remove it
+        if directory:
+            infile += 'rm -rf %s' %( self.get_attribute('cmssw_release') )
+            
+
         return infile
 
     def get_first_output(self):
