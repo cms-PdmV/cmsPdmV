@@ -262,6 +262,14 @@ class chained_request(json_base):
                 if 'pdmv_dataset' in previous_wma
         """        
             
+        if req['completed_events'] <=0:
+            raise KeyError('Completed events is negative or null')
+
+        ##transfer completed events to requested events
+        req['total_events'] = req['completed_events']
+        ## null the completed events
+        req['completed_events']=0
+
         ## check whether we went from a possible root to non-root request
         if nc['root'] ==1 and pc['root'] !=1:
             #in this case, if there are staged number requirements, let's use it
@@ -271,7 +279,7 @@ class chained_request(json_base):
                 if 'staged' in my_action_item:
                     req['total_events'] = my_action_item['staged']
                 elif 'threshold' in my_action_item:
-                    req['total_events'] = req['total_events'] * float( my_action_item['threshold'])  / 100.
+                    req['total_events'] = int( req['total_events'] * float( my_action_item['threshold'])  / 100. )
 
         #self.logger.error( 'we arrived here and req = %s' % (str( req)))
 
