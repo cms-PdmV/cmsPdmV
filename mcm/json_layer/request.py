@@ -697,7 +697,7 @@ class request(json_base):
         rdb.update(self.json())
 
     def get_stats(self,
-                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr'],
+                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS'],
                   override_id=None):
         #existing rwma
         mcm_rr=self.get_attribute('reqmgr_name')
@@ -760,7 +760,11 @@ class request(json_base):
         if len(mcm_rr):
             if ('pdmv_status_in_DAS' in mcm_rr[-1]['content'] and 'pdmv_status_from_reqmngr' in mcm_rr[-1]['content']):
                 if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] == 'announced':
+                    ## how many events got completed for real
+                    self.set_attribute('completed_events' , mcm_rr[-1]['content']['pdmv_evts_in_DAS'] )
+                    ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
+                    ## save the request back to db
                     db = database( 'requests')
                     saved = db.save( self.json() )
                     if saved:
