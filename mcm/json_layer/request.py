@@ -567,6 +567,17 @@ class request(json_base):
             previous += 1
 
         ## gen valid configs
+        valid_sequence = None
+        n_to_valid=1000 #get it differently than that
+        val_sentence=self.get_attribute('validation')
+        if len(val_sentence):
+            val_spec=val_sentence.split(',')
+            for spec in val_spec:
+                spec_s = spec.split(':')
+                k = spec_s[0]
+                if k == 'nEvents':
+                    n_to_valid = int( spec_s[1])
+
         # to be refined using the information of the campaign
         firstSequence = self.get_attribute('sequences')[0]
         firstStep = firstSequence['step'][0]
@@ -603,16 +614,6 @@ class request(json_base):
         val+=' %s'%( dqm_dataset ) 
         self.set_attribute('validation', val)
 
-        valid_sequence = None
-        n_to_valid=1000 #get it differently than that
-        val_sentence=self.get_attribute('validation')
-        if len(val_sentence):
-            val_spec=val_sentence.split(',')
-            for spec in val_spec:
-                spec_s = spec.split(':')
-                k = spec_s[0]
-                if k == 'nEvents':
-                    n_to_valid = int( spec_s[1])
                 
         if firstStep == 'GEN':
 
