@@ -9,8 +9,8 @@ from json import loads,dumps
 from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
-#from json_layer.action import action
-#from tools.authenticator import authenticator
+from tools.locator import locator
+
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -461,6 +461,10 @@ class request(json_base):
 #            adb.save(a.json())
 #        return True
 
+    def little_release(self):
+        release_to_find=self.get_attribute('cmssw_release')
+        return release_to_find.replace('CMSSW_','').replace('_','')
+
     def get_scram_arch(self):
         #economise to call many times.
         if hasattr(self,'scram_arch'):
@@ -479,10 +483,9 @@ class request(json_base):
         return self.scram_arch
     
     def get_setup_file(self,directory='',events=10):
+        l_type = locator()
         infile = ''
         infile += '#!/bin/bash\n'
-        #if self.get_attribute('fragment'):
-        #    infile += 'cern-get-sso-cookie -u https://cms-pdmv-dev.cern.ch/mcm/ -o ~/private/cookie.txt --krb\n'
         if directory:
             ## go into the request directory itself to setup the release, since we cannot submit more than one at a time ...
             infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
@@ -522,8 +525,10 @@ class request(json_base):
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            #infile += 'curl -k -L -s --cookie-jar ~/private/cookie.txt --cookie ~/private/cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
-            infile += 'curl -s --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            if l_type.isDev():
+                infile += 'curl -s --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            else:
+                infile += 'curl -s --insecure https://cms-pdmv.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
 
         # previous counter
         previous = 0
@@ -565,9 +570,41 @@ class request(json_base):
         # to be refined using the information of the campaign
         firstSequence = self.get_attribute('sequences')[0]
         firstStep = firstSequence['step'][0]
-        harvesting_and_dqm_upload='cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+        self.genvalid_driver = None
+        self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+
+        dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM'%(self.get_attribute('dataset_name'),
+                                                          self.get_attribute('cmssw_release'),
+                                                          self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
+                                                          self.get_attribute('version')
+                                                          )
+        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s-genvalid-v%s__DQM.root'%( self.get_attribute('dataset_name'),
+                                                                                    self.get_attribute('cmssw_release'),
+                                                                                    self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
+                                                                                    self.get_attribute('version')
+                                                                                    )
+
+        
+        where ='https://cmsweb.cern.ch/dqm/relval'
+        if l_type.isDev():
+            where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+        where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+        self.harverting_upload = ''        
+        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file ) 
+        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
+        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem \n'
+        self.harverting_upload += 'python visDQMUpload %s %s \n'%( where, dqm_file )
+        
+        ##then the url back to the validation sample in the gui !!!
+        val=self.get_attribute('validation')
+        #val+='%s/start?runnr=1;dataset=%s;sampletype=offline_relval;referenceshow=customise;referenceobj1=refobj;workspace=Everything;size=M;root=Generator;'%(where, dqm_file)
+        #val+='%s/start?runnr=1;dataset=%s;sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=customise;referenceobj1=refobj;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;'%(where, dqm_dataset)
+        ### please do not put dqm gui url inside, but outside in java view ...
+        val+=' %s'%( dqm_dataset ) 
+        self.set_attribute('validation', val)
+
         valid_sequence = None
-        n_to_valid=10000 #get it differently than that
+        n_to_valid=1000 #get it differently than that
         val_sentence=self.get_attribute('validation')
         if val_sentence:
             val_parameters=map( lambda spl: tuple(spl.split(':',1)), val_sentence.split(','))
@@ -595,9 +632,11 @@ class request(json_base):
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
         
         ##############
-        ## switch it off there
+        ## switch it off there, for a certain range of releases, and for production instance
         ##############
-        valid_sequence = None
+        if self.little_release() < '530' or (not l_type.isDev()):
+            valid_sequence = None
+
         if valid_sequence:
             ## until we have full integration in the release
             infile += initCvs()
@@ -607,11 +646,13 @@ class request(json_base):
 
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
-            cmsd_list += '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec \n'%(genvalid_request.build_cmsDriver(0),
+
+            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec \n'%(genvalid_request.build_cmsDriver(0),
                                                                                                           n_to_valid,
                                                                                                           directory)
+            cmsd_list += self.genvalid_driver
             ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
-            cmsd_list += harvesting_and_dqm_upload            
+            cmsd_list += self.harvesting_driver
 
         infile += '\nscram b\n'
         infile += cmsd_list
@@ -654,8 +695,8 @@ class request(json_base):
         ##maybe raise instead of just returning false
         wma_type= self.get_wmagent_type()
         if wma_type in ['MonteCarloFromGEN','ReDigi'] and not self.get_attribute('input_filename'):
-            raise Exception('Input Dataset name is not defined.')
-            #return False
+            #raise Exception('Input Dataset name is not defined.')
+            return True
         if wma_type in ['MonteCarlo','MonteCarloFromGEN','LHEStepZero']:
             if not self.get_attribute('cvs_tag') and not self.get_attribute('fragment') and not self.get_attribute('name_of_fragment'):
                 if wma_type=='LHEStepZero' and self.get_attribute('mcdb_id')<=0:
