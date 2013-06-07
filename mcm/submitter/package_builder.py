@@ -383,9 +383,16 @@ class package_builder:
             return False
 
         for cmsd in self.__cmsDrivers:
+            ## this could be done a bit more transparently
             self.__pyconfigs.append(self.request.get_attribute('prepid')+'_'+str(previous+1)+'_cfg.py')
             previous += 1
 
+            
+        ## add the validation sequences if any ?
+        if self.request.genvalid_driver:
+            self.__pyconfigs.append('genvalid.py')
+            self.__pyconfigs.append('genvalid_harvesting.py')
+            
         self.logger.inject(infile, level='debug', handler=self.hname)
 
         return infile
@@ -587,32 +594,6 @@ class package_builder:
         command += '\n'
 
         return command
-
-    """
-    def __build_summary_string(self):
-        summarystring = str(self.request.get_attribute('prepid'))
-        summarystring += '\t' + str(self.request.get_attribute('cmssw_release'))
-        summarystring += '\t' + str(self.__cmsDrivers[0].split('--eventcontent')[1].split(' ')[0])
-        summarystring += '\t' + str(self.request.get_attribute('priority'))
-        summarystring += '\t' + str(self.request.get_attribute('total_events'))
-        summarystring += '\t' + str(self.request.get_attribute('time_event'))
-        summarystring += '\t' + str(self.request.get_attribute('size_event'))
-        if self.request.get_attribute('generator_parameters'):
-            summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            summarystring += '\t' + str(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
-        summarystring += '\t' + str(self.request.get_attribute('dataset_name'))
-        summarystring += '\t' + str(self.__cmsDrivers[0].split('--conditions')[1].split(' ')[0])
-        for pyc in self.__pyconfigs:
-            summarystring += '\t' + pyc
-
-        if self.request.get_attribute('input_filename') != None:
-            summarystring += '\t' + self.request.get_attribute('input_filename')
-
-        if self.request.get_attribute('type') == 'LHE':
-            summarystring += '\t' + self.request.get_attribute('name_of_fragment').split('/')[-1] + '\t' + str(self.request.get_attribute('mcdb_id'))
-
-        return summarystring + '\n'
-    """
 
     # Spawns a subprocess to execute the setup script
     # and to produce the config files. If it fails, it
