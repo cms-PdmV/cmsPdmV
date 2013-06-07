@@ -581,39 +581,9 @@ class request(json_base):
         # to be refined using the information of the campaign
         firstSequence = self.get_attribute('sequences')[0]
         firstStep = firstSequence['step'][0]
+
         self.genvalid_driver = None
-        self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
-
-        dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM'%(self.get_attribute('dataset_name'),
-                                                          self.get_attribute('cmssw_release'),
-                                                          self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
-                                                          self.get_attribute('version')
-                                                          )
-        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s-genvalid-v%s__DQM.root'%( self.get_attribute('dataset_name'),
-                                                                                    self.get_attribute('cmssw_release'),
-                                                                                    self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
-                                                                                    self.get_attribute('version')
-                                                                                    )
-
         
-        where ='https://cmsweb.cern.ch/dqm/relval'
-        if l_type.isDev():
-            where ='https://cmsweb-testbed.cern.ch/dqm/dev'
-        where ='https://cmsweb-testbed.cern.ch/dqm/dev'
-        self.harverting_upload = ''        
-        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file ) 
-        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
-        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem \n'
-        self.harverting_upload += 'python visDQMUpload %s %s \n'%( where, dqm_file )
-        
-        ##then the url back to the validation sample in the gui !!!
-        val=self.get_attribute('validation')
-        #val+='%s/start?runnr=1;dataset=%s;sampletype=offline_relval;referenceshow=customise;referenceobj1=refobj;workspace=Everything;size=M;root=Generator;'%(where, dqm_file)
-        #val+='%s/start?runnr=1;dataset=%s;sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=customise;referenceobj1=refobj;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;'%(where, dqm_dataset)
-        ### please do not put dqm gui url inside, but outside in java view ...
-        val+=' %s'%( dqm_dataset ) 
-        self.set_attribute('validation', val)
-
                 
         if firstStep == 'GEN':
 
@@ -641,6 +611,8 @@ class request(json_base):
             valid_sequence = None
 
         if valid_sequence:
+            self.setup_harvesting(directory)
+
             ## until we have full integration in the release
             infile += initCvs()
             cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
@@ -669,6 +641,41 @@ class request(json_base):
             
 
         return infile
+
+    def setup_harvesting(self,directory):
+        self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+
+        dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM'%(self.get_attribute('dataset_name'),
+                                                          self.get_attribute('cmssw_release'),
+                                                          self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
+                                                          self.get_attribute('version')
+                                                          )
+        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s-genvalid-v%s__DQM.root'%( self.get_attribute('dataset_name'),
+                                                                                    self.get_attribute('cmssw_release'),
+                                                                                    self.get_attribute('sequences')[0]['conditions'].replace('::All',''),
+                                                                                    self.get_attribute('version')
+                                                                                    )
+
+        
+        where ='https://cmsweb.cern.ch/dqm/relval'
+        l_type = locator()
+        if l_type.isDev():
+            where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+        where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+        self.harverting_upload = ''        
+        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file ) 
+        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
+        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem \n'
+        self.harverting_upload += 'python visDQMUpload %s %s \n'%( where, dqm_file )
+        
+        ##then the url back to the validation sample in the gui !!!
+        val=self.get_attribute('validation')
+        ### please do not put dqm gui url inside, but outside in java view ...
+        val+=' %s'%( dqm_dataset ) 
+        self.set_attribute('validation', val)
+
+
+
 
     def get_first_output(self):
         eventcontentlist = []
