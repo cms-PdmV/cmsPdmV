@@ -606,11 +606,13 @@ class request(json_base):
         valid_sequence = None
         n_to_valid=1000 #get it differently than that
         val_sentence=self.get_attribute('validation')
-        if val_sentence:
-            val_parameters=map( lambda spl: tuple(spl.split(':',1)), val_sentence.split(','))
-            for (k,a) in val_parameters:
+        if len(val_sentence):
+            val_spec=val_sentence.split(',')
+            for spec in val_spec:
+                spec_s = spec.split(':')
+                k = spec_s[0]
                 if k == 'nEvents':
-                    n_to_valid = int(a)
+                    n_to_valid = int( spec_s[1])
                 
         if firstStep == 'GEN':
 
