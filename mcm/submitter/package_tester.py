@@ -6,6 +6,7 @@ import re
 import logging
 from tools.logger import logger as logfactory, prep2_formatter
 from tools.ssh_executor import ssh_executor
+from tools.locator import locator
 
 class package_tester:
     logger = logfactory('prep2')
@@ -33,141 +34,45 @@ class package_tester:
             return
         
         self.ssh_exec = ssh_executor(directory,self.hname)
-        #s self.ssh_client = None
-        #s self.ssh_server = 'lxplus.cern.ch'#'pdmvserv-test.cern.ch'
-        #s self.ssh_server_port = 22
-        #s self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'#'/afs/cern.ch/user/n/nnazirid/private/credentials'
 
         self.scram_arch = None
-        #s self.__build_ssh_client()
 
     def __build_logger(self):
 
-        # define logger
-        #logger = logging.getLogger('prep2_inject')
 
         # define .log file
         self.__logfile = self.directory + self.request.get_attribute('prepid') + '.log'
 
-            #self.logger.setLevel(1)
-
-            # main stream handler using the stderr
-            #mh = logging.StreamHandler()
-            #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
-
-            # filename handler outputting to log
+        # filename handler outputting to log
         fh = logging.FileHandler(self.__logfile)
         fh.setLevel(logging.DEBUG) # log filename is most verbose
 
-            # format logs
-            #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
-            #mw.setFormatter(formatter)
+        # format logs
         fh.setFormatter(prep2_formatter())
 
-            # add handlers to main logger - good to go
+        # add handlers to main logger - good to go
         self.hname = self.request.get_attribute('prepid')
         self.logger.add_inject_handler(name=self.hname, handler=fh)
-            #self.logger.addHandler(mh)
+        #self.logger.addHandler(mh)
 
-        #self.logger.inject('full debugging information in ' + repr(self.__logfile), handler=self.hname)
 
     
     def __check_directory(self):
         
-        # check if directory is empty
-        if not self.directory:
-            self.directory = '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'#'/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/'
-        
-        if not self.request.get_attribute('prepid') in self.directory:
-            self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
-
         if not self.directory.endswith('/'):
             self.directory+='/'
 
         # check if exists (and force)
         if os.path.exists(self.directory):
             return
-            
-        # recursively create any needed parents and the dir itself
-        os.makedirs(self.directory)
-    """
-    def __build_ssh_client(self):
-        self.ssh_client = paramiko.SSHClient()
-        paramiko.util.log_to_file(self.directory + self.request.get_attribute('prepid')+'_ssh_.log', 10) 
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        #self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/n/nnazirid/', ".ssh", "known_hosts")))
-        
-        us,  pw = self.__get_ssh_credentials()
-        
-        if not us:
-            self.logger.inject('Credentials could not be retrieved. Reason: username was None', level='error', handler=self.hname)
-            raise paramiko.AuthenticationException('Credentials could not be retrieved.')
-        
-        try:
-            self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
-        except paramiko.AuthenticationException as ex:
-            self.logger.error('Could not authenticate to remove server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
-            return
-        except paramiko.BadHostKeyException as ex:
-            self.logger.inject('Host key was invalid. Reason: %s' % (ex), level='error', handler=self.hname)
-            return
-        except SSHException as ex:
-            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
-            return
-        except SocketError  as ex:
-            self.logger.inject('Could not allocate socket for SSH. Reason: %s' % (ex), level='error', handler=self.hname)
-            return
 
-    def __get_ssh_credentials(self):
-        try:
-            f = open(self.ssh_credentials,  'r')
-            data = f.readlines()
-            f.close()
-        except IOError as ex:
-            self.logger.inject('Could not access credential file. IOError: %s' % (ex), level='error', handler=self.hname)
-            return None,  None
-        
-        username,  password = None,  None
-        
-        for line in data:
-            if 'username:' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.inject('Username was None', level='error', handler=self.hname)
-                    raise paramiko.AuthenticationException('Username not found.')
-                username = toks[1].strip()
-            elif 'password' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.inject('Password was None', level='error', handler=self.hname)
-                    raise paramiko.AuthenticationException('Password not found.')
-                password = toks[1].strip()
-        
-        return username,  password
-                
-    """
     def __remote_exec(self,  cmd=''):
         #s giving that away to ssh executor
         return self.ssh_exec.execute(cmd)
-
-        if not cmd:
-            return None,  None,  None
-        try:
-            return self.ssh_client.exec_command(cmd)
-        except SSHException as ex:
-            self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
-            return None,  None,  None
         
     def build_submit_script(self):
         infile = ''
         infile += '#!/bin/bash\n'
-        #infile += 'export SCRAM_ARCH=slc5_amd64_gcc434\n'
-        #infile += 'export myrel=' + self.request.get_attribute('cmssw_release') + '\n'
-        #infile += 'rel=`echo $myrel | sed -e "s/CMSSW_//g" | sed -e "s/_patch.*//g" | awk -F _ \'{print $1$2$3}\'`\n'
-        #infile += 'if [ $rel -gt 505 ]; then\n'
-        #infile += '  export SCRAM_ARCH=slc5_amd64_gcc462\n'
-        #infile += '  echo $SCRAM_ARCH\n'
-        #infile += 'fi\n'
         infile += 'export SCRAM_ARCH=%s\n'%(self.scram_arch)
         infile += 'scram p CMSSW ' + self.request.get_attribute('cmssw_release') + '\n'
         infile += 'cd ' + self.request.get_attribute('cmssw_release') + '\n'
@@ -182,7 +87,9 @@ class package_tester:
             infile += ' || exit $? ;\n'
             self.configurationLogFiles.append(logname)
 
-        
+        if self.request.genvalid_driver:
+            infile += self.request.harverting_upload
+
         try:
             script = open(self.directory+'run_test.sh',  'w')
             script.write(infile)
@@ -308,24 +215,6 @@ class package_tester:
         data = stdout.read()
         if data.strip():
 	    self.logger.inject('Job %s file dump: \n%s' % (extension,data), level='error', handler=self.hname)
-        ##JR
-        #or line by line...
-        ##for line in data.strip().split('\n'):
-        ##    self.logger.inject(line)
-
-#    def get_job_resulta(self):
-#        try:
-#            log = open(self.directory + self.request.get_attribute('prepid') + '.out', 'r')
-#            
-#            for line in log.readlines():
-#                if 'Successfully completed.' in line:
-#                    return True
-#                elif 'Exited with exit code' in line:
-#                    return False
-#            log.close()
-#        except Exception as e:
-#            self.logger.inject('Status error: %s' % (e), level='error', handler=self.hname)
-#            return None
 
     def test(self):
         #if not self.ssh_client:
@@ -340,7 +229,7 @@ class package_tester:
         
         
         while not self.monitor_job_status():
-            time.sleep(10)
+            time.sleep(30)
             
         #wait for afs to sync the .out file
         time.sleep(10)
