@@ -138,7 +138,8 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     */
     $scope.load_dataset_list = function (req_name){
-	getfrom='/stats/admin/stats/'+req_name;
+	//getfrom='/stats/admin/stats/'+req_name;
+	getfrom='/stats/restapi/get_one/'+req_name;
 	$http({method:'GET', url: getfrom}).success(function(data,status){
 		$scope.stats_cache [req_name] = data;
 	    }).error(function(status){
@@ -585,6 +586,19 @@ function resultsCtrl($scope, $http, $location, $window){
   //     console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
   //   });
   // },true);
+$scope.linkify = function(inputText) {
+    var replaceText, replacePattern1, replacePattern2, replacePattern3;
+
+    //URLs starting with http://, https://, or ftp://
+    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank"><i class="icon-shopping-cart"></i></a>');
+
+    //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
+    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank"><i class="icon-shopping-cart"></i></a>');
+    
+    return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
+}
 
 };
 
