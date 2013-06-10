@@ -62,6 +62,24 @@ function resultsCtrl($scope, $http, $location, $window){
           alert('Error no.' + status + '. Could not delete object.');
       });
     };
+
+    $scope.inspect = function(value){
+      $http({method:'GET', url:'restapi/chained_campaigns/inspect/'+value}).success(function(data,status){
+        if (data["results"]){
+          $scope.update["success"] = data.results;
+          $scope.update["fail"] = false;
+          $scope.update["status_code"] = status;
+          $scope.getData();
+        }else{
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+        }
+        }).error(function(status){
+          alert('Error no.' + status + '. Could not delete object.');
+      });
+    };
+
     $scope.sort = {
       column: 'prepid',
       descending: false
