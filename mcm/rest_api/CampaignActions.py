@@ -276,6 +276,7 @@ class CampaignsRESTResource(RESTResource):
         res = []
         for c in clist:
 
+            ## this query needs to be modified if we want to also inspect the request for submit !
             rlist = self.rdb.queries( ["member_of_campaign==%s"%( c ),
                                        "status==submitted"] )
             for r in rlist:
