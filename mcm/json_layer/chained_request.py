@@ -16,12 +16,13 @@ class chained_request(json_base):
             return 'Error: Campaign', self.c,  'already represented in the chain.'
     
     class ChainedRequestCannotFlowException(Exception):
-        def __init__(self,  crname):
+        def __init__(self,  crname, message='cannot flow any further'):
             self.name = str(crname)
-            chained_request.logger.error('Chained request %s cannot flow any further.' % (self.name))
+            self.message = message
+            chained_request.logger.error('Chained request %s %s.' % (self.name, self.message))
 
         def __str__(self):
-            return 'Error: Chained request '+self.name+' cannot flow any further.'
+            return 'Chained request %s %s.' % (self.name, self.message)
     
     class NotApprovedException(Exception):
         def __init__(self,  oname,  alevel, allowed):
@@ -46,10 +47,10 @@ class chained_request(json_base):
     class CampaignStoppedException(NotApprovedException):
         def __init__(self,  oname):
             self.name = str(oname)
-            chained_request.logger.error('Campaign %s has been stopped' % (self.name))
+            chained_request.logger.error('Campaign %s is stopped' % (self.name))
 
         def __str__(self):
-            return 'Error: '+self.name+' has been stopped.'
+            return 'Error: '+self.name+' is stopped.'
     
     def __init__(self, json_input={}):
 
@@ -142,6 +143,12 @@ class chained_request(json_base):
 
         if req['status'] not in allowed_request_statuses:
             raise self.NotInProperStateException(req['_id'], req['status'], allowed_request_statuses)
+
+        original_action = adb.get( self.get_attribute('chain')[0] )
+        my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
+        if my_action_item['flag'] == False:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'has no valid action')
+        
 
         # find the flow responsible for this step
         #tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
@@ -273,7 +280,6 @@ class chained_request(json_base):
         ## check whether we went from a possible root to non-root request
         if nc['root'] ==1 and pc['root'] !=1:
             #in this case, if there are staged number requirements, let's use it
-            original_action = adb.get( self.get_attribute('chain')[0] )
             if self.get_attribute('member_of_campaign') in original_action['chains']:
                 my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
                 if 'staged' in my_action_item:
