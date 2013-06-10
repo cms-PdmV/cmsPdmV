@@ -393,6 +393,10 @@ class GetFragmentForRequest(RESTResource):
       
       fragmentText=self.request.get_attribute('fragment')
       if view:
+          fragmentHTML="<pre>"
+          fragmentHTML+=fragmentText
+          fragmentHTML+="</pre>"
+          return fragmentHTML
           fragmentHTML=""
           for line in fragmentText.split('\n'):
               blanks=""
