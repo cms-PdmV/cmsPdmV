@@ -720,7 +720,7 @@ class package_builder:
         except Exception as ex:
             self.logger.inject('Could not list files in directory "%s". Reason: %s' % (tempy, ex), level='warning')
 
-    def build_package(self):
+    def build_package(self, how_far=None):
 	# log new injection
 	#self.logger.inject('## Logger instance retrieved', level='debug')
 
@@ -760,6 +760,10 @@ class package_builder:
         if not flag:
             self.close()
             return False
+
+        if how_far and how_far=='test':
+            self.close()
+            return True
 
         # clean directory
         #self.__clean_directory()    
