@@ -513,17 +513,22 @@ class package_builder:
             command += ' --number-events %s' %(self.request.get_attribute('total_events'))
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
 
-            if self.request.get_attribute('mcdb_id') == 0:
-                ### this file does not exists at this point ...
-                configfile = open(self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('name_of_fragment'), 'r')
-                for line in configfile:
-                    if 'nEvents' in line:
-                        line.rstrip('\n')
-                        numbers = re.findall(r'[0-9]+', line)
-                        self.numberOfEventsPerJob = numbers[len(numbers)-1]
-                        if not self.numberOfEventsPerJob:
-                            raise ValueError('Number of events per job could not be retrieved from: %s' % (self.directory + '../'+self.request.get_attribute('cmssw_release')+'/src/'+self.request.get_attribute('name_of_fragment')))
-                print self.numberOfEventsPerJob
+            def get_nEvents( source ):
+                 for line in source.split('\n'):
+                      if 'nEvents' in line: 
+                          numbers = re.findall(r'[0-9]+', line)                          
+                          return  numbers[len(numbers)-1]
+                 return None
+            if self.request.get_attribute('mcdb_id') <= 0:
+                if  self.request.get_attribute('fragment'):
+                    self.numberOfEventsPerJob = get_nEvents( self.request.get_attribute('fragment') )
+                else:
+                    self.numberOfEventsPerJob = get_nEvents( os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.request.get_attribute('name_of_fragment'),self.request.get_attribute('cvs_tag') )).read() )
+
+                if not self.numberOfEventsPerJob:
+                    raise ValueError('Number of events per job could not be retrieved')
+
+                self.logger.inject('Number of evetns per job : %s'%(self.numberOfEventsPerJob),  level='debug', handler=self.hname)
                 command += ' --events-per-job %s' % (self.numberOfEventsPerJob)
             else:
                 command += ' --lhe '
