@@ -193,30 +193,17 @@ class FlowToNextStep(RESTResource):
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
     
         # if the chained_request can flow, do it
-        inputds = None
-        inblack = None
-        inwhite = None
-        try:
-            if 'input_filename' in vdata:
-                inputds = vdata['input_filename']
-            if 'block_black_list' in vdata:
-                inblack = vdata['block_black_list']
-            if 'block_white_list' in vdata:
-                inwhite = vdata['block_white_list']
+        inputds = ''
+        inblack = []
+        inwhite = []
+        if 'input_filename' in vdata:
+            inputds = vdata['input_filename']
+        if 'block_black_list' in vdata:
+            inblack = vdata['block_black_list']
+        if 'block_white_list' in vdata:
+            inwhite = vdata['block_white_list']
             
-            if creq.flow(inputds,  inblack,  inwhite):
-                self.db.update(creq.json())
-
-                return dumps({"results":True})
-
-            return dumps({"results":False})
-
-        except chained_request.NotApprovedException as ex:
-            return dumps({"results":str(ex)})
-        except chained_request.NotInProperStateException as ex:
-            return dumps({"results":str(ex)})
-        except chained_request.ChainedRequestCannotFlowException as ex:
-            return dumps({"results":str(ex)})
+        return dumps(creq.flow_trial( inputds,  inblack,  inwhite))
 
     def flow(self,  chainid):
         try:
@@ -228,23 +215,7 @@ class FlowToNextStep(RESTResource):
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
         
         # if the chained_request can flow, do it
-        try:
-            if creq.flow():
-                #self.logger.log('After flow method and before save the chain is: %s'%(creq.get_attribute('chain')))
-                #self.logger.log('After flow method and before save the chain is: %s'%(creq.json()['chain']))
-                #self.db.save(creq.json())
-                self.db.update(creq.json()) #does not seem to save properly the changes...
-                #self.logger.log('After saving the chain is: %s'%(creq.get_attribute('chain')))
-                #creq_aftershave = chained_request(json_input=self.db.get(chainid))
-                #self.logger.log('After saving the chain is: %s'%(creq_aftershave.get_attribute('chain')))
-                return {"prepid":chainid,"results":True}
-            return {"prepid":chainid,"results":False, "message":"Failed to flow."}
-        except chained_request.NotApprovedException as ex:
-            return {"prepid":chainid,"results":False, "message":str(ex)}
-        except chained_request.NotInProperStateException as ex:
-            return {"prepid":chainid,"results":False, "message":str(ex)}
-        except chained_request.ChainedRequestCannotFlowException as ex:
-            return {"prepid":chainid,"results":False, "message":str(ex)}
+        return creq.flow_trial()
 
 class ApproveRequest(RESTResource):
     def __init__(self):
@@ -300,7 +271,7 @@ class InspectChain(RESTResource):
         for cr in crlist:
             if self.crdb.document_exists( cr):
                 mcm_cr = chained_request( self.crdb.get( cr) )
-                res.append( {"prepid": cr, "results":False, "message":" Not implemented yet"})
+                res.append( mcm_cr.inspect() )
             else:
                 res.append( {"prepid": cr, "results":False, 'message' : '%s does not exists'%(cr)})
 
