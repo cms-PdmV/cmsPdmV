@@ -9,11 +9,12 @@ username=pdmvserv
 #fi
 
 # get kerberos credentials
-klist 
-if [ $? -eq 1 ]; then
-    kinit $username
-    aklog
-fi
+#klist 
+#if [ $? -eq 1 ]; then
+#    kinit $username
+#    aklog
+#fi
+source kinit.sh &
 
 kill -9 `ps -e -f  | grep main.py | grep python | awk '{print $2}'`
 
