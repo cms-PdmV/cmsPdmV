@@ -1,4 +1,4 @@
-function resultsCtrl($scope, $http, $location, $window){
+function resultsCtrl($scope, $http, $location, $window, chttp){
     $scope.filt = {}; //define an empty filter
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
@@ -55,7 +55,9 @@ function resultsCtrl($scope, $http, $location, $window){
         if (($scope.selectedOption['starts'] != "------")){
           query+="&root="+$scope.selectedOption['starts'];
         };
-        var promise = $http.get('search/?db_name=chained_campaigns'+query);
+
+        var promise = chttp.get('search/?db_name=chained_campaigns'+query);
+
           promise.then(function(data){
            $scope.chained_campaigns = data.data.results;
     
@@ -358,7 +360,53 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.toggleMultipleInput();
     }
   };
-}
+  $scope.wholeColumnSelection = function(columnId){
+    _.each($scope.result, function(v){
+      //console.log(v['chains'][columnId.db_name]);
+      if(v['chains'][columnId.db_name] !== undefined){
+        var exists = false;
+        _.each($scope.selected_prepids, function(id){
+          if (id['prepid'] == v['prepid'] && id['column'] == columnId['db_name']){ //if exists in array then lets remove
+            $scope.selected_prepids.splice($scope.selected_prepids.indexOf(id),1);
+            exists = true;
+          }
+        });
+        if (!exists){
+          var selected ={};
+          selected['prepid'] = v['prepid'];
+          selected['column'] = columnId.db_name;
+          $scope.selected_prepids.push(selected);
+        }
+      }
+    });
+  };
+};
+
+testApp.service("chttp", function ($http, $window, $q) {
+  var obj = {};
+
+  obj.get = function (query) {
+    var code = $window.btoa(query);
+    var ret = $window.localStorage[code];
+
+    var deferred = $q.defer();
+    
+    if (ret) {
+      deferred.resolve(JSON.parse(ret));
+    } else {
+      var http_promise = $http.get(query);
+      http_promise.then(function (body) {
+        deferred.resolve(body);
+        $window.localStorage.setItem(code, JSON.stringify(body));
+      });
+    }
+    
+    return deferred.promise;
+  };
+
+  return obj;
+});
+
 // var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customPrepId", function ($rootScope, $http) {
     return {
@@ -456,7 +504,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '    <span class="add-on">%</span>'+
         '  </span>'+
         '</div>'+
-        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1 && 1<2" rel="tooltip" title="Add to multiple list" ng-hide="role(3);"/>'+
+        '      <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="selected_prepids.indexOf(prepid) != -1" rel="tooltip" title="Add to multiple list" ng-hide="role(3);"/>'+
         '    <div ng-show="displayBox">'+
         '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
         '        <option ng-repeat="key in [0,1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
