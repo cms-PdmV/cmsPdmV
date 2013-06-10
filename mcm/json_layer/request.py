@@ -2,6 +2,7 @@
 
 import copy
 import os 
+import re
 
 from couchdb_layer.prep_database import database
 
@@ -179,6 +180,12 @@ class request(json_base):
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
 
+        if self.get_attribute('mcdb_id') <= 0 and self.get_wmagent_type()=='LHEStepZero':
+            nevents_per_job = self.numberOfEventsPerJob()
+            if not nevents_per_job:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job cannot be retrieved for lhe production')
+            elif nevents_per_job == self.get_attribute('total_events'):
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
 
         rdb=database('requests')
         similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
@@ -855,3 +862,18 @@ class request(json_base):
             not_good.update( {'message' : " there are no requests in request manager. Please invsetigate!"})
             return not_good
 
+
+    def numberOfEventsPerJob(self):
+        def get_nEvents( source ):
+            for line in source.split('\n'):
+                if 'nEvents' in line: 
+                    numbers = re.findall(r'[0-9]+', line)                          
+                    return  int(numbers[len(numbers)-1])
+            return None
+        numberOfEventsPerJob = None
+        if  self.get_attribute('fragment'):
+            numberOfEventsPerJob = get_nEvents( self.get_attribute('fragment') )
+        elif self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
+            numberOfEventsPerJob = get_nEvents( os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag') )).read() )
+        
+        return numberOfEventsPerJob
