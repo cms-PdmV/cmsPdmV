@@ -61,7 +61,7 @@
               <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
             </div>
             <div ng-switch-default>
-              {{column.text}}
+              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
                 <i class="icon-resize-vertical"></i>
@@ -156,8 +156,8 @@
               </div>
               <div ng-switch-when="PrepId">
                 <a ng-href='requests?prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-		<a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_self"><i class="icon-user"></i></a>
-		<a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
+                <a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_self"><i class="icon-user"></i></a>
+                <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
               </div>
 	            <div ng-switch-when="Pwg"> 
 		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
@@ -220,6 +220,9 @@
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[value.db_name]}}' rel="tooltip" title="View request for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign {{data[value.db_name]}}" target="_self"><i class="icon-book"></i></a>
 		
+              </div>
+              <div ng-switch-when="Validation">
+                <div ng-bind-html-unsafe="linkify(data[value.db_name])"></div>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
