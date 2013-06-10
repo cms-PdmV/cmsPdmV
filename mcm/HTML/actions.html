@@ -72,9 +72,9 @@
               </span>
               <span ng-switch-default>
                 <a ng-href='chained_campaigns?prepid={{column.db_name}}' rel="tooltip" title="Show {{column.db_name}}" target="_blank">{{column.text}}<i class="icon-align-right"></i></a>
-		<a ng-href='chained_requests?member_of_campaign={{column.db_name}}' rel="tooltip" title="Show chained requests in chained campaign {{column.db_name}}" target="_blank">
-		  <i class="icon-indent-left"></i>
-		</a>
+                <a ng-href='chained_requests?member_of_campaign={{column.db_name}}' rel="tooltip" title="Show chained requests in chained campaign {{column.db_name}}" target="_blank">
+                  <i class="icon-indent-left"></i>
+                </a>
                 <a rel="tooltip" title="Generate chained requests for {{column.db_name}}" ng-click="generateRequests(column.db_name)" ng-hide="role(3);">
                   <i class="icon-play"></i>
                 </a>
@@ -119,9 +119,16 @@
               </div>
             </div>
           </td>
+          <tr>
+            <td ng-repeat="value in actions_defaults" ng-show="value.select">
+              <input type="checkbox" ng-disabled="role(3);" rel="tooltip" title="Select all column for multiple action" ng-hide="value.text == 'Actions'" ng-click="wholeColumnSelection(value)" ng-checked="false"/>
+            </td>
+          </tr>
         </tr>
+        
       </tbody>
     </table>
+    <!-- {{selected_prepids}} -->
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
         <span ng-hide="role(1);">
@@ -134,6 +141,7 @@
           </a>
           <img ng-show="updatingMultipleActions" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
           <div ng-show="showMultipleInput">
+            <input type="checkbox" ng-model="multipleSelection.flag" ng-disabled="role(3);" rel="tooltip" title="Set the action for multiple selections"/>'+
             <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="multipleSelection.block_number">
               <option ng-repeat="key in [0,1,2,3,4,5,6]">{{key}}</option>
             </select>
@@ -169,7 +177,6 @@
         </div>
       </div>
     </div>
-<!--    {{selectedOption}} -->
     </span>
   </body>
 </html>
