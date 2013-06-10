@@ -295,3 +295,59 @@ class Stop(RESTResource):
         cc.stop()
         self.ccdb.update(cc.json())
 
+class InspectChainedCampaignsRest(RESTResource):
+    def __init__(self):
+        self.ccdb = database('chained_campaigns') 
+        self.crdb = database('chained_requests')
+        self.access_limit = 3
+
+    def listAll(self):
+        all_cc = self.ccdb.raw_query("prepid")
+        prepids_list = map(lambda x:x['id'], all_cc)
+        return prepids_list
+
+    def multiple_inspect(self, ccids):
+        res=[]
+        for ccid in ccids.split(','):
+            crlist = self.crdb.queries( ["member_of_campaign==%s"% ccid,
+                                         "status==done"] )
+            for cr in crlist:
+                mcm_cr = chained_request( cr )
+                if mcm_cr:
+                    res.append( mcm_cr.inspect() )
+                else:
+                    res.append( {"prepid":cr, "results":False, 'message' : '%s does not exists'%(r)})
+
+        if len(res)>1:
+            return dumps(res)
+        elif len(res):
+            return dumps(res[0])
+        else:
+            return dumps([])
+
+class InspectChainedRequests(InspectChainedCampaignsRest): 
+    def __init__(self):
+        InspectChainedCampaignsRest.__init__(self)
+
+    def GET(self, *args):
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":'Error: No arguments were given'})
+        return self.multiple_inspect( args[0] )
+
+class InspectChainedCampaigns(InspectChainedCampaignsRest):
+    def __init__(self):
+        InspectChainedCampaignsRest.__init__(self)
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        if args[0] != 'all':
+            return dumps({"results":'Error: Incorrect argument provided'})
+
+        return self.multiple_inspect( ','.join(self.listAll()) )
+
+    
+
+
+        
