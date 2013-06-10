@@ -830,11 +830,25 @@ class request(json_base):
     def inspect(self):
         ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
         not_good = {"prepid": self.get_attribute('prepid'), "results":False}
-        # only if you are in submitted
-        if self.get_attribute('status') != 'submitted':
-            not_good.update( {'message' : 'cannot inspect a request in %s status'%(self.get_attribute('status'))} )
-            return not_good
 
+        # only if you are in submitted status
+        ## later, we could inspect on "approved" and trigger injection
+        if self.get_attribute('status') == 'submitted':
+            return self.inspect_submitted()
+        elif self.get_attribute('status') == 'approved':
+            return self.inspect_approved()
+        
+        not_good.update( {'message' : 'cannot inspect a request in %s status'%(self.get_attribute('status'))} )
+        return not_good
+
+    def inspect_approved(self):
+        ## try to inject the request
+        not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
+        not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status'%(self.get_attribute('status'))} ) 
+        return not_good 
+
+    def inspect_submitted(self):
+        not_good = {"prepid": self.get_attribute('prepid'), "results":False}
         ## get fresh up to date stats
         self.get_stats()
         mcm_rr = self.get_attribute('reqmgr_name')
@@ -870,8 +884,11 @@ class request(json_base):
         def get_nEvents( source ):
             for line in source.split('\n'):
                 if 'nEvents' in line: 
-                    numbers = re.findall(r'[0-9]+', line)                          
-                    return  int(numbers[len(numbers)-1])
+                    try:
+                        numbers = re.findall(r'[0-9]+', line)                          
+                        return  int(numbers[len(numbers)-1])
+                    except:
+                        return None
             return None
         numberOfEventsPerJob = None
         if  self.get_attribute('fragment'):
