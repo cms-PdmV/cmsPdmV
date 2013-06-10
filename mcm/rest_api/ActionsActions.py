@@ -122,6 +122,13 @@ class UpdateMultipleActions(RESTResource):
                     single_action["chains"][elem["column"]]["threshold"] = data["values"]["threshold"]
             elif "threshold" in single_action["chains"][elem["column"]]: #if threshold not in update then delete from chain
                 del single_action["chains"][elem["column"]]["threshold"]
+            if "flag" in data["values"]:
+                if data["values"]["flag"] == None:
+                    del single_action["chains"][elem["column"]]["flag"]
+                else:
+                    single_action["chains"][elem["column"]]["threshold"] = data["values"]["flag"]
+            elif "flag" in single_action["chains"][elem["column"]]: #if threshold not in update then delete from chain
+                del single_action["chains"][elem["column"]]["flag"]
             self.logger.error(single_action)    
             output += [self.single_updater.import_request(dumps(single_action))]
         return dumps({"results": output})
