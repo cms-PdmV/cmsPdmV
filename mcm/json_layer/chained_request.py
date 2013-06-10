@@ -80,6 +80,22 @@ class chained_request(json_base):
         self.update(json_input)
         self.validate()
 
+
+    def flow_trial( self, input_dataset='',  block_black_list=[],  block_white_list=[]):
+        chainid = self.get_attribute('prepid')
+        try:
+            if self.flow():
+                db = database('chained_requests')
+                db.update(self.json()) 
+                return {"prepid":chainid,"results":True}
+            return {"prepid":chainid,"results":False, "message":"Failed to flow."}
+        except Exception as ex:
+            return {"prepid":chainid,"results":False, "message":str(ex)}
+        #except chained_request.NotInProperStateException as ex:
+        #    return {"prepid":chainid,"results":False, "message":str(ex)}
+        #except chained_request.ChainedRequestCannotFlowException as ex:
+        #    return {"prepid":chainid,"results":False, "message":str(ex)}
+
     def flow(self,  input_dataset='',  block_black_list=[],  block_white_list=[]):
         return self.flow_to_next_step(input_dataset,  block_black_list,  block_white_list)
         
@@ -494,4 +510,19 @@ class chained_request(json_base):
                 #set to the maximum priority
                 req.set_attribute('priority', max(req.get_attribute('priority'),  priority().priority(level)))
                 rdb.update(req.json())
+        
+    def inspect(self):
+        not_good = {"prepid": self.get_attribute('prepid'), "results":False}
+        
+        if self.get_attribute('last_status') == 'done':
+            return self.inspect_done()
+
+        not_good.update( {'message' : 'Nothing to inspect on chained request in %s last status'%( self.get_attribute('last_status')) })
+        return not_good
+
+    def inspect_done(self):
+        return self.flow_trial()
+        
+
+        
         
