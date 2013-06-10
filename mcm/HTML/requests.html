@@ -129,7 +129,7 @@
                 <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of this request">
                   <i class="icon-screenshot"></i>
                 </a>
-                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
+                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
               </div>
@@ -304,7 +304,7 @@
     <!--     END OF MODAL  -->
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
-        <span ng-hide="role(1);">
+        <span>
         Multiple selection buttons
         <a ng-click="previous_approval()" rel="tooltip" ng-hide="role(3);" title="Reset selected requests">
          <i class="icon-repeat"></i>
