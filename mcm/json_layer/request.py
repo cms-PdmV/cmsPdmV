@@ -716,7 +716,10 @@ class request(json_base):
     def get_wmagent_type(self):
         if self.get_attribute('type') == 'Prod':
             if self.get_attribute('mcdb_id') == -1:
-                return 'MonteCarlo'
+                if self.request.get_attribute('input_filename'):
+                    return 'MonteCarloFromGEN'
+                else:
+                    return 'MonteCarlo'
             else:
                 return 'MonteCarloFromGEN'
         elif  self.get_attribute('type') in ['LHE','LHEStepZero']:
