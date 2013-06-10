@@ -13,7 +13,13 @@ class RESTResource(object):
 	#logger = cherrypy.log
 	logger = logfactory('rest')
 	access_limit = None
-		
+	
+	limit_per_method={
+		'GET' : 0,
+		'PUT' : 1,
+		'POST' : 1,
+		'DELETE' :3
+		}
 	def __init__(self, content=''):
 		self.content = content
 			
@@ -28,14 +34,18 @@ class RESTResource(object):
 		if self.access_limit:
 			self.logger.log('Setting access limit to %s'%self.access_limit)
 			self.authenticator.set_limit(self.access_limit)
-		elif cherrypy.request.method == 'GET':
-			self.authenticator.set_limit(0)
-		elif cherrypy.request.method == 'PUT':
-			self.authenticator.set_limit(1)
-		elif cherrypy.request.method == 'POST':
-			self.authenticator.set_limit(1)
-		elif cherrypy.request.method == 'DELETE':
-			self.authenticator.set_limit(3)
+		elif cherrypy.request.method in self.limit_per_method:
+			self.authenticator.set_limit( self.limit_per_method[ cherrypy.request.method ])
+		#elif cherrypy.request.method == 'GET':
+		#	self.authenticator.set_limit(0)
+		#elif cherrypy.request.method == 'PUT':
+		#	self.authenticator.set_limit(1)
+		#elif cherrypy.request.method == 'POST':
+		#	self.authenticator.set_limit(1)
+		#elif cherrypy.request.method == 'DELETE':
+		#	self.authenticator.set_limit(3)
+		else:
+			raise cherrypy.HTTPError(403, 'You cannot access this page with method %s'%( cherrypy.request.method ))
 #                print '######'
 #                print 
 #                
@@ -83,25 +93,55 @@ class RESTResourceIndex(RESTResource):
 		if not self.data:
 			self.data = {'PUT':[('import_request','Request JSON', 'Import a request to the database')], 
 				     'GET':[('get_request', 'prepid', 'Retrieve a request from the database'), ('request_prepid', 'Pwg, Campaign Name', 'Generates the next available PREP_ID from the database'), ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')], 
-				     'DELETE':[('delete_request', 'prepid', 'Delete a request from the database and that\'s it ')]}
+				     'DELETE':[('delete_request', 'prepid', 'Delete a request from the d<th>GET Doc string</th>atabase and that\'s it ')]}
 	
 	def GET(self):
 		return self.index()
 
 	def index(self):
 		self.res = '<h1>REST API for McM<h2>'
-		self.res += "<ul>"
-		for method in self.data:
-			self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
-			self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
-			for r in self.data[method]:
-				self.res += "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>"
-			self.res += "</table></li>"
-		self.res += "</ul>"
-		#self.res += ", ".join(self.__dict__.keys())
-		#for key in self.__dict__.keys():
-	        #			self.res += " %s, "% (key)
+		methods = ['GET','PUT','POST','DELETE']
+		self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Information</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
+		#for method in self.data:
+		#	self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
+		#	self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
+		#	for r in self.data[method]:
+		#		self.res += "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>"
+		#	self.res += "</table></li>"
+		#self.res += "</ul>"
+		#self.res += "<br>".join(self.__dict__.keys())
 
+		#self.res += "<ul>"
+		for key in self.__dict__.keys():
+                     o = getattr(self, key)
+			
+			#for m in methods:
+			#	if hasattr(o,m):
+			#		self.res +=' '+m
+                     self.res += "<tr>"
+                     if hasattr(o,'access_limit'):
+                         self.logger.log('Setting access limit to %s'%dir(o.__class__.__dict__))
+                         self.res += "<td><b>%s</b></td>" %(key)
+                         self.res +=' <td>%s</td><td> %s</td>'%( o.__class__.__name__,o.__class__.__doc__)
+			 limit = None
+			 if o.access_limit:
+				 limit = o.access_limit
+			 for m in methods:
+				 self.res +='<td>%s</td>'%(getattr(o,m).__doc__)
+				 if limit:
+					 self.res +='<td align=center>+%s</td>'%(limit)
+				 else:
+					 self.res +='<td align=center>%s</td>'%(self.limit_per_method [m])
+			 #self.res += "<td>"
+                         #if o.access_limit:
+			#	 self.res +=' + %s'%( o.access_limit )
+			 #else:
+				 #self.res +=' %s'%( o.authenticator.get_limit())
+			#	 self.res +=' %s '% ( self.limit_per_method [m])
+                         #self.res += "</td></tr>"
+			 self.res += "</tr>"
+
+		self.res += "</tbody></table>"
 		return self.res
 					
 	
