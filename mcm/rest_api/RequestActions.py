@@ -137,17 +137,27 @@ class RequestRESTResource(RESTResource):
 
     
 class CloneRequest(RequestRESTResource):
+    """
+    A SUPER DUPPER CLASS
+    """
+
     def __init__(self):
         RequestRESTResource.__init__(self)
         self.access_limit = 1 ## maybe that is wrong
 
     def GET(self, *args):
+        """
+        Make a clone with no special requirement
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given.'})
         return self.clone_request(args[0])
 
     def PUT(self):
+        """
+        Make a clone with specific requirements
+        """
         data=loads(cherrypy.request.body.read().strip())
         pid=data['prepid']
         return self.clone_request(pid,data)
@@ -163,11 +173,13 @@ class CloneRequest(RequestRESTResource):
             del new_json['prepid']
             del new_json['approval']
             del new_json['status']
-            new_json['history']=[]
-            new_json['config_id']=[]
-            new_json['member_of_chain']=[]
+            del new_json['history']
+            del new_json['config_id']
+            del new_json['member_of_chain']
             new_json['version']=0
-            new_json['generator_parameters']=[]
+            del new_json['generator_parameters']
+            del new_json['reqmgr_name']
+            
 
             return self.import_request(new_json)
             #new_pid = self.import_request(new_json)['results']
@@ -184,6 +196,9 @@ class ImportRequest(RequestRESTResource):
         self.access_limit = 1 ## maybe that is wrong
         
     def PUT(self):
+        """
+        Saving a new request from a given dictionnary
+        """
         return self.import_request(loads(cherrypy.request.body.read().strip()))
 
         
@@ -192,6 +207,9 @@ class UpdateRequest(RequestRESTResource):
         RequestRESTResource.__init__(self)
         
     def PUT(self):
+        """
+        Updating an existing request with an updated dictionnary
+        """
         try:
             res=self.update_request(cherrypy.request.body.read().strip())
             return res
@@ -255,6 +273,9 @@ class MigratePage(RequestRESTResource):
         RequestRESTResource.__init__(self)       
         
     def GET(self, *args):
+        """
+        Provides a page to migrate requests from prep
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False,"message":'Error: No arguments were given.'})
@@ -268,6 +289,9 @@ class MigrateRequest(RequestRESTResource):
         RequestRESTResource.__init__(self)
 
     def GET(self, *args):
+        """
+        Imports a request from prep (id provided)
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False,"message":'Error: No arguments were given.'})
@@ -355,13 +379,16 @@ class GetCmsDriverForRequest(RESTResource):
         self.request = None
 
     def GET(self, *args):
-      if not args:
-        self.logger.error('No arguments were given')
-        return dumps({"results":'Error: No arguments were given.'})
-      cast=0
-      if len(args)>1:
-          cast=int(args[1])
-      return self.get_cmsDriver(self.db.get(prepid=args[0]),cast)
+        """
+        Retrieve the cmsDriver commands for a given request
+        """
+        if not args:
+            self.logger.error('No arguments were given')
+            return dumps({"results":'Error: No arguments were given.'})
+        cast=0
+        if len(args)>1:
+            cast=int(args[1])
+        return self.get_cmsDriver(self.db.get(prepid=args[0]),cast)
 
     def get_cmsDriver(self, data, cast):
       try:
@@ -377,6 +404,9 @@ class GetFragmentForRequest(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+      """
+      Retrieve the fragment as stored for a given request
+      """
       if not args:
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
@@ -415,6 +445,9 @@ class GetSetupForRequest(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+      """
+      Retrieve the script necessary to setup and test a given request
+      """
       if not args:
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
@@ -441,6 +474,9 @@ class DeleteRequest(RESTResource):
         self.crdb = database('chained_requests')
 
     def DELETE(self, *args):
+        """
+        Simply delete a request
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False})
@@ -470,6 +506,9 @@ class GetRequest(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        """
+        Retreive the dictionnary for a given request
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":{}})
@@ -483,6 +522,9 @@ class ApproveRequest(RESTResource):
         self.db = database('requests')
     
     def GET(self,  *args):
+        """
+        Approve to the next step, or specified index the given request or coma separated list of requests
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if len(args) == 1:
@@ -676,12 +718,13 @@ class InjectRequest(RESTResource):
         self.access_limit = 3
 
     class INJECTOR(Thread):
-        def __init__(self,pid,log):
+        def __init__(self,pid,log,how_far=None):
             Thread.__init__(self)
             self.logger = log
             self.db = database('requests')
             self.act_on_pid=[]
             self.res=[]
+            self.how_far = how_far
             if not self.db.document_exists(pid):
                 self.res.append({"prepid": pid, "results": False,"message":"The request %s does not exist"%(pid)})
                 return
@@ -728,8 +771,8 @@ class InjectRequest(RESTResource):
                     continue
 
                 self.res.append({"prepid": pid,"results": res_sub})
-                # update history
-                req.update_history({'action':'inject'})
+                # update history : was done already inside build_package
+                ##req.update_history({'action':'inject'})
                 
         def status(self):
             return self.res
