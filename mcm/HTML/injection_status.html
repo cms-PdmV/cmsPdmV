@@ -22,7 +22,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="elem in data" style="white-space: nowrap;">
-          <td><a ng-ref='requests?query="prepid%3D%3D{{elem['prepid']}}"' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}
+          <td><a ng-href='requests?prepid={{elem["prepid"]}}' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}
 	  </a></td>
           <td>
 	    <span ng-switch="elem['status']">
