@@ -282,3 +282,29 @@ class ApproveRequest(RESTResource):
             return {"prepid":rid, "results":True}
         else:
             return {"prepid":rid, "results":False , 'message': 'unable to save the updated chained request'}
+
+
+class InspectChain(RESTResource):
+    def __init__(self):
+        self.crdb = database('chained_requests')
+        self.rdb = database('requests')
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results":'Error: No arguments were given'})
+        return self.multiple_inspect(args[0])
+
+    def multiple_inspect(self, crid):
+        crlist=crid.rsplit(',')
+        res = []
+        for cr in crlist:
+            if self.crdb.document_exists( cr):
+                mcm_cr = chained_request( self.crdb.get( cr) )
+                res.append( {"prepid": cr, "results":False, "message":" Not implemented yet"})
+            else:
+                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exists'%(cr)})
+
+        if len(res)>1:
+            return dumps(res)
+        else:
+            return dumps(res[0])
