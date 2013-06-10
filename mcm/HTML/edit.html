@@ -165,10 +165,11 @@
                     <div ng-switch-when="Fragment">
                       <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
                         <span ng-switch-when="true">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ng-model="result[column.db_name]"></textarea>
+
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
                         </span>
                         <span ng-switch-when="false">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ng-model="result[column.db_name]"></textarea>
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
                         </span>
                       </span>
                     </div>
