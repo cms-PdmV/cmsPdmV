@@ -329,7 +329,8 @@ class package_builder:
         # initialize the config files
         self.__init_configuration()
 
-    def __validate_configuration(self,  cmsDriver):
+        """
+        def __validate_configuration(self,  cmsDriver):
 
         # check if Prod
         if self.request.get_attribute('type') == 'Prod':
@@ -363,6 +364,7 @@ class package_builder:
                 raise self.NotInitializedException('Input Dataset name is not defined.')
             if 'conditions' not in cmsDriver:
                 raise self.NotInitializedException('Conditions are not defined.')
+        """
 
     def __build_setup_script(self):
         # commands required for setting up the cms environ
