@@ -171,6 +171,11 @@ class request(json_base):
         if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'))):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
+        if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
+            for line in os.popen('curl -s  http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag'))).read.split('\n'):
+                if 'Exception Has Occurred' in line:
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exists')
+
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
 
@@ -252,12 +257,24 @@ class request(json_base):
         if not len(self.get_attribute('member_of_chain')):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
 
+        at_least_an_action=False
+        crdb = database('chained_requests')
+        adb = database('actions')
+        for in_chain_id in self.get_attribute('member_of_chain'):
+            in_chain = crdb.get(in_chain_id)
+            original_action = adb.get( in_chain['chain'][0] )
+            my_action_item = original_action['chains'][in_chain['member_of_campaign']]
+            if my_action_item['flag'] == True:
+                at_least_an_action=True
+                break
+        if not at_least_an_action:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
+
         ## the request manager could pull out those requests approved to be submitted
         ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
         # remains to the production manager to announce the batch the requests are part of
         #### not settting any status forward
         
-
     def get_fragment(self):
         #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
         fragment=self.get_attribute('name_of_fragment')
@@ -609,7 +626,10 @@ class request(json_base):
         ##############
         if self.little_release() < '530' or (not l_type.isDev()):
             valid_sequence = None
-
+        
+        ## or just switched off for all
+        valid_sequence = None
+        
         if valid_sequence:
             self.setup_harvesting(directory)
 
@@ -622,7 +642,7 @@ class request(json_base):
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
 
-            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec \n'%(genvalid_request.build_cmsDriver(0),
+            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec --dump_python \n'%(genvalid_request.build_cmsDriver(0),
                                                                                                           n_to_valid,
                                                                                                           directory)
             cmsd_list += self.genvalid_driver
