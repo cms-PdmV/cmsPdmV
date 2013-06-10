@@ -177,6 +177,10 @@ class json_base:
         if self.__json['approval'] == self.__approvalsteps[next_step]:
             return
             #raise self.IllegalApprovalStep(self.__json['approval'])
+
+        ## move the approval field along, so that in the history, it comes before the status change
+        self.__json['approval'] = self.__approvalsteps[next_step]
+        self.update_history({'action':'approve', 'step':self.__json['approval']})
         
         ## is it allowed to move on
         fcn='ok_to_move_to_approval_%s'%(self.__approvalsteps[next_step])
@@ -190,8 +194,6 @@ class json_base:
                         self.textified()
                         )
 
-        self.__json['approval'] = self.__approvalsteps[next_step]
-        self.update_history({'action':'approve', 'step':self.__json['approval']})
 
     def textified(self):
         return 'no body'
