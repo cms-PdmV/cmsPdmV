@@ -50,18 +50,18 @@ function resultsCtrl($scope, $http, $location,$timeout, $window){
     $scope.nextUpdate = false;
       $timeout(function(){
     _.each($scope.prepid, function(elem){ //check each request 1 by 1 with different timeout.
-	    console.log('talk to me',elem,$scope.data[elem]);
-      if ($scope.data[elem] === undefined){
-          $scope.data[elem] = {"prepid": elem};
-        }
+	    //console.log('talk to me',elem,$scope.data[elem]);
+	    if ($scope.data[elem] === undefined){
+		$scope.data[elem] = {"prepid": elem};
+	    }
       
 
-	if ($scope.data[elem]["check_me"]){
-          $scope.data[elem]["checking_status"] = true;
-	  $scope.data[elem]["checking_log"] = true;
-	  $scope.data[elem]["check_me"]=false;
-	  next_index=$scope.prepid.indexOf(elem) - 1;
-
+	    if ($scope.data[elem]["check_me"]){
+		$scope.data[elem]["checking_status"] = true;
+		$scope.data[elem]["checking_log"] = true;
+		$scope.data[elem]["check_me"]=false;
+		next_index=$scope.prepid.indexOf(elem) - 1;
+		
 	  promise = $http.get("public/restapi/requests/get_status/"+elem);
 	  promise.then(function(data){
 		  $scope.data[elem]["status"] = data.data[elem];
