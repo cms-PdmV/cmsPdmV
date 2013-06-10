@@ -79,6 +79,9 @@
                   <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                     <i class="icon-wrench"></i>
                   </a>
+		  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3);"> 
+		    <i class="icon-screenshot"></i>
+		  </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
                     <div class="modal-header">
                       <h4>Create a request</h4>
