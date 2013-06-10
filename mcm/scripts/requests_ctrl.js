@@ -91,6 +91,7 @@ function resultsCtrl($scope, $http, $location, $window){
 		  }else{
 		      //$window.location.reload();
 		      console.log('I want to reload');
+		      $scope.getData();
 		  }
 	      }
 	      else{
