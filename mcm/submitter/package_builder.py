@@ -513,18 +513,8 @@ class package_builder:
             command += ' --number-events %s' %(self.request.get_attribute('total_events'))
             command += ' --primary-dataset %s' %(self.request.get_attribute('dataset_name'))
 
-            def get_nEvents( source ):
-                 for line in source.split('\n'):
-                      if 'nEvents' in line: 
-                          numbers = re.findall(r'[0-9]+', line)                          
-                          return  numbers[len(numbers)-1]
-                 return None
             if self.request.get_attribute('mcdb_id') <= 0:
-                if  self.request.get_attribute('fragment'):
-                    self.numberOfEventsPerJob = get_nEvents( self.request.get_attribute('fragment') )
-                else:
-                    self.numberOfEventsPerJob = get_nEvents( os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.request.get_attribute('name_of_fragment'),self.request.get_attribute('cvs_tag') )).read() )
-
+                self.numberOfEventsPerJob = self.request.numberOfEventsPerJob()
                 if not self.numberOfEventsPerJob:
                     raise ValueError('Number of events per job could not be retrieved')
 
