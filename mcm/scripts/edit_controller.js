@@ -144,6 +144,16 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
           }
         });
+        setTimeout(function(){ //update fragment field
+          codemirror = document.querySelector('.CodeMirror');
+          console.log(codemirror);
+          if (codemirror != null){
+            _.each(angular.element(codemirror),function(elem){
+              elem.CodeMirror.refresh();
+            });          
+          }
+        },300);
+        //});
       }
     }, function(){ alert("Error getting information"); });
   };
