@@ -78,7 +78,7 @@ class request(json_base):
             'status':self.get_status_steps()[0],
             'type':'',
             'keep_output':[], ## list of booleans
-            'generators':'',
+            'generators':[],
             'sequences':[],
             'generator_parameters':[], 
             'reqmgr_name':[], # list of tuples (req_name, valid)
@@ -167,6 +167,9 @@ class request(json_base):
         if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
 
+        if not len(self.get_attribute('generators')):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','There should be at least one generator mentioned in the request')
+
         if self.get_attribute('time_event') <=0 or self.get_attribute('size_event')<=0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The time per event or size per event are invalid: negative or null')
 
@@ -174,7 +177,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
         if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            for line in os.popen('curl -s  http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag'))).read.split('\n'):
+            for line in os.popen('curl -s  http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag'))).read().split('\n'):
                 if 'Exception Has Occurred' in line:
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exists')
 
@@ -643,7 +646,7 @@ class request(json_base):
             valid_sequence = None
         
         ## or just switched off for all
-        valid_sequence = None
+        #valid_sequence = None
         
         if valid_sequence:
             self.setup_harvesting(directory)
@@ -724,7 +727,7 @@ class request(json_base):
     def get_wmagent_type(self):
         if self.get_attribute('type') == 'Prod':
             if self.get_attribute('mcdb_id') == -1:
-                if self.request.get_attribute('input_filename'):
+                if self.get_attribute('input_filename'):
                     return 'MonteCarloFromGEN'
                 else:
                     return 'MonteCarlo'
