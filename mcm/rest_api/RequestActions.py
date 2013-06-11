@@ -23,6 +23,7 @@ class RequestRESTResource(RESTResource):
         self.cdb = database('campaigns')
         self.request = None
         self.access_limit = 1
+        self.with_trace = True
 
     def set_campaign(self):
         # check that the campaign it belongs to exsits
@@ -73,6 +74,10 @@ class RequestRESTResource(RESTResource):
                 self.adb.save(a.json())
 
     def import_request(self, data):
+
+        if '_rev' in data:
+            return dumps({"results":False, 'message' : 'could not save object with a revision number in the object'})
+
         try:
             #self.request = request(json_input=loads(data))
             self.request = request(json_input=data)
@@ -123,7 +128,8 @@ class RequestRESTResource(RESTResource):
         #self.request.
             
         # update history
-        self.request.update_history({'action':'created'})
+        if self.with_trace:
+            self.request.update_history({'action':'created'})
 
         # save to database
         if not self.db.save(self.request.json()):
@@ -137,10 +143,6 @@ class RequestRESTResource(RESTResource):
 
     
 class CloneRequest(RequestRESTResource):
-    """
-    A SUPER DUPPER CLASS
-    """
-
     def __init__(self):
         RequestRESTResource.__init__(self)
         self.access_limit = 1 ## maybe that is wrong
@@ -201,7 +203,7 @@ class ImportRequest(RequestRESTResource):
         """
         return self.import_request(loads(cherrypy.request.body.read().strip()))
 
-        
+
 class UpdateRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
@@ -210,6 +212,9 @@ class UpdateRequest(RequestRESTResource):
         """
         Updating an existing request with an updated dictionnary
         """
+        return self.update()
+
+    def update(self):
         try:
             res=self.update_request(cherrypy.request.body.read().strip())
             return res
@@ -262,11 +267,26 @@ class UpdateRequest(RequestRESTResource):
             self.add_action()
         	
 	# update history
-	self.request.update_history({'action': 'update'})
+        if self.with_trace:
+            self.request.update_history({'action': 'update'})
         return  self.save_request()
 
     def save_request(self):
         return dumps({"results":self.db.update(self.request.json())})
+
+class ManageRequest(UpdateRequest):
+    """
+    Same as UpdateRequest, leaving no trace in history, for admin only
+    """
+    def __init__(self):
+        UpdateRequest.__init__(self)
+        self.access_limit = 4
+        self.with_trace = False
+    def PUT(self):
+        """
+        Updating an existing request with an updated dictionnary, leaving no trace in history, for admin only
+        """
+        return self.update()
 
 class MigratePage(RequestRESTResource):
     def __init__(self):  
