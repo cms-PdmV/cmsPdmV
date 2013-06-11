@@ -550,7 +550,13 @@ class ApproveRequest(RESTResource):
 
         #req.approve(val)
 	try:
-        	req.approve(val)
+            req.approve(val)
+            if val==0:
+                req.set_attribute('completed_events', 0)
+                req.set_attribute('reqmgr_name',[])
+                req.set_attribute('config_id',[])
+                req.set_status(step=val,with_notification=True)
+
 	except request.WrongApprovalSequence as ex:
             return {'prepid': rid, 'results':False, 'message' : str(ex)}
         except request.WrongStatusSequence as ex:
@@ -562,53 +568,14 @@ class ApproveRequest(RESTResource):
 	
         return {'prepid' : rid, 'approval' : req.get_attribute('approval') ,'results':self.db.update(req.json())}
 
-class ResetRequestApproval(RESTResource):
+class ResetRequestApproval(ApproveRequest):
     def __init__(self):
-        self.db = database('requests')
+        ApproveRequest.__init__(self)
+        
     def GET(self, *args):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
-        if len(args) < 2:
-            return self.multiple_reset(args[0])
-        return self.multiple_reset(args[0], int(args[1]))
-
-    def multiple_reset(self, rid, val=0):
-        if ',' in rid:
-            rlist = rid.rsplit(',')
-            res = []
-            for r in rlist:
-                 res.append(self.reset(r, val))
-            return dumps(res)
-        else:
-            return dumps(self.reset(rid, val))
-
-    def reset(self, rid, val=0):
-        if not self.db.document_exists(rid):
-            return {"prepid": rid, "results":'Error: The given request id does not exist.'}
-
-        req = request(json_input=self.db.get(rid))
-
-        appsteps = req.get_approval_steps()
-        app = req.get_attribute('approval')
-
-        if val > appsteps.index(app):
-            return {"prepid": rid, "results":'Error: Cannot reset higher approval step %s:%s -> %s'%(app,appsteps.index(app),step)}
-
-        try:
-            req.approve(val)
-            if val==0:
-                req.set_status(step=val,with_notification=True)
-        except request.WrongApprovalSequence as ex:
-            return {"prepid":rid, "results":False, 'message' : str(ex)}
-        except request.WrongStatusSequence as ex:
-            return {"prepid":rid, "results":False, 'message' : str(ex)}
-        except request.IllegalApprovalStep as ex:
-            return {"prepid":rid, "results":False, 'message' : str(ex)}
-        except:
-            return {"prepid":rid, "results":False, 'message' : traceback.format_exc()}
-
-        return {"prepid": rid, "results":self.db.update(req.json())}
-
+        return self.multiple_approve(args[0], 0)
 
 class GetStatus(RESTResource):
     def __init__(self):
