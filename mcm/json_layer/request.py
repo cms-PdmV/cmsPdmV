@@ -3,6 +3,7 @@
 import copy
 import os 
 import re
+import pprint
 
 from couchdb_layer.prep_database import database
 
@@ -186,6 +187,13 @@ class request(json_base):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job cannot be retrieved for lhe production')
             elif nevents_per_job == self.get_attribute('total_events'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
+            
+            fragmnt_lines = self.parse_fragment()
+            for line in fragmnt_lines:
+                if 'outputFile' in line and not 'events_final.lhe' in line:
+                    ## should this be made a default configuration ?
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','outputFile needs to be set to events_final.lhe')
+
 
         rdb=database('requests')
         similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
@@ -879,21 +887,44 @@ class request(json_base):
             not_good.update( {'message' : " there are no requests in request manager. Please invsetigate!"})
             return not_good
 
+    def parse_fragment(self):
+        if  self.get_attribute('fragment'):
+            for line in self.get_attribute('fragment').split('\n'):
+                yield line
+        elif self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
+            for line in os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag') )).read().split('\n'):
+                yield line
+        else:
+            for line in []:
+                yield line
 
     def numberOfEventsPerJob(self):
-        def get_nEvents( source ):
-            for line in source.split('\n'):
-                if 'nEvents' in line: 
-                    try:
-                        numbers = re.findall(r'[0-9]+', line)                          
-                        return  int(numbers[len(numbers)-1])
-                    except:
-                        return None
-            return None
-        numberOfEventsPerJob = None
-        if  self.get_attribute('fragment'):
-            numberOfEventsPerJob = get_nEvents( self.get_attribute('fragment') )
-        elif self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            numberOfEventsPerJob = get_nEvents( os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag') )).read() )
-        
-        return numberOfEventsPerJob
+        fragmnt_lines = self.parse_fragment()
+        for line in fragmnt_lines:
+            if 'nEvents' in line:
+                 try:
+                     numbers = re.findall(r'[0-9]+', line)
+                     return  int(numbers[len(numbers)-1])
+                 except:
+                     return None
+        return None
+
+    def textified(self):
+        l_type = locator()
+        view_in_this_order=['pwg','prepid','dataset_name','analysis_id','notes','total_events','validation','approval','status','input_filename','member_of_chain','reqmgr_name','completed_events']
+        text=''
+        for view in view_in_this_order:
+            if self.get_attribute(view):
+                if type(self.get_attribute(view)) == list:
+                    for (i,item) in enumerate(self.get_attribute(view)):
+                        text += '%s[%s] : %s \n' %( view, i, pprint.pformat(item))
+                else:
+                    text += '%s : %s \n'%(view, self.get_attribute(view))
+        text+='\n'
+        if l_type.isDev():
+            text+='https://cms-pdmv-dev.cern.ch/mcm/requests?prepid=%s'%( self.get_attribute('prepid'))
+        else:
+            text+='https://cms-pdmv.cern.ch/mcm/requests?prepid=%s'%( self.get_attribute('prepid'))
+        text+='\n'
+        text+='McM Announcing service'
+        return text
