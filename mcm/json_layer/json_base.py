@@ -230,7 +230,7 @@ class json_base:
         #self.logger.log('Updating the status for object %s to %s...' % (self.get_attribute('_id'), self.__status[next_step]))
         if with_notification:
             self.notify('Status changed for request %s to %s'%(self.get_attribute('prepid'), self.__status[next_step]),
-                        'no message')
+                        self.textified())
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action':'set status', 'step':self.__json['status']})
