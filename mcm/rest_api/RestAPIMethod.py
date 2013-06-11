@@ -101,7 +101,7 @@ class RESTResourceIndex(RESTResource):
 	def index(self):
 		self.res = '<h1>REST API for McM<h2>'
 		methods = ['GET','PUT','POST','DELETE']
-		self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Information</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
+		self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Function info</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
 		#for method in self.data:
 		#	self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
 		#	self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
@@ -126,11 +126,18 @@ class RESTResourceIndex(RESTResource):
 			 if o.access_limit:
 				 limit = o.access_limit
 			 for m in methods:
-                                 self.res +='<td>%s</td>'%(getattr(o,m).__doc__)
-				 if limit:
-					 self.res +='<td align=center>+%s</td>'%(limit)
+				 if m in o.__class__.__dict__:
+					 if getattr(o,m).__doc__:
+						 self.res +='<td>%s</td>'%(getattr(o,m).__doc__)
+					 else:
+						 self.res +='<td><b>To be documented</b></td>'
+					 #self.res +='<td>%s</td>'%(o.__class__.__dict__)
+					 if limit:
+						 self.res +='<td align=center>+%s</td>'%(limit)
+					 else:
+						 self.res +='<td align=center>%s</td>'%(self.limit_per_method [m])
 				 else:
-					 self.res +='<td align=center>%s</td>'%(self.limit_per_method [m])
+					 self.res +='<td><small>N/A</small> </td><td> <small>N/A</small> </td>'
 			 #self.res += "<td>"
                          #if o.access_limit:
 			#	 self.res +=' + %s'%( o.access_limit )
