@@ -120,14 +120,13 @@ class RESTResourceIndex(RESTResource):
 			#		self.res +=' '+m
                      self.res += "<tr>"
                      if hasattr(o,'access_limit'):
-                         self.logger.log('Setting access limit to %s'%dir(o.__class__.__dict__))
                          self.res += "<td><b>%s</b></td>" %(key)
                          self.res +=' <td>%s</td><td> %s</td>'%( o.__class__.__name__,o.__class__.__doc__)
 			 limit = None
 			 if o.access_limit:
 				 limit = o.access_limit
 			 for m in methods:
-				 self.res +='<td>%s</td>'%(getattr(o,m).__doc__)
+                                 self.res +='<td>%s</td>'%(getattr(o,m).__doc__)
 				 if limit:
 					 self.res +='<td align=center>+%s</td>'%(limit)
 				 else:
