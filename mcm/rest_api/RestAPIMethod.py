@@ -121,7 +121,10 @@ class RESTResourceIndex(RESTResource):
                      self.res += "<tr>"
                      if hasattr(o,'access_limit'):
                          self.res += "<td><b>%s</b></td>" %(key)
-                         self.res +=' <td>%s</td><td> %s</td>'%( o.__class__.__name__,o.__class__.__doc__)
+			 if o.__class__.__doc__:
+				 self.res +=' <td>%s</td><td> %s</td>'%( o.__class__.__name__,o.__class__.__doc__)
+			 else:
+				 self.res +=' <td>%s</td><td><b>To be documented</b></td>'%( o.__class__.__name__)
 			 limit = None
 			 if o.access_limit:
 				 limit = o.access_limit
