@@ -800,8 +800,7 @@ class package_builder:
                     requests=self.request.get_attribute('reqmgr_name')
                     requests.extend(added)
                     self.request.set_attribute('reqmgr_name',requests)
-                    #BTW: the status is set only if there is actually a request in the request manager !
-                    self.request.set_status(with_notification=True)
+
                     
                     ##put it also in the batch DB
                     bdb = database('batches')
@@ -820,7 +819,10 @@ class package_builder:
 
                     ##save all only at the end with all suceeding to not have half/half
                     rdb = database('requests')
+
+                    #the status is set only if there is actually a request in the request manager !
                     self.request.update_history({'action':'inject'})
+                    self.request.set_status(with_notification=True)
                     rdb.update(self.request.json())
                     bdb.update(b.json())
                     for request in added:
