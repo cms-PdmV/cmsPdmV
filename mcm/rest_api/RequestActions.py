@@ -370,6 +370,12 @@ class MigrateRequest(RequestRESTResource):
             #if not len(mcm_rr):
             #    return dumps({"results":False,"message":"found no request in the request in the stats DB ... %s"%(len(allstats))})
             """
+
+            # set the completed events properly
+            if mcm_r.get_attribute('status') == 'done' and len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events')<=0:
+                mcm_r.set_attribute('completed_events', mcm_r.get_attribute('reqmgr_name')[-1]['content']['pdmv_evts_in_DAS'])
+                
+            
             saved = self.db.save(mcm_r.json())
 
             ## force to add an action on those requests
