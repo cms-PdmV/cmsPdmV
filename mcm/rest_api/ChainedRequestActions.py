@@ -273,7 +273,7 @@ class InspectChain(RESTResource):
                 mcm_cr = chained_request( self.crdb.get( cr) )
                 res.append( mcm_cr.inspect() )
             else:
-                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exists'%(cr)})
+                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist'%(cr)})
 
         if len(res)>1:
             return dumps(res)
