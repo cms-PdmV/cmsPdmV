@@ -103,7 +103,7 @@
         <tbody>
           <tr ng-repeat="column in defaults">
             <th>
-              {{column.text}}
+              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
             </th>
             <td>
               <ng-form name="antantasForm">
