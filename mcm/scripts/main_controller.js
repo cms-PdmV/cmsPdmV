@@ -30,8 +30,7 @@ function mainCtrl($scope, $http, $location, $window){
     //        _.each(nav_bar, function(v){
     //		v.style.backgroundImage = "linear-gradient(to bottom, #E89619, #F2F2F2)"    
     //		    });
-        
-    }
+    //    }
     return is_dev;
   };
 
