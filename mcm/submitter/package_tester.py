@@ -227,7 +227,6 @@ class package_tester:
         if not submit_flag:
             return False
         
-        
         while not self.monitor_job_status():
             time.sleep(30)
             
