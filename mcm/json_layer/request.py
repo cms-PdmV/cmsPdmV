@@ -184,12 +184,16 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The time per event or size per event are invalid: negative or null')
 
         if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'))):
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
+            if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
+                ##this case is OK
+                pass
+            else:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
         if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
             for line in os.popen('curl -s  http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag'))).read().split('\n'):
                 if 'Exception Has Occurred' in line:
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exists')
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exist')
 
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
@@ -222,8 +226,6 @@ class request(json_base):
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                #self.logger.error(self.get_attribute('status')+' validation'+'The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
-                ##do not make it a n exception yet
                 cdb = database('campaigns')
                 if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
                     ##only requests belonging to a root==0 campaign can have mcdbid
