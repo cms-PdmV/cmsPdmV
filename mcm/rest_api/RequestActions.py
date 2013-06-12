@@ -895,3 +895,67 @@ class GetActors(RESTResource):
         else:
             return dumps(request_in_db.get_actors())
 
+class UploadFile(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.cdb = database('campaigns')
+        self.all_campaigns = map(lambda x:x['id'], self.cdb.raw_query("prepid"))
+
+    def identify_an_id(self, word):
+        if word.count('-') ==2:
+            (pwg,campaign,serial) = word.split('-')
+            if len(pwg)!=3:
+                return None
+            if not serial.isdigit():
+                return None
+            if not campaign in self.all_campaigns:
+                return None
+            if self.rdb.document_exists(word):
+                return word
+        return None
+
+    def PUT(self, *args):
+        #self.logger.error(cherrypy.request.body.read().strip())
+        self.logger.error("Got a file from uploading")
+        data = loads(cherrypy.request.body.read().strip())
+        text = data['contents']
+
+        all_ids=[]
+        ## parse that file for prepids
+        for line in text.split('\n'):
+            in_the_line=[]
+            for word in line.split():
+                if word.endswith(','):
+                    word=word[0:-2]
+                if word.startswith(','):
+                    word=word[1:]
+                #self.logger.error("Got a word "+word)
+                an_id = self.identify_an_id(word)
+                if an_id:
+                    all_ids.append( an_id )
+                    in_the_line.append( an_id )
+                if word =='->':
+                    if len(in_the_line):
+                        in_the_line = [in_the_line[-1]]
+                if len(in_the_line)==2:
+                    #then we have a range
+                    id_start=in_the_line[0]
+                    id_end=in_the_line[1]
+                    in_the_line=[]
+                    if id_start[0:4] == id_end[0:4]:
+                        serial_start = int(id_start.split('-')[-1])
+                        serial_end = int(id_end.split('-')[-1])+1
+                        for serial in range(serial_start,serial_end):
+                            all_ids.append('-'.join(id_start.split('-')[0:2]+['%05d'%(serial)]))
+        all_ids = list(set(all_ids))
+        all_ids.sort()
+        all_requests=[]
+        if len(all_ids):
+            for rid in all_ids:
+                if self.rdb.document_exists(rid):
+                    all_requests.append(self.rdb.get(rid))
+             
+        self.logger.error("Got %s ids identified"%( len (all_requests)))
+  
+        return dumps({"results": all_requests })
+
