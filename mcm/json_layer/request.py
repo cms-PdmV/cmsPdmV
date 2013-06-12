@@ -133,6 +133,16 @@ class request(json_base):
                 chain=crdb.get(inchain)
                 if chain['chain'][-1] == self.get_attribute('prepid'):
                     chain['last_status'] = self.get_attribute('status')
+                    if not 'status' in chain:
+                        chain['status']=''
+                    if self.get_attribute('status')=='new':
+                        chain['status'] ='new'
+                    else:
+                        chain['status'] ='processing'
+                    expected_end = max(0,chain['_id'].count('-')-2)
+                    if chain['step'] == expected_end and self.get_attribute('status')=='done':
+                        chain['status'] ='done'
+
                     crdb.save(chain)
         
     def get_editable(self):
@@ -212,9 +222,12 @@ class request(json_base):
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                self.logger.error(self.get_attribute('status')+' validation'+'The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+                #self.logger.error(self.get_attribute('status')+' validation'+'The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
                 ##do not make it a n exception yet
-                #raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of chained request: this is not allowed')
+                cdb = database('campaigns')
+                if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
+                    ##only requests belonging to a root==0 campaign can have mcdbid
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign')
 
         else:
             crdb = database('chained_requests')
@@ -222,7 +235,7 @@ class request(json_base):
                 mcm_cr = crdb.get(cr)
                 if mcm_cr['chain'].index( self.get_attribute('prepid') ) ==0:
                     if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains; this is not allowed')
+                        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains.')
 
         ## a state machine should come along and submit jobs for validation, then set the status to validation once on-going
         # for now: hard-wire the toggling
