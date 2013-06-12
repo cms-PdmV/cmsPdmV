@@ -44,7 +44,7 @@ class campaign(json_base):
                                  'notes' : '',
                                  #'remarks':'', 
                                  #'notes':'',
-                                 'status':self.get_status_steps()[-1], 
+                                 'status':self.get_status_steps()[0], 
                                  'validation':'',
                                  'pileup_dataset_name':'', 
                                  #'process_string':[], 
@@ -54,7 +54,7 @@ class campaign(json_base):
                                  'total_events':-1, 
                                  'root':-1, # -1: possible root, 0: root, 1: non-root 
                                  'sequences':[], # list of jsons of jsons
-                                 'approval':self.get_approval_steps()[-1], 
+                                 'approval':self.get_approval_steps()[0], 
                                  'history':[]
                                  }
 
