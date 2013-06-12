@@ -345,31 +345,11 @@ class MigrateRequest(RequestRESTResource):
         mcm_r.update_history({'action':'migrated'})
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
             mcm_r.get_stats(override_id = pid)
-            """
-            statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
-            ### do a manual search
-            #stats_rr = map(lambda x: x['value'], statsDB.query(query="",page_num=-1))
-            #stats_rr = filter(lambda r : pid in r['pdmv_request_name'], stats_rr)
-            ###if you believe in the prepid member ... which is not reliable for resub
-            stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%pid,page_num=-1))
-            mcm_rr=[]
-            for stats_r in stats_rr:
-                ## there are two ways here: either make a full copy in McM ---> bad, or implement soft linking for the information that is required
-                
-                #mcm_rr.append( { 'content' : stats_r,
-                #                 'name' : stats_r['pdmv_request_name']})
-                
-                keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list']
-                mcm_content={}
-                for k in keys_to_import:
-                    mcm_content[k] = stats_r[k]
-                mcm_rr.append( { 'content' : mcm_content,
-                                 'name' : stats_r['pdmv_request_name']})
 
-            mcm_r.set_attribute('reqmgr_name', mcm_rr)
-            #if not len(mcm_rr):
-            #    return dumps({"results":False,"message":"found no request in the request in the stats DB ... %s"%(len(allstats))})
-            """
+            if not len(mcm_r.get_attribute('reqmgr_name')):
+                # no requests provided, the request should fail migration. 
+                # I have put fake docs in stats so that it never happens
+                return dumps({"results":False,"message":"Could not find an entry in the stats DB for prepid %s"%(pid)})
 
             # set the completed events properly
             if mcm_r.get_attribute('status') == 'done' and len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events')<=0:
