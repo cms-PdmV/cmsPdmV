@@ -316,7 +316,7 @@ class InspectChainedCampaignsRest(RESTResource):
                 if mcm_cr:
                     res.append( mcm_cr.inspect() )
                 else:
-                    res.append( {"prepid":cr, "results":False, 'message' : '%s does not exists'%(r)})
+                    res.append( {"prepid":cr, "results":False, 'message' : '%s does not exist'%(r)})
 
         if len(res)>1:
             return dumps(res)
