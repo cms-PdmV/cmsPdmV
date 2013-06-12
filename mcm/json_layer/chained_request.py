@@ -57,6 +57,8 @@ class chained_request(json_base):
         self._json_base__approvalsteps = ['none','flow', 'submit']
         #self._json_base__status = ['new','started','done']
 
+        self._json_base__status = ['new', 'processing', 'done']
+
         self._json_base__schema = {
             '_id':'',
             'chain':[],
@@ -74,7 +76,8 @@ class chained_request(json_base):
             'member_of_campaign':'',
             #'generator_parameters':[], #prune
             #'request_parameters':{} # json with user prefs #prune
-            'last_status':'none'
+            'last_status':'none',
+            'status' : self.get_status_steps()[0]
             }
         # update self according to json_input
         self.update(json_input)
