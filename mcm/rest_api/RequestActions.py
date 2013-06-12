@@ -461,7 +461,7 @@ class GetSetupForRequest(RESTResource):
       if self.db.document_exists(pid):
           return self.get_fragment(self.db.get(prepid=pid))
       else:
-          return dumps({"results":False,"message":"%s does not exists"%(pid)})
+          return dumps({"results":False,"message":"%s does not exist"%(pid)})
 
     def get_fragment(self, data):
       try:
@@ -630,7 +630,7 @@ class InspectStatus(RESTResource):
             if mcm_r:
                 res.append( mcm_r.inspect() ) 
             else:
-                res.append( {"prepid": r, "results":False, 'message' : '%s does not exists'%(r)})
+                res.append( {"prepid": r, "results":False, 'message' : '%s does not exist'%(r)})
         if len(res)>1:
             return dumps(res)
         else:
@@ -824,7 +824,7 @@ class NotifyUser(RESTResource):
         results=[]
         for pid in pids:
             if not self.rdb.document_exists(pid):
-                return results.append({"prepid" : pid,"results":False,"message":"%s does not exists"%(pid)})
+                return results.append({"prepid" : pid,"results":False,"message":"%s does not exist"%(pid)})
         
             req = request(self.rdb.get(pid))
             # notify the actors of the request
