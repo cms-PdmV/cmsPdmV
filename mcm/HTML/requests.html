@@ -41,6 +41,7 @@
             </label>
           </span>
         </div><!--end of well for table columns-->
+          <!-- {{ cf }} -->
       </div><!--End of span12 -->
     </div><!--End of container-->
     <table class="table table-bordered table-stripped" style="owerflow:auto;">
@@ -363,6 +364,12 @@
           </ul>
         </div>
       </div>
+        <div class="control-group">
+	  List request from a list file: <ddl-file-reader ng-model="cf"> </ddl-file-reader>
+          <button class="btn btn-mini" align="middle" ng-click="upload();">Upload</button>
+	  <!-- <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_file_listing" rel="tooltip" title="Glossary for File listing"><i class="icon-question-sign"></i></a> -->
+        </div>
+
     </div>
   </span>  
   </body>
