@@ -284,7 +284,7 @@ class CampaignsRESTResource(RESTResource):
                 if mcm_r:
                     res.append( mcm_r.inspect() ) 
                 else:
-                    res.append( {"prepid": r, "results":False, 'message' : '%s does not exists'%(r)})
+                    res.append( {"prepid": r, "results":False, 'message' : '%s does not exist'%(r)})
         if len(res)>1:
             return dumps(res)
         elif len(res):
