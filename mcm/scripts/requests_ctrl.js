@@ -587,7 +587,7 @@ function resultsCtrl($scope, $http, $location, $window){
   //     console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
   //   });
   // },true);
-$scope.linkify = function(inputText) {
+  $scope.linkify = function(inputText) {
     var replaceText, replacePattern1, replacePattern2, replacePattern3;
 
     //URLs starting with http://, https://, or ftp://
@@ -599,7 +599,23 @@ $scope.linkify = function(inputText) {
     replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank"><i class="icon-shopping-cart"></i></a>');
     
     return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
-}
+  }
+  $scope.upload = function(){
+    /*Upload a file to server*/
+    // console.log("file:", $scope.cf);
+      $scope.got_results = false;
+     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: $scope.cf}).success(function(data,status){
+	     
+	     console.log(data,status);
+	     $scope.result = data.results;
+	     $scope.got_results = true;
+
+       }).error(function(status){
+         $scope.update["success"] = false;
+         $scope.update["fail"] = true;
+         $scope.update["status_code"] = status;
+       });
+   };
 
 };
 
@@ -809,4 +825,34 @@ testApp.directive("generatorParams", function($http){
       };
     }
   };
+});
+testApp.directive('ddlFileReader', function() {
+    return {
+        require: "ngModel",
+        replace: true,
+        restrict: 'E',
+        link: function(scope, element, attrs, ctrl) {
+
+            element.bind("change", function (ev) {
+                var files = ev.target.files;
+                var file = files.length?files[0]:null;
+
+                if (! file) {
+                    ctrl.$setViewValue(null);
+                    return;
+                }
+
+                // Closure to capture the file information.
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    scope.$apply(function () {
+                        ctrl.$setViewValue({ f: file, contents: e.target.result });
+                    });
+                };
+
+                reader.readAsText(file);
+            });
+        },
+        template: '<input type="file" class="input" />'
+    }
 });
