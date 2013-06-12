@@ -1,4 +1,4 @@
-<div class="navbar navbar-static-top" style="margin-bottom: 20px;"><!--  place for NAV-BAR-->
+<div class="navbar navbar-static-top" ng-class="{ 'navbar-inverse': isDevMachine() }"  style="margin-bottom: 20px;"> <!--  place for NAV-BAR-->
   <div class="navbar-inner">
     <ul class="nav">
       <li ng-class='{ "active": dbName=="campaigns"}'>
