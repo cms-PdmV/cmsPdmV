@@ -18,38 +18,10 @@
     </script>
   <![endif]>
 
-  <script type="text/javascript">
-  
-  function resultsCtrl($scope,$http,$location){
-    $scope.selectedDB = "------";
-    $scope.possibleDBs = ["requests","flows","chained_campaigns","actions","users","campaigns","batches","chained_requests"];
-    $scope.user = {name: "", role:"", roleIndex:0};
-    // GET username and role
-    var promise = $http.get("restapi/users/get_roles");
-    promise.then(function(data){
-      $scope.user.name = data.data.username;
-      $scope.user.role = data.data.roles[0];
-    }, function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
-    var promise = $http.get("restapi/users/get_all_roles");
-    promise.then(function(data){
-      $scope.all_roles = data.data;
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
-    // Endo of user info request
-    $scope.role = function(priority){
-      if(priority > _.indexOf($scope.all_roles, $scope.user.role)){ //if user.priority < button priority then hide=true
-        return true;
-      }else{
-        return false;
-      }
-    };
-  };
-  </script>
+<script src="scripts/main_controller.js"></script>
+
 </head>
-<body ng-controller="resultsCtrl">
+<body ng-controller="mainCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <div class="container">
     <div align="middle">
