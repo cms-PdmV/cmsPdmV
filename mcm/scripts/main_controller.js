@@ -24,8 +24,17 @@ function mainCtrl($scope, $http, $location, $window){
 // Endo of user info request
 
   $scope.isDevMachine = function(){
-    return $location.absUrl().indexOf("dev") != -1;
+    is_dev = $location.absUrl().indexOf("dev") != -1;
+    if (is_dev){
+        nav_bar = document.getElementsByClassName("navbar-inner");
+        _.each(nav_bar, function(v){
+            v.style.backgroundImage = "linear-gradient(to bottom, #E89619, #F2F2F2)"    
+        });
+        
+    }
+    return is_dev;
   };
+
   //return everyting thats after main url
   $scope.getLocation = function(){
     return $location.url();
