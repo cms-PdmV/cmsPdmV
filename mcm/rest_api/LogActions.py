@@ -8,12 +8,14 @@ from RestAPIMethod import RESTResource
 
 class ReadInjectionLog(RESTResource):
 	def __init__(self):
-		self.authenticator.set_limit(2)
 		self.logfile = 'logs/inject.log'
 		self.db_name = 'requests'
 		self.db = database(self.db_name)
 
 	def GET(self, *args):
+		"""
+		Retreives the last injection log for a given request id
+		"""
 		if not args:
 			self.logger.error('No arguments were given')
 			return dumps({"results":'Error: No arguments were given'})
