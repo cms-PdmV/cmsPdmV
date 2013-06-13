@@ -929,13 +929,16 @@ class request(json_base):
 
     def textified(self):
         l_type = locator()
-        view_in_this_order=['pwg','prepid','dataset_name','analysis_id','notes','total_events','validation','approval','status','input_filename','member_of_chain','reqmgr_name','completed_events']
+        view_in_this_order=['pwg','prepid','dataset_name','mcdb_id','analysis_id','notes','total_events','validation','approval','status','input_filename','member_of_chain','reqmgr_name','completed_events']
         text=''
         for view in view_in_this_order:
             if self.get_attribute(view):
                 if type(self.get_attribute(view)) == list:
                     for (i,item) in enumerate(self.get_attribute(view)):
                         text += '%s[%s] : %s \n' %( view, i, pprint.pformat(item))
+                elif type(self.get_attribute(view)) == int:
+                    if self.get_attribute(view) > 0:
+                        text += '%s : %s \n'%(view, self.get_attribute(view))
                 else:
                     text += '%s : %s \n'%(view, self.get_attribute(view))
         text+='\n'
