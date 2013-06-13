@@ -121,7 +121,10 @@ class transformer:
             new['name_of_fragment'] = req_json['genfragment']
         new['version'] = 0
 
-        new['generators'] = req_json['generators'].split(',')
+        if req_json['generators']:
+            new['generators'] = req_json['generators'].split(',')
+        else:
+            new['generators'] = []
         new['block_black_list'] = []
         new['block_white_list'] = []
 
