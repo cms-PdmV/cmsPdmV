@@ -20,14 +20,19 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     $scope.selected_prepids = [];
     $scope.multipleSelection = {};
     $scope.update = [];
-
+    $scope.result = [];
+    
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
       if ($scope.selectedOption['contains'] != "------"){
           $location.search("select",$scope.selectedOption['contains']);
+          //$scope.getData();
+          do_get_data = true;
       }
       if ($scope.selectedOption['starts'] != "------"){
           $location.search("starts",$scope.selectedOption['starts']);
+          //$scope.getData();
+          do_get_data = true;
       }
     },true);
 
@@ -39,7 +44,8 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
         }
     }
     
-    $scope.select_campaign = function(){
+    $scope.select_campaign = function(do_get_data){
+        $scope.result = []; //clear results on selection
         $scope.rootCampaign = [];
         //set the well to have only ChainedCampaigns which includes selectedOption
         if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
@@ -81,6 +87,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
                }
              });
           $scope.rootCampaign = _.uniq($scope.rootCampaign);
+
           // console.log($scope.rootCampaign)
           $scope.actions_defaults = _.filter($scope.actions_defaults, function(element){ //filter all actions from well
             if (element.text != 'Actions'){    //leave actions column
@@ -105,6 +112,13 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
                add = false;
              }
            });
+
+	   // then get data
+     if (do_get_data == true){
+	     $scope.getData();
+     }
+	   // 
+
         });
       }
     };
@@ -120,23 +134,27 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     }
 
 
-    promise = $http.get('restapi/campaigns/get_all')
+    promise = $http.get('restapi/campaigns/listall')
     promise.then(function(data){
       _.each(data.data.results, function(v){
-        $scope.campaigns.push(v.key);
+	      //$scope.campaigns.push(v.key);
+	      $scope.campaigns.push(v);
       });
 
 	if (($location.search()["select"] === undefined) && ($location.search()["starts"] === undefined)){
 	    $location.search("select", $scope.selectedOption['contains']);
       $location.search("starts", $scope.selectedOption['starts']);
 	}else{
+      var do_get_data = false;
       if ($location.search()["select"] !== undefined){
 	      $scope.selectedOption['contains'] = $location.search()["select"];
+        do_get_data = true;
       }
       if ($location.search()["starts"] !== undefined){
         $scope.selectedOption['starts'] = $location.search()["starts"];
+        do_get_data = true;
       }
-	    $scope.select_campaign();
+      $scope.select_campaign(do_get_data);
 	}
     });
 
@@ -152,6 +170,40 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     };
     
   $scope.getData = function(){
+      $scope.result = [];
+      var query = ""
+      _.each($scope.rootCampaign, function(element){
+        query = "&member_of_campaign="+element;
+        _.each($location.search(), function(value,key){
+          if (key == 'select'){
+            //do nothing
+          } else if (key == 'starts'){
+            //do nothing
+          }
+          else{
+            query += "&"+key+"="+value;
+          };
+        });
+	      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+	      promise.then(function(data){
+		      _.each( data.data.results , function( item ){
+			      $scope.result.push( item );
+			  });
+		  },function(){
+		      alert("Error getting data.");
+		  });
+	  });
+      //then put everything in result
+      //      $scope.result = [];
+      //      console.log( results );
+      //      _.each(results, function(item_list){
+      //	      _.each(item_list, function(item){
+      //		      $scope.result.push(item);
+      //		  });
+      //	  });
+  
+
+      /*
   var query = ""
     _.each($location.search(), function(value,key){
       if (key == 'select'){
@@ -174,7 +226,10 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     },function(){
         alert("Error getting data.");
     });
+      */
   };
+
+
   $scope.$watch('list_page', function(){
     $scope.getData();
   });
