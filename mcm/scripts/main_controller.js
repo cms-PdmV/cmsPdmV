@@ -31,6 +31,12 @@ function mainCtrl($scope, $http, $location, $window){
     //		v.style.backgroundImage = "linear-gradient(to bottom, #E89619, #F2F2F2)"    
     //		    });
     //    }
+    if (is_dev){
+      body = document.getElementsByTagName("body");
+     _.each(body, function(v){
+      v.style.backgroundImage = "url(HTML/draft.png)"
+      });
+    }
     return is_dev;
   };
 
