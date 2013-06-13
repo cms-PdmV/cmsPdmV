@@ -11,11 +11,11 @@ class RequestPrepId(RESTResourceIndex):
         self.db_name = 'requests'
         self.db = database(self.db_name)
 
-    def GET(self, *args):
-        if len(args) < 2:
-            self.logger.error('No arguments were given.')
-            return dumps({"prepid":""})
-        return self.generate_prepid(args[0], args[1])
+    #def GET(self, *args):
+    #    if len(args) < 2:
+    #        self.logger.error('No arguments were given.')
+    #        return dumps({"prepid":""})
+    #    return self.generate_prepid(args[0], args[1])
     
     def generate_prepid(self, pwg, campaign):
         if not pwg:
