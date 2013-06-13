@@ -154,13 +154,13 @@ class chained_request(json_base):
         #allowed_approvals = ['define',  'approve',  'submit']
         allowed_request_approvals = ['submit']
         
-        if req['approval'] not in allowed_request_approvals:
+        if initial_req.get_attribute('approval') not in allowed_request_approvals:
             raise self.NotApprovedException(req['_id'], req['approval'], allowed_request_approvals)
 
         # JR : also check on the status of the root request
         allowed_request_statuses = ['submitted','done']
 
-        if req['status'] not in allowed_request_statuses:
+        if initial_req.get_attribute('status') not in allowed_request_statuses:
             raise self.NotInProperStateException(req['_id'], req['status'], allowed_request_statuses)
 
         original_action = adb.get( self.get_attribute('chain')[0] )
@@ -214,12 +214,16 @@ class chained_request(json_base):
         ## faking it : alreadyExistingRequest=request(rdb.get('JME-Fall11R1-00001'))
         ## look up all chained requests that start from the same root request
         
-        toMatch='.'.join(self.get_attribute('prepid').split('_')[1:][0:stepIndex+1])
+        
+        ## remove <pwg>-chain_ and the -serial number, replacing _ with a .
+        toMatch='.'.join(self.get_attribute('prepid').split('_')[1:][0:stepIndex+1]).split('-')[0]
         accs = map(lambda x: x['value'],  crdb.query('root_request=='+self.get_attribute('chain')[0]))
         for existing in accs:
             #if existing['prepid']==self.get_attribute('prepid'): continue
             # get a string truncated to the 
-            truncated = '.'.join(existing['prepid'].split('_')[1:][0:stepIndex+1])
+            truncated = '.'.join(existing['prepid'].split('_')[1:][0:stepIndex+1]).split('-')[0]
+            self.logger.error('to match : %s , this one %s'%( toMatch, truncated ))
+            
             if truncated == toMatch:
                 #we found a chained request that starts with all same steps
                 matchingcc = chained_request(crdb.get(existing['prepid']))
@@ -230,6 +234,7 @@ class chained_request(json_base):
                     matchingID=matchingcc.get_attribute('chain')[stepIndex]
                     alreadyExistingRequest = request(rdb.get(matchingID))
                     break
+
 
         if alreadyExistingRequest!=False:
             # if exist, hand it over to the chained request
@@ -384,7 +389,7 @@ class chained_request(json_base):
 
         nre = request(new_req)
 
-         #JR toggle approval of the request until we reached the desired 
+        #JR toggle approval of the request until we reached the desired 
         # maximum approval level max(flow,chained_request) in ['none','flow','submit']
         ## TO BE INSERTED HERE, in a Thread object, so as to not hold the request back
 
@@ -400,12 +405,14 @@ class chained_request(json_base):
         self.set_attribute('step',  int(stepIndex))
         # send notification
         initial_req.notify('Flow for request %s in %s'%(initial_req.get_attribute('prepid'),next_camp),
-                           'The request %s has been flown within %s into campaign %s using %s creating the new request %s as part of %s'%(initial_req.get_attribute('prepid'),
-                                                                                                                                         self.get_attribute('member_of_campaign'),
-                                                                                                                                         next_camp,
-                                                                                                                                         flowname,
-                                                                                                                                         nre.get_attribute('prepid'),
-                                                                                                                                         self.get_attribute('prepid')))
+                           'The request %s has been flown within:\n %s into campaign:\n %s using\n: %s creating the new request:\n %s as part of:\n %s and from the produced dataset:\n %s'%(initial_req.get_attribute('prepid'),
+                                                                                                                                                                                             self.get_attribute('member_of_campaign'),
+                                                                                                                                                                                             next_camp,
+                                                                                                                                                                                             flowname,
+                                                                                                                                                                                             nre.get_attribute('prepid'),
+                                                                                                                                                                                             self.get_attribute('prepid'),
+                                                                                                                                                                                             nre.get_attribute('input_filename')
+                                                                                                                                                                                             ))
                     
         
         return True
