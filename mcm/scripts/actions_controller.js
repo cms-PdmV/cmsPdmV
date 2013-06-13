@@ -81,7 +81,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
                }
              });
           $scope.rootCampaign = _.uniq($scope.rootCampaign);
-          console.log($scope.rootCampaign)
+          // console.log($scope.rootCampaign)
           $scope.actions_defaults = _.filter($scope.actions_defaults, function(element){ //filter all actions from well
             if (element.text != 'Actions'){    //leave actions column
               return (_.indexOf(to_remove_list, element.text) == -1) //if column not in to_add_list -> remove it (a.k.a its in to_be_removed list)
@@ -391,15 +391,15 @@ testApp.service("chttp", function ($http, $window, $q) {
 
     var deferred = $q.defer();
     
-    if (ret) {
-      deferred.resolve(JSON.parse(ret));
-    } else {
+    // if (ret) { //uncoment to improce local load -> takes data from local storage
+    //  deferred.resolve(JSON.parse(ret));
+    // } else {
       var http_promise = $http.get(query);
       http_promise.then(function (body) {
         deferred.resolve(body);
         $window.localStorage.setItem(code, JSON.stringify(body));
       });
-    }
+    // }
     
     return deferred.promise;
   };
