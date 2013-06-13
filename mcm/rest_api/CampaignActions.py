@@ -16,8 +16,12 @@ class CreateCampaign(RESTResource):
         self.db = database(self.db_name)
         self.cdb = database('chained_campaigns')
         self.campaign = None
+        self.acccess_limit =3 
 
     def PUT(self):
+        """
+        Create a request with the provided json content
+        """
         return self.create_campaign(cherrypy.request.body.read().strip())
 
     def create_campaign(self, data):
@@ -39,7 +43,11 @@ class CreateCampaign(RESTResource):
         self.campaign.set_attribute('_id', self.campaign.get_attribute('prepid'))
 
         self.campaign.update_history({'action':'created'})
-       
+
+        ## this is to create, not to update
+        if self.db.document_exists( self.campaign.get_attribute('prepid') ):
+            return dumps({"results":False})
+
         # save to db
         if not self.db.save(self.campaign.json()):
             self.logger.error('Could not save object to database')
@@ -65,11 +73,17 @@ class UpdateCampaign(RESTResource):
         self.db_name = 'campaigns'
         self.db = database(self.db_name)
         self.request = None
+        self.access_limit = 4
         
     def PUT(self):
+        """
+        Update the content of a campaign data with the provided information
+        """
         return self.update_request(cherrypy.request.body.read().strip())
 
     def update_request(self, data):
+        if not '_rev' in data:
+            return dumps({"results":False, 'message': 'There is no previous revision provided'})
         try:
             self.request = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
@@ -93,22 +107,25 @@ class DeleteCampaign(RESTResource):
         self.fdb = database('flows')
     
     def DELETE(self, *args):
+        """
+        Delete a campaign
+        """
         if not args:
             return dumps({"results":False})
         return self.delete_request(args[0])
     
-    def delete_request(self, id):
-        if not self.delete_all_requests(id):
+    def delete_request(self, cid):
+        if not self.delete_all_requests(cid):
                 return dumps({"results":False})
         
         # delete all chained_campaigns and flows that have this campaign as a member
-        self.resolve_dependencies(id)
+        self.resolve_dependencies(cid)
         
-        return dumps({"results":self.db.delete(id)})
+        return dumps({"results":self.db.delete(cid)})
 
-    def delete_all_requests(self, id):
+    def delete_all_requests(self, cid):
         rdb = database('requests')
-        res = rdb.query('member_of_campaign=='+id, page_num=-1)
+        res = rdb.query('member_of_campaign=='+cid, page_num=-1)
         try:
                 for req in res:
                         rdb.delete(req['value']['prepid'])
@@ -153,6 +170,9 @@ class GetCampaign(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        """
+        Retrive the json content of a campaign attributes
+        """
         if not args:
 	    self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
@@ -167,6 +187,9 @@ class GetAllCampaigns(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Get the json content of all campaigns in McM
+        """
         return self.get_all()
 
     def get_all(self):
@@ -175,8 +198,12 @@ class GetAllCampaigns(RESTResource):
 class ToggleCampaign(RESTResource):
     def __init__(self):
         self.db = database('campaigns')
+        self.access_limit = 3
     
     def GET(self,  *args):
+        """
+        Move the campaign approval to the other state
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.toggle_campaign(args[0])
@@ -192,8 +219,12 @@ class ToggleCampaign(RESTResource):
 class ToggleCampaignStatus(RESTResource):
     def __init__(self):
         self.db = database('campaigns')
+        self.access_limit = 3 
 
     def GET(self,  *args):
+        """    
+        Move the campaign status to the next state
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.toggle_campaign(args[0])
@@ -211,8 +242,12 @@ class ToggleCampaignStatus(RESTResource):
 class ApproveCampaign(RESTResource):
     def __init__(self):
         self.db = database('campaigns')
+        self.access_limit = 3 
     
     def GET(self,  *args):
+        """
+        Move campaign or provided list of campaigns ids to the next approval (/ids) or to the specified index (/ids/index)
+        """
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
@@ -220,7 +255,7 @@ class ApproveCampaign(RESTResource):
             return self.multiple_toggle(args[0])
         return self.multiple_toggle(args[0],  args[1])
 
-    def multiple_toggle(self, rid, val=0):
+    def multiple_toggle(self, rid, val=-1):
         if ',' in rid:
             rlist = rid.rsplit(',')
             res = []
@@ -248,6 +283,9 @@ class GetCmsDriverForCampaign(RESTResource):
         self.campaign = None
 
     def GET(self, *args):
+      """
+      Retrieve the list of cmsDriver commands for a given campaign id
+      """
       if not args:
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
@@ -297,6 +335,9 @@ class ListAllCampaigns(CampaignsRESTResource):
         CampaignsRESTResource.__init__(self)
 
     def GET(self, *args):
+        """
+        Retrieve the list of all existing campaigns
+        """
         return dumps({"results": self.listAll()})
 
 
@@ -306,6 +347,9 @@ class InspectRequests(CampaignsRESTResource):
         self.access_limit = 3
 
     def GET(self, *args):
+        """
+        Inspect the campaign or coma separated list of campaigns for completed requests
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.multiple_inspect(args[0])
@@ -316,6 +360,9 @@ class InspectCampaigns(CampaignsRESTResource):
         self.access_limit = 3
 
     def GET(self, *args):
+        """
+        Inspect all the campaigns in McM for completed requests. Requires /all
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if args[0] != 'all':
