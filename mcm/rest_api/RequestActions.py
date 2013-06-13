@@ -145,7 +145,7 @@ class RequestRESTResource(RESTResource):
 class CloneRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
-        self.access_limit = 1 ## maybe that is wrong
+        #self.access_limit = 1 ## maybe that is wrong
 
     def GET(self, *args):
         """
@@ -195,7 +195,7 @@ class CloneRequest(RequestRESTResource):
 class ImportRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
-        self.access_limit = 1 ## maybe that is wrong
+        #self.access_limit = 1 ## maybe that is wrong
         
     def PUT(self):
         """
@@ -305,12 +305,15 @@ class MigratePage(RequestRESTResource):
         return html
     
 class MigrateRequest(RequestRESTResource):
+    """
+    Self contained PREP->McM migration class
+    """
     def __init__(self):
         RequestRESTResource.__init__(self)
 
     def GET(self, *args):
         """
-        Imports a request from prep (id provided)
+        Imports am existing request from prep (id provided) to an already existing campaign in McM
         """
         if not args:
             self.logger.error('No arguments were given')
@@ -577,8 +580,12 @@ class ApproveRequest(RESTResource):
 class ResetRequestApproval(ApproveRequest):
     def __init__(self):
         ApproveRequest.__init__(self)
-        
+        self.access_limit = 2
+
     def GET(self, *args):
+        """
+        Reste both approval and status to their initial state.
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.multiple_approve(args[0], 0)
@@ -618,6 +625,9 @@ class InspectStatus(RESTResource):
         self.access_limit = 3
 
     def GET(self, *args):
+        """
+        Triggers the internal inspection of the status of a request or coma separated list of request
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.multiple_inspect(args[0])
@@ -643,6 +653,9 @@ class SetStatus(RESTResource):
         self.access_limit = 3
 
     def GET(self, *args):
+        """
+        Perform the change of status to the next (/ids) or to the specidied index (/ids/index)
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if len(args) < 2:
@@ -751,12 +764,18 @@ class InjectRequest(RESTResource):
             return self.res
 
     def GET(self, *args):
+        """
+        Perform the thread (/ids/thread) or live preparation (/ids), testing, injection of a request, or coma separated list of requests.
+        """
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         
         res=[]
-        forking=(len(args)>1)
+        forking=False
+        if len(args)>1 and args[1]=='thread':
+            forking=True
+            
         forks=[]
         ids=args[0].split(',')
         for pid in ids:
@@ -785,6 +804,9 @@ class GetEditable(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Retreive the fields that are currently editable for a given request id
+        """
         if not args:
             self.logger.error('Request/GetEditable: No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -801,6 +823,9 @@ class GetDefaultGenParams(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Simply get the schema for the generator parameters object in request.
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -817,6 +842,9 @@ class NotifyUser(RESTResource):
         self.rdb = database('requests')
 
     def PUT(self):
+        """
+        Sends the prodived posted text to the user registered to a list of requests request
+        """
         data = loads(cherrypy.request.body.read().strip())
         # read a message from data
         message = data['message']
@@ -845,6 +873,9 @@ class RegisterUser(RESTResource):
         self.udb = database('users')
 
     def GET(self, *args):
+        """
+        Any person with cern credential can register to a request or a list of requests
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False, 'message':'Error: No arguments were given'})
@@ -881,6 +912,9 @@ class GetActors(RESTResource):
         self.rdb = database('requests')
         
     def GET(self, *args):
+        """
+        Provide the list of user registered and actors to a given request
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":False, 'message':'Error: No arguments were given'})
@@ -915,6 +949,9 @@ class UploadFile(RESTResource):
         return None
 
     def PUT(self, *args):
+        """
+        Parse the posted text document for request id and request ranges for display
+        """
         #self.logger.error(cherrypy.request.body.read().strip())
         self.logger.error("Got a file from uploading")
         data = loads(cherrypy.request.body.read().strip())
