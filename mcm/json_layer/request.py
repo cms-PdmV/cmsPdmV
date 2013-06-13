@@ -139,9 +139,11 @@ class request(json_base):
                         chain['status'] ='new'
                     else:
                         chain['status'] ='processing'
-                    expected_end = max(0,chain['_id'].count('-')-2)
+                    expected_end = max(0,chain['_id'].count('_')-1)
+                    self.logger.error('there and trying to set the chained request status %s %s %s %s'% ( chain['_id'], expected_end, chain['step'], chain['status'] ))
                     if chain['step'] == expected_end and self.get_attribute('status')=='done':
                         chain['status'] ='done'
+                    self.logger.error('there and trying to set the chained request status %s %s %s %s'% ( chain['_id'], expected_end, chain['step'], chain['status'] ))
 
                     crdb.save(chain)
         
