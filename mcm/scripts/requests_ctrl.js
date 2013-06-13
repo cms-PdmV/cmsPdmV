@@ -421,7 +421,7 @@ function resultsCtrl($scope, $http, $location, $window){
       return;
     }
     $scope.pendingHTTP = true;
-    var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/1");
+    var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/thread");
       promise.then(function(data){
         $scope.pendingHTTP = false;
         $scope.injectModalData = data.data;
