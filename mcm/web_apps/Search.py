@@ -6,6 +6,7 @@ import simplejson
 #from Page import Page
 from couchdb_layer.prep_database import database
 import copy
+from tools.locator import locator
 
 class Search(object):
 
@@ -93,7 +94,11 @@ class Search(object):
 		multiple_view=[]
 		#### 
 		## to switch on/off the view creation on the fly
-		simple_search=False
+		l_type=locator()
+		if l_type.isDev():
+			simple_search=False
+		else:
+			simple_search=True
 		####
 		for key in filter (lambda s : '-' not in s, allowed_key_search):
 			if key in args:
