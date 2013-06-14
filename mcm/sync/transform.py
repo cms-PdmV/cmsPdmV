@@ -240,6 +240,7 @@ class transformer:
                                         'match_efficiency': float(req_json['matchEff']),
                                         'match_efficiency_error': -1.}]
 
+        new['energy'] = camp['energy']
         new['reqmgr_name'] = []
 
         return new
