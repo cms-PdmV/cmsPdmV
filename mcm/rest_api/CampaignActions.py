@@ -73,7 +73,7 @@ class UpdateCampaign(RESTResource):
         self.db_name = 'campaigns'
         self.db = database(self.db_name)
         self.request = None
-        self.access_limit = 4
+        self.access_limit = 3
         
     def PUT(self):
         """
@@ -235,9 +235,14 @@ class ToggleCampaignStatus(RESTResource):
         camp = campaign(json_input=self.db.get(rid))
         try:
             camp.toggle_status()
-            return dumps({"results":self.db.update(camp.json())})
-        except:
-            return dumps({"results":False})
+            saved = self.db.update(camp.json())
+            if saved:
+                return dumps({"results":True})
+            else:
+                return dumps({"results":False, "message":"Could not save request"})
+                           
+        except Exception as ex:
+            return dumps({"results":False, "message": str(ex) })
     
 class ApproveCampaign(RESTResource):
     def __init__(self):
