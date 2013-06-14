@@ -109,9 +109,15 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
         $scope.update["success"] = data["results"];
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = data["results"];
-        $scope.getData();
+	if ($scope.update["success"] == true){
+	    $scope.update["fail"] = false;
+	    $scope.update["status_code"] = data["results"];
+	    $scope.getData();
+	}else{
+	    $scope.update["success"] = false;
+	    $scope.update["fail"] = true;  
+	    $scope.update["status_code"] = data.message;
+	}
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -121,9 +127,15 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.next_status = function(prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
         $scope.update["success"] = data["results"];
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = data["results"];
-        $scope.getData();
+	if ($scope.update["success"] == true){
+	    $scope.update["fail"] = false;
+	    $scope.update["status_code"] = data["results"];
+	    $scope.getData();
+	}else{
+	    $scope.update["success"] = false;             
+	    $scope.update["fail"] = true;            
+	    $scope.update["status_code"] = data.message;             
+	}
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
