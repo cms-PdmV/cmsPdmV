@@ -29,9 +29,11 @@ class RequestRESTResource(RESTResource):
         # check that the campaign it belongs to exsits
         camp = self.request.get_attribute('member_of_campaign')
         if not self.cdb.document_exists(camp):
-            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
+            return False
         ## get campaign                   
         self.campaign = self.cdb.get(camp)
+        self.request.set_attribute('energy' , self.campaign['energy'] )
+        return True
 
     ## duplicate version to be centralized in a unique class
     def add_action(self,force=False):
@@ -84,7 +86,8 @@ class RequestRESTResource(RESTResource):
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        self.set_campaign()
+        if not self.set_campaign():
+            return dumps({"results":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
         self.logger.log('Building new request...')
 
 	# set '_id' and 'prepid' fields
@@ -263,7 +266,8 @@ class UpdateRequest(RequestRESTResource):
             pass
         else:
             # check on the action 
-            self.set_campaign()
+            if not self.set_campaign():
+                return dumps({"results":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
             self.add_action()
         	
 	# update history
@@ -364,7 +368,8 @@ class MigrateRequest(RequestRESTResource):
             ## force to add an action on those requests
             #it might be that later on, upon update of the request that the action get deleted
             if camp.get_attribute('root') <=0:
-                self.set_campaign()
+                if not self.set_campaign():
+                    return dumps({"results":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
                 self.add_action(force=True)            
         else:
             return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})

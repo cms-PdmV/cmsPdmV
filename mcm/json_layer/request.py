@@ -84,6 +84,7 @@ class request(json_base):
             'reqmgr_name':[], # list of tuples (req_name, valid)
             'approval':self.get_approval_steps()[0],
             'analysis_id':[],
+            'energy' : 0,
             }
         # update self according to json_input
         self.setup()
