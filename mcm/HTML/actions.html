@@ -105,7 +105,7 @@
                   {{data[value.db_name]}}</a>
 		  <a ng-href='requests?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="Show request {{data[value.db_name]}}" target="_self"><i class="icon-folder-open"></i></a>
                 {{data['dataset_name']}}
-                <a ng-href='admin/_utils/document.html?actions/{{data[value.db_name]}}' rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
+                <a ng-href='admin/_utils/document.html?actions/{{data[value.db_name]}}' rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
                 <a ng-href='chained_requests?root_request={{data[value.db_name]}}' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_self">
                   <i class="icon-indent-left"></i>
                 </a>

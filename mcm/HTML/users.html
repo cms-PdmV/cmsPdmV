@@ -81,7 +81,7 @@
 	      <div ng-switch-when="UserName">
 		<a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
 		<a ng-href='requests?actor={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View requests operated by {{user_info[data.db_name]}}"><i class="icon-folder-open"></i></a>
-		<a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(3);" target="_self" ><i class="icon-star"></i></a>
+		<a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
 	      </div>
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Increase user role" ng-click="changeRole(user_info['username'],1)" ng-hide="role(4);">

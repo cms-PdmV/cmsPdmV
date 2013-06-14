@@ -158,7 +158,7 @@
               <div ng-switch-when="PrepId">
                 <a ng-href='requests?prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_self"><i class="icon-user"></i></a>
-                <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
+                <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
 	            <div ng-switch-when="Pwg"> 
 		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>

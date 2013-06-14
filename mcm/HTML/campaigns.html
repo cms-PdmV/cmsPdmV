@@ -81,7 +81,7 @@
           <div ng-switch on="value.text">
 	          <div ng-switch-when="PrepId">
 	           <a ng-href='{{getLocation()}}&prepid={{data.prepid}}' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-book"></i></a>
-             <a ng-href="admin/_utils/document.html?campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(3);"><i class="icon-star"></i></a>
+             <a ng-href="admin/_utils/document.html?campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
 	          </div>
             <div ng-switch-when="Actions">
        <!--     MODAL -->
