@@ -886,6 +886,12 @@ class request(json_base):
                 if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] == 'announced':
                     ## how many events got completed for real
                     self.set_attribute('completed_events' , mcm_rr[-1]['content']['pdmv_evts_in_DAS'] )
+
+                    if self.get_attribute('completed_events') <=0:
+                        not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( mcm_rr[-1]['content']['pdmv_dataset_name'])})
+                        db = database( 'requests')
+                        saved = db.save( self.json() )
+                        return not_good
                     ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
                     ## save the request back to db
