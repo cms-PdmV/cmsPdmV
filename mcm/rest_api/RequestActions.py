@@ -84,10 +84,14 @@ class RequestRESTResource(RESTResource):
             #self.request = request(json_input=loads(data))
             self.request = request(json_input=data)
         except request.IllegalAttributeName as ex:
-            return dumps({"results":False})
+            return dumps({"results":False,"message" : str(ex)})
 
         if not self.set_campaign():
-            return dumps({"results":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
+            return dumps({"results":False, "message":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
+
+        if self.campaign['status'] != 'started':
+            return dumps({"results":False, "message" : "Cannot create a request in a campaign that is not started"})
+
         self.logger.log('Building new request...')
 
 	# set '_id' and 'prepid' fields
@@ -108,7 +112,8 @@ class RequestRESTResource(RESTResource):
         
             if not self.request.get_attribute('prepid'):
                 self.logger.error('prepid returned was None')
-                raise ValueError('Prepid returned was None')
+                return dumps({"results":False, "message" : "internal error and the request id is null"})
+            
             self.request.set_attribute('_id', self.request.get_attribute('prepid'))
 
         self.logger.log('New prepid: %s' % (self.request.get_attribute('prepid')))     
@@ -142,7 +147,7 @@ class RequestRESTResource(RESTResource):
         # add an action to the action_db
         self.add_action()
 
-        return dumps({"results":self.request.get_attribute('_id')})
+        return dumps({"results":True, "prepid" :self.request.get_attribute('_id')})
 
     
 class CloneRequest(RequestRESTResource):

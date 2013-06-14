@@ -233,7 +233,11 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
     $scope.shouldBeOpen = false;
       $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
         console.log(data, status);
-        $window.location.href ="edit?db_name=requests&query="+data.results;
+	if (data.results){
+	    $window.location.href ="edit?db_name=requests&query="+data.prepid;
+	}else{
+	    alert("Error:"+ data.message);
+	}
       }).error(function(data,status){
         alert("Error:"+ status);
         console.log(data, status);
