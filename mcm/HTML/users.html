@@ -93,12 +93,23 @@
                 <a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
                   <i class="icon-question-sign"></i>
                 </a>
+		<a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);">
+		  <i class="icon-wrench"></i>
+		</a>
               </div>
       	      <div ng-switch-when="Roles">
                 <a ng-href='users?role={{user_info[data.db_name].join()}}' rel="tooltip" title="View users with role {{user_info[data.db_name].join()}}" target="_self"> {{user_info[data.db_name].join()}}</a>
       	      </div>
 	      <div ng-switch-when="Email">
 		 <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}
+	      </div>
+	      <div ng-switch-when="Role">
+		<a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
+	      </div>
+	      <div ng-switch-when="Pwg">
+		<ul>
+		  <li ng-repeat="p in user_info[data.db_name]"> {{p}} </li>
+		</ul>
 	      </div>
       	      <div ng-switch-default>
     		        {{user_info[data.db_name]}}
