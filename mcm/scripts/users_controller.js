@@ -156,6 +156,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data.status;
       $scope.update["results"] = data.data.results;
+      $scope.getData();
       //$window.location.reload();
     },function(data, status){
       $scope.update["success"] = false;
