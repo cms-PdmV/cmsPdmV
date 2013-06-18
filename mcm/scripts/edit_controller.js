@@ -188,6 +188,19 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     }
   };
+  $scope.removeUserPWG = function(elem){
+    //console.log(_.without($scope.result["pwg"], elem));
+    $scope.result["pwg"] = _.without($scope.result["pwg"], elem);
+  };
+  $scope.showAddUserPWG = function(){
+    $scope.showSelectPWG = true;
+    $scope.all_pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
+  };
+  $scope.addUserPWG = function(elem){
+    if($scope.result["pwg"].indexOf(elem) == -1){
+      $scope.result["pwg"].push(elem);
+    }
+  };
 }
 var ModalDemoCtrl = function ($scope) {
   $scope.open = function (number) {
