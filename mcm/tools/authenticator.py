@@ -19,9 +19,9 @@ class authenticator:
 		self.set_limit(limit)
 	
 	# get the roles that are registered to a specific username
-	def get_user_roles(self, username,email=None):
+	def get_user_role(self, username,email=None):
 		if not self.__db.document_exists(username):
-			return [self.__roles[0]]
+			return self.__roles[0]
 		user=self.__db.get(username)
 		if email and ('email' not in user or user['email']!=email):
 			user['email']=email
@@ -29,15 +29,15 @@ class authenticator:
 		role=None
 		while not role:
 			try:
-				role = user['roles']
+				role = user['role']
 			except:
 				## how to print an error from here ?
 				user=self.__db.get(username)
 				pass
-		return user['roles']
+		return user['role']
 
-	def get_user_roles_index(self,username,email=None):
-		r=self.get_user_roles(username,email)[0]
+	def get_user_role_index(self,username,email=None):
+		r=self.get_user_role(username,email)
 		return self.__roles.index(r),r
 
 	# aux: get the list of __roles
@@ -71,27 +71,27 @@ class authenticator:
 	# returns True, if a user matches the base role or higher
 	# returns False, otherwise.
 	def can_access(self, username):
-		roles = self.get_user_roles(username)
+		role = self.get_user_role(username)
 		
-		if self.__base_role in roles:
+		if self.__base_role == role:
 			return True
 		
 		# if the user does not match the given role, then
 		# maybe he has higher access rights.
-		for role in roles:
-			if role not in self.__roles:
-				continue
-			if self.__roles.index(role) >= self.__limit:
-				return True
+		if role not in self.__roles:
+			###exception actually
+			raise ValueError('role %s is not recognized'%( role ))
+		if self.__roles.index(role) >= self.__limit:
+			return True
 		return False
 
 	def get_login_box(self, username):
 		res = '<div id="login_box" style="float: right; display: block;"> '
 		res += str(username)
 		
-		roles = self.get_user_roles(username)
+		role = self.get_user_role(username)
 		
-		res += '\t(\tRoles: ' + str(roles)
+		res += '\t(\tRole: ' + str(role)
 		res += "\t)\t<a href='https://login.cern.ch/adfs/ls/?wa=wsignout1.0' style='float: right'>logout</a>"
 		res += "</div>"
 		return res
