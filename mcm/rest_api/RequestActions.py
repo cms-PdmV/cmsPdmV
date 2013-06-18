@@ -3,6 +3,7 @@
 import cherrypy
 import sys
 import traceback
+import string
 from json import loads,dumps
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
@@ -939,11 +940,48 @@ class GetActors(RESTResource):
         else:
             return dumps(request_in_db.get_actors())
 
+class SearchRequest(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.access_limit = 0
+        
+    def PUT(self, *args):
+        """
+        Search requests according to the search json provided
+        """
+        self.logger.error("Got a wild search dictionnary")
+        search_dict = loads(cherrypy.request.body.read().strip())
+        wild_search_dict={}
+        reg_queries =[]
+        for (key,search) in search_dict.items():
+            if '*' in search:
+                wild_search_dict[key] = search
+            else:
+                reg_queries.append('%s==%s'%( key, search))
+
+        ## do all the regular search the regular way
+        results= self.rdb.queries( reg_queries )
+        #results = map(lambda x: x['value'], self.rdb.get_all())
+        for (key,search) in wild_search_dict.items():
+            key_searchs=filter( lambda s : len(s), map(string.lower ,search.split('*')))
+            if not len(results):
+                continue
+            if type( results[0][key]) == list:
+                for key_search in key_searchs:
+                    results = filter( lambda doc :  any(map(lambda item : key_search in item.lower(), doc[key])), results)
+                else:
+                    for key_search in key_searchs:
+                        results = filter(lambda doc : key_search in doc[key].lower(), results)
+                    
+        return dumps( {"results": results})
+        
+
 class UploadFile(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
         self.cdb = database('campaigns')
         self.all_campaigns = map(lambda x:x['id'], self.cdb.raw_query("prepid"))
+        self.access_limit = 0
 
     def identify_an_id(self, word):
         if word.count('-') ==2:
@@ -966,7 +1004,7 @@ class UploadFile(RESTResource):
         self.logger.error("Got a file from uploading")
         data = loads(cherrypy.request.body.read().strip())
         text = data['contents']
-
+        
         all_ids=[]
         ## parse that file for prepids
         for line in text.split('\n'):
