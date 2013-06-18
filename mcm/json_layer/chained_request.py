@@ -266,6 +266,7 @@ class chained_request(json_base):
         req['pileup_dataset_name'] = nc['pileup_dataset_name']
         req['root'] = False #JR???
         req['version']=0
+        req['energy'] = nc['energy']
         
         # add the previous requests output_dataset name as input for the new
         ## get the input dataset from the previous request
