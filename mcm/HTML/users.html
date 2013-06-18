@@ -93,7 +93,7 @@
                 <a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
                   <i class="icon-question-sign"></i>
                 </a>
-		<a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);">
+		<a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);" target="_self">
 		  <i class="icon-wrench"></i>
 		</a>
               </div>
