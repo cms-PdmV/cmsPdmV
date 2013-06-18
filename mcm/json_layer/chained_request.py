@@ -167,7 +167,8 @@ class chained_request(json_base):
         my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
         if my_action_item['flag'] == False:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'has no valid action')
-        
+        if not 'block_number' in my_action_item or not my_action_item['block_number']:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'has no valid block number')
 
         # find the flow responsible for this step
         #tokstr = cc['prepid'].split('_') # 0: chain, 1: root camp, 2: flow1, 3: flow2, ...
@@ -396,6 +397,9 @@ class chained_request(json_base):
         # update history and save request to database
 	nre.update_history({'action':'flow'})
         rdb.save(nre.json())
+
+        ## inspect priority
+        self.set_priority( my_action_item['block_number'] )
 
         self.set_attribute('last_status', nre.get_attribute('status'))
         # update local history
