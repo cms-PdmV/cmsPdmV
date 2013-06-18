@@ -890,9 +890,12 @@ testApp.controller('TabsController', ['$scope', '$element', function($scope, $el
       pane.selected = false;
     });
     pane.selected = true;
+   // $scope.togglePane(pane);
+    console.log("pane selection", pane.selected);
   };
 
   this.addPane = function addPane(pane) {
+    console.log("add pane");
     if (!panes.length) {
       $scope.select(pane);
     }
@@ -900,11 +903,20 @@ testApp.controller('TabsController', ['$scope', '$element', function($scope, $el
   };
 
   this.removePane = function removePane(pane) { 
+    console.log("remove pane");
     var index = panes.indexOf(pane);
     panes.splice(index, 1);
     //Select a new pane if removed pane was selected 
     if (pane.selected && panes.length > 0) {
       $scope.select(panes[index < panes.length ? index : index-1]);
+    }
+  };
+
+  this.togglePane = $scope.togglePane = function togglePane(pane){
+    if (pane.selected){
+      pane.selected = false;
+    }else{
+      pane.selected = true;
     }
   };
 }])
