@@ -129,7 +129,7 @@ class json_base:
         if updater != 'automatic':
             self.current_user = updater
         self.current_user_email = updater_user['author_email']
-        self.current_user_level,self.current_user_role=auth.get_user_roles_index(updater)
+        self.current_user_level,self.current_user_role=auth.get_user_role_index(updater)
         #return self.current_user_level
 
     def get_actors(self,N=-1,what='author_username'):
