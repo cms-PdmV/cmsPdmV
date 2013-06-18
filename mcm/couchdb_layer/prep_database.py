@@ -200,7 +200,7 @@ class database:
     def queries( self, query_list):
         ##page_nume does not matter 
         if not len(query_list):
-            return self.get_all(page_num)
+            return self.get_all(page_num=-1)
         try:
 
             results_list=[]
