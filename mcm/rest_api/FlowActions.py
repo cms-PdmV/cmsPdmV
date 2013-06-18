@@ -419,7 +419,7 @@ class UpdateFlow(FlowRESTResource):
         return self.update_flow(cherrypy.request.body.read().strip())
 
     def update_flow(self, jsdata):
-        data = lods(jsdata)
+        data = loads(jsdata)
         if not '_rev' in data:
             return dumps({"results":"Cannot update without _rev"})
         try:
