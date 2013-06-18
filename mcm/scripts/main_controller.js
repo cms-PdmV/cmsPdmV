@@ -13,10 +13,10 @@ function mainCtrl($scope, $http, $location, $window){
   $scope.user = {name: "guest", role:"user",roleIndex:0};
 
 // GET username and role
-    var promise = $http.get("restapi/users/get_roles");
+    var promise = $http.get("restapi/users/get_role");
     promise.then(function(data){
       $scope.user.name = data.data.username;
-      $scope.user.role = data.data.roles[0];
+      $scope.user.role = data.data.role;
       $scope.user.roleIndex = parseInt(data.data.role_index);
     },function(data){
       alert("Error getting user information. Error: "+data.status);
