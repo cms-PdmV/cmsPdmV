@@ -12,13 +12,15 @@ class RequestChainId(RESTResourceIndex):
         self.ccamp_db = database(self.ccamp_db_name)
         self.creq_db_name = 'chained_requests'
         self.creq_db = database(self.creq_db_name)
-
+    
+    """
     def GET(self, *args):
         if len(args) < 2:
             self.logger.error('No arguments were given.')
             return dumps({"results":""})
         return self.generate_id(args[0], args[1])
-    
+    """
+
     def generate_id(self, pwg, campaign):
         if not pwg:
             self.logger.error('Physics working group provided is None.')

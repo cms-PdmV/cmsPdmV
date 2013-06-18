@@ -96,13 +96,16 @@ class RESTResourceIndex(RESTResource):
 				     'DELETE':[('delete_request', 'prepid', 'Delete a request from the d<th>GET Doc string</th>atabase and that\'s it ')]}
 	
 	def GET(self):
+		"""
+		Returns the documentation of the resource
+		"""
 		return self.index()
 
 	def index(self):
 		self.res = '<h1>REST API for McM<h2>'
 		methods = ['GET','PUT','POST','DELETE']
 		#self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Function info</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
-		self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
+		self.res += "<table border='1'><thead><tr><th>Path</th><th>Function name</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
 		#for method in self.data:
 		#	self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
 		#	self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
@@ -121,7 +124,7 @@ class RESTResourceIndex(RESTResource):
 			#		self.res +=' '+m
                      self.res += "<tr>"
                      if hasattr(o,'access_limit'):
-                         self.res += "<td><b>%s</b></td>" %(key)
+                         self.res += "<td><a href=%s><b>%s</b></a></td>" %(key,key)
 			 self.res +=' <td>%s</td>'%(o.__class__.__name__)
 			 #if o.__class__.__doc__:
 			 #self.res +=' <td> %s</td>'%(o.__class__.__doc__)

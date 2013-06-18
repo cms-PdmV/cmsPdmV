@@ -16,8 +16,11 @@ class CreateAction(RESTResource):
         self.db_name = 'actions'
         self.db = database(self.db_name)
         self.action = None
-
+        self.access_limit = 3
     def PUT(self):
+        """
+        Create an action from the provided json content
+        """
         return self.import_request(cherrypy.request.body.read().strip())
 
     def import_request(self, data):
@@ -43,8 +46,12 @@ class UpdateAction(RESTResource):
         self.db_name = 'actions'
         self.db = database(self.db_name)
         self.action = None
+        self.access_limit = 3
 
     def PUT(self):
+        """
+        update the action with the provided json content
+        """
         return self.import_request(cherrypy.request.body.read().strip())
 
     def import_request(self, data):
@@ -99,8 +106,12 @@ class UpdateMultipleActions(RESTResource):
         self.db = database(self.db_name)
         self.single_updater = UpdateAction()
         self.action_getter = GetAction()
+        self.access_limit =3 
 
     def PUT(self):
+        """
+        Update a multiple number of actions at the same time from the provided json content
+        """
         self.logger.log('Updating multiple actions')
         data = loads(cherrypy.request.body.read().strip())
         output = []
@@ -139,6 +150,9 @@ class GetAction(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        """
+        Retrieve the json content of a given action id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -152,20 +166,25 @@ class SelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
         self.db = database(self.db_name)
-    
+        self.access_limit = 4
+        
     def GET(self, *args):
+        """
+        Allows to select a given chained request for a given action id /action_id/chain_id
+        """
+        return dumps({"results":'not implemented'})
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given'})
             
         return self.select_chain(args[0],  args[1])
     
-    def select_chain(self, id,  chainid):
-        self.logger.log('Selecting chain %s for action %s...' % (chainid, id))
+    def select_chain(self, aid,  chainid):
+        self.logger.log('Selecting chain %s for action %s...' % (chainid, aid))
         # if action exists
-        if self.db.document_exists(id):
+        if self.db.document_exists(aid):
             # initialize the object
-            a = action(json_input=self.db.get(id))
+            a = action(json_input=self.db.get(aid))
             # and set it to 1 (default ?)
             a.select_chain(chainid)
             
@@ -179,8 +198,12 @@ class DeSelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
         self.db = database(self.db_name)
+        self.access_limit = 4
     
     def GET(self, *args):
+        """
+        Allows to UN-select a given chained request for a given action id /action_id/chain_id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -207,8 +230,12 @@ class GenerateChainedRequests(RESTResource):
         self.ccdb = database('chained_campaigns')
         self.crdb = database('chained_requests')
         self.rdb = database('requests')
+        self.access_limit = 3
 
     def GET(self,  *args):
+        """
+        Generate all chained requests for a given action id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({'results':'Error: No arguments were given'})
@@ -297,6 +324,9 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
         GenerateChainedRequests.__init__(self)
         
     def GET(self,  *args):
+        """
+        Generate all chained requests for all actions where applicable
+        """
         return self.generate_requests()
     
     def generate_requests(self):
@@ -399,8 +429,12 @@ class GenerateAllChainedRequests(RESTResource):
 class DetectChains(RESTResource):
     def __init__(self):
         self.db = database('actions')
-    
+        self.access_limit = 3
+
     def GET(self,  *args):
+        """
+        Update the action content with the possible chains
+        """
         if not args:
             return self.find_all_chains()
         return self.find_chains(args[0])

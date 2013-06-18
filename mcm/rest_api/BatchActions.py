@@ -6,10 +6,11 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.prep_database import database
 from json_layer.batch import batch
 
+"""
 class SetStatus(RESTResource):
     def __init__(self):
         self.db = database('batches')
-
+        self.access_limit = 
     def GET(self, *args):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
@@ -39,6 +40,7 @@ class SetStatus(RESTResource):
             return {"prepid":rid, "results":False, 'message' : 'Unknow error'}
 
         return {"prepid": rid, "results":self.db.update(req.json())}
+"""
 
 class GetBatch(RESTResource):
     def __init__(self):
@@ -46,6 +48,9 @@ class GetBatch(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Retrieve the json content of given batch id
+        """
         if not args:
             self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
@@ -60,6 +65,9 @@ class GetAllBatches(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Retrieve the json content of the batch db
+        """
         return self.get_all()
 
     def get_all(self):
@@ -71,6 +79,9 @@ class GetIndex(RESTResource):
         self.db = database(self.db_name)
 
     def GET(self, *args):
+        """
+        Redirect to the proper link to a given batch id
+        """
         if not args:
             self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
@@ -80,7 +91,7 @@ class GetIndex(RESTResource):
         #yurks ?
         redirect="""\
 <html>
-<meta http-equiv="REFRESH" content="0; url=https://cms-pdmv.cern.ch/mcm/batches?db_name=batches&query=%22prepid%3D%3D%s%22&page=0">
+<meta http-equiv="REFRESH" content="0; url=/mcm/batches?prepid=%s&page=0">
 </html>
 """%(id)
         return redirect
@@ -90,18 +101,22 @@ class AnnounceBatch(RESTResource):
     def __init__(self):
         self.db_name = 'batches'
         self.db = database(self.db_name) 
+        self.access_limit = 3
 
     def PUT(self):
+        """
+        Annouce a given batch id, with the provided notes in json content
+        """
         return self.announce(loads(cherrypy.request.body.read().strip()))
     
     def announce(self, data):
         if not 'prepid' in data or not 'notes' in data:
             raise ValueError('no prepid nor notes in batch announcement api')
-        id=data['prepid']
-        if not self.db.document_exists(id):
-            return dumps({"results":False, "message": "%s is not a valid batch name"%(id)})
+        bid=data['prepid']
+        if not self.db.document_exists(bid):
+            return dumps({"results":False, "message": "%s is not a valid batch name"%(bid)})
         
-        b = batch(self.db.get(id))
+        b = batch(self.db.get(bid))
         r=b.announce(data['notes'])
         if r:
             return dumps({"results":self.db.save(b.json()) , "value" : r})

@@ -15,11 +15,19 @@ class CreateChainedCampaign(RESTResource):
         self.db = database('chained_campaigns')
         self.adb = database('actions')
         self.ccamp = None
+        self.access_limit = 3
     
     def PUT(self):
-                return self.create_campaign(cherrypy.request.body.read().strip())
+        """
+        Create a chained campaign from the provide json content
+        """
+        return self.create_campaign(cherrypy.request.body.read().strip())
 
     def create_campaign(self, jsdata):
+        data = loads(jsdata)
+        if '_rev' in data:
+            return dumps({"results":" cannot create from a json with _rev"})
+
         try:
             self.ccamp = chained_campaign(json_input=loads(jsdata))
         except chained_campaign('').IllegalAttributeName as ex:
@@ -69,15 +77,24 @@ class UpdateChainedCampaign(RESTResource):
         def __init__(self):
                 self.db = database('chained_campaigns')
                 self.ccamp = None
+                self.access_limit = 3 
 
         def PUT(self):
-                return self.update_campaign(cherrypy.request.body.read().strip())
+            """
+            Update the content of a chained campaign with the provided json content
+            """
+            return self.update_campaign(cherrypy.request.body.read().strip())
 
         def update_campaign(self, jsdata):
+                data = loads ( jsdata)
+                if '_rev' not in data:
+                    return dumps({"results":False})
+
                 try:
-                        self.ccamp = chained_campaign(json_input=loads(jsdata))
+                        self.ccamp = chained_campaign(json_input=data)
                 except chained_campaign('').IllegalAttributeName as ex:
                         return dumps({"results":False})
+
 
                 if not self.ccamp.get_attribute("_id"):
                         self.logger.error('prepid returned was None')
@@ -90,7 +107,7 @@ class UpdateChainedCampaign(RESTResource):
 
                 return dumps({"results":self.db.update(self.ccamp.json())})
 
-        
+"""        
 class AddRequestToChain(RESTResource):
     def __init__(self):
         self.request_db = database('requests')
@@ -136,6 +153,7 @@ class AddRequestToChain(RESTResource):
             self.logger.error('Could not save newly created request to database.')
             return dumps({"results":False})
         return dumps({"results":self.request_db.save(new_req)})
+"""
 
 class DeleteChainedCampaign(RESTResource):
     def __init__(self):
@@ -143,6 +161,9 @@ class DeleteChainedCampaign(RESTResource):
         self.db = database(self.db_name)
         self.adb = database('actions')
     def DELETE(self, *args):
+        """
+        Delete a chained campaign and all related
+        """
         if not args:
             return dumps({"results":False})
         return self.delete_request(args[0])
@@ -181,6 +202,9 @@ class GetChainedCampaign(RESTResource):
         self.db_name = 'chained_campaigns'
         self.db = database(self.db_name)
     def GET(self, *args):
+        """
+        Retrieve the content of a given chained campaign id
+        """
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":False})
@@ -195,8 +219,14 @@ class GenerateChainedRequests(RESTResource):
         self.ccdb = database('chained_campaigns')
         self.cdb = database('campaigns')
         self.adb = database('actions')
+        self.access_limit = 3
     
     def GET(self,  *args):
+        """
+        Generate the chained requests for a given chained campaign.
+        """
+        return dumps({"results":"Broken and should not be used yet"})
+
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
@@ -251,11 +281,12 @@ class GenerateChainedRequests(RESTResource):
 
         return dumps({"results":True})
 
+"""
 # starts the chained campaign
 class Start(RESTResource):
     def __init__(self):
         self.ccdb = database('chained_campaigns')
-    
+        self.access_limit 
     def GET(self,  *args):
         if not args:
             self.logger.error('No arguments were given') 
@@ -272,7 +303,8 @@ class Start(RESTResource):
         cc = chained_campaign(self.ccdb.get(ccid))
         cc.start()
         self.ccdb.update(cc.json())
-
+"""
+"""
 # stops the chained campaign
 class Stop(RESTResource):
     def __init__(self):
@@ -294,7 +326,7 @@ class Stop(RESTResource):
         cc = chained_campaign(self.ccdb.get(ccid))
         cc.stop()
         self.ccdb.update(cc.json())
-
+"""
 class InspectChainedCampaignsRest(RESTResource):
     def __init__(self):
         self.ccdb = database('chained_campaigns') 
@@ -330,6 +362,9 @@ class InspectChainedRequests(InspectChainedCampaignsRest):
         InspectChainedCampaignsRest.__init__(self)
 
     def GET(self, *args):
+        """
+        Inspect the chained requests of a provided chained campaign id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -340,6 +375,9 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         InspectChainedCampaignsRest.__init__(self)
 
     def GET(self, *args):
+        """
+        Inspect the chained requests of all chained campaigns, requires /all
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         if args[0] != 'all':

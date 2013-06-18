@@ -12,8 +12,12 @@ class CreateChainedRequest(RESTResource):
         self.db_name = 'chained_requests'
         self.db = database(self.db_name)
         self.req = None
+        self.access_limit = 4
 
     def PUT(self):
+        """
+        Create a chained request from the provided json content
+        """
         return self.import_request(cherrypy.request.body.read().strip())
     def import_request(self, data):
         try:
@@ -51,7 +55,12 @@ class UpdateChainedRequest(RESTResource):
         self.db_name = 'chained_requests'
         self.db = database(self.db_name)
         self.request = None
+        self.access_limit = 4
+
     def PUT(self):
+        """
+        Update a chained request from the provided json content
+        """
         return self.update_request(cherrypy.request.body.read().strip())
 
     def update_request(self, data):
@@ -81,6 +90,9 @@ class DeleteChainedRequest(RESTResource):
         self.db = database(self.db_name)
     
     def DELETE(self, *args):
+        """
+        Simply delete a chained requests
+        """
         if not args:
             return dumps({"results":False})
         return self.delete_request(args[0])
@@ -94,6 +106,9 @@ class GetChainedRequest(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        """
+        Retrieve the content of a chained request id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":{}})
@@ -107,8 +122,13 @@ class AddRequestToChain(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
         self.db = database('chained_requests')
-    
+        self.access_limit =4 
     def PUT(self):
+        """
+        Add a request to a chained request from a provided json content
+        """
+        return dumps({"results" : "Not implemented"})
+
         return self.add_to_chain(cherrypy.request.body.read().strip())
         
     def add_to_chain(self, data):
@@ -156,11 +176,18 @@ class AddRequestToChain(RESTResource):
 class FlowToNextStep(RESTResource):
     def __init__(self):
         self.db = database('chained_requests')
-    
+        self.access_limit = 3
+
     def PUT(self):
+        """
+        Allows to flow a chained request with the dataset and blocks provided in the json 
+        """
         return self.flow2(cherrypy.request.body.read().strip())
     
     def GET(self, *args):
+        """
+        Allow to flow a chained request with internal information
+        """
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given.'})
@@ -220,8 +247,12 @@ class FlowToNextStep(RESTResource):
 class ApproveRequest(RESTResource):
     def __init__(self):
         self.db = database('chained_requests')
-    
+        self.acces_limit = 3 
+
     def GET(self,  *args):
+        """
+        move the chained request approval to the next step
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
@@ -259,8 +290,12 @@ class InspectChain(RESTResource):
     def __init__(self):
         self.crdb = database('chained_requests')
         self.rdb = database('requests')
+        self.acces_limit = 3
 
     def GET(self, *args):
+        """
+        Inspect a chained request for next action
+        """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
         return self.multiple_inspect(args[0])

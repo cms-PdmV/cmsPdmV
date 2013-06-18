@@ -19,6 +19,7 @@ class FlowRESTResource(RESTResource):
         self.ccdb = database('chained_campaigns')
         self.adb = database('actions')
         self.f = None
+        self.access_limit = 3
 
     # takes  a 2 lists and returns a tuple of what is present in the second and not in the first and
     # what was present in the first and not in the second
@@ -231,11 +232,17 @@ class CreateFlow(FlowRESTResource):
         FlowRESTResource.__init__(self)
 
     def PUT(self,  *args,  **kwargs):
+        """
+        Create a flow from the provided json content
+        """
         return self.create_flow(cherrypy.request.body.read().strip())
         
-    def create_flow(self, data):
+    def create_flow(self, jsdata):
+        data = loads(jsdata)
+        if '_rev' in data:
+            return dumps({"results":'Cannot create a flow with _rev'})
         try:
-            self.f = flow(json_input=loads(data))
+            self.f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
         except ValueError as ex:
@@ -406,11 +413,17 @@ class UpdateFlow(FlowRESTResource):
         FlowRESTResource.__init__(self)
         
     def PUT(self):
+        """
+        Update a flow with the provided content
+        """
         return self.update_flow(cherrypy.request.body.read().strip())
 
-    def update_flow(self, data):
+    def update_flow(self, jsdata):
+        data = lods(jsdata)
+        if not '_rev' in data:
+            return dumps({"results":"Cannot update without _rev"})
         try:
-            self.f = flow(json_input=loads(data))
+            self.f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
         
@@ -453,6 +466,9 @@ class DeleteFlow(RESTResource):
         self.cdb = database('campaigns')
     
     def DELETE(self, *args):
+        """
+        Delete a flow and all related objects
+        """
         if not args:
             return dumps({"results":'Error: No Arguments were provided.'})
         return self.delete_flow(args[0])
@@ -519,6 +535,9 @@ class GetFlow(RESTResource):
         self.db = database(self.db_name)
     
     def GET(self, *args):
+        """
+        Retrieve the json content of a given flow id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":{}})
@@ -530,8 +549,12 @@ class GetFlow(RESTResource):
 class ApproveFlow(RESTResource):
     def __init__(self):
         self.db = database('flows')
-    
+        self.access_limit = 3
+
     def GET(self,  *args):
+        """
+        Move the given flow id to the next approval /flow_id , or the provided index /flow_id/index
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
