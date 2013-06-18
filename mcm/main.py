@@ -5,7 +5,7 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UploadFile
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UploadFile, SearchRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain
@@ -14,7 +14,7 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
-from rest_api.UserActions import GetUserRoles, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser
+from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG
 from rest_api.BatchActions import GetBatch, GetAllBatches, AnnounceBatch, GetIndex
 
 #to get campaign sequences
@@ -168,7 +168,8 @@ root.public.restapi.requests.get_actors = GetActors()
 # - 'get' actions are request through HTTP GET and return a json
 
 # REST User actions
-root.restapi.users.get_roles = GetUserRoles()
+root.restapi.users.get_role = GetUserRole()
+root.restapi.users.get_pwg = GetUserPWG()
 root.restapi.users.get_all_roles = GetAllRoles()
 root.restapi.users.get_all_users = GetAllUsers()
 root.restapi.users.add_role = AddRole()
@@ -200,6 +201,7 @@ root.restapi.requests.notify = NotifyUser()
 root.restapi.requests.migrate = MigrateRequest()
 root.restapi.requests.inspect = InspectStatus()
 root.restapi.requests.listwithfile = UploadFile()
+root.restapi.requests.search = SearchRequest()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
