@@ -4,12 +4,14 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Actions',select:true, db_name:''},
         {text:'Approval',select:true, db_name:'approval'},
         {text:'Status',select:true, db_name:'status'},
-        {text:'MCDBId',select:true, db_name:'mcdb_id'},
+        //{text:'MCDBId',select:true, db_name:'mcdb_id'},
         {text:'Dataset name',select:true, db_name:'dataset_name'},
         //{text:'SW Release',select:false, db_name:'cmssw_release'},
         //{text:'Type',select:false, db_name:'type'},
-        {text:'History',select:false, db_name:'history'},
+        {text:'History',select:true, db_name:'history'},
     ];
+    $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""}];
+    $search_data = {};
 
     $scope.filt = {}; //define an empty filter
     $scope.notify_text = "";
@@ -600,22 +602,45 @@ function resultsCtrl($scope, $http, $location, $window){
     
     return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
   }
-  $scope.upload = function(){
-    /*Upload a file to server*/
-    // console.log("file:", $scope.cf);
-      $scope.got_results = false;
-     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: $scope.cf}).success(function(data,status){
-	     
-	     console.log(data,status);
-	     $scope.result = data.results;
-	     $scope.got_results = true;
 
+   $scope.togglePane = function(val){
+    if (val){
+      return true;
+    }else{
+      return false;
+    }
+   };
+   $scope.superSearch = function(data){
+     var search_data={};
+     _.each($scope.searchable_fields, function(elem){
+      if (elem.value !=""){
+        search_data[elem.name] = elem.value;
+      }
+      });
+      /*submit method*/
+      $http({method:'PUT', url:'restapi/'+$scope.dbName+'/search', data: search_data}).success(function(data,status){
+       $scope.result = data.results;
+       $scope.got_results = true;
        }).error(function(status){
          $scope.update["success"] = false;
          $scope.update["fail"] = true;
          $scope.update["status_code"] = status;
        });
+
+     
    };
+    $scope.upload = function(file){
+    /*Upload a file to server*/
+      $scope.got_results = false;
+        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
+          $scope.result = data.results;
+          $scope.got_results = true;
+        }).error(function(status){
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+        });
+      };
 
 };
 
@@ -826,7 +851,7 @@ testApp.directive("generatorParams", function($http){
     }
   };
 });
-testApp.directive('ddlFileReader', function() {
+testApp.directive('ddlFileReader', function($http,$rootScope) {
     return {
         require: "ngModel",
         replace: true,
@@ -852,7 +877,91 @@ testApp.directive('ddlFileReader', function() {
 
                 reader.readAsText(file);
             });
+
         },
         template: '<input type="file" class="input" />'
     }
 });
+testApp.controller('TabsController', ['$scope', '$element', function($scope, $element) {
+  var panes = $scope.panes = [];
+
+  this.select = $scope.select = function selectPane(pane) {
+    angular.forEach(panes, function(pane) {
+      pane.selected = false;
+    });
+    pane.selected = true;
+  };
+
+  this.addPane = function addPane(pane) {
+    if (!panes.length) {
+      $scope.select(pane);
+    }
+    panes.push(pane);
+  };
+
+  this.removePane = function removePane(pane) { 
+    var index = panes.indexOf(pane);
+    panes.splice(index, 1);
+    //Select a new pane if removed pane was selected 
+    if (pane.selected && panes.length > 0) {
+      $scope.select(panes[index < panes.length ? index : index-1]);
+    }
+  };
+}])
+testApp.directive('tabs', function() {
+  return {
+    restrict: 'EA',
+    transclude: true,
+    scope: {
+    },
+    controller: 'TabsController',
+    template: 
+    "<div class=\"tabbable\">\n" +
+    "  <ul class=\"nav nav-tabs\">\n" +
+    "    <li ng-repeat=\"pane in panes\" ng-class=\"{active:pane.selected}\">\n" +
+    "      <a ng-click=\"select(pane)\">{{pane.heading}}</a>\n" +
+    "    </li>\n" +
+    "  </ul>{{result}}\n" +
+    "  <div class=\"tab-content\" ng-transclude></div>\n" +
+    "</div>\n",
+    replace: true
+  };
+})
+testApp.directive('pane', ['$parse', function($parse) {
+  return {
+    require: '^tabs',
+    restrict: 'EA',
+    transclude: true,
+    scope:{
+      heading:'@',
+    },
+    link: function(scope, element, attrs, tabsCtrl) {
+      var getSelected, setSelected;
+      scope.selected = false;
+      if (attrs.active) {
+        getSelected = $parse(attrs.active);
+        setSelected = getSelected.assign;
+        scope.$watch(
+          function watchSelected() {return getSelected(scope.$parent);},
+          function updateSelected(value) {scope.selected = value;}
+        );
+        scope.selected = getSelected ? getSelected(scope.$parent) : false;
+      }
+      scope.$watch('selected', function(selected) {
+        if(selected) {
+          tabsCtrl.select(scope);
+        }
+        if(setSelected) {
+          setSelected(scope.$parent, selected);
+        }
+      });
+
+      tabsCtrl.addPane(scope);
+      scope.$on('$destroy', function() {
+        tabsCtrl.removePane(scope);
+      });
+    },
+    template: "<div class=\"tab-pane\" ng-class=\"{active: selected}\" ng-show=\"selected\" ng-transclude></div>\n",
+    replace: true
+  };
+}]);

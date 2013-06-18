@@ -949,29 +949,41 @@ class SearchRequest(RESTResource):
         """
         Search requests according to the search json provided
         """
-        self.logger.error("Got a wild search dictionnary")
         search_dict = loads(cherrypy.request.body.read().strip())
+        self.logger.error("Got a wild search dictionnary %s"%( str(search_dict) ) )
+
         wild_search_dict={}
         reg_queries =[]
         for (key,search) in search_dict.items():
             if '*' in search:
-                wild_search_dict[key] = search
+                wild_search_dict[str(key)] = str(search)
             else:
                 reg_queries.append('%s==%s'%( key, search))
 
+        if len(reg_queries)==0 and len(wild_search_dict)==0:
+            return dumps( {"results": []})
+        
         ## do all the regular search the regular way
         results= self.rdb.queries( reg_queries )
-        #results = map(lambda x: x['value'], self.rdb.get_all())
+   
+        self.logger.error("Got %s results so far"%( len( results)))
+
         for (key,search) in wild_search_dict.items():
             key_searchs=filter( lambda s : len(s), map(string.lower ,search.split('*')))
-            if not len(results):
-                continue
-            if type( results[0][key]) == list:
+            self.logger.error("Wild search on %s %s %s"%(key, search, key_searchs ))
+            if len(results) ==0:
+                self.logger.error("no results anymore...")
+                break
+            if type( results[0][key] ) == list:
                 for key_search in key_searchs:
+                    self.logger.error("Got %s results so far (list)"%( len( results)))
                     results = filter( lambda doc :  any(map(lambda item : key_search in item.lower(), doc[key])), results)
-                else:
-                    for key_search in key_searchs:
-                        results = filter(lambda doc : key_search in doc[key].lower(), results)
+                    self.logger.error("Got %s results so far (list)"%( len( results)))
+            else:
+                for key_search in key_searchs:
+                    self.logger.error("Got %s results so far (else)"%( len( results)))
+                    results = filter(lambda doc : key_search in doc[key].lower(), results)
+                    self.logger.error("Got %s results so far (else)"%( len( results)))
                     
         return dumps( {"results": results})
         
