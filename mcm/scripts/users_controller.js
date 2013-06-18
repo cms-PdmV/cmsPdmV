@@ -3,7 +3,7 @@ function resultsCtrl($scope, $http, $location, $window){
     {text:'UserName', select:true, db_name:'username'},
     {text:'Actions', select:false, db_name:''},
     {text:'Email', select:false, db_name:'email'},
-    {text:'Roles', select:true, db_name:'roles'}
+    {text:'Role', select:true, db_name:'role'}
   ];
   $scope.update = [];
 
