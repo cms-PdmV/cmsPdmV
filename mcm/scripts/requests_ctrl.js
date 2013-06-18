@@ -882,41 +882,37 @@ testApp.directive('ddlFileReader', function($http,$rootScope) {
         template: '<input type="file" class="input" />'
     }
 });
+/*
+Angular-UI panes/tab directive with local customisation
+http://angular-ui.github.io/bootstrap/
+*/
 testApp.controller('TabsController', ['$scope', '$element', function($scope, $element) {
   var panes = $scope.panes = [];
 
   this.select = $scope.select = function selectPane(pane) {
-    angular.forEach(panes, function(pane) {
+    if (pane.selected == true){ //if pane is clicked while open -> close pane to save space
       pane.selected = false;
-    });
-    pane.selected = true;
-   // $scope.togglePane(pane);
-    console.log("pane selection", pane.selected);
+    }else{ //else if it was closed-> open clicked pane by closing all and opening the current one
+      angular.forEach(panes, function(pane) {
+        pane.selected = false;
+      });
+      pane.selected = true;
+    }
   };
 
   this.addPane = function addPane(pane) {
-    console.log("add pane");
-    if (!panes.length) {
-      $scope.select(pane);
-    }
+    //if (!panes.length) {
+    //  $scope.select(pane);
+    //}
     panes.push(pane);
   };
 
   this.removePane = function removePane(pane) { 
-    console.log("remove pane");
     var index = panes.indexOf(pane);
     panes.splice(index, 1);
     //Select a new pane if removed pane was selected 
     if (pane.selected && panes.length > 0) {
       $scope.select(panes[index < panes.length ? index : index-1]);
-    }
-  };
-
-  this.togglePane = $scope.togglePane = function togglePane(pane){
-    if (pane.selected){
-      pane.selected = false;
-    }else{
-      pane.selected = true;
     }
   };
 }])
@@ -959,14 +955,14 @@ testApp.directive('pane', ['$parse', function($parse) {
         );
         scope.selected = getSelected ? getSelected(scope.$parent) : false;
       }
-      scope.$watch('selected', function(selected) {
-        if(selected) {
-          tabsCtrl.select(scope);
-        }
-        if(setSelected) {
-          setSelected(scope.$parent, selected);
-        }
-      });
+    //  scope.$watch('selected', function(selected) {
+        //if(selected) {
+          //tabsCtrl.select(scope); //lame original watch
+        //}
+    //    if(setSelected) {
+    //      setSelected(scope.$parent, selected);
+    //    }
+    //  });
 
       tabsCtrl.addPane(scope);
       scope.$on('$destroy', function() {

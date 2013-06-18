@@ -32,14 +32,14 @@
         <pane heading="Select Columns">
         <div class="well">
           <div>
-            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
-            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
-            <span ng-show="show_well == true">
+            <!-- <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false"> -->
+            <!-- <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true"> -->
+            <!-- <span ng-show="show_well == true"> -->
               <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-            </span>
+            <!-- </span> -->
           </div>
-          <span ng-repeat="value in requests_defaults" ng-show="show_well" style="width:160px;float:inline;">
+          <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
             <label class="checkbox inline">
               <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
             </label>
@@ -48,7 +48,7 @@
       </pane>
         <pane heading="Super search">
           <form class="form-inline">
-            <input type="text" class="input-mini" maxlength="20" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
+            <input type="text" class="input-mini" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
             <button class="btn btn-mini" ng-click="superSearch(searchable_fields);">Search!</button>
           </form>
         </pane>
