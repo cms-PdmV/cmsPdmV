@@ -1008,6 +1008,12 @@ class UploadFile(RESTResource):
                 return word
         return None
 
+    def identify_a_dataset_name(self,word):
+        if word.count('/')==3:
+            (junk,dsn,ps,tier)=word.split('/')
+            if junk:
+                return None
+            return dsn
     def PUT(self, *args):
         """
         Parse the posted text document for request id and request ranges for display
@@ -1031,6 +1037,7 @@ class UploadFile(RESTResource):
                 if an_id:
                     all_ids.append( an_id )
                     in_the_line.append( an_id )
+                    
                 if word =='->':
                     if len(in_the_line):
                         in_the_line = [in_the_line[-1]]
@@ -1044,6 +1051,7 @@ class UploadFile(RESTResource):
                         serial_end = int(id_end.split('-')[-1])+1
                         for serial in range(serial_start,serial_end):
                             all_ids.append('-'.join(id_start.split('-')[0:2]+['%05d'%(serial)]))
+
         all_ids = list(set(all_ids))
         all_ids.sort()
         all_requests=[]
