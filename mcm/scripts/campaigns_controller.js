@@ -229,20 +229,29 @@ function resultsCtrl($scope, $http, $location, $window){
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
-    $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG'];
-  $scope.selectedPwg= 'BPH';
   $scope.open = function (id) {
-    $scope.shouldBeOpen = true;
-    $scope.prepId = id;
+      
+    var promise = $http.get("restapi/users/get_pwg/vlimant")
+    promise.then(function(data){
+	    $scope.pwgs = data.data.results;
+	    //if ($scope.pwgs.length==0){
+	    //$scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
+	    //}
+	    $scope.selectedPwg= $scope.pwgs[0];
+	    $scope.shouldBeOpen = true;
+	    $scope.prepId = id;
+	});
+
   };
 
   $scope.close = function () {
-    $scope.selectedPwg= 'BPH';
+
     $scope.shouldBeOpen = false;
   };
     $scope.save = function () {
     console.log($scope.selectedPwg, $scope.prepId);
     $scope.shouldBeOpen = false;
+    if ($scope.selectedPwg){
       $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
         console.log(data, status);
 	if (data.results){
@@ -254,7 +263,11 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
         alert("Error:"+ status);
         console.log(data, status);
       });
+    }else{
+	alert("Error: no pwg defined");
+    }
     };
+    
     $scope.createCampaign = function(){
       $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
         console.log(data, status);
