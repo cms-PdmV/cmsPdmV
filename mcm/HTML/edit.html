@@ -193,6 +193,22 @@
                     <div ng-switch-when="Allowed campaigns">
                       <div select-campaign ng-model="result[column.db_name]"></div>
                     </div>
+                    <div ng-switch-when="Pwg">
+                      <div ng-switch on="dbName">
+                        <div ng-switch-when="users">
+                          <ul ng-repeat="elem in result[column.db_name]">
+                            <li>
+                              {{elem}} <a ng-click="removeUserPWG(elem);"><i class="icon-remove-sign"></i></a>
+                            </li>
+                          </ul>
+                          <a ng-click="showAddUserPWG();"><i class="icon-plus" ng-hide="showSelectPWG"></i></a>
+                          <select ng-model="selectedPWG" ng-change="addUserPWG(selectedPWG);" ng-options="value for value in all_pwgs" ng-show="showSelectPWG"></select>
+                        </div>
+                        <div ng-switch-default>
+                          <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                        </div>
+                      </div>
+                    </div>
                     <div ng-switch-when="Next campaign">
                       <select ng-model="result[column.db_name]" ng-options="value for value in allCampaigns"></select>
                     </div>
