@@ -259,7 +259,7 @@ root.restapi.flows.approve = ApproveFlow()
 root.restapi.batches.get_batch = GetBatch()
 root.restapi.batches.get_all_batches = GetAllBatches()
 root.restapi.batches.announce = AnnounceBatch()
-root.restapi.batches.index = GetIndex()
+root.restapi.batches.redirect = GetIndex()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
