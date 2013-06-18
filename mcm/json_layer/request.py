@@ -840,6 +840,14 @@ class request(json_base):
         if override_id:
             look_for_what = override_id
         stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%(look_for_what) ,page_num=-1))
+        ### order them from [0] earliest to [n] latest
+        def sortRequest(r1 , r2):
+            if r1['pdmv_submission_date'] == r2['pdmv_submission_date']:
+                return cmp(r1['pdmv_request_name'] , r2['pdmv_request_name'])
+            else:
+                return cmp(r1['pdmv_submission_date'] , r2['pdmv_submission_date'])
+        stats_rr.sort( cmp = sortRequest )
+
         #self.logger.error('found %s'%(stats_rr))
         one_new=False
         for stats_r in stats_rr:
