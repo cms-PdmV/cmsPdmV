@@ -645,9 +645,10 @@ class request(json_base):
         ############################################################################
         #### HERE starts a big chunk that should be moved somewhere else than here
         ## gen valid configs
+        self.genvalid_driver = None
         valid_sequence = None
         n_to_valid=1000 #get it differently than that
-        yes_to_valid=True
+        yes_to_valid=False
         val_sentence=self.get_attribute('validation')
         if len(val_sentence):
             val_spec=val_sentence.split(',')
@@ -670,9 +671,6 @@ class request(json_base):
         firstSequence = self.get_attribute('sequences')[0]
         firstStep = firstSequence['step'][0]
 
-        self.genvalid_driver = None
-        
-                
         if firstStep == 'GEN':
 
             cmsd_list += '\n\n'
