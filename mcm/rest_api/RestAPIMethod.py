@@ -131,7 +131,7 @@ class RESTResourceIndex(RESTResource):
 			 #else:
 			 #	 self.res +=' <td><b>To be documented</b></td>'
 			 limit = None
-			 if o.access_limit:
+			 if o.access_limit!=None:
 				 limit = o.access_limit
 			 for m in methods:
 				 if m in o.__class__.__dict__:
@@ -140,7 +140,7 @@ class RESTResourceIndex(RESTResource):
 					 else:
 						 self.res +='<td><b>To be documented</b></td>'
 					 #self.res +='<td>%s</td>'%(o.__class__.__dict__)
-					 if limit:
+					 if limit!=None:
 						 self.res +='<td align=center>+%s</td>'%(limit)
 					 else:
 						 self.res +='<td align=center>%s</td>'%(self.limit_per_method [m])
