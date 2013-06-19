@@ -5,12 +5,12 @@ from web_apps.Search import Search
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
 from rest_api.RestAPIMethod import RESTResourceIndex
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UploadFile, SearchRequest
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, RequestsFromFile, SearchRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions
+from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
@@ -200,7 +200,7 @@ root.restapi.requests.register = RegisterUser()
 root.restapi.requests.notify = NotifyUser()
 root.restapi.requests.migrate = MigrateRequest()
 root.restapi.requests.inspect = InspectStatus()
-root.restapi.requests.listwithfile = UploadFile()
+root.restapi.requests.listwithfile = RequestsFromFile()
 root.restapi.requests.search = SearchRequest()
 
 # REST Campaign Actions
@@ -247,7 +247,7 @@ root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
 root.restapi.actions.detect_chains = DetectChains()
 root.restapi.actions.generate_all_chained_requests = GenerateAllChainedRequests()
 root.restapi.actions.update_multiple = UpdateMultipleActions()
-
+root.restapi.actions.listwithfile = ActionsFromFile()
 # REST Flow Actions
 root.restapi.flows.get = GetFlow()
 root.restapi.flows.save = CreateFlow()
