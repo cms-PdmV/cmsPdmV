@@ -61,3 +61,125 @@ function mainCtrl($scope, $http, $location, $window){
       $scope.pendingHTTP = true;
   });
 };
+testApp.directive('ddlFileReader', function($http,$rootScope) {
+    return {
+        require: "ngModel",
+        replace: true,
+        restrict: 'E',
+        link: function(scope, element, attrs, ctrl) {
+
+            element.bind("change", function (ev) {
+                var files = ev.target.files;
+                var file = files.length?files[0]:null;
+
+                if (! file) {
+                    ctrl.$setViewValue(null);
+                    return;
+                }
+
+                // Closure to capture the file information.
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    scope.$apply(function () {
+                        ctrl.$setViewValue({ f: file, contents: e.target.result });
+                    });
+                };
+
+                reader.readAsText(file);
+            });
+
+        },
+        template: '<input type="file" class="input" />'
+    }
+});
+/*
+Angular-UI panes/tab directive with local customisation
+http://angular-ui.github.io/bootstrap/
+*/
+testApp.controller('TabsController', ['$scope', '$element', function($scope, $element) {
+  var panes = $scope.panes = [];
+
+  this.select = $scope.select = function selectPane(pane) {
+    if (pane.selected == true){ //if pane is clicked while open -> close pane to save space
+      pane.selected = false;
+    }else{ //else if it was closed-> open clicked pane by closing all and opening the current one
+      angular.forEach(panes, function(pane) {
+        pane.selected = false;
+      });
+      pane.selected = true;
+    }
+  };
+
+  this.addPane = function addPane(pane) {
+    //if (!panes.length) {
+    //  $scope.select(pane);
+    //}
+    panes.push(pane);
+  };
+
+  this.removePane = function removePane(pane) { 
+    var index = panes.indexOf(pane);
+    panes.splice(index, 1);
+    //Select a new pane if removed pane was selected 
+    if (pane.selected && panes.length > 0) {
+      $scope.select(panes[index < panes.length ? index : index-1]);
+    }
+  };
+}])
+testApp.directive('tabs', function() {
+  return {
+    restrict: 'EA',
+    transclude: true,
+    scope: {
+    },
+    controller: 'TabsController',
+    template: 
+    "<div class=\"tabbable\">\n" +
+    "  <ul class=\"nav nav-tabs\">\n" +
+    "    <li ng-repeat=\"pane in panes\" ng-class=\"{active:pane.selected}\">\n" +
+    "      <a ng-click=\"select(pane)\">{{pane.heading}}</a>\n" +
+    "    </li>\n" +
+    "  </ul>{{result}}\n" +
+    "  <div class=\"tab-content\" ng-transclude></div>\n" +
+    "</div>\n",
+    replace: true
+  };
+})
+testApp.directive('pane', ['$parse', function($parse) {
+  return {
+    require: '^tabs',
+    restrict: 'EA',
+    transclude: true,
+    scope:{
+      heading:'@',
+    },
+    link: function(scope, element, attrs, tabsCtrl) {
+      var getSelected, setSelected;
+      scope.selected = false;
+      if (attrs.active) {
+        getSelected = $parse(attrs.active);
+        setSelected = getSelected.assign;
+        scope.$watch(
+          function watchSelected() {return getSelected(scope.$parent);},
+          function updateSelected(value) {scope.selected = value;}
+        );
+        scope.selected = getSelected ? getSelected(scope.$parent) : false;
+      }
+    //  scope.$watch('selected', function(selected) {
+        //if(selected) {
+          //tabsCtrl.select(scope); //lame original watch
+        //}
+    //    if(setSelected) {
+    //      setSelected(scope.$parent, selected);
+    //    }
+    //  });
+
+      tabsCtrl.addPane(scope);
+      scope.$on('$destroy', function() {
+        tabsCtrl.removePane(scope);
+      });
+    },
+    template: "<div class=\"tab-pane\" ng-class=\"{active: selected}\" ng-show=\"selected\" ng-transclude></div>\n",
+    replace: true
+  };
+}]);
