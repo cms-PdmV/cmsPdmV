@@ -759,6 +759,8 @@ class package_builder:
 
         if not flag:
             self.close()
+            message='Runtest failed \n %s \n'%( tester.job_log_when_failed )
+            self.request.test_failure(message)
             return False
 
         if how_far and how_far=='test':
