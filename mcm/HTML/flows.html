@@ -6,6 +6,8 @@
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
+        <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
          <!--[IF IE]>
@@ -41,6 +43,7 @@
               <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
             </label>
           </span>
+          <input type="button" value="saveCookie" ng-click="saveCookie()" ng-show="show_well">
         </div><!--end of well for table columns-->
       </div>
     </div><!--End of container-->
