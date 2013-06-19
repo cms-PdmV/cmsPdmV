@@ -955,7 +955,7 @@ class SearchRequest(RESTResource):
         wild_search_dict={}
         reg_queries =[]
         for (key,search) in search_dict.items():
-            if '*' in search:
+            if '*' in search or '+' in search:
                 wild_search_dict[str(key)] = str(search)
             else:
                 reg_queries.append('%s==%s'%( key, search))
@@ -969,21 +969,31 @@ class SearchRequest(RESTResource):
         self.logger.error("Got %s results so far"%( len( results)))
 
         for (key,search) in wild_search_dict.items():
+            ## * is and
             key_searchs=filter( lambda s : len(s), map(string.lower ,search.split('*')))
             self.logger.error("Wild search on %s %s %s"%(key, search, key_searchs ))
-            if len(results) ==0:
+            if len(results) == 0:
                 self.logger.error("no results anymore...")
                 break
+            #try:
+            #    x= results[0][key] 
+            #except:
+            #    self.logger.error("Request content %s"%( str( results[0])))
+            
             if type( results[0][key] ) == list:
                 for key_search in key_searchs:
-                    self.logger.error("Got %s results so far (list)"%( len( results)))
+                    #self.logger.error("Got %s results so far (list)"%( len( results)))
                     results = filter( lambda doc :  any(map(lambda item : key_search in item.lower(), doc[key])), results)
-                    self.logger.error("Got %s results so far (list)"%( len( results)))
+                    #self.logger.error("Got %s results so far (list)"%( len( results)))
+            elif type( results[0][key] ) == int:
+                for key_search in key_searchs:
+                    ##until something better comes up
+                    results = filter(lambda doc : str(key_search) in str(doc[key]).lower(), results)
             else:
                 for key_search in key_searchs:
-                    self.logger.error("Got %s results so far (else)"%( len( results)))
+                    #self.logger.error("Got %s results so far (else)"%( len( results)))
                     results = filter(lambda doc : key_search in doc[key].lower(), results)
-                    self.logger.error("Got %s results so far (else)"%( len( results)))
+                    #self.logger.error("Got %s results so far (else)"%( len( results)))
                     
         return dumps( {"results": results})
         
