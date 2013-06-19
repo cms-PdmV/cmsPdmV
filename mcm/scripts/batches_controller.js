@@ -119,8 +119,16 @@ function resultsCtrl($scope, $http, $location, $window){
                 $scope.batches_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
             }
         });
+        var shown = "";
+        if ($.cookie($scope.dbName+"shown") !== undefined){
+          shown = $.cookie($scope.dbName+"shown");
+          $location.search("shown", shown);
+        }
         if ($location.search()["shown"] !== undefined){
-          binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+          shown = $location.search()["shown"]
+        }
+        if (shown != ""){
+          binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           _.each($scope.batches_defaults, function(column){
             column_index = $scope.batches_defaults.indexOf(column);
             binary_bit = binary_shown.charAt(column_index);
@@ -182,6 +190,24 @@ function resultsCtrl($scope, $http, $location, $window){
         // alert to announce that uknown action is asked???
         break;
     }
+  };
+  $scope.saveCookie = function(){
+    var cookie_name = $scope.dbName+"shown";
+    if($location.search()["shown"]){
+      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
+    }
+  };
+  $scope.useCookie = function(){
+    var cookie_name = $scope.dbName+"shown";
+    var shown = $.cookie(cookie_name);
+    binary_shown = parseInt(shown).toString(2).split('').reverse().join('');
+    _.each($scope.batches_defaults, function(elem,index){
+      if (binary_shown.charAt(index) == 1){
+        elem.select = true;
+      }else{
+        elem.select = false;
+      }
+    });
   };
 };
 
