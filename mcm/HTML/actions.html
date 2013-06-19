@@ -33,18 +33,28 @@
             <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
           </form>
         </div><!--End of campaing SELECT -->
-        
-        <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
-          <span style="float: left;">
+        <tabs>
+          <pane heading="Select Columns">
+            <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
+          <!-- <span style="float: left;">
             <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
             <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
-          </span>
-          <span ng-repeat="value in actions_defaults" ng-show="show_well">
-            <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select"> {{value.text}}
-            </label>
-          </span>
-        </div><!--end of well for table columns-->
+          </span> -->
+              <span ng-repeat="value in actions_defaults" ng-show="show_well">
+                <label class="checkbox inline">
+                  <input type="checkbox" ng-model="value.select"> {{value.text}}
+                </label>
+              </span>
+            </div><!--end of well for table columns-->
+          </pane>
+          <pane heading="List from file">
+            <div class="control-group">
+              List request from a list file: <ddl-file-reader ng-model="cf"> </ddl-file-reader>
+              <button class="btn btn-mini" align="middle" ng-click="upload(cf);">Upload</button>
+              <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Lists_Requests" rel="tooltip" title="Help on listing from file"><i class="icon-question-sign"></i></a>
+            </div>
+          </pane>
+        </tabs>
       </div> <!--end of SPAN12-->
     </div> <!--end of container-->
     <table class="table table-bordered table-stripped">
