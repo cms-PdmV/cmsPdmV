@@ -6,6 +6,8 @@
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
          <script type="text/javascript" src="scripts/underscore.js"></script>
+         <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
+         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
          <script type="text/javascript" src="scripts/angular.min.js"></script>
          <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
          <!--<script src="scripts/ui-bootstrap-custom-tpls-0.3.0.min.js"></script>-->
@@ -39,21 +41,22 @@
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
             <!-- </span> -->
           </div>
-	  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics"><i class="icon-question-sign"></i></a>
+          
           <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
             <label class="checkbox inline">
               <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
             </label>
           </span>
-
+          <input type="button" value="saveCookie" ng-click="saveCookie()">
+          <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
         </div><!--end of well for table columns-->
       </pane>
         <pane heading="Super search">
           <form class="form-inline">
             <input type="text" class="input-mini" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
             <button class="btn btn-mini" ng-click="superSearch(searchable_fields);">Search!</button>
-	    <!--<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_search" rel="tooltip" title="Glossary for search"><i class="icon-question-sign"></i></a>-->
-	    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_Requests" rel="tooltip" title="Help for search"><i class="icon-question-sign"></i></a>
+            <!--<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_search" rel="tooltip" title="Glossary for search"><i class="icon-question-sign"></i></a>-->
+            <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_Requests" rel="tooltip" title="Help for search"><i class="icon-question-sign"></i></a>
           </form>
         </pane>
         <pane heading="List from file">
