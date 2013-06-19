@@ -24,15 +24,20 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
+      $scope.update = [];
       if ($scope.selectedOption['contains'] != "------"){
           $location.search("select",$scope.selectedOption['contains']);
           //$scope.getData();
-          do_get_data = true;
+          //do_get_data = true;
+      }else{
+        $location.search("select",null);
       }
       if ($scope.selectedOption['starts'] != "------"){
           $location.search("starts",$scope.selectedOption['starts']);
           //$scope.getData();
-          do_get_data = true;
+          //do_get_data = true;
+      }else{
+        $location.search("starts",null);
       }
     },true);
 
@@ -172,6 +177,14 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
   $scope.getData = function(){
       $scope.result = [];
       var query = ""
+      if ($scope.rootCampaign){ //if defined
+        if ($scope.rootCampaign.length == 0){
+          $scope.update['status_code'] = "None";
+          $scope.update['success'] = false;
+          $scope.update['fail'] = true;
+          $scope.update['result'] = "No root campaign to get data";
+        }
+      }
       _.each($scope.rootCampaign, function(element){
         query = "&member_of_campaign="+element;
         _.each($location.search(), function(value,key){
@@ -433,6 +446,18 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
           $scope.selected_prepids.push(selected);
         }
       }
+    });
+  };
+  $scope.upload = function(file){
+      /*Upload a file to server*/
+    $scope.got_results = false;
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
+      $scope.result = data.results;
+      $scope.got_results = true;
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
     });
   };
 };
