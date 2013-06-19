@@ -988,12 +988,22 @@ class SearchRequest(RESTResource):
         return dumps( {"results": results})
         
 
-class UploadFile(RESTResource):
+class RequestLister():
     def __init__(self):
         self.rdb = database('requests')
         self.cdb = database('campaigns')
         self.all_campaigns = map(lambda x:x['id'], self.cdb.raw_query("prepid"))
-        self.access_limit = 0
+        self.retrieve_db = None
+
+    def get_objects(self, all_ids):
+        all_objects=[]
+        if len(all_ids) and self.retrieve_db:
+            for oid in all_ids:
+                if self.retrieve_db.document_exists(oid):
+                    all_objects.append( self.retrieve_db.get(oid))
+                    
+        self.logger.error("Got %s ids identified"%( len (all_objects)))
+        return dumps({"results": all_objects })
 
     def identify_an_id(self, word):
         if word.count('-') ==2:
@@ -1009,22 +1019,23 @@ class UploadFile(RESTResource):
         return None
 
     def identify_a_dataset_name(self,word):
+        #self.logger.error('word %s %s'%(word, word.count('/')))
         if word.count('/')==3:
+            #self.logger.error('word %s'%(word))
             (junk,dsn,ps,tier)=word.split('/')
             if junk:
                 return None
             return dsn
-    def PUT(self, *args):
-        """
-        Parse the posted text document for request id and request ranges for display
-        """
-        #self.logger.error(cherrypy.request.body.read().strip())
+
+    def get_list_of_ids(self):
         self.logger.error("Got a file from uploading")
         data = loads(cherrypy.request.body.read().strip())
         text = data['contents']
         
         all_ids=[]
+        all_dsn={}
         ## parse that file for prepids
+        possible_campaign = None
         for line in text.split('\n'):
             in_the_line=[]
             for word in line.split():
@@ -1032,17 +1043,35 @@ class UploadFile(RESTResource):
                     word=word[0:-2]
                 if word.startswith(','):
                     word=word[1:]
-                #self.logger.error("Got a word "+word)
-                an_id = self.identify_an_id(word)
+
+                if word.startswith('@-'):
+                    possible_campaign = None
+                elif word.startswith('@'):
+                    possible_campaign = word[1:]
+                    if not possible_campaign in all_dsn:
+                        all_dsn[possible_campaign]=[]
+
+                ## is that a prepid ?
+                an_id = None
+                a_dsn = None
+                if possible_campaign==None:
+                    an_id = self.identify_an_id(word)
+            
                 if an_id:
                     all_ids.append( an_id )
                     in_the_line.append( an_id )
-                    
+                elif possible_campaign:
+                    a_dsn = self.identify_a_dataset_name(word)
+                    if a_dsn:
+                        all_dsn[possible_campaign].append( a_dsn)
+
+                ## the ley word for range
                 if word =='->':
                     if len(in_the_line):
                         in_the_line = [in_the_line[-1]]
+
+                ## dealing with id range
                 if len(in_the_line)==2:
-                    #then we have a range
                     id_start=in_the_line[0]
                     id_end=in_the_line[1]
                     in_the_line=[]
@@ -1052,15 +1081,31 @@ class UploadFile(RESTResource):
                         for serial in range(serial_start,serial_end):
                             all_ids.append('-'.join(id_start.split('-')[0:2]+['%05d'%(serial)]))
 
+
+        for (possible_campaign,possible_dsn) in all_dsn.items():
+            #self.logger.error("Found those dsn to look for %s"%(possible_dsn))
+            if not self.cdb.document_exists( possible_campaign):
+                continue
+            ## get all requests
+            all_requests =map(lambda x: x['value'], self.rdb.query('member_of_campaign==%s'% ( possible_campaign), page_num=-1))
+            for request in all_requests:
+                if request['dataset_name'] in possible_dsn:
+                    all_ids.append(request['prepid'])
+            
         all_ids = list(set(all_ids))
         all_ids.sort()
-        all_requests=[]
-        if len(all_ids):
-            for rid in all_ids:
-                if self.rdb.document_exists(rid):
-                    all_requests.append(self.rdb.get(rid))
-             
-        self.logger.error("Got %s ids identified"%( len (all_requests)))
-  
-        return dumps({"results": all_requests })
+        return all_ids
+        
+class RequestsFromFile(RequestLister,RESTResource):
+    def __init__(self):
+        RequestLister.__init__(self)
+        self.retrieve_db = self.rdb
+        self.access_limit = 0
+
+    def PUT(self, *args):
+        """
+        Parse the posted text document for request id and request ranges for display of requests
+        """
+        all_ids = self.get_list_of_ids()
+        return self.get_objects( all_ids )
 
