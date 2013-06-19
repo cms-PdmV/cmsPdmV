@@ -535,6 +535,15 @@ class request(json_base):
                 if release == release_to_find:
                     self.scram_arch = scram_arch
         return self.scram_arch
+
+    def initCvs(self):
+        txt=''
+        if not hasattr(self,'cvsInit') or not self.cvsInit:
+            txt += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
+            txt += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
+            txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
+        self.cvsInit=True
+        return txt
     
     def get_setup_file(self,directory='',events=10):
         l_type = locator()
@@ -563,18 +572,10 @@ class request(json_base):
         ## setup from the last release directory used
         infile += 'eval `scram runtime -sh`\n'
 
-        def initCvs():
-            txt=''
-            if not initCvs.cvsInit:
-                txt += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
-                txt += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
-                txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
-            initCvs.cvsInit=True
-            return txt
-        initCvs.cvsInit = False
+        self.cvsInit = False
         # checkout from cvs (if needed)
         if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            infile+=initCvs()
+            infile+=self.initCvs()
             infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + '\n'
         
         ##copy the fragment directly from the DB into a file
@@ -601,7 +602,7 @@ class request(json_base):
 
                 # add customization
                 if 'GenProduction' in cname:
-                    infile += initCvs()
+                    infile += self.initCvs()
                     infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
             # tweak a bit more finalize cmsDriver command
             res = cmsd
@@ -620,9 +621,33 @@ class request(json_base):
 
             previous += 1
 
+        (i,c) = self.get_genvalid_setup(directory)
+        infile+=i
+        cmsd_list+=c
+
+        infile += '\nscram b\n'
+        infile += cmsd_list
+        # since it's all in a subshell, there is
+        # no need for directory traversal (parent stays unaffected)
+
+        infile += 'cd ../../\n'
+        ## if there was a release setup, jsut remove it
+        if directory:
+            infile += 'rm -rf %s' %( self.get_attribute('cmssw_release') )
+            
+
+        return infile
+
+    def get_genvalid_setup(self,directory):
+        cmsd_list =""
+        infile =""
+
+        ############################################################################
+        #### HERE starts a big chunk that should be moved somewhere else than here
         ## gen valid configs
         valid_sequence = None
         n_to_valid=1000 #get it differently than that
+        yes_to_valid=True
         val_sentence=self.get_attribute('validation')
         if len(val_sentence):
             val_spec=val_sentence.split(',')
@@ -630,7 +655,16 @@ class request(json_base):
                 spec_s = spec.split(':')
                 k = spec_s[0]
                 if k == 'nEvents':
-                    n_to_valid = int( spec_s[1])
+                    n_to_valid = int(spec_s[1])
+                if k == 'valid':
+                    yes_to_valid = bool( spec_s[1] )
+
+        l_type=locator()
+        if self.little_release() < '530' or (not l_type.isDev()):
+            yes_to_valid= False        
+
+        if not yes_to_valid:
+            return ("","")
 
         # to be refined using the information of the campaign
         firstSequence = self.get_attribute('sequences')[0]
@@ -658,20 +692,11 @@ class request(json_base):
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
         
-        ##############
-        ## switch it off there, for a certain range of releases, and for production instance
-        ##############
-        if self.little_release() < '530' or (not l_type.isDev()):
-            valid_sequence = None
-        
-        ## or just switched off for all
-        #valid_sequence = None
-        
         if valid_sequence:
             self.setup_harvesting(directory)
 
             ## until we have full integration in the release
-            infile += initCvs()
+            infile += self.initCvs()
             cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
             cmsd_list +='cvs co -r HEAD GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py 2> /dev/null \n'
             cmsd_list +='\nscram b -j5 \n'
@@ -686,18 +711,9 @@ class request(json_base):
             ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
             cmsd_list += self.harvesting_driver
 
-        infile += '\nscram b\n'
-        infile += cmsd_list
-        # since it's all in a subshell, there is
-        # no need for directory traversal (parent stays unaffected)
-
-        infile += 'cd ../../\n'
-        ## if there was a release setup, jsut remove it
-        if directory:
-            infile += 'rm -rf %s' %( self.get_attribute('cmssw_release') )
-            
-
-        return infile
+        ##that's the end of the part for gen-valid that should be somewhere else
+        ############################################################################
+        return (infile,cmsd_list)
 
     def setup_harvesting(self,directory):
         self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
