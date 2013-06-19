@@ -200,7 +200,7 @@ class database:
     def queries( self, query_list):
         ##page_nume does not matter 
         if not len(query_list):
-            return self.get_all(page_num=-1)
+            return map(lambda r : r['value'], self.get_all(page_num=-1))
         try:
 
             results_list=[]
@@ -428,7 +428,7 @@ class database:
             #self.logger.error(self.db.commitOne(doc))
             ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
             saved = self.db.commitOne(doc)
-            self.logger.error('Commit One says : %s'%(saved))
+            #self.logger.error('Commit One says : %s'%(saved))
             return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
