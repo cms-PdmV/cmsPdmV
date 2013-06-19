@@ -161,8 +161,16 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.flows_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
           }
         });
+        var shown = "";
+        if ($.cookie($scope.dbName+"shown") !== undefined){
+          shown = $.cookie($scope.dbName+"shown");
+          $location.search("shown", shown);
+        }
         if ($location.search()["shown"] !== undefined){
-          binary_shown = parseInt($location.search()["shown"]).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+          shown = $location.search()["shown"]
+        }
+        if (shown != ""){
+          binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           _.each($scope.flows_defaults, function(column){
             column_index = $scope.flows_defaults.indexOf(column);
             binary_bit = binary_shown.charAt(column_index);
@@ -207,6 +215,12 @@ function resultsCtrl($scope, $http, $location, $window){
     if ($scope.result.length !=0){
       $location.search("page", current_page+1);
       $scope.list_page = current_page+1;
+    }
+  };
+  $scope.saveCookie = function(){
+    var cookie_name = $scope.dbName+"shown";
+    if($location.search()["shown"]){
+      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
 };
