@@ -100,12 +100,12 @@ function resultsCtrl($scope, $http, $location, $window){
         var shown = "";
         if ($.cookie($scope.dbName+"shown") !== undefined){
           shown = $.cookie($scope.dbName+"shown");
-          $location.search("shown", shown);
         }
         if ($location.search()["shown"] !== undefined){
           shown = $location.search()["shown"]
         }
         if (shown != ""){
+          $location.search("shown", shown);
           binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           _.each($scope.defaults, function(column){
             column_index = $scope.defaults.indexOf(column);
@@ -190,18 +190,6 @@ function resultsCtrl($scope, $http, $location, $window){
     if($location.search()["shown"]){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
-  };
-  $scope.useCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    var shown = $.cookie(cookie_name);
-    binary_shown = parseInt(shown).toString(2).split('').reverse().join('');
-    _.each($scope.defaults, function(elem,index){
-      if (binary_shown.charAt(index) == 1){
-        elem.select = true;
-      }else{
-        elem.select = false;
-      }
-    });
   };
 };
 

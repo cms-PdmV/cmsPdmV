@@ -176,12 +176,12 @@ function resultsCtrl($scope, $http, $location, $window){
         var shown = "";
         if ($.cookie($scope.dbName+"shown") !== undefined){
           shown = $.cookie($scope.dbName+"shown");
-          $location.search("shown", shown);
         }
         if ($location.search()["shown"] !== undefined){
           shown = $location.search()["shown"]
         }
         if (shown != ""){
+          $location.search("shown", shown);
           binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           // for(i=0;i<$scope.defaults.length-binary_shown.length;i++){
           //   binary_shown += "0";

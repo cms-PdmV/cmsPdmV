@@ -286,12 +286,13 @@ function resultsCtrl($scope, $http, $location, $window){
         var shown = "";
         if ($.cookie($scope.dbName+"shown") !== undefined){
           shown = $.cookie($scope.dbName+"shown");
-          $location.search("shown", shown);
         }
         if ($location.search()["shown"] !== undefined){
-          shown = $location.search()["shown"]
+          shown = $location.search()["shown"];
         }
         if (shown != ""){
+          console.log(shown);
+          $location.search("shown", shown);
           binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           _.each($scope.requests_defaults, function(column){
             column_index = $scope.requests_defaults.indexOf(column);
