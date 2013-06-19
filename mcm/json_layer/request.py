@@ -208,11 +208,12 @@ class request(json_base):
             elif nevents_per_job == self.get_attribute('total_events'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
             
-            fragmnt_lines = self.parse_fragment()
-            for line in fragmnt_lines:
-                if 'outputFile' in line and not 'events_final.lhe' in line:
-                    ## should this be made a default configuration ?
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','outputFile needs to be set to events_final.lhe')
+            #this is not true
+            #fragment_lines = self.parse_fragment()
+            #for line in fragment_lines:
+            #    if 'outputFile' in line and not 'events_final.lhe' in line:
+            #        ## should this be made a default configuration ?
+            #        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','outputFile needs to be set to events_final.lhe')
 
 
         rdb=database('requests')
