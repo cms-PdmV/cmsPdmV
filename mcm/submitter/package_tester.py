@@ -204,6 +204,7 @@ class package_tester:
                 continue
             data = stdout.read()
             if data.strip():
+                self.job_log_when_failed = data
                 self.logger.inject('Configuration test %s log: \n %s'%(log,data))
                 
     def __read_job_error(self,extension='.err'):
