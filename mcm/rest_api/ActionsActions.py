@@ -454,3 +454,17 @@ class DetectChains(RESTResource):
             return dumps({'results': str(ex)})
         return dumps({'results': True})
         
+from rest_api.RequestActions import RequestLister
+class ActionsFromFile(RequestLister,RESTResource): 
+    def __init__(self):
+        RequestLister.__init__(self)
+        self.retrieve_db = database('actions')
+        self.access_limit = 0 
+
+    def PUT(self, *args):
+        """
+        Parse the posted text document for request id and request ranges for display of actions
+        """
+        all_ids = self.get_list_of_ids()
+        return self.get_objects( all_ids )
+
