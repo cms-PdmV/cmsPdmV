@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app="testApp">
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
         <title>Injection status page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -7,9 +7,23 @@
         
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+
+  <!--[IF IE]>
+    <script type="text/javascript">
+      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
+    </script>
+  <![endif]-->
+  <![if !IE]>
+    <script type="text/javascript">
+      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+    </script>
+  <![endif]>
+        <script src="scripts/main_controller.js"></script>
         <script src="scripts/injection_controller.js"></script>
   </head>
-  <body ng-controller="resultsCtrl">
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
   	<div ng-include="'HTML/navbar_template.html'"></div>
   	<table class="table table-bordered table-stripped">
       <thead>
@@ -22,17 +36,17 @@
       </thead>
       <tbody>
         <tr ng-repeat="elem in data" style="white-space: nowrap;">
-          <td><a ng-href='requests?prepid={{elem["prepid"]}}' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}
-	  </a></td>
           <td>
-	    <span ng-switch="elem['status']">
-	      <img ng-switch-when="submitted" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-green.gif" rel="tooltip" title="Sucess"/>
-	      <img ng-switch-when="approved" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
-	      <img ng-switch-when="undefined" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
+            <a ng-href='requests?prepid={{elem["prepid"]}}' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}</a>
+          </td>
+          <td>
+	          <span ng-switch="elem['status']">
+              <img ng-switch-when="submitted" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-green.gif" rel="tooltip" title="Sucess"/>
+              <img ng-switch-when="approved" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
+              <img ng-switch-when="undefined" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
               <img ng-switch-default ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-red.gif" rel="tooltip" title="Fail"/>
-
-		{{elem['status']}} 
-	    </span>
+              {{elem['status']}}
+            </span>
             <img ng-show="elem['checking_status']" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
           </td>
           <td>
@@ -54,4 +68,5 @@
     </div>-->
     <text ng-show="prepid.length==0"> No more status update to be done. The batch submission has completed.</text>
   </body>
+</span>
 </html>
