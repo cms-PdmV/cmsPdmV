@@ -16,6 +16,7 @@ from json_layer.batch import batch
 from couchdb_layer.prep_database import database
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
+from tools.request_to_wma import request_to_wmcontrol
 
 class package_builder:
 	
@@ -440,6 +441,11 @@ class package_builder:
     # to be saved in upload_configs.sh and injectAndApprove.sh
     # injection scripts (This works the magic)
     def __prepare_approve_command(self):
+
+
+        return request_to_wmcontrol().get_command( self.request, self.batchNumber)
+
+    """
         # calculate the appropriate scram architecture
         # set scram env
         #self.scram_arch='slc5_amd64_gcc434'
@@ -542,23 +548,23 @@ class package_builder:
             # temp ev cont holder
             eventcontentlist = self.request.get_first_output()
             
-            """
+
             ##shipped back to request object 
-            for cmsDriver in self.__cmsDrivers:
-                ## check for pileup dataset ??? why ?
-                #if 'pileup' in cmsDriver:
-                #    if 'NoPileUp' in cmsDriver:
-                #        continue
-                #    else:
-                #        command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
-
-                # get the first event content of every defined sequence and use it as output to the next step...
-                eventcontent = cmsDriver.split('--eventcontent')[1].split()[0] + 'output'
-                if ',' in eventcontent:
-                    eventcontent = eventcontent.split(',')[0] + 'output'
-
-                eventcontentlist.append(eventcontent)
-            """
+            #for cmsDriver in self.__cmsDrivers:
+            #    ## check for pileup dataset ??? why ?
+            #    #if 'pileup' in cmsDriver:
+            #    #    if 'NoPileUp' in cmsDriver:
+            #    #        continue
+            #    #    else:
+            #    #        command += ' --pileup-ds '+self.request.get_attribute('pileup_dataset_name')
+#
+#                # get the first event content of every defined sequence and use it as output to the next step...
+#                eventcontent = cmsDriver.split('--eventcontent')[1].split()[0] + 'output'
+#                if ',' in eventcontent:
+#                    eventcontent = eventcontent.split(',')[0] + 'output'
+#
+#                eventcontentlist.append(eventcontent)
+ 
     
             keeps = self.request.get_attribute('keep_output')
             if not keeps[-1]:
@@ -591,6 +597,7 @@ class package_builder:
         command += '\n'
 
         return command
+"""
 
     # Spawns a subprocess to execute the setup script
     # and to produce the config files. If it fails, it
