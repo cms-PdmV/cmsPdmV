@@ -124,7 +124,8 @@ class sequence(json_base):
           return ''
 
     def build_cmsDriver(self):
-      command = ' '
+      ### always MC in McM. better to say it
+      command = ' --mc '
 
       for key in self.json():
         command += self.to_command_line(key)
