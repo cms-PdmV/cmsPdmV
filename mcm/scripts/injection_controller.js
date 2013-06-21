@@ -102,4 +102,4 @@ function resultsCtrl($scope, $http, $location,$timeout, $window){
 	});
       }, 5000); //pause for 5 sec
       }
- var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
+// var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
