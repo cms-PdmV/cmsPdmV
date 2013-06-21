@@ -6,7 +6,7 @@ from threading import Thread
 import logging
 from tools.logger import logger as logfactory, prep2_formatter
 from tools.locator import locator
-from tools.tester import batch_control
+from tools.batch_control import batch_control
 from couchdb_layer.prep_database import database
 #from json_layer.request import request
 from tools.installer import installer

@@ -13,7 +13,7 @@ from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools.locator import locator
-from tools.tester import batch_control
+from tools.batch_control import batch_control
 from tools.installer import installer
 from tools.handler import handler
 
