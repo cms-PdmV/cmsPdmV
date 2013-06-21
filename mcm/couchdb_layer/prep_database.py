@@ -10,7 +10,7 @@ import copy
 from tools.locator import locator
 
 class database:
-    logger = logfactory("prep2")
+    logger = logfactory("mcm")
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
