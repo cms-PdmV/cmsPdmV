@@ -7,7 +7,7 @@ import logging
 from tools.logger import logger as logfactory, prep2_formatter
 
 class ssh_executor:
-    logger = logfactory('prep2')
+    logger = logfactory('mcm')
     hname = '' # handler's name
 
     def __init__(self,directory,prepid,server='lxplus5.cern.ch'):
