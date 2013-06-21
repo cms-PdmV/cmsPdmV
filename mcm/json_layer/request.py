@@ -4,6 +4,7 @@ import copy
 import os 
 import re
 import pprint
+import time 
 
 from couchdb_layer.prep_database import database
 
@@ -12,7 +13,9 @@ from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools.locator import locator
-
+from tools.tester import batch_control
+from tools.installer import installer
+from tools.handler import handler
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -217,13 +220,19 @@ class request(json_base):
 
 
         rdb=database('requests')
-        similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
-        
+        #similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
+        ## same thing but using db query => faster
+        find_similar = ['dataset_name==%s'%(self.get_attribute('dataset_name')),
+                        'member_of_campaign==%s'%( self.get_attribute('member_of_campaign'))]
+        if self.get_attribute('process_string'):
+            find_similar.append( 'process_string==%s'%( self.get_attribute('process_string')) )
+        similar_ds  = rdb.queries(find_similar)
+
         if len(similar_ds)>1:
             if len(similar_ds)>2:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name in that campaign')
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name, same process string in the same campaign')
             if similar_ds[0]['extension'] == similar_ds[1]['extension']:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, and they are not extension of each other')
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
         
 
         ##this below needs fixing
@@ -243,9 +252,14 @@ class request(json_base):
                     if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains.')
 
-        ## a state machine should come along and submit jobs for validation, then set the status to validation once on-going
-        # for now: hard-wire the toggling
-        self.set_status()
+        ## select to synchronize status and approval toggling, or run the validation/run test
+        de_synchronized=False
+        if de_synchronized:
+            threaded_test = runtest_genvalid( str(self.get_attribute('prepid')) )
+            ## this will set the status on completion, or reset the request.
+            threaded_test.start()
+        else:
+            self.set_status()
 
     def ok_to_move_to_approval_define(self):
         if self.current_user_level==0:
@@ -544,8 +558,17 @@ class request(json_base):
             txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
         self.cvsInit=True
         return txt
-    
-    def get_setup_file(self,directory='',events=10):
+    def make_release(self):
+        makeRel =''
+        makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
+        makeRel += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
+        makeRel += 'else\n'
+        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        makeRel += 'fi\n'
+        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        return makeRel
+
+    def get_setup_file(self,directory='',events=None):
         l_type = locator()
         infile = ''
         infile += '#!/bin/bash\n'
@@ -555,19 +578,13 @@ class request(json_base):
 
         infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
         infile += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
-        makeRel =''
-        makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
-        makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
-        makeRel += 'fi\n'
-        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+
         ##create a release directory "at the root" if not already existing
-        infile += makeRel
+        infile += self.make_release()
         if directory:
             ##create a release directory "in the request" directory if not already existing 
             infile += 'cd ' + os.path.abspath(directory) + '\n'
-            infile += makeRel 
+            infile += self.make_release()
 
         ## setup from the last release directory used
         infile += 'eval `scram runtime -sh`\n'
@@ -580,10 +597,7 @@ class request(json_base):
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            if l_type.isDev():
-                infile += 'curl -s --insecure https://cms-pdmv-dev.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
-            else:
-                infile += 'curl -s --insecure https://cms-pdmv.cern.ch/mcm/public/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(self.get_attribute('prepid'),self.get_fragment())
+            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(l_type.baseurl(),self.get_attribute('prepid'),self.get_fragment())
 
         # previous counter
         previous = 0
@@ -591,6 +605,12 @@ class request(json_base):
         # validate and build cmsDriver commands
         cmsd_list = ''
         
+        configuration_names = []
+        if events:
+            run = True
+        else:
+            run= False
+
         for cmsd in self.build_cmsDrivers():
 
             # check if customization is needed to check it out from cvs
@@ -607,38 +627,49 @@ class request(json_base):
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
-            res += ' --python_filename '+directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py '
+            configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
+            res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
             #JR res += '--fileout step'+str(previous+1)+'.root '
-            if previous > 0:
-                #JR res += '--filein file:step'+str(previous)+'.root '
-                res += '--lazy_download '
+            ## seems that we do not need that anymore
+            #if previous > 0:
+            #    #JR res += '--filein file:step'+str(previous)+'.root '
+            #    res += '--lazy_download '
 
-            ##JR it's going to be easier to look at things with no dump_python
-            #res += '--no_exec --dump_python -n '+str(self.events)#str(self.request.get_attribute('total_events'))
-            res += '--no_exec -n '+str(events)#str(self.request.get_attribute('total_events'))
+            if run:
+                ## with a back port of number_out that would be much better
+                res += '-n '+str(events)+ ' '
+                res += '--customise Configuration/DataProcessing/Utils.addMonitoring \n'
+                res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; '%( directory, self.get_attribute('prepid'), configuration_names[-1] )
+            else:
+                res += '-n 10 '
             #infile += res
             cmsd_list += res + '\n'
 
             previous += 1
 
-        (i,c) = self.get_genvalid_setup(directory)
+
+        (i,c) = self.get_genvalid_setup(directory, run)
         infile+=i
         cmsd_list+=c
-
+        
         infile += '\nscram b\n'
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
+        if run and self.genvalid_driver:
+            infile += self.harverting_upload
+
         infile += 'cd ../../\n'
         ## if there was a release setup, jsut remove it
-        if directory:
+        #not in dev
+        if directory and not l_type.isDev():
             infile += 'rm -rf %s' %( self.get_attribute('cmssw_release') )
             
 
         return infile
 
-    def get_genvalid_setup(self,directory):
+    def get_genvalid_setup(self,directory,run):
         cmsd_list =""
         infile =""
 
@@ -657,6 +688,7 @@ class request(json_base):
                 k = spec_s[0]
                 if k == 'nEvents':
                     n_to_valid = int(spec_s[1])
+                    yes_to_valid = True
                 if k == 'valid':
                     yes_to_valid = bool( spec_s[1] )
 
@@ -671,6 +703,7 @@ class request(json_base):
         firstSequence = self.get_attribute('sequences')[0]
         firstStep = firstSequence['step'][0]
 
+        dump_python=''
         if firstStep == 'GEN':
 
             cmsd_list += '\n\n'
@@ -689,9 +722,9 @@ class request(json_base):
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
-        
+            dump_python= '--dump_python' ### only there until it gets fully integrated in all releases
         if valid_sequence:
-            self.setup_harvesting(directory)
+            self.setup_harvesting(directory,run)
 
             ## until we have full integration in the release
             infile += self.initCvs()
@@ -702,19 +735,26 @@ class request(json_base):
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
 
-            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py --no_exec --dump_python \n'%(genvalid_request.build_cmsDriver(0),
-                                                                                                          n_to_valid,
+            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py %s --no_exec \n'%(genvalid_request.build_cmsDriver(0),
+                                                                                                                                 int(n_to_valid),
+                                                                                                                                 directory,
+                                                                                                                                 dump_python)
+            if run:
+                self.genvalid_driver += 'cmsRun -e -j %s%s_gv %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
                                                                                                           directory)
-            cmsd_list += self.genvalid_driver
+                
+            cmsd_list += self.genvalid_driver +'\n'
             ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
-            cmsd_list += self.harvesting_driver
+            cmsd_list += self.harvesting_driver + '\n'
 
         ##that's the end of the part for gen-valid that should be somewhere else
         ############################################################################
         return (infile,cmsd_list)
 
-    def setup_harvesting(self,directory):
+    def setup_harvesting(self,directory,run):
         self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+        if run:
+            self.harvesting_driver +='cmsRun %sgenvalid_harvesting.py  || exit $? ; \n'%(directory)
 
         dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM'%(self.get_attribute('dataset_name'),
                                                           self.get_attribute('cmssw_release'),
@@ -736,16 +776,15 @@ class request(json_base):
         self.harverting_upload = ''        
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file ) 
         self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
-        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem \n'
-        self.harverting_upload += 'python visDQMUpload %s %s \n'%( where, dqm_file )
+        self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh \n'
+        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin \n'
+        self.harverting_upload += 'python visDQMUpload %s %s &> run.log || exit $? ; \n'%( where, dqm_file )
         
         ##then the url back to the validation sample in the gui !!!
         val=self.get_attribute('validation')
         ### please do not put dqm gui url inside, but outside in java view ...
-        val+=' %s'%( dqm_dataset ) 
+        val+=', %s'%( dqm_dataset ) 
         self.set_attribute('validation', val)
-
-
 
 
     def get_first_output(self):
@@ -812,12 +851,12 @@ class request(json_base):
         actors = list(set(actors))
         return actors
 
-    def test_failure(self,message,rewind=False):
+    def test_failure(self,message,what='Submission',rewind=False):
         if rewind:
             self.set_status(0)
             self.approve(0)
         self.update_history({'action':'failed'})
-        self.notify('Submission failed for request %s'%(self.get_attribute('prepid')), message)
+        self.notify('%s failed for request %s'%(what,self.get_attribute('prepid')), message)
         rdb = database('requests')
         rdb.update(self.json())
 
@@ -974,10 +1013,73 @@ class request(json_base):
                 else:
                     text += '%s : %s \n'%(view, self.get_attribute(view))
         text+='\n'
-        if l_type.isDev():
-            text+='https://cms-pdmv-dev.cern.ch/mcm/requests?prepid=%s'%( self.get_attribute('prepid'))
-        else:
-            text+='https://cms-pdmv.cern.ch/mcm/requests?prepid=%s'%( self.get_attribute('prepid'))
-        text+='\n'
-        text+='McM Announcing service'
+        text+='%srequests?prepid=%s'%(l_type.baseurl(), self.get_attribute('prepid'))
         return text
+
+    def get_n_for_test(self):
+        events = 10.0
+        # the matching and filter efficiencies
+        if self.get_attribute('generator_parameters'):
+            ## get the last entry of generator parameters
+            match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
+            filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
+            if match > -1 and filter_eff > -1:
+                events /=  (match*filter_eff)
+
+
+        if events>1000:
+            return int(50)
+        elif events>=1:
+            return int(events)
+        else:
+            ##default to 5
+            return int(5)
+
+
+class runtest_genvalid(handler):
+    """
+    operate the run test, operate the gen_valid, upload to the gui and toggles the status to validation
+    """
+    def __init__(self, rid):
+        handler.__init__(self)
+        self.rid = rid
+        self.db = database('requests')
+        
+    def run(self):
+        location = installer( self.rid, care_on_existing=False, clean_on_exit=False)
+        
+        test_script = location.location()+'validation_run_test.sh'
+        there = open( test_script ,'w')
+        ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
+        #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+        time.sleep( 10 )
+        mcm_r = request(self.db.get(self.rid))
+        #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+        n_for_test = mcm_r.get_n_for_test()
+        ## the following does change something on the request object, to be propagated in case of success
+        there.write( mcm_r.get_setup_file( location.location() , n_for_test) )        
+        there.close()
+        
+        batch_test = batch_control( self.rid, test_script )
+        success = batch_test.test()
+        
+        
+
+        self.logger.error('I came all the way to here and %s'%( success ))
+        if not success:
+            ## need to provide all the information back
+            the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
+            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+            # reset the content of the request
+            mcm_r = request(self.db.get(self.rid))
+            mcm_r.test_failure(message=the_logs,what='Validation run test',rewind=True)
+            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+        else:
+            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+            ## change the status with notification
+            mcm_r.set_status(with_notification=True)
+            self.db.update( mcm_r.json() )
+            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+
+        location.close()
+
