@@ -13,7 +13,7 @@ class communicator:
                  destination,
                  subject,
                  text,
-                 sender):
+                 sender=None):
 
         if type(destination)!=list:
             print "Cannot send email. destination should be a list of strings"
@@ -21,17 +21,24 @@ class communicator:
         
 
         msg = MIMEMultipart()
+        #it could happen that message are send after forking, threading and there's no current user anymore
         if not sender:
-            #it could happen that message are send after forking, threading and there's no current user anymore
             msg['From'] = 'pdmvserv@cern.ch'
         else:
             msg['From'] = sender
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
+        
+        ## add a mark on the subjcet automatically
         if locator().isDev():
             msg['Subject'] ='[McM-dev] '+subject
         else:
             msg['Subject'] ='[McM] '+subject
+        
+        ## add a signature automatically
+        text+='\n'
+        text+='McM Announcing service'
+
         try:
             msg.attach(MIMEText(text))
             smtpObj = smtplib.SMTP()
