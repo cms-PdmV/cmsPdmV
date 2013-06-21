@@ -9,7 +9,7 @@ class json_base:
     __json = {}
     __approvalsteps = ['none','validation',  'define',  'approve', 'submit']
     __status = ['new',  'validation', 'defined',  'approved', 'submitted', 'done']
-    logger = logfactory("prep2")
+    logger = logfactory("mcm")
 
     class WrongApprovalSequence(Exception):
         def __init__(self,status,approval,message=''):
