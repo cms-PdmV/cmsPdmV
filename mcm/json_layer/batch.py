@@ -31,7 +31,9 @@ class batch(json_base):
     def announce(self,notes="",user="McM Announcing service"):
         if self.get_attribute('status')!='new':
             return False
-        
+        if len(self.get_attribute('requests'))==0:
+            return False
+
         current_notes=self.get_attribute('notes')
         if current_notes:
             current_notes+='\n'
@@ -57,10 +59,7 @@ class batch(json_base):
         message+="Link to the batch:\n"
         #message+="https://cms-pdmv.cern.ch/mcm/batches/%s\n"%(self.get_attribute('prepid'))
         l_type = locator()
-        if l_type.isDev():
-            message+='https://cms-pdmv-dev.cern.ch/mcm/batches?prepid=%s \n\n'%(self.get_attribute('prepid'))
-        else:
-            message+='https://cms-pdmv.cern.ch/mcm/batches?prepid=%s \n\n'%(self.get_attribute('prepid'))
+        message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
             message+="Additional comments for this batch:\n"+current_notes+'\n\n'
         message+="Thank you,\n"+user
