@@ -32,3 +32,9 @@ class locator:
             ## legacy directory return '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'
         else:
             return '/afs/cern.ch/cms/PPD/PdmV/work/McM/submit/'
+    def baseurl(self):
+        if self.isDev():
+            return 'https://cms-pdmv-dev.cern.ch/mcm/'
+        else:
+            return 'https://cms-pdmv.cern.ch/mcm/'
+        
