@@ -4,17 +4,22 @@ import cherrypy
 import sys
 import traceback
 import string
+import time
 from json import loads,dumps
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.json_base import json_base
 from json_layer.request import request
+from json_layer.request import runtest_genvalid
 from json_layer.action import action
 from json_layer.campaign import campaign
 from json_layer.generator_parameters import generator_parameters
 from threading import Thread
 from submitter.package_builder import package_builder
+import xml.dom.minidom
+from tools.locator import locator
+from tools.communicator import communicator
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -472,20 +477,31 @@ class GetSetupForRequest(RESTResource):
         self.logger.error('No arguments were given')
         return dumps({"results":'Error: No arguments were given.'})
       pid = args[0]
+      n=None
+      if len(args)>1:
+          n=int(args[1])
+          
       if self.db.document_exists(pid):
-          return self.get_fragment(self.db.get(prepid=pid))
+          try:
+              self.request = request( self.db.get(pid))
+          except request.IllegalAttributeName as ex:
+              return dumps({"results":False})
+          setupText = self.request.get_setup_file(events=n)
+          return setupText
       else:
           return dumps({"results":False,"message":"%s does not exist"%(pid)})
 
+    """
     def get_fragment(self, data):
-      try:
-        self.request = request(json_input=data)
-      except request.IllegalAttributeName as ex:
-        return dumps({"results":False})
+    try:
+    self.request = request(json_input=data)
+    except request.IllegalAttributeName as ex:
+    return dumps({"results":False})
+    
+    setupText = self.request.get_setup_file()
+    return setupText
+    """
       
-      setupText = self.request.get_setup_file()
-      return setupText
-
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -699,12 +715,71 @@ class SetStatus(RESTResource):
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 
+from tools.request_to_wma import request_to_wmcontrol
+from tools.handler import handler
+from tools.installer import installer
+from tools.ssh_executor import ssh_executor
+class prepare_and_submit(handler):
+    """
+    operate a runtest with the configs in config cache, operate submission, toggles the status to submitted
+    """
+    def __init__(self, rid):       
+        handler.__init__(self)
+        self.rid = rid
+        self.db = database('requests')
+
+    def run(self):
+        location = installer( self.rid, care_on_existing=False, clean_on_exit=False)
+        
+        test_script = location.location()+'inject.sh'
+        there = open( test_script ,'w')
+        #time.sleep( 10 )
+        mcm_r = request(self.db.get(self.rid))
+        there.write( mcm_r.get_setup_file( location.location() ))
+        there.write( '\n')
+        r2wm = request_to_wmcontrol()
+        there.write( r2wm.get_command( mcm_r, 167, True) )
+        there.close()
+
+        r2wm.get_requests( mcm_r )
+
+        #ssh = ssh_executor( location.location(), self.rid )
+        #stdin,  stdout,  stderr = ssh.execute('bash %s'%( test_script))
+        
+        ## now need to get the request manager name !
+
+        self.logger.error( stdout.read())
+        self.logger.error( stderr.read())
+
+        location.close()
+
+
 class TestRequest(RESTResource):
     ## a rest api to make a creation test of a request
     def __init__(self):
-        self.db_name = 'requests'
-        self.db = database(self.db_name)
+        pass
         
+    def GET(self, *args):
+        """ 
+        this is test for admins only
+        """
+        ### test for wmcontrol config
+        #rdb = database('requests')
+        #mcm_r = request( rdb.get(args[0]))
+        #return request_to_wmcontrol().get_command( mcm_r, 12345, True)
+        
+        ### test for submission
+        inject = prepare_and_submit(args[0])
+        inject.run()
+
+        ######################
+        #### part of a test
+        ########################
+        #threaded_test = runtest_genvalid(args[0])
+        #threaded_test.start()
+        ###################
+
+        return dumps({"on-going":True})
 
 class InjectRequest(RESTResource):
     def __init__(self):
@@ -796,6 +871,8 @@ class InjectRequest(RESTResource):
                 res.extend(forks[-1].status())
                 ##forks the process directly
                 forks[-1].start()
+                ##wait a few seconds, so that batch numbers do not clash !
+                time.sleep(5)
             else:
                 ##makes you wait until it goes
                 self.logger.log('Running the injection of request %s ' % (pid))
@@ -996,7 +1073,40 @@ class SearchRequest(RESTResource):
                     #self.logger.error("Got %s results so far (else)"%( len( results)))
                     
         return dumps( {"results": results})
-        
+
+class RequestPerformance(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.access_limit = 4
+
+    def PUT():
+        """
+        Upload performance report .xml : retrieve size_event and time_event
+        """
+        self.logger.error("Got a file from uploading")
+        data = loads(cherrypy.request.body.read().strip())
+        xml_doc = data['contents']
+        xml_data = xml.dom.minidom.parseString( xml_doc )
+
+        total_event= xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data
+        timing = None
+        file_size = None
+        for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
+            for summary in item.getElementsByTagName("PerformanceSummary"):
+                for perf in summary.getElementsByTagName("Metric"):
+                    name=perf.getAttribute('Name')
+                    if name == 'AvgEventTime':
+                        timing = float( perf.getAttribute('Value'))
+                    if name == 'Timing-tstoragefile-write-totalMegabytes':
+                        file_size = float( perf.getAttribute('Value')) 
+
+        if timing:
+            timing /= total_event
+        if file_size:
+            file_size /= total_event
+
+        ## then get the request ID and update it's value
+
 
 class RequestLister():
     def __init__(self):
@@ -1119,3 +1229,89 @@ class RequestsFromFile(RequestLister,RESTResource):
         all_ids = self.get_list_of_ids()
         return self.get_objects( all_ids )
 
+class RequestsReminder(RESTResource):
+    def __init__(self):       
+        self.access_limit = 4
+
+    def GET(self, *args):  
+        """
+        Goes through all requests and send reminder to whom is concerned
+        """
+        udb = database('users')
+        rdb = database('requests')
+        
+        #all_requests = rdb.queries([])
+        # a dictionnary  campaign : [ids]
+        ids_for_production_managers = {}
+        # a dictionnary  campaign : [ids]
+        ids_for_gen_conveners = {}
+        # a dictionnary contact : { campaign : [ids] }
+        ids_for_users = {}
+
+        res=[]
+        ## fill up the reminders
+        def get_all_in_status( status ):
+            campaigns_and_ids = {}
+            for mcm_r in rdb.queries(['status==%s'%(status)]):
+                ## check whether it has a valid action before to add them in the reminder
+                c = mcm_r['member_of_campaign']
+                if not c in campaigns_and_ids:
+                    campaigns_and_ids[c] = []
+                campaigns_and_ids[c].append( mcm_r['prepid'] )
+            return campaigns_and_ids
+
+        com = communicator()            
+        l_type=locator()
+
+        def prepare_text_for( campaigns_and_ids, status_for_link):
+            message=''
+            for (camp,ids) in campaigns_and_ids.items():
+                message+='For campaign: %s \n'%( camp )
+                message+='%srequests?page=-1&member_of_campaign=%s&status=%s \n'%( l_type.baseurl(), camp, status_for_link)
+                for rid in ids:
+                    message+='\t%s\n'%( rid)
+                message+='\n'
+            return message
+
+        ## send the reminder to the production managers
+        ids_for_production_managers = get_all_in_status('approved')
+        if l_type.isDev(): ids_for_production_managers={}
+        for c in ids_for_production_managers:
+            res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_production_managers[c]))
+        
+        if len(ids_for_production_managers):
+            production_managers= udb.queries(['role==production_manager'])
+            message='A few request that needs to be submitted \n\n'
+            message+= prepare_text_for( ids_for_production_managers, 'approved')
+            com.sendMail( map( lambda u : u['email'], production_managers)+ ['pdmvserv@cern.ch'],
+                          'Gentle reminder on requests to be submitted',
+                          message)
+
+        ## send the reminder to generator conveners
+        ids_for_gen_conveners = get_all_in_status('defined')
+        ##avoid spam during tests
+        if l_type.isDev(): ids_for_gen_conveners={}
+        for c in ids_for_production_managers:
+            res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_gen_conveners[c]))
+        if len(ids_for_gen_conveners):
+            gen_conveners = udb.queries(['role==generator_convener'])
+            message='A few requests need your approvals \n\n'
+            message+= prepare_text_for( ids_for_gen_conveners, 'defined' )
+            com.sendMail( map( lambda u : u['email'], gen_conveners) + ['pdmvserv@cern.ch'],
+                          'Gentle reminder on requests to be approved by you',
+                          message)
+
+        if len(ids_for_users):
+            gen_contacts = udb.queries(['role==generator_contact'])
+            users = udb.queries(['role==user'])
+            for (user, campaigns_and_ids) in ids_for_users.items():
+                if len(campaigns_and_ids):
+                    message='A few request need you action \n\n'
+                    message+= prepare_text_for( campaigns_and_ids, 'validation' )
+                    com.sendMail( [user['email'], 'pdmvserv@cern.ch'] ,
+                                  'Gentle reminder on requests to be looked at',
+                                  message
+                                  )
+                    
+        
+        return dumps( res )
