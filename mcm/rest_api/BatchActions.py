@@ -99,8 +99,7 @@ class GetIndex(RESTResource):
 
 class AnnounceBatch(RESTResource):
     def __init__(self):
-        self.db_name = 'batches'
-        self.db = database(self.db_name) 
+        self.bdb = database('batches')
         self.access_limit = 3
 
     def PUT(self):
@@ -113,17 +112,33 @@ class AnnounceBatch(RESTResource):
         if not 'prepid' in data or not 'notes' in data:
             raise ValueError('no prepid nor notes in batch announcement api')
         bid=data['prepid']
-        if not self.db.document_exists(bid):
+        if not self.bdb.document_exists(bid):
             return dumps({"results":False, "message": "%s is not a valid batch name"%(bid)})
         
-        b = batch(self.db.get(bid))
-        r=b.announce(data['notes'])
+        return dumps(self.announce_with_text(bid, data['notes'] ))
+
+    def announce_with_text(self, bid, message):
+        b = batch(self.bdb.get(bid))
+        r=b.announce(message)
         if r:
-            return dumps({"results":self.db.save(b.json()) , "value" : r})
+            return {"results":self.bdb.update(b.json()) , "value" : r}
         else:
-            return dumps({"results":False})
+            return {"results":False}
         
     
-
+class InspectBatches(AnnounceBatch):
+    def __init__(self):
+        AnnounceBatch.__init__(self)
         
-
+    def GET(self, *args):
+        """
+        Look for batches that need to be announced
+        """
+        res=[]
+        new_batches = self.bdb.queries(['status==new'])
+        for new_batch in new_batches:
+            if len(new_batch['requests'])>=1:
+                ## it is good to be announced !
+                res.append( self.announce_with_text( new_batch['_id'], '') )
+                
+        return dumps(res)
