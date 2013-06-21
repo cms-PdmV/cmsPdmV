@@ -72,6 +72,7 @@ class package_injector:
         script += 'eval `scram runtime -sh` \n\n'
         script += 'cd ../\n'
         script += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        #script += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         #jrscript += 'tar xvzf %s \n'%(self.tarball)
         #jr script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
         script += 'cd %s \n '%(self.prepid)
