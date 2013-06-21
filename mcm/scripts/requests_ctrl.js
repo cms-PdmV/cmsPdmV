@@ -600,15 +600,21 @@ function resultsCtrl($scope, $http, $location, $window){
   // },true);
   $scope.linkify = function(inputText) {
     var replaceText, replacePattern1, replacePattern2, replacePattern3;
+    
+    replacedText = inputText;
 
     //URLs starting with http://, https://, or ftp://
-    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank"><i class="icon-shopping-cart"></i></a>');
+    //    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+    //    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank"><i class="icon-shopping-cart"></i></a>');
 
     //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
-    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank"><i class="icon-shopping-cart"></i></a>');
+    //    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+    //    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank"><i class="icon-shopping-cart"></i></a>');
     
+    //replace anything that is /.../DQM
+    replacePattern3 = /.*,\s+(\/.*DQM)/gim;
+    replacedText = replacedText.replace(replacePattern3, '<a href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset=$1;workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for $1" target="_blank"><i class="icon-th-large"></i></a>');
+
     return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
   }
 
