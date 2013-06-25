@@ -2,7 +2,7 @@
 class priority:
     def __init__(self):
         self.blocks = {
-            1:95000,
+            1:110000,
             2:90000,
             3:85000,
             4:80000,
