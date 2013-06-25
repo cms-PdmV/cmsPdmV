@@ -5,6 +5,8 @@ import os
 import re
 import pprint
 import time 
+import xml.dom.minidom
+from math import sqrt
 
 from couchdb_layer.prep_database import database
 
@@ -176,6 +178,9 @@ class request(json_base):
         if self.get_attribute('status')!='new':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
 
+        if self.get_attribute('cmssw_release')==None or self.get_attribute('cmssw_release')=='None':
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The release version is undefined')
+
         if not self.get_attribute('dataset_name') or ' ' in self.get_attribute('dataset_name'):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The dataset name is invalid: either null string or containing blanks')
 
@@ -253,7 +258,7 @@ class request(json_base):
                         raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains.')
 
         ## select to synchronize status and approval toggling, or run the validation/run test
-        de_synchronized=False
+        de_synchronized=True
         if de_synchronized:
             threaded_test = runtest_genvalid( str(self.get_attribute('prepid')) )
             ## this will set the status on completion, or reset the request.
@@ -480,9 +485,10 @@ class request(json_base):
       return commands  
 
     
-    def update_generator_parameters(self):#, generator_parameters={}):
-        #if not generator_parameters:
-        #    return
+    def update_generator_parameters(self):
+        """
+        Create a new generator paramters at the end of the list
+        """
         gens = self.get_attribute('generator_parameters')
         if not len (gens):
             genInfo = generator_parameters()
@@ -558,6 +564,7 @@ class request(json_base):
             txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
         self.cvsInit=True
         return txt
+
     def make_release(self):
         makeRel =''
         makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
@@ -593,7 +600,7 @@ class request(json_base):
         # checkout from cvs (if needed)
         if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
             infile+=self.initCvs()
-            infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + '\n'
+            infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + ' 2> /dev/null \n'
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
@@ -623,7 +630,7 @@ class request(json_base):
                 # add customization
                 if 'GenProduction' in cname:
                     infile += self.initCvs()
-                    infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1]
+                    infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1] + ' 2> /dev/null \n'
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
@@ -640,6 +647,7 @@ class request(json_base):
                 res += '-n '+str(events)+ ' '
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; '%( directory, self.get_attribute('prepid'), configuration_names[-1] )
+                #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
                 res += '-n 10 '
             #infile += res
@@ -741,8 +749,11 @@ class request(json_base):
                                                                                                                                  dump_python)
             if run:
                 self.genvalid_driver += 'cmsRun -e -j %s%s_gv %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
-                                                                                                          directory)
-                
+                                                                                               directory)
+                ## put back the perf report to McM ! wil modify the request object while operating on it.
+                # and therefore the saving of the request will fail ...
+                #self.genvalid_driver += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/eff -H "Content-Type: application/xml" -X PUT --data "@%s%s_gv.xml" \n' %(self.get_attribute('prepid'), directory, self.get_attribute('prepid'))
+
             cmsd_list += self.genvalid_driver +'\n'
             ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
             cmsd_list += self.harvesting_driver + '\n'
@@ -1035,6 +1046,65 @@ class request(json_base):
             ##default to 5
             return int(5)
 
+    def update_performance(self, xml_doc, what):
+        total_event_in = self.get_n_for_test()
+        
+        xml_data = xml.dom.minidom.parseString( xml_doc )
+        
+        total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
+        timing = None
+        file_size = None
+        for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
+            for summary in item.getElementsByTagName("PerformanceSummary"):
+                for perf in summary.getElementsByTagName("Metric"):
+                    name=perf.getAttribute('Name')
+                    if name == 'AvgEventTime':
+                        timing = float( perf.getAttribute('Value'))
+                    if name == 'Timing-tstoragefile-write-totalMegabytes':
+                        file_size = float( perf.getAttribute('Value')) 
+
+        if timing:
+            timing = int( timing/ total_event)
+        if file_size:
+            file_size = int(  file_size / total_event)
+
+        efficiency = total_event / total_event_in
+        efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in )
+
+        geninfo=None
+        if len(self.get_attribute('generator_parameters')):
+            geninfo = self.get_attribute('generator_parameters')[-1]
+               
+        to_be_saved= False
+
+        to_be_changed='filter_efficiency'
+        if self.get_attribute('input_filename'):
+            to_be_changed='match_efficiency'
+
+        self.logger.error("Calculated all %s %s %s %s" % ( efficiency, efficiency_error, timing, file_size ))
+
+        if what =='eff':
+            if not geninfo or geninfo[to_be_changed+'_error'] > efficiency_error:
+                ## we have a better error on the efficiency: combine or replace: replace for now
+                self.update_generator_parameters()
+                added_geninfo = self.get_attribute('generator_parameters')[-1]
+                added_geninfo[to_be_changed] = efficiency
+                added_geninfo[to_be_changed+'_error'] = efficiency_error
+                to_be_saved=True
+        elif what =='perf':
+            if timing:
+                self.set_attribute('time_event', timing)
+                to_be_saved=True
+            if file_size:
+                self.set_attribute('size_event', file_size)
+                to_be_saved=True
+
+        if to_be_saved:
+            self.update_history({'action':'update','step':what})
+
+        return to_be_saved
+
+
 
 class runtest_genvalid(handler):
     """
@@ -1063,7 +1133,13 @@ class runtest_genvalid(handler):
         batch_test = batch_control( self.rid, test_script )
         success = batch_test.test()
         
-        
+        #suck in run-test if present
+        rt_xml=location.location()+'%s_rt.xml'%( self.rid )
+        if os.path.exists( rt_xml ):
+            mcm_r.update_performance( open(rt_xml).read(), 'perf')
+        gv_xml=location.location()+'%s_gv.xml'%( self.rid )
+        if os.path.exists( gv_xml ):
+            mcm_r.update_performance( open(gv_xml).read(), 'eff')
 
         self.logger.error('I came all the way to here and %s'%( success ))
         if not success:
@@ -1082,4 +1158,5 @@ class runtest_genvalid(handler):
             #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
 
         location.close()
+
 
