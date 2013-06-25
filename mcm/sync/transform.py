@@ -209,7 +209,9 @@ class transformer:
                                      "eventcontent": self.splitPrep1String(req_json['eventcontent']),
                                      "conditions": co})
 
+        keep = []
         for i, seq in enumerate(new['sequences']):
+            keep.append(False)
             for att in seq:
                 if i == 0:
                     if att in se1:
@@ -218,6 +220,8 @@ class transformer:
                     if att in se2:
                         seq[att] = se2[att]
 
+        keep[-1]=True
+        new['keep_output'] = keep
         ## copy a few things from the campaign sequences as it is in McM
         camp = self.get_campaign(new['member_of_campaign'])
         for i, seqs in enumerate(camp['sequences']):
