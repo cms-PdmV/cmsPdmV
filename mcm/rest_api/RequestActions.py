@@ -5,6 +5,7 @@ import sys
 import traceback
 import string
 import time
+from math import sqrt
 from json import loads,dumps
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
@@ -17,7 +18,6 @@ from json_layer.campaign import campaign
 from json_layer.generator_parameters import generator_parameters
 from threading import Thread
 from submitter.package_builder import package_builder
-import xml.dom.minidom
 from tools.locator import locator
 from tools.communicator import communicator
 
@@ -364,7 +364,7 @@ class MigrateRequest(RequestRESTResource):
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
             mcm_r.get_stats(override_id = pid)
 
-            if not len(mcm_r.get_attribute('reqmgr_name')):
+            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in ['done','submitted']:
                 # no requests provided, the request should fail migration. 
                 # I have put fake docs in stats so that it never happens
                 return dumps({"results":False,"message":"Could not find an entry in the stats DB for prepid %s"%(pid)})
@@ -1079,33 +1079,37 @@ class RequestPerformance(RESTResource):
         self.rdb = database('requests')
         self.access_limit = 4
 
-    def PUT():
+    def PUT(self, *args):
         """
         Upload performance report .xml : retrieve size_event and time_event
         """
-        self.logger.error("Got a file from uploading")
-        data = loads(cherrypy.request.body.read().strip())
-        xml_doc = data['contents']
-        xml_data = xml.dom.minidom.parseString( xml_doc )
+        self.logger.error("Got a performance file from uploading %s"% (str(args)))
+        if len(args)!=2:
+            return dumps({"results":False, "message" :"not enough arguments"})
 
-        total_event= xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data
-        timing = None
-        file_size = None
-        for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
-            for summary in item.getElementsByTagName("PerformanceSummary"):
-                for perf in summary.getElementsByTagName("Metric"):
-                    name=perf.getAttribute('Name')
-                    if name == 'AvgEventTime':
-                        timing = float( perf.getAttribute('Value'))
-                    if name == 'Timing-tstoragefile-write-totalMegabytes':
-                        file_size = float( perf.getAttribute('Value')) 
+        rid = args[0]
+        if not self.rdb.document_exists( rid):
+            return dumps({"results":False, "message" :"%s does not exist"%( rid)})
 
-        if timing:
-            timing /= total_event
-        if file_size:
-            file_size /= total_event
+        what = args[1]
+        if not what in ["perf","eff"]:
+            return dumps({"results":False, "message" :"%s is not a valid option"%( what)})
+
+        xml_doc = cherrypy.request.body.read()
 
         ## then get the request ID and update it's value
+        mcm_r = request( self.rdb.get(rid) )
+        to_be_saved = mcm_r.update_performance( xml_doc, what)
+
+        if to_be_saved:
+            saved = self.rdb.update( mcm_r.json() )
+            if saved:
+                return dumps({"results":True,"prepid": rid})
+            else:
+                return dumps({"results":False,"prepid": rid})
+        else:
+            return dumps({"results":False,"prepid": rid})
+                          
 
 
 class RequestLister():
