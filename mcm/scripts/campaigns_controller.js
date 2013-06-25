@@ -245,7 +245,7 @@ function resultsCtrl($scope, $http, $location, $window){
 var ModalDemoCtrl = function ($scope, $http, $window) {
   $scope.open = function (id) {
       
-    var promise = $http.get("restapi/users/get_pwg/vlimant")
+    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name)
     promise.then(function(data){
 	    $scope.pwgs = data.data.results;
 	    //if ($scope.pwgs.length==0){
