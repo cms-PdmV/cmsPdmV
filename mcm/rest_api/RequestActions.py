@@ -1017,6 +1017,35 @@ class GetActors(RESTResource):
         else:
             return dumps(request_in_db.get_actors())
 
+class SearchableRequest(RESTResource):
+    def __init__(self):
+        self.rdb = database('requests')
+        self.access_limit = 3
+
+    def GET(self, *args):
+
+        all_requests = self.rdb.queries([])
+
+        searchable={}
+
+        for request in all_requests: 
+            for key in ['energy','dataset_name','status','approval','extension','generators','member_of_chain']:
+                if not key in searchable:
+                    searchable[key]=[]
+                if not key in request:
+                    ## that should make things break down, and due to schema evolution missed-migration
+                    continue
+                if type(request[key]) == list:
+                    for item in request[key]:
+                        searchable[key].append(item)
+                else:
+                    searchable[key].append( request[key] )
+
+        for key in searchable:
+            searchable[key]=list(set( searchable[key]))
+        return dumps(searchable)
+
+
 class SearchRequest(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
@@ -1024,7 +1053,7 @@ class SearchRequest(RESTResource):
         
     def PUT(self, *args):
         """
-        Search requests according to the search json provided
+        Search requests according to the search json provided for wild search
         """
         search_dict = loads(cherrypy.request.body.read().strip())
         self.logger.error("Got a wild search dictionnary %s"%( str(search_dict) ) )
