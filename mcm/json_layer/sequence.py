@@ -26,8 +26,24 @@ class sequence(json_base):
             'donotDropOnInput':'',
             'restoreRNDSeeds':'',
             'slhc':'',
+            'inputEventContent':'',
+            'gflash':'',
+            'geometry':'',
+            'repacked':'',
+            'runsScenarioForMC':'',
+            'hltProcess':'',
+            'triggerResultsProcess':'',
+            'runsAndWeightsForMC':'',
+            'customise_commands':'',
+            'inputCommands':'',
+            'custom_conditions':'',
             'extra':''} 
 
+        ## how to get the options ?
+        # in cmssw
+        # import  Configuration.PyReleaseValidation.Options as opt
+        # map( lambda s : s.replace('--','') ,opt.parser._long_opt.keys() )
+        
         # update self according to json_input
         self.__update(json_input)
         self.__validate()
