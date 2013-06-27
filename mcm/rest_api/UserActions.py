@@ -47,10 +47,16 @@ class GetUserPWG(RESTResource):
 	    """
 	    Retrieve the pwg of the provided user
 	    """
+	    all_pwgs=['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP']
+	    if len(args)==0:
+		    return dumps({"results" : all_pwgs})
 	    user_name = args[0]
 	    if self.db.document_exists( user_name ):
 		    user = self.db.get( args[0] )
-		    return dumps({"results" : user['pwg']})
+		    if user['role'] in ['production_manager','administrator','generator_convener']:
+			    return dumps({"results" : all_pwgs})
+		    else:
+			    return dumps({"results" : user['pwg']})
 	    else:
 		    return dumps({"results" : []})
 
