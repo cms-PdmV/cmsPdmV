@@ -82,14 +82,17 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
 
-	      $scope.action_status[data['prepid']] = data['results'];
+	      $scope.action_status[prepid] = data['results'];
 	      if (data['results']){
 		  $scope.update["success"] = data["results"];
 		  $scope.update["fail"] = false;
 		  $scope.update["status_code"] = data["results"];
-		  $scope.action_report[data['prepid']] = 'OK';
+		  $scope.action_report[prepid] = 'OK';
 		  if (step=='clone'){
-		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["results"]
+		      // not used anymore
+		      $scope.action_report[prepid]= 'OK';
+		      $scope.action_status[prepid]
+		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["prepid"];
 		  }else{
 		      //$window.location.reload();
 		      console.log('I want to reload');
@@ -482,7 +485,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = data["results"];
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data["results"];
-      $window.open("edit?db_name=requests&query="+$scope.update["status_code"]);
+      $window.open("edit?db_name=requests&query="+data["prepid"]);
       $scope.getData();
       }).error(function(status){
         $scope.update["success"] = false;
