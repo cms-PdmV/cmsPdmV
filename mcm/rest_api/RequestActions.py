@@ -81,7 +81,7 @@ class RequestRESTResource(RESTResource):
                 self.logger.log('Updating an action for %s'%(self.request.get_attribute('prepid')))
                 self.adb.save(a.json())
 
-    def import_request(self, data):
+    def import_request(self, data, label='created'):
 
         if '_rev' in data:
             return dumps({"results":False, 'message' : 'could not save object with a revision number in the object'})
@@ -143,7 +143,7 @@ class RequestRESTResource(RESTResource):
             
         # update history
         if self.with_trace:
-            self.request.update_history({'action':'created'})
+            self.request.update_history({'action':label})
 
         # save to database
         if not self.db.save(self.request.json()):
@@ -197,7 +197,7 @@ class CloneRequest(RequestRESTResource):
             del new_json['reqmgr_name']
             
 
-            return self.import_request(new_json)
+            return self.import_request(new_json,label='clone')
             #new_pid = self.import_request(new_json)['results']
 
         if new_pid:
