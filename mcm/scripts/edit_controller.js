@@ -194,7 +194,12 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.showAddUserPWG = function(){
     $scope.showSelectPWG = true;
-    $scope.all_pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
+    var promise = $http.get("restapi/users/get_pwg")
+    promise.then(function(data){
+	    //$scope.all_pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
+	    $scope.all_pwgs = data.data.results;
+	});
+    
   };
   $scope.addUserPWG = function(elem){
     if($scope.result["pwg"].indexOf(elem) == -1){
