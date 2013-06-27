@@ -522,7 +522,30 @@ testApp.directive("sequenceEdit", function($http){
             var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
             promise.then(function(data){
               scope.driver = data.data.results;
+	      // try to evolve the schema at this point ! yes or no ? helps with campaigns editing
+	      /*
+	      console.log('sequences', scope.result.sequences );
+	      var promise2 = $http.get("getDefaultSequences");
+	      promise2.then(function(data){
+		      console.log('data retreived', data );
+		      //and put any new entries of data in the sequence
+		      _.each( data.data, function(elem,key){
+			      console.log(key, scope.result.sequences[key]);
+			      if (scope.result.sequences[key] === undefined ){
+				  console.log(key,'adding',elem);
+				  scope.result.sequences[key] = elem;
+			      }
+			      else{
+				  console.log(key,'is there already',elem);
+			      }
+			  });
+
+		      console.log( scope.sequencesOriginal );
+		  });
+	      */
+	      //copy in case one cancels
               scope.sequencesOriginal = _.clone(scope.result.sequences);
+	      
             }, function(data){ alert("Error: ", data.status); });
           }
         }else{  //just clone the original sequences -> in case user edited and didnt saved.
