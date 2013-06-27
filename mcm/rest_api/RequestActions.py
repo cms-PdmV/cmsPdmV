@@ -12,6 +12,7 @@ from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.json_base import json_base
 from json_layer.request import request
+from json_layer.sequence import sequence
 from json_layer.request import runtest_genvalid
 from json_layer.action import action
 from json_layer.campaign import campaign
@@ -551,7 +552,11 @@ class GetRequest(RESTResource):
         return self.get_request(args[0])
     
     def get_request(self, data):
-        return dumps({"results":self.db.get(prepid=data)})
+        mcm_r = self.db.get(prepid=data)
+        # cast the sequence for schema evolution !!! here or not ?
+        for (i_s,s) in enumerate(mcm_r['sequences']):
+            mcm_r['sequences'][i_s] = sequence( s ).json()
+        return dumps({"results": mcm_r})
 
 class ApproveRequest(RESTResource):
     def __init__(self):
