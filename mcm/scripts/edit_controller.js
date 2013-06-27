@@ -518,7 +518,7 @@ testApp.directive("sequenceEdit", function($http){
         }else{
           scope.showSequences = true; //if hidden -> then display sequences, get the cmsDrivers;
         if(scope.dbName == "requests"){
-          if (!scope.sequencesOriginal){ //if requests and sequences haven't been requested already
+          if (true || !scope.sequencesOriginal){ //if requests and sequences haven't been requested already
             var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
             promise.then(function(data){
               scope.driver = data.data.results;
