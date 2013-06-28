@@ -928,6 +928,7 @@ class request(json_base):
             ### FIXME
             #then set it back if at least one new    
         self.set_attribute('reqmgr_name', mcm_rr)
+        return one_new
 
     def inspect(self):
         ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
@@ -952,8 +953,9 @@ class request(json_base):
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results":False}
         ## get fresh up to date stats
-        self.get_stats()
+        one_new = self.get_stats()
         mcm_rr = self.get_attribute('reqmgr_name')
+        db = database( 'requests')
         if len(mcm_rr):
             if ('pdmv_status_in_DAS' in mcm_rr[-1]['content'] and 'pdmv_status_from_reqmngr' in mcm_rr[-1]['content']):
                 if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] == 'announced':
@@ -962,13 +964,11 @@ class request(json_base):
 
                     if self.get_attribute('completed_events') <=0:
                         not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( mcm_rr[-1]['content']['pdmv_dataset_name'])})
-                        db = database( 'requests')
                         saved = db.save( self.json() )
                         return not_good
                     ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
                     ## save the request back to db
-                    db = database( 'requests')
                     saved = db.save( self.json() )
                     if saved:
                         return {"prepid": self.get_attribute('prepid'), "results":True}
@@ -976,9 +976,11 @@ class request(json_base):
                         not_good.update( {'message' : "Set status to %s could not be saved in DB"%(self.get_attribute('status'))})
                         return not_good
                 else:
+                    if one_new: db.save( self.json() )
                     not_good.update( {'message' : "last request %s is not ready"%(mcm_rr[-1]['name'])})
                     return not_good
             else:
+                if one_new: db.save( self.json() )
                 not_good.update( {'message' : "last request %s is malformed %s"%(mcm_rr[-1]['name'],
                                                                                  mcm_rr[-1]['content'])})
                 return not_good
