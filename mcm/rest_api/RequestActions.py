@@ -1275,6 +1275,13 @@ class RequestsReminder(RESTResource):
         """
         Goes through all requests and send reminder to whom is concerned
         """
+        what=None
+        if len(args):
+            #we've been passed parameters
+            what=args[0].split(',')
+            if 'all' in what:
+                what=None
+            
         udb = database('users')
         rdb = database('requests')
         
@@ -1311,45 +1318,45 @@ class RequestsReminder(RESTResource):
                 message+='\n'
             return message
 
-        ## send the reminder to the production managers
-        ids_for_production_managers = get_all_in_status('approved')
-        if l_type.isDev(): ids_for_production_managers={}
-        for c in ids_for_production_managers:
-            res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_production_managers[c]))
+        if not what or 'production_manager' in what:
+            ## send the reminder to the production managers
+            ids_for_production_managers = get_all_in_status('approved')
+            for c in ids_for_production_managers:
+                res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_production_managers[c]))
         
-        if len(ids_for_production_managers):
-            production_managers= udb.queries(['role==production_manager'])
-            message='A few request that needs to be submitted \n\n'
-            message+= prepare_text_for( ids_for_production_managers, 'approved')
-            com.sendMail( map( lambda u : u['email'], production_managers)+ ['pdmvserv@cern.ch'],
-                          'Gentle reminder on requests to be submitted',
-                          message)
+            if len(ids_for_production_managers):
+                production_managers= udb.queries(['role==production_manager'])
+                message='A few request that needs to be submitted \n\n'
+                message+= prepare_text_for( ids_for_production_managers, 'approved')
+                com.sendMail( map( lambda u : u['email'], production_managers)+ ['pdmvserv@cern.ch'],
+                              'Gentle reminder on requests to be submitted',
+                              message)
 
-        ## send the reminder to generator conveners
-        ids_for_gen_conveners = get_all_in_status('defined')
-        ##avoid spam during tests
-        if l_type.isDev(): ids_for_gen_conveners={}
-        for c in ids_for_production_managers:
-            res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_gen_conveners[c]))
-        if len(ids_for_gen_conveners):
-            gen_conveners = udb.queries(['role==generator_convener'])
-            message='A few requests need your approvals \n\n'
-            message+= prepare_text_for( ids_for_gen_conveners, 'defined' )
-            com.sendMail( map( lambda u : u['email'], gen_conveners) + ['pdmvserv@cern.ch'],
-                          'Gentle reminder on requests to be approved by you',
-                          message)
+        if not what or 'gen_conveners' in what:
+             ## send the reminder to generator conveners
+            ids_for_gen_conveners = get_all_in_status('defined')
+            for c in ids_for_gen_conveners:
+                res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_gen_conveners[c]))
+            if len(ids_for_gen_conveners):
+                gen_conveners = udb.queries(['role==generator_convener'])
+                message='A few requests need your approvals \n\n'
+                message+= prepare_text_for( ids_for_gen_conveners, 'defined' )
+                com.sendMail( map( lambda u : u['email'], gen_conveners) + ['pdmvserv@cern.ch'],
+                              'Gentle reminder on requests to be approved by you',
+                              message)
 
-        if len(ids_for_users):
-            gen_contacts = udb.queries(['role==generator_contact'])
-            users = udb.queries(['role==user'])
-            for (user, campaigns_and_ids) in ids_for_users.items():
-                if len(campaigns_and_ids):
-                    message='A few request need you action \n\n'
-                    message+= prepare_text_for( campaigns_and_ids, 'validation' )
-                    com.sendMail( [user['email'], 'pdmvserv@cern.ch'] ,
-                                  'Gentle reminder on requests to be looked at',
-                                  message
-                                  )
-                    
+        if not what:
+            if len(ids_for_users):
+                gen_contacts = udb.queries(['role==generator_contact'])
+                users = udb.queries(['role==user'])
+                for (user, campaigns_and_ids) in ids_for_users.items():
+                    if len(campaigns_and_ids):
+                        message='A few request need you action \n\n'
+                        message+= prepare_text_for( campaigns_and_ids, 'validation' )
+                        com.sendMail( [user['email'], 'pdmvserv@cern.ch'] ,
+                                      'Gentle reminder on requests to be looked at',
+                                      message
+                                      )
+                        
         
         return dumps( res )
