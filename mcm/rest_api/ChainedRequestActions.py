@@ -244,6 +244,22 @@ class FlowToNextStep(RESTResource):
         # if the chained_request can flow, do it
         return creq.flow_trial()
 
+class RewindToPreviousStep(RESTResource):
+    def __init__(self):
+        self.db = database('chained_requests')
+        self.access_limit = 3
+
+    def GET(self,  *args):
+        """
+        Rewind the current chained request of one step.
+        """
+        ## to be implemented.
+        #### invalidate the last request in the chain, and reset it
+        ## step = step -1
+        # set status, last status
+        
+        return dumps({'results':'not implemented yet'})
+
 class ApproveRequest(RESTResource):
     def __init__(self):
         self.db = database('chained_requests')
