@@ -25,19 +25,23 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
       $scope.update = [];
-      if ($scope.selectedOption['contains'] != "------"){
-          $location.search("select",$scope.selectedOption['contains']);
-          //$scope.getData();
-          //do_get_data = true;
-      }else{
-        $location.search("select",null);
+      if ($location.search()["select"] == null){
+        if ($scope.selectedOption['contains'] != "------"){
+            $location.search("select",$scope.selectedOption['contains']);
+            //$scope.getData();
+            //do_get_data = true;
+        }else{
+          $location.search("select",null);
+        }
       }
-      if ($scope.selectedOption['starts'] != "------"){
-          $location.search("starts",$scope.selectedOption['starts']);
-          //$scope.getData();
-          //do_get_data = true;
-      }else{
-        $location.search("starts",null);
+      if ($location.search()["starts"] == null){
+        if ($scope.selectedOption['starts'] != "------"){
+            $location.search("starts",$scope.selectedOption['starts']);
+            //$scope.getData();
+            //do_get_data = true;
+        }else{
+          $location.search("starts",null);
+        }
       }
     },true);
 
@@ -147,8 +151,10 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       });
 
 	if (($location.search()["select"] === undefined) && ($location.search()["starts"] === undefined)){
-	    $location.search("select", $scope.selectedOption['contains']);
-      $location.search("starts", $scope.selectedOption['starts']);
+    if (($scope.selectedOption['contains'] != "------") && ($scope.selectedOption['starts'] != "------")){
+	      $location.search("select", $scope.selectedOption['contains']);
+        $location.search("starts", $scope.selectedOption['starts']);
+      }
 	}else{
       var do_get_data = false;
       if ($location.search()["select"] !== undefined){
