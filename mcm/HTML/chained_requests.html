@@ -99,6 +99,9 @@
                 <a ng-click="single_step('approve',data.prepid, '')" rel="tooltip" title="Next step" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
+		<a ng-click='' rel="tooltip" title="Rewind" ng-hide="role(3);">
+		  <i class="icon-backward"></i>
+		</a>
                 <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
                   <i class="icon-forward"></i>
                 </a>
@@ -115,8 +118,8 @@
               <div ng-switch-when="Chain">
                 <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_self"><i class='icon-indent-left'></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
-                  <!--<a ng-hide='puce[chain]' ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}<i class="icon-folder-open"></i></a>-->
                   <a ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}<i class="icon-folder-open"></i></a>
+		  <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
                   <img ng-show="puce[chain]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
