@@ -374,6 +374,7 @@ testApp.directive("customHistory", function(){
 //     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
+    '          <th style="padding: 0px;">Step</th>'+
     '        </tr>'+
     '      </thead>'+
     '      <tbody>'+
@@ -387,6 +388,7 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
+   '          <td style="padding: 0px;">{{elem.step}}</td>'+  
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
