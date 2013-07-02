@@ -136,22 +136,13 @@ class request(json_base):
         crdb= database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
             if crdb.document_exists(inchain):
-                chain=crdb.get(inchain)
-                if chain['chain'][-1] == self.get_attribute('prepid'):
-                    chain['last_status'] = self.get_attribute('status')
-                    if not 'status' in chain:
-                        chain['status']=''
-                    if self.get_attribute('status')=='new':
-                        chain['status'] ='new'
-                    else:
-                        chain['status'] ='processing'
-                    expected_end = max(0,chain['_id'].count('_')-1)
-                    self.logger.error('there and trying to set the chained request status %s %s %s %s'% ( chain['_id'], expected_end, chain['step'], chain['status'] ))
-                    if chain['step'] == expected_end and self.get_attribute('status')=='done':
-                        chain['status'] ='done'
-                    self.logger.error('there and trying to set the chained request status %s %s %s %s'% ( chain['_id'], expected_end, chain['step'], chain['status'] ))
-
-                    crdb.save(chain)
+                from json_layer.chained_request import chained_request
+                chain=chained_request(crdb.get(inchain))
+                a_change=False
+                a_change += chain.set_last_status()
+                a_change += chain.set_processing_status( self.get_attribute('prepid'), self.get_attribute('status'))
+                if a_change:
+                    crdb.save(chain.json())
         
     def get_editable(self):
         editable= {}
@@ -302,10 +293,9 @@ class request(json_base):
         self.set_status()
 
     def ok_to_move_to_approval_submit(self):
-        if self.current_user_level<=2:
-            ##not allowed to do so                                                                                                                                                                                                                                                  
+        if self.current_user_level<=3:
+            ##not allowed to do so                                                                                                      
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
-
 
         if self.get_attribute('status')!='approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
@@ -313,16 +303,7 @@ class request(json_base):
         if not len(self.get_attribute('member_of_chain')):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
 
-        at_least_an_action=False
-        crdb = database('chained_requests')
-        adb = database('actions')
-        for in_chain_id in self.get_attribute('member_of_chain'):
-            in_chain = crdb.get(in_chain_id)
-            original_action = adb.get( in_chain['chain'][0] )
-            my_action_item = original_action['chains'][in_chain['member_of_campaign']]
-            if my_action_item['flag'] == True:
-                at_least_an_action=True
-                break
+        at_least_an_action = self.has_at_least_an_action()
         if not at_least_an_action:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
@@ -330,6 +311,27 @@ class request(json_base):
         ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
         # remains to the production manager to announce the batch the requests are part of
         #### not settting any status forward
+        
+    def has_at_least_an_action(self):
+        at_least_an_action=False
+        crdb = database('chained_requests')
+        adb = database('actions')
+        for in_chain_id in self.get_attribute('member_of_chain'):
+            in_chain = crdb.get(in_chain_id)
+            original_action = adb.get( in_chain['chain'][0] )
+            my_action_item = original_action['chains'][in_chain['member_of_campaign']]
+            ## old convention
+            if 'flag' in my_action_item and my_action_item['flag'] == True:
+                at_least_an_action=True
+                break
+            ## new convention
+            if type(my_action_item['chains'])==dict:
+                for (cr,content) in my_action_item['chains'].items():
+                    if content['flag']== True:
+                        at_least_an_action=True
+                        break
+            
+        return at_least_an_action
         
     def get_fragment(self):
         #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
@@ -850,6 +852,10 @@ class request(json_base):
         crdb=database('chained_requests')
         lookedat=[]
         for cr in self.get_attribute('member_of_chain'):
+            ## this protection is bad against malformed db content. it should just fail badly with exception
+            #if not crdb.document_exists(cr):
+            #    self.logger.error('For requests %s, the chain %s of which it is a member of does not exist.'%( self.get_attribute('prepid'), cr))
+            #    continue
             crr = crdb.get(cr)
             for other in crr['chain']:
             #limit to those before this one ? NO, the comment could go backward as it could go "forward"
