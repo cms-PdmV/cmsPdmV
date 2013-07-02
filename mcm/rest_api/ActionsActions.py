@@ -93,11 +93,13 @@ class UpdateAction(RESTResource):
                         else:
                             self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
         """
+        """
         rd = database('requests')
         if rd.document_exists(self.action.get_attribute('prepid')):
             r= request(rd.get(self.action.get_attribute('prepid')))
             self.action.set_attribute('dataset_name',r.get_attribute('dataset_name'))
-            
+        """
+    
         return dumps({'results':self.db.update(self.action.json())})
 
 class UpdateMultipleActions(RESTResource):
