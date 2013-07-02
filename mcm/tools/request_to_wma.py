@@ -57,7 +57,7 @@ class request_to_wmcontrol:
 
             command += ' --number-events %s' %(mcm_r.get_attribute('total_events'))
             command += ' --primary-dataset %s' %(mcm_r.get_attribute('dataset_name'))
-        elif self.wmagent_type == 'MonteCarloFromGEN':
+        elif wmagent_type == 'MonteCarloFromGEN':
             # calculate eff dev                
             command += ' --filter-eff %s' %( efficiency(mcm_r) )  
 
@@ -85,7 +85,7 @@ class request_to_wmcontrol:
                     processString=''
                 processString+='STEP0ATCERN'
 
-        elif self.wmagent_type == 'ReDigi':
+        elif wmagent_type == 'ReDigi':
 
             command += ' --input-ds %s' %(mcm_r.get_attribute('input_filename'))
             ## if PU dataset name is defined : add it
