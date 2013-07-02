@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from json_base import json_base
-from request import request
 
 class flow(json_base):
     def __init__(self, json_input={}):
