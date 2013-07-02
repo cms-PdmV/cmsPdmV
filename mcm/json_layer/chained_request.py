@@ -1,5 +1,5 @@
 from json_base import json_base
-from request import request
+from json_layer.request import request
 from flow import flow
 
 from couchdb_layer.prep_database import database
@@ -76,7 +76,7 @@ class chained_request(json_base):
             'member_of_campaign':'',
             #'generator_parameters':[], #prune
             #'request_parameters':{} # json with user prefs #prune
-            'last_status':'none',
+            'last_status':'new',
             'status' : self.get_status_steps()[0]
             }
         # update self according to json_input
@@ -189,7 +189,7 @@ class chained_request(json_base):
             return False        
         
         # get flow
-        fl = flow(fdb.get(flowname)).json()
+        fl = flib.flow(fdb.get(flowname)).json()
         
         allowed_flow_approvals = ['flow','submit']
 
@@ -515,6 +515,41 @@ class chained_request(json_base):
         # set request approval status to new
         #req.approve(0)
         return req.json()
+
+    def set_last_status(self):
+        rdb = database('requests')
+        step_r = rdb.get( self.get_attribute('chain')[ self.get_attribute('step') ])
+        new_last_status= step_r['status']
+        if new_last_status != self.get_attribute('last_status'):
+            self.update_history({'action':'set last status', 'step': step_r['status']})
+            self.set_attribute( 'last_status' , step_r['status'] )
+            return True
+        else:
+            return False
+    
+    def set_processing_status(self, pid=None, status=None):
+        if not pid  or not status:
+            rdb = database('requests')
+            step_r = rdb.get( self.get_attribute('chain')[ self.get_attribute('step') ])
+            pid = step_r['prepid']
+            status = step_r['status']
+
+        if pid ==self.get_attribute('chain')[ self.get_attribute('step') ]:
+            expected_end = max(0,self.get_attribute('prepid').count('_')-1)
+            current_status = self.get_attribute('status')
+            ## the current request is the one the status has just changed
+            self.logger.log('processing status %s given %s and at %s and stops at %s '%( current_status, status, self.get_attribute('step'), expected_end))
+            if self.get_attribute('step') == expected_end and status=='done' and current_status=='processing':
+                ## you're supposed to be in processing status
+                self.set_status()
+                return True
+            ##only when updating with a submitted request status do we change to processing
+            if status in ['submitted'] and current_status=='new':
+                self.set_status()
+                return True
+            return False
+        else:
+            return False
 
     def set_priority(self,level):
         rdb = database('requests')
