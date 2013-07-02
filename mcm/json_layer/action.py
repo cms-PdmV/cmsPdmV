@@ -168,23 +168,11 @@ class action(json_base):
         chains=self.get_attribute('chains')
         crdb = database('chained_requests')
         
-        ## solution with db query, which might make things extra slow at some point
-        #acrs = map(lambda x: x['value'],  crdb.query('root_request=='+self.action.get_attribute('_id')))
-        #for acr in acrs:
-        #    cr=chained_request(acr)
-        #    cc=cr.get_attribute('member_of_campaign')
-        #    if cc in chains and chains[cc]['flag'] and chains[cc]['block_number']:
-        #        cr.set_priority(chains[cc]['block_number'])
-        #        self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-        #    else:
-        #        self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-
-        ##alternative, using a new member of action['chains'][<cc>]['chains'] containing the list of chained request created for that action
-        #chains=self.action.get_attribute('chains')
-        for inchain in chains:
-            if chains[inchain]['flag']:
-                if 'chains' in chains[inchain]:
-                    for acr in chains[inchain]['chains']:
+        for inCC in chains:
+            ### this is the old convention
+            if 'flag' in chains[inCC] and chains[inCC]['flag']:
+                if 'chains' in chains[inCC]:
+                    for acr in chains[inCC]['chains']:
                         cr=chained_request(crdb.get(acr))
                         cc=cr.get_attribute('member_of_campaign')
                         if chains[cc]['block_number']:
@@ -192,6 +180,17 @@ class action(json_base):
                             self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
                         else:
                             self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+            ## new convention
+            if 'chains' in chains[inCC] and type(chains[inCC]['chains'])==dict:
+                for acr in chains[inCC]['chains']:
+                    bn=chains[inCC]['chains'][acr]['block_number']
+                    cr=chained_request(crdb.get(acr))
+                    if bn:
+                        cr.set_priority( bn )
+                        self.logger.log('Set priority block %s to %s'%( bn , acr))
+                    else:
+                        self.logger.error('Could not set block %s to %s'%( bn , acr))
+                        
 
         rd = database('requests')
         if rd.document_exists(self.get_attribute('prepid')):
