@@ -124,7 +124,7 @@ class RESTResourceIndex(RESTResource):
 			#		self.res +=' '+m
                      self.res += "<tr>"
                      if hasattr(o,'access_limit'):
-                         self.res += "<td><a href=%s><b>%s</b></a></td>" %(key,key)
+                         self.res += "<td><a href=%s/><b>%s</b></a></td>" %(key,key)
 			 self.res +=' <td>%s</td>'%(o.__class__.__name__)
 			 #if o.__class__.__doc__:
 			 #self.res +=' <td> %s</td>'%(o.__class__.__doc__)
