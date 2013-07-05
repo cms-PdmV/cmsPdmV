@@ -47,6 +47,7 @@ class GetUserPWG(RESTResource):
 	    """
 	    Retrieve the pwg of the provided user
 	    """
+	    ## this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
 	    all_pwgs=['BPH', 'B2G', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP']
 	    all_pwgs.sort()
 	    if len(args)==0:
