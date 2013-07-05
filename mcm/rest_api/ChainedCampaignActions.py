@@ -386,6 +386,71 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         return self.multiple_inspect( ','.join(self.listAll()) )
 
     
+class TestChainedCampaigns(RESTResource):
+    def __init__(self):
+        self.ccdb = database('chained_campaigns')
+        self.cdb = database('campaigns')
+        self.fdb = database('flows')
+        self.access_limit = 4
 
+    def GET(self, *args):
+        """
+        just a testing restapi
+        """
 
+        # get all the flows
+        flows = self.fdb.queries([])
+        # get all the campaigns
+        campaigns = self.cdb.queries([])
         
+        #every_possible_cc=[]
+
+        # def find_all( campaign, flows, campaigns, branches=[]):
+        #     if len(branches)==0:
+        #         branches.append('chain_%s'%(campaign))
+        #
+        #     for f in flows:
+        #         f_id=f['prepid']
+        #         if campaign in f['allowed_campaigns']:
+        #             next_campaign = f['next_campaign']
+        #             # we have a branch
+        #             new_branches=[]
+        #             if each_branch in branches:
+        #                 new_branches.append(each_branch + '_%s'%( f_id))
+        #             branches.extend( find_all(next_campaign, flows, campaigns,
+        #     return branches
+        # all_cc=[]
+        # for campaign in campaigns:
+        #     campaign_id=campaign['prepid']
+        #     if campaign['root']==1:
+        #         #starts only with roots
+        #         continue
+        #     all_cc.extend( find_all( campaign, flows, campaigns)
+
+
+        # inverted_trees={}
+        #
+        # for f in flows:
+        #     f_id = f['prepid']
+        #     next_campaign = f['next_campaign']
+        #     if next_campaign not in inverted_trees:
+        #         inverted_trees[next_campaign] = []
+        #
+        #     inverted_trees[next_campaign].extend( map( lambda c : [f_id,c],f['allowed_campaigns'] ))
+            #inverted_trees[next_campaign]=list(set( inverted_trees[next_campaign] ))
+
+        # one_replaced=True
+        # while one_replaced:
+        #     one_replaced=False
+        #     for c in inverted_trees.keys():
+        #         for (b_i,b) in enumerate(inverted_trees[c]):
+        #             if type(b[1])!=list and b[1] in inverted_trees:
+        #                     one_replaced=True
+        #                     inverted_trees[c][b_i][1]=inverted_trees[b[1]]
+
+        campaign_flows_dict = {}
+        for flow in flows:
+            campaign_flows_dict[flow['next_campaign']] = flow['allowed_campaigns']
+
+        return dumps(campaign_flows_dict)
+        #return dumps({'results':'Got %s flows and %s campaigns'%(len(flows),len(campaigns))})
