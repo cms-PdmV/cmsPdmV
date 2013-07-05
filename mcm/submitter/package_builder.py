@@ -770,9 +770,9 @@ class package_builder:
             self.request.test_failure(message)
             return False
 
-        if how_far and how_far=='test':
-            self.close()
-            return True
+        #if how_far and how_far=='test':
+        #    self.close()
+        #    return True
 
         # clean directory
         #self.__clean_directory()    
