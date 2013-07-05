@@ -18,7 +18,7 @@ class InspectInvalidation(RESTResource):
 
     def GET(self, *args):
         """
-        Goes through invalidation documents and announce them
+        Goes through invalidation documents and display (/) and announce them to data ops (/announce)
         """
 
         announce=False
