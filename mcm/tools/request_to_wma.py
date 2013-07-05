@@ -1,4 +1,5 @@
 from tools.locator import locator
+from tools.ssh_executor import ssh_executor
 
 class request_to_wmcontrol:
     """
