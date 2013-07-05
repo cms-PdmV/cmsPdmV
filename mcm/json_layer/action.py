@@ -173,8 +173,10 @@ class action(json_base):
             if 'flag' in chains[inCC] and chains[inCC]['flag']:
                 if 'chains' in chains[inCC]:
                     for acr in chains[inCC]['chains']:
+                        #if not crdb.document_exists(acr):   continue
                         cr=chained_request(crdb.get(acr))
                         cc=cr.get_attribute('member_of_campaign')
+                        #if 'block_number' in chains[cc] and chains[cc]['block_number']:
                         if chains[cc]['block_number']:
                             cr.set_priority(chains[cc]['block_number'])
                             self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
