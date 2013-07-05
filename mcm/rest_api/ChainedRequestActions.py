@@ -6,6 +6,7 @@ from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestChainId import RequestChainId
 from json_layer.chained_request import chained_request
+from json_layer.request import request
 
 class CreateChainedRequest(RESTResource):
     def __init__(self):
@@ -246,19 +247,53 @@ class FlowToNextStep(RESTResource):
 
 class RewindToPreviousStep(RESTResource):
     def __init__(self):
-        self.db = database('chained_requests')
+        self.crdb = database('chained_requests')
+        self.rdb = database('requests')
         self.access_limit = 3
 
     def GET(self,  *args):
         """
         Rewind the current chained request of one step.
         """
-        ## to be implemented.
-        #### invalidate the last request in the chain, and reset it
-        ## step = step -1
+        if not len(args):
+            return dumps({"results":False})
+        crid=args[0]
+        mcm_cr = chained_request( self.crdb.get( crid) )
+        current_step = mcm_cr.get_attribute('step')
+        if current_step==0:
+            ## or should it be possible to cancel the initial requests of a chained request
+            return dumps({"results":False, "message":"already at the root"})
+
+        ## supposedly all the other requests were already reset!
+        for next in mcm_cr.get_attribute('chain')[current_step+1:]:
+            ## what if that next one is not in the db
+            if not self.rdb.document_exists( next):
+                self.logger.error('%s is part of %s but does not exist'%( next, crid))
+                die=now
+                continue
+            mcm_r = request(self.rdb.get( next ))
+            if mcm_r.get_attribute('status')!='new':
+                # this cannot be right!
+                self.logger.error('%s is after the current request and is not new: %s' %( next, mcm_r.get_attribute('status')))
+                die=now
+
+        ##get the one to be reset
+        current_id=mcm_cr.get_attribute('chain')[current_step]
+        mcm_r = request( self.rdb.get( current_id ))
+        mcm_r.reset()
+        saved = self.rdb.update( mcm_r.json() )
+        if not saved:
+            return dumps({"results":False, "message":"could not save the last request of the chain"})
+        mcm_cr.set_attribute('step',current_step -1 )
         # set status, last status
+        mcm_cr.set_last_status()
+        mcm_cr.set_processing_status()
         
-        return dumps({'results':'not implemented yet'})
+        saved = self.crdb.update( mcm_cr.json())
+        if saved:
+            return dumps({"results":True})
+        else:
+            return dumps({"results":False, "message":"could not save chained requests. the DB is going to be inconsistent !"})
 
 class ApproveRequest(RESTResource):
     def __init__(self):
