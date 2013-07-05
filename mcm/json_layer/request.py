@@ -230,12 +230,11 @@ class request(json_base):
             if similar_ds[0]['extension'] == similar_ds[1]['extension']:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
         
-
+        cdb = database('campaigns')
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                cdb = database('campaigns')
                 if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
                     ##only requests belonging to a root==0 campaign can have mcdbid
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign')
@@ -247,6 +246,45 @@ class request(json_base):
                 if mcm_cr['chain'].index( self.get_attribute('prepid') ) ==0:
                     if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains.')
+
+
+        ## check on chagnes in the sequences
+        mcm_c = cdb.get( self.get_attribute('member_of_campaign') )
+        if len(self.get_attribute('sequences')) != len(mcm_c['sequences']):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has a different number of steps than the campaigns it belog to')
+
+
+        def in_there( seq1, seq2):
+            for (name,item) in seq1.items():
+                if name in seq2:
+                    if item!=seq2[name]:
+                        return False
+                else:
+                    return False
+            ## arived here, all items of seq1 are identical in seq2
+            return True
+        matching_labels=set([])
+        for (i_seq,seqs) in enumerate(mcm_c['sequences']):
+            self_sequence = self.get_attribute('sequences')[i_seq]
+            this_matching=set([])
+            for (label,seq) in seqs.items():
+                # label = default , seq = dict
+                if in_there( seq, self_sequence ) and in_there( self_sequence, seq ):
+                    ## identical sequences
+                    this_matching.add(label)
+            if len(matching_labels)==0:
+                matching_labels=this_matching
+            else:
+                # do the intersect
+                matching_labels = matching_labels - (matching_labels - this_matching) 
+
+        if len(matching_labels)==0:
+            self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
+            # try setting the process string ? or just raise an exception ?
+            if not self.get_attribute('process_string'):
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences of the request has been changed, but not processing string has been provided')
+                    
+                    
 
         ## select to synchronize status and approval toggling, or run the validation/run test
         de_synchronized=True
@@ -1141,13 +1179,18 @@ class runtest_genvalid(handler):
         batch_test = batch_control( self.rid, test_script )
         success = batch_test.test()
         
-        #suck in run-test if present
-        rt_xml=location.location()+'%s_rt.xml'%( self.rid )
-        if os.path.exists( rt_xml ):
-            mcm_r.update_performance( open(rt_xml).read(), 'perf')
-        gv_xml=location.location()+'%s_gv.xml'%( self.rid )
-        if os.path.exists( gv_xml ):
-            mcm_r.update_performance( open(gv_xml).read(), 'eff')
+        try:
+            #suck in run-test if present
+            rt_xml=location.location()+'%s_rt.xml'%( self.rid )
+            if os.path.exists( rt_xml ):
+                mcm_r.update_performance( open(rt_xml).read(), 'perf')
+            gv_xml=location.location()+'%s_gv.xml'%( self.rid )
+            if os.path.exists( gv_xml ):
+                mcm_r.update_performance( open(gv_xml).read(), 'eff')
+        except:
+            self.logger.error('Failed to get perf reports')
+            success = False
+
 
         self.logger.error('I came all the way to here and %s'%( success ))
         if not success:
