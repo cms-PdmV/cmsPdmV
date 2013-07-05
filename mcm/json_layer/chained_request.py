@@ -260,14 +260,15 @@ class chained_request(json_base):
                 alreadyExistingRequest.update_history({'action':'flow'})
                 rdb.update(alreadyExistingRequest.json())
                 ## and get it back
-                alreadyExistingRequest = request(rdb.get( alreadyExistingID))
+                #  alreadyExistingRequest = request(rdb.get( alreadyExistingID))
                 
             ## JR, instead of returning true here, which skews the "step", just update everything to that one
-            if alreadyExistingRequest.get_attribut('status') == 'new':
-                req = alreadyExistingRequest.json()
-                return True
-            else:
-                return True
+            #if alreadyExistingRequest.get_attribut('status') == 'new':
+            #    req = alreadyExistingRequest.json()
+            #    return True
+            #else:
+            #    return True
+            return True
             
             
 
