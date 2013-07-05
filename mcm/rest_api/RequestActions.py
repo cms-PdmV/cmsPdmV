@@ -594,6 +594,22 @@ class ApproveRequest(RESTResource):
             req.approve(val)
             if val==0:
                 req.set_attribute('completed_events', 0)
+                ## make sure to keep track of what needs to be invalidated in case there is
+                invalidation = database('invalidations')
+                ds_to_invalidate=[]
+                for wma in req.get_attribute('reqmgr_name'):
+                    new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new"}
+                    new_invalidation['_id'] = new_invalidation['object']
+                    invalidation.save( new_invalidation )
+                    if 'content' in wma and 'pdmv_dataset_list' in wma['content']:
+                        ds_to_invalidate.extend( wma['content']['pdmv_dataset_list'])
+                    if 'content' in wma and 'pdmv_dataset_name' in wma['content']:
+                        ds_to_invalidate.append( wma['content']['pdmv_dataset_name'])
+                ds_to_invalidate=list(set(ds_to_invalidate))
+                for ds in ds_to_invalidate:
+                    new_invalidation={"object" : ds, "type" : "dataset", "status" : "new"}
+                    new_invalidation['_id'] = new_invalidation['object'].replace('/','')
+                    invalidation.save( new_invalidation )
                 req.set_attribute('reqmgr_name',[])
                 req.set_attribute('config_id',[])
                 req.set_status(step=val,with_notification=True)
@@ -724,6 +740,7 @@ from tools.request_to_wma import request_to_wmcontrol
 from tools.handler import handler
 from tools.installer import installer
 from tools.ssh_executor import ssh_executor
+
 class prepare_and_submit(handler):
     """
     operate a runtest with the configs in config cache, operate submission, toggles the status to submitted
