@@ -47,7 +47,8 @@ class GetUserPWG(RESTResource):
 	    """
 	    Retrieve the pwg of the provided user
 	    """
-	    all_pwgs=['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP']
+	    all_pwgs=['BPH', 'B2G', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP']
+	    all_pwgs.sort()
 	    if len(args)==0:
 		    return dumps({"results" : all_pwgs})
 	    user_name = args[0]
