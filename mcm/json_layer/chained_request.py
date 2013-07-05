@@ -164,7 +164,12 @@ class chained_request(json_base):
             raise self.NotInProperStateException(req['_id'], req['status'], allowed_request_statuses)
 
         original_action = adb.get( self.get_attribute('chain')[0] )
-        my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
+        my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]['chains']
+
+        if self.get_attribute('prepid') not in my_action_item:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'has no valid action')
+        
+        my_action_item= my_action_item[self.get_attribute('prepid')]
         if my_action_item['flag'] == False:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'has no valid action')
         if not 'block_number' in my_action_item or not my_action_item['block_number']:
@@ -189,7 +194,7 @@ class chained_request(json_base):
             return False        
         
         # get flow
-        fl = flib.flow(fdb.get(flowname)).json()
+        fl = flow(fdb.get(flowname)).json()
         
         allowed_flow_approvals = ['flow','submit']
 
@@ -212,10 +217,8 @@ class chained_request(json_base):
         
         ## JR: check that there is no already existing requests in the campaign, that corresponds to the same steps of campaign+flow up until now
         alreadyExistingRequest=False
-        ## faking it : alreadyExistingRequest=request(rdb.get('JME-Fall11R1-00001'))
+
         ## look up all chained requests that start from the same root request
-        
-        
         ## remove <pwg>-chain_ and the -serial number, replacing _ with a .
         toMatch='.'.join(self.get_attribute('prepid').split('_')[1:][0:stepIndex+1]).split('-')[0]
         accs = map(lambda x: x['value'],  crdb.query('root_request=='+self.get_attribute('chain')[0]))
@@ -243,20 +246,29 @@ class chained_request(json_base):
             alreadyExistingID=alreadyExistingRequest.get_attribute('prepid')
             self.logger.log('There is already the request "%s" that fits in the flowing of %s'%(alreadyExistingID,self.get_attribute("prepid")))
             if not alreadyExistingID in chain:
+                ## and was not yet in the list of requests
                 chain.append(alreadyExistingID)
                 self.set_attribute("chain",chain)
                 self.update_history({'action':'flow', 'step':str(int(self.get_attribute('step'))+1)})
-                self.set_attribute('step',  stepIndex)
+                self.set_attribute('step',  stepIndex+1)
 
-            # and register to the lucky one that it is part of a second chained request
+            # and register to the lucky one that it is part of another chained request
             inchains=alreadyExistingRequest.get_attribute("member_of_chain")
             if not self.get_attribute("prepid") in inchains:
                 inchains.append(self.get_attribute("prepid"))
                 alreadyExistingRequest.set_attribute("member_of_chain",inchains)
                 alreadyExistingRequest.update_history({'action':'flow'})
                 rdb.update(alreadyExistingRequest.json())
+                ## and get it back
+                alreadyExistingRequest = request(rdb.get( alreadyExistingID))
+                
+            ## JR, instead of returning true here, which skews the "step", just update everything to that one
+            if alreadyExistingRequest.get_attribut('status') == 'new':
+                req = alreadyExistingRequest.json()
+                return True
+            else:
+                return True
             
-            return True
             
 
         # use root request as template
@@ -286,14 +298,6 @@ class chained_request(json_base):
 
         if input_dataset: 
             req['input_filename'] = input_dataset
-        """
-        else:
-            ## JR we should find a way of getting that info from the previous request
-            ### the naming is really awkward here ...
-            lastFound=None
-            for previous_wma in req['requests']:
-                if 'pdmv_dataset' in previous_wma
-        """        
             
         if req['completed_events'] <=0:
             raise KeyError('Completed events is negative or null')
@@ -307,7 +311,7 @@ class chained_request(json_base):
         if nc['root'] ==1 and pc['root'] !=1:
             #in this case, if there are staged number requirements, let's use it
             if self.get_attribute('member_of_campaign') in original_action['chains']:
-                my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
+                ## made up there  already ##my_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]
                 if 'staged' in my_action_item:
                     req['total_events'] = my_action_item['staged']
                 elif 'threshold' in my_action_item:
@@ -353,8 +357,6 @@ class chained_request(json_base):
         new_req['keep_output'][-1] = True
 
         ### this is an awfull copy/paste that I had to do because of cross import between request and chained_requests
-
-
         def puttogether(nc,fl,new_req):
             # copy the sequences of the flow
             for i, step in enumerate(nc['sequences']):
@@ -388,7 +390,7 @@ class chained_request(json_base):
 		
         puttogether(nc,fl,new_req)
         
-
+        ## make a request object
         nre = request(new_req)
 
         #JR toggle approval of the request until we reached the desired 
@@ -438,7 +440,7 @@ class chained_request(json_base):
             self.logger.error('Could not build request object. Reason: %s' % (ex))
             return {}
         
-        chain_specific = ['threshold',  'block_number',  'staged']
+        #chain_specific = ['threshold',  'block_number',  'staged']
         
         ## JR remove from schema
         ##this was removed as part of cleaning things up
