@@ -23,7 +23,14 @@ class handler(Thread):
         self.res = []
 
     def run(self):
-        pass
+        try:
+            self.unsafe_run()
+            # set the status, save the request, notify ...
+            pass
+        except:
+            ## catch anything that comes this way and handle it
+            # logging, rolling back the request, notifying, ...
+            pass
 
     def status(self):
         return self.res
