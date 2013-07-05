@@ -43,72 +43,49 @@ class CreateAction(RESTResource):
 
 class UpdateAction(RESTResource):
     def __init__(self):
-        self.db_name = 'actions'
-        self.db = database(self.db_name)
-        self.action = None
+        self.adb = database('actions')
         self.access_limit = 3
 
     def PUT(self):
         """
         update the action with the provided json content
         """
-        return self.import_request(cherrypy.request.body.read().strip())
+        res = self.import_action( loads(cherrypy.request.body.read().strip()) )
+        return dumps(res)
 
-    def import_request(self, data):
+    def import_action(self, content):
         try:
-            self.action = action(json_input=loads(data))
+            mcm_a = action( content ) 
         except request.IllegalAttributeName as ex:
-            return dumps({"results":False})
+            return {"results":False}
+        self.logger.log('Updating action "%s" by hand...' % (mcm_a.get_attribute('_id')))
 
-        self.logger.log('Updating action "%s" by hand...' % (self.action.get_attribute('_id')))
+        ## massage the json for removing null items that could be send by the action editor interface
+        chains = mcm_a.get_attribute('chains')
+        for (cc,content) in chains.items():
+            for (o,value) in content.items():
+                if type(value)==dict:
+                    for (cr,specs) in value.items():
+                        for (s,spec) in specs.items():
+                            if spec==None:
+                                specs.pop(s)
+                else:
+                    if value==None:
+                        content.pop(o)
+        mcm_a.set_attribute('chains',chains)
 
-        self.action.inspect_priority()
-        """
-        ##JR: until put in the proper place
-        chains=self.action.get_attribute('chains')
-        crdb = database('chained_requests')
+
+        mcm_a.inspect_priority()
         
-        ## solution with db query, which might make things extra slow at some point
-        #acrs = map(lambda x: x['value'],  crdb.query('root_request=='+self.action.get_attribute('_id')))
-        #for acr in acrs:
-        #    cr=chained_request(acr)
-        #    cc=cr.get_attribute('member_of_campaign')
-        #    if cc in chains and chains[cc]['flag'] and chains[cc]['block_number']:
-        #        cr.set_priority(chains[cc]['block_number'])
-        #        self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-        #    else:
-        #        self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+        saved = self.adb.update( mcm_a.json() )
+        if saved:
+            return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+        else:
+            return {"results":False , "prepid": mcm_a.get_attribute('prepid')}
 
-        ##alternative, using a new member of action['chains'][<cc>]['chains'] containing the list of chained request created for that action
-        #chains=self.action.get_attribute('chains')
-        for inchain in chains:
-            if chains[inchain]['flag']:
-                if 'chains' in chains[inchain]:
-                    for acr in chains[inchain]['chains']:
-                        cr=chained_request(crdb.get(acr))
-                        cc=cr.get_attribute('member_of_campaign')
-                        if chains[cc]['block_number']:
-                            cr.set_priority(chains[cc]['block_number'])
-                            self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-                        else:
-                            self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-        """
-        """
-        rd = database('requests')
-        if rd.document_exists(self.action.get_attribute('prepid')):
-            r= request(rd.get(self.action.get_attribute('prepid')))
-            self.action.set_attribute('dataset_name',r.get_attribute('dataset_name'))
-        """
-    
-        return dumps({'results':self.db.update(self.action.json())})
-
-class UpdateMultipleActions(RESTResource):
+class UpdateMultipleActions(UpdateAction):
     def __init__(self):
-        self.db_name = 'actions'
-        self.db = database(self.db_name)
-        self.single_updater = UpdateAction()
-        self.action_getter = GetAction()
-        self.access_limit =3 
+        UpdateAction.__init__(self)
 
     def PUT(self):
         """
@@ -116,6 +93,13 @@ class UpdateMultipleActions(RESTResource):
         """
         self.logger.log('Updating multiple actions')
         data = loads(cherrypy.request.body.read().strip())
+        
+        results=[]
+        for single_action in data:
+            results.append(self.import_action(single_action))
+
+        return dumps({"results": results})
+        """
         output = []
         for elem in data["actions"]:
             single_action = loads(self.action_getter.get_request(elem["prepid"]))["results"]
@@ -145,6 +129,7 @@ class UpdateMultipleActions(RESTResource):
             self.logger.error(single_action)    
             output += [self.single_updater.import_request(dumps(single_action))]
         return dumps({"results": output})
+        """
 
 class GetAction(RESTResource):
     def __init__(self):
