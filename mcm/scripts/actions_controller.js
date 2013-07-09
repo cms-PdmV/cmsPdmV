@@ -30,7 +30,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       if ($location.search()["select"] == null){
         if ($scope.selectedOption['contains'] != "------"){
             $location.search("select",$scope.selectedOption['contains']);
-            //$scope.getData();
+            //$scope.getData("");
             //do_get_data = true;
         }else{
           $location.search("select",null);
@@ -39,7 +39,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       if ($location.search()["starts"] == null){
         if ($scope.selectedOption['starts'] != "------"){
             $location.search("starts",$scope.selectedOption['starts']);
-            //$scope.getData();
+            //$scope.getData("");
             //do_get_data = true;
         }else{
           $location.search("starts",null);
@@ -126,7 +126,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
 
 	   // then get data
      if (do_get_data == true){
-	     $scope.getData();
+	     $scope.getData("");
      }
 	   // 
 
@@ -182,7 +182,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
         }
     };
     
-  $scope.getData = function(){
+  $scope.getData = function(prepid){
       $scope.result = [];
       var query = ""
       if ($scope.rootCampaign){ //if defined
@@ -205,6 +205,11 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
             query += "&"+key+"="+value;
           };
         });
+        // console.log(prepid);
+        // if (prepid != ""){
+        //   query+="&"+"prepid"+"="+prepid;
+        // }
+        // console.log(query);
 	      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
 	      promise.then(function(data){
 		      _.each( data.data.results , function( item ){
@@ -214,45 +219,11 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
 		      alert("Error getting data.");
 		  });
 	  });
-      //then put everything in result
-      //      $scope.result = [];
-      //      console.log( results );
-      //      _.each(results, function(item_list){
-      //	      _.each(item_list, function(item){
-      //		      $scope.result.push(item);
-      //		  });
-      //	  });
-  
-
-      /*
-  var query = ""
-    _.each($location.search(), function(value,key){
-      if (key == 'select'){
-        if(value !='------'){
-          query += "&member_of_campaign="+value;
-        }
-      }
-      else if(key != 'starts'){
-        query += "&"+key+"="+value;
-      };
-    });
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
-    promise.then(function(data){
-      $scope.result = data.data.results;
-      if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-        $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-      }
-    },function(){
-        alert("Error getting data.");
-    });
-      */
   };
 
 
   $scope.$watch('list_page', function(){
-    $scope.getData();
+    $scope.getData("");
   });
     
   $scope.previous_page = function(current_page){
@@ -302,7 +273,14 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     //console.log(id);
     var generateUrl = "";
     if ( id.indexOf("chain_") !=-1){
-        generateUrl = "restapi/chained_campaigns/generate_chained_requests/"+id;
+        //generateUrl = "restapi/chained_campaigns/generate_chained_requests/"+id;
+	var ids_on_the_page=[];
+	_.each($scope.result, function(item){
+		ids_on_the_page.push(item.prepid);
+	    });
+	generateUrl = "restapi/actions/generate_chained_requests/"+ids_on_the_page.join();
+	//console.log( generateUrl )
+	//generateUrl = "restapi/actions/toto"
     }else {
         generateUrl = "restapi/actions/generate_chained_requests/"+id;
     };
@@ -315,7 +293,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
       $scope.update['result'] = id+" generated Successfully";
-      $scope.getData();
+      $scope.getData("");
     }, function(data){
         $scope.update['status_code'] = data.status;
         $scope.update['fail'] = true;
@@ -327,8 +305,12 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
   $scope.generateAllRequests = function(){
     //console.log("Generate all!");
     $scope.generatingAllIcon = true;
-    
-    generateUrl = "restapi/actions/generate_all_chained_requests";
+    //generateUrl = "restapi/actions/generate_all_chained_requests";
+    var ids_on_the_page=[];
+    _.each($scope.result, function(item){      
+	    ids_on_the_page.push(item.prepid);          
+	});  
+    generateUrl = "restapi/actions/generate_chained_requests/"+ids_on_the_page.join();
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.generatingAllIcon = false;
@@ -338,7 +320,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       $scope.update['fail'] = false;
       $scope.update['result'] = "All requests generated Successfully";
       $scope.update['status_code'] = data.status;
-      $scope.getData();
+      $scope.getData("");
     }, function(data){
         $scope.update['fail'] = true;
         $scope.update['success'] = false;
@@ -358,7 +340,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       $scope.update['fail'] = false;
       $scope.update['result'] = id+" chain detected Successfully";
       $scope.update['status_code'] = data.status;
-      $scope.getData();
+      $scope.getData("");
     }, function(data){
         $scope.refreshingAllIcon = false;
         
@@ -383,7 +365,7 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       $scope.update['fail'] = false;
       $scope.update['result'] = "All chains detected Successfully";
       $scope.update['status_code'] = data.status;
-      $scope.getData();
+      $scope.getData("");
     }, function(data){
         $scope.refreshingAllIcon = false;
         
@@ -474,9 +456,9 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       $scope.updatingMultipleActions = false;
       $scope.update['success'] = true;
       $scope.update['fail'] = false;
-      $scope.update['result'] = data;
+      $scope.update['result'] = data.results;
       $scope.update['status_code'] = status;
-      $scope.getData();
+      $scope.getData("");
     }).error(function(data,status){
       $scope.updatingMultipleActions = false;
       $scope.update['fail'] = true;
@@ -487,6 +469,52 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     $scope.updatingMultipleActions = false;
     $scope.multipleChanged = false;
     $scope.toggleMultipleInput();
+  };
+
+  $scope.formatDocument = function(doc){
+    _.each(doc.chains, function(chain){
+      if (chain.staged !== undefined){
+        if (chain.staged == null){
+          delete(chain.staged);
+        }
+      }
+      if (chain.threshold !== undefined){
+        if (chain.threshold == null){
+          delete(chain.threshold);
+        }
+      }
+      if (chain.block_number !== undefined){
+        chain.block_number = parseInt(chain.block_number);
+      }
+      _.each(chain.chains, function(super_chain){ //crosscheck all sub-chains
+      if (super_chain.staged !== undefined){
+        if (super_chain.staged == null){
+          delete(super_chain.staged);
+        }
+      }
+      if (super_chain.threshold !== undefined){
+        if (super_chain.threshold == null){
+          delete(super_chain.threshold);
+        }
+      }
+      if (super_chain.block_number !== undefined){
+        super_chain.block_number = parseInt(super_chain.block_number);
+      } 
+      });
+    });
+    return doc;
+  };
+
+  $scope.commitAllChanges = function(){
+    var documents_to_update = [];
+    _.each($scope.changed_prepids, function(doc_id_to_update){
+      _.each($scope.result, function(doc){
+        if (doc.prepid == doc_id_to_update){
+          documents_to_update.push($scope.formatDocument(doc));
+        }
+      });
+    });
+    $scope.sendUpdatedDocuents(documents_to_update);
   };
 
   $scope.wholeColumnSelection = function(columnId){
@@ -540,8 +568,10 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
       });
     });    
     $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson($scope.result[prepid])}).success(function(data,status){
-      scope.displayBox = false;
-      scope.anychanges = false;
+      //$scope.displayBox = false;
+      //$scope.anychanges = false;
+      $scope.changed_prepids[prepid] = false;
+      $scope.getData($scope.result[prepid]['prepid']);
     }).error(function(data,status){
       alert("Error: ", status);
     });
