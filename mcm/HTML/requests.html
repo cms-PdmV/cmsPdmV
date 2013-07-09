@@ -53,7 +53,7 @@
       </pane>
         <pane heading="Super search">
           <form class="form-inline">
-            <input type="text" class="input-mini" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
+            <input type="text" class="input-small" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
             <button class="btn btn-mini" ng-click="superSearch(searchable_fields);">Search!</button>
             <!--<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_search" rel="tooltip" title="Glossary for search"><i class="icon-question-sign"></i></a>-->
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_Requests" rel="tooltip" title="Help for search"><i class="icon-question-sign"></i></a>

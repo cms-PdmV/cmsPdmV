@@ -10,7 +10,7 @@ function resultsCtrl($scope, $http, $location, $window){
         //{text:'Type',select:false, db_name:'type'},
         {text:'History',select:true, db_name:'history'},
     ];
-    $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""}];
+    $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
     $search_data = {};
 
     $scope.filt = {}; //define an empty filter
