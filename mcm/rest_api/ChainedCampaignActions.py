@@ -9,6 +9,7 @@ from json_layer.campaign import campaign
 from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
+from collections import defaultdict
 
 class CreateChainedCampaign(RESTResource):
     def __init__(self):
@@ -31,14 +32,14 @@ class CreateChainedCampaign(RESTResource):
         try:
             self.ccamp = chained_campaign(json_input=loads(jsdata))
         except chained_campaign('').IllegalAttributeName as ex:
-            return dumps({"results":str(ex)})
+            return dumps({"results":False, "message":str(ex)})
 
         self.logger.log('Creating new chained_campaign %s...' % (self.ccamp.get_attribute('_id'))) 
         
         self.ccamp.set_attribute("_id", self.ccamp.get_attribute("prepid"))
         if not self.ccamp.get_attribute("_id") :#or self.db.document_exists(self.ccamp.get_attribute("_id")):
             self.logger.error('Campaign %s already exists. Cannot re-create it.' % (self.ccamp.get_attribute('_id')))
-            return dumps({"results":'Error: Campaign '+self.ccamp.get_attribute("_id")+' already exists'})
+            return dumps({"results":False, "message":'Error: Campaign '+self.ccamp.get_attribute("_id")+' already exists'})
         
         # update actions db
         self.update_actions()
@@ -46,7 +47,12 @@ class CreateChainedCampaign(RESTResource):
 	# update history
 	self.ccamp.update_history({'action':'created'})
         
-        return dumps({"results":self.db.save(self.ccamp.json())})
+        saved = self.db.save(self.ccamp.json())
+        if saved:
+            return dumps({"results":True, "prepid" : self.ccamp.get_attribute("prepid")})
+        else:
+            return dumps({"results":False, "message":"could not save to DB"})
+
     
     # update the actions db to include the new chain
     def update_actions(self):
@@ -220,19 +226,38 @@ class GenerateChainedRequests(RESTResource):
         self.cdb = database('campaigns')
         self.adb = database('actions')
         self.access_limit = 3
-    
+        from rest_api.ActionsActions import GenerateChainedRequests
+        self.generator = GenerateChainedRequests()
+
     def GET(self,  *args):
         """
         Generate the chained requests for a given chained campaign.
         """
-        return dumps({"results":"Broken and should not be used yet"})
-
+        #return dumps({"results":"Broken and should not be used yet"})
+    
         if not args:
             self.logger.error('No arguments were given') 
             return dumps({"results":'Error: No arguments were given'})
         return self.generate_requests(args[0])
     
-    def generate_requests(self,  pid):
+    def generate_requests(self, ccid):
+        if not self.ccdb.document_exists(ccid):
+            return dumps({"results":False})
+
+        mcm_cc = chained_campaign( self.ccdb.get(ccid))
+        ## get the root campaign id
+        root_campaign = mcm_cc.get_attribute('campaigns')[0][0]
+
+        ## get all actions belonging to that root campaign
+        root_actions = self.adb.queries(['member_of_campaign==%s'%(root_campaign)])
+        res=[]
+        for a in root_actions:
+            res.append(self.generator.generate_request(a['prepid']))
+            
+        return dumps(res)
+    
+    """
+    def generate_requests_old(self,  pid):
         self.logger.log('Generating all selected chained_requests for chained_campaign %s...' % (pid))       
  
         # init chained_campaign
@@ -280,6 +305,7 @@ class GenerateChainedRequests(RESTResource):
 
 
         return dumps({"results":True})
+"""
 
 """
 # starts the chained campaign
@@ -387,6 +413,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
 
     
 class TestChainedCampaigns(RESTResource):
+
     def __init__(self):
         self.ccdb = database('chained_campaigns')
         self.cdb = database('campaigns')
@@ -397,60 +424,68 @@ class TestChainedCampaigns(RESTResource):
         """
         just a testing restapi
         """
-
         # get all the flows
         flows = self.fdb.queries([])
-        # get all the campaigns
-        campaigns = self.cdb.queries([])
-        
-        #every_possible_cc=[]
+        all_cc = []
 
-        # def find_all( campaign, flows, campaigns, branches=[]):
-        #     if len(branches)==0:
-        #         branches.append('chain_%s'%(campaign))
-        #
-        #     for f in flows:
-        #         f_id=f['prepid']
-        #         if campaign in f['allowed_campaigns']:
-        #             next_campaign = f['next_campaign']
-        #             # we have a branch
-        #             new_branches=[]
-        #             if each_branch in branches:
-        #                 new_branches.append(each_branch + '_%s'%( f_id))
-        #             branches.extend( find_all(next_campaign, flows, campaigns,
-        #     return branches
-        # all_cc=[]
-        # for campaign in campaigns:
-        #     campaign_id=campaign['prepid']
-        #     if campaign['root']==1:
-        #         #starts only with roots
-        #         continue
-        #     all_cc.extend( find_all( campaign, flows, campaigns)
+        def finish_chain(chain_name, chains_dict, allowed_campaigns_dict):
+            """
+            Start recursive finishing of chain.
+            """
+            chain = chains_dict[chain_name]["campaigns_list"]
+            try:
+                last_campaign, last_flow = chain[-1]
+            except TypeError:
+                return
+            next_campaigns = []
+            if last_campaign in allowed_campaigns_dict:
+                next_campaigns.extend(allowed_campaigns_dict[last_campaign])
 
+            traverse_next_campaigns(next_campaigns, chains_dict, chain, chain_name,allowed_campaigns_dict)
 
-        # inverted_trees={}
-        #
-        # for f in flows:
-        #     f_id = f['prepid']
-        #     next_campaign = f['next_campaign']
-        #     if next_campaign not in inverted_trees:
-        #         inverted_trees[next_campaign] = []
-        #
-        #     inverted_trees[next_campaign].extend( map( lambda c : [f_id,c],f['allowed_campaigns'] ))
-            #inverted_trees[next_campaign]=list(set( inverted_trees[next_campaign] ))
+        def traverse_next_campaigns(next_campaigns, chains_dict, previous_campaigns, previous_chain_name, allowed_campaigns_dict):
+            """
+            Go through all possible connections between chains.
+            """
+            for flow, next_campaign in next_campaigns:
+                chain_name = previous_chain_name+'_'+flow
+                db_existence = self.ccdb.document_exists(chain_name)
+                validity = False
+                new_campaigns = list(previous_campaigns)
+                new_campaigns.append((next_campaign, flow))
+                if db_existence:
+                    mcm_cc=self.ccdb.get(chain_name)
+                    validity=mcm_cc['valid']
+                    all_cc.append(mcm_cc)
+                else:
+                    all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns, "exists": False})
+                    
+                # chained_campaigns = self.ccdb.queries(['prepid==%s' % chain_name])
+                # db_existence = False
+                # validity = False
+                # if len(chained_campaigns) > 0:
+                #    db_existence = True
+                #    if chained_campaigns[0]['valid']:
+                #        validity = True
+                chains_dict[chain_name] = {"campaigns_list": new_campaigns, "exists_in_database": db_existence, "valid": validity}
+                # recursively fill all the possible chains
+                finish_chain(chain_name, chains_dict, allowed_campaigns_dict)
 
-        # one_replaced=True
-        # while one_replaced:
-        #     one_replaced=False
-        #     for c in inverted_trees.keys():
-        #         for (b_i,b) in enumerate(inverted_trees[c]):
-        #             if type(b[1])!=list and b[1] in inverted_trees:
-        #                     one_replaced=True
-        #                     inverted_trees[c][b_i][1]=inverted_trees[b[1]]
-
-        campaign_flows_dict = {}
+        allowed_campaigns_dict = defaultdict(list)
+        # preparation of dicts needed by later algorithm
         for flow in flows:
-            campaign_flows_dict[flow['next_campaign']] = flow['allowed_campaigns']
+            allowed_campaigns = flow['allowed_campaigns']
+            for allowed_campaign in allowed_campaigns:
+                allowed_campaigns_dict[allowed_campaign].append((flow['prepid'], flow['next_campaign']))
 
-        return dumps(campaign_flows_dict)
+        chains_dict = defaultdict(dict) # chain_id:{"campaigns_list": list, "exists_in_database":exists, "valid":validity})
+        # creation of output dictionary
+        for allowed_c in allowed_campaigns_dict:
+            campaigns = self.cdb.queries(['prepid==%s' % allowed_c])
+            if len(campaigns) == 0 or campaigns[0]["root"] == 1:
+                continue
+            next_campaigns = allowed_campaigns_dict[allowed_c]
+            traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)], 'chain_' + allowed_c, allowed_campaigns_dict)
+
+        return dumps(all_cc)
         #return dumps({'results':'Got %s flows and %s campaigns'%(len(flows),len(campaigns))})
