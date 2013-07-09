@@ -213,7 +213,7 @@ class DeSelectChain(RESTResource):
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
-        self.db = database('actions')
+        self.adb = database('actions')
         self.ccdb = database('chained_campaigns')
         self.crdb = database('chained_requests')
         self.rdb = database('requests')
@@ -226,17 +226,69 @@ class GenerateChainedRequests(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({'results':'Error: No arguments were given'})
-        
-        return self.generate_request(args[0])
+        res=[]
+        for aid in args[0].split(','):
+            res.append( self.generate_request(aid))
+            
+        if len(res)==1:
+            return dumps(res[0])
+        else:
+            return dumps(res)
     
-    def generate_request(self,  pid):
-        if not self.db.document_exists(pid):
+    def generate_request(self, aid):
+        if not self.adb.document_exists(aid):
+            return dumps({'results':False, 'message':'%s does not exist'%(aid)})
+        
+        self.logger.log('Generating all selected chained_requests for action %s' % (aid))
+        act = action(self.adb.get(aid))
+        chains = act.get_attribute('chains')
+        hasChainsChanged=False 
+        for cc in chains:  
+            if 'flag' in chains[cc] and chains[cc]['flag']:
+                ## in the new convention, that means that something needs to be created
+
+                mcm_cc = chained_campaign( self.ccdb.get(cc) )
+                new_cr = mcm_cc.generate_request( aid )
+                if not 'chains' in chains[cc]:
+                    chains[cc]['chains'] = {}
+                chains[cc]['chains'][new_cr['prepid']] = {}
+                to_transfer=['flag','threshold','staged','block_number']
+                for item in to_transfer:
+                    if item in chains[cc]:
+                        chains[cc]['chains'][new_cr['prepid']] [item] = chains[cc][item]
+                        chains[cc].pop(item)
+                hasChainsChanged=True
+                if not self.crdb.save(new_cr):
+                    return dumps({'results':False,'message':'could not save %s'%( new_cr['prepid'])})
+                
+                ## update the cc history
+                self.ccdb.update(mcm_cc.json())
+
+                # then let the root request know that it is part of a chained request
+                req = request(json_input=self.rdb.get(aid))
+                inchains=req.get_attribute('member_of_chain')
+                inchains.append(new_cr['prepid'])
+                req.set_attribute('member_of_chain',list(set(inchains)))
+                self.rdb.update(req.json())
+                
+        if hasChainsChanged:
+            #the chains parameter might have changed
+            act.set_attribute('chains',chains)
+            self.adb.update(act.json())
+
+        #and set priorities properly to all requests concerned
+        act.inspect_priority()
+
+        return dumps({'results':True})
+    """
+    def generate_request_old(self,  pid):
+        if not self.adb.document_exists(pid):
             return dumps({'results':'Error: PrepId '+pid+' does not exist in the database.'})
         
         self.logger.log('Generating all selected chained_requests for action %s' % (pid)) 
         
         # init action
-        act = action(json_input=self.db.get(pid))
+        act = action(json_input=self.adb.get(pid))
  
         ##this needs to go AFTER the chained requests are generated
         #act.inspect_priority()
@@ -248,7 +300,8 @@ class GenerateChainedRequests(RESTResource):
         for cc in chains:
             if chains[cc]['flag']:
                 # check if the chain already exists
-                accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+pid))
+                #accs = map(lambda x: x['value'],  self.crdb.query('root_request=='+pid))
+                accs = self.crdb.queries(['root_request==%s'%(pid)])
                 flag = False
                 for acc in accs:
                     if cc == acc['_id'].split('-')[1]:
@@ -299,12 +352,13 @@ class GenerateChainedRequests(RESTResource):
         if hasChainsChanged:
             #the chains parameter might have changed
             act.set_attribute('chains',chains)
-            self.db.update(act.json())
+            self.adb.update(act.json())
 
         #and set priorities properly to all requests concerned
         act.inspect_priority()
 
         return dumps({'results':True})
+        """
 
 class GenerateAllChainedRequests(GenerateChainedRequests):
     def __init__(self):
@@ -319,10 +373,11 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
     def generate_requests(self):
         self.logger.log('Generating all possible (and selected) chained_requests...')
         allacs = self.db.get_all(-1) # no pagination
+        res=[]
         for a in allacs:
-            self.generate_request(a['key'])
+            res.append(self.generate_request(a['key']))
         
-        return dumps({'results':True})
+        return dumps(res)
 
 """
 class GenerateAllChainedRequests(RESTResource):
