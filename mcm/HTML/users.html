@@ -112,7 +112,9 @@
 	      </div>
 	      <div ng-switch-when="Pwg">
 		<ul>
-		  <li ng-repeat="p in user_info[data.db_name]"> {{p}} </li>
+		  <li ng-repeat="p in user_info[data.db_name]"> 
+		    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}
+		  </li>
 		</ul>
 	      </div>
       	      <div ng-switch-default>
