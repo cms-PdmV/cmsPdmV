@@ -101,10 +101,16 @@ class campaign(json_base):
         except self.IllegalAttributeName() as ex:
             return {}
         
+        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type']
+        #keys_not_to_transfer=['prepid','_id','_rev','_date','description','remarks','validation','_events','comments','notes','status','approval','history','total_events','']
         for key in self._json_base__json:
             if key not in req.schema():
                 continue
-            if 'prepid' == key or '_id' == key or '_date' in key or 'description' == key or 'remarks' == key or 'validation' == key or '_events' in key or 'comments' == key:
+            #if 'prepid' == key or '_id' == key or '_date' in key or 'description' == key or 'remarks' == key or 'validation' == key or '_events' in key or 'comments' == key or 'notes' == key:
+            #    continue
+            #if key in keys_not_to_transfer:
+            #    continue
+            if not key in keys_to_transfer: 
                 continue
             req.set_attribute(key, self.get_attribute(key))
         req.set_attribute('member_of_campaign', self.get_attribute('_id'))
