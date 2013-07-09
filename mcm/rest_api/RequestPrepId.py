@@ -17,7 +17,24 @@ class RequestPrepId(RESTResourceIndex):
     #        return dumps({"prepid":""})
     #    return self.generate_prepid(args[0], args[1])
     
+    def next_prepid(self, pwg, campaign):
+        if not pwg or not campaign:
+            return None
+        res = map(lambda doc: int(doc['prepid'].split('-')[-1]), self.db.queries(['pwg==%s'%(pwg),
+                                                                                  'member_of_campaign==%s'%(campaign)]))
+        lastSN=0
+        if len(res)!=0:
+            lastSN = max(res)
+        if lastSN==0:
+            self.logger.log('Beginning new prepid family: %s %s' %( pwg, campaign))
+        lastSN+=1        
+        pid='%s-%s-%05d'%( pwg, campaign , lastSN)
+        self.logger.log('New prepid : %s '%( pid))
+        return pid
+
     def generate_prepid(self, pwg, campaign):
+        return dumps({"prepid": self.next_prepid(pwg, campaign)})
+        """
         if not pwg:
             self.logger.error('Physics working group provided is None.')
             return dumps({"prepid":""})
@@ -26,9 +43,8 @@ class RequestPrepId(RESTResourceIndex):
             return dumps({"prepid":""})
 
         # get the list of the prepids with the same pwg and campaign name 
-        res = map(lambda x: x['value'], self.db.query('prepid ~= '+pwg+'-'+campaign+'-*', page_num=-1))
-        #res = map(lambda x: x['value'], self.db.query('prepid ~= '+pwg+'-'+campaign+'-*', page_num=-1)) ##JR what is that ~=
-        res = map(lambda x: x['prepid'], res)
+        res = map(lambda x: x['prepid'], self.db.queries(['pwg==%s'%(pwg),
+                                                          'member_of_campaign==%s'%(campaign)]))
         if not res:
             self.logger.log('Beginning new prepid family: %s' % (pwg+"-"+campaign+"-00001"), level='warning')
             return dumps({"prepid":pwg+"-"+campaign+"-00001"})
@@ -48,4 +64,4 @@ class RequestPrepId(RESTResourceIndex):
         
         # return a json like: {'prepid': new_prepid}
         return dumps({"prepid":new_prepid})
-        
+        """
