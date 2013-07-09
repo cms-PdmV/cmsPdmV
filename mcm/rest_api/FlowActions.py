@@ -46,7 +46,8 @@ class FlowRESTResource(RESTResource):
         self.logger.log('Updating actions...')
 
         # find all actions that belong to a campaign
-        allacs = map(lambda x: x['value'],  self.adb.query('member_of_campaign=='+c,  0))
+        #allacs = map(lambda x: x['value'],  self.adb.query('member_of_campaign=='+c,  0))
+        allacs = self.adb.queries(['member_of_campaign==%s'%(c)])
         
         # for each action
         for ac in allacs:
@@ -159,10 +160,9 @@ class FlowRESTResource(RESTResource):
             #if c is NOT a root campaign
             if camp['root']==1 or camp['root']==-1:
                 # get all chained campaigns that have the allowed c as the last step
-                ccamps = self.ccdb.query('last_campaign=='+c)
-                ccs = map(lambda x: x['value'],  ccamps)
+                ccs = self.ccdb.queries(['last_campaign==%s'%(c)]) 
                 self.logger.log('for alst campaign %s'%( c ))
-                self.logger.log('found %d to deal with'%(len(ccamps)))
+                self.logger.log('found %d to deal with'%(len(ccs)))
                 self.logger.log('found %s'%( map(lambda doc: doc['prepid'],ccs) ))
                 # for each chained campaign
                 for cc in ccs:
@@ -180,7 +180,6 @@ class FlowRESTResource(RESTResource):
                     # init a ccamp object based on the old
                     ccamp = chained_campaign(json_input=cc)
 
-
                     # disable it
                     ccamp.stop()
                     # update to db
@@ -192,6 +191,9 @@ class FlowRESTResource(RESTResource):
                     ccamp.set_attribute('_id',  nextName)#ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
                     ccamp.set_attribute('prepid',  ccamp.get_attribute('_id'))
                     
+                    # reset the alias
+                    ccamp.set_attribute('alias','')
+
                     # restart chained campaign
                     ccamp.start()
                     
@@ -493,12 +495,14 @@ class DeleteFlow(RESTResource):
 
     def delete_chained_campaigns(self,  fid):
         # get all campaigns that contain the flow : fid
-        ccamps = map(lambda x: x['value'],self.ccdb.query('contains=='+fid),page=-1)
+        #ccamps = map(lambda x: x['value'],self.ccdb.query('contains=='+fid),page=-1)
+        ccamps = self.ccdb.queries(['contains==%s'%(fid)])
         
         # check that all relelvant chained campaigns are empty
         crdb = database('chained_requests')
         for cc in ccamps:
-            mcm_crs = map(lambda x: x['value'], crdb.query('member_of_campaign=='+cc['prepid']),page=-1)
+            #mcm_crs = map(lambda x: x['value'], crdb.query('member_of_campaign=='+cc['prepid']),page=-1)
+            mcm_crs = crdb.queries(['member_of_campaign==%s'%(cc['prepid'])])
             if len(mcm_crs) != 0:
                 raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign'%(fid,
                                                                                                            cc['prepid']))
@@ -515,7 +519,8 @@ class DeleteFlow(RESTResource):
         
         next_c = f['next_campaign']
         # get all campaigns that contain the flow's next campaign in the campaign's next
-        camps = map(lambda x: x['value'],self.cdb.query('next=='+next_c,page=-1))
+        #camps = map(lambda x: x['value'],self.cdb.query('next=='+next_c,page=-1))
+        camps = self.cdb.queries(['next==%s'%(next_c)])
         
         for c in camps:
             ##check that nothing allows to flow in it
