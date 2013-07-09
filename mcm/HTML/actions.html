@@ -36,10 +36,6 @@
         <tabs>
           <pane heading="Select Columns">
             <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
-          <!-- <span style="float: left;">
-            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false">
-            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true">
-          </span> -->
               <span ng-repeat="value in actions_defaults">
                 <label class="checkbox inline">
                   <input type="checkbox" ng-model="value.select"> {{value.text}}
@@ -72,6 +68,9 @@
                   <i class="icon-refresh"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <a ng-click="commitAllChanges();" ng-show="changed_prepids.length > 0" rel="tooltip" title="Commit all changed values">
+                  <i class="icon-warning-sign"></i>
+                </a>
                 <!-- SORTING lines -->
                 <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
                     <i class="icon-resize-vertical"></i>
