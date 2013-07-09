@@ -149,6 +149,8 @@ class chained_campaign(json_base):
         #creq.approve(0)
         
         # set request parameters
+        ## legacy wat of passing the info to the chained request
+        """
         reqp = self.get_attribute('action_parameters')
         if root_request_id in reqp:
             creq.set_attribute('request_parameters',  reqp[root_request_id])
@@ -157,7 +159,8 @@ class chained_campaign(json_base):
             #self.__remove_request_parameters(root_request_id)
             del reqp[root_request_id]
             self.set_attribute('action_parameters',  reqp)
-        
+        """
+
         # add root request to chain
         creq.set_attribute('chain',  [root_request_id])
 
