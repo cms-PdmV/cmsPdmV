@@ -120,13 +120,24 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.getData = function(){
   var query = ""
-    _.each($location.search(), function(value,key){
-      if (key!= 'shown'){
-        query += "&"+key+"="+value;
-      }
-    });
-    $scope.got_results = false; //to display/hide the 'found n results' while reloading
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+  var select=false;
+  _.each($location.search(), function(value,key){
+	  if (key!= 'shown' && key!='select'){
+	      query += "&"+key+"="+value;
+	  }
+	  if (key=='select'){
+	      select=true;
+	  }
+      });
+  $scope.got_results = false; //to display/hide the 'found n results' while reloading
+  var promise;
+  if (select){
+      promise = $http.get("restapi/chained_campaigns/select");
+  }
+  else{
+      promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+  }
+  //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
     promise.then(function(data){
       $scope.got_results = true;
       $scope.result = data.data.results;
@@ -224,16 +235,44 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
     $scope.selectedPwg= 'BPH';
     $scope.shouldBeOpen = false;
   };
+
   $scope.save = function () {
     $scope.shouldBeOpen = false;
-      $http({method: 'PUT', url:'restapi/chained_requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
-        $window.location.href ="edit?db_name=chained_requests&query="+data.results;
+    $http({method: 'PUT', url:'restapi/chained_requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, status){
+	    if (data.results){
+		$window.location.href ="edit?db_name=chained_requests&prepid="+data.prepid;
+	    }else{
+		alert("Error:"+ data.message + status);
+	    }
+	       
       }).error(function(data,status){
         alert("Error:"+ status);
         console.log(data, status);
       });
     };
+
+  $scope.create = function( cc_name ) {
+      for (var i = 0; i< $scope.result.length; i++) {
+          if($scope.result[i].prepid == cc_name) {
+              var campaigns = $scope.result[i].campaigns;
+              break
+          }
+      }
+      $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: cc_name, campaigns:campaigns}}).success(function(data, status){
+	      if (data.results){
+            $window.location.href ="edit?db_name=chained_campaigns&prepid="+data.prepid;
+          } else {
+              alert("Error:" + data.message + status)
+          }
+	  }).error(function(data, status){
+        alert("Error:"+ status);
+        console.log(data, status);
+	     });
+  };
+
   $scope.createChainedCampaign = function(){
+      //get the data from $scope.results
+      
     $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
       $scope.update["success"] = data.results;
       $scope.update["fail"] = false;
