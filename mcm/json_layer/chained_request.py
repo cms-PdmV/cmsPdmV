@@ -341,7 +341,7 @@ class chained_request(json_base):
             for key in fl.get_attribute('request_parameters'):
                 if key == 'sequences':                    continue
 		else:
-                    if key in new_req:
+                    if key in new_req.json():
                         new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
 
         ##assemble the campaign+flow => request
