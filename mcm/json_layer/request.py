@@ -7,6 +7,7 @@ import pprint
 import time 
 import xml.dom.minidom
 from math import sqrt
+import hashlib
 
 from couchdb_layer.prep_database import database
 
@@ -788,7 +789,7 @@ class request(json_base):
                                                                                                                                  directory,
                                                                                                                                  dump_python)
             if run:
-                self.genvalid_driver += 'cmsRun -e -j %s%s_gv %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
+                self.genvalid_driver += 'cmsRun -e -j %s%s_gv.xml %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
                                                                                                directory)
                 ## put back the perf report to McM ! wil modify the request object while operating on it.
                 # and therefore the saving of the request will fail ...
@@ -1092,6 +1093,27 @@ class request(json_base):
             ##default to 5
             return int(5)
 
+    def unique_string(self, step_i):
+        ### create a string that supposedly uniquely identifies the request configuration for step 
+        uniqueString=''
+        if self.get_attribute('fragment'):
+            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            uniqueString+=fragment_hash
+        if self.get_attribute('cvs_tag'):
+            uniqueString+=self.get_attribute('cvs_tag')
+        if self.get_attribute('name_of_fragment'):
+            uniqueString+=self.get_attribute('name_of_fragment')
+        uniqueString+= self.get_attribute('cmssw_release')
+        seq=sequence(self.get_attribute('sequences')[step_i])
+        uniqueString+=seq.to_string()
+        return uniqueString
+
+    def configuration_identifier(self, step_i):
+        uniqueString=self.unique_string(step_i)
+        #create a hash value that supposedly uniquely defines the configuration
+        hash_id=hashlib.sha224(uniqueString).hexdigest()
+        return hash_id
+
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test()
         
@@ -1156,7 +1178,7 @@ class request(json_base):
         invalidation = database('invalidations')
         ds_to_invalidate=[]
         for wma in self.get_attribute('reqmgr_name'):
-            new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new"}
+            new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object']
             invalidation.save( new_invalidation )
             if 'content' in wma and 'pdmv_dataset_list' in wma['content']:
@@ -1165,7 +1187,7 @@ class request(json_base):
                 ds_to_invalidate.append( wma['content']['pdmv_dataset_name'])
             ds_to_invalidate=list(set(ds_to_invalidate))
         for ds in ds_to_invalidate:
-            new_invalidation={"object" : ds, "type" : "dataset", "status" : "new"}
+            new_invalidation={"object" : ds, "type" : "dataset", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object'].replace('/','')
             invalidation.save( new_invalidation )
         self.set_attribute('completed_events', 0)
