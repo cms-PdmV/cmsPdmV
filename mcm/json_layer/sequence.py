@@ -139,6 +139,15 @@ class sequence(json_base):
       else:
           return ''
 
+    def to_string(self):
+        text=''
+        keys=self.json().keys()
+        keys.sort()
+        for key in keys:
+            if key in []: continue
+            text+=key+str(self.get_attribute(key))
+        return text
+
     def build_cmsDriver(self):
       ### always MC in McM. better to say it
       command = ' --mc '
