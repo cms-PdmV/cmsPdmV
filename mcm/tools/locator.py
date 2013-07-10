@@ -38,3 +38,8 @@ class locator:
         else:
             return 'https://cms-pdmv.cern.ch/mcm/'
         
+    def cmsweburl(self):
+        if self.isDev():
+            return 'https://cmsweb-testbed.cern.ch/'
+        else:
+            return 'https://cmsweb.cern.ch/'
