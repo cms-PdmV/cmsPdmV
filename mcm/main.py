@@ -7,7 +7,7 @@ from web_apps.Search import Search
 from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, RequestsFromFile, SearchRequest, TestRequest, RequestsReminder, RequestPerformance, SearchableRequest
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
-from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, TestChainedCampaigns
+from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile
@@ -110,6 +110,9 @@ def getDefaultSequences(*args, **kwargs):
 @cherrypy.expose
 def injection_status( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','injection_status.html'))
+@cherrypy.expose
+def invalidations_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','invalidations.html'))
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -121,6 +124,7 @@ root.search = Search()
 root.campaigns = campaigns_html
 #root.chained_campaigns = chained_campaigns
 root.chained_campaigns = chained_campaigns_html
+
 #root.chained_requests = chained_requests
 root.chained_requests = chained_requests_html
 #root.requests = requests
@@ -138,6 +142,7 @@ root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
 root.users = users
 root.batches = batches
+root.invalidations = invalidations_html
 root.injection_status = injection_status
 
 # REST API - RESTResourceIndex is the directory of available commands
@@ -234,7 +239,7 @@ root.restapi.chained_campaigns.update = UpdateChainedCampaign()
 root.restapi.chained_campaigns.generate_chained_requests = chained_generate_requests()
 root.restapi.chained_campaigns.inspect = InspectChainedRequests()
 root.restapi.chained_campaigns.inspectall = InspectChainedCampaigns()
-root.restapi.chained_campaigns.test = TestChainedCampaigns()
+root.restapi.chained_campaigns.select = SelectNewChainedCampaigns()
 
 # REST Chained Request Actions
 root.restapi.chained_requests.request_chainid = RequestChainId()
