@@ -73,19 +73,19 @@
 		  <!--<a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_self" ng-hide="role(3);">
                     <i class="icon-plus-sign"></i>
                   </a>-->
-                  <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
+                  <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self" ng-hide="data.exists==false;">
                     <i class="icon-indent-left"></i>
                   </a>
-                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3);">
+                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3) || data.exists==false;">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
+                  <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3) || data.exists==false;">
                     <i class="icon-wrench"></i>
                   </a>
-		  <a ng-click="create(data.prepid)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
+		  <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
 		    <i class="icon-refresh"></i>
 		  </a>
-		  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3);"> 
+		  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;"> 
 		    <i class="icon-screenshot"></i>
 		  </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
