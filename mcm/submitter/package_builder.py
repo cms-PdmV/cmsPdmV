@@ -104,7 +104,7 @@ class package_builder:
         #find the last open batch
         #res = map(lambda x: x['value'], bdb.query('prepid ~= %s-*'%(self.batchName), page_num=-1))
         #### doing the query by hand    
-        res = map(lambda x: x['value'], bdb.query(query='',page_num=-1))
+        res = bdb.queries([])
         res_this = filter(lambda x: x['prepid'].split('-')[0] == self.batchName, res)
         ## filter to have the ones of that family, that are NEW
         res_new = filter(lambda x: x['status']=='new', res_this)
@@ -810,7 +810,25 @@ class package_builder:
                     requests.extend(added)
                     self.request.set_attribute('reqmgr_name',requests)
 
-                    
+                    cf_ids= self.request.get_attribute('config_id')
+                    cf_ids.append( injector.config_ids )
+                    self.request.set_attribute('config_id', cf_ids)
+                    hash_ids = database('configs')
+                    for (step_i,docid) in enumerate(injector.config_ids):
+                        hash_id=self.request.configuration_identifier(step_i)
+                        if not hash_ids.document_exists( hash_id ):
+                            ##then save that in the db for future usage
+                            new_hash_doc={'_id': hash_id,
+                                          'docid' : docid,
+                                          'prepid' : self.request.get_attribute('prepid'),
+                                          'unique_string' : self.request.unique_string(step_i)
+                                          }
+                            saved = hash_ids.save( new_hash_doc )
+                            if not saved:
+                                self.logger.inject('Could not save the has document %s'%( hash_id ), level='warning', handler=self.hname)
+                                return False
+                            
+                        
                     ##put it also in the batch DB
                     bdb = database('batches')
                     b=batch(bdb.get(self.batchName))

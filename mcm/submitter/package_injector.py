@@ -182,13 +182,23 @@ class package_injector:
 
 
         self.requestNames=[]
+        self.config_ids=[]
         for line in fullOutPutText.split('\n'):
+            line_spl = line.split()
             if line.startswith('Injected workflow:'):
                 self.requestNames.append(line.split()[2])
-        
+            if len(line_spl) and line_spl[0]=='DocID:':
+                self.logger.inject('a line of the output contains docid %s : %s'%(line, line_spl), handler=self.hname)
+                self.config_ids.append( line_spl[-1] )
+
         if not len(self.requestNames):
             self.logger.inject('There were no request manager name recorded \n %s'%(fullOutPutText),level='error', handler=self.hname)
             return False
+
+        ## this is not mandatory to catch and fail, because it could happen that this is empty legitimaly
+        #if not len(self.config_ids):
+        #    self.logger.inject('There were no config ids recorded \n %s'%(fullOutPutText),level='error', handler=self.hname)
+        #    return False
 
         self.logger.inject('Injection output: %s' % (fullOutPutText), handler=self.hname)
 
