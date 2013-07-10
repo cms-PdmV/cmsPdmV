@@ -412,7 +412,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         return self.multiple_inspect( ','.join(self.listAll()) )
 
     
-class TestChainedCampaigns(RESTResource):
+class SelectNewChainedCampaigns(RESTResource):
 
     def __init__(self):
         self.ccdb = database('chained_campaigns')
@@ -456,7 +456,7 @@ class TestChainedCampaigns(RESTResource):
                 if db_existence:
                     mcm_cc=self.ccdb.get(chain_name)
                     validity=mcm_cc['valid']
-                    all_cc.append(mcm_cc)
+                    #all_cc.append(mcm_cc)
                 else:
                     all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns, "exists": False})
                     
@@ -487,5 +487,5 @@ class TestChainedCampaigns(RESTResource):
             next_campaigns = allowed_campaigns_dict[allowed_c]
             traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)], 'chain_' + allowed_c, allowed_campaigns_dict)
 
-        return dumps(all_cc)
+        return dumps({"results" : all_cc})
         #return dumps({'results':'Got %s flows and %s campaigns'%(len(flows),len(campaigns))})
