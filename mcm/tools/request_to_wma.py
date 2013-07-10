@@ -1,5 +1,6 @@
 from tools.locator import locator
 from tools.ssh_executor import ssh_executor
+from couchdb_layer.prep_database import database 
 
 class request_to_wmcontrol:
     """
@@ -32,7 +33,15 @@ class request_to_wmcontrol:
         command += ' --request-type %s' %(wmagent_type)
 
         ## check on the presence of docId ?...
-        command += ' --step1-cfg %s' %(mcm_r.get_attribute('prepid')+'_1_cfg.py')
+        hash_ids = database('configs')
+
+        hash_id = mcm_r.configuration_identifier(0)
+        if hash_ids.document_exists( hash_id ):
+            hash_doc = hash_ids.get( hash_id )
+            config_cache_id = hash_doc['docid']
+            command += ' --step1-docID %s'%(config_cache_id)
+        else:
+            command += ' --step1-cfg %s_1_cfg.py'%(mcm_r.get_attribute('prepid'))
         
         command += ' --request-id %s' %(mcm_r.get_attribute('prepid'))
 
@@ -107,11 +116,14 @@ class request_to_wmcontrol:
                 if keeps[i]:
                     command += ' --keep-step'+str(i+1)+' True'
 
-                #if len(eventcontentlist) > 1 and i < len(eventcontentlist)-1:
-                #    command += ' --keep-step'+str(i+1)+' True'
                 if i > 0:
-                    #command += ' --step'+str(i+1)+'-cfg config_0_'+str(i+1)+'_cfg.py'
-                    command += ' --step'+str(i+1)+'-cfg '+mcm_r.get_attribute('prepid')+'_'+str(i+1)+'_cfg.py'
+                    hash_id = mcm_r.configuration_identifier(i)
+                    if hash_ids.document_exists( hash_id ):
+                        hash_doc = hash_ids.get( hash_id )
+                        config_cache_id = hash_doc['docid']
+                        command += ' --step%d-docID %s'%(i+1,config_cache_id)
+                    else:
+                        command += ' --step%d-cfg %s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'), i+1)
                 # set the output of 
                 if i < len(eventcontentlist)-1:
                     command += ' --step'+str(i+1)+'-output '+content
