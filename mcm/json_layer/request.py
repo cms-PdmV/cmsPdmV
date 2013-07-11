@@ -140,8 +140,8 @@ class request(json_base):
                 from json_layer.chained_request import chained_request
                 chain=chained_request(crdb.get(inchain))
                 a_change=False
-                a_change += chain.set_last_status()
-                a_change += chain.set_processing_status( self.get_attribute('prepid'), self.get_attribute('status'))
+                a_change += chain.set_last_status( self.get_attribute('status') )
+                a_change += chain.set_processing_status( self.get_attribute('prepid'), self.get_attribute('status') )
                 if a_change:
                     crdb.save(chain.json())
         
@@ -217,7 +217,6 @@ class request(json_base):
 
 
         rdb=database('requests')
-        #similar_ds = filter(lambda doc : doc['member_of_campaign'] == self.get_attribute('member_of_campaign'), map(lambda x: x['value'],  rdb.query('dataset_name==%s'%(self.get_attribute('dataset_name')))))
         ## same thing but using db query => faster
         find_similar = ['dataset_name==%s'%(self.get_attribute('dataset_name')),
                         'member_of_campaign==%s'%( self.get_attribute('member_of_campaign'))]
@@ -949,7 +948,7 @@ class request(json_base):
         look_for_what = self.get_attribute('prepid')
         if override_id:
             look_for_what = override_id
-        stats_rr = map(lambda x: x['value'], statsDB.query(query='prepid==%s'%(look_for_what) ,page_num=-1))
+        stats_rr = statsDB.query(query='prepid==%s'%(look_for_what) ,page_num=-1)
         ### order them from [0] earliest to [n] latest
         def sortRequest(r1 , r2):
             if r1['pdmv_submission_date'] == r2['pdmv_submission_date']:
@@ -1103,6 +1102,8 @@ class request(json_base):
             uniqueString+=self.get_attribute('cvs_tag')
         if self.get_attribute('name_of_fragment'):
             uniqueString+=self.get_attribute('name_of_fragment')
+        if self.get_attribute('mcdb_id')>=0:
+            uniqueString+='mcdb%s'%(self.get_attribute('mcdb_id'))
         uniqueString+= self.get_attribute('cmssw_release')
         seq=sequence(self.get_attribute('sequences')[step_i])
         uniqueString+=seq.to_string()
