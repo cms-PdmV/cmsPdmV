@@ -13,14 +13,6 @@ class RequestChainId(RESTResourceIndex):
         self.creq_db_name = 'chained_requests'
         self.creq_db = database(self.creq_db_name)
     
-    """
-    def GET(self, *args):
-        if len(args) < 2:
-            self.logger.error('No arguments were given.')
-            return dumps({"results":""})
-        return self.generate_id(args[0], args[1])
-    """
-
     def generate_id(self, pwg, campaign):
         if not pwg:
             self.logger.error('Physics working group provided is None.')
@@ -33,7 +25,7 @@ class RequestChainId(RESTResourceIndex):
             return dumps({"results":""})
  
         # get the list of the prepids with the same pwg and campaign name 
-        results = map(lambda x: x['value'], self.creq_db.get_all())
+        results = self.creq_db.get_all()
         results = filter(lambda x: pwg+'-'+campaign+'-' in x,map(lambda x: x['_id'], results))
         if not results:
             self.logger.log('Beginning new prepid family: %s' % (pwg+"-"+campaign+"-00001"))
