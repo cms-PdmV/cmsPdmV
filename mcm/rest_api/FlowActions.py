@@ -46,7 +46,6 @@ class FlowRESTResource(RESTResource):
         self.logger.log('Updating actions...')
 
         # find all actions that belong to a campaign
-        #allacs = map(lambda x: x['value'],  self.adb.query('member_of_campaign=='+c,  0))
         allacs = self.adb.queries(['member_of_campaign==%s'%(c)])
         
         # for each action
@@ -306,110 +305,6 @@ class CreateFlow(FlowRESTResource):
         return dumps({"results":True})
         
 
-    """
-
-
-    ## this is commmented out instead of removed, to keep an eye on what it was looking like before moving to a central rest class for flows: dead-wood
-    # create all possible chained campaigns going from allowed.member to next
-    def update_chained_campaigns(self,  next, allowed):
-        # check to see if next is legal
-        if not self.cdb.document_exists(next):
-            raise ValueError('Campaign '+str(next)+' does not exist.')
-        
-        n = self.cdb.get(next)
-
-        self.logger.log('Updating all derived chained_campaigns...')
-         
-        if n['root'] == 0:
-            self.logger.error('Campaign %s is a root campaign' % (next))
-            raise ValueError('Campaign '+str(next)+' is a root campaign.')        
-        
-        for c in allowed:
-            # check to see if this chained campaign is already created
-            fid = self.f.get_attribute('_id')
-            if fid:
-                if self.ccdb.document_exists('chain_'+c+'_'+fid):
-                    continue
-            else:
-                if self.ccdb.document_exists('chain_'+c):
-                    continue
-                        
-            # init campaign objects
-            camp = self.cdb.get(c)
-            #if c is NOT a root campaign
-            if camp['root']==1 or camp['root']==-1:
-                # get all flows, that have the allowed c as the next campaign
-                vflows = self.db.query('next_campaign=='+c)
-                vfs = map(lambda x: x['value'],  vflows)
-                ccs = []
-                
-                for vf in vfs:
-                    # get all campaigns that have the allowed c as the last step
-                    #ccamps = self.ccdb.query('last_campaign=="%5B%22'+c+'%22%2C%22'+vf['_id']+'%22%5D"')
-                    ccamps = self.ccdb.raw_query('last_campaign',  options={"key":[c,  vf['_id']]})
-                    #ccamps = self.ccdb.query('last_campaign==['+c+','+vf['_id']+']')
-                    ccslst = map(lambda x: x['value'],  ccamps)
-                    ccs.extend(ccslst)
-                
-                # for each chained campaign
-                for cc in ccs:
-                    if cc['_id'] == 'chain_'+camp['_id']:
-                        continue
-                    
-                    # init a ccamp object based on the old
-                    ccamp = chained_campaign(json_input=cc)
-                    # disable it
-                    ccamp.stop()
-                    # update to db
-                    self.ccdb.update(ccamp.json())
-                    
-                    # append the next campaign in the chain
-                    ccamp.add_campaign(next,  self.f.get_attribute('prepid'))
-                    # update the id
-                    ccamp.set_attribute('_id',  ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
-                    ccamp.set_attribute('prepid',  ccamp.get_attribute('_id'))
-                    ccamp.set_attribute('alias',  '')
-                    
-                    # restart chained campaign
-                    ccamp.start()
-
-                    # remove CouchDB revision trash
-                    new_ccamp = ccamp.json()
-                    del new_ccamp['_rev']
-                    
-                    # save new chained campaign to database
-                    #self.ccdb.save(ccamp.json())
-                    self.ccdb.save(new_ccamp)
-
-            # else if c is root campaign:
-            if camp['root']==0 or camp['root']==-1:
-                ccamp = chained_campaign()
-                # add allowed root
-                ccamp.add_campaign(c) # assume root. flow=None
-                            
-                # add next with given flow
-                ccamp.add_campaign(next,  self.f.get_attribute('prepid'))
-            
-                # init campaign objects
-                camp = self.cdb.get(c)
-                # add meta (energy)
-                ## JR: this is not a member any-more
-                #ccamp.set_attribute('energy', camp['energy'])
-            
-                # add a prepid
-                if fid:
-                    ccamp.set_attribute('prepid',  'chain_'+camp['prepid']+'_'+self.f.get_attribute('_id'))
-                else:
-                    ccamp.set_attribute('prepid',  'chain_'+camp['prepid'])
-                    
-                ccamp.set_attribute('_id',  ccamp.get_attribute('prepid'))
-            
-                self.ccdb.save(ccamp.json())
-
-            # update actions
-            self.update_actions(c)
-            """
-
 class UpdateFlow(FlowRESTResource):
     def __init__(self):
         FlowRESTResource.__init__(self)
@@ -495,13 +390,11 @@ class DeleteFlow(RESTResource):
 
     def delete_chained_campaigns(self,  fid):
         # get all campaigns that contain the flow : fid
-        #ccamps = map(lambda x: x['value'],self.ccdb.query('contains=='+fid),page=-1)
         ccamps = self.ccdb.queries(['contains==%s'%(fid)])
         
         # check that all relelvant chained campaigns are empty
         crdb = database('chained_requests')
         for cc in ccamps:
-            #mcm_crs = map(lambda x: x['value'], crdb.query('member_of_campaign=='+cc['prepid']),page=-1)
             mcm_crs = crdb.queries(['member_of_campaign==%s'%(cc['prepid'])])
             if len(mcm_crs) != 0:
                 raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign'%(fid,
@@ -519,13 +412,12 @@ class DeleteFlow(RESTResource):
         
         next_c = f['next_campaign']
         # get all campaigns that contain the flow's next campaign in the campaign's next
-        #camps = map(lambda x: x['value'],self.cdb.query('next=='+next_c,page=-1))
         camps = self.cdb.queries(['next==%s'%(next_c)])
         
         for c in camps:
             ##check that nothing allows to flow in it
             # get the list of chained campaign that still contain both 
-            mcm_ccs = map(lambda x: x['value'],self.ccdb.queries(['contains=='+c['prepid'], 'contains=='+next_c]))
+            mcm_ccs = self.ccdb.queries(['contains=='+c['prepid'], 'contains=='+next_c])
             if not len(mcm_ccs):
                 #there a no chained campaign left, that uses both that campaign and next_c
                 c['next'].remove(fid)
