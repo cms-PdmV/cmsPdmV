@@ -69,11 +69,8 @@ class Search(object):
 		multiple_view=[]
 		#### 
 		## to switch on/off the view creation on the fly
-		l_type=locator()
-		if l_type.isDev():
-			simple_search=False
-		else:
-			simple_search=True
+		simple_search=(not locator().isDev())
+		simple_search=False
 		####
 		for key in filter (lambda s : '-' not in s, allowed_key_search):
 			if key in args:
