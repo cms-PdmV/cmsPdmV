@@ -11,7 +11,7 @@ class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
-    def generate_prepid(self, flow_with, next_campaign):
+    def generate_prepid(self, flow_with, next_campaign, processstring=None):
 
         if flown_with:
             batchName = flown_with+'_'+next_campaign
@@ -19,7 +19,7 @@ class BatchPrepId():
             batchName = next_campaign
         
         #### doing the query by hand    
-        res = map(lambda x: x['value'], self.bdb.query(query='',page_num=-1))
+        res = self.bdb.queries([])
         res_this = filter(lambda x: x['prepid'].split('-')[0] == batchName, res)
         ## filter to have the ones of that family, that are NEW
         res_new = filter(lambda x: x['status']=='new', res_this)
