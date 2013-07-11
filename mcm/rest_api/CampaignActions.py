@@ -128,7 +128,7 @@ class DeleteCampaign(RESTResource):
         res = rdb.query('member_of_campaign=='+cid, page_num=-1)
         try:
                 for req in res:
-                        rdb.delete(req['value']['prepid'])
+                        rdb.delete(req['prepid'])
                 return True
         except Exception as ex:
                 print str(ex)
