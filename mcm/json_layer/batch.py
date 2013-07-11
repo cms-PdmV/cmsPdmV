@@ -28,7 +28,7 @@ class batch(json_base):
         b_notes+=notes
         self.set_attribute('notes',b_notes)
 
-    def announce(self,notes="",user="McM Announcing service"):
+    def announce(self,notes="",user=""):
         if self.get_attribute('status')!='new':
             return False
         if len(self.get_attribute('requests'))==0:
@@ -62,7 +62,8 @@ class batch(json_base):
         message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
             message+="Additional comments for this batch:\n"+current_notes+'\n\n'
-        message+="Thank you,\n"+user
+        
+        #message+="Thank you,\n"+user
 
         #self.logger.log(message)
         self.logger.log('Message send for batch %s'%(self.get_attribute('prepid')))
