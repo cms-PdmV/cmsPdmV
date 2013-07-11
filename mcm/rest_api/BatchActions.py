@@ -95,12 +95,24 @@ class GetIndex(RESTResource):
 </html>
 """%(id)
         return redirect
-    
 
-class AnnounceBatch(RESTResource):
+class BatchAnnouncer(RESTResource):
     def __init__(self):
         self.bdb = database('batches')
         self.access_limit = 3
+
+    def announce_with_text(self, bid, message):
+        b = batch(self.bdb.get(bid))
+        r=b.announce(message)
+        if r:
+            return {"results":self.bdb.update(b.json()) , "value" : r}
+        else:
+            return {"results":False}
+        
+
+class AnnounceBatch(BatchAnnouncer):
+    def __init__(self):
+        BatchAnnouncer.__init__(self)
 
     def PUT(self):
         """
@@ -117,28 +129,23 @@ class AnnounceBatch(RESTResource):
         
         return dumps(self.announce_with_text(bid, data['notes'] ))
 
-    def announce_with_text(self, bid, message):
-        b = batch(self.bdb.get(bid))
-        r=b.announce(message)
-        if r:
-            return {"results":self.bdb.update(b.json()) , "value" : r}
-        else:
-            return {"results":False}
-        
     
-class InspectBatches(AnnounceBatch):
+class InspectBatches(BatchAnnouncer):
     def __init__(self):
-        AnnounceBatch.__init__(self)
-        
+        BatchAnnouncer.__init__(self)
+
     def GET(self, *args):
         """
-        Look for batches that need to be announced
+        Look for batches that are new and with 5 requests or /N and announce them
         """
+        self.N_to_go=5
+        if len(args):
+            self.N_to_go=int(args[0])
         res=[]
         new_batches = self.bdb.queries(['status==new'])
         for new_batch in new_batches:
-            if len(new_batch['requests'])>=1:
+            if len(new_batch['requests'])>=N_to_go:
                 ## it is good to be announced !
-                res.append( self.announce_with_text( new_batch['_id'], '') )
+                res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
                 
         return dumps(res)
