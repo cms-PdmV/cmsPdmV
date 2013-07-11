@@ -533,7 +533,7 @@ class DeleteRequest(RESTResource):
             self.adb.delete(pid)
 
     def delete_chained_requests(self, pid):
-        mcm_crs = map(lambda x: x['value'], self.crdb.query('contains=='+pid))
+        mcm_crs = self.crdb.queries(['contains=='+pid])
         for doc in mcm_crs:
             self.crdb.delete(doc['prepid'])
 
@@ -737,7 +737,6 @@ class prepare_and_submit(handler):
         
         test_script = location.location()+'inject.sh'
         there = open( test_script ,'w')
-        #time.sleep( 10 )
         mcm_r = request(self.db.get(self.rid))
         there.write( mcm_r.get_setup_file( location.location() ))
         there.write( '\n')
@@ -767,14 +766,20 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
+
+        #rdb = database('actions')
+        #res = rdb.query('member_of_campaign==Summer11')
+        statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/') 
+        res=statsDB.query(query='prepid==HIG-Summer11dr53X-00063')
+        return dumps(res)
         ### test for wmcontrol config
         #rdb = database('requests')
         #mcm_r = request( rdb.get(args[0]))
         #return request_to_wmcontrol().get_command( mcm_r, 12345, True)
         
         ### test for submission
-        inject = prepare_and_submit(args[0])
-        inject.run()
+        #inject = prepare_and_submit(args[0])
+        #inject.run()
 
         ######################
         #### part of a test
@@ -875,8 +880,8 @@ class InjectRequest(RESTResource):
                 res.extend(forks[-1].status())
                 ##forks the process directly
                 forks[-1].start()
-                ##wait a few seconds, so that batch numbers do not clash !
-                time.sleep(5)
+                ##wait just a bit so that batch numbers do not clash !
+                time.sleep(0.5)
             else:
                 ##makes you wait until it goes
                 self.logger.log('Running the injection of request %s ' % (pid))
@@ -1244,7 +1249,7 @@ class RequestLister():
             if not self.cdb.document_exists( possible_campaign):
                 continue
             ## get all requests
-            all_requests =map(lambda x: x['value'], self.rdb.query('member_of_campaign==%s'% ( possible_campaign), page_num=-1))
+            all_requests = self.rdb.queries(['member_of_campaign==%s'% ( possible_campaign)])
             for request in all_requests:
                 if request['dataset_name'] in possible_dsn:
                     all_ids.append(request['prepid'])
