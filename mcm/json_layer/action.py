@@ -99,12 +99,12 @@ class action(json_base):
         # get all chains
         # '>' & '>=' operators in queries for string keys return the same
         #candidate_chains = chaindb.query('prepid>=chain_'+campid)
-        candidate_chains = chaindb.query('prepid>=chain_'+campid+'_')
-        candidate_chains.extend(chaindb.query('prepid==chain_'+campid))
+        candidate_chains = chaindb.query('prepid>=chain_'+campid+'_',page_num=-1)
+        candidate_chains.extend(chaindb.query('prepid==chain_'+campid,page_num=-1))
         
         
         # map only prepids
-        ccids = map(lambda x: x['value']['_id'],  candidate_chains)
+        ccids = map(lambda x: x['_id'],  candidate_chains)
         chains = self.get_attribute('chains')
         new_chains = {}
         
