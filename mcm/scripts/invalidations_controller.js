@@ -1,16 +1,15 @@
 function resultsCtrl($scope, $http, $location, $window){
   $scope.defaults = [
-    {text:'UserName', select:true, db_name:'username'},
+    {text:'Object', select:true, db_name:'object'},
     {text:'Actions', select:false, db_name:''},
-    {text:'Email', select:false, db_name:'email'},
-    {text:'Role', select:true, db_name:'role'},
-    {text:'Pwg', select:true, db_name:'pwg'}
+    {text:'Type', select:true, db_name:'type'},
+    {text:'Status', select:true, db_name:'status'}
   ];
   $scope.update = [];
 
   $scope.show_well = false;
   if ($location.search()["db_name"] === undefined){
-    $scope.dbName = "users";
+    $scope.dbName = "invalidations";
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
@@ -37,14 +36,15 @@ function resultsCtrl($scope, $http, $location, $window){
       _.each($scope.defaults, function(elem){
         elem.select = false;
       });
-      $scope.defaults[0].select = true; //set prepid to be enabled by default
-      $scope.defaults[3].select = true; // set actions to be enabled
+      $scope.defaults[0].select = true; // set object to be enabled by default
+      $scope.defaults[2].select = true; // set type to be enabled
+      $scope.defaults[3].select = true; // set status to be enabled
       $scope.selectedCount = false;
     }
   };
 
   $scope.sort = {
-    column: 'value.username',
+    column: 'value.object',
     descending: false
   };
 
@@ -156,41 +156,16 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.changeRole = function(username,step){
-    var promise = $http.get("restapi/users/change_role/"+username+"/"+step);
-    promise.then(function(data, status){
-      $scope.update["success"] = true;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = data.status;
-      $scope.update["results"] = data.data.results;
-      $scope.getData();
-      //$window.location.reload();
-    },function(data, status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = data.status;
-    });
-  };
-
-  $scope.addMe = function(){
-    var promise = $http.get("restapi/users/add_role");
-    promise.then(function(data, status){
-      $scope.update["success"] = true;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = data.status;
-      $scope.getData();
-    },function(data, status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = data.status;
-    });
-  };
   $scope.saveCookie = function(){
     var cookie_name = $scope.dbName+"shown";
     if($location.search()["shown"]){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
+
+    $scope.objectToId = function(object_name) {
+        return object_name.replace(/\//g, "")
+    }
 };
 
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
