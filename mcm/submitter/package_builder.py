@@ -847,7 +847,7 @@ class package_builder:
                         if len(note):
                             b.add_notes('\n%s: %s'%(self.request.get_attribute('prepid'),
                                                     ','.join(note)))
-                        b.update_history({'action':'updated'})
+                        b.update_history({'action':'updated','step' : self.request.get_attribute('prepid')})
                         saved=bdb.update(b.json())
                         if not saved: time.sleep(0.1)
                     
