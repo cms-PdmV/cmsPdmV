@@ -121,3 +121,21 @@ class InspectInvalidation(RESTResource):
                          text)
 
         return html
+
+
+class GetInvalidation(RESTResource):
+    def __init__(self):
+        self.access_limit = 4
+        self.db = database('invalidations')
+
+    def GET(self, *args):
+        """
+        Retrieve the content of a given invalidation object
+        """
+        if not args:
+            self.logger.error('No arguments were given.')
+            return dumps({"results": False})
+        return self.get_request(args[0])
+
+    def get_request(self, object_name):
+        return dumps({"results": self.db.get(object_name)})
