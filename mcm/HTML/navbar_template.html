@@ -29,6 +29,10 @@
         <a ng-href='batches' target="_self">Batch <i class="icon-tags"></i></a>
       </li>
       <li class="divider-vertical"></li>
+      <li ng-class='{ "active": dbName=="invalidations"}'>
+        <a ng-href='invalidations' target="_self">Invalidations <i class="icon-exclamation-sign"></i></a>
+      </li>
+      <li class="divider-vertical"></li>
       <li ng-class='{ "active": dbName=="users"}'>
         <a ng-href='users' target="_self">User <i class="icon-user"></i></a>
       </li>
