@@ -16,7 +16,7 @@ from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG
 from rest_api.BatchActions import GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
-from rest_api.InvalidationActions import InspectInvalidation
+from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -281,6 +281,7 @@ root.restapi.batches.inspect = InspectBatches()
 
 # REST invalidation Actions
 root.restapi.invalidations.inspect = InspectInvalidation()
+root.restapi.invalidations.get = GetInvalidation()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
