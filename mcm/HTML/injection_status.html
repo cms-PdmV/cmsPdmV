@@ -25,6 +25,8 @@
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
   	<div ng-include="'HTML/navbar_template.html'"></div>
+	<text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
+	<text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
   	<table class="table table-bordered table-stripped">
       <thead>
       	<tr style="white-space: nowrap;">
@@ -66,7 +68,8 @@
     <!-- <div ng-click="reload();">
       <i class="icon-refresh"></i>
     </div>-->
-    <text ng-show="prepid.length==0"> No more status update to be done. The batch submission has completed.</text>
+    <text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
+    <text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
   </body>
 </span>
 </html>
