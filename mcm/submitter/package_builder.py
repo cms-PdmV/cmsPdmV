@@ -842,7 +842,7 @@ class package_builder:
 
                         if self.request.get_attribute('extension'):
                             note.append(' is an extension')
-                        if len(self.request.get_attribute('reqmgr_name'))>1: #>1 because you just added that submission request a few lines above
+                        if len(self.request.get_attribute('reqmgr_name'))>1 or self.request.get_attribute('version')!=0: #>1 because you just added that submission request a few lines above
                             note.append(' is a resubmission')
                         if len(note):
                             b.add_notes('\n%s: %s'%(self.request.get_attribute('prepid'),
