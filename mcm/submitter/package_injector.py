@@ -31,6 +31,7 @@ class package_injector:
         self.__build_ssh_client()
         self.__build_logger()
 
+        self.fail_message=''
 
     def __build_logger(self):
 
@@ -191,8 +192,9 @@ class package_injector:
                 self.logger.inject('a line of the output contains docid %s : %s'%(line, line_spl), handler=self.hname)
                 self.config_ids.append( line_spl[-1] )
 
+        self.fail_message = 'Log of injection: \n %s'%(fullOutPutText)
         if not len(self.requestNames):
-            self.logger.inject('There were no request manager name recorded \n %s'%(fullOutPutText),level='error', handler=self.hname)
+            self.fail_message = 'There were no request manager name recorded \n %s'%(fullOutPutText)
             return False
 
         ## this is not mandatory to catch and fail, because it could happen that this is empty legitimaly
