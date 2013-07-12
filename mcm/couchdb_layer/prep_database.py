@@ -441,8 +441,11 @@ class database:
             #self.logger.error(self.db.commitOne(doc))
             ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
             saved = self.db.commitOne(doc)
-            #self.logger.error('Commit One says : %s'%(saved))
-            return True
+            if 'error' in saved[0]:
+                self.logger.error('Commit One says : %s'%(saved))
+                return False
+            else:
+                return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
