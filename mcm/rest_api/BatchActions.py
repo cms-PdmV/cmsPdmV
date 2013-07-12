@@ -41,6 +41,23 @@ class SetStatus(RESTResource):
 
         return {"prepid": rid, "results":self.db.update(req.json())}
 """
+class SaveBatch(RESTResource):
+    def __init__(self):
+        self.bdb = database('batches')
+        self.access_limit = 3
+
+    def PUT(self):
+        """
+        Save the content of a batch given the json content
+        """
+        data = loads(cherrypy.request.body.read().strip())
+      
+        data.pop('_rev')
+
+        mcm_b = batch( data )
+        
+        self.bdb.save( mcm_b.json() )
+
 
 class GetBatch(RESTResource):
     def __init__(self):

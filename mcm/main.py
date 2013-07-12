@@ -15,7 +15,7 @@ from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG
-from rest_api.BatchActions import GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
+from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 
 #to get campaign sequences
@@ -273,7 +273,8 @@ root.restapi.flows.delete = DeleteFlow()
 root.restapi.flows.approve = ApproveFlow()
 
 # REST Batches Actions
-root.restapi.batches.get_batch = GetBatch()
+root.restapi.batches.get = GetBatch()
+root.restapi.batches.save = SaveBatch()
 root.restapi.batches.get_all_batches = GetAllBatches()
 root.restapi.batches.announce = AnnounceBatch()
 root.restapi.batches.redirect = GetIndex()
