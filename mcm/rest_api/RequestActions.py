@@ -193,19 +193,16 @@ class CloneRequest(RequestRESTResource):
             del new_json['history']
             del new_json['config_id']
             del new_json['member_of_chain']
+            del new_json['validation']
+            del new_json['completed_events']
             new_json['version']=0
             del new_json['generator_parameters']
             del new_json['reqmgr_name']
+            del new_json['priority']
             
-
             return self.import_request(new_json,label='clone')
-            #new_pid = self.import_request(new_json)['results']
-
-        if new_pid:
-            return dumps({"results":True,"prepid":new_pid})
         else:
-            return dumps({"results":False})
-
+            return dumps({"results":False,"message":"cannot clone an inexisting id %s"%( pid)})
     
 class ImportRequest(RequestRESTResource):
     def __init__(self):
