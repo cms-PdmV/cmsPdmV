@@ -1,6 +1,7 @@
 from couchdb_layer.prep_database import database
 from json_layer.json_base import json_base
 from tools.locator import locator
+import re
 
 class batch(json_base):
     def __init__(self, json_input={}):
@@ -41,21 +42,28 @@ class batch(json_base):
             current_notes+=notes
             self.set_attribute('notes',current_notes)
 
+        total_events=0
+        content = self.get_attribute('requests')
+        total_requests=len(content)
+        rdb =database('requests')
+
         ## prepare the announcing message
         (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
         subject="New %s production, batch %d"%(campaign,int(batchNumber))
         message=""
         message+="Dear Data Operation Team,\n\n"
-        message+="may you please consider the following batch number %d of request for the campaign %s:\n\n"%(int(batchNumber),campaign)
-        content = self.get_attribute('requests')
+        message+="may you please consider the following batch number %d of %s requests for the campaign %s:\n\n"%(int(batchNumber),total_requests, campaign)
         for r in content:
             ##loose binding of the prepid to the request name, might change later on
-            if 'prepid' in r['content']:
-                pid=r['content']
+            if 'pdmv_prepid_id' in r['content']:
+                pid=r['content']['pdmv_prepid_id']
             else:
                 pid=r['name'].split('_')[1]
+            mcm_r = rdb.get(pid)
+            total_events+=mcm_r['total_events']
             message+=" * %s -> %s \n"%(pid,r['name'])
         message+="\n"
+        message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
         message+="Link to the batch:\n"
         #message+="https://cms-pdmv.cern.ch/mcm/batches/%s\n"%(self.get_attribute('prepid'))
         l_type = locator()
