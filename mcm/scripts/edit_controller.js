@@ -16,7 +16,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
-	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy"]; //user non-editable columns
+	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
