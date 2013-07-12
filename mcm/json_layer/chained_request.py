@@ -217,11 +217,11 @@ class chained_request(json_base):
                 ## prevent from using a request from within the same exact chained_campaigns
                 if existing_cr['member_of_campaign']==self.get_attribute('member_of_campaign'):
                     continue
-                truncated = '.'.join(existing['prepid'].split('_')[1:][0:next_step+1]).split('-')[0]
+                truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step+1]).split('-')[0]
                 self.logger.error('to match : %s , this one %s'%( toMatch, truncated ))
                 if truncated == toMatch:
                     #we found a chained request that starts with all same steps          
-                    mcm_cr = chained_request(crdb.get(existing['prepid']))
+                    mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
                     if len(mcm_cr.get_attribute('chain'))<=next_step:
                         #found one, but it has not enough content either
                         continue
