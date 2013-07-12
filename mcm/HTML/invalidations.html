@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
-        <title>Users page McM</title>  
+        <title>Invalidations page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         
@@ -22,7 +22,7 @@
            </script>
          <![endif]>
         <script src="scripts/main_controller.js"></script>
-        <script src="scripts/users_controller.js"></script>
+        <script src="scripts/invalidations_controller.js"></script>
   </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
@@ -79,47 +79,31 @@
         </tr>
       </thead>
       <tbody>
-      	<tr ng-repeat="user_info in result | orderBy:sort.column: sort.descending">
+      	<tr ng-repeat="invalidations_info in result | orderBy:sort.column: sort.descending">
       	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
-	      <div ng-switch-when="UserName">
-		<a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
-		<a ng-href='requests?actor={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View requests operated by {{user_info[data.db_name]}}"><i class="icon-folder-open"></i></a>
-		<a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
+	      <div ng-switch-when="Object">
+		<!--<a ng-href='invalidations?object={{invalidations_info[data.db_name]}}' target="_self" rel="tooltip" title="View only invalidation {{invalidations_info[data.db_name]}}">{{invalidations_info[data.db_name]}}</a>-->
+		<a ng-show="invalidations_info.type=='dataset'" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{invalidations_info[data.db_name]}}'  rel="tooltip" title="View dataset in DAS" target="_self" >{{invalidations_info[data.db_name]}}</a>
+		<a ng-show="invalidations_info.type=='request' && isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
+		<a ng-show="invalidations_info.type=='request' && !isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
+
+		<a ng-href="admin/_utils/document.html?invalidations/{{objectToId(invalidations_info[data.db_name])}}" rel="tooltip" title="Admin view of {{invalidations_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
 	      </div>
-              <div ng-switch-when="Actions">
-                <a rel="tooltip" title="Increase user role" ng-click="changeRole(user_info['username'],1)" ng-hide="role(4);">
-                  <i class="icon-thumbs-up"></i>
-                </a>
-                <a rel="tooltip" title="Lower user role" ng-click="changeRole(user_info['username'],-1)" ng-hide="role(4);">
-                  <i class="icon-thumbs-down"></i>
-                </a>
-                <a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
-                  <i class="icon-question-sign"></i>
-                </a>
-		<a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);" target="_self">
-		  <i class="icon-wrench"></i>
-		</a>
-              </div>
-      	      <div ng-switch-when="Roles">
-                <a ng-href='users?role={{user_info[data.db_name].join()}}' rel="tooltip" title="View users with role {{user_info[data.db_name].join()}}" target="_self"> {{user_info[data.db_name].join()}}</a>
-      	      </div>
-	      <div ng-switch-when="Email">
-		 <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}
+          <div ng-switch-when="Actions">
+            <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
+              <i class="icon-wrench"></i>
+            </a>
+          </div>
+          <div ng-switch-when="Type">
+            <a ng-href='invalidations?type={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with type {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
+          </div>
+	      <div ng-switch-when="Status">
+		<a ng-href='invalidations?status={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with status {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
 	      </div>
-	      <div ng-switch-when="Role">
-		<a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
-	      </div>
-	      <div ng-switch-when="Pwg">
-		<ul>
-		  <li ng-repeat="p in user_info[data.db_name]"> 
-		    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}
-		  </li>
-		</ul>
-	      </div>
-      	      <div ng-switch-default>
-    		        {{user_info[data.db_name]}}
-      	      </div>
+          <div ng-switch-default>
+                {{invalidations_info[data.db_name]}}
+          </div>
       	    </div>
       	  </td>
       	</tr>
@@ -127,7 +111,6 @@
     </table>
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
-        <input type="button" class="btn" ng-click="addMe()" value="Add me!" align="left"/>
       </div>
       <div class="span2" style="margin-top:20px;">
         <span ng-show="got_results">
