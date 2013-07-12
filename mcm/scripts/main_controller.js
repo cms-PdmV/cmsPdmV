@@ -60,6 +60,15 @@ function mainCtrl($scope, $http, $location, $window){
     }else
       $scope.pendingHTTP = true;
   });
+  $scope.numberWithCommas =  function(x) {
+   if (x !== undefined){
+     var parts = x.toString().split(".");
+     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+     return parts.join(".");
+   }else{
+     return x;
+   }
+  };
 };
 testApp.directive('ddlFileReader', function($http,$rootScope) {
     return {
