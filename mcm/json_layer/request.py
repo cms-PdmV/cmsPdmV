@@ -8,6 +8,7 @@ import time
 import xml.dom.minidom
 from math import sqrt
 import hashlib
+import traceback
 
 from couchdb_layer.prep_database import database
 
@@ -52,7 +53,7 @@ class request(json_base):
             'cmssw_release':'',
             'input_filename':'',
             'pwg':'',
-            'validation':'',
+            'validation':{},
             'dataset_name':'',
             'pileup_dataset_name':'',
             #'www':'',
@@ -260,6 +261,9 @@ class request(json_base):
                     if item!=seq2[name]:
                         return False
                 else:
+                    if item=='':
+                        #do not care about parameters that are absent, with no actual value
+                        return True
                     return False
             ## arived here, all items of seq1 are identical in seq2
             return True
@@ -271,18 +275,24 @@ class request(json_base):
                 # label = default , seq = dict
                 if in_there( seq, self_sequence ) and in_there( self_sequence, seq ):
                     ## identical sequences
+                    self.logger.log('identical sequences %s'% label)
                     this_matching.add(label)
+                else:
+                    self.logger.log('different sequences %s \n %s \n %s'%(label, seq, self_sequence))
             if len(matching_labels)==0:
                 matching_labels=this_matching
+                self.logger.log('Matching labels %s'% matching_labels)
             else:
                 # do the intersect
                 matching_labels = matching_labels - (matching_labels - this_matching) 
+                self.logger.log('Matching labels after changes %s'% matching_labels)
+                
 
         if len(matching_labels)==0:
             self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
             # try setting the process string ? or just raise an exception ?
             if not self.get_attribute('process_string'):
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences of the request has been changed, but not processing string has been provided')
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
                     
                     
 
@@ -355,6 +365,9 @@ class request(json_base):
         crdb = database('chained_requests')
         adb = database('actions')
         for in_chain_id in self.get_attribute('member_of_chain'):
+            if not crdb.document_exists(in_chain_id):
+                self.logger.error('for %s there is a chain inconsistency with %s' %( self.get_attribute('prepid'), in_chain_id))
+                return False
             in_chain = crdb.get(in_chain_id)
             original_action = adb.get( in_chain['chain'][0] )
             my_action_item = original_action['chains'][in_chain['member_of_campaign']]
@@ -728,6 +741,14 @@ class request(json_base):
         valid_sequence = None
         n_to_valid=1000 #get it differently than that
         yes_to_valid=False
+        val_attributes = self.get_attribute('validation')
+        if 'nEvents' in val_attributes:
+            n_to_valid=val_attributes['nEvents']
+            yes_to_valid=True
+        if 'valid' in val_attributes:
+            yes_to_valid=val_attributes['valid']
+
+        """
         val_sentence=self.get_attribute('validation')
         if len(val_sentence):
             val_spec=val_sentence.split(',')
@@ -739,6 +760,7 @@ class request(json_base):
                     yes_to_valid = True
                 if k == 'valid':
                     yes_to_valid = bool( spec_s[1] )
+        """
 
         l_type=locator()
         if self.little_release() < '530' or (not l_type.isDev()):
@@ -834,7 +856,10 @@ class request(json_base):
         ##then the url back to the validation sample in the gui !!!
         val=self.get_attribute('validation')
         ### please do not put dqm gui url inside, but outside in java view ...
+        """
         val+=', %s'%( dqm_dataset ) 
+        """
+        val['dqm'] = dqm_dataset
         self.set_attribute('validation', val)
 
 
@@ -891,9 +916,9 @@ class request(json_base):
         lookedat=[]
         for cr in self.get_attribute('member_of_chain'):
             ## this protection is bad against malformed db content. it should just fail badly with exception
-            #if not crdb.document_exists(cr):
-            #    self.logger.error('For requests %s, the chain %s of which it is a member of does not exist.'%( self.get_attribute('prepid'), cr))
-            #    continue
+            if not crdb.document_exists(cr):
+                self.logger.error('For requests %s, the chain %s of which it is a member of does not exist.'%( self.get_attribute('prepid'), cr))
+                continue
             crr = crdb.get(cr)
             for other in crr['chain']:
             #limit to those before this one ? NO, the comment could go backward as it could go "forward"
@@ -1121,6 +1146,10 @@ class request(json_base):
         xml_data = xml.dom.minidom.parseString( xml_doc )
         
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
+        if total_event==0:
+            self.logger.error("For % the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
+            return
+
         timing = None
         file_size = None
         for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
@@ -1131,7 +1160,7 @@ class request(json_base):
                         timing = float( perf.getAttribute('Value'))
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float( perf.getAttribute('Value')) 
-
+        
         if timing:
             timing = int( timing/ total_event)
         if file_size:
@@ -1230,11 +1259,15 @@ class runtest_genvalid(handler):
             rt_xml=location.location()+'%s_rt.xml'%( self.rid )
             if os.path.exists( rt_xml ):
                 mcm_r.update_performance( open(rt_xml).read(), 'perf')
+        except:
+            self.logger.error('Failed to get perf reports \n %s'%(traceback.format_exc()))
+            success = False
+        try:
             gv_xml=location.location()+'%s_gv.xml'%( self.rid )
             if os.path.exists( gv_xml ):
                 mcm_r.update_performance( open(gv_xml).read(), 'eff')
         except:
-            self.logger.error('Failed to get perf reports')
+            self.logger.error('Failed to get gen valid reports \n %s'%(traceback.format_exc()))
             success = False
 
 
