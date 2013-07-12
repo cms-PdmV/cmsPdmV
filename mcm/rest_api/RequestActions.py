@@ -264,10 +264,15 @@ class UpdateRequest(RequestRESTResource):
         previous_version =  request(self.db.get(self.request.get_attribute('prepid')))
         editable = previous_version.get_editable()
         for (key,right) in editable.items():
+            # does not need to inspect the ones that can be edited
+            if right: continue
             #self.logger.log('%s: %s vs %s : %s'%(key,previous_version.get_attribute(key),self.request.get_attribute(key),right))
-            if (previous_version.get_attribute(key) != self.request.get_attribute(key)) and right==False:
+            if key=='sequences':
+                ## need a special treatment because it is a list of dicts
+                continue
+            if (previous_version.get_attribute(key) != self.request.get_attribute(key)):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s'%(key,previous_version.get_attribute(key),self.request.get_attribute(key),right))
-                return dumps({"results":False,'message':'Illegal change of parameter'})
+                return dumps({"results":False,'message':'Illegal change of parameter %s'%(key)})
                 #raise ValueError('Illegal change of parameter')
         
 
