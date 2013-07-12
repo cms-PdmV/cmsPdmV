@@ -826,43 +826,65 @@ class package_builder:
                             saved = hash_ids.save( new_hash_doc )
                             if not saved:
                                 self.logger.inject('Could not save the has document %s'%( hash_id ), level='warning', handler=self.hname)
+                                self.close()
                                 return False
                             
                         
                     ##put it also in the batch DB
-                    bdb = database('batches')
-                    b=batch(bdb.get(self.batchName))
-                    b.add_requests(added)
-                    note=[]
+                    saved=False
+                    timeout=0
+                    while not saved and timeout<10:
+                        timeout+=1
+                        bdb = database('batches')
+                        b=batch(bdb.get(self.batchName))
+                        b.add_requests(added)
+                        note=[]
 
-                    if self.request.get_attribute('extension'):
-                        note.append(' is an extension')
-                    if len(self.request.get_attribute('reqmgr_name'))>1: #>1 because you just added that submission request a few lines above
-                        note.append(' is a resubmission')
-                    if len(note):
-                        b.add_notes('\n%s: %s'%(self.request.get_attribute('prepid'),
-                                              ','.join(note)))
-                    b.update_history({'action':'updated'})
+                        if self.request.get_attribute('extension'):
+                            note.append(' is an extension')
+                        if len(self.request.get_attribute('reqmgr_name'))>1: #>1 because you just added that submission request a few lines above
+                            note.append(' is a resubmission')
+                        if len(note):
+                            b.add_notes('\n%s: %s'%(self.request.get_attribute('prepid'),
+                                                    ','.join(note)))
+                        b.update_history({'action':'updated'})
+                        saved=bdb.update(b.json())
+                        if not saved: time.sleep(0.1)
+                    
+                    if timeout>=10:
+                        message='Concurrent changes on the batch prevented the request to be registered in the batch %s'%( self.batchName )
+                        self.logger.inject(message, level='warning', handler=self.hname)
+                        self.request.test_failure(message)
+                        self.close()
+                        return False
 
                     ##save all only at the end with all suceeding to not have half/half
                     rdb = database('requests')
-
+                    
                     #the status is set only if there is actually a request in the request manager !
                     self.request.update_history({'action':'inject'})
                     self.request.set_status(with_notification=True)
-                    rdb.update(self.request.json())
-                    bdb.update(b.json())
+                    saved = rdb.update(self.request.json())
+                    ## check on saved value
+                    if not saved:
+                        message='Could not save requests %s details'%( self.request.get_attribute('prepid'))
+                        self.logger.inject(message, level='warning', handler=self.hname)
+                        self.request.test_failure(message)
+                        self.close()
+                        return False
+
                     for request in added:
                         self.logger.inject('Request %s send to %s'%(request['name'],self.batchName))
+                    flag=True
                 else:
-                    message='Injection has succeeded but no request manager names were registered. Check with administrators'
+                    message='Injection has succeeded but no request manager names were registered. Check with administrators. %s'%(injector.fail_message)
                     self.logger.inject(message, level='warning', handler=self.hname)
                     self.request.test_failure(message)
 
             else:
-                message='Injection failed'
-                self.logger.inject(message, level='warning', handler=self.hname)
-                self.request.test_failure(message)
+                self.logger.inject(injector.fail_message, level='warning', handler=self.hname)
+                self.request.test_failure(injector.fail_message)
                 flag = False
 
+        self.close()
         return flag
