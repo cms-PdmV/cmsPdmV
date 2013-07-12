@@ -1223,6 +1223,7 @@ class request(json_base):
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name',[])
         self.set_attribute('config_id',[])
+        self.set_attribute('version', self.get_attribute('version')+1)
         self.set_status(step=0,with_notification=True)
         
 
