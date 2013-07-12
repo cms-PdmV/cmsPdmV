@@ -852,8 +852,7 @@ class InjectRequest(RESTResource):
                     continue
 
                 self.res.append({"prepid": pid,"results": res_sub})
-                # update history : was done already inside build_package
-                ##req.update_history({'action':'inject'})
+                ## now remove the directory maybe ?
                 
         def status(self):
             return self.res
