@@ -485,8 +485,8 @@ class chained_request(json_base):
         else:
             new_last_status=status
         if new_last_status != self.get_attribute('last_status'):
-            self.update_history({'action':'set last status', 'step': step_r['status']})
-            self.set_attribute( 'last_status' , step_r['status'] )
+            self.update_history({'action':'set last status', 'step': new_last_status })
+            self.set_attribute( 'last_status' , new_last_status )
             return True
         else:
             return False
