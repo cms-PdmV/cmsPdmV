@@ -1,5 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window, chttp){
-    $scope.filt = {}; //define an empty filter
+    $scope.filt = {}; //define an empty filter a stupid update test for github
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
     }else{
