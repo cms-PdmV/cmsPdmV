@@ -418,6 +418,7 @@ class chained_request(json_base):
         #JR clear the fragment in flowing: always
         req.set_attribute('name_of_fragment','')
         req.set_attribute('cvs_tag','')
+        req.set_attribute('fragment_tag','')
         req.set_attribute('fragment','')
         req.set_attribute('history',[])
         req.set_attribute('reqmgr_name',[])
