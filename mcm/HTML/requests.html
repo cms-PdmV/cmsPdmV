@@ -247,8 +247,12 @@
                 </ul>
               </div>
 	            <div ng-switch-when="Name of fragment">
-		            <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}' target="_self" ng-hide='data["cvs_tag"];'>{{data[value.db_name]}}</a>
-		            <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["cvs_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+		      <a ng-href='https://raw.github.com/cms-sw/genproductions/{{data["fragment_tag"]}}/{{data[value.db_name].replace("Configuration/GenProduction","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
+		      <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github</a>
+		      <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["fragment_tag"];'>,cvs</a>
+		      <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/' target="_self" ng-hide='data["fragment_tag"];'>,cvs</a>
+		      <!--<a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}' target="_self" ng-hide='data["cvs_tag"];'>{{data[value.db_name]}}</a>
+		      <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["cvs_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["cvs_tag"];'>{{data[value.db_name]}}</a>-->
 	            </div>
               <div ng-switch-when="Fragment">
                 <a ng-href='public/restapi/requests/get_fragment/{{data.prepid}}/0' rel="tooltip" title="View fragment" ng-hide="!data[value.db_name] || data[value.db_name]=='';" target="_self">
