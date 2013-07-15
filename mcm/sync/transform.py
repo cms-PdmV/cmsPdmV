@@ -101,7 +101,7 @@ class transformer:
         else:
             new['input_block'] = ''
         if req_json['genproductiontag'] and req_json['genproductiontag']!='None':
-            new['cvs_tag'] = req_json['genproductiontag']
+            new['fragment_tag'] = req_json['genproductiontag']
 
         new['pvt_flag'] = ''#req_json['PVTflag']
         new['pvt_comment'] = ''#req_json['PVTcomment']
