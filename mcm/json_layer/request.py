@@ -63,6 +63,7 @@ class request(json_base):
             'block_black_list':[], 
             'block_white_list':[], 
             'cvs_tag':'',
+            'fragment_tag':'',
             #'pvt_flag':'',
             #'pvt_comment':'',
             'mcdb_id':-1,
@@ -155,7 +156,7 @@ class request(json_base):
                 for key in ['generator_parameters','notes','history','generators']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
-                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation']:
+                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation','fragment_tag']:
                     editable[key]=True
         else:
             for key in self._json_base__schema:
@@ -187,17 +188,19 @@ class request(json_base):
         if self.get_attribute('time_event') <=0 or self.get_attribute('size_event')<=0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The time per event or size per event are invalid: negative or null')
 
-        if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'))):
+        if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'))):
             if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
                 ##this case is OK
                 pass
             else:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
-        if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            for line in os.popen('curl -s  http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag'))).read().split('\n'):
+        if self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
+            for line in self.parse_fragment():
+                if 'This is not the web page you are looking for' in line:
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exist in git')
                 if 'Exception Has Occurred' in line:
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exist')
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exist in cvs')
 
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
@@ -209,13 +212,6 @@ class request(json_base):
             elif nevents_per_job == self.get_attribute('total_events'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
             
-            #this is not true
-            #fragment_lines = self.parse_fragment()
-            #for line in fragment_lines:
-            #    if 'outputFile' in line and not 'events_final.lhe' in line:
-            #        ## should this be made a default configuration ?
-            #        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','outputFile needs to be set to events_final.lhe')
-
 
         rdb=database('requests')
         ## same thing but using db query => faster
@@ -384,7 +380,30 @@ class request(json_base):
             
         return at_least_an_action
         
+
+    def retrieve_fragment(self,name=None,get=True):
+        if not name:
+            name=self.get_attribute('name_of_fragment')
+        get_me=''
+        tag=self.get_attribute('fragment_tag')
+        if not tag:
+            tag = self.get_attribute('cvs_tag')
+        if tag:
+            # remove this to allow back-ward compatibility of fragments/requests placed with PREP
+            name=name.replace('Configuration/GenProduction/python/','')
+            name=name.replace('Configuration/GenProduction/','')
+            # curl from git hub which has all history tags
+            get_me='curl -s https://raw.github.com/cms-sw/genproductions/%s/python/%s '%( self.get_attribute('fragment_tag'), name )
+            # add the part to make it local
+            if get:
+                get_me+='--create-dirs -o  Configuration/GenProduction/python/%s '%( name )
+
+        if get:
+            get_me+='\n'
+        return get_me
+
     def get_fragment(self):
+        ## provides the name of the fragment depending on 
         #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
         fragment=self.get_attribute('name_of_fragment')
         if self.get_attribute('fragment') and not fragment:
@@ -609,15 +628,6 @@ class request(json_base):
                     self.scram_arch = scram_arch
         return self.scram_arch
 
-    def initCvs(self):
-        txt=''
-        if not hasattr(self,'cvsInit') or not self.cvsInit:
-            txt += 'export CVSROOT=:pserver:anonymous@cmscvs.cern.ch:/local/reps/CMSSW\n'
-            txt += "echo '/1 :pserver:anonymous@cmscvs.cern.ch:2401/local/reps/CMSSW AA_:yZZ3e' > cvspass\n"
-            txt += "export CVS_PASSFILE=`pwd`/cvspass\n"
-        self.cvsInit=True
-        return txt
-
     def make_release(self):
         makeRel =''
         makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
@@ -649,11 +659,8 @@ class request(json_base):
         ## setup from the last release directory used
         infile += 'eval `scram runtime -sh`\n'
 
-        self.cvsInit = False
-        # checkout from cvs (if needed)
-        if self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            infile+=self.initCvs()
-            infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' ' + self.get_attribute('name_of_fragment') + ' 2> /dev/null \n'
+        ## get the fragment if need be
+        infile += self.retrieve_fragment()
         
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
@@ -677,13 +684,17 @@ class request(json_base):
             if '--customise' in cmsd:
                 cust = cmsd.split('--customise ')[1].split(' ')[0]
                 toks = cust.split('.')
-                cname = toks[0]
-                cfun = toks[1]
+                cname = toks[0]+'.py'
+                if len(toks)>1:
+                    cfun = toks[1]
 
                 # add customization
+
                 if 'GenProduction' in cname:
-                    infile += self.initCvs()
-                    infile += 'cvs co -r ' + self.get_attribute('cvs_tag') + ' Configuration/GenProduction/python/' + cname.split('/')[-1] + ' 2> /dev/null \n'
+                    ## this works for back-ward compatiblity
+                    #infile+= self.retrieve_fragment(name=cname.split('/')[-1])
+                    infile+= self.retrieve_fragment(name=cname)
+                    
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
@@ -698,7 +709,13 @@ class request(json_base):
             if run:
                 ## with a back port of number_out that would be much better
                 res += '-n '+str(events)+ ' '
-                res += '--customise Configuration/DataProcessing/Utils.addMonitoring \n'
+                #what if there was already a customise ?
+                if '--customise' in cmsd:
+                    cust = cmsd.split('--customise ')[1].split()[0]
+                    cust+=',Configuration/DataProcessing/Utils.addMonitoring'
+                    res +='--customise %s \n'%( cust )
+                else:
+                    res += '--customise Configuration/DataProcessing/Utils.addMonitoring \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; '%( directory, self.get_attribute('prepid'), configuration_names[-1] )
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
@@ -797,9 +814,8 @@ class request(json_base):
             self.setup_harvesting(directory,run)
 
             ## until we have full integration in the release
-            infile += self.initCvs()
             cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
-            cmsd_list +='cvs co -r HEAD GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py 2> /dev/null \n'
+            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py%s?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
             cmsd_list +='\nscram b -j5 \n'
 
             genvalid_request = request( self.json() )
@@ -897,7 +913,7 @@ class request(json_base):
             #raise Exception('Input Dataset name is not defined.')
             return True
         if wma_type in ['MonteCarlo','MonteCarloFromGEN','LHEStepZero']:
-            if not self.get_attribute('cvs_tag') and not self.get_attribute('fragment') and not self.get_attribute('name_of_fragment'):
+            if not self.get_attribute('fragment_tag') and not self.get_attribute('fragment') and not self.get_attribute('name_of_fragment'):
                 if wma_type=='LHEStepZero' and self.get_attribute('mcdb_id')<=0:
                     raise Exception('No CVS Production Tag is defined. No fragement name, No fragment text')
                     #return False
@@ -1062,8 +1078,9 @@ class request(json_base):
         if  self.get_attribute('fragment'):
             for line in self.get_attribute('fragment').split('\n'):
                 yield line
-        elif self.get_attribute('name_of_fragment') and self.get_attribute('cvs_tag'):
-            for line in os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('cvs_tag') )).read().split('\n'):
+        elif self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
+            #for line in os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('fragment_tag') )).read().split('\n'):
+            for line in os.popen(self.retrieve_fragment(get=False)).read().split('\n'):
                 yield line
         else:
             for line in []:
@@ -1123,8 +1140,8 @@ class request(json_base):
         if self.get_attribute('fragment'):
             fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
             uniqueString+=fragment_hash
-        if self.get_attribute('cvs_tag'):
-            uniqueString+=self.get_attribute('cvs_tag')
+        if self.get_attribute('fragment_tag'):
+            uniqueString+=self.get_attribute('fragment_tag')
         if self.get_attribute('name_of_fragment'):
             uniqueString+=self.get_attribute('name_of_fragment')
         if self.get_attribute('mcdb_id')>=0:
