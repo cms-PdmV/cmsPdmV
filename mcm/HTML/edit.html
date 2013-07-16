@@ -147,7 +147,7 @@
                     <div ng-switch-when="Valid">
                       <input type="checkbox" ng-model="result[column.db_name]">
                     </div>
-		    <div ng-switch-when="Validation">
+                    <div ng-switch-when="Validation">
                       <ng-form name="fieldForm">
                         <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
@@ -188,7 +188,9 @@
                       </ul>
                     </div>
                     <div ng-switch-when="Extension">
-                      <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                      <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]">
+                        <option ng-repeat="key in [0,1,2,3,4,5]" ng-selected ="result[column.db_name] == key">{{key}}</option>
+                      </select>
                     </div>
                     <div ng-switch-when="Action parameters">
                       <ng-form name="fieldForm">
