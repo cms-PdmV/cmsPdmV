@@ -58,7 +58,7 @@ class request(json_base):
             'pileup_dataset_name':'',
             #'www':'',
             'process_string':'',
-            'extension': False,
+            'extension': 0,
             #'input_block':'',
             'block_black_list':[], 
             'block_white_list':[], 
@@ -222,10 +222,16 @@ class request(json_base):
         similar_ds  = rdb.queries(find_similar)
 
         if len(similar_ds)>1:
-            if len(similar_ds)>2:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name, same process string in the same campaign')
-            if similar_ds[0]['extension'] == similar_ds[1]['extension']:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
+            #if len(similar_ds)>2:
+            #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name, same process string in the same campaign')
+            #if similar_ds[0]['extension'] == similar_ds[1]['extension']:
+            #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
+            my_extension = self.get_attribute('extension')
+            my_id = self.get_attribute('prepid')
+            for similar in similar_ds:
+                if similar['prepid'] == my_id: continue
+                if int(similar['extension']) == int(my_extension):
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'( my_extension))
         
         cdb = database('campaigns')
         ##this below needs fixing
@@ -1249,9 +1255,9 @@ class runtest_genvalid(handler):
     """
     operate the run test, operate the gen_valid, upload to the gui and toggles the status to validation
     """
-    def __init__(self, rid):
-        handler.__init__(self)
-        self.rid = rid
+    def __init__(self, **kwargs):
+        handler.__init__(self, **kwargs)
+        self.rid = kwargs['rid']
         self.db = database('requests')
         
     def run(self):
@@ -1271,7 +1277,7 @@ class runtest_genvalid(handler):
         
         batch_test = batch_control( self.rid, test_script )
         success = batch_test.test()
-        
+        self.logger.log("batch_test result is %s" % success)
         try:
             #suck in run-test if present
             rt_xml=location.location()+'%s_rt.xml'%( self.rid )
