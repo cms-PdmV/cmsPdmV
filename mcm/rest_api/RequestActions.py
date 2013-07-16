@@ -829,6 +829,11 @@ class InjectRequest(RESTResource):
             if not self.db.document_exists(pid):
                 self.res.append({"prepid": pid, "results": False,"message":"The request %s does not exist"%(pid)})
                 return
+
+            #global locks_on_prepid        
+            #locks_on_prepid.get(pid).acquire()
+        
+
             req = request(self.db.get(pid))
             if req.get_attribute('status')!='approved':
                 self.res.append({"prepid": pid, "results": False,"message":"The request is in status %s, while approved is required"%(req.get_attribute('status'))})
@@ -845,6 +850,11 @@ class InjectRequest(RESTResource):
             self.logger.inject('## Logger instance retrieved', level='info', handler = pid)
 
             self.res.append({"prepid": pid, "results": True, "message":"The request %s is being forked"%(pid)})
+
+        #def __delete__(self):
+            #global locks_on_prepid        
+            #locks_on_prepid.get(args[0]).release()
+        
 
         def run(self):
             if len(self.act_on_pid):
