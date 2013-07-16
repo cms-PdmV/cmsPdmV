@@ -146,7 +146,6 @@ function resultsCtrl($scope, $http, $location, $window){
         });
         setTimeout(function(){ //update fragment field
           codemirror = document.querySelector('.CodeMirror');
-          console.log(codemirror);
           if (codemirror != null){
             _.each(angular.element(codemirror),function(elem){
               elem.CodeMirror.refresh();
@@ -492,7 +491,7 @@ testApp.directive("sequenceEdit", function($http){
     '  </div>'+
     //end OF MODAL
     '</div>',
-    link: function(scope, element, attrs, ctrl){
+    link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){ 
         scope.showSequences = false;
         scope.showAddNewModal = false;
@@ -617,7 +616,7 @@ testApp.directive("customHistory", function(){
     '  </div>'+
     '</div>'+
     '',
-    link: function(scope, element, attrs, ctrl){
+    link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
@@ -825,7 +824,7 @@ testApp.directive("generatorParams", function($http){
     ///END OF MODAL
     '</div>'+
     '',
-    link: function(scope, element, attrs, ctrl){
+    link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
         scope.genParam_data = ctrl.$viewValue;
       };
