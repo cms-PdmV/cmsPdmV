@@ -179,7 +179,7 @@ class transformer:
         co = req_json['conditions']
         if co and ';' in co:
             co = co.split(';')[0]
-        if not co.endswith('::All'):
+        if co and not co.endswith('::All'):
             co+='::All'
 
         new['sequences'] = [{"slhc": "",
