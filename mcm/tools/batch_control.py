@@ -105,12 +105,15 @@ class batch_control:
             elif 'Exited with' in line:
                 self.logger.error('workflow batch test returned: %s' % (line))
                 self.log_out = out
-                self.log_err = stderr.read()
-                #self.__read_job_error()
-                #self.__read_job_log_file()
+                
+                cmd = 'cat %s' % ( self.test_err )
+                stdin, stdout, stderr = self.ssh_exec.execute(cmd)
+                if not stdin and not stdout and not stderr:
+                    self.log_err = 'Could not be retrieved %s' %( stderr.read())
+                    return False
+                self.log_err = stdout.read()
                 return False
 
-        #self.logger.inject('Could not obtain status from logfile "%s.out". Error stream dump: %s' % (self.directory + self.request.get_attribute('prepid'), stderr.read()), level='error', handler=self.hname)
         return None
 
     """
@@ -148,7 +151,7 @@ class batch_control:
             
         ## check that it succeeded
         #wait for afs to sync the .out file
-        time.sleep(10)
+        time.sleep(30)
         result = self.get_job_result()
         if not result:
             return False
