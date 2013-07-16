@@ -363,11 +363,14 @@ class MigrateRequest(RequestRESTResource):
         #mcm_r.build_cmsDrivers(cast=-1)
         #mcm_r.build_cmsDrivers(cast=1)
 
+        if mcm_r.get_attribute('mcdb_id')>0 and mcm_r.get_attribute('status') not in ['submitted','done']:
+            return dumps({"results":False,"message":"A request which will require a step0 (%s) cannot be migrated in status %s, requires submitted or done"%( mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))})
+        
         mcm_r.update_history({'action':'migrated'})
         if not self.db.document_exists(mcm_r.get_attribute('prepid')):
             mcm_r.get_stats(override_id = pid)
 
-            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in ['done','submitted']:
+            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in ['done']: #['done','submitted']:
                 # no requests provided, the request should fail migration. 
                 # I have put fake docs in stats so that it never happens
                 return dumps({"results":False,"message":"Could not find an entry in the stats DB for prepid %s"%(pid)})
@@ -386,13 +389,20 @@ class MigrateRequest(RequestRESTResource):
                     return dumps({"results":'Error: Campaign '+ self.request.get_attribute('member_of_campaign') +' does not exist.'})
                 self.add_action(force=True)            
         else:
-            return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
+            html='<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,
+                                                                                                                                                                                                                                                            pid,
+                                                                                                                                                                                                                                                            mcm_r.get_attribute('prepid'),
+                                                                                                                                                                                                                                                            mcm_r.get_attribute('prepid'))
+            return html
+            #return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
 
         if saved:
-            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,pid,
-                                                                                                                                                                                                                                                                          mcm_r.get_attribute('prepid'),mcm_r.get_attribute('prepid'))
+            html='<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>'%(pid,
+                                                                                                                                                                                                                                                            pid,
+                                                                                                                                                                                                                                                            mcm_r.get_attribute('prepid'),
+                                                                                                                                                                                                                                                            mcm_r.get_attribute('prepid'))
             return html
-            return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
+            #return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
         else:
             return dumps({"results":saved,"message":"could not save converted prepid %s in McM"%(pid)})
 
@@ -721,7 +731,7 @@ class SetStatus(RESTResource):
         return {"prepid": rid, "results":self.db.update(req.json())}
 
 from tools.request_to_wma import request_to_wmcontrol
-from tools.handler import handler
+from tools.handler import handler, PoolOfHandlers
 from tools.installer import installer
 from tools.ssh_executor import ssh_executor
 
@@ -769,11 +779,19 @@ class TestRequest(RESTResource):
         this is test for admins only
         """
 
+        ids_list = args[0].split(',')
+        new_list = []
+        for rid in ids_list:
+            new_list.append({'rid': rid})
+        pool = PoolOfHandlers(runtest_genvalid, new_list)
+        pool.start()
+
+
         #rdb = database('actions')
         #res = rdb.query('member_of_campaign==Summer11')
-        statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/') 
-        res=statsDB.query(query='prepid==HIG-Summer11dr53X-00063')
-        return dumps(res)
+        #statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/') 
+        #res=statsDB.query(query='prepid==HIG-Summer11dr53X-00063')
+        #return dumps(res)
         ### test for wmcontrol config
         #rdb = database('requests')
         #mcm_r = request( rdb.get(args[0]))
