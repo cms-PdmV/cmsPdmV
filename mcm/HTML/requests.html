@@ -34,12 +34,8 @@
         <pane heading="Select View">
         <div class="well">
           <div>
-            <!-- <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well ==false"> -->
-            <!-- <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well ==true"> -->
-            <!-- <span ng-show="show_well == true"> -->
               <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-            <!-- </span> -->
           </div>
           
           <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
@@ -66,6 +62,9 @@
             <!--<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_file_listing" rel="tooltip" title="Glossary for listing from file"><i class="icon-question-sign"></i></a>-->
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Lists_Requests" rel="tooltip" title="Help on listing from file"><i class="icon-question-sign"></i></a>
           </div>
+        </pane>
+        <pane heading="Navigation">
+          <load-fields></load-fields>
         </pane>
       </tabs>
     <!-- </div> -->
@@ -145,9 +144,9 @@
                 <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify">
                   <i class="icon-envelope"></i>
                 </a>
-		<a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status">
-		  <i class="icon-step-backward"></i>
-		</a>
+                <a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status">
+                  <i class="icon-step-backward"></i>
+                </a>
                 <a ng-click="open_isSureModal('toggle',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
                   <i class="icon-step-forward"></i>
                 </a>
@@ -189,7 +188,7 @@
               <div ng-switch-when="PrepId">
                 <a ng-href='requests?prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='public/restapi/requests/get_actors/{{data[value.db_name]}}' rel="tooltip" title="View registered users" target="_self"><i class="icon-user"></i></a>
-		<a ng-show='data.reqmgr_name.length!=0' ng-href='batches?contains={{data.prepid}}' rel="tooltip" title="View batches containing {{data.prepid}}" target="_self"><i class="icon-tags"></i></a>
+                <a ng-show='data.reqmgr_name.length!=0' ng-href='batches?contains={{data.prepid}}' rel="tooltip" title="View batches containing {{data.prepid}}" target="_self"><i class="icon-tags"></i></a>
                 <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
 	            <div ng-switch-when="Pwg"> 
@@ -246,14 +245,14 @@
                   </li>
                 </ul>
               </div>
-	      <div ng-switch-when="Name of fragment">
-		<div ng-show="data[value.db_name];">
-		  <a ng-href='https://raw.github.com/cms-sw/genproductions/{{data["fragment_tag"]}}/{{data[value.db_name].replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
-		  <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github repo</a>
-		  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["fragment_tag"];'>, old file in cvs</a>
-		  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/' target="_self" ng-hide='data["fragment_tag"];'>,cvs repo</a>
-		</div>
-	      </div>
+              <div ng-switch-when="Name of fragment">
+                <div ng-show="data[value.db_name];">
+                  <a ng-href='https://raw.github.com/cms-sw/genproductions/{{data["fragment_tag"]}}/{{data[value.db_name].replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
+                  <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github repo</a>
+                  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["fragment_tag"];'>, old file in cvs</a>
+                  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/' target="_self" ng-hide='data["fragment_tag"];'>,cvs repo </a>
+                </div>
+              </div>
               <div ng-switch-when="Fragment">
                 <a ng-href='public/restapi/requests/get_fragment/{{data.prepid}}/0' rel="tooltip" title="View fragment" ng-hide="!data[value.db_name] || data[value.db_name]=='';" target="_self">
                   <i class="icon-fullscreen"></i>
@@ -265,52 +264,51 @@
 		
               </div>
               <div ng-switch-when="Validation">
-		<ul style="margin-bottom: 0px;">
-		  <li ng-show="data[value.db_name].valid!=undefined"><i class="icon-ok" ng-show="data[value.db_name].valid"></i> <i class="icon-remove" ng-show="!data[value.db_name].valid"></i></li>
-		  <li ng-show="data[value.db_name].nEvents!=undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li>
-		  <li ng-show="data[value.db_name].dqm!=undefined"> dqm
-		    <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
-		    <a ng-show="!isDevMachine()"href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
-		  </li>
-		  
-		  <!--<li ng-repeat="att in data[value.db_name]">
-		    {{att}}
-		  </li>-->
-		</ul>
+                <ul style="margin-bottom: 0px;">
+                  <li ng-show="data[value.db_name].valid!=undefined"><i class="icon-ok" ng-show="data[value.db_name].valid"></i> <i class="icon-remove" ng-show="!data[value.db_name].valid"></i></li>
+                  <li ng-show="data[value.db_name].nEvents!=undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li>
+                  <li ng-show="data[value.db_name].dqm!=undefined"> dqm
+                    <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
+                    <a ng-show="!isDevMachine()"href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
+                  </li>
+		              <!--<li ng-repeat="att in data[value.db_name]">
+		                {{att}}
+		              </li>-->
+                </ul>
                 <!--<div ng-bind-html-unsafe="linkify(data[value.db_name])"></div>-->
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
-	      <div ng-switch-when="Total events" align="right">
-		{{numberWithCommas(data[value.db_name])}}
-	      </div>
-	      <div ng-switch-when="Completed events" align="right">
-		{{numberWithCommas(data[value.db_name])}}
-	      </div>
+              <div ng-switch-when="Total events" align="right">
+                {{numberWithCommas(data[value.db_name])}}
+              </div>
+              <div ng-switch-when="Completed events" align="right">
+                {{numberWithCommas(data[value.db_name])}}
+              </div>
               <div ng-switch-when="Reqmgr name">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="rqmngr in data[value.db_name]">
-		    <a ng-href='batches?contains={{rqmngr.name}}' rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>
+                    <a ng-href='batches?contains={{rqmngr.name}}' rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>
                     <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>
                     <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>
                     ,<a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_self"> stats</a>
                     <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='stats_cache[rqmngr["name"]]' rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>
-		    <b><font color='red' ng-show='stats_cache[rqmngr["name"]] && !underscore.isObject(stats_cache[rqmngr["name"]])'> Stats Not Found</font></b>
-		    <div ng-show='underscore.isObject(stats_cache[rqmngr["name"]])'>
-		      <a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_self"> {{numberWithCommas(stats_cache[rqmngr["name"]].pdmv_evts_in_DAS)}} events</a>
-		      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr["name"]}}' rel="tooltip" title="Perf" target="_self">perf </a>
-		      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr["name"]}}' rel="tooltip" title="DS" target="_self">output<a/>
-		      <a ng-href='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'><img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
-		      <ul style="margin-bottom: 0px;" ng-show='true;'>
+                    <b><font color='red' ng-show='stats_cache[rqmngr["name"]] && !underscore.isObject(stats_cache[rqmngr["name"]])'> Stats Not Found</font></b>
+                    <div ng-show='underscore.isObject(stats_cache[rqmngr["name"]])'>
+                      <a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_self"> {{numberWithCommas(stats_cache[rqmngr["name"]].pdmv_evts_in_DAS)}} events</a>
+                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr["name"]}}' rel="tooltip" title="Perf" target="_self">perf </a>
+                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr["name"]}}' rel="tooltip" title="DS" target="_self">output</a>
+                      <a ng-href='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'><img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
+                      <ul style="margin-bottom: 0px;" ng-show='true;'>
                         <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
                           <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>
                         </li>
                         <li ng-show='data["status"]=="done" && rqmngr.content.pdmv_dataset_name && !underscore.isObject(stats_cache[rqmngr["name"]])'>
                           <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}' rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr.content.pdmv_dataset_name}}</a>
                         </li>
-		      </ul>
-	            </div>
+                      </ul>
+                    </div>
                   </li>
                 </ul>
               </div>
