@@ -1230,6 +1230,9 @@ class request(json_base):
         ## make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
         ds_to_invalidate=[]
+        # retrieve the latest requests for it
+        self.get_stats()
+        # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
             new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object']
