@@ -63,7 +63,7 @@ class Search(object):
 
 		vetoed_keys = []
 		for (view,f) in design['views'].items():
-			if 'for(' in f['map']:
+			if 'for(' in f['map'] or 'for (' in f['map']:
 				vetoed_keys.append( view )
 		allowed_key_search.sort()
 		multiple_view=[]
