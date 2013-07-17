@@ -1058,30 +1058,45 @@ class GetActors(RESTResource):
 class SearchableRequest(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
-        self.access_limit = 3
+        self.access_limit = 1
 
     def GET(self, *args):
 
-        all_requests = self.rdb.queries([])
+        if len(args) and args[0]=='do':
+            all_requests = self.rdb.queries([])
+            
+            searchable={}
 
-        searchable={}
+            for request in all_requests: 
+                for key in ['energy','dataset_name','status','approval','extension','generators','member_of_chain','pwg','process_string','mcdb_id','prepid']:
+                    if not key in searchable:
+                        searchable[key]=set([])
+                    if not key in request:
+                        ## that should make things break down, and due to schema evolution missed-migration
+                        continue
+                    if type(request[key]) == list:
+                        for item in request[key]:
+                            searchable[key].add(item)
+                    else:
+                        searchable[key].add( request[key] )
 
-        for request in all_requests: 
-            for key in ['energy','dataset_name','status','approval','extension','generators','member_of_chain']:
-                if not key in searchable:
-                    searchable[key]=[]
-                if not key in request:
-                    ## that should make things break down, and due to schema evolution missed-migration
-                    continue
-                if type(request[key]) == list:
-                    for item in request[key]:
-                        searchable[key].append(item)
-                else:
-                    searchable[key].append( request[key] )
+            #unique it
+            for key in searchable:
+                searchable[key]=list( searchable[key])
 
-        for key in searchable:
-            searchable[key]=list(set( searchable[key]))
-        return dumps(searchable)
+            #store that value
+            search = database('searchable')
+            searchable.update({'_id': 'searchable'})
+            search.save( searchable )
+            searchable.pop('_id')
+            return dumps(searchable)
+        else:
+            ## just retrieve that value
+            search = database('searchable')
+            searchable = search.get('searchable')
+            searchable.pop('_id')
+            searchable.pop('_rev')
+            return dumps(searchable)
 
 
 class SearchRequest(RESTResource):
