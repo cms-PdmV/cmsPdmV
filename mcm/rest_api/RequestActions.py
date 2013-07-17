@@ -564,6 +564,8 @@ class GetRequest(RESTResource):
         return self.get_request(args[0])
     
     def get_request(self, data):
+        if not self.db.document_exists(data):
+            return dumps({"results": {}})
         mcm_r = self.db.get(prepid=data)
         # cast the sequence for schema evolution !!! here or not ?
         for (i_s,s) in enumerate(mcm_r['sequences']):
@@ -1083,6 +1085,7 @@ class SearchableRequest(RESTResource):
             #unique it
             for key in searchable:
                 searchable[key]=list( searchable[key])
+                searchable[key].sort()
 
             #store that value
             search = database('searchable')
