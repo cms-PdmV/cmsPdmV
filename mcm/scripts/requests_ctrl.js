@@ -113,19 +113,9 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     $scope.next_status = function(prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
-		$scope.parse_one_only(data,status);
-		/*$scope.update["success"] = data["results"];
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = data["results"];
-	$scope.action_report[prepid] = data["message"];
-	$window.location.reload();*/
+        $scope.parse_one_only(data,status);
       }).error(function(status){
 	      $scope.set_fail(status);
-	      /*
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["status_code"] = status;
-	$scope.action_report[prepid] = data[status];*/
       });
     };
     /*
@@ -144,58 +134,39 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     */
     $scope.load_dataset_list = function (req_name){
-	//getfrom='/stats/admin/stats/'+req_name;
-	getfrom='/stats/restapi/get_one/'+req_name;
-	$http({method:'GET', url: getfrom}).success(function(data,status){
-		$scope.stats_cache [req_name] = data;
+      getfrom='/stats/restapi/get_one/'+req_name;
+      $http({method:'GET', url: getfrom}).success(function(data,status){
+        $scope.stats_cache [req_name] = data;
 	    }).error(function(status){
         $scope.stats_cache [req_name] = "Not found";
 		    console.log(getfrom,' --> error');
-		});
+      });
     };
 
     $scope.register = function(prepid){
 	    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+prepid}).success(function(data,status){
-		    $scope.parse_one_only(data,status);
-		    /*		    $scope.update["success"] = data["results"];
-		    if (data["results"]){
-		      $scope.update["fail"] = false;
-		      $scope.update["status_code"] = data["results"];
-		      alert('Success');
-		      //$window.location.reload();
-		    }else{
-		      $scope.update["fail"] = true;
-		      alert(data["message"]);
-		      $scope.update["status_code"] = 0;
-		      }*/
-
-	      }).error(function(status){
-		      $scope.set_fail(status);
-		      /*		      $scope.update["success"] = false;
-		      $scope.update["fail"] = true;
-		      $scope.update["status_code"] = status;*/
-		    });
-      };
-
-    $scope.inspect = function(prepid){
-	$http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+prepid}).success(function(data,status){
-		$scope.parse_one_only(data,status);
+        $scope.parse_one_only(data,status);
 	    }).error(function(status){
 		    $scope.set_fail(status);
-		});
+		  });
+    };
+
+    $scope.inspect = function(prepid){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+prepid}).success(function(data,status){
+        $scope.parse_one_only(data,status);
+	    }).error(function(status){
+		    $scope.set_fail(status);
+		  });
     };
 
     $scope.loadStats = function(){	
-	for (i=0;i<$scope.result.length;i++){
-	    if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
-		for (i_r=0;i_r!=$scope.result[i].reqmgr_name.length;i_r++){
-		    //console.log($scope.result[i].reqmgr_name[i_r].name);
-		    $scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name);
-		}
-	    }
-	    
-	}
-	
+      for (i=0;i<$scope.result.length;i++){
+        if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
+          for (i_r=0;i_r!=$scope.result[i].reqmgr_name.length;i_r++){
+            $scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name);
+          }
+        }
+      }
     };
 
     $scope.select_all_well = function(){
@@ -224,8 +195,7 @@ function resultsCtrl($scope, $http, $location, $window){
     };
 
     $scope.delete_edit = function(id){
-        console.log("delete some from edit");
-        $scope.delete_object($scope.dbName, id);
+      $scope.delete_object($scope.dbName, id);
     };
 
     $scope.sort = {
@@ -246,6 +216,7 @@ function resultsCtrl($scope, $http, $location, $window){
         sort.descending = false;
       }
     };
+
   $scope.showing_well = function(){
     if ($scope.show_well){
       $scope.show_well = false;
@@ -294,7 +265,6 @@ function resultsCtrl($scope, $http, $location, $window){
           shown = $location.search()["shown"];
         }
         if (shown != ""){
-          console.log(shown);
           $location.search("shown", shown);
           binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
           _.each($scope.requests_defaults, function(column){
@@ -348,38 +318,37 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.showapproval = false;
   $scope.showApprovals = function(){
-      if ($scope.showapproval){
-          $scope.showapproval = false;
+    if ($scope.showapproval){
+      $scope.showapproval = false;
     }
     else{
-        $scope.showapproval = true;
+      $scope.showapproval = true;
     }
   };
   $scope.selected_prepids = [];
   $scope.add_to_selected_list = function(prepid){
     if (_.contains($scope.selected_prepids, prepid)){
-        $scope.selected_prepids = _.without($scope.selected_prepids,prepid)
-    }else
-        $scope.selected_prepids.push(prepid);
+      $scope.selected_prepids = _.without($scope.selected_prepids,prepid);
+    }else{
+      $scope.selected_prepids.push(prepid);
+    }
   };
 
   $scope.parse_report = function(data,status){
-	    to_reload=true;
-	    for (i=0;i<data.length;i++){
-		$scope.action_status[data[i]['prepid']] = data[i]['results'];
-		if ($scope.parse_one ( data[i] )){
+    to_reload=true;
+    for (i=0;i<data.length;i++){
+      $scope.action_status[data[i]['prepid']] = data[i]['results'];
+      if ($scope.parse_one ( data[i] )){
 		    to_reload=false;
-		}
-	    }
-	    if (to_reload == true)
-		{
-		    $scope.set_success(status);
-		}
-	    else
-		{
-		    $scope.set_fail(status);
+      }
+	  }
+	  if (to_reload == true){
+		  $scope.set_success(status);
+    }else{
+      $scope.set_fail(status);
 		}
   };
+
   $scope.next_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    $scope.parse_report(data,status);
@@ -388,48 +357,41 @@ function resultsCtrl($scope, $http, $location, $window){
 	    $scope.set_fail(status);
     });
   };
+
   $scope.previous_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
-	    $scope.parse_report(data,status);	    
-            //alert("Success!");
-	    //	    $window.location.reload();
-        }).error(function(data,status){
-		$scope.set_fail(status);
-		//alert("Error while processing request. Code: "+status);
-        });
+	    $scope.parse_report(data,status);
+    }).error(function(data,status){
+      $scope.set_fail(status);
+    });
   };
+
   $scope.status_toggle = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/status/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    $scope.parse_report(data,status);
-	    //alert("Success!");
-	    //$window.location.reload();
-        }).error(function(data,status){
-            alert("Error while processing request. Code: "+status);
-        });
+    }).error(function(data,status){
+      alert("Error while processing request. Code: "+status);
+    });
   };
 
-
   $scope.register_several = function(){
-      $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+$scope.selected_prepids.join()}).success(function(data,status){
-	      $scope.parse_report(data,status);	    
-	    //alert("Success!");
-	    //$window.location.reload();
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+$scope.selected_prepids.join()}).success(function(data,status){
+	    $scope.parse_report(data,status);
 	  }).error(function(data,status){
 		  alert("Error while processing request. Code: "+status);
 	  });
   };
 
   $scope.inspect_many = function(){ 
-      $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+$scope.selected_prepids.join()}).success(function(data,status){
-	      $scope.parse_report(data,status);
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+$scope.selected_prepids.join()}).success(function(data,status){
+      $scope.parse_report(data,status);
 	  }).error(function(data,status){
-                  alert("Error while processing request. Code: "+status);
-	      });
+      alert("Error while processing request. Code: "+status);
+    });
   };
 
   $scope.submit_many = function(){
     /* submit many requests. On successfully submited ones open a status watching page*/
-
     if($scope.selected_prepids.length == 0 ){
       alert("You have selected no requests for multiple actions");
       return;
@@ -465,21 +427,21 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.statusIcon = function(value){
-      icons = {'new' :  'icon-edit',
+    icons = {'new' :  'icon-edit',
 	       'validation' : 'icon-eye-open',
 	       'defined' : 'icon-check',
 	       'approved' : 'icon-share',
 	       'submitted' : 'icon-inbox',
 	       'injected' : 'icon-envelope',
 	       'done' : 'icon-ok'
-      }
-      if (icons[value]){
-	  return icons[value] ;
-      }
-      else{
-	  return "icon-question-sign" ;
-      }
+    }
+    if (icons[value]){
+	    return icons[value] ;
+    }else{
+	    return "icon-question-sign" ;
+    }
   };
+
   $scope.clone = function(prepid){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/clone/'+prepid}).success(function(data,status){
       $scope.update["success"] = data["results"];
@@ -493,6 +455,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["status_code"] = status;
       });
   };
+
   $scope.toggleAll = function(){
     if ($scope.selected_prepids.length != $scope.result.length){
       _.each($scope.result, function(v){
@@ -503,15 +466,18 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.selected_prepids = [];
     }
   };
+
   /*Is Sure modal actions*/
   $scope.open_isSureModal = function(action, prepid){
     $scope.isSure_Modal = true;
     $scope.toggle_prepid = prepid;
     $scope.modal_action = action;
   };
+
   $scope.closeisSureModal = function(){
     $scope.isSure_Modal = false;
   };
+
   $scope.sureTotoggle = function(){
     $scope.isSure_Modal = false;
     switch ($scope.modal_action){
@@ -542,8 +508,8 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.closeModal = function () {
     $scope.submissionModal = false;
   };
+
   $scope.openInjectStatus = function(){
-    
     var prepids = [];
     _.each($scope.successfullSubmits, function(element){
       prepids.push(element["prepid"]);
@@ -557,16 +523,16 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.notify_Modal = true;
     $scope.notify_prepid = prepid;
   };
+
   $scope.closeNotifyModal = function(){
     $scope.notify_Modal = false;
   };
+
   $scope.Notify = function(){
     if ($scope.selected_prepids.length != 0){
-//      console.log("multiple");
       $scope.notify_prepid = $scope.selected_prepids;
     }else{
       $scope.notify_prepid = [$scope.notify_prepid];
-//      console.log("single");
     }
     $scope.loadNotify = true;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: $scope.notify_prepid, message: $scope.notify_text})}).success(function(data,status){
@@ -581,12 +547,10 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.notify_Modal = false;
       $scope.notify_text = "";
       $scope.notify_prepid = [];
-//      $window.location.reload();
     }).error(function(data,status){
       $scope.loadNotify = false;
       $scope.set_fail(status);
     });
-
   };
   /* --Modals actions END--*/
 
@@ -595,12 +559,7 @@ function resultsCtrl($scope, $http, $location, $window){
       _.each($scope.filt, function(filter_column, key){
     });
   };
-  // $scope.$watch("filt", function(){
-  //   $scope.update_filtered();
-  //   _.each($scope.filt, function(v,k){
-  //     console.log(k, ": ",v.split(" "), " : ", $scope.filt[k]);
-  //   });
-  // },true);
+
   $scope.linkify = function(inputText) {
     var replaceText, replacePattern1, replacePattern2, replacePattern3;
     
@@ -622,44 +581,45 @@ function resultsCtrl($scope, $http, $location, $window){
     return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
   }
 
-   $scope.togglePane = function(val){
+  $scope.togglePane = function(val){
     if (val){
       return true;
     }else{
       return false;
     }
-   };
-   $scope.superSearch = function(data){
-     var search_data={};
-     _.each($scope.searchable_fields, function(elem){
+  };
+
+  $scope.superSearch = function(data){
+    var search_data={};
+    _.each($scope.searchable_fields, function(elem){
       if (elem.value !=""){
         search_data[elem.name] = elem.value;
       }
-      });
+    });
       /*submit method*/
-      $http({method:'PUT', url:'restapi/'+$scope.dbName+'/search', data: search_data}).success(function(data,status){
-       $scope.result = data.results;
-       $scope.got_results = true;
-       }).error(function(status){
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
-       });
-
-     
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/search', data: search_data}).success(function(data,status){
+      $scope.result = data.results;
+      $scope.got_results = true;
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    }); 
    };
-    $scope.upload = function(file){
+
+  $scope.upload = function(file){
     /*Upload a file to server*/
-      $scope.got_results = false;
-        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
-          $scope.result = data.results;
-          $scope.got_results = true;
-        }).error(function(status){
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
-          $scope.update["status_code"] = status;
-        });
-      };
+    $scope.got_results = false;
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
+      $scope.result = data.results;
+      $scope.got_results = true;
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
+  };
+
   $scope.saveCookie = function(){
     var cookie_name = $scope.dbName+"shown";
     if($location.search()["shown"]){
@@ -875,4 +835,72 @@ testApp.directive("generatorParams", function($http){
       };
     }
   };
+});
+testApp.directive("loadFields", function($http, $location){
+  return {
+    replace: true,
+    restrict: 'E',
+    template:
+    '<div>'+
+    '  <form class="form-inline">'+
+    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '      <label style="width:130px;">{{key}}</label>'+
+    '      <select ng-model="listfields[key]" ng-options="elem for elem in value">'+
+    '      </select>'+
+    '    </span>'+
+    '  </form>'+
+    '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
+    '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
+    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
+    '  <a ng-show="showUrl" ng-href="{{newurl}}" target="_blank">{{newurl}}</a>'+
+    '</div>'
+    ,
+    link: function(scope, element, attr){
+        scope.listfields = {};
+        scope.showUrl = false;
+        var promise = $http.get("restapi/"+scope.dbName+"/searchable");
+        scope.loadingData = true;
+        promise.then(function(data){
+          scope.loadingData = false;
+          scope.searchable = data.data;
+          _.each(scope.searchable, function(element,key){
+            element.unshift("------"); //lets insert into begining of array an default value to not include in search
+            scope.listfields[key] = "------";
+          });
+        }, function(data){
+          scope.loadingData = false;
+          alert("Error getting searchable fields: "+data.status);
+        });
+	scope.getSearch = function(){
+	scope.listfields = {};
+        scope.showUrl = false;
+        var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
+        scope.loadingData = true;
+        promise.then(function(data){
+          scope.loadingData = false;
+          scope.searchable = data.data;
+          _.each(scope.searchable, function(element,key){
+            element.unshift("------"); //lets insert into begining of array an default value to not include in search
+            scope.listfields[key] = "------";
+          });
+        }, function(data){
+          scope.loadingData = false;
+          alert("Error getting searchable fields: "+data.status);
+	    });}
+      scope.getUrl = function(){
+        scope.url = "?";
+        _.each(scope.listfields, function(value, key){
+          if (value != "------"){
+            scope.url += key +"=" +value+"&";
+            $location.search(key,String(value));
+          }else{
+            $location.search(key,null);//.remove(key);
+          }
+	  //	  scope.newurl = $location.absUrl().replace("?", scope.url);
+        });
+        //scope.showUrl = true;
+        scope.getData();
+      };
+	}
+  }
 });
