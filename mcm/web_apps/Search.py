@@ -105,7 +105,7 @@ class Search(object):
 						break
 				if really_not_there:
 				        #tempatively add the view to the design
-					new_func = "function(doc){ emit([%s], doc);}"%( ','.join(map( lambda k: "doc.%s"%(k), map( lambda p:p[0], multiple_view) )))
+					new_func = "function(doc){ emit([%s], doc._id);}"%( ','.join(map( lambda k: "doc.%s"%(k), map( lambda p:p[0], multiple_view) )))
 					design['views'] [ multiple_search ] = { "map" : new_func }
 					saved = odb.update( design )
 		                        ##### NOTE ####
