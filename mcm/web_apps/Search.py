@@ -77,7 +77,6 @@ class Search(object):
 				if key in vetoed_keys or simple_search:
 					query_list.append('%s==%s'%(key,args[key]))
 				else:
-					multiple_view.append( (key, '"'+args[key]+'"') )
 					if args[key].isdigit():
 						multiple_view.append( (key, args[key]) )
 					else:
