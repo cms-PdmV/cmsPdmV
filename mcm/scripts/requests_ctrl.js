@@ -854,7 +854,8 @@ testApp.directive("loadFields", function($http, $location){
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
     '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '  <a ng-show="showUrl" ng-href="{{newurl}}" target="_blank">{{newurl}}</a>'+
+	//    '  <a ng-show="showUrl" ng-href="{{newurl}}" target="_blank">{{newurl}}</a>'+
+    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '</div>'
     ,
     link: function(scope, element, attr){
