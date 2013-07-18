@@ -716,12 +716,15 @@ class request(json_base):
                 ## with a back port of number_out that would be much better
                 res += '-n '+str(events)+ ' '
                 #what if there was already a customise ?
+                monitor_location='Utils'
+                if self.little_release() < '420':
+                    monitor_location='Monitoring'
                 if '--customise' in cmsd:
                     cust = cmsd.split('--customise ')[1].split()[0]
-                    cust+=',Configuration/DataProcessing/Utils.addMonitoring'
+                    cust+=',Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
                     res +='--customise %s \n'%( cust )
                 else:
-                    res += '--customise Configuration/DataProcessing/Utils.addMonitoring \n'
+                    res += '--customise Configuration/DataProcessing/%s.addMonitoring \n'%( monitor_location )
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; '%( directory, self.get_attribute('prepid'), configuration_names[-1] )
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
