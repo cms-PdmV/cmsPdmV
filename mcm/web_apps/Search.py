@@ -78,6 +78,11 @@ class Search(object):
 					query_list.append('%s==%s'%(key,args[key]))
 				else:
 					multiple_view.append( (key, '"'+args[key]+'"') )
+					if args[key].isdigit():
+						multiple_view.append( (key, args[key]) )
+					else:
+						multiple_view.append( (key, '"'+args[key]+'"') )
+
 				args.pop(key)
 
 		if len(multiple_view)>1:
