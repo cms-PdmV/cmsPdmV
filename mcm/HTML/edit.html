@@ -148,10 +148,11 @@
                       <input type="checkbox" ng-model="result[column.db_name]">
                     </div>
                     <div ng-switch-when="Validation">
-                      <ng-form name="fieldForm">
+                      <!-- <ng-form name="fieldForm">
                         <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
+                      </ng-form> -->
+                      <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
                     </div>
                     <div ng-switch-when="Request parameters">
                       <ng-form name="fieldForm">
