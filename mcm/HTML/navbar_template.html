@@ -28,8 +28,8 @@
       <li ng-class='{ "active": dbName=="batches"}'>
         <a ng-href='batches' target="_self">Batch <i class="icon-tags"></i></a>
       </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="invalidations"}'>
+      <li class="divider-vertical" ng-hide="role(3);"></li>
+      <li ng-class='{ "active": dbName=="invalidations"}' ng-hide="role(3);">
         <a ng-href='invalidations' target="_self">Invalidations <i class="icon-exclamation-sign"></i></a>
       </li>
       <li class="divider-vertical"></li>
