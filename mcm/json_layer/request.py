@@ -718,13 +718,20 @@ class request(json_base):
                 #what if there was already a customise ?
                 monitor_location='Utils'
                 if self.little_release() < '420':
-                    monitor_location='Monitoring'
+                    infile+='addpkg Configuration/DataProcessing\n'
+                    infile+='cvs co -r 1.3 Configuration/DataProcessing/python/Utils.py \n'
+
+                #if self.little_release() > '420': 
                 if '--customise' in cmsd:
                     cust = cmsd.split('--customise ')[1].split()[0]
                     cust+=',Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
                     res +='--customise %s'%( cust )
                 else:
                     res += '--customise Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
+                #else:
+                    ## cannot have addMonitoring :-(
+                    #pass
+
                 res += ' || exit $? ; \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
@@ -1315,7 +1322,7 @@ class runtest_genvalid(handler):
             #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
             ## change the status with notification
             mcm_current = request(self.db.get(self.rid))
-            if mcm_current.get_attribute('_rev')==mcm_r.get_attribute('_rev'):
+            if mcm_current.json()['_rev']==mcm_r.json()['_rev']:
                 ## it's fine to push it through
                 mcm_r.set_status(with_notification=True)
                 saved = self.db.update( mcm_r.json() )
