@@ -15,7 +15,7 @@ def maintenance_page():
 
 #@cherrypy.expose
 class GetDummyUserRole(RESTResource):
-    def GET(self):
+    def GET(self, *args):
         return json.dumps({"username": "trained", "role_index": 1, "role": "monkey"})
 
 root = maintenance_page
@@ -37,7 +37,7 @@ root.injection_status = maintenance_page
 
 root.restapi = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
-root.restapi.users.get_role = GetDummyUserRole
+root.restapi.users.get_role = GetDummyUserRole()
 
 log = cherrypy.log
 log.error_file = None
