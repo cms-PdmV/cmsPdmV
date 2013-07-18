@@ -1310,8 +1310,15 @@ class runtest_genvalid(handler):
         else:
             #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
             ## change the status with notification
-            mcm_r.set_status(with_notification=True)
-            self.db.update( mcm_r.json() )
+            mcm_current = request(self.db.get(self.rid))
+            if mcm_current.get_attribute('_rev')==mcm_r.get_attribute('_rev'):
+                ## it's fine to push it through
+                mcm_r.set_status(with_notification=True)
+                saved = self.db.update( mcm_r.json() )
+                if not saved:
+                    mcm_current.test_failure(message='The request could not be saved after the run test procedure',what='Validation run test',rewind=True)
+            else:
+                mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
             #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
 
         location.close()
