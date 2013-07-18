@@ -1028,8 +1028,8 @@ class RegisterUser(RESTResource):
         if current_user in request_in_db.get_actors():
             return {"prepid" : pid, "results":False,'message':"%s already in the list of people for notification of %s"%(current_user,pid)}
         
-        self.logger.error('list of users %s'%(request_in_db.get_actors()))
-        self.logger.error('current actor %s'%(current_user))
+        #self.logger.error('list of users %s'%(request_in_db.get_actors()))
+        #self.logger.error('current actor %s'%(current_user))
 
         request_in_db.update_history({'action':'register','step':current_user})
         self.rdb.save(request_in_db.json())
@@ -1060,10 +1060,12 @@ class GetActors(RESTResource):
 class SearchableRequest(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
-        self.access_limit = 1
+        self.access_limit = 0
 
     def GET(self, *args):
-
+        """
+        Return a document containing several usal values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
+        """
         if len(args) and args[0]=='do':
             all_requests = self.rdb.queries([])
             
