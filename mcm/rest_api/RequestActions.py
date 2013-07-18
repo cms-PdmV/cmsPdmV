@@ -1070,7 +1070,7 @@ class SearchableRequest(RESTResource):
             searchable={}
 
             for request in all_requests: 
-                for key in ['energy','dataset_name','status','approval','extension','generators','member_of_chain','pwg','process_string','mcdb_id','prepid']:
+                for key in ['energy','dataset_name','status','approval','extension','generators','member_of_chain','pwg','process_string','mcdb_id','prepid','flown_with','member_of_campaign']:
                     if not key in searchable:
                         searchable[key]=set([])
                     if not key in request:
@@ -1089,6 +1089,8 @@ class SearchableRequest(RESTResource):
 
             #store that value
             search = database('searchable')
+            if search.document_exists('searchable'):
+                search.delete('searchable')
             searchable.update({'_id': 'searchable'})
             search.save( searchable )
             searchable.pop('_id')
