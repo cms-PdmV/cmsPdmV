@@ -722,13 +722,14 @@ class request(json_base):
                 if '--customise' in cmsd:
                     cust = cmsd.split('--customise ')[1].split()[0]
                     cust+=',Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
-                    res +='--customise %s \n'%( cust )
+                    res +='--customise %s'%( cust )
                 else:
-                    res += '--customise Configuration/DataProcessing/%s.addMonitoring \n'%( monitor_location )
-                res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; '%( directory, self.get_attribute('prepid'), configuration_names[-1] )
+                    res += '--customise Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
+                res += ' || exit $? ; \n'
+                res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
-                res += '-n 10 '
+                res += '-n 10 || exit $? ; \n'
             #infile += res
             cmsd_list += res + '\n'
 
