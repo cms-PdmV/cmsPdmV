@@ -156,7 +156,7 @@ class request(json_base):
                 for key in ['generator_parameters','notes','history','generators']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
-                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation','fragment_tag']:
+                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation']:
                     editable[key]=True
         else:
             for key in self._json_base__schema:
