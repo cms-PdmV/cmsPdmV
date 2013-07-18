@@ -831,3 +831,41 @@ testApp.directive("generatorParams", function($http){
     }
   }
 });
+testApp.directive("customValidationEdit", function(){
+  return {
+    require: 'ngModel',
+    replace: true,
+    restrict: 'E',
+    template: 
+    '<div ng-switch on="dbName">'+
+    '  <form ng-switch-when="requests">'+
+    '    <fieldset>'+
+    '      <div class="control-group">'+
+    '        Valid:'+
+    '        <input type="checkbox" ng-model="validation_data.valid"></input>'+
+    '      </div>'+
+    '      <div class="control-group" ng-show="validation_data.valid">'+
+    '        nEvents:'+
+    '        <input type="number" ng-model="validation_data.nEvents"></input>'+
+    '      </div>'+
+    '      <div class="control-group" ng-show="validation_data.dqm">'+
+    '        DQM:'+
+    '        <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank">'+
+    '          <i class="icon-th-large"></i>'+
+    '        </a>'+
+    '        <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank">'+
+    '          <i class="icon-th-large"></i>'+
+    '        </a>'+
+    '      </div>'+
+    '    </fieldset>'+
+    '  </form>'+
+    '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;"></input>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl){
+      ctrl.$render = function(){
+        scope.validation_data = ctrl.$viewValue;
+      };
+    }
+  }
+});
