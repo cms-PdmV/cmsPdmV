@@ -845,7 +845,9 @@ testApp.directive("loadFields", function($http, $location){
     '  <form class="form-inline">'+
     '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:130px;">{{key}}</label>'+
-    '      <select ng-model="listfields[key]" ng-options="elem for elem in value">'+
+    // '      <select ng-model="listfields[key]" ng-options="elem for elem in value">'+
+    '      <select ng-model="listfields[key]">'+
+    '        <option ng-repeat="elem in value">{{elem}}</option>'+
     '      </select>'+
     '    </span>'+
     '  </form>'+
