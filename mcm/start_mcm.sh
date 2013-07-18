@@ -16,7 +16,7 @@ username=pdmvserv
 #fi
 source kinit.sh &
 
-kill -9 `ps -e -f  | grep main.py | grep python | awk '{print $2}'`
+kill -9 `ps -e -f  | grep main | grep python | awk '{print $2}'`
 
 # check CouchDB status
 couch_status=`/etc/init.d/couchdb status | grep running`
