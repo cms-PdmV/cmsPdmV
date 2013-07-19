@@ -21,6 +21,7 @@
   <![endif]>
 
 <script src="scripts/main_controller.js"></script>
+<script src="scripts/index_controller.js"></script>
 
 </head>
 <body ng-controller="mainCtrl">
@@ -36,5 +37,18 @@
     <select ng-model="selectedDB" ng-options="value for value in possibleDBs"></select>
     <input type"text" nd-model="search_query" class="input-xlarge">
   </span>-->
+  <span ng-controller="resultsCtrl" class="span12">
+    <form style="height: 500px; overflow: auto;">
+      <div ng-repeat="new in news |  orderBy: 'date' :true" style="margin-top: 20px;"> <!-- true for reverse sorting as smallest goes first -->
+        <strong>{{new.subject}}</strong>  Date: {{new.date}}, Author: <i>{{new.author}}</i>
+        <pre>{{new.text}}</pre>
+      </div>
+    </form>
+  </span>
   </div><!--End of container -->
+  <div class="navbar-fixed-bottom" id="news_banner">
+  <!-- <marquee behavior="scroll" direction="left" id="news_spammer"> -->
+    
+  <!-- </marquee> -->
+</div>
 </body>
