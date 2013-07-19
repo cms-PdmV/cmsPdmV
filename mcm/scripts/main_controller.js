@@ -25,12 +25,6 @@ function mainCtrl($scope, $http, $location, $window){
 
   $scope.isDevMachine = function(){
     is_dev = $location.absUrl().indexOf("dev") != -1;
-    //    if (is_dev){
-    //        nav_bar = document.getElementsByClassName("navbar-inner");
-    //        _.each(nav_bar, function(v){
-    //		v.style.backgroundImage = "linear-gradient(to bottom, #E89619, #F2F2F2)"    
-    //		    });
-    //    }
     if (is_dev){
       body = document.getElementsByTagName("body");
      _.each(body, function(v){
