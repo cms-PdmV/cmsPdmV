@@ -539,6 +539,9 @@ class request(json_base):
           if can_save:
               rdb = database('requests')
               rdb.update(new_req)
+          else:
+              ## could re-assign the new_req to itself
+              pass
 
       elif  cast==-1 and self.get_attribute('status')=='new':
           ## a way of resetting the sequence and necessary parameters
@@ -556,6 +559,9 @@ class request(json_base):
           if can_save:
               rdb = database('requests')
               rdb.update(self.json())
+          else:
+              ## could re-assign the new_req to itself
+              pass
 
       for i in range(len(self.get_attribute('sequences'))):
         cd = self.build_cmsDriver(i)
@@ -780,7 +786,10 @@ class request(json_base):
         val_attributes = self.get_attribute('validation')
         if 'nEvents' in val_attributes:
             n_to_valid=val_attributes['nEvents']
-            yes_to_valid=True
+            if not n_to_valid:
+                yes_to_valid=False
+            else:
+                yes_to_valid=True
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
 
@@ -834,7 +843,7 @@ class request(json_base):
 
             ## until we have full integration in the release
             cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
-            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py%s?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
+            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
             cmsd_list +='\nscram b -j5 \n'
 
             genvalid_request = request( self.json() )
@@ -1215,7 +1224,7 @@ class request(json_base):
         if self.get_attribute('input_filename'):
             to_be_changed='match_efficiency'
 
-        self.logger.error("Calculated all %s %s %s %s" % ( efficiency, efficiency_error, timing, file_size ))
+        self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % ( efficiency, efficiency_error, timing, file_size ))
 
         if what =='eff':
             if not geninfo or geninfo[to_be_changed+'_error'] > efficiency_error:
