@@ -455,7 +455,7 @@ class request(json_base):
 
       return '%s %s' % (command, cmsDriverOptions)
 
-    def build_cmsDrivers(self,cast=0):
+    def build_cmsDrivers(self,cast=0, can_save=True):
       commands = []
       if cast==1 and self.get_attribute('status')=='new':
           cdb = database('campaigns')
@@ -536,9 +536,10 @@ class request(json_base):
                       freshKeep.append(False)
           freshKeep[-1]=True
           self.set_attribute('keep_output',freshKeep)              
-          rdb = database('requests')
-          #rdb.update(self.json())
-          rdb.update(new_req)
+          if can_save:
+              rdb = database('requests')
+              rdb.update(new_req)
+
       elif  cast==-1 and self.get_attribute('status')=='new':
           ## a way of resetting the sequence and necessary parameters
           self.set_attribute('cmssw_release','')
@@ -552,8 +553,9 @@ class request(json_base):
           self.set_attribute('sequences',freshSeq)
           self.set_attribute('keep_output',freshKeep)
           ##then update itself in DB
-          rdb = database('requests')
-          rdb.update(self.json())
+          if can_save:
+              rdb = database('requests')
+              rdb.update(self.json())
 
       for i in range(len(self.get_attribute('sequences'))):
         cd = self.build_cmsDriver(i)
