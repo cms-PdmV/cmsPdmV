@@ -17,6 +17,7 @@ from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG
 from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
+from rest_api.NewsAction import GetAllNews
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -156,6 +157,7 @@ root.restapi.flows = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.batches = RESTResourceIndex()
 root.restapi.invalidations = RESTResourceIndex()
+root.restapi.news = RESTResourceIndex()
 
 ## create a restriction-free urls, with limited capabilities
 root.public = RESTResourceIndex()
@@ -283,6 +285,9 @@ root.restapi.batches.inspect = InspectBatches()
 # REST invalidation Actions
 root.restapi.invalidations.inspect = InspectInvalidation()
 root.restapi.invalidations.get = GetInvalidation()
+
+# REST news Actions
+root.restapi.news.getall = GetAllNews()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
