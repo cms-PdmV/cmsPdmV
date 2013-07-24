@@ -354,8 +354,13 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
   $scope.refreshActions = function(){
     //console.log("Detect all!");
     $scope.refreshingAllIcon = true;
-    
-    generateUrl = "restapi/actions/detect_chains";
+
+    var ids_on_the_page=[];
+    _.each($scope.result, function(item){
+            ids_on_the_page.push(item.prepid);
+        });
+    generateUrl = "restapi/actions/detect_chains/"+ids_on_the_page.join();
+    //generateUrl = "restapi/actions/detect_chains";
     promise = $http.get(generateUrl);
     promise.then(function(data){
       $scope.refreshingAllIcon = false;
