@@ -132,6 +132,10 @@ class FlowRESTResource(RESTResource):
 
     # create all possible chained campaigns going from allowed.member to next
     def update_chained_campaigns(self,  next, allowed):
+        #### we can switch this method off in order to not generate godzillions of chained campaigns
+        ## we have the SelectChainedCampaigns ability for that
+        return 
+
         # check to see if next is legal
         if not self.cdb.document_exists(next):
             raise ValueError('Campaign '+str(next)+' does not exist.')
