@@ -41,13 +41,14 @@ class CreateChainedCampaign(RESTResource):
             self.logger.error('Campaign %s already exists. Cannot re-create it.' % (self.ccamp.get_attribute('_id')))
             return dumps({"results":False, "message":'Error: Campaign '+self.ccamp.get_attribute("_id")+' already exists'})
         
-        # update actions db
-        self.update_actions()
-
 	# update history
 	self.ccamp.update_history({'action':'created'})
         
         saved = self.db.save(self.ccamp.json())
+
+        # update actions db
+        self.update_actions()
+
         if saved:
             return dumps({"results":True, "prepid" : self.ccamp.get_attribute("prepid")})
         else:
