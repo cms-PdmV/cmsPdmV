@@ -627,8 +627,7 @@ testApp.directive("customHistory", function(){
 testApp.directive("selectCampaign", function($http){
   return{
       require: 'ngModel',
-      template: 
-      // '{{allowedCampaigns.join(";")}}'+
+      template:
       '<div>'+
       '  <a ng-repeat="elem in allowedCampaigns" ng-click="removeAllowedCampaign(elem)">{{elem}}<i class="icon-minus"></i></a>'+ //display allowed campaign list with possibility to remove it
       '</div>'+
@@ -657,6 +656,7 @@ testApp.directive("selectCampaign", function($http){
         }
         scope.removeAllowedCampaign = function(campaign_name){
           scope.allowedCampaigns = _.without(scope.allowedCampaigns, campaign_name);
+          scope.result["allowed_campaigns"] = _.without(scope.allowedCampaigns, campaign_name);
           scope.all_campaigns.push(campaign_name);
           // scope.allowedCampaigns.push(campaign_name); //push a selected value
         }
@@ -866,6 +866,11 @@ testApp.directive("customValidationEdit", function(){
       ctrl.$render = function(){
         scope.validation_data = ctrl.$viewValue;
       };
+      scope.$watch("validation_data.nEvents", function(elem){ //watch nEvents -> is user leaves empty remove nEvents, as not to save null
+        if (!elem){
+          delete(scope.validation_data.nEvents);
+        }
+      });
     }
   }
 });
