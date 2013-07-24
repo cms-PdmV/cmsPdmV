@@ -1254,6 +1254,8 @@ class request(json_base):
         ds_to_invalidate=[]
         # retrieve the latest requests for it
         self.get_stats()
+        # increase the revision only if there was a request in req mng, or a dataset already on the table
+        increase_revision=False
         # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
             new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new" , "prepid" : self.get_attribute('prepid')}
@@ -1264,14 +1266,17 @@ class request(json_base):
             if 'content' in wma and 'pdmv_dataset_name' in wma['content']:
                 ds_to_invalidate.append( wma['content']['pdmv_dataset_name'])
             ds_to_invalidate=list(set(ds_to_invalidate))
+            increase_revision=True
         for ds in ds_to_invalidate:
             new_invalidation={"object" : ds, "type" : "dataset", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object'].replace('/','')
             invalidation.save( new_invalidation )
+            increase_revision=True
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name',[])
         self.set_attribute('config_id',[])
-        self.set_attribute('version', self.get_attribute('version')+1)
+        if increase_revision:
+            self.set_attribute('version', self.get_attribute('version')+1)
         self.set_status(step=0,with_notification=True)
         
 
