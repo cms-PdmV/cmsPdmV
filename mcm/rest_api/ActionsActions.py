@@ -311,7 +311,15 @@ class DetectChains(RESTResource):
         """
         if not args:
             return self.find_all_chains()
-        return self.find_chains(args[0])
+        res=[]
+        aids=args[0].split(',')
+        if len(aids)==1:
+            return self.find_chains(aids[0])
+        else:
+            for aid in aids:
+                res.append(self.find_chains(aid))
+            return res
+
     
     def find_chains(self,  aid):
         self.logger.log('Identifying all possible chains for action %s' % (aid))
