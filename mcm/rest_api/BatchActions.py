@@ -166,3 +166,4 @@ class InspectBatches(BatchAnnouncer):
                 res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
                 
         return dumps(res)
+
