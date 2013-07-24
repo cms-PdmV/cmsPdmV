@@ -56,6 +56,23 @@ class CreateChainedCampaign(RESTResource):
     
     # update the actions db to include the new chain
     def update_actions(self):
+        cid = self.ccamp.get_attribute('prepid')
+        # get the initial campaigns
+        (root_camp,f) = self.ccamp.get_attribute('campaigns')[0]
+        #f == null
+        allacs = self.adb.query('member_of_campaign=='+cid) 
+                
+        # for each action
+        for ac in allacs:
+            # init action object
+            a = action(json_input=ac)
+            # calculate the available chains
+            a.find_chains()
+            # save to db
+            self.adb.update(a.json())
+
+"""
+    def update_actions(self):
         # get all campaigns in the chained campaign
         camps = self.ccamp.get_attribute('campaigns')
  
@@ -78,6 +95,7 @@ class CreateChainedCampaign(RESTResource):
                 a['chains'][cid]['flag']=False
                 # save to db
                 self.adb.update(a)
+"""
 
 class UpdateChainedCampaign(RESTResource):
         def __init__(self):
