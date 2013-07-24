@@ -150,6 +150,7 @@ class campaign(json_base):
         if cid not in self.get_attribute('next'):
             new_next = self.get_attribute('next')
             new_next.append(cid)
+            new_next.sort()
             self.set_attribute('next',  new_next)
         else:
             raise self.CampaignExistsException(cid)
