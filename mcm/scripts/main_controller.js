@@ -13,15 +13,42 @@ function mainCtrl($scope, $http, $location, $window){
   $scope.user = {name: "guest", role:"user",roleIndex:0};
 
 // GET username and role
-    var promise = $http.get("restapi/users/get_role");
-    promise.then(function(data){
-      $scope.user.name = data.data.username;
-      $scope.user.role = data.data.role;
-      $scope.user.roleIndex = parseInt(data.data.role_index);
-    },function(data){
-      alert("Error getting user information. Error: "+data.status);
-    });
+  var promise = $http.get("restapi/users/get_role",{ cache: true});
+  promise.then(function(data){
+    $scope.user.name = data.data.username;
+    $scope.user.role = data.data.role;
+    $scope.user.roleIndex = parseInt(data.data.role_index);
+  },function(data){
+    alert("Error getting user information. Error: "+data.status);
+  });
 // Endo of user info request
+
+// GET all news
+  var promise = $http.get("restapi/news/getall/5");
+  promise.then(function(data){
+    $scope.news = data.data;
+    var new_marquee = document.createElement('marquee');
+    var news_banner = document.getElementById("news_banner");
+    if(news_banner){
+      new_marquee.setAttribute('direction','left');
+      new_marquee.setAttribute('behavior','scroll');
+      var sorted_news = _.sortBy($scope.news, function(elem){ //sort news array by date
+        return elem.date;
+      });
+      //changed in the rest api directly
+      sorted_news.reverse(); //lets reverse it so newest new is in beggining of array
+  //    sorted_news = sorted_news.splice(0,5); //take only 5 newest and best news
+      _.each(sorted_news, function(v){
+        new_new = "<span> <i class='icon-globe'></i><b>"+v.subject+"</b>  <i>"+v.date+" </i></span>";
+          new_marquee.innerHTML += new_new;
+      });
+      news_banner.appendChild(new_marquee);
+      news_banner.appendChild(new_marquee);
+    }
+  },function(data){
+    alert("Error getting news. Error: "+data.status);
+  });
+// Endo of news!
 
   $scope.isDevMachine = function(){
     is_dev = $location.absUrl().indexOf("dev") != -1;
@@ -55,7 +82,7 @@ function mainCtrl($scope, $http, $location, $window){
       $scope.pendingHTTP = true;
   });
   $scope.numberWithCommas =  function(x) {
-   if (x !== undefined){
+   if (x){
      var parts = x.toString().split(".");
      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
      return parts.join(".");
