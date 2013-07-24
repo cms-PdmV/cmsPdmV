@@ -95,8 +95,8 @@ class chained_request(json_base):
                 return {"prepid":chainid,"results":True}
             return {"prepid":chainid,"results":False, "message":"Failed to flow."}
         except Exception as ex:
-            #return {"prepid":chainid,"results":False, "message":str(ex)}
-            return {"prepid":chainid,"results":False, "message":str(ex)+'\n'+traceback.format_exc()}
+            return {"prepid":chainid,"results":False, "message":str(ex)}
+            #return {"prepid":chainid,"results":False, "message":str(ex)+'\n'+traceback.format_exc()}
         #except chained_request.NotInProperStateException as ex:
         #    return {"prepid":chainid,"results":False, "message":str(ex)}
         #except chained_request.ChainedRequestCannotFlowException as ex:
@@ -132,7 +132,7 @@ class chained_request(json_base):
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),'the chain rqeuest %s is member of %s that does not exist'%( self.get_attribute('_id'), self.get_attribute('member_of_campaign')))
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
-        if current_step >= len(mcm_cc['campaigns']):
+        if next_step >= len(mcm_cc['campaigns']):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'chained_campaign %s does not allow any further flowing.' %( self.get_attribute('member_of_campaign')))
         ## is the current request in the proper approval
         allowed_request_approvals = ['submit']
