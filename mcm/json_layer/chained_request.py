@@ -239,7 +239,7 @@ class chained_request(json_base):
             from rest_api.RequestPrepId import RequestPrepId
             next_id=RequestPrepId().next_prepid( current_request.get_attribute('pwg'), next_campaign_id)
             next_request = request(next_campaign.add_request({"prepid" : next_id, "_id" : next_id}))
-            to_be_transfered=['pwg','dataset_name','generators','process_string','analysis_id']
+            to_be_transfered=['pwg','dataset_name','generators','process_string','analysis_id','mcdb_id']
             for key in to_be_transfered:
                 next_request.set_attribute(key, current_request.get_attribute(key))
             next_request.set_attribute("member_of_chain", [self.get_attribute('_id')])
