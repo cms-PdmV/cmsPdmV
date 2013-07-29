@@ -205,13 +205,15 @@ class request(json_base):
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of requested event is invalid: Negative')
 
-        if self.get_attribute('mcdb_id') <= 0 and self.get_wmagent_type()=='LHEStepZero':
-            nevents_per_job = self.numberOfEventsPerJob()
-            if not nevents_per_job:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job cannot be retrieved for lhe production')
-            elif nevents_per_job == self.get_attribute('total_events'):
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
-            
+        if self.get_wmagent_type()=='LHEStepZero':
+            if self.get_attribute('mcdb_id') == 0:
+                nevents_per_job = self.numberOfEventsPerJob()
+                if not nevents_per_job:
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job cannot be retrieved for lhe production')
+                elif nevents_per_job == self.get_attribute('total_events'):
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
+            if self.get_attribute('mcdb_id')<0:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request should have a positive of null mcdb id')
 
         rdb=database('requests')
         ## same thing but using db query => faster
