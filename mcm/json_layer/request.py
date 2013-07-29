@@ -1189,7 +1189,7 @@ class request(json_base):
             uniqueString+=self.get_attribute('fragment_tag')
         if self.get_attribute('name_of_fragment'):
             uniqueString+=self.get_attribute('name_of_fragment')
-        if self.get_attribute('mcdb_id')>=0:
+        if self.get_attribute('mcdb_id')>=0 and self.get_attribute('type') in ['LHE','LHEStepZero']:
             uniqueString+='mcdb%s'%(self.get_attribute('mcdb_id'))
         uniqueString+= self.get_attribute('cmssw_release')
         seq=sequence(self.get_attribute('sequences')[step_i])
@@ -1294,6 +1294,12 @@ class request(json_base):
         self.set_attribute('config_id',[])
         if increase_revision:
             self.set_attribute('version', self.get_attribute('version')+1)
+        # remove the configs doc hash in reset
+        hash_ids = database('configs')
+        for i in range( len(self.get_attribute('sequences'))):
+            hash_id = self.configuration_identifier(i)
+            if hash_ids.document_exists( hash_id ):
+                hash_ids.delete( hash_id )
         self.set_status(step=0,with_notification=True)
         
 
