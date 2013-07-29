@@ -239,18 +239,18 @@ class request(json_base):
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
-            if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
+            if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
                 if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
-                    ##only requests belonging to a root==0 campaign can have mcdbid
+                    ##only requests belonging to a root==0 campaign can have mcdbid before being in a chain
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign')
 
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
                 mcm_cr = crdb.get(cr)
-                if mcm_cr['chain'].index( self.get_attribute('prepid') ) ==0:
-                    if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
-                        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and is considered to be a request at the root of its chains.')
+                if mcm_cr['chain'].index( self.get_attribute('prepid') ) !=0:
+                    if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
+                        raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
 
 
         ## check on chagnes in the sequences
