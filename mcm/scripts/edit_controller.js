@@ -13,10 +13,10 @@ function resultsCtrl($scope, $http, $location, $window){
     }
 
     if ($scope.dbName == "campaigns"){
-	$scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
+	    $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
-	$scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
+	    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data){
         $scope.parseEditableObject(data.data.results);
@@ -35,7 +35,9 @@ function resultsCtrl($scope, $http, $location, $window){
         alert("Error getting all campaign list for flows");
       });
     }
-    else{
+    else if($scope.dbName == "news"){
+      $scope.not_editable_list = ["Author", "Date"];
+    }else{
       $scope.not_editable_list = [];
     }
 
@@ -79,11 +81,14 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["fail"] = false;
         $scope.update["message"] = data["message"];
         $scope.update["status_code"] = status;
-	if ($scope.update["success"] == false){
-	    $scope.update["fail"] = true;
-	}else{
-	    $scope.getData();
-	}
+        if ($scope.update["success"] == false){
+          $scope.update["fail"] = true;
+        }else{
+          if($scope.sequencesOriginal){
+            delete($scope.sequencesOriginal);
+          }
+          $scope.getData();
+        }
       }).error(function(data,status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -548,7 +553,7 @@ testApp.directive("sequenceEdit", function($http){
             }, function(data){ alert("Error: ", data.status); });
           }
         }else{  //just clone the original sequences -> in case user edited and didnt saved.
-          if (!scope.sequencesOriginal){ //if requests and sequences haven't been requested already
+          if (true || !scope.sequencesOriginal){ //if requests and sequences haven't been requested already
             var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
             promise.then(function(data){
               scope.CMSdriver = data.data.results;
