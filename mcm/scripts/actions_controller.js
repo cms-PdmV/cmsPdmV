@@ -561,24 +561,29 @@ function resultsCtrl($scope, $http, $location, $window, chttp){
     });
   };
   $scope.commit = function(prepid){
-    _.each($scope.result[prepid]['chains'], function(chain){
+    var place = 0;
+    _.each($scope.result, function(element, index){
+      if(element.prepid == prepid){
+        place = index;
+      }
+    }); //get index of prepid
+    _.each($scope.result[place]['chains'], function(chain){
       if (chain['block_number']){
         chain['block_number'] = parseInt(chain['block_number']);
       }
       _.each(chain['chains'], function(value,key){
-        console.log(key,value);
         if (value['block_number']){
           value['block_number'] = parseInt(value['block_number']);
         }
       });
     });    
-    $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson($scope.result[prepid])}).success(function(data,status){
+    $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson($scope.result[place])}).success(function(data,status){
       //$scope.displayBox = false;
       //$scope.anychanges = false;
-      $scope.changed_prepids[prepid] = false;
-      $scope.getData($scope.result[prepid]['prepid']);
+      $scope.changed_prepids = $scope.changed_prepids.splice($scope.changed_prepids.indexOf(prepid),0);
+      $scope.getData($scope.result[place]['prepid']);
     }).error(function(data,status){
-      alert("Error: ", status);
+      alert("Error: "+ status);
     });
   };
 };
