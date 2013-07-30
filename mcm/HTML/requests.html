@@ -32,21 +32,20 @@
     <!-- <div ng-controller="TabsDemoCtrl"> -->
       <tabs>
         <pane heading="Select View">
-        <div class="well">
-          <div>
+          <div class="well">
+            <div>
               <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-          </div>
-          
-          <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
-            <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
-            </label>
-          </span>
-          <input type="button" value="saveCookie" ng-click="saveCookie()">
-          <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
-        </div><!--end of well for table columns-->
-      </pane>
+            </div>
+            <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
+              <label class="checkbox inline">
+                <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
+              </label>
+            </span>
+            <input type="button" value="saveCookie" ng-click="saveCookie()">
+            <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
+          </div><!--end of well for table columns-->
+        </pane>
         <pane heading="Super search">
           <form class="form-inline">
             <input type="text" class="input-small" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
@@ -66,13 +65,13 @@
         <pane heading="Navigation">
           <load-fields></load-fields>
         </pane>
-	<pane heading="Output Dataset">
-	  <form class="form-inline">
-	    <input type="text" class="input-xxlarge" maxlength="200" placeholder="dataset name as shown in DAS" ng-model="dataset_name_in_das">
-	    <a class="btn btn-mini" ng-href='requests?produce="{{dataset_name_in_das}}"' target="_self">Search</a>
-	    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_by_Dataset" rel="tooltip" title="Help for search by output dataset"> <i class='icon-question-sign'></i></a>
-	  </form>
-	</pane>
+        <pane heading="Output Dataset">
+          <form class="form-inline">
+            <input type="text" class="input-xxlarge" maxlength="200" placeholder="dataset name as shown in DAS" ng-model="dataset_name_in_das">
+            <a class="btn btn-mini" ng-href='requests?produce="{{dataset_name_in_das}}"' target="_self">Search</a>
+            <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_by_Dataset" rel="tooltip" title="Help for search by output dataset"> <i class='icon-question-sign'></i></a>
+          </form>
+        </pane>
       </tabs>
     <!-- </div> -->
       
