@@ -88,48 +88,47 @@
 	          </div>
             <div ng-switch-when="Actions">
        <!--     MODAL -->
-                <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_self" ng-show="!role(1) && (!role(3) || data['root']!=1);">
-                    <i class="icon-plus-sign"></i>
-                  </a>
-		  <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
-		  <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self"> <i class="icon-magnet"></i></a>
-		  <a ng-href='actions?select={{data.prepid}}' rel="tooltip" title="View actions on this campaign" target="_self"> <i class="icon-qrcode"></i></a>
-		  <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}"  target="_self"><i class="icon-folder-open"></i></a>
-		  
-                  <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
-                    <i class="icon-minus-sign"></i>
-                  </a>
-                  <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
-                    <i class="icon-wrench"></i>
-                  </a>
-                  <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
-                    <i class="icon-repeat"></i>
-                  </a>
-                  <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
-                    <i class="icon-chevron-right"></i>
-                  </a>
-                  <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
-                    <i class="icon-flag"></i>
-                  </a>
-		  <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests">
-		    <i class="icon-screenshot"></i>
-		  </a>
-                  <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
-                    <div class="modal-header">
-                        <h4>Create a request</h4>
-                    </div>  <!--end oFda.f modal header-->
-                  <div class="modal-body">
-                    Create request for:{{prepId}} campaign
-                    <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
-                    </select>
-                  </div> <!--end of modal body-->
-                  <div class="modal-footer">
-                    <button class="btn btn-success" ng-click="save()">Create</button>
-                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                  </div> <!--end of modal footer-->
-                  </div>
-                </div> <!--end of modalControler DIV-->
+              <div ng-controller="ModalDemoCtrl">
+                <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_self" ng-show="!role(1) && (!role(3) || data['root']!=1);">
+                  <i class="icon-plus-sign"></i>
+                </a>
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
+                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self"> <i class="icon-magnet"></i></a>
+                <a ng-href='actions?select={{data.prepid}}' rel="tooltip" title="View actions on this campaign" target="_self"> <i class="icon-qrcode"></i></a>
+                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}"  target="_self"><i class="icon-folder-open"></i></a>
+                <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
+                  <i class="icon-minus-sign"></i>
+                </a>
+                <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
+                  <i class="icon-repeat"></i>
+                </a>
+                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
+                  <i class="icon-chevron-right"></i>
+                </a>
+                <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
+                  <i class="icon-flag"></i>
+                </a>
+                <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests">
+                  <i class="icon-screenshot"></i>
+                </a>
+                <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+                  <div class="modal-header">
+                      <h4>Create a request</h4>
+                  </div>  <!--end oFda.f modal header-->
+                <div class="modal-body">
+                  Create request for:{{prepId}} campaign
+                  <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
+                  </select>
+                </div> <!--end of modal body-->
+                <div class="modal-footer">
+                  <button class="btn btn-success" ng-click="save()">Create</button>
+                  <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                </div> <!--end of modal footer-->
+                </div>
+              </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->
             </div>
             <div ng-switch-when="Sequences">
@@ -159,7 +158,7 @@
               <ul style="margin-bottom: 0px;">
                 <li ng-repeat="campaign in data[value.db_name]">
                   <a ng-href='campaigns?prepid={{campaign}}' rel="tooltip" title="View details of the campaign" target="_self">{{campaign}}<i class="icon-book"></i></a>
-		  <a ng-href='flows?next_campaign={{campaign}}' rel="tooltip" title="View flows going into {{campaign}}" target="_self"> <i class="icon-magnet"></i></a>
+                  <a ng-href='flows?next_campaign={{campaign}}' rel="tooltip" title="View flows going into {{campaign}}" target="_self"> <i class="icon-magnet"></i></a>
                 </li>
               </ul>
             </div>
