@@ -17,7 +17,7 @@ from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG
 from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
-from rest_api.NewsAction import GetAllNews
+from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -114,6 +114,9 @@ def injection_status( *args, **kwargs):
 @cherrypy.expose
 def invalidations_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','invalidations.html'))
+@cherrypy.expose
+def news_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','news.html'))
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -145,6 +148,7 @@ root.users = users
 root.batches = batches
 root.invalidations = invalidations_html
 root.injection_status = injection_status
+root.news = news_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -287,7 +291,10 @@ root.restapi.invalidations.inspect = InspectInvalidation()
 root.restapi.invalidations.get = GetInvalidation()
 
 # REST news Actions
+root.restapi.news.get = GetSingleNew()
 root.restapi.news.getall = GetAllNews()
+root.restapi.news.save = CreateNews()
+root.restapi.news.update = UpdateNew()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
