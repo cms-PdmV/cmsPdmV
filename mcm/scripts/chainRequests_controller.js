@@ -14,7 +14,9 @@ function resultsCtrl($scope, $http, $location, $window){
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
-
+  
+  $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
+  $search_data = {};
   $scope.new = {};
   $scope.selectedAll = false;
   $scope.underscore = _;
@@ -353,6 +355,35 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     });
   };
+  $scope.superSearch = function(data){
+    var search_data={};
+    _.each($scope.searchable_fields, function(elem){
+      if (elem.value !=""){
+        search_data[elem.name] = elem.value;
+      }
+    });
+      /*submit method*/
+    $http({method:'PUT', url:'restapi/requests/search/'+$scope.dbName, data: search_data}).success(function(data,status){
+      $scope.result = data.results;
+      $scope.got_results = true;
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    }); 
+   };
+  $scope.upload = function(file){
+    /*Upload a file to server*/
+    $scope.got_results = false;
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
+      $scope.result = data.results;
+      $scope.got_results = true;
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
+  };
 };
 
 // NEW for directive
@@ -400,6 +431,74 @@ testApp.directive("customHistory", function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
       };
+    }
+  }
+});
+testApp.directive("loadFields", function($http, $location){
+  return {
+    replace: true,
+    restrict: 'E',
+    template:
+    '<div>'+
+    '  <form class="form-inline">'+
+    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '      <label style="width:140px;">{{key}}</label>'+
+    '      <select ng-model="listfields[key]">'+
+    '        <option ng-repeat="elem in value">{{elem}}</option>'+
+    '      </select>'+
+    '    </span>'+
+    '  </form>'+
+    '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
+    '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
+    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
+    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '</div>'
+    ,
+    link: function(scope, element, attr){
+        scope.listfields = {};
+        scope.showUrl = false;
+        var promise = $http.get("restapi/"+"requests"+"/searchable");
+        scope.loadingData = true;
+        promise.then(function(data){
+          scope.loadingData = false;
+          scope.searchable = data.data;
+          _.each(scope.searchable, function(element,key){
+            element.unshift("------"); //lets insert into begining of array an default value to not include in search
+            scope.listfields[key] = "------";
+          });
+        }, function(data){
+          scope.loadingData = false;
+          alert("Error getting searchable fields: "+data.status);
+        });
+        scope.getSearch = function(){
+          scope.listfields = {};
+          scope.showUrl = false;
+          var promise = $http.get("restapi/"+"requests"+"/searchable/do");
+          scope.loadingData = true;
+          promise.then(function(data){
+            scope.loadingData = false;
+            scope.searchable = data.data;
+            _.each(scope.searchable, function(element,key){
+              element.unshift("------"); //lets insert into begining of array an default value to not include in search
+              scope.listfields[key] = "------";
+            });
+          }, function(data){
+            scope.loadingData = false;
+            alert("Error getting searchable fields: "+data.status);
+          });
+        };
+        scope.getUrl = function(){
+          scope.url = "?";
+          _.each(scope.listfields, function(value, key){
+            if (value != "------"){
+              scope.url += key +"=" +value+"&";
+              $location.search(key,String(value));
+            }else{
+              $location.search(key,null);//.remove(key);
+            }
+          });
+          scope.getData();
+        };
     }
   }
 });
