@@ -844,8 +844,7 @@ testApp.directive("loadFields", function($http, $location){
     '<div>'+
     '  <form class="form-inline">'+
     '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
-    '      <label style="width:130px;">{{key}}</label>'+
-    // '      <select ng-model="listfields[key]" ng-options="elem for elem in value">'+
+    '      <label style="width:140px;">{{key}}</label>'+
     '      <select ng-model="listfields[key]">'+
     '        <option ng-repeat="elem in value">{{elem}}</option>'+
     '      </select>'+
@@ -854,7 +853,6 @@ testApp.directive("loadFields", function($http, $location){
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
     '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-	//    '  <a ng-show="showUrl" ng-href="{{newurl}}" target="_blank">{{newurl}}</a>'+
     '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '</div>'
     ,
@@ -874,36 +872,35 @@ testApp.directive("loadFields", function($http, $location){
           scope.loadingData = false;
           alert("Error getting searchable fields: "+data.status);
         });
-	scope.getSearch = function(){
-	scope.listfields = {};
-        scope.showUrl = false;
-        var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
-        scope.loadingData = true;
-        promise.then(function(data){
-          scope.loadingData = false;
-          scope.searchable = data.data;
-          _.each(scope.searchable, function(element,key){
-            element.unshift("------"); //lets insert into begining of array an default value to not include in search
-            scope.listfields[key] = "------";
+        scope.getSearch = function(){
+          scope.listfields = {};
+          scope.showUrl = false;
+          var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
+          scope.loadingData = true;
+          promise.then(function(data){
+            scope.loadingData = false;
+            scope.searchable = data.data;
+            _.each(scope.searchable, function(element,key){
+              element.unshift("------"); //lets insert into begining of array an default value to not include in search
+              scope.listfields[key] = "------";
+            });
+          }, function(data){
+            scope.loadingData = false;
+            alert("Error getting searchable fields: "+data.status);
+	        });
+        };
+        scope.getUrl = function(){
+          scope.url = "?";
+          _.each(scope.listfields, function(value, key){
+            if (value != "------"){
+              scope.url += key +"=" +value+"&";
+              $location.search(key,String(value));
+            }else{
+              $location.search(key,null);//.remove(key);
+            }
           });
-        }, function(data){
-          scope.loadingData = false;
-          alert("Error getting searchable fields: "+data.status);
-	    });}
-      scope.getUrl = function(){
-        scope.url = "?";
-        _.each(scope.listfields, function(value, key){
-          if (value != "------"){
-            scope.url += key +"=" +value+"&";
-            $location.search(key,String(value));
-          }else{
-            $location.search(key,null);//.remove(key);
-          }
-	  //	  scope.newurl = $location.absUrl().replace("?", scope.url);
-        });
-        //scope.showUrl = true;
-        scope.getData();
-      };
-	}
+          scope.getData();
+        };
+	  }
   }
 });
