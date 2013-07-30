@@ -341,7 +341,7 @@ class SelectNewChainedCampaigns(RESTResource):
         self.ccdb = database('chained_campaigns')
         self.cdb = database('campaigns')
         self.fdb = database('flows')
-        self.access_limit = 4
+        self.access_limit = 3
 
     def GET(self, *args):
         """
