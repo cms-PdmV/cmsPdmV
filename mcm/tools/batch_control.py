@@ -20,7 +20,7 @@ class batch_control:
         self.test_id = test_id
         self.directory_for_test = self.script_for_test.rsplit('/',1)[0] +'/'
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
-        self.timeout = 40
+        self.timeout = 80
         self.log_out = 'Not available'
         self.log_err = 'Not available'
         
