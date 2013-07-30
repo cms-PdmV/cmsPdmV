@@ -746,7 +746,7 @@ class request(json_base):
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
-                res += '-n 10 || exit $? ; \n'
+                res += '-n %s || exit $? ; \n' % self.get_n_for_test()
             #infile += res
             cmsd_list += res + '\n'
 
