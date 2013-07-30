@@ -1014,7 +1014,7 @@ class request(json_base):
                 ## should we be removing it ?
                 continue
             stats_r = statsDB.get( rwma['name'] )
-            if not earliest_date or int(earliest_date)> int(stats_r['pdmv_submission_date']):
+            if not earliest_date or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             mcm_content=transfer( stats_r , keys_to_import )
             mcm_rr[rwma_i]['content'] = mcm_content
