@@ -76,7 +76,14 @@ class handler(Thread):
         except:
             ## catch anything that comes this way and handle it
             # logging, rolling back the request, notifying, ...
+            self.rollback()
             pass
+
+    def unsafe_run(self):
+        pass
+
+    def rollback(self):
+        pass
 
     def status(self):
         return self.res
