@@ -21,6 +21,7 @@ from threading import Thread
 from submitter.package_builder import package_builder
 from tools.locator import locator
 from tools.communicator import communicator
+from tools.locker import locker
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -133,7 +134,7 @@ class RequestRESTResource(RESTResource):
             
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
         if not self.request.get_attribute('sequences'):
-            self.request.build_cmsDrivers(cast=1)
+            self.request.build_cmsDrivers(cast=1,can_save=False)
 
         #c = self.cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
@@ -500,6 +501,7 @@ class GetSetupForRequest(RESTResource):
           except request.IllegalAttributeName as ex:
               return dumps({"results":False})
           setupText = self.request.get_setup_file(events=n)
+          cherrypy.response.headers['Content-Type'] = 'text/plain'
           return setupText
       else:
           return dumps({"results":False,"message":"%s does not exist"%(pid)})
@@ -821,7 +823,7 @@ class InjectRequest(RESTResource):
         self.access_limit = 3
 
     class INJECTOR(Thread):
-        def __init__(self,pid,log,how_far=None):
+        def __init__(self, pid, log, how_far=None):
             Thread.__init__(self)
             self.logger = log
             self.db = database('requests')
@@ -831,10 +833,6 @@ class InjectRequest(RESTResource):
             if not self.db.document_exists(pid):
                 self.res.append({"prepid": pid, "results": False,"message":"The request %s does not exist"%(pid)})
                 return
-
-            #global locks_on_prepid        
-            #locks_on_prepid.get(pid).acquire()
-        
 
             req = request(self.db.get(pid))
             if req.get_attribute('status')!='approved':
@@ -851,40 +849,41 @@ class InjectRequest(RESTResource):
             ## this is a line that allows to brows back the logs efficiently
             self.logger.inject('## Logger instance retrieved', level='info', handler = pid)
 
-            self.res.append({"prepid": pid, "results": True, "message":"The request %s is being forked"%(pid)})
-
-        #def __delete__(self):
-            #global locks_on_prepid        
-            #locks_on_prepid.get(args[0]).release()
-        
+            self.res.append({"prepid": pid, "results": True, "message": "The request %s will be forked unless same request is being handled already" % (pid)})
 
         def run(self):
             if len(self.act_on_pid):
                 self.res=[]
             for pid in self.act_on_pid:
-                req = request(self.db.get(pid))
-                pb=None
-                try:
-                    pb = package_builder(req_json=req.json())
-                except:
-                    message = "Errors in making the request : \n"+ traceback.format_exc()
-                    self.logger.inject(message, handler = pid)
-                    self.logger.error(message)
-                    self.res.append({"prepid": pid, "results" : False, "message": message})
-                    req.test_failure(message)
+                if not locker.acquire(pid, blocking=False):
+                    self.res.append({"prepid": pid, "results": False, "message": "The request is already being handled"})
                     continue
                 try:
-                    res_sub=pb.build_package()
-                except:
-                    message = "Errors in building the request : \n"+ traceback.format_exc()
-                    self.logger.inject(message, handler = pid)
-                    self.logger.error(message)
-                    self.res.append({"prepid": pid, "results" : False , "message": message})
-                    req.test_failure(message)
-                    continue
+                    req = request(self.db.get(pid))
+                    pb=None
+                    try:
+                        pb = package_builder(req_json=req.json())
+                    except:
+                        message = "Errors in making the request : \n"+ traceback.format_exc()
+                        self.logger.inject(message, handler = pid)
+                        self.logger.error(message)
+                        self.res.append({"prepid": pid, "results" : False, "message": message})
+                        req.test_failure(message)
+                        continue
+                    try:
+                        res_sub=pb.build_package()
+                    except:
+                        message = "Errors in building the request : \n"+ traceback.format_exc()
+                        self.logger.inject(message, handler = pid)
+                        self.logger.error(message)
+                        self.res.append({"prepid": pid, "results" : False , "message": message})
+                        req.test_failure(message)
+                        continue
 
-                self.res.append({"prepid": pid,"results": res_sub})
-                ## now remove the directory maybe ?
+                    self.res.append({"prepid": pid,"results": res_sub})
+                    ## now remove the directory maybe ?
+                finally:
+                    locker.release(pid)
                 
         def status(self):
             return self.res
@@ -1109,6 +1108,7 @@ class SearchableRequest(RESTResource):
 class SearchRequest(RESTResource):
     def __init__(self):
         self.rdb = database('requests')
+        self.crdb = database('chained_requests')
         self.access_limit = 0
         
     def PUT(self, *args):
@@ -1117,6 +1117,10 @@ class SearchRequest(RESTResource):
         """
         search_dict = loads(cherrypy.request.body.read().strip())
         self.logger.error("Got a wild search dictionnary %s"%( str(search_dict) ) )
+
+        output_object='requests'
+        if len(args):
+            output_object=args[0]
 
         wild_search_dict={}
         reg_queries =[]
@@ -1160,7 +1164,18 @@ class SearchRequest(RESTResource):
                     #self.logger.error("Got %s results so far (else)"%( len( results)))
                     results = filter(lambda doc : key_search in doc[key].lower(), results)
                     #self.logger.error("Got %s results so far (else)"%( len( results)))
-                    
+
+        if output_object=='chained_requests':
+            cr_ids=set()
+            for r in results:
+                for cr in r['member_of_chain']:
+                    if self.crdb.document_exists( cr ):
+                        cr_ids.add( cr )
+            cr_results=[]
+            for cr in sorted(cr_ids):
+                cr_results.append( self.crdb.get( cr) )
+            return dumps( {"results": cr_results} )
+
         return dumps( {"results": results})
 
 class RequestPerformance(RESTResource):
@@ -1350,18 +1365,20 @@ class RequestsReminder(RESTResource):
 
         res=[]
         ## fill up the reminders
-        def get_all_in_status( status ):
+        def get_all_in_status( status ,extracheck=None ):
             campaigns_and_ids = {}
             for mcm_r in rdb.queries(['status==%s'%(status)]):
                 ## check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
                 if not c in campaigns_and_ids:
                     campaigns_and_ids[c] = []
-                campaigns_and_ids[c].append( mcm_r['prepid'] )
+                if extracheck!=None and extracheck ( mcm_r ):
+                    campaigns_and_ids[c].append( mcm_r['prepid'] )
             return campaigns_and_ids
 
         com = communicator()            
         l_type=locator()
+
 
         def prepare_text_for( campaigns_and_ids, status_for_link):
             message=''
@@ -1373,9 +1390,15 @@ class RequestsReminder(RESTResource):
                 message+='\n'
             return message
 
+        def is_in_chain( r ):
+            if len(r['member_of_chain'])!=0:
+                return True
+            else:
+                return False
+
         if not what or 'production_manager' in what:
             ## send the reminder to the production managers
-            ids_for_production_managers = get_all_in_status('approved')
+            ids_for_production_managers = get_all_in_status('approved', extracheck=is_in_chain )
             for c in ids_for_production_managers:
                 res.extend( map( lambda i : {"results":True,"prepid": i},ids_for_production_managers[c]))
         
