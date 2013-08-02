@@ -10,7 +10,7 @@ function resultsCtrl($scope, $http, $location, $window){
     }else{
       $scope.dbName = $location.search()["db_name"];
     }
-       
+
     $scope.update = [];
     $scope.show_well = false;
     $scope.chained_campaigns = [];
