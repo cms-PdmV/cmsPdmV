@@ -3,6 +3,7 @@ import os
 import logging
 import logging.handlers
 import json
+import time
 
 from tools.logger import rest_formatter
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
@@ -17,6 +18,12 @@ def maintenance_page():
 class GetDummyUserRole(RESTResource):
     def GET(self, *args):
         return json.dumps({"username": "trained", "role_index": 1, "role": "monkey"})
+
+#@cherrypy.expose
+class GetDummyNews(RESTResource):
+    def GET(self, *args):
+        return json.dumps([{"announced":True, "subject":"McM is in maintenance", "text":"", "date" : time.strftime('%Y-%m-%d-%H-%M'),"author" : "support" }])
+
 
 root = maintenance_page
 root.search = maintenance_page
@@ -38,6 +45,8 @@ root.injection_status = maintenance_page
 root.restapi = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.users.get_role = GetDummyUserRole()
+root.news = RESTResourceIndex()
+root.restapi.news.getall = GetDummyNews()
 
 log = cherrypy.log
 log.error_file = None
