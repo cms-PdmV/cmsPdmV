@@ -186,7 +186,8 @@ class package_injector:
         self.config_ids=[]
         for line in fullOutPutText.split('\n'):
             line_spl = line.split()
-            if line.startswith('Injected workflow:'):
+            #if line.startswith('Injected workflow:'):
+            if line.startswith('Approved workflow:'):
                 self.requestNames.append(line.split()[2])
             if len(line_spl) and line_spl[0]=='DocID:':
                 self.logger.inject('a line of the output contains docid %s : %s'%(line, line_spl), handler=self.hname)
