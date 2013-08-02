@@ -1045,7 +1045,7 @@ class request(json_base):
             ## only add if the date is later than the earliest_date
             if not 'pdmv_submission_date' in stats_r:
                 continue
-            if  int(stats_r['pdmv_submission_date']) < int(earliest_date):
+            if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
                 continue
                 
             mcm_content=transfer( stats_r , keys_to_import)
