@@ -45,7 +45,7 @@ root.injection_status = maintenance_page
 root.restapi = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.users.get_role = GetDummyUserRole()
-root.news = RESTResourceIndex()
+root.restapi.news = RESTResourceIndex()
 root.restapi.news.getall = GetDummyNews()
 
 log = cherrypy.log
