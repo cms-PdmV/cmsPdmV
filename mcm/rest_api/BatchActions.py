@@ -164,6 +164,15 @@ class InspectBatches(BatchAnnouncer):
             if len(new_batch['requests'])>=N_to_go:
                 ## it is good to be announced !
                 res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
-                
+        
+        #statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
+        
+        ## check on on-going batches
+        #announced_batches = self.bdb.queries(['status==announced'])
+        #for announced_batch in announced_batches:
+        #    for r in announced_batch['requests']:
+        #        wma_name = r['name']
+        #        rid = r['content']['pdmv_prep_id']
+
         return dumps(res)
 
