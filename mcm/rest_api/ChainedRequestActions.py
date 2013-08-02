@@ -8,6 +8,17 @@ from RequestChainId import RequestChainId
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 
+"""
+## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
+class SearchChainedRequest(RESTResource):
+    def __init__(self):
+        self.access_limit = 0
+        self.getter
+
+    def PUT(self):
+"""        
+
+
 class CreateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
