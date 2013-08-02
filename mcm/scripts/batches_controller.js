@@ -7,7 +7,6 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.update = [];
   $scope.filt = {}; //define an empty filter
-  
   $scope.batches_defaults = [
     {text:'PrepId',select:true, db_name:'prepid'},
     {text:'Actions',select:false, db_name:''},
