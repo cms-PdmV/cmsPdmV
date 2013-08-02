@@ -109,7 +109,7 @@ class package_tester:
             return None
             
         cmd = 'bsub -J ' + self.request.get_attribute('prepid') 
-        cmd += ' -q 8nh -W 40 -cwd ' + self.directory 
+        cmd += ' -q 8nh -W 100 -cwd ' + self.directory 
         cmd += ' -eo ' + os.path.abspath(self.directory + self.request.get_attribute('prepid') + '.err') 
         cmd += ' -oo ' + os.path.abspath(self.directory + self.request.get_attribute('prepid') + '.out') 
         cmd += ' bash ' + os.path.abspath(self.directory + 'run_test.sh')
