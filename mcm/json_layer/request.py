@@ -1003,9 +1003,7 @@ class request(json_base):
 
         ####
         ## update all existing
-        earliest_date=None
-        if not len(mcm_rr):
-            earliest_date=0
+        earliest_date=0
         for rwma_i in range(len(mcm_rr)):
             rwma = mcm_rr[rwma_i]
             if not statsDB.document_exists( rwma['name'] ):
@@ -1014,7 +1012,7 @@ class request(json_base):
                 ## should we be removing it ?
                 continue
             stats_r = statsDB.get( rwma['name'] )
-            if not earliest_date or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
+            if earliest_date==0 or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             mcm_content=transfer( stats_r , keys_to_import )
             mcm_rr[rwma_i]['content'] = mcm_content
@@ -1033,7 +1031,7 @@ class request(json_base):
                 return cmp(r1['pdmv_submission_date'] , r2['pdmv_submission_date'])
         stats_rr.sort( cmp = sortRequest )
 
-        self.logger.error(' get stats with date %s , %s existings and %s matching'%( earliest_date, len(mcm_rr), len(stats_rr) ))
+        self.logger.error('got stats with date %s , %s existings and %s matching'%( earliest_date, len(mcm_rr), len(stats_rr) ))
 
         #self.logger.error('found %s'%(stats_rr))
         one_new=False
