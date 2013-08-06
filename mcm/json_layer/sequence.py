@@ -26,6 +26,7 @@ class sequence(json_base):
             'donotDropOnInput':'',
             'restoreRNDSeeds':'',
             'slhc':'',
+            'himix':False,
             'inputEventContent':'',
             'gflash':'',
             'geometry':'',
