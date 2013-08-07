@@ -1372,7 +1372,7 @@ class RequestsReminder(RESTResource):
                 c = mcm_r['member_of_campaign']
                 if not c in campaigns_and_ids:
                     campaigns_and_ids[c] = []
-                if extracheck!=None and extracheck ( mcm_r ):
+                if extracheck==None or extracheck ( mcm_r ):
                     campaigns_and_ids[c].append( mcm_r['prepid'] )
             return campaigns_and_ids
 
