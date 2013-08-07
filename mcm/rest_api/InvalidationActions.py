@@ -116,9 +116,17 @@ class InspectInvalidation(RESTResource):
                 to_who.append( 'hn-cms-dataopsrequests@cern.ch' )
 
             ## to be replace
-            com.sendMail(['vlimant@cern.ch'],
+            com.sendMail(to_who,
                          'Request and Datasets to be Invalidated',
                          text)
+            
+            for r in r_to_be_rejected:
+                r['status']='announced'
+                idb.update(r)
+            for ds in ds_to_be_invalidated:
+                ds['status']='announced'
+                idb.update(ds)
+
 
         return html
 
