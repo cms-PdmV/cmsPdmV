@@ -233,7 +233,7 @@ class request(json_base):
             for similar in similar_ds:
                 if similar['prepid'] == my_id: continue
                 if int(similar['extension']) == int(my_extension):
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'( my_extension))
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'%( my_extension))
         
         cdb = database('campaigns')
         ##this below needs fixing
