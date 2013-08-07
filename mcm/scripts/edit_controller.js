@@ -599,7 +599,6 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-//     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
     '        </tr>'+
@@ -607,7 +606,6 @@ testApp.directive("customHistory", function(){
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">'+
     '              <div ng-switch="elem.updater.author_name">'+
@@ -876,6 +874,89 @@ testApp.directive("customValidationEdit", function(){
           delete(scope.validation_data.nEvents);
         }
       });
+    }
+  }
+});
+testApp.directive("customAnalysisId", function(){
+  return {
+    replace: false,
+    restrict: 'E',   
+    require: 'ngModel',
+    template: 
+    '<div>'+
+    '  <ul>'+
+    '   <li ng-repeat="elem in analysis_data">'+
+    '     <span ng-hide="editable[$index]">'+
+    '       {{elem}}'+
+    '     </span>'+
+    '     <span ng-show="editable[$index]">'+
+    '       <input ng-model="new_id"></input>'+
+    '       <a ng-click="save($index, new_id)">'+
+    '         <i class="icon-plus-sign"></i>'+
+    '       </a>'+
+    '       <a ng-click="edit($index)">'+
+    '         <i class="icon-minus"></i>'+
+    '       </a>'+
+    '     </span>'+
+    '     <span ng-hide="editable[$index]">'+
+    '       <a ng-click="edit($index)" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '         <i class="icon-wrench"></i>'+
+    '       </a>'+
+    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '         <i class="icon-remove-sign"></i>'+
+    '       </a>'+
+    '     <span>'+
+    '   </li>'+
+    '  </ul>'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '      <a ng-click="toggleAddNewAnalysisID()">'+
+    '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
+    '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
+    '      </a>'+
+    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id"></i>'+
+    '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
+    '    </form>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.analysis_data = ctrl.$viewValue;
+        scope.new_analysis_id = "";
+        scope.editable = {};
+        scope.new_id = "";
+      };
+      scope.toggleAddNewAnalysisID = function(){
+        if(scope.add_analysis_id)
+        {
+          scope.add_analysis_id = false;
+        } else
+        {
+           scope.add_analysis_id = true;
+        }
+      };
+      scope.edit = function(elem){
+        if(scope.editable[elem])
+        {
+          scope.editable[elem] = false;
+        }else
+        {
+          scope.editable[elem] = true;
+        }
+        scope.new_id = scope.analysis_data[elem];
+      };
+      scope.save = function(index, new_id){
+        scope.analysis_data[index] = new_id;
+        scope.editable[index] = false;
+      }
+      scope.remove = function(index){
+        scope.analysis_data.splice(index,1);
+      }
+      scope.pushNewAnalysisID = function(){
+        scope.analysis_data.push(scope.new_analysis_id);
+        scope.add_analysis_id = false;
+        scope.new_analysis_id = "";
+      };
     }
   }
 });

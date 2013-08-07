@@ -151,6 +151,9 @@
           <a ng-click="toggleMultipleInput();" ng-hide="showMultipleInput || role(3);" title="Edit action parameters for selected actions">
             <i class="icon-wrench"></i>
           </a>
+          <a ng-click="toggleMultipleTransfer();" ng-hide="showMultipleTransfer || role(3);" title="Move action parameter to another chained campaign">
+            <i class="icon-share-alt"></i>
+          </a>
           <a ng-show="multipleChanged" ng-click="commitMultipleSelection();" rel="tooltip" title="Values updated. Commit?">
             <i class="icon-warning-sign"></i>
           </a>
@@ -169,6 +172,14 @@
               <i class="icon-remove"></i>
             </a>
           </div>
+          <span ng-show="showMultipleTransfer">
+            <select ng-model="selected_transfer_target">
+              <option ng-repeat="elem in allChainedCampaings">{{elem.db_name}}</option>
+            </select>
+            <a ng-click="transferMultiple();">
+              <i class="icon-step-forward"></i>
+            </a>
+          </span>
         </span>
       </div>
       <div class="span2" style="padding-top:20px;">
