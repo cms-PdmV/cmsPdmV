@@ -343,7 +343,7 @@ class database:
         try:
             view_opts = self.__build_options(op, kval)
         except Exception as ex:
-            self.logger.error('Value types are not compatible with operator %s' % (op)) 
+            self.logger.error('Value types are not compatible with operator %s value %s Error: %s' % (op, kval, str(ex))) 
             return None,None
         return param, view_opts
     
@@ -373,7 +373,7 @@ class database:
         num_flag = False
         if is_number(val):
             num_flag = True
-            kval = int(val)
+            kval = float(val)
         else:
             kval = val.decode('ascii')
         if '>' in op:
