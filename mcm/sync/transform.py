@@ -80,6 +80,7 @@ class transformer:
 
         new['completion_date'] = ''
         new['cmssw_release'] = req_json['swrelease']
+            
         if req_json['inputfilename'] and req_json['inputfilename']!='None':
             new['input_filename'] = req_json['inputfilename']
             
@@ -224,6 +225,10 @@ class transformer:
         new['keep_output'] = keep
         ## copy a few things from the campaign sequences as it is in McM
         camp = self.get_campaign(new['member_of_campaign'])
+
+        if not new['cmssw_release'] or new['cmssw_release']=='None':
+            new['cmssw_release'] = camp['cmssw_release']
+
         for i, seqs in enumerate(camp['sequences']):
             for att in seqs['default']:
                 ##do not copy over the sequence of conditions
