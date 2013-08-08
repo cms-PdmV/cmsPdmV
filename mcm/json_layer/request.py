@@ -1250,10 +1250,10 @@ class request(json_base):
                 added_geninfo[to_be_changed+'_error'] = efficiency_error
                 to_be_saved=True
         elif what =='perf':
-            if timing:
+            if timing and timing>self.get_attribute('time_event'):
                 self.set_attribute('time_event', timing)
                 to_be_saved=True
-            if file_size:
+            if file_size and file_size>self.get_attribute('size_event'):
                 self.set_attribute('size_event', file_size)
                 to_be_saved=True
 
