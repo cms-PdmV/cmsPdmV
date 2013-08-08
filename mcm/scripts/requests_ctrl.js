@@ -697,7 +697,7 @@ testApp.directive("customHistory", function(){
 //     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
-    '          <th style="padding: 0px;">Step</th>'+
+    '          <th style="padding: 0px;">Step</th>'+ //is it needed?
     '        </tr>'+
     '      </thead>'+
     '      <tbody>'+
@@ -711,7 +711,7 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
-    '          <td style="padding: 0px;">{{elem.step}}</td>'+
+    '          <td style="padding: 0px;">{{elem.step}}</td>'+ //is it needed?
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
@@ -786,6 +786,8 @@ testApp.directive("generatorParams", function($http){
     '      <a ng-click="viewOldGenParam($index)" ng-show="display_list.indexOf($index) != -1"><i class="icon-eye-close"></i></a>'+  //elements to be viewed on-click
     '      <span ng-show="display_list.indexOf($index) != -1">'+ //if index in list of possible views -> then display
     '        <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
+    '          <dt>{{"version"}}</dt>'+
+    '          <dd>{{param["version"]}}</dd>'+
     '          <dt>{{"cross section"}}</dt>'+
     '          <dd>{{param["cross_section"]}}</dd>'+
     '          <dt>{{"filter efficiency"}}</dt>'+
@@ -803,6 +805,8 @@ testApp.directive("generatorParams", function($http){
     '    </li>'+
     '    <li ng-switch-when="false">'+ //last parameter to be displayed all the time
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
+    '        <dt>{{"version"}}</dt>'+
+    '        <dd>{{param["version"]}}</dd>'+
     '        <dt>{{"cross section"}}</dt>'+
     '        <dd>{{param["cross_section"]}}</dd>'+
     '        <dt>{{"filter efficiency"}}</dt>'+
