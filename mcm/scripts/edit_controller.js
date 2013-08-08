@@ -75,7 +75,44 @@ function resultsCtrl($scope, $http, $location, $window){
       });
     };
     
+    $scope.booleanize_sequence = function(sequence){
+      _.each(sequence, function(value, key){
+        if (_.isString(value))
+        {
+          switch(value.toLowerCase()){
+            case "true":
+              sequence[key] = true;
+              break;
+            case "false":
+              sequence[key] = false;
+              break;
+            default:
+              break;
+          }
+        }
+      });
+    };
+
     $scope.submit_edit = function(){
+      switch($scope.dbName){
+        case "requests":
+          _.each($scope.result["sequences"], function(sequence){
+            $scope.booleanize_sequence(sequence);
+          });
+          break;
+        case "campaigns":
+          _.each($scope.result["sequences"], function(sequence){
+            _.each(sequence, function(subSequence, key){
+              if (key != "$$hashKey") //ignore angularhs hashkey 
+              {
+                $scope.booleanize_sequence(subSequence);
+              }
+            });  
+          });
+          break;
+        default:
+          break;
+      }
       $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
