@@ -31,7 +31,6 @@ class chained_campaign(json_base):
             'alias':'', 
             #'energy':0,
             'campaigns':[], # list of lists [camp_id, flow]
-            #'approvals':[], # unecessary - remove 
             #'description':'',
             'notes':'',
             'action_parameters':{}, 
