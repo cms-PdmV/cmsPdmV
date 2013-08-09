@@ -179,6 +179,7 @@ class package_injector:
         if len(Exceptions):
             self.logger.inject('Executed \n %s'%(fullOutPutText), handler=self.hname, level='error')
             self.logger.inject('Errors returned: %s' % (error), handler=self.hname, level='error')
+            self.fail_message="wmcontrol exceptions : \n %s \n in full log : \n %s" % ( '\n'.join( Exceptions), fullOutPutText)
             return False
 
 
