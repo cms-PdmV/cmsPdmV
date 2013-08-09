@@ -5,9 +5,10 @@ from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
 from tools.locator import locator
 
+
 class communicator:
     def __init__(self):
-        self.from_opt='user' # could be service at some point
+        self.from_opt = 'user' # could be service at some point
 
     def sendMail(self,
                  destination,
@@ -15,29 +16,25 @@ class communicator:
                  text,
                  sender=None):
 
-        if type(destination)!=list:
+        if isinstance(destination, list):
             print "Cannot send email. destination should be a list of strings"
             return
-        
 
         msg = MIMEMultipart()
         #it could happen that message are send after forking, threading and there's no current user anymore
-        if not sender:
-            msg['From'] = 'pdmvserv@cern.ch'
-        else:
-            msg['From'] = sender
+        msg['From'] = sender if sender else 'pdmvserv@cern.ch'
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
-        
+
         ## add a mark on the subjcet automatically
         if locator().isDev():
-            msg['Subject'] ='[McM-dev] '+subject
+            msg['Subject'] = '[McM-dev] ' + subject
         else:
-            msg['Subject'] ='[McM] '+subject
-        
+            msg['Subject'] = '[McM] ' + subject
+
         ## add a signature automatically
-        text+='\n'
-        text+='McM Announcing service'
+        text += '\n'
+        text += 'McM Announcing service'
 
         try:
             msg.attach(MIMEText(text))
