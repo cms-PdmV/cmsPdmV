@@ -1205,6 +1205,10 @@ class request(json_base):
         
         xml_data = xml.dom.minidom.parseString( xml_doc )
         
+        if not len(xml_data.documentElement.getElementsByTagName("TotalEvents")):
+            self.logger.error("There are no TotalEvents reported, bailing out from performnace test")
+            return 
+
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
         if total_event==0:
             self.logger.error("For % the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
