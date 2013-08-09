@@ -254,17 +254,14 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-	//    '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
     '          <th style="padding: 0px;">Step</th>'+
-
     '        </tr>'+
     '      </thead>'+
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-	//    '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">'+
     '              <div ng-switch="elem.updater.author_name">'+
