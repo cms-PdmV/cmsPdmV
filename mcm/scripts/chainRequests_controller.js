@@ -53,8 +53,11 @@ function resultsCtrl($scope, $http, $location, $window){
 				      r_status = data[r_prepid];
 				      $scope.r_status[ r_prepid ] = r_status;
 				      status_map = { 'done' : 'led-green.gif',
-					       'submitted' : 'led-orange.gif',
-					       'new' : 'led-red.gif'}
+						     'submitted' : 'led-blue.gif',
+						     'approved' : 'led-orange.gif',
+						     'defined' : 'led-orange.gif',
+						     'validation' : 'led-red.gif',
+						     'new' : 'led-red.gif'}
 				      if (status_map[r_status]){
 				        $scope.puce[ r_prepid ] = status_map[r_status];
               }else{
@@ -402,7 +405,6 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-//     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
     '          <th style="padding: 0px;">Step</th>'+
@@ -411,7 +413,6 @@ testApp.directive("customHistory", function(){
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">'+
     '              <div ng-switch="elem.updater.author_name">'+
