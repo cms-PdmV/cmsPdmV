@@ -88,9 +88,11 @@ class InspectInvalidation(RESTResource):
                 html += 'for request <a href=%srequests?prepid=%s> %s </a>' % (
                     l_type.baseurl(), invalid.get_attribute('prepid'), invalid.get_attribute('prepid'))
 
-        def print_invalidations(invalids, text):
+        def print_invalidations(invalids):
+            a_text=''
             for invalid in invalids:
-                text += ' %s\n' % (invalid.get_attribute('object'))
+                a_text += ' %s\n' % (invalid.get_attribute('object'))
+            return a_text
 
         html = '<html><body>\n'
         html += 'Requests to be aborted/rejected <br>\n'
@@ -109,12 +111,14 @@ class InspectInvalidation(RESTResource):
         html += '</ul>\n'
         html += '</html></body>\n'
 
-        if announce:
+        if announce and (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
             text = 'Dear Data Operation Team,\n\n'
-            text += 'please reject or abort the following requests:\n'
-            print_invalidations(r_to_be_rejected, text)
-            text += '\nPlease invalidate the following datasets:\n'
-            print_invalidations(ds_to_be_invalidated, text)
+            if len(r_to_be_rejected)!=0:
+                text += 'please reject or abort the following requests:\n'
+                text += print_invalidations(r_to_be_rejected)
+            if len(ds_to_be_invalidated)!=0:
+                text += '\nPlease invalidate the following datasets:\n'
+                text += print_invalidations(ds_to_be_invalidated)
             text += '\nas a consequence of requests being reset.\n'
             com = communicator()
 
