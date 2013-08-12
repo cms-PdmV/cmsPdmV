@@ -1094,6 +1094,11 @@ class request(json_base):
                         not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( mcm_rr[-1]['content']['pdmv_dataset_name'])})
                         saved = db.save( self.json() )
                         return not_good
+                    tier_produced=mcm_rr[-1]['content']['pdmv_dataset_name'].split('/')[-1]
+                    if not tier_produced in self.get_attribute('sequences')[-1]['datatier']:
+                        not_good.update( {'message' : '%s completed but tier does no match any of %s'%( mcm_rr[-1]['content']['pdmv_dataset_name'], self.get_attribute('sequences')[-1]['datatier'])} )
+                        saved = db.save( self.json() )
+                        return not_good
                     ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
                     ## save the request back to db
