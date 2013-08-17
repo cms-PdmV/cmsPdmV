@@ -135,7 +135,7 @@ class FlowRESTResource(RESTResource):
         """
         next_energy = next_c.get_attribute('energy')
         for camp in allowed_c:
-            mcm_c = self.cdb.get(camp)
+            mcm_c = campaign(self.cdb.get(camp))
             if mcm_c.get_attribute('energy') != next_energy:
                 return False
         return True
@@ -144,7 +144,7 @@ class FlowRESTResource(RESTResource):
         if next_c:
             if not self.cdb.document_exists(next_c):
                 return {"results": False, "message": '{0} is not a valid campaign for next'.format(next_c)}
-            next_mcm_c = self.cdb.get(next_c)
+            next_mcm_c = campaign(self.cdb.get(next_c))
             if not self.is_energy_consistent(next_mcm_c, allowed_c):
                 return {"results": False,
                         "message": 'Next campaign {0} and allowed campaigns have inconsistent energies'.format(next_c)}
