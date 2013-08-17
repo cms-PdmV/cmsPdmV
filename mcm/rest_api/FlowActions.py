@@ -135,8 +135,22 @@ class FlowRESTResource(RESTResource):
         """
         next_energy = next_c.get_attribute('energy')
         for camp in allowed_c:
-            if camp.get_attribute('energy') != next_energy:
+            mcm_c = self.cdb.get(camp)
+            if mcm_c.get_attribute('energy') != next_energy:
                 return False
+        return True
+
+    def are_campaigns_correct(self, next_c, allowed_c):
+        if next_c:
+            if not self.cdb.document_exists(next_c):
+                return {"results": False, "message": '{0} is not a valid campaign for next'.format(next_c)}
+            next_mcm_c = self.cdb.get(next_c)
+            if not self.is_energy_consistent(next_mcm_c, allowed_c):
+                return {"results": False,
+                        "message": 'Next campaign {0} and allowed campaigns have inconsistent energies'.format(next_c)}
+            ##consistency check
+            if next_c in allowed_c:
+                return {"results": False, "message": "Cannot have next campaign in the allowed campaign"}
         return True
 
     # create all possible chained campaigns going from allowed.member to next
@@ -277,11 +291,10 @@ class CreateFlow(FlowRESTResource):
         self.logger.log('Creating new flow %s ...' % (self.f.get_attribute('_id')))
 
         nc = self.f.get_attribute('next_campaign')
-        if nc:
-            if not self.cdb.document_exists(nc):
-                return dumps({"results": '%s is not a valid campaign for next' % ( nc)})
-            if not self.is_energy_consistent(nc, self.f.get_attribute('allowed_campaigns')):
-                return dumps({"results": 'Next campaign %s and allowed campaigns have inconsistent energies' % nc})
+
+        result = self.are_campaigns_correct(nc, self.f.get_attribute('allowed_campaigns'))
+        if result is not True:
+            return dumps(result)
 
         ## adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc)
@@ -298,15 +311,11 @@ class CreateFlow(FlowRESTResource):
         if not nc or not len(self.f.get_attribute('allowed_campaigns')):
             return dumps({"results": True})
 
-        ##consistency check 
-        if self.f.get_attribute('next_campaign') in self.f.get_attribute('allowed_campaigns'):
-            return dumps({"results": False, "message": "Cannot have next campaign in the allowed campaign"})
-
         # update all relevant campaigns with the "Next" parameter
         try:
             self.update_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
         except Exception as ex:
-            print 'Error: update_campaigns returned:' + str(ex)
+            self.logger.error('Error: update_campaigns returned:' + str(ex))
             return dumps({"results": 'Error: update_campaigns returned:' + str(ex)})
 
         # create all possible chained_campaigns from the next and allowed campaigns
@@ -315,7 +324,8 @@ class CreateFlow(FlowRESTResource):
                                           self.f.get_attribute('allowed_campaigns'))
         except Exception as ex:
             self.logger.error(
-                'Could not build derived chained_campaigns for flow %s. Reason: %s' % (self.f.get_attribute('_id'), ex))
+                'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
+                    self.f.get_attribute('_id'), ex))
             return dumps({"results": 'Error while creating derived chained_campaigns: ' + str(ex)})
 
         # save to database
@@ -353,11 +363,9 @@ class UpdateFlow(FlowRESTResource):
             self.f.set_attribute('allowed_campaigns', list(set(self.f.get_attribute('allowed_campaigns'))))
 
         nc = self.f.get_attribute('next_campaign')
-        if nc:
-            if not self.cdb.document_exists(nc):
-                return dumps({"results": '%s is not a valid campaign for next' % ( nc)})
-            if not self.is_energy_consistent(nc, self.f.get_attribute('allowed_campaigns')):
-                return dumps({"results": 'Next campaign %s and allowed campaigns have inconsistent energies' % nc})
+        result = self.are_campaigns_correct(nc, self.f.get_attribute('allowed_campaigns'))
+        if result is not True:
+            return dumps(result)
 
         ## adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc)
@@ -367,7 +375,7 @@ class UpdateFlow(FlowRESTResource):
 
         # save to db
         if not self.db.update(self.f.json()):
-            self.logger.error('Could not update flow %s. Reason: %s' % (self.f.get_attribute('_id'), ex))
+            self.logger.error('Could not update flow {0}.'.format(self.f.get_attribute('_id')))
             return dumps({'results': False})
 
         return self.update_derived_objects(old, self.f.json())
