@@ -12,6 +12,7 @@ class sequence(json_base):
             'datatier':[], 
             'beamspot':'',
             'customise':'',
+            'inline_custom':False,
             'filtername':'',
             'geometry':'', 
             'magField':'', 
