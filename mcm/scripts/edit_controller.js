@@ -92,6 +92,10 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       });
     };
+    //    $scope.listify_blocks = function(){
+    //      $scope.result["block_black_list"] = $scope.result["block_black_list"].split(",")
+    //      $scope.result["block_white_list"] = $scope.result["block_white_list"].split(",")
+    //    };
 
     $scope.submit_edit = function(){
       switch($scope.dbName){
@@ -99,6 +103,7 @@ function resultsCtrl($scope, $http, $location, $window){
           _.each($scope.result["sequences"], function(sequence){
             $scope.booleanize_sequence(sequence);
           });
+	//$scope.listify_blocks();
           break;
         case "campaigns":
           _.each($scope.result["sequences"], function(sequence){
@@ -760,17 +765,17 @@ testApp.directive("generatorParams", function($http){
     '    <li ng-switch-when="false">'+ //when last gen param to be shown
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '        <dt>{{"cross section"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["cross_section"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["cross_section"]}}</dd>'+
     '        <dt>{{"filter efficiency"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["filter_efficiency"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["filter_efficiency"]}}</dd>'+
     '        <dt>{{"filter efficiency error"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["filter_efficiency_error"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["filter_efficiency_error"]}}</dd>'+
     '        <dt>{{"match efficiency"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["match_efficiency"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["match_efficiency"]}}</dd>'+
     '        <dt>{{"match efficiency error"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["match_efficiency_error"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["match_efficiency_error"]}}</dd>'+
     '        <dt>{{"author username"}}</dt>'+
-    '        <dd>{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
     '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
     '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
