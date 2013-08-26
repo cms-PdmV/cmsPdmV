@@ -21,7 +21,7 @@ from tools.request_to_wma import request_to_wmcontrol
 from tools.locker import locker
 
 class package_builder:
-    logger = logfactory('prep2')
+    logger = logfactory('mcm')
     hname = '' # the name of the handler for the request to be injected
 
     class DataAlreadyExistsException(Exception):
@@ -172,13 +172,16 @@ class package_builder:
 
         # There is a not-Initialized exception that is not handled
         self.directory = directory
+        self.hname = self.request.get_attribute('prepid')
         if l_type.isDev():
             self.careOfExistingDirectory = False
+            self.hname += "-dev"
         else:
             ## care of existing diretories in prod instance so as to limit the amount of space taken by the submissions 
             self.careOfExistingDirectory = True
             ## override it ANYWAYS to false
         self.careOfExistingDirectory = False
+        self.cleanUpAfter  = True
 
         self.__check_directory() # check directory sanity
 
@@ -221,7 +224,7 @@ class package_builder:
             self.logger.inject('Data directory is not defined', level='error', handler=self.hname)
             raise self.NotInitializedException('Data directory is not defined.')
 
-        self.directory = os.path.abspath(self.directory) + '/' + self.request.get_attribute('prepid') + '/'
+        self.directory = os.path.abspath(self.directory) + '/' + self.hname + '/'
 
         # check if exists (and force)
         if os.path.exists(self.directory):
@@ -243,7 +246,7 @@ class package_builder:
         #logger = logging.getLogger('prep2_inject')
 
         # define .log file
-        self.__logfile = self.directory + self.request.get_attribute('prepid') + '.log'
+        self.__logfile = self.directory + self.hname + '.log'
 
         #self.logger.setLevel(1)
 
@@ -261,9 +264,8 @@ class package_builder:
         fh.setFormatter(prep2_formatter())
 
         # add handlers to main logger - good to go
-        self.hname = self.request.get_attribute('prepid')
         self.logger.add_inject_handler(name=self.hname, handler=fh)
-        #self.logger.inject_logger.handlers[0].setFormatter(inject_formatter(self.request.get_attribute('prepid')))
+        #self.logger.inject_logger.handlers[0].setFormatter(inject_formatter(self.hname))
         #self.logger.addHandler(mh)
 
         self.logger.inject('full debugging information in ' + repr(self.__logfile), handler=self.hname)
@@ -272,11 +274,11 @@ class package_builder:
     # check and init the tarball
     def __init_tarball(self):
         if self.directory:
-            self.tarball = os.path.abspath(self.directory + os.path.pardir) + '/' +self.request.get_attribute('prepid')+'.tgz'
+            self.tarball = os.path.abspath(self.directory + os.path.pardir) + '/' +self.hname+'.tgz'
         else:
             self.tarball = None # randomize tarball name
 
-        self.__tarobj = tarball(tarball=self.request.get_attribute('prepid')+'.tgz',  workdir=os.path.abspath(self.directory + os.path.pardir) + '/')
+        self.__tarobj = tarball(tarball=self.hname+'.tgz',  workdir=os.path.abspath(self.directory + os.path.pardir) + '/')
 
         if not self.tarball:
             self.tarball = self.__tarobj.tarball
@@ -399,7 +401,7 @@ class package_builder:
 
         for cmsd in self.__cmsDrivers:
             ## this could be done a bit more transparently
-            self.__pyconfigs.append(self.request.get_attribute('prepid') + '_' + str(previous + 1) + '_cfg.py')
+            self.__pyconfigs.append(self.hname + '_' + str(previous + 1) + '_cfg.py')
             previous += 1
 
 
@@ -420,7 +422,7 @@ class package_builder:
 
         # check to see if cmsDrivers are defined
         if not self.__cmsDrivers:
-            raise self.NoStepsDetected(self.request.get_attribute('prepid'))
+            raise self.NoStepsDetected(self.hname)
 
         self.logger.inject('Detected %d steps' % (len(self.__cmsDrivers)), handler=self.hname)
 
@@ -433,7 +435,7 @@ class package_builder:
             return False
 
         # write full command to setup.sh
-        self.__setupFile = self.request.get_attribute('prepid') + '-setup.sh'
+        self.__setupFile = self.hname + '-setup.sh'
         try:
             f = open(self.directory + os.path.pardir + '/' + self.__setupFile, 'w')
             f.write(fullcommand)
@@ -486,8 +488,8 @@ class package_builder:
         command += ' --size-event %s' %(self.request.get_attribute('size_event'))
         command += ' --request-type %s' %(self.wmagent_type)
         #command += ' --step1-cfg %s' %('config_0_1_cfg.py')
-        command += ' --step1-cfg %s' %(self.request.get_attribute('prepid')+'_1_cfg.py')
-        command += ' --request-id %s' %(self.request.get_attribute('prepid'))
+        command += ' --step1-cfg %s' %(self.hname+'_1_cfg.py')
+        command += ' --request-id %s' %(self.hname)
 
         ##JR in order to inject into the testbed instead of the production machine
         l_type = locator()
@@ -592,7 +594,7 @@ class package_builder:
                 #    command += ' --keep-step'+str(i+1)+' True'
                 if i > 0:
                     #command += ' --step'+str(i+1)+'-cfg config_0_'+str(i+1)+'_cfg.py'
-                    command += ' --step'+str(i+1)+'-cfg '+self.request.get_attribute('prepid')+'_'+str(i+1)+'_cfg.py'
+                    command += ' --step'+str(i+1)+'-cfg '+self.hname+'_'+str(i+1)+'_cfg.py'
                 # set the output of 
                 if i < len(eventcontentlist)-1:
                     command += ' --step'+str(i+1)+'-output '+content
@@ -622,7 +624,7 @@ class package_builder:
 
         # Avoid faulty execution and inform the user.
         if not command:
-            self.logger.inject("%s Command Preparation FAILED" % (self.request.get_attribute('prepid')), level='error',
+            self.logger.inject("%s Command Preparation FAILED" % (self.hname), level='error',
                                handler=self.hname)
             return False
 
@@ -642,7 +644,7 @@ class package_builder:
             retcode = -1
         sterr = stderr.read() ## this contains much more than what it should
         if len(sterr):
-            self.logger.inject("%s Preparation FAILED with :\n %s" % (self.request.get_attribute('prepid'), sterr),
+            self.logger.inject("%s Preparation FAILED with :\n %s" % (self.hname, sterr),
                                level='error', handler=self.hname)
             retcode = -1
 
@@ -653,12 +655,12 @@ class package_builder:
 
         # when you fail, you die
         if retcode:
-            self.logger.inject("%s Creation FAILED" % (self.request.get_attribute('prepid')), level='error',
+            self.logger.inject("%s Creation FAILED" % (self.hname), level='error',
                                handler=self.hname)
             self.request.test_failure(sterr)
             return False
 
-        self.logger.inject("%s Creation SUCCESS" % (self.request.get_attribute('prepid')), handler=self.hname)
+        self.logger.inject("%s Creation SUCCESS" % (self.hname), handler=self.hname)
         #self.__update_configuration(self.__summary,  self.__build_summary_string())
         #self.__update_configuration(self.__summary, 'Total evts = ' + str(self.request.get_attribute('total_events')))
         return True
@@ -671,12 +673,12 @@ class package_builder:
         #self.logger.debug('Shutting down...')
         #logging.shutdown()
         self.logger.remove_inject_handler(self.hname)
-
+        self.ssh_exec.close_executor()
         # clean streams
         #self.__tarobj.close()
 
         # delete directory
-        if self.careOfExistingDirectory:
+        if self.cleanUpAfter:
             self.__delete_directory()
 
     """
@@ -730,6 +732,8 @@ class package_builder:
 
         # clean configuration files & execution leftovers
         try:
+            os.remove(os.path.abspath(self.directory) + '/../' + self.hname + '.log')
+            os.remove(os.path.abspath(self.directory) + '/../' + self.hname + '-setup.sh')
             shutil.rmtree(self.directory)
         except Exception as ex:
             self.logger.inject('Could not delete directory "%s". Reason: %s' % (self.directory, ex), level='warning')
@@ -753,162 +757,147 @@ class package_builder:
         self.init_package()
 
         flag = self.build_configuration()
-
-        if not flag:
-            self.close()
-            return False
-
-        ## JR find a way to skip testing in batch the request for digi-reco requests
-        # test configuration
-        cdb = database('campaigns')
-        camp = campaign(cdb.get(self.request.get_attribute('member_of_campaign')))
-        if camp.get_attribute('root') == 1:
-            #self.__tarobj.add(self.directory)
-            self.logger.inject('Requests not from root or possible root campaigns do not need to be ran locally')
-            flag = True
-        else:
-            self.logger.inject('Testing request for %d events' % (self.events))
-            tester = package_tester(self.request, self.directory, self.__pyconfigs)
-            tester.scram_arch = self.scram_arch
-            if tester.test():
+        try:
+            if not flag:
+                return False
+            ## JR find a way to skip testing in batch the request for digi-reco requests
+            # test configuration
+            cdb = database('campaigns')
+            camp = campaign(cdb.get(self.request.get_attribute('member_of_campaign')))
+            if camp.get_attribute('root') == 1:
                 #self.__tarobj.add(self.directory)
-                self.logger.inject('Runtime Test Job successfully completed !', handler=self.hname)
-                #print 'JOB completed successfully'
+                self.logger.inject('Requests not from root or possible root campaigns do not need to be ran locally')
                 flag = True
-
-
             else:
-                #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
-                self.logger.inject('Runtime Test Job Failed. Check logs for details.', level='error',
-                                   handler=self.hname)
-                flag = False
-
-        if not flag:
-            self.close()
-            tester.get_job_result()
-            message = 'Runtest failed \n %s \n' % ( tester.job_log_when_failed )
-            self.request.test_failure(message)
-            return False
-
-        #if how_far and how_far=='test':
-        #    self.close()
-        #    return True
-
-        # clean directory
-        #self.__clean_directory()    
-
-        # clean up
-        #self.close()
-
-        #flag = True
-
-        # inject config to couch
-        if flag:
-            self.logger.inject('Creating Injection...', handler=self.hname)
-
-            # initialize injector object with the finalized tarball
-            injector = None
-            #try:
-            #injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
-            injector = package_injector(self.request.get_attribute('prepid'),
-                                        self.request.get_attribute('cmssw_release') + ":" + self.scram_arch)
-            #except:
-            #    self.logger.inject('Injection failed', level='warning', handler=self.hname)
-            #    self.request.test_failure(message)
-            #    flag = False
-
-            self.logger.inject('Injecting...', handler=self.hname)
-            if injector.inject():
-                if injector.requestNames:
-                    self.logger.inject('Injection successful !', handler=self.hname)
+                self.logger.inject('Testing request for %d events' % (self.events))
+                tester = package_tester(self.request, self.directory, self.__pyconfigs)
+                tester.scram_arch = self.scram_arch
+                if tester.test():
+                    #self.__tarobj.add(self.directory)
+                    self.logger.inject('Runtime Test Job successfully completed !', handler=self.hname)
+                    #print 'JOB completed successfully'
                     flag = True
 
-                    added = []
-                    for request in injector.requestNames:
-                        added.append(
-                            {'name': request, 'content': {'pdmv_prep_id': self.request.get_attribute('prepid')}})
-                        ## put it in the request object
-                    requests = self.request.get_attribute('reqmgr_name')
-                    requests.extend(added)
-                    self.request.set_attribute('reqmgr_name', requests)
 
-                    cf_ids = self.request.get_attribute('config_id')
-                    cf_ids.append(injector.config_ids)
-                    self.request.set_attribute('config_id', cf_ids)
-                    hash_ids = database('configs')
-                    for (step_i, docid) in enumerate(injector.config_ids):
-                        hash_id = self.request.configuration_identifier(step_i)
-                        if not hash_ids.document_exists(hash_id):
-                            ##then save that in the db for future usage
-                            new_hash_doc = {'_id': hash_id,
-                                            'docid': docid,
-                                            'prepid': self.request.get_attribute('prepid'),
-                                            'unique_string': self.request.unique_string(step_i)
-                            }
-                            saved = hash_ids.save(new_hash_doc)
-                            if not saved:
-                                self.logger.inject('Could not save the has document %s' % ( hash_id ), level='warning',
-                                                   handler=self.hname)
-                                self.close()
-                                return False
-
-
-                    ##put it also in the batch DBe
-
-                    saved = False
-                    with locker.lock(self.batchName):
-                        bdb = database('batches')
-                        b = batch(bdb.get(self.batchName))
-                        b.add_requests(added)
-                        note = []
-
-                        if self.request.get_attribute('extension'):
-                            note.append(' is an extension (%s)' % ( self.request.get_attribute('extension')))
-                        if len(self.request.get_attribute('reqmgr_name')) > 1 or self.request.get_attribute(
-                                'version') != 0: #>1 because you just added that submission request a few lines above
-                            note.append(' is a resubmission (v%s)' % (self.request.get_attribute('version')))
-                        if len(note):
-                            b.add_notes('\n%s: %s' % (self.request.get_attribute('prepid'),
-                                                      ','.join(note)))
-                        b.update_history({'action': 'updated', 'step': self.request.get_attribute('prepid')})
-                        saved = bdb.update(b.json())
-
-                    if not saved:
-                        message = 'There was a problem with registering request in the batch %s' % (
-                            self.batchName )
-                        self.logger.inject(message, level='warning', handler=self.hname)
-                        self.request.test_failure(message)
-                        self.close()
-                        return False
-
-                    ##save all only at the end with all suceeding to not have half/half
-                    rdb = database('requests')
-
-                    #the status is set only if there is actually a request in the request manager !
-                    self.request.update_history({'action': 'inject'})
-                    self.request.set_status(with_notification=True)
-                    saved = rdb.update(self.request.json())
-                    ## check on saved value
-                    if not saved:
-                        message = 'Could not save requests %s details' % ( self.request.get_attribute('prepid'))
-                        self.logger.inject(message, level='warning', handler=self.hname)
-                        self.request.test_failure(message)
-                        self.close()
-                        return False
-
-                    for request in added:
-                        self.logger.inject('Request %s send to %s' % (request['name'], self.batchName))
-                    flag = True
                 else:
-                    message = 'Injection has succeeded but no request manager names were registered. Check with administrators. %s' % (
-                        injector.fail_message)
-                    self.logger.inject(message, level='warning', handler=self.hname)
-                    self.request.test_failure(message)
+                    #    print 'JOB Failed. Check "/afs/cern.ch/work/n/nnazirid/public/prep2_submit_area/" for details'
+                    self.logger.inject('Runtime Test Job Failed. Check logs for details.', level='error',
+                                       handler=self.hname)
+                    flag = False
 
-            else:
-                self.logger.inject(injector.fail_message, level='warning', handler=self.hname)
-                self.request.test_failure(injector.fail_message)
-                flag = False
+            if not flag:
+                tester.get_job_result()
+                message = 'Runtest failed \n %s \n' % ( tester.job_log_when_failed )
+                self.request.test_failure(message)
+                return False
 
-        self.close()
-        return flag
+            #if how_far and how_far=='test':
+            #    self.close()
+            #    return True
+
+            #flag = True
+
+            # inject config to couch
+            if flag:
+                self.logger.inject('Creating Injection...', handler=self.hname)
+
+                #try:
+                #injector = package_injector(self.tarball.split('/')[-1],  self.request.get_attribute('cmssw_release')+":"+self.scram_arch)
+                injector = package_injector(self.hname,
+                                            self.request.get_attribute('cmssw_release') + ":" + self.scram_arch)
+                #except:
+                #    self.logger.inject('Injection failed', level='warning', handler=self.hname)
+                #    self.request.test_failure(message)
+                #    flag = False
+
+                self.logger.inject('Injecting...', handler=self.hname)
+                if injector.inject():
+                    if injector.requestNames:
+                        self.logger.inject('Injection successful !', handler=self.hname)
+                        flag = True
+
+                        added = []
+                        for request in injector.requestNames:
+                            added.append(
+                                {'name': request, 'content': {'pdmv_prep_id': self.hname}})
+                            ## put it in the request object
+                        requests = self.request.get_attribute('reqmgr_name')
+                        requests.extend(added)
+                        self.request.set_attribute('reqmgr_name', requests)
+
+                        cf_ids = self.request.get_attribute('config_id')
+                        cf_ids.append(injector.config_ids)
+                        self.request.set_attribute('config_id', cf_ids)
+                        hash_ids = database('configs')
+                        for (step_i, docid) in enumerate(injector.config_ids):
+                            hash_id = self.request.configuration_identifier(step_i)
+                            if not hash_ids.document_exists(hash_id):
+                                ##then save that in the db for future usage
+                                new_hash_doc = {'_id': hash_id,
+                                                'docid': docid,
+                                                'prepid': self.hname,
+                                                'unique_string': self.request.unique_string(step_i)
+                                }
+                                saved = hash_ids.save(new_hash_doc)
+                                if not saved:
+                                    self.logger.inject('Could not save the has document %s' % ( hash_id ), level='warning',
+                                                       handler=self.hname)
+                                    return False
+
+
+                        ##put it also in the batch DBe
+
+                        saved = False
+                        with locker.lock(self.batchName):
+                            bdb = database('batches')
+                            b = batch(bdb.get(self.batchName))
+                            b.add_requests(added)
+                            note = []
+
+                            if self.request.get_attribute('extension'):
+                                note.append(' is an extension (%s)' % ( self.request.get_attribute('extension')))
+                            if len(self.request.get_attribute('reqmgr_name')) > 1 or self.request.get_attribute(
+                                    'version') != 0: #>1 because you just added that submission request a few lines above
+                                note.append(' is a resubmission (v%s)' % (self.request.get_attribute('version')))
+                            if len(note):
+                                b.add_notes('\n%s: %s' % (self.hname,
+                                                          ','.join(note)))
+                            b.update_history({'action': 'updated', 'step': self.hname})
+                            saved = bdb.update(b.json())
+
+                        if not saved:
+                            message = 'There was a problem with registering request in the batch %s' % (
+                                self.batchName )
+                            self.logger.inject(message, level='warning', handler=self.hname)
+                            self.request.test_failure(message)
+                            return False
+
+                        ##save all only at the end with all suceeding to not have half/half
+                        rdb = database('requests')
+
+                        #the status is set only if there is actually a request in the request manager !
+                        self.request.update_history({'action': 'inject'})
+                        self.request.set_status(with_notification=True)
+                        saved = rdb.update(self.request.json())
+                        ## check on saved value
+                        if not saved:
+                            message = 'Could not save requests %s details' % ( self.hname)
+                            self.logger.inject(message, level='warning', handler=self.hname)
+                            self.request.test_failure(message)
+                            return False
+
+                        for request in added:
+                            self.logger.inject('Request %s send to %s' % (request['name'], self.batchName))
+                        flag = True
+                    else:
+                        message = 'Injection has succeeded but no request manager names were registered. Check with administrators. %s' % (
+                            injector.fail_message)
+                        self.logger.inject(message, level='warning', handler=self.hname)
+                        self.request.test_failure(message)
+                else:
+                    self.logger.inject(injector.fail_message, level='warning', handler=self.hname)
+                    self.request.test_failure(injector.fail_message)
+                    flag = False
+            return flag
+        finally:
+            self.close()
