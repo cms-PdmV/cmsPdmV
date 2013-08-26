@@ -6,34 +6,35 @@ import re
 import logging
 from tools.logger import logger as logfactory, prep2_formatter
 
+
 class ssh_executor:
     logger = logfactory('mcm')
-    hname = '' # handler's name
 
-    def __init__(self,directory,prepid,server='lxplus5.cern.ch'):
+    def __init__(self, directory=None, prepid=None, server='lxplus5.cern.ch'):
         self.ssh_client = None
         self.ssh_server = server
         self.ssh_server_port = 22
         self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'
-        self.__logfile = directory + prepid + '.log'
-        self.__ssh_logfile = directory + prepid + '_ssh_.log'
-        self.hname = prepid
-        
-        # filename handler outputting to log
-        fh = logging.FileHandler(self.__logfile)
-        fh.setLevel(logging.DEBUG) # log filename is most verbose
+        self.hname = None
+        if not (directory is None or prepid is None):
+            self.__logfile = directory + prepid + '.log'
+            # self.__ssh_logfile = directory + prepid + '_ssh_.log'
+            self.hname = prepid
 
-        # format logs
-        fh.setFormatter(prep2_formatter())
+            # filename handler outputting to log
+            fh = logging.FileHandler(self.__logfile)
+            fh.setLevel(logging.DEBUG) # log filename is most verbose
 
-        # add handlers to main logger - good to go
-        self.logger.add_inject_handler(name=self.hname, handler=fh)
+            # format logs
+            fh.setFormatter(prep2_formatter())
 
+            # add handlers to main logger - good to go
+            self.logger.add_inject_handler(name=self.hname, handler=fh)
         self.__build_ssh_client()
     
     def __build_ssh_client(self):
         self.ssh_client = paramiko.SSHClient()
-        paramiko.util.log_to_file(self.__ssh_logfile, 10) 
+        # paramiko.util.log_to_file(self.__ssh_logfile, 10)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
         us,  pw = self.__get_ssh_credentials()
@@ -50,7 +51,7 @@ class ssh_executor:
         except paramiko.BadHostKeyException as ex:
             self.logger.inject('Host key was invalid. Reason: %s' % (ex), level='error', handler=self.hname)
             return
-        except SSHException as ex:
+        except paramiko.SSHException as ex:
             self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SocketError  as ex:
@@ -90,10 +91,15 @@ class ssh_executor:
             return None,  None,  None
         try:
             return self.ssh_client.exec_command(cmd)
-        except SSHException as ex:
+        except paramiko.SSHException as ex:
             self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
             return None,  None,  None
 
     def execute(self, cmd):
         stdin,  stdout,  stderr = self.__remote_exec(cmd)
         return stdin,  stdout,  stderr
+
+    def close_executor(self):
+        self.ssh_client.close()
+        if self.hname is not None:
+            self.logger.remove_inject_handler(self.hname)
