@@ -25,6 +25,14 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.selected_prepids = [];
   $scope.action_report= {};
   $scope.action_status= {};
+  $scope.tabsettings = {
+    "view":{
+      active:false
+    },
+    "search":{
+      active:false
+    }
+  };
 
   if($location.search()["page"] === undefined){
     page = 0;
@@ -222,6 +230,7 @@ function resultsCtrl($scope, $http, $location, $window){
   };
   $scope.$watch('list_page', function(){
     $scope.getData();
+    $scope.selected_prepids = [];
   });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
