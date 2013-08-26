@@ -17,7 +17,7 @@ function resultsCtrl($scope, $http, $location, $window){
     //not used ? JR    $scope.selected_campaign = "";
 
     $scope.generatingAllIcon = false;
-    $scope.selected_prepids = [];
+    //$scope.selected_prepids = [];
     $scope.multipleSelection = {};
     $scope.update = [];
     $scope.result = [];
@@ -27,32 +27,30 @@ function resultsCtrl($scope, $http, $location, $window){
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
       $scope.update = [];
-      if ($location.search()["select"] == null){
-        if ($scope.selectedOption['contains'] != "------"){
-            $location.search("select",$scope.selectedOption['contains']);
-            //$scope.getData("");
-            //do_get_data = true;
-        }else{
-          $location.search("select",null);
-        }
+      if ($scope.selectedOption['contains'] != "------"){
+        $location.search("select",$scope.selectedOption['contains']);
+        //$scope.getData("");
+        //do_get_data = true;
+      }else
+      {
+        //$location.search("select",null);
       }
-      if ($location.search()["starts"] == null){
-        if ($scope.selectedOption['starts'] != "------"){
-            $location.search("starts",$scope.selectedOption['starts']);
-            //$scope.getData("");
-            //do_get_data = true;
-        }else{
-          $location.search("starts",null);
-        }
+      if ($scope.selectedOption['starts'] != "------"){
+        $location.search("starts",$scope.selectedOption['starts']);
+        //$scope.getData("");
+        //do_get_data = true;
+      }else
+      {
+        //$location.search("starts",null);
       }
     },true);
 
     $scope.getChainCampainTEXT = function(alias, id){
-        if (alias != ""){
-          return alias;
-        }else{
-          return id;
-        }
+      if (alias != ""){
+        return alias;
+      }else{
+        return id;
+      }
     }
     $scope.get_chained_campaigns_info = function(do_get_data, query){
       $scope.rootCampaign = [];
@@ -112,14 +110,14 @@ function resultsCtrl($scope, $http, $location, $window){
     };
 
     $scope.select_campaign = function(do_get_data){
-        $scope.result = []; //clear results on selection
-        //set the well to have only ChainedCampaigns which includes selectedOption
-        if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
-          //console.log("selected to show all");
-          var tmp = [];
-          $scope.actions_defaults = tmp;
-        }
-        else{
+      $scope.result = []; //clear results on selection
+      //set the well to have only ChainedCampaigns which includes selectedOption
+      if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
+        //console.log("selected to show all");
+        var tmp = [];
+        $scope.actions_defaults = tmp;
+      }
+      else{
         var query = ""
         if (($scope.selectedOption['contains'] != "------")){
           query+="&contains="+$scope.selectedOption['contains'];
@@ -128,7 +126,6 @@ function resultsCtrl($scope, $http, $location, $window){
           query+="&root="+$scope.selectedOption['starts'];
         };
         $scope.get_chained_campaigns_info(do_get_data,query);
-
       }
     };
 
@@ -175,7 +172,45 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.show_well = true;
     }
   };
-    
+
+  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
+    var bin_string = ""; //reconstruct from begining
+    _.each($scope.actions_defaults, function(column){ //iterate all columns
+      if(column.select){
+        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
+      }else{
+        bin_string ="0"+bin_string;
+      }
+    });
+    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
+  };
+
+  $scope.parseShown = function(){
+    var shown = "";
+    //if ($.cookie($scope.dbName+"shown") !== undefined){
+    //  shown = $.cookie($scope.dbName+"shown");
+   // }
+    if ($location.search()["shown"] !== undefined){
+      shown = $location.search()["shown"];
+    }
+    if (shown != ""){
+      $location.search("shown", shown);
+      binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+      _.each($scope.actions_defaults, function(column){
+        column_index = $scope.actions_defaults.indexOf(column);
+        binary_bit = binary_shown.charAt(column_index);
+        if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+          if (binary_bit == 1){
+            column.select = true;
+          }else{
+            column.select = false;
+          }
+        }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+          column.select = false;
+        }
+      });
+    }
+  }
   $scope.getData = function(prepid){
     $scope.result = [];
     var query = ""
@@ -194,6 +229,8 @@ function resultsCtrl($scope, $http, $location, $window){
           //do nothing
         } else if (key == 'starts'){
           //do nothing
+        } else if (key == 'shown'){
+          //do nothing
         } 
         else
         {
@@ -203,8 +240,10 @@ function resultsCtrl($scope, $http, $location, $window){
 	    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
 	    promise.then(function(data){
 		    _.each( data.data.results , function( item ){
-			    $scope.result.push( item );
+			    $scope.result.push( item ); 
 			  });
+      $scope.parseShown();
+      //set selected columns?
 		  },function(){
 		    alert("Error getting data.");
 		  });
@@ -213,6 +252,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.$watch('list_page', function(){
     $scope.getData("");
+    $scope.multiple_selection = {};
   });
     
   $scope.previous_page = function(current_page){
@@ -376,14 +416,14 @@ function resultsCtrl($scope, $http, $location, $window){
           remove = false;
         }
         if (columnId.chains !== undefined){
-          remove = false
+          remove = false;
         }
       });
       if (remove){
         delete($scope.multiple_selection[key]);
       }
     });
-    var dataToSend = {"actions": $scope.selected_prepids, "values":$scope.multipleSelection}
+    //var dataToSend = {"actions": $scope.selected_prepids, "values":$scope.multipleSelection}
     if (_.keys($scope.multiple_selection).length == 0){
       alert("You have selected 0 actions from table");
       $scope.updatingMultipleActions = false;
