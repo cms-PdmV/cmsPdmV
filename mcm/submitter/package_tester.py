@@ -10,12 +10,12 @@ from tools.locator import locator
 
 
 class package_tester:
-    logger = logfactory('prep2')
+    logger = logfactory('mcm')
     hname = '' # handler's name
 
     def __init__(self, request_object, directory=None, pyconfigs=[]):
+        l_type = locator()
         if not directory:
-            l_type = locator()
             directory = l_type.workLocation()
         self.request = request_object
         self.configurationLogFiles = []
@@ -29,13 +29,14 @@ class package_tester:
         self.job_log_when_failed = 'No log available'
 
         self.hname = self.request.get_attribute('prepid')
+        if l_type.isDev():
+            self.hname += "-dev"
         self.__build_logger()
 
         self.pyconfigs = pyconfigs
 
         if not self.pyconfigs:
             return
-
         self.ssh_exec = ssh_executor(directory, self.hname)
 
         self.scram_arch = None
@@ -44,7 +45,7 @@ class package_tester:
 
 
         # define .log file
-        self.__logfile = self.directory + self.request.get_attribute('prepid') + '.log'
+        self.__logfile = self.directory + self.hname + '.log'
 
         # filename handler outputting to log
         fh = logging.FileHandler(self.__logfile)
@@ -54,7 +55,6 @@ class package_tester:
         fh.setFormatter(prep2_formatter())
 
         # add handlers to main logger - good to go
-        self.hname = self.request.get_attribute('prepid')
         self.logger.add_inject_handler(name=self.hname, handler=fh)
         #self.logger.addHandler(mh)
 
@@ -109,11 +109,10 @@ class package_tester:
     def build_test_command(self):
         if not self.build_submit_script():
             return None
-
-        cmd = 'bsub -J ' + self.request.get_attribute('prepid')
+        cmd = 'bsub -J ' + self.hname
         cmd += ' -q 8nh -W 100 -cwd ' + self.directory
-        cmd += ' -eo ' + os.path.abspath(self.directory + self.request.get_attribute('prepid') + '.err')
-        cmd += ' -oo ' + os.path.abspath(self.directory + self.request.get_attribute('prepid') + '.out')
+        cmd += ' -eo ' + os.path.abspath(self.directory + self.hname + '.err')
+        cmd += ' -oo ' + os.path.abspath(self.directory + self.hname + '.out')
         cmd += ' bash ' + os.path.abspath(self.directory + 'run_test.sh')
 
         return cmd
@@ -130,6 +129,7 @@ class package_tester:
         if not stdin and not stdout and not stderr:
             return False
 
+        self.logger.log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc")
         self.logger.inject(stdout.read(), handler=self.hname)
         self.logger.inject('SSH remote execution stderr stream: \n%s' % (stderr.read()), handler=self.hname,
                            level='debug')
@@ -150,7 +150,7 @@ class package_tester:
         lines = re.split(r'(\n+)', data)
 
         for line in lines:
-            if self.request.get_attribute('prepid') in line:
+            if self.hname in line:
                 jid = line[:line.index(' ')]
                 self.logger.inject(self.__get_job_percentage(jid), level='debug', handler=self.hname)
 
@@ -179,7 +179,7 @@ class package_tester:
 
     def get_job_result(self):
         stdin, stdout, stderr = self.__remote_exec(
-            'cat %s.out' % (self.directory + self.request.get_attribute('prepid')))
+            'cat %s.out' % (self.directory + self.hname))
 
         if not stdin and not stdout and not stderr:
             return False
@@ -199,7 +199,7 @@ class package_tester:
                 return False
 
         self.logger.inject('Could not obtain status from logfile "%s.out". Error stream dump: %s' % (
-            self.directory + self.request.get_attribute('prepid'), stderr.read()), level='error', handler=self.hname)
+            self.directory + self.hname, stderr.read()), level='error', handler=self.hname)
         return None
 
     def __read_job_log_file(self):
@@ -214,7 +214,7 @@ class package_tester:
 
     def __read_job_error(self, extension='.err'):
         stdin, stdout, stderr = self.__remote_exec(
-            'cat %s%s' % (self.directory + self.request.get_attribute('prepid'), extension))
+            'cat %s%s' % (self.directory + self.hname, extension))
 
         if not stdin and not stdout and not stderr:
             return
