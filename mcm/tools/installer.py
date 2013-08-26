@@ -33,7 +33,6 @@ class installer:
                 self.logger.error( os.popen('echo %s; ls -f %s'%(self.directory, self.directory)).read())
                 self.logger.error('Directory ' + self.directory + ' already exists.')
                 raise Exception('Data directory %s already exists'%(self.directory))
-                return
             else:
                 self.logger.log('Directory ' + self.directory + ' already exists.')
         else:
@@ -49,10 +48,9 @@ class installer:
         self.cleanup = False
 
     def close(self):
-        self.logger.error('Should be deleting the directory: %s' % (self.directory))
         if self.cleanup:
             try:
+                self.logger.error('Deleting the directory: %s' % (self.directory))
                 shutil.rmtree(self.directory)
             except Exception as ex:
                 self.logger.error('Could not delete directory "%s". Reason: %s' % (self.directory, ex))
-                
