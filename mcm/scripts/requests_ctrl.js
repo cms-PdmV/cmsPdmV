@@ -23,7 +23,23 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.action_report= {};
     $scope.action_status= {};
     $scope.underscore = _;
-
+    $scope.tabsettings = {
+      "view":{
+        active:false
+      },
+      "search":{
+        active:false
+      },
+      "file":{
+        active:false
+      },
+      "navigation":{
+        active:false
+      },
+      "output":{
+        active:false
+      }
+    };
 
     if($location.search()["page"] === undefined){
       page = 0;
@@ -289,6 +305,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.$watch('list_page', function(){
     $scope.getData();
+    $scope.selected_prepids = [];
   });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
@@ -492,6 +509,9 @@ function resultsCtrl($scope, $http, $location, $window){
         break;
       case "delete":
         $scope.delete_object('requests', $scope.toggle_prepid);
+        break;
+      case "clone":
+        $scope.clone($scope.toggle_prepid);
         break;
       default:
         // alert to announce that uknown action is asked???
@@ -787,38 +807,40 @@ testApp.directive("generatorParams", function($http){
     '      <span ng-show="display_list.indexOf($index) != -1">'+ //if index in list of possible views -> then display
     '        <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '          <dt>{{"version"}}</dt>'+
-    '          <dd>{{param["version"]}}</dd>'+
+    // '          <dd>{{$index}}</dd>'+
+    '          <dd class="clearfix">{{param["version"]}}</dd>'+
     '          <dt>{{"cross section"}}</dt>'+
-    '          <dd>{{param["cross_section"]}}</dd>'+
+    '          <dd class="clearfix">{{param["cross_section"]}}</dd>'+
     '          <dt>{{"filter efficiency"}}</dt>'+
-    '          <dd>{{param["filter_efficiency"]}}</dd>'+
+    '          <dd class="clearfix">{{param["filter_efficiency"]}}</dd>'+
     '          <dt>{{"filter efficiency error"}}</dt>'+
-    '          <dd>{{param["filter_efficiency_error"]}}</dd>'+
+    '          <dd class="clearfix">{{param["filter_efficiency_error"]}}</dd>'+
     '          <dt>{{"match efficiency"}}</dt>'+
-    '          <dd>{{param["match_efficiency"]}}</dd>'+
+    '          <dd class="clearfix">{{param["match_efficiency"]}}</dd>'+
     '          <dt>{{"match efficiency error"}}</dt>'+
-    '          <dd>{{param["match_efficiency_error"]}}</dd>'+
+    '          <dd class="clearfix">{{param["match_efficiency_error"]}}</dd>'+
     '          <dt>{{"author username"}}</dt>'+
-    '          <dd>{{param["submission_details"]["author_username"]}}</dd>'+
+    '          <dd class="clearfix">{{param["submission_details"]["author_username"]}}</dd>'+
     '        </dl>'+
     '      </span>'+
     '    </li>'+
     '    <li ng-switch-when="false">'+ //last parameter to be displayed all the time
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '        <dt>{{"version"}}</dt>'+
-    '        <dd>{{param["version"]}}</dd>'+
+    // '          <dd>{{$index}}</dd>'+
+    '        <dd class="clearfix">{{param["version"]}}</dd>'+
     '        <dt>{{"cross section"}}</dt>'+
-    '        <dd>{{param["cross_section"]}}</dd>'+
+    '        <dd class="clearfix">{{param["cross_section"]}}</dd>'+
     '        <dt>{{"filter efficiency"}}</dt>'+
-    '        <dd>{{param["filter_efficiency"]}}</dd>'+
+    '        <dd class="clearfix">{{param["filter_efficiency"]}}</dd>'+
     '        <dt>{{"filter efficiency error"}}</dt>'+
-    '        <dd>{{param["filter_efficiency_error"]}}</dd>'+
+    '        <dd class="clearfix">{{param["filter_efficiency_error"]}}</dd>'+
     '        <dt>{{"match efficiency"}}</dt>'+
-    '        <dd>{{param["match_efficiency"]}}</dd>'+
+    '        <dd class="clearfix">{{param["match_efficiency"]}}</dd>'+
     '        <dt>{{"match efficiency error"}}</dt>'+
-    '        <dd>{{param["match_efficiency_error"]}}</dd>'+
+    '        <dd class="clearfix">{{param["match_efficiency_error"]}}</dd>'+
     '        <dt>{{"author username"}}</dt>'+
-    '        <dd>{{param["submission_details"]["author_username"]}}</dd>'+
+    '        <dd class="clearfix">{{param["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
     '    </li>'+
     '  </ul>'+
@@ -863,19 +885,7 @@ testApp.directive("loadFields", function($http, $location){
     link: function(scope, element, attr){
         scope.listfields = {};
         scope.showUrl = false;
-        var promise = $http.get("restapi/"+scope.dbName+"/searchable");
-        scope.loadingData = true;
-        promise.then(function(data){
-          scope.loadingData = false;
-          scope.searchable = data.data;
-          _.each(scope.searchable, function(element,key){
-            element.unshift("------"); //lets insert into begining of array an default value to not include in search
-            scope.listfields[key] = "------";
-          });
-        }, function(data){
-          scope.loadingData = false;
-          alert("Error getting searchable fields: "+data.status);
-        });
+
         scope.getSearch = function(){
           scope.listfields = {};
           scope.showUrl = false;
@@ -905,6 +915,27 @@ testApp.directive("loadFields", function($http, $location){
           });
           scope.getData();
         };
+      scope.$watch('tabsettings.navigation.active', function(){
+      if (scope.tabsettings.navigation.active)
+      {
+        if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
+        {
+          var promise = $http.get("restapi/"+scope.dbName+"/searchable");
+          scope.loadingData = true;
+          promise.then(function(data){
+            scope.loadingData = false;
+            scope.searchable = data.data;
+            _.each(scope.searchable, function(element,key){
+              element.unshift("------"); //lets insert into begining of array an default value to not include in search
+              scope.listfields[key] = "------";
+            });
+          }, function(data){
+            scope.loadingData = false;
+            alert("Error getting searchable fields: "+data.status);
+          });
+        }
+      }
+    },true);
 	  }
   }
 });
