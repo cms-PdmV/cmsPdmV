@@ -28,22 +28,22 @@
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
       <tabs>
-        <pane heading="Select View">
-        <div class="well">
-          <div>
-            <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
-            <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-          </div>
-          <span ng-repeat="value in defaults" style="width:160px;float:inline;">
-            <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
-            </label>
-          </span>
-          <input type="button" value="saveCookie" ng-click="saveCookie()">
-          <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
-        </div><!--end of well for table columns-->
-      </pane>
-        <pane heading="Super search">
+        <pane heading="Select View" active="tabsettings.view.active">
+          <div class="well">
+            <div>
+              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
+              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
+            </div>
+            <span ng-repeat="value in defaults" style="width:160px;float:inline;">
+              <label class="checkbox inline">
+                <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
+              </label>
+            </span>
+            <input type="button" value="saveCookie" ng-click="saveCookie()">
+            <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
+          </div><!--end of well for table columns-->
+        </pane>
+        <pane heading="Super search" active="tabsettings.search.active">
           <form class="form-inline">
             <input type="text" class="input-small" maxlength="40" ng-repeat="elem in searchable_fields" ng-model="elem.value" placeholder="{{elem.name}}">
             <button class="btn btn-mini" ng-click="superSearch(searchable_fields);">Search!</button>
@@ -116,15 +116,15 @@
                 <a ng-click="single_step('approve',data.prepid, '')" rel="tooltip" title="Next step" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
-		<a ng-click="single_step('rewind',data.prepid, '')" rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
-		  <i class="icon-backward"></i>
-		</a>
+                <a ng-click="single_step('rewind',data.prepid, '')" rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
+                  <i class="icon-backward"></i>
+                </a>
                 <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
                   <i class="icon-forward"></i>
                 </a>
-		<a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
-		  <i class="icon-screenshot"></i>
-		</a>
+                <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
+                  <i class="icon-screenshot"></i>
+                </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
@@ -136,10 +136,10 @@
                 <a ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_self"><i class='icon-indent-left'></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
                   <a ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}<i class="icon-folder-open"></i></a>
-		  <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
+                  <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
                   <img ng-show="puce[chain]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
-		  <a ng-show="$index==0" ng-href='actions?prepid={{chain}}' rel="tooltip" title="Show action for {{chain}}" target="_self"><i class="icon-qrcode"></i></a>
+                  <a ng-show="$index==0" ng-href='actions?prepid={{chain}}' rel="tooltip" title="Show action for {{chain}}" target="_self"><i class="icon-qrcode"></i></a>
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
                     <a ng-switch-when="false">
                       <i  class="icon-arrow-right"></i>
@@ -210,10 +210,10 @@
         <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests">
          <i class="icon-forward"></i>
         </a>
-	<a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);">
-	  <i class="icon-screenshot"></i>
+        <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);">
+          <i class="icon-screenshot"></i>
         </a>
-        <input type="checkbox" ng-checked='{{selected_prepids.length > 0}}' ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;">
+        <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </div>
       <div class="span2" style="margin-top:20px;">
         <span ng-show="got_results">
