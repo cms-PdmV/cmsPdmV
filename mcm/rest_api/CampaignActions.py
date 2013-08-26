@@ -7,6 +7,7 @@ from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.campaign import campaign
 from json_layer.request import request
+from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from json_layer.flow import flow
 
