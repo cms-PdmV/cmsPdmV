@@ -16,7 +16,7 @@ class communicator:
                  text,
                  sender=None):
 
-        if isinstance(destination, list):
+        if not isinstance(destination, list):
             print "Cannot send email. destination should be a list of strings"
             return
 
