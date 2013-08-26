@@ -92,6 +92,14 @@ class UpdateCampaign(RESTResource):
         if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
         
+        #cast schema evolution of sequences
+        sequences = self.request.get_attribute('sequences')
+        for steps in sequences:
+            for label in steps:
+                steps[label] = sequence( steps[label] ).json()
+        self.request.set_attribute('sequences', sequences)
+
+
         self.request.update_history({'action':'update'})
         
         return self.save_request()

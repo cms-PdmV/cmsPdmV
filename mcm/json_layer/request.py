@@ -260,9 +260,13 @@ class request(json_base):
 
 
         def in_there( seq1, seq2):
-            for (name,item) in seq1.items():
-                if name in seq2:
-                    if item!=seq2[name]:
+            items_that_do_not_matter=['conditions']
+            for (name,item) in seq1.json().items():
+                if name in items_that_do_not_matter:
+                    #there are parameters which do not require specific processing string to be provided
+                    continue
+                if name in seq2.json():
+                    if item!=seq2.json()[name]:
                         return False
                 else:
                     if item=='':
@@ -271,18 +275,20 @@ class request(json_base):
                     return False
             ## arived here, all items of seq1 are identical in seq2
             return True
+
         matching_labels=set([])
         for (i_seq,seqs) in enumerate(mcm_c['sequences']):
-            self_sequence = self.get_attribute('sequences')[i_seq]
+            self_sequence = sequence(self.get_attribute('sequences')[i_seq])
             this_matching=set([])
-            for (label,seq) in seqs.items():
+            for (label,seq_j) in seqs.items():
+                seq = sequence( seq_j )
                 # label = default , seq = dict
                 if in_there( seq, self_sequence ) and in_there( self_sequence, seq ):
                     ## identical sequences
                     self.logger.log('identical sequences %s'% label)
                     this_matching.add(label)
                 else:
-                    self.logger.log('different sequences %s \n %s \n %s'%(label, seq, self_sequence))
+                    self.logger.log('different sequences %s \n %s \n %s'%(label, seq.json(), self_sequence.json()))
             if len(matching_labels)==0:
                 matching_labels=this_matching
                 self.logger.log('Matching labels %s'% matching_labels)
