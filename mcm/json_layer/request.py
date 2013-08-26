@@ -1176,7 +1176,7 @@ class request(json_base):
             ## get the last entry of generator parameters
             match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
             filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            if match > -1 and filter_eff > -1:
+            if match > 0 and filter_eff > 0:
                 events /=  (match*filter_eff)
 
 

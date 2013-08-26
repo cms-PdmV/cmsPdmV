@@ -25,9 +25,8 @@ class generator_parameters(json_base):
         for (k,v) in self._json_base__json.items():
             if len(k)>=4 and k[0:5] in ['cross','filte','match'] and v<0:
                 return True
-            if 'efficiency' in k and v>1.:
+            if 'efficiency' in k and v>1. or v==0:
                 return True
-
         return False
 
 """
