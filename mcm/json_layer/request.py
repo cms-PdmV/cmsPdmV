@@ -1230,8 +1230,7 @@ class request(json_base):
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float( perf.getAttribute('Value')) 
         
-        if timing:
-            timing = int( timing/ total_event)
+
         if file_size:
             file_size = int(  file_size / total_event)
 
@@ -1321,63 +1320,63 @@ class runtest_genvalid(handler):
         self.db = database('requests')
         
     def run(self):
-        location = installer( self.rid, care_on_existing=False, clean_on_exit=False)
-        
-        test_script = location.location()+'validation_run_test.sh'
-        there = open( test_script ,'w')
-        ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
-        #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-        time.sleep( 10 )
-        mcm_r = request(self.db.get(self.rid))
-        #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-        n_for_test = mcm_r.get_n_for_test()
-        ## the following does change something on the request object, to be propagated in case of success
-        there.write( mcm_r.get_setup_file( location.location() , n_for_test) )        
-        there.close()
-        
-        batch_test = batch_control( self.rid, test_script )
-        success = batch_test.test()
-        self.logger.log("batch_test result is %s" % success)
         try:
-            #suck in run-test if present
-            rt_xml=location.location()+'%s_rt.xml'%( self.rid )
-            if os.path.exists( rt_xml ):
-                mcm_r.update_performance( open(rt_xml).read(), 'perf')
-        except:
-            self.logger.error('Failed to get perf reports \n %s'%(traceback.format_exc()))
-            success = False
-        try:
-            gv_xml=location.location()+'%s_gv.xml'%( self.rid )
-            if os.path.exists( gv_xml ):
-                mcm_r.update_performance( open(gv_xml).read(), 'eff')
-        except:
-            self.logger.error('Failed to get gen valid reports \n %s'%(traceback.format_exc()))
-            success = False
+            location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
+
+            test_script = location.location()+'validation_run_test.sh'
+            with open( test_script ,'w') as there:
+                ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                time.sleep( 10 )
+                mcm_r = request(self.db.get(self.rid))
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                n_for_test = mcm_r.get_n_for_test()
+                ## the following does change something on the request object, to be propagated in case of success
+                there.write( mcm_r.get_setup_file( location.location() , n_for_test) )
+
+            batch_test = batch_control( self.rid, test_script )
+            success = batch_test.test()
+            self.logger.log("batch_test result is %s" % success)
+            try:
+                #suck in run-test if present
+                rt_xml=location.location()+'%s_rt.xml'%( self.rid )
+                if os.path.exists( rt_xml ):
+                    mcm_r.update_performance( open(rt_xml).read(), 'perf')
+            except:
+                self.logger.error('Failed to get perf reports \n %s'%(traceback.format_exc()))
+                success = False
+            try:
+                gv_xml=location.location()+'%s_gv.xml'%( self.rid )
+                if os.path.exists( gv_xml ):
+                    mcm_r.update_performance( open(gv_xml).read(), 'eff')
+            except:
+                self.logger.error('Failed to get gen valid reports \n %s'%(traceback.format_exc()))
+                success = False
 
 
-        self.logger.error('I came all the way to here and %s'%( success ))
-        if not success:
-            ## need to provide all the information back
-            the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
-            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-            # reset the content of the request
-            mcm_r = request(self.db.get(self.rid))
-            mcm_r.test_failure(message=the_logs,what='Validation run test',rewind=True)
-            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-        else:
-            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-            ## change the status with notification
-            mcm_current = request(self.db.get(self.rid))
-            if mcm_current.json()['_rev']==mcm_r.json()['_rev']:
-                ## it's fine to push it through
-                mcm_r.set_status(with_notification=True)
-                saved = self.db.update( mcm_r.json() )
-                if not saved:
-                    mcm_current.test_failure(message='The request could not be saved after the run test procedure',what='Validation run test',rewind=True)
+            self.logger.error('I came all the way to here and %s'%( success ))
+            if not success:
+                ## need to provide all the information back
+                the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                # reset the content of the request
+                mcm_r = request(self.db.get(self.rid))
+                mcm_r.test_failure(message=the_logs,what='Validation run test',rewind=True)
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
             else:
-                mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
-            #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-
-        location.close()
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                ## change the status with notification
+                mcm_current = request(self.db.get(self.rid))
+                if mcm_current.json()['_rev']==mcm_r.json()['_rev']:
+                    ## it's fine to push it through
+                    mcm_r.set_status(with_notification=True)
+                    saved = self.db.update( mcm_r.json() )
+                    if not saved:
+                        mcm_current.test_failure(message='The request could not be saved after the run test procedure',what='Validation run test',rewind=True)
+                else:
+                    mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
+                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+        finally:
+            location.close()
 
 
