@@ -141,6 +141,18 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
+		    <div ng-switch-when="Block white list">
+		      <ng-form name="fieldForm">
+			<div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+			<font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+		      </ng-form>
+		    </div>
+		    <div ng-switch-when="Block black list">
+		      <ng-form name="fieldForm">
+			<div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+			<font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+		    </div>
                     <div ng-switch-when="History">
                       <div custom-history ng-model="result[column.db_name]"></div>
                     </div>
