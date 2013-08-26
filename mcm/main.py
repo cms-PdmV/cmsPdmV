@@ -18,6 +18,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
+from rest_api.DashboardActions import GetBjobs, GetLogFeed
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -117,6 +118,12 @@ def invalidations_html( *args, **kwargs):
 @cherrypy.expose
 def news_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','news.html'))
+
+
+@cherrypy.expose
+def dashboard_html(*args, **kwargs):
+    return open(os.path.join(file_location, 'HTML', 'dashboard.html'))
+
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -149,6 +156,7 @@ root.batches = batches
 root.invalidations = invalidations_html
 root.injection_status = injection_status
 root.news = news_html
+root.dashboard = dashboard_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -162,6 +170,7 @@ root.restapi.users = RESTResourceIndex()
 root.restapi.batches = RESTResourceIndex()
 root.restapi.invalidations = RESTResourceIndex()
 root.restapi.news = RESTResourceIndex()
+root.restapi.dashboard = RESTResourceIndex()
 
 ## create a restriction-free urls, with limited capabilities
 root.public = RESTResourceIndex()
@@ -295,6 +304,11 @@ root.restapi.news.get = GetSingleNew()
 root.restapi.news.getall = GetAllNews()
 root.restapi.news.save = CreateNews()
 root.restapi.news.update = UpdateNew()
+
+# REST dashboard Actions
+
+root.restapi.dashboard.get_bjobs = GetBjobs()
+root.restapi.dashboard.get_log_feed = GetLogFeed()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
