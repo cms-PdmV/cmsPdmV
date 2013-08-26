@@ -99,7 +99,7 @@ class store_configuration(handler):
         self.db = database('requests')
 
     def run(self):
-        location = installer( self.rid, care_on_existing=False, clean_on_exit=False)
+        location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
         
         test_script = location.location()+'prepare.sh'
         there = open( test_script ,'w')
