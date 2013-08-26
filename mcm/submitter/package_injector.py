@@ -5,22 +5,24 @@ import logging
 from tools.logger import prep2_formatter, logger as logfactory
 from tools.locator import locator
 
+
 class package_injector:
-    logger = logfactory('prep2')
+    logger = logfactory('mcm')
     hname = '' # name of the log handler
 
-    def __init__(self,  prepid,  cmssw_release, directory=None):
+    def __init__(self, prepid, cmssw_release, directory=None):
+        l_type = locator()
         if not directory:
-            l_type=locator()
             directory = l_type.workLocation()
-        #jr self.tarball = str(tarball)
-        #self.prepid = self.tarball.rsplit('.tgz')[0]
-        self.prepid = prepid
+            #jr self.tarball = str(tarball)
+        #self.hname = self.tarball.rsplit('.tgz')[0]
+        self.hname = prepid
+
         self.directory = str(directory)
         if ":" in cmssw_release:
-            self.cmssw_release,self.arch = map(str, cmssw_release.split(':'))
+            self.cmssw_release, self.arch = map(str, cmssw_release.split(':'))
         else:
-            self.cmssw_release=str(self.cmssw_release)
+            self.cmssw_release = str(self.cmssw_release)
             self.arch = 'slc5_amd64_gcc462'
 
         self.ssh_client = None
@@ -31,7 +33,7 @@ class package_injector:
         self.__build_ssh_client()
         self.__build_logger()
 
-        self.fail_message=''
+        self.fail_message = ''
 
     def __build_logger(self):
 
@@ -39,57 +41,57 @@ class package_injector:
         #logger = logging.getLogger('prep2_inject')
 
         # define .log file
-        self.__logfile = self.directory + self.prepid + '.log'
+        self.__logfile = self.directory + self.hname + '.log'
 
-            #self.logger.setLevel(1)
+        #self.logger.setLevel(1)
 
-            # main stream handler using the stderr
-            #mh = logging.StreamHandler()
-            #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
+        # main stream handler using the stderr
+        #mh = logging.StreamHandler()
+        #mh.setLevel((6 - self.__verbose) * 10) # reverse verbosity
 
-            # filename handler outputting to log
+        # filename handler outputting to log
         fh = logging.FileHandler(self.__logfile)
         fh.setLevel(logging.DEBUG) # log filename is most verbose
 
-            # format logs
-            #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
-            #mw.setFormatter(formatter)
+        # format logs
+        #formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(message)s")
+        #mw.setFormatter(formatter)
         fh.setFormatter(prep2_formatter())
 
-            # add handlers to main logger - good to go
-        self.hname = self.prepid
+        # add handlers to main logger - good to go
         self.logger.add_inject_handler(name=self.hname, handler=fh)
 
 
     def build_injection_script(self):
         script = ''
-        script += 'cd '+self.directory + '\n'
+        script += 'cd ' + self.directory + '\n'
         script += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
-	script += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem\n'
+        script += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem\n'
         script += 'set -o verbose \n'
-        script += 'export SCRAM_ARCH=%s \n'%(self.arch)
-        script += 'scram project CMSSW %s \n'%(self.cmssw_release)
-        script += 'cd %s \n'%(self.cmssw_release)
+        script += 'export SCRAM_ARCH=%s \n' % (self.arch)
+        script += 'scram project CMSSW %s \n' % (self.cmssw_release)
+        script += 'cd %s \n' % (self.cmssw_release)
         script += 'eval `scram runtime -sh` \n\n'
         script += 'cd ../\n'
         script += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         #script += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         #jrscript += 'tar xvzf %s \n'%(self.tarball)
         #jr script += 'cd %s \n '%(self.tarball.replace('.tgz',''))
-        script += 'cd %s \n '%(self.prepid)
+        script += 'cd %s \n ' % (self.hname)
         script += 'ls -l \n'
         script += 'chmod 755 injectAndApprove.sh \n'
         ## just to have a look at the wmcontrol from within the logger
         script += 'grep wmcontrol injectAndApprove.sh \n'
         script += './injectAndApprove.sh \n'
-        
+
         try:
-            self.logger.inject('Writing injection script to '+self.directory+'inject-'+self.prepid+'.sh')
-            f = open(self.directory+'inject-'+self.prepid+'.sh',  'w')
+            self.logger.inject('Writing injection script to ' + self.directory + 'inject-' + self.hname + '.sh')
+            f = open(self.directory + 'inject-' + self.hname + '.sh', 'w')
             f.write(script)
             f.close()
         except IOError as ex:
-            self.logger.inject('Could not create injection script. IOError: %s' % (ex), level='error', handler=self.hname)
+            self.logger.inject('Could not create injection script. IOError: %s' % (ex), level='error',
+                               handler=self.hname)
             return False
         return True
 
@@ -98,22 +100,24 @@ class package_injector:
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         #self.ssh_client.load_host_keys(os.path.expanduser(os.path.join('/afs/cern.ch/user/p/pdmvserv/', ".ssh", "known_hosts")))
 
-        us,  pw = self.__get_ssh_credentials()
+        us, pw = self.__get_ssh_credentials()
 
         if not us:
             self.logger.inject('Credentials for injection could not be retrieved.', level='error', handler=self.hname)
             raise paramiko.AuthenticationException('Credentials could not be retrieved.')
 
         try:
-            self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
+            self.ssh_client.connect(self.ssh_server, port=self.ssh_server_port, username=us, password=pw)
         except paramiko.AuthenticationException as ex:
-            self.logger.inject('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
+            self.logger.inject('Could not authenticate to remote server "%s:%d". Reason: %s' % (
+                self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
             return
         except paramiko.BadHostKeyException as ex:
             self.logger.inject('Host key is invalid. Reason: %s' % (ex), level='error', handler=self.hname)
             return
         except SSHException as ex:
-            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
+            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error',
+                               handler=self.hname)
             return
         except SocketError  as ex:
             self.logger.inject('Could not allocate socket. Reason: %s' % (ex), level='error', handler=self.hname)
@@ -121,14 +125,15 @@ class package_injector:
 
     def __get_ssh_credentials(self):
         try:
-            f = open(self.ssh_credentials,  'r')
+            f = open(self.ssh_credentials, 'r')
             data = f.readlines()
             f.close()
         except IOError as ex:
-            self.logger.inject('Could not retrieve the credentials for the injection. IOError: %s' % (ex), level='critical', handler=self.hname)
-            return None,  None
+            self.logger.inject('Could not retrieve the credentials for the injection. IOError: %s' % (ex),
+                               level='critical', handler=self.hname)
+            return None, None
 
-        username,  password = None,  None
+        username, password = None, None
 
         for line in data:
             if 'username:' in line:
@@ -144,17 +149,17 @@ class package_injector:
                     raise paramiko.AuthenticationException('Password not found.')
                 password = toks[1].strip()
 
-        return username,  password
+        return username, password
 
 
-    def __remote_exec(self,  cmd=''):
+    def __remote_exec(self, cmd=''):
         if not cmd:
-            return None,  None,  None
+            return None, None, None
         try:
             return self.ssh_client.exec_command(cmd)
         except SSHException as ex:
             self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
-            return None,  None,  None
+            return None, None, None
 
 
     def inject(self):
@@ -162,41 +167,40 @@ class package_injector:
         if not flag:
             return False
 
-
-        stdin,  stdout,  stderr = self.__remote_exec('sh '+self.directory+'inject-'+self.prepid+'.sh')
+        stdin, stdout, stderr = self.__remote_exec('sh ' + self.directory + 'inject-' + self.hname + '.sh')
 
         if not stdin and not stdout and not stderr:
             return False
 
-        fullOutPutText=stdout.read()        
+        fullOutPutText = stdout.read()
         error = stderr.read()
         Exceptions = []
         for line in error.split('\n'):
             if '[wmcontrol exception]' in line:
                 Exceptions.append(line)
-        #self.logger.inject('Just for the eyes %s'%( error ))
+            #self.logger.inject('Just for the eyes %s'%( error ))
         #if error:
         if len(Exceptions):
-            self.logger.inject('Executed \n %s'%(fullOutPutText), handler=self.hname, level='error')
+            self.logger.inject('Executed \n %s' % (fullOutPutText), handler=self.hname, level='error')
             self.logger.inject('Errors returned: %s' % (error), handler=self.hname, level='error')
-            self.fail_message="wmcontrol exceptions : \n %s \n in full log : \n %s" % ( '\n'.join( Exceptions), fullOutPutText)
+            self.fail_message = "wmcontrol exceptions : \n %s \n in full log : \n %s" % (
+                '\n'.join(Exceptions), fullOutPutText)
             return False
 
-
-        self.requestNames=[]
-        self.config_ids=[]
+        self.requestNames = []
+        self.config_ids = []
         for line in fullOutPutText.split('\n'):
             line_spl = line.split()
             #if line.startswith('Injected workflow:'):
             if line.startswith('Approved workflow:'):
                 self.requestNames.append(line.split()[2])
-            if len(line_spl) and line_spl[0]=='DocID:':
-                self.logger.inject('a line of the output contains docid %s : %s'%(line, line_spl), handler=self.hname)
-                self.config_ids.append( line_spl[-1] )
+            if len(line_spl) and line_spl[0] == 'DocID:':
+                self.logger.inject('a line of the output contains docid %s : %s' % (line, line_spl), handler=self.hname)
+                self.config_ids.append(line_spl[-1])
 
-        self.fail_message = 'Log of injection: \n %s'%(fullOutPutText)
+        self.fail_message = 'Log of injection: \n %s' % (fullOutPutText)
         if not len(self.requestNames):
-            self.fail_message = 'There were no request manager name recorded \n %s'%(fullOutPutText)
+            self.fail_message = 'There were no request manager name recorded \n %s' % (fullOutPutText)
             return False
 
         ## this is not mandatory to catch and fail, because it could happen that this is empty legitimaly
