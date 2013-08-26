@@ -18,6 +18,9 @@ class batch_control:
     def __init__(self, test_id, test_script):
         self.script_for_test = test_script
         self.test_id = test_id
+        locat = locator()
+        if locat.isDev():
+            self.test_id += '-dev'
         self.directory_for_test = self.script_for_test.rsplit('/',1)[0] +'/'
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
         self.timeout = 80
@@ -103,7 +106,7 @@ class batch_control:
             if 'Successfully completed.' in line:
                 return True
             elif 'Exited with' in line:
-                self.logger.error('workflow batch test returned: %s' % (line))
+                # self.logger.error('workflow batch test returned: %s' % (line))
                 self.log_out = out
                 
                 cmd = 'cat %s' % ( self.test_err )
@@ -153,6 +156,7 @@ class batch_control:
         #wait for afs to sync the .out file
         time.sleep(30)
         result = self.get_job_result()
+        self.ssh_exec.close_executor()
         if not result:
             return False
 
