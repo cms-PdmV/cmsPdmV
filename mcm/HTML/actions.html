@@ -30,12 +30,12 @@
           <form class="form-inline">
             Starts with: <select ng-change="select_campaign();" ng-model="selectedOption.starts" ng-options="value for value in campaigns"></select>
             Contains: <select ng-change="select_campaign();" ng-model="selectedOption.contains" ng-options="value for value in campaigns"></select>
-            <button class="btn btn-mini" ng-click="getData()">Get Data</button>
+            <button class="btn btn-mini" ng-click="getDataFromButton()">Get Data</button>
             <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
           </form>
         </div><!--End of campaing SELECT -->
         <tabs>
-          <pane heading="Select Columns">
+          <pane heading="Select Columns" active="tabsettings.view.active">
             <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
               <span ng-repeat="value in actions_defaults">
                 <label class="checkbox inline">
@@ -44,7 +44,7 @@
               </span>
             </div><!--end of well for table columns-->
           </pane>
-          <pane heading="List from file">
+          <pane heading="List from file" active="tabsettings.file.active">
             <div class="control-group">
               List request from a list file: <ddl-file-reader ng-model="cf"> </ddl-file-reader>
               <button class="btn btn-mini" align="middle" ng-click="upload(cf);">Upload</button>
