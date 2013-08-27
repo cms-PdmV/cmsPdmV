@@ -23,6 +23,14 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.result = [];
     $scope.changed_prepids = [];
     $scope.multiple_selection = {};
+    $scope.tabsettings = {
+      "view":{
+        active:false
+      },
+      "file":{
+        active:false
+      }
+    };
     
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
@@ -110,7 +118,7 @@ function resultsCtrl($scope, $http, $location, $window){
     };
 
     $scope.select_campaign = function(do_get_data){
-      $scope.result = []; //clear results on selection
+      //$scope.result = []; //clear results on selection
       //set the well to have only ChainedCampaigns which includes selectedOption
       if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
         //console.log("selected to show all");
@@ -212,6 +220,12 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   }
   $scope.getData = function(prepid){
+   if($scope.file_was_uploaded)
+   {
+     $scope.upload($scope.uploaded_file);
+   }
+   else
+   {
     $scope.result = [];
     var query = ""
     if ($scope.rootCampaign){ //if defined
@@ -248,6 +262,12 @@ function resultsCtrl($scope, $http, $location, $window){
 		    alert("Error getting data.");
 		  });
 	  });
+    }
+  };
+
+  $scope.getDataFromButton = function(){
+    $scope.file_was_uploaded = false;
+    $scope.getData("");
   };
 
   $scope.$watch('list_page', function(){
@@ -560,11 +580,13 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.upload = function(file){
       /*Upload a file to server*/
     $scope.got_results = false;
+    $scope.file_was_uploaded = true;
+    $scope.uploaded_file = file;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
       $scope.result = data.results;
-      var chained_campaign = $scope.result[0]["member_of_campaign"];
-      query = "&contains="+ chained_campaign;
-      $scope.get_chained_campaigns_info(false,query);
+      //var chained_campaign = $scope.result[0]["member_of_campaign"];
+      //query = "&contains="+ chained_campaign;
+      //$scope.get_chained_campaigns_info(false,query);
       $scope.got_results = true;
     }).error(function(status){
       $scope.update["success"] = false;
@@ -779,7 +801,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '          <i class="icon-wrench"></i>'+
         '        </a>'+
         '        <input type="checkbox" ng-click="add_chain_to_selected_list(prepid,cr)" ng-checked="multiple_selection[prepid][column].chains[cr]" rel="tooltip" title="Add to multiple list" ng-hide="role(3);"/>'+
-        '        <a rel="tooltip" title="Show chained request {{cr}}" ng-href="chained_requests?query=prepid%3D%3D{{cr}}" target="_blank">'+
+        '        <a rel="tooltip" title="Show chained request {{cr}}" ng-href="chained_requests?prepid={{cr}}" target="_blank">'+
         '          <i class="icon-indent-left"></i>'+
         '        </a>'+
         '        <form class="form-inline" ng-show="showSubForm[cr]">'+
