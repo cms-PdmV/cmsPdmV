@@ -359,6 +359,13 @@ class chained_request(json_base):
         ## register the flow to the request
         next_request.set_attribute('flown_with', flow_name)
 
+        ## setup the keep output parameter
+        keep = []
+        for s in next_request.get_attribute('sequences'):
+            keep.append(False)
+        keep[-1] = True
+        next_request.set_attribute('keep_output', keep)
+
         ## another copy/paste
         def put_together(nc, fl, new_req):
             # copy the sequences of the flow
@@ -396,12 +403,6 @@ class chained_request(json_base):
         ##assemble the campaign+flow => request
         put_together(next_campaign, mcm_f, next_request)
 
-        ## setup the keep output parameter
-        keep = []
-        for s in next_request.get_attribute('sequences'):
-            keep.append(False)
-        keep[-1] = True
-        next_request.set_attribute('keep_output', keep)
 
         next_request.update_history({'action': 'flow', 'step': self.get_attribute('prepid')})
         request_saved = rdb.save(next_request.json())
