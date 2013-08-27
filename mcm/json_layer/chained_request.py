@@ -359,13 +359,6 @@ class chained_request(json_base):
         ## register the flow to the request
         next_request.set_attribute('flown_with', flow_name)
 
-        ## setup the keep output parameter
-        keep = []
-        for s in next_request.get_attribute('sequences'):
-            keep.append(False)
-        keep[-1] = True
-        next_request.set_attribute('keep_output', keep)
-
         ## another copy/paste
         def put_together(nc, fl, new_req):
             # copy the sequences of the flow
@@ -392,6 +385,13 @@ class chained_request(json_base):
                     sequences.append(step['default'])
 
             new_req.set_attribute('sequences', sequences)
+            ## setup the keep output parameter
+            keep = []
+            for s in sequences:
+                keep.append(False)
+            keep[-1] = True
+            new_req.set_attribute('keep_output', keep)
+
             # override request's parameters
             for key in fl.get_attribute('request_parameters'):
                 if key == 'sequences':
