@@ -183,12 +183,16 @@
 	            </div>
 	            <div ng-switch-when="Last status" align="center">
 		            <i class="{{statusIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='chained_requests?status={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained request with last status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+		            <a ng-href='chained_requests?last_status={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all chained request with last status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
 	            <div ng-switch-when="Dataset name">
 		            <a ng-href='chained_requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show chained requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-indent-left"></i></a>
 		            <a ng-href='requests?dataset_name={{data[value.db_name]}}&page=0' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_self"><i class="icon-folder-open"></i></a>
 	            </div>
+                <div ng-switch-when="Status" align="center">
+                  <i class="{{statusIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
+                  <a ng-href='chained_requests&status={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+                </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
           </td>
