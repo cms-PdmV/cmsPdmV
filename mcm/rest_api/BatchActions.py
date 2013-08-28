@@ -5,6 +5,7 @@ from json import loads,dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.prep_database import database
 from json_layer.batch import batch
+from tools.locker import semaphore_events
 
 """
 class SetStatus(RESTResource):
@@ -119,8 +120,10 @@ class BatchAnnouncer(RESTResource):
         self.access_limit = 3
 
     def announce_with_text(self, bid, message):
+        if not semaphore_events.is_set(bid):
+            return {"results": False, "value": "Batch {0} has on-going submissions.".format(bid)}
         b = batch(self.bdb.get(bid))
-        r=b.announce(message)
+        r = b.announce(message)
         if r:
             return {"results":self.bdb.update(b.json()) , "value" : r}
         else:
@@ -161,7 +164,7 @@ class InspectBatches(BatchAnnouncer):
         res=[]
         new_batches = self.bdb.queries(['status==new'])
         for new_batch in new_batches:
-            if len(new_batch['requests'])>=N_to_go:
+            if len(new_batch['requests'])>=self.N_to_go:
                 ## it is good to be announced !
                 res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
         
