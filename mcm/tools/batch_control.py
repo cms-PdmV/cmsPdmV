@@ -15,7 +15,8 @@ class batch_control:
     logger = logfactory('mcm')
     hname = '' # handler's name
     group = 'no-group'
-
+    timeout = 80 # in minutes
+        
     def __init__(self, test_id, test_script):
         self.script_for_test = test_script
         self.test_id = test_id
@@ -27,7 +28,7 @@ class batch_control:
             self.group = '/prod'
         self.directory_for_test = self.script_for_test.rsplit('/',1)[0] +'/'
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
-        self.timeout = 80
+
         self.log_out = 'Not available'
         self.log_err = 'Not available'
         
