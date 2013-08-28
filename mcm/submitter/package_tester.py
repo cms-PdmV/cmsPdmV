@@ -12,6 +12,7 @@ from tools.locator import locator
 class package_tester:
     logger = logfactory('mcm')
     hname = '' # handler's name
+    group = ''
 
     def __init__(self, request_object, directory=None, pyconfigs=[]):
         l_type = locator()
@@ -31,6 +32,9 @@ class package_tester:
         self.hname = self.request.get_attribute('prepid')
         if l_type.isDev():
             self.hname += "-dev"
+            self.group = "/dev"
+        else:
+            self.group = "/prod"
         self.__build_logger()
 
         self.pyconfigs = pyconfigs
@@ -110,6 +114,7 @@ class package_tester:
         if not self.build_submit_script():
             return None
         cmd = 'bsub -J ' + self.hname
+        cmd += ' -g ' + self.group
         cmd += ' -q 8nh -W 100 -cwd ' + self.directory
         cmd += ' -eo ' + os.path.abspath(self.directory + self.hname + '.err')
         cmd += ' -oo ' + os.path.abspath(self.directory + self.hname + '.out')
