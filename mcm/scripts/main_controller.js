@@ -105,7 +105,35 @@ function mainCtrl($scope, $http, $location, $window){
      return x;
    }
   };
-};
+}
+testApp.directive('slider', function () {
+return {
+    restrict: 'AE',
+    scope: {
+        value: '=',
+        sliding: '='
+    },
+    link: function (scope, element, attrs, ctrl) {
+        var slider_lines = $("input", element).slider();
+        slider_lines.data('slider').setValue(scope.value);
+
+        slider_lines.on('slide', function (ev) {
+            scope.$parent.$apply(function () {
+                scope.sliding = true;
+                scope.value = slider_lines.data('slider').getValue();
+            });
+        });
+
+        slider_lines.on('slideStop', function (ev) {
+            scope.$parent.$apply(function () {
+                scope.sliding = false;
+            });
+        });
+
+    },
+    template: '<input type="text" class="slider" data-slider-min=5 data-slider-max=101 data-slider-selection="after" data-slider-tooltip="hide">'
+}
+});
 testApp.directive('ddlFileReader', function($http,$rootScope) {
     return {
         require: "ngModel",
