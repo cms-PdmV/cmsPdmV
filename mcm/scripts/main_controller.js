@@ -131,7 +131,7 @@ return {
         });
 
     },
-    template: '<input type="text" class="slider" data-slider-min=5 data-slider-max=101 data-slider-selection="after" data-slider-tooltip="hide">'
+    template: '<input type="text" class="slider" data-slider-min=5 data-slider-max=101 data-slider-selection="after" data-slider-tooltip="hide" data-slider-handle="round-square">'
 }
 });
 testApp.directive('ddlFileReader', function($http,$rootScope) {
@@ -214,7 +214,7 @@ testApp.directive('tabs', function() {
     "<div class=\"tabbable\">\n" +
     "  <ul class=\"nav nav-tabs\">\n" +
     "    <li ng-repeat=\"pane in panes\" ng-class=\"{active:pane.selected}\">\n" +
-    "      <a ng-click=\"select(pane)\">{{pane.heading}}</a>\n" +
+    "      <a ng-click=\"select(pane)\" ng-href=\"#\">{{pane.heading}}</a>\n" +
     "    </li>\n" +
     "  </ul>{{result}}\n" +
     "  <div class=\"tab-content\" ng-transclude></div>\n" +
