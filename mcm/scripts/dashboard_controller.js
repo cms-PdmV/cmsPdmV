@@ -1,9 +1,8 @@
 function resultsCtrl($scope, $http, $location, $window){
-
     $scope.update_stats = [];
     $scope.update_batch = [];
     $scope.update_logs = [];
-    $scope.bjobsOptions = {bjobsOutput:""};
+    $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
     $scope.tabsettings={
         batch:{
             active:true
@@ -16,8 +15,16 @@ function resultsCtrl($scope, $http, $location, $window){
         }
     };
     $scope.logs = {
-        type : 'error'
+        type : 'error',
+        lines : 10
     };
+
+    function groupName(){
+        if($scope.isDevMachine())
+            return " -g dev";
+        else
+            return " -g prod"
+    }
 
     function removeEmptyString(dict){
         var output_array = [];
@@ -28,7 +35,7 @@ function resultsCtrl($scope, $http, $location, $window){
             if (elem) {
                 output_array.push(elem)
             }
-        })
+        });
         return output_array
     }
 
@@ -48,7 +55,8 @@ function resultsCtrl($scope, $http, $location, $window){
     })};
 
     $scope.getLogData = function(log_name){
-        var promise = $http.get("restapi/dashboard/get_log_feed/" + log_name);
+        var lines = $scope.logs.lines>100?-1:$scope.logs.lines;
+        var promise = $http.get("restapi/dashboard/get_log_feed/" + log_name + "/" + lines);
         promise.then(function(data, status){
             $scope.update_logs["success"] = true;
             $scope.update_logs["fail"] = false;
@@ -59,6 +67,10 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.update_logs["fail"] = true;
             $scope.update_logs["status_code"] = data.status;
     })};
+
+    $scope.getLines = function(line_number){
+     return line_number>100?"All":line_number
+    };
 
     $scope.$watch('tabsettings.batch.active', function(){
         if($scope.tabsettings.batch.active) {
@@ -93,4 +105,10 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.$watch('bjobsOptions', function(){
         $scope.getBjobsData();
     }, true);
+
+    $scope.$watch('logs.sliding', function() {
+        if(!$scope.logs.sliding)
+            $scope.getLogData($scope.logs.type)
+    });
+
 }
