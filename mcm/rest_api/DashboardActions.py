@@ -20,7 +20,7 @@ class GetBjobs(RESTResource):
             out = stdout.read()
             err = stderr.read()
             if err:
-                if err == "Job <*-dev> is not found\n":  # so the shown string is consistent with production
+                if "No job found in job group" in err:  # so the shown string is consistent with production
                     return dumps({"results": 'No unfinished job found'})
                 return dumps({"results": err})
             return dumps({"results": out})
@@ -30,7 +30,10 @@ class GetBjobs(RESTResource):
     def create_command(self, options):
         bcmd = 'bjobs'
         for opt in options:
-            bcmd += opt
+            if '-g' in opt:
+                bcmd += ' -g ' + '/' + '/'.join(opt.split()[1:])
+            else:
+                bcmd += opt
         return bcmd
 
 

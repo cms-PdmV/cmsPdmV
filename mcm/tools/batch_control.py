@@ -14,6 +14,7 @@ class batch_control:
     """
     logger = logfactory('mcm')
     hname = '' # handler's name
+    group = 'no-group'
 
     def __init__(self, test_id, test_script):
         self.script_for_test = test_script
@@ -21,6 +22,9 @@ class batch_control:
         locat = locator()
         if locat.isDev():
             self.test_id += '-dev'
+            self.group = '/dev'
+        else:
+            self.group = '/prod'
         self.directory_for_test = self.script_for_test.rsplit('/',1)[0] +'/'
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
         self.timeout = 80
@@ -29,8 +33,9 @@ class batch_control:
         
     def build_batch_command(self):
             
-        cmd = 'bsub -J ' + self.test_id+ ' '
-        cmd += '-R "type=SLC5_64" ' # on slc5 nodes
+        cmd = 'bsub -J ' + self.test_id
+        cmd += ' -g ' + self.group
+        cmd += ' -R "type=SLC5_64" ' # on slc5 nodes
         #cmd += '-M 3000000 ' # 3G of mem
         cmd += ' -q 8nh -cwd ' + self.directory_for_test
         if self.timeout:
