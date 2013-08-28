@@ -1,4 +1,4 @@
-from threading import RLock
+from threading import RLock, Event
 from tools.logger import logger
 from collections import defaultdict
 
@@ -39,5 +39,39 @@ class Locker(object):
             self.logger.log("Releasing lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
-
 locker = Locker()
+
+
+class SemaphoreEvents(object):
+    """
+    Class works like semaphore (counts number of threads) and uses events to call waiting threads when the counter
+    reaches 0. Non-waiting threads should use increment/decrement statements.
+    """
+
+    logger = logger('mcm')
+    event_dictionary = defaultdict(Event)
+    count_dictionary = defaultdict()
+
+    def increment(self, lock_id):
+        with locker.lock(lock_id):
+            self.count_dictionary[lock_id] += 1
+            self.event_dictionary[lock_id].clear()
+            self.logger.log("Semaphore {0} incremented".format(lock_id))
+
+    def decrement(self, lock_id):
+        with locker.lock(lock_id):
+            self.count_dictionary[lock_id] -= 1
+            self.logger.log("Semaphore {0} decremented".format(lock_id))
+            if self.count_dictionary[lock_id] == 0:
+                self.event_dictionary[lock_id].set()
+
+    def wait(self, lock_id, timeout):
+        with locker.lock(lock_id):
+            event = self.event_dictionary[lock_id]
+        return event.wait(timeout)
+
+    def is_set(self, lock_id):
+        with locker.lock(lock_id):
+            return self.event_dictionary[lock_id].is_set()
+
+semaphore_events = SemaphoreEvents()
