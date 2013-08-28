@@ -1171,8 +1171,10 @@ class request(json_base):
         return text
 
     def get_n_for_test(self):
-        events = 10.0
-        # the matching and filter efficiencies
+        ## that's the number of events we want to get in output
+        events = 100.0
+
+        #=> correct for the matching and filter efficiencies
         if self.get_attribute('generator_parameters'):
             ## get the last entry of generator parameters
             match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
@@ -1180,14 +1182,26 @@ class request(json_base):
             if match > 0 and filter_eff > 0:
                 events /=  (match*filter_eff)
 
+        #=> estimate how long it will take
+        total_test_time = self.get_attribute('time_event') * events
+        timeout = batch_control.timeout * 60. # in seconds
+        # check that it is not going to time-out
+        ### either the batch test time-out is set accordingly, or we limit the events
+        self.logger.log('running %s means running for %s s, and timeout is %s' %( events, total_test_time, timeout))
+        if total_test_time > timeout:
+            #reduce the n events for test to fit in 75% of the timeout
+            events = 0.75* timeout / float(self.get_attribute('time_event'))
+            self.logger.log('N for test was lowered to %s to not exceed time-out'%( events ))
 
-        if events>1000:
-            return int(50)
-        elif events>=1:
+        ## no need to max out since we take care of timing above
+        #if events>1000: 
+        #    return int(50)
+        #el
+        if events>=1:
             return int(events)
         else:
-            ##default to 5
-            return int(5)
+            ##default to 1
+            return int(1)
 
     def unique_string(self, step_i):
         ### create a string that supposedly uniquely identifies the request configuration for step 
