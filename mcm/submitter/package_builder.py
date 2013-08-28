@@ -18,7 +18,7 @@ from couchdb_layer.prep_database import database
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.request_to_wma import request_to_wmcontrol
-from tools.locker import locker
+from tools.locker import locker, semaphore_events
 
 class package_builder:
     logger = logfactory('mcm')
@@ -134,87 +134,91 @@ class package_builder:
             self.batchNumber = max(res_new)
 
         self.batchName += '-%05d' % (self.batchNumber)
-        if not bdb.document_exists(self.batchName):
-            newBatch = batch({'_id': self.batchName, 'prepid': self.batchName})
-            notes = ""
-            cdb = database('campaigns')
-            mcm_c = cdb.get(req_json['member_of_campaign'])
-            if mcm_c['notes']:
-                notes += "Notes about the campaign:\n" + mcm_c['notes'] + "\n"
-            if req_json['flown_with']:
-                fdb = database('flows')
-                mcm_f = fdb.get(req_json['flown_with'])
-                if mcm_f['notes']:
-                    notes += "Notes about the flow:\n" + mcm_f['notes'] + "\n"
-            if notes:
-                newBatch.set_attribute('notes', notes)
-            newBatch.update_history({'action': 'created'})
-            bdb.save(newBatch.json())
+        semaphore_events.increment(self.batchName)
+        try:
+            if not bdb.document_exists(self.batchName):
+                newBatch = batch({'_id': self.batchName, 'prepid': self.batchName})
+                notes = ""
+                cdb = database('campaigns')
+                mcm_c = cdb.get(req_json['member_of_campaign'])
+                if mcm_c['notes']:
+                    notes += "Notes about the campaign:\n" + mcm_c['notes'] + "\n"
+                if req_json['flown_with']:
+                    fdb = database('flows')
+                    mcm_f = fdb.get(req_json['flown_with'])
+                    if mcm_f['notes']:
+                        notes += "Notes about the flow:\n" + mcm_f['notes'] + "\n"
+                if notes:
+                    newBatch.set_attribute('notes', notes)
+                newBatch.update_history({'action': 'created'})
+                bdb.save(newBatch.json())
 
-        # list of different production steps (represented as a different element in the request's "sequences" property)
-        self.__cmsDrivers = []
-        self.wmagent_type = ''
-        self.__injection_command = ''
-        self.__build_command = ''
+            # list of different production steps (represented as a different element in the request's "sequences" property)
+            self.__cmsDrivers = []
+            self.wmagent_type = ''
+            self.__injection_command = ''
+            self.__build_command = ''
 
-        # reqmgr config cache specifics
-        #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
-        #self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
-        #self.reqmgr_database = "reqmgr_config_cache"
-        #self.reqmgr_user = "pdmvserv" 
-        #self.reqmgr_group = "ppd" 
+            # reqmgr config cache specifics
+            #self.reqmgr_couchurl = "https://cmsweb.cern.ch/couchdb"
+            #self.reqmgr_couchurl = "https://cmsweb-testbed.cern.ch/couchdb"
+            #self.reqmgr_database = "reqmgr_config_cache"
+            #self.reqmgr_user = "pdmvserv"
+            #self.reqmgr_group = "ppd"
 
-        # config files
-        #self.__summary = None
-        #self.__upload_configs = None
-        self.__injectAndApprove = None
-        self.__pyconfigs = []
+            # config files
+            #self.__summary = None
+            #self.__upload_configs = None
+            self.__injectAndApprove = None
+            self.__pyconfigs = []
 
-        # There is a not-Initialized exception that is not handled
-        self.directory = directory
-        self.hname = self.request.get_attribute('prepid')
-        if l_type.isDev():
-            self.careOfExistingDirectory = False
-            self.hname += "-dev"
-        else:
-            ## care of existing diretories in prod instance so as to limit the amount of space taken by the submissions 
-            self.careOfExistingDirectory = True
-            ## override it ANYWAYS to false
-        self.careOfExistingDirectory = False
-        self.cleanUpAfter  = True
-
-        self.__check_directory() # check directory sanity
-
-        # init logger
-        #self.logger = None
-        self.__build_logger()
-
-        # initialize tarball
-        self.tarball = None
-        #self.__init_tarball()
-
-        # the number of events to be tested.
-        # for generation requests, I need to take into consideration
-        # the matching and filter efficiencies
-        if self.request.get_attribute('generator_parameters'):
-            match = float(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
-            filter_eff = float(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            if match > -1 and filter_eff > -1:
-                self.events = int(math.fabs(events / (match * filter_eff)))
+            # There is a not-Initialized exception that is not handled
+            self.directory = directory
+            self.hname = self.request.get_attribute('prepid')
+            if l_type.isDev():
+                self.careOfExistingDirectory = False
+                self.hname += "-dev"
             else:
+                ## care of existing diretories in prod instance so as to limit the amount of space taken by the submissions
+                self.careOfExistingDirectory = True
+                ## override it ANYWAYS to false
+            self.careOfExistingDirectory = False
+            self.cleanUpAfter  = True
+
+            self.__check_directory() # check directory sanity
+
+            # init logger
+            #self.logger = None
+            self.__build_logger()
+
+            # initialize tarball
+            self.tarball = None
+            #self.__init_tarball()
+
+            # the number of events to be tested.
+            # for generation requests, I need to take into consideration
+            # the matching and filter efficiencies
+            if self.request.get_attribute('generator_parameters'):
+                match = float(self.request.get_attribute('generator_parameters')[-1]['match_efficiency'])
+                filter_eff = float(self.request.get_attribute('generator_parameters')[-1]['filter_efficiency'])
+                if match > -1 and filter_eff > -1:
+                    self.events = int(math.fabs(events / (match * filter_eff)))
+                else:
+                    self.events = int(math.fabs(events))
+            else:
+                #self.events = math.fabs(int(events))
                 self.events = int(math.fabs(events))
-        else:
-            #self.events = math.fabs(int(events))
-            self.events = int(math.fabs(events))
 
-        # avoid large testing samples
-        if self.events > 1000:
-            truncatedTo = 50
-            self.logger.inject('The run test should be on %d events, truncating to %d' % (self.events, truncatedTo),
-                               handler=self.hname)
-            self.events = truncatedTo
+            # avoid large testing samples
+            if self.events > 1000:
+                truncatedTo = 50
+                self.logger.inject('The run test should be on %d events, truncating to %d' % (self.events, truncatedTo),
+                                   handler=self.hname)
+                self.events = truncatedTo
 
-        self.ssh_exec = ssh_executor(self.directory, self.hname)
+            self.ssh_exec = ssh_executor(self.directory, self.hname)
+        except:
+            semaphore_events.decrement(self.batchName)
 
     # check and create all working directories
     def __check_directory(self):
@@ -669,7 +673,7 @@ class package_builder:
     def close(self):
         #if self.closed:
         #    return
-
+        semaphore_events.decrement(self.batchName)
         #self.logger.debug('Shutting down...')
         #logging.shutdown()
         self.logger.remove_inject_handler(self.hname)
@@ -753,11 +757,11 @@ class package_builder:
         # log new injection
         #self.logger.inject('## Logger instance retrieved', level='debug')
 
-        #init configuration and package specific stuff
-        self.init_package()
-
-        flag = self.build_configuration()
         try:
+        #init configuration and package specific stuff
+            self.init_package()
+
+            flag = self.build_configuration()
             if not flag:
                 return False
             ## JR find a way to skip testing in batch the request for digi-reco requests
