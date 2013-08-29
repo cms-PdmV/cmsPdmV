@@ -12,7 +12,10 @@ class batch(json_base):
             'history':[],
             'notes':'',
             'status':self.get_status_steps()[0],
-            'requests':[]
+            'requests':[],
+            'extensions':0,
+            'process_string':'',
+            'version':0
             }
         self.setup()
         self.update(json_input)
