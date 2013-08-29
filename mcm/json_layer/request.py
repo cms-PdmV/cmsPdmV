@@ -1198,8 +1198,11 @@ class request(json_base):
         self.logger.log('running %s means running for %s s, and timeout is %s' %( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            events = timeout / float(self.get_attribute('time_event'))
-            self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out'%( events, fraction , batch_control.timeout))
+            if self.get_attribute('time_event'):
+                events = timeout / float(self.get_attribute('time_event'))
+                self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out'%( events, fraction , batch_control.timeout))
+            else:
+                self.logger.error('time per event is set to 0 !')
 
         if events>=1:
             return int(events)
