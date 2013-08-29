@@ -103,6 +103,8 @@
 				break
 		}
 
+        var backgroundColour = this.element.data('slider-handle')||options.handle;
+
 		if (this.range) {
 			this.value[0] = Math.max(this.min, Math.min(this.max, this.value[0]));
 			this.value[1] = Math.max(this.min, Math.min(this.max, this.value[1]));

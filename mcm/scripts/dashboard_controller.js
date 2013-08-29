@@ -18,6 +18,11 @@ function resultsCtrl($scope, $http, $location, $window){
         type : 'error',
         lines : 10
     };
+    $scope.fontSize = 12;
+    $scope.items = [];
+    for(var i = 9;i<18;i++){
+        $scope.items.push(i)
+    }
 
     function groupName(){
         if($scope.isDevMachine())
@@ -108,7 +113,18 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.$watch('logs.sliding', function() {
         if(!$scope.logs.sliding)
-            $scope.getLogData($scope.logs.type)
+            $scope.getLogData($scope.logs.type);
     });
+
+
+    
+    $scope.selectValue = function() {
+        return document.getElementById("selectFont").value;
+    };
+
+//    $scope.$watch($scope.selectValue(), function() {
+//        console.log(document.getElementById("selectFont").value);
+//        document.getElementById("preLogs").style.fontSize= document.getElementById("selectFont").value + "px";
+//    });
 
 }
