@@ -23,6 +23,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.action_report= {};
     $scope.action_status= {};
     $scope.underscore = _;
+    $scope.file_was_uploaded = false;
     $scope.tabsettings = {
       "view":{
         active:false
@@ -243,6 +244,12 @@ function resultsCtrl($scope, $http, $location, $window){
    };
 
   $scope.getData = function(){
+    if($scope.file_was_uploaded)
+   {
+     $scope.upload($scope.uploaded_file);
+   }
+   else
+   {
     var query = ""
     _.each($location.search(), function(value,key){
       if (key!= 'shown'){
@@ -301,6 +308,7 @@ function resultsCtrl($scope, $http, $location, $window){
     },function(){
       alert("Error getting information");
     });
+   }
   };
 
   $scope.$watch('list_page', function(){
@@ -358,18 +366,17 @@ function resultsCtrl($scope, $http, $location, $window){
       if ($scope.parse_one ( data[i] )){
 		    to_reload=false;
       }
-	  }
-	  if (to_reload == true){
-		  $scope.set_success(status);
+    }
+    if (to_reload == true){
+      $scope.set_success(status);
     }else{
       $scope.set_fail(status);
-		}
+    }
   };
 
   $scope.next_approval = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
-	    $scope.parse_report(data,status);
-
+      $scope.parse_report(data,status);
     }).error(function(data,status){
 	    $scope.set_fail(status);
     });
@@ -628,6 +635,8 @@ function resultsCtrl($scope, $http, $location, $window){
    };
 
   $scope.upload = function(file){
+    $scope.file_was_uploaded = true;
+    $scope.uploaded_file = file;
     /*Upload a file to server*/
     $scope.got_results = false;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
@@ -871,71 +880,90 @@ testApp.directive("loadFields", function($http, $location){
     '  <form class="form-inline">'+
     '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    '      <select ng-model="listfields[key]">'+
+    '      <select ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     '        <option ng-repeat="elem in value">{{elem}}</option>'+
     '      </select>'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in searchable[key] | filter: $viewValue | limitTo: 10">'+
+    '      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
     '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
     '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid();" ng-disabled="is_prepip_in_url">Next prepId</button>'+
     '</div>'
     ,
-    link: function(scope, element, attr){
+    link: function(scope, element, attr)
+    {
+      scope.listfields = {};
+      scope.showUrl = false;
+      scope.showOption = {};
+      scope.is_prepip_in_url = $location.search()["prepid"];
+      scope.getSearch = function(){
         scope.listfields = {};
         scope.showUrl = false;
-
-        scope.getSearch = function(){
-          scope.listfields = {};
-          scope.showUrl = false;
-          var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
-          scope.loadingData = true;
-          promise.then(function(data){
-            scope.loadingData = false;
-            scope.searchable = data.data;
-            _.each(scope.searchable, function(element,key){
-              element.unshift("------"); //lets insert into begining of array an default value to not include in search
-              scope.listfields[key] = "------";
-            });
-          }, function(data){
-            scope.loadingData = false;
-            alert("Error getting searchable fields: "+data.status);
-	        });
-        };
-        scope.getUrl = function(){
-          scope.url = "?";
-          _.each(scope.listfields, function(value, key){
-            if (value != "------"){
-              scope.url += key +"=" +value+"&";
-              $location.search(key,String(value));
-            }else{
-              $location.search(key,null);//.remove(key);
-            }
-          });
-          scope.getData();
-        };
-      scope.$watch('tabsettings.navigation.active', function(){
-      if (scope.tabsettings.navigation.active)
-      {
-        if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
-        {
-          var promise = $http.get("restapi/"+scope.dbName+"/searchable");
-          scope.loadingData = true;
-          promise.then(function(data){
-            scope.loadingData = false;
-            scope.searchable = data.data;
-            _.each(scope.searchable, function(element,key){
-              element.unshift("------"); //lets insert into begining of array an default value to not include in search
-              scope.listfields[key] = "------";
-            });
-          }, function(data){
-            scope.loadingData = false;
-            alert("Error getting searchable fields: "+data.status);
-          });
-        }
+        var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
+        scope.loadingData = true;
+        promise.then(function(data){
+          scope.loadingData = false;
+          scope.searchable = data.data;
+        }, function(data){
+          scope.loadingData = false;
+          alert("Error getting searchable fields: "+data.status);
+        });
+      };
+      scope.zeroPad = function(num, places){
+        var zero = places - num.toString().length + 1;
+        return Array(+(zero > 0 && zero)).join("0") + num;
       }
-    },true);
-	  }
+      scope.goToNextPrepid = function(){
+        if($location.search()["prepid"]){
+          var prepid = $location.search()["prepid"];
+          lastnumber = parseInt(prepid.substring(prepid.length-5))+1;
+          var new_prepid = prepid.substring(0,prepid.length-5)+scope.zeroPad(lastnumber, 5);
+          $location.search("prepid", new_prepid);
+          scope.getData();
+        }
+      };
+      scope.getUrl = function(){
+        scope.url = "?";
+        _.each(scope.listfields, function(value, key){
+          if (value != ""){
+            scope.url += key +"=" +value+"&";
+            $location.search(key,String(value));
+          }else{
+            $location.search(key,null);//.remove(key);
+          }
+        });
+        scope.getData();
+      };
+      scope.toggleSelectOption = function(option){
+        if (scope.showOption[option])
+        {
+          scope.showOption[option] = false;
+        }else
+        {
+          scope.showOption[option] = true;
+        }
+      };
+      scope.$watch('tabsettings.navigation.active', function(){
+        if (scope.tabsettings.navigation.active)
+        {
+          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
+          {
+            var promise = $http.get("restapi/"+scope.dbName+"/searchable");
+            scope.loadingData = true;
+            promise.then(function(data){
+              scope.loadingData = false;
+              scope.searchable = data.data;
+            }, function(data){
+              scope.loadingData = false;
+              alert("Error getting searchable fields: "+data.status);
+            });
+          }
+        }
+      },true);
+    }
   }
 });
