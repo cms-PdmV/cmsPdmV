@@ -74,7 +74,7 @@ class chained_request(json_base):
         self._json_base__schema = {
             '_id': '',
             'chain': [],
-            'approval': self.get_approval_steps()[0],
+            'approval': self.get_approval_steps()[1], ## create all chained request in flow
             'step': 0,
             'analysis_id': [],
             'pwg': '',
@@ -124,6 +124,12 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'chained_request %s has got no root' % (
                                                              self.get_attribute('_id')))
+
+        # check on the approval of the chained request before all
+        ## let it be flowing regardless
+        #if self.get_attribute('approval') == 'none':
+        #    raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+        #                                                 'The approval of the chained request is none, and therefore flow cannot happen')
 
         #this operation requires to access all sorts of objects
         rdb = database('requests')
@@ -436,6 +442,11 @@ class chained_request(json_base):
         return True
 
     def toggle_last_request(self):
+
+        ## let it toggle the last request to a given approval only if the chained request allows it
+        if self.get_attribute('approval') == 'none':
+            return 
+
         ccdb = database('chained_campaigns')
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][self.get_attribute('step')]
