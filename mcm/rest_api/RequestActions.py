@@ -859,9 +859,10 @@ class InjectRequest(RESTResource):
         self.access_limit = 3
 
     class INJECTOR(Thread):
-        def __init__(self, pid, log, how_far=None):
+        def __init__(self, pid, log, how_far=None,check_on_approval=True,wait=0):
             Thread.__init__(self)
             self.logger = log
+            self.wait=wait
             self.db = database('requests')
             self.act_on_pid = []
             self.res = []
@@ -876,7 +877,7 @@ class InjectRequest(RESTResource):
                                  "message": "The request is in status %s, while approved is required" % (
                                      req.get_attribute('status'))})
                 return
-            if req.get_attribute('approval') != 'submit':
+            if check_on_approval and req.get_attribute('approval') != 'submit':
                 self.res.append({"prepid": pid, "results": False,
                                  "message": "The request is in approval %s, while submit is required" % (
                                      req.get_attribute('approval'))})
@@ -897,6 +898,7 @@ class InjectRequest(RESTResource):
             if len(self.act_on_pid):
                 self.res = []
             for pid in self.act_on_pid:
+                time.sleep(self.wait)
                 if not locker.acquire(pid, blocking=False):
                     self.res.append(
                         {"prepid": pid, "results": False, "message": "The request is already being handled"})
@@ -1131,9 +1133,9 @@ class SearchableRequest(RESTResource):
                         continue
                     if type(request[key]) == list:
                         for item in request[key]:
-                            searchable[key].add(item)
+                            searchable[key].add(str(item))
                     else:
-                        searchable[key].add(request[key])
+                        searchable[key].add(str(request[key]))
 
             #unique it
             for key in searchable:
