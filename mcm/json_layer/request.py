@@ -1191,20 +1191,16 @@ class request(json_base):
 
         #=> estimate how long it will take
         total_test_time = self.get_attribute('time_event') * events
-        timeout = batch_control.timeout * 60. # in seconds
+        fraction = 0.5
+        timeout = batch_control.timeout * 60. * fraction # in seconds
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
         self.logger.log('running %s means running for %s s, and timeout is %s' %( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            fraction = 0.5
-            events = fraction*timeout / float(self.get_attribute('time_event'))
-            self.logger.log('N for test was lowered to %s to not exceed %s time-out'%( events, fraction ))
+            events = timeout / float(self.get_attribute('time_event'))
+            self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out'%( events, fraction , batch_control.timeout))
 
-        ## no need to max out since we take care of timing above
-        #if events>1000: 
-        #    return int(50)
-        #el
         if events>=1:
             return int(events)
         else:
