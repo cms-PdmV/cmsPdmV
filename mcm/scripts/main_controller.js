@@ -25,7 +25,7 @@ function mainCtrl($scope, $http, $location, $window){
 
 // GET all news
   $scope.getNews = function(){ //we check for wich page to get news -> home page gets news all the time
-    var pages_not_to_get_news = ["chained_campaigns","flows","actions","requests","chained_requests","batch","dashboard","users"];
+    var pages_not_to_get_news = ["chained_campaigns","flows","actions","requests","chained_requests","batch","dashboard","users","edit"];
     var return_info = true;
     _.each(pages_not_to_get_news, function(elem){
       if($location.path().indexOf(elem) != -1)
@@ -312,6 +312,45 @@ testApp.constant('buttonConfig', {
           ngModelCtrl.$setViewValue(element.hasClass(activeClass) ? getFalseValue() : getTrueValue());
           ngModelCtrl.$render();
         });
+      });
+    }
+  };
+}]);
+
+testApp.directive('dropdownToggle', ['$document', '$location', function ($document, $location) {
+  var openElement = null,
+      closeMenu   = angular.noop;
+  return {
+    restrict: 'CA',
+    link: function(scope, element, attrs) {
+      scope.$watch('$location.path', function() { closeMenu(); });
+      element.parent().bind('click', function() { closeMenu(); });
+      element.bind('click', function (event) {
+
+        var elementWasOpen = (element === openElement);
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!!openElement) {
+          closeMenu();
+        }
+
+        if (!elementWasOpen) {
+          element.parent().addClass('open');
+          openElement = element;
+          closeMenu = function (event) {
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            $document.unbind('click', closeMenu);
+            element.parent().removeClass('open');
+            closeMenu = angular.noop;
+            openElement = null;
+          };
+          $document.bind('click', closeMenu);
+        }
       });
     }
   };
