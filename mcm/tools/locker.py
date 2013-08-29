@@ -50,7 +50,7 @@ class SemaphoreEvents(object):
 
     logger = logger('mcm')
     event_dictionary = defaultdict(Event)
-    count_dictionary = defaultdict()
+    count_dictionary = defaultdict(int)
 
     def increment(self, lock_id):
         with locker.lock(lock_id):
