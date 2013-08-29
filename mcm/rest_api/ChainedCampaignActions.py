@@ -291,7 +291,7 @@ class InspectChainedCampaignsRest(RESTResource):
         res=[]
         for ccid in ccids.split(','):
             crlist = self.crdb.queries( ["member_of_campaign==%s"% ccid,
-                                         "status==done"] )
+                                         "last_status==done"] )
             for cr in crlist:
                 mcm_cr = chained_request( cr )
                 if mcm_cr:
