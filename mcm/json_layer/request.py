@@ -1244,7 +1244,7 @@ class request(json_base):
 
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
         if total_event==0:
-            self.logger.error("For % the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
+            self.logger.error("For %s the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
             return
 
         timing = None
@@ -1371,14 +1371,16 @@ class runtest_genvalid(handler):
                 if os.path.exists( rt_xml ):
                     mcm_r.update_performance( open(rt_xml).read(), 'perf')
             except:
-                self.logger.error('Failed to get perf reports \n %s'%(traceback.format_exc()))
+                batch_test.log_err = traceback.format_exc()
+                self.logger.error('Failed to get perf reports \n %s'%( batch_test.log_err))
                 success = False
             try:
                 gv_xml=location.location()+'%s_gv.xml'%( self.rid )
                 if os.path.exists( gv_xml ):
                     mcm_r.update_performance( open(gv_xml).read(), 'eff')
             except:
-                self.logger.error('Failed to get gen valid reports \n %s'%(traceback.format_exc()))
+                batch_test.log_err = traceback.format_exc()
+                self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
                 success = False
 
 
