@@ -19,6 +19,8 @@ from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.request_to_wma import request_to_wmcontrol
 from tools.locker import locker, semaphore_events
+from rest_api.BatchPrepId import BatchPrepId
+
 
 class package_builder:
     logger = logfactory('mcm')
@@ -79,7 +81,6 @@ class package_builder:
         def __str__(self):
             return 'Error: Package name given was NoneType'
 
-
     def __init__(self, req_json=None, directory=None, events=5):
         l_type = locator()
         if not directory:
@@ -100,59 +101,11 @@ class package_builder:
         self.__logfile = ''
         self.__verbose = 4
 
-        #JR
-        ## figure out the batch number from the batch DB
-        ### this should all be under some db class somewhere !!!
-        bdb = database('batches')
-        if req_json['flown_with']:
-            self.batchName = req_json['flown_with'] + '_' + req_json['member_of_campaign']
-        else:
-            self.batchName = req_json['member_of_campaign']
-
-        #find the last open batch
-        #res = map(lambda x: x['value'], bdb.query('prepid ~= %s-*'%(self.batchName), page_num=-1))
-        #### doing the query by hand    
-        res = bdb.queries([])
-        res_this = filter(lambda x: x['prepid'].split('-')[0] == self.batchName, res)
-        ## filter to have the ones of that family, that are NEW
-        res_new = filter(lambda x: x['status'] == 'new', res_this)
-        ##get only the serial number of those
-        res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
-
-        ##find out the next one
-        if not res_new:
-            ##no open batch of this kind
-            res_next = filter(lambda x: x['prepid'].split('-')[0].endswith(req_json['member_of_campaign']), res)
-            if not res_next:
-                ## not even a document with *_<campaign>-* existing: ---> creating a new family
-                self.batchNumber = 1
-            else:
-                ## pick up the last+1 serial number of *_<campaign>-*  family
-                self.batchNumber = max(map(lambda x: int(x['prepid'].split('-')[-1]), res_next)) + 1
-        else:
-            ## pick up the last serial number of that family
-            self.batchNumber = max(res_new)
-
-        self.batchName += '-%05d' % (self.batchNumber)
+        batchPrepIdCreator = BatchPrepId()
+        self.batchName = batchPrepIdCreator.generate_prepid(req_json['flown_with'], req_json['member_of_campaign'])
+        self.batchNumber = self.batchName.split("-")[-1]
         semaphore_events.increment(self.batchName)
         try:
-            if not bdb.document_exists(self.batchName):
-                newBatch = batch({'_id': self.batchName, 'prepid': self.batchName})
-                notes = ""
-                cdb = database('campaigns')
-                mcm_c = cdb.get(req_json['member_of_campaign'])
-                if mcm_c['notes']:
-                    notes += "Notes about the campaign:\n" + mcm_c['notes'] + "\n"
-                if req_json['flown_with']:
-                    fdb = database('flows')
-                    mcm_f = fdb.get(req_json['flown_with'])
-                    if mcm_f['notes']:
-                        notes += "Notes about the flow:\n" + mcm_f['notes'] + "\n"
-                if notes:
-                    newBatch.set_attribute('notes', notes)
-                newBatch.update_history({'action': 'created'})
-                bdb.save(newBatch.json())
-
             # list of different production steps (represented as a different element in the request's "sequences" property)
             self.__cmsDrivers = []
             self.wmagent_type = ''
