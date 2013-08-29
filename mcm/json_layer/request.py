@@ -365,11 +365,18 @@ class request(json_base):
         if not at_least_an_action:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
-        ## the request manager could pull out those requests approved to be submitted
-        ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
-        # remains to the production manager to announce the batch the requests are part of
-        #### not settting any status forward
-        
+        sync_submission=False
+        if sync_submission:
+            ## the request manager could pull out those requests approved to be submitted
+            ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
+            # remains to the production manager to announce the batch the requests are part of
+            #### not settting any status forward
+            from rest_api.RequestActions import InjectRequest
+            threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
+            threaded_submission.start()
+        else:
+            pass
+
     def has_at_least_an_action(self):
         at_least_an_action=False
         crdb = database('chained_requests')
@@ -1190,8 +1197,9 @@ class request(json_base):
         self.logger.log('running %s means running for %s s, and timeout is %s' %( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            events = 0.75* timeout / float(self.get_attribute('time_event'))
-            self.logger.log('N for test was lowered to %s to not exceed time-out'%( events ))
+            fraction = 0.5
+            events = fraction*timeout / float(self.get_attribute('time_event'))
+            self.logger.log('N for test was lowered to %s to not exceed %s time-out'%( events, fraction ))
 
         ## no need to max out since we take care of timing above
         #if events>1000: 
