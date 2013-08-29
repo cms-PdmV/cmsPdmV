@@ -156,7 +156,7 @@ class batch_control:
         
         ## check when it is finished
         while not self.monitor_job_status():
-            time.sleep(30)
+            time.sleep(60)
             
         ## check that it succeeded
         #wait for afs to sync the .out file
