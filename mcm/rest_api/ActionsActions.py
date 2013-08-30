@@ -131,6 +131,9 @@ class UpdateMultipleActions(UpdateAction):
         return dumps({"results": output})
         """
 
+        
+            
+
 class GetAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
@@ -299,6 +302,74 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
             res.append(self.generate_request(a['key']))
         
         return dumps(res)
+
+class SetAction(GenerateChainedRequests):
+    def __init__(self):
+        GenerateChainedRequests.__init__(self)
+        self.access_limit = 4
+
+    def GET(self, *args):
+        """
+        Set the action and generate the chained request for /aid/alias or cc name/block#/stage of threshold
+        """
+        if len(args)<3:
+            return dumps("Not enough arguments")
+
+
+        (aid,cc,block) = args[0:3]
+        extra=None
+        if len(args)==4:
+            extra=args[3]
+        staged=None
+        threshold=None
+        if extra:
+            if '.' in extra:
+                threshold=float(extra)
+                if threshold>1 or threshold<0:
+                    return dumps("A threshold is specified %s but not valid"%( threshold))
+                threshold=int(threshold * 100)
+            else:
+                staged=int(extra)
+
+        block=int(block)
+
+        mcm_a = action( self.adb.get(aid) )
+        ccs = self.ccdb.queries(['alias==%s'% cc])
+        if not len(ccs):
+            ccs = self.ccdb.queries(['prepid==%s'% cc])
+        if not len(ccs) :
+            return dumps("%s not a chained campaigns"%( cc ))
+
+        mcm_cc = chained_campaign( ccs[0] )
+        mcm_cc_name=mcm_cc.get_attribute('prepid')
+
+        chains = mcm_a.get_attribute('chains')        
+        if mcm_cc_name not in chains:
+            #detect
+            mcm_a.find_chains()
+            chains = mcm_a.get_attribute('chains')
+
+        if mcm_cc_name not in chains:
+            return dumps("Not able to find %s for %s"%( mcm_cc_name, aid))
+        
+        #edit the chains content
+        if 'chains' in chains[mcm_cc_name]:
+            return dumps("Something already exists for %s in %s. You'll have to do it by hand"%( mcm_cc_name,aid))
+
+        chains[mcm_cc_name] = { "flag":True, "block_number" : block}
+        if staged:
+            chains[mcm_cc_name]['staged']=stage
+        if threshold:
+            chains[mcm_cc_name]['threshold']=threshold
+
+        #set back the chains
+        mcm_a.set_attribute('chains',chains)
+
+        #save it since it is retrieved from scratch later
+        self.adb.save( mcm_a.json() )
+        
+        #and generate the chained requests
+        return self.generate_request(aid)
 
 class DetectChains(RESTResource):
     def __init__(self):
