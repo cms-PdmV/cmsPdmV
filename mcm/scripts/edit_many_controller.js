@@ -2,7 +2,7 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.defaults = [];
   $scope.edited_fields = {};
   $scope.dbName = $location.search()["db_name"];
-  $scope.prepid = $location.search()["prepid"];
+  $scope.underscore = _;
 
   $scope.minPrepid = function(string_of_prepids)
   {
@@ -16,13 +16,13 @@ function resultsCtrl($scope, $http, $location, $window){
   	});
   	return min;
   }
-
-  $scope.min_prepid = $scope.minPrepid($scope.prepid);
+  $scope.prepid = $scope.minPrepid($location.search()["prepid"]);
+  $scope.min_prepid = $location.search()["prepid"];
   if($scope.dbName == "requests")
   {
     // get the editable -> set false in list
     $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
-    var promise = $http.get("restapi/requests/editable/"+$scope.min_prepid)
+    var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
     promise.then(function(data)
     {
       $scope.parseEditableObject(data.data.results);
@@ -163,7 +163,7 @@ function resultsCtrl($scope, $http, $location, $window){
     }  
   };
   $scope.getData = function(){
-    var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.min_prepid)
+    var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
     promise.then(function(data){
       $scope.result = data.data.results;
       if ($scope.result.length != 0){
@@ -244,6 +244,7 @@ function resultsCtrl($scope, $http, $location, $window){
 }
 var ModalDemoCtrl = function ($scope) {
   $scope.open = function (number) {
+  	console.log(number);
     $scope.shouldBeOpen = true;
     $scope.sequenceNum = number;
     $scope.seqModalInfo = _.clone($scope.sequenceInfo[number]);
@@ -366,7 +367,7 @@ testApp.directive("sequenceEdit", function($http){
     '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-show="showSequences">'+
     '     <i class="icon-eye-close"></i>'+
     '   </a>'+
-    '  <div ng-switch-when="requests" ng-show="showSequences">'+
+    '  <div ng-switch-when="requests">'+
     // '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
@@ -580,7 +581,7 @@ testApp.directive("sequenceEdit", function($http){
 	      */
 	      //copy in case one cancels
               scope.sequencesOriginal = _.clone(scope.result.sequences);
-	      
+              console.log(scope.sequencesOriginal);
             }, function(data){ alert("Error: ", data.status); });
           }
         }else{  //just clone the original sequences -> in case user edited and didnt saved.
