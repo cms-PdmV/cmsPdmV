@@ -69,7 +69,7 @@
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
-		<a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
+                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
@@ -91,14 +91,14 @@
               <div ng-switch-when="Allowed Campaigns">
                 <ul>
                   <li ng-repeat="value in data[value.db_name]">
-		    <a ng-href='flows?allowed_campaigns={{value}}' rel="tooltip" title="View flows starting from {{value}}" target="_self">{{value}}<i class="icon-magnet"></i></a>
-		    <a ng-href='campaigns?prepid={{value}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
+                    <a ng-href='flows?allowed_campaigns={{value}}' rel="tooltip" title="View flows starting from {{value}}" target="_self">{{value}}<i class="icon-magnet"></i></a>
+                    <a ng-href='campaigns?prepid={{value}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
 		              </li>
                 </ul>
               </div>
               <div ng-switch-when="Next Campaign">
-		<a ng-href='flows?next_campaign?prepid={{data[value.db_name]}}' rel="tooltip" title="View flows going into {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
-		<a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
+                <a ng-href='flows?next_campaign={{data[value.db_name]}}' rel="tooltip" title="View flows going into {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
+                <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
               </div>
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
