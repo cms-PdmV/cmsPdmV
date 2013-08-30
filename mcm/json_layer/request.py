@@ -1234,7 +1234,7 @@ class request(json_base):
         return hash_id
 
     def update_performance(self, xml_doc, what):
-        total_event_in = self.get_n_for_test()
+        total_event_in = self.get_n_for_test(100.0)
         
         xml_data = xml.dom.minidom.parseString( xml_doc )
         
