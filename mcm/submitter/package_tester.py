@@ -134,7 +134,7 @@ class package_tester:
         if not stdin and not stdout and not stderr:
             return False
 
-        self.logger.log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc")
+        #self.logger.log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc")
         self.logger.inject(stdout.read(), handler=self.hname)
         self.logger.inject('SSH remote execution stderr stream: \n%s' % (stderr.read()), handler=self.hname,
                            level='debug')
