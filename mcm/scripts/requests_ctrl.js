@@ -891,7 +891,8 @@ testApp.directive("loadFields", function($http, $location){
     '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
     '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
-    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid();" ng-disabled="is_prepip_in_url">Next prepId</button>'+
+    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(-1);" ng-disabled="is_prepid_in_url == undefined">Previous</button>,'+
+    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(1);" ng-disabled="is_prepid_in_url == undefined">Next</button> request'+
     '</div>'
     ,
     link: function(scope, element, attr)
@@ -899,7 +900,7 @@ testApp.directive("loadFields", function($http, $location){
       scope.listfields = {};
       scope.showUrl = false;
       scope.showOption = {};
-      scope.is_prepip_in_url = $location.search()["prepid"];
+      scope.is_prepid_in_url = $location.search()["prepid"];
       scope.getSearch = function(){
         scope.listfields = {};
         scope.showUrl = false;
@@ -917,10 +918,10 @@ testApp.directive("loadFields", function($http, $location){
         var zero = places - num.toString().length + 1;
         return Array(+(zero > 0 && zero)).join("0") + num;
       }
-      scope.goToNextPrepid = function(){
+      scope.goToNextPrepid = function(increment){
         if($location.search()["prepid"]){
           var prepid = $location.search()["prepid"];
-          lastnumber = parseInt(prepid.substring(prepid.length-5))+1;
+          lastnumber = parseInt(prepid.substring(prepid.length-5))+increment;
           var new_prepid = prepid.substring(0,prepid.length-5)+scope.zeroPad(lastnumber, 5);
           $location.search("prepid", new_prepid);
           scope.getData();
