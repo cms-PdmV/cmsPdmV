@@ -72,6 +72,14 @@ class SemaphoreEvents(object):
 
     def is_set(self, lock_id):
         with locker.lock(lock_id):
-            return self.event_dictionary[lock_id].is_set()
+            #return self.event_dictionary[lock_id].is_set()
+            if lock_id in self.event_dictionary:
+                return self.event_dictionary[lock_id].is_set()
+            else:
+                ## because the default oonstructor is with is_set=False
+                #in case the batch was created, sever cycled, and one tries to announce it on the "second" session
+                return True
+
+return self.event_dictionary[lock_id].is_set()
 
 semaphore_events = SemaphoreEvents()
