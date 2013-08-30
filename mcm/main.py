@@ -118,6 +118,9 @@ def invalidations_html( *args, **kwargs):
 @cherrypy.expose
 def news_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','news.html'))
+@cherrypy.expose
+def edit_many_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','edit_many.html'))
 
 
 @cherrypy.expose
@@ -157,6 +160,7 @@ root.invalidations = invalidations_html
 root.injection_status = injection_status
 root.news = news_html
 root.dashboard = dashboard_html
+root.edit_many = edit_many_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
