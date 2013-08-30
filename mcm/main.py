@@ -10,7 +10,7 @@ from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampa
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
 from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile
+from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
@@ -18,7 +18,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -276,6 +276,7 @@ root.restapi.chained_requests.inspect = InspectChain()
 root.restapi.actions.save = CreateAction()
 root.restapi.actions.update = UpdateAction()
 root.restapi.actions.get = GetAction()
+root.restapi.actions.set = SetAction()
 root.restapi.actions.select = SelectChain()
 root.restapi.actions.deselect = DeSelectChain()
 root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
@@ -313,6 +314,7 @@ root.restapi.news.update = UpdateNew()
 
 root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
+root.restapi.dashboard.get_logs = GetLogs()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
