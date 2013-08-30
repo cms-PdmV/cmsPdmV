@@ -1,7 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window){
-    $scope.update_stats = [];
-    $scope.update_batch = [];
-    $scope.update_logs = [];
+    $scope.update = [];
     $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
     $scope.tabsettings={
         batch:{
@@ -15,9 +13,10 @@ function resultsCtrl($scope, $http, $location, $window){
         }
     };
     $scope.logs = {
-        type : 'error',
-        lines : 10
+        lines : 10,
+        list: [{name: 'error', modified: ''}, {name: 'inject', modified: ''}, {name: 'access', modified: ''}]
     };
+    $scope.selectedLog = $scope.logs.list[0];
     $scope.fontSize = 12;
     $scope.items = [];
     for(var i = 9;i<18;i++){
@@ -49,28 +48,28 @@ function resultsCtrl($scope, $http, $location, $window){
         var bjobs_options = bjobs_options_array.join("/");
         var promise = $http.get("restapi/dashboard/get_bjobs/" + bjobs_options.toString());
         promise.then(function(data, status){
-            $scope.update_batch["success"] = true;
-            $scope.update_batch["fail"] = false;
-            $scope.update_batch["status_code"] = data.status;
+            $scope.update["success"] = true;
+            $scope.update["fail"] = false;
+            $scope.update["status_code"] = data.status;
             $scope.results = data.data.results
         }, function(data, status){
-            $scope.update_batch["success"] = false;
-            $scope.update_batch["fail"] = true;
-            $scope.update_batch["status_code"] = data.status;
+            $scope.update["success"] = false;
+            $scope.update["fail"] = true;
+            $scope.update["status_code"] = data.status;
     })};
 
     $scope.getLogData = function(log_name){
         var lines = $scope.logs.lines>100?-1:$scope.logs.lines;
         var promise = $http.get("restapi/dashboard/get_log_feed/" + log_name + "/" + lines);
         promise.then(function(data, status){
-            $scope.update_logs["success"] = true;
-            $scope.update_logs["fail"] = false;
-            $scope.update_logs["status_code"] = data.status;
+            $scope.update["success"] = true;
+            $scope.update["fail"] = false;
+            $scope.update["status_code"] = data.status;
             $scope.logs.results = data.data.results
         }, function(data, status){
-            $scope.update_logs["success"] = false;
-            $scope.update_logs["fail"] = true;
-            $scope.update_logs["status_code"] = data.status;
+            $scope.update["success"] = false;
+            $scope.update["fail"] = true;
+            $scope.update["status_code"] = data.status;
     })};
 
     $scope.getLines = function(line_number){
@@ -92,19 +91,35 @@ function resultsCtrl($scope, $http, $location, $window){
     function getLog() {
         if($scope.tabsettings.logs.active) {
             clearInterval($scope.logs.int_id);
-            $scope.getLogData($scope.logs.type);
-            $scope.logs.int_id = setInterval(function() { $scope.getLogData($scope.logs.type); }, 60000);
+            $scope.getLogData(($scope.logs.list[$scope.getLogIndex()]).name);
+            $scope.logs.int_id = setInterval(function() { $scope.getLogData(($scope.logs.list[$scope.getLogIndex()]).name); }, 60000);
         } else {
             clearInterval($scope.logs.int_id);
         }
     }
 
+    $scope.getLogs = function(){
+        var promise = $http.get("restapi/dashboard/get_logs");
+        promise.then(function(data){
+                $scope.logs.list =  data.data.results;
+                $scope.selectedLog = $scope.logs.list[0];
+            }, function(data){
+                alert("Error getting logs list: " +data.status);
+            }
+        )
+    };
+
+    $scope.getLogIndex = function() {
+        return document.getElementById('selectLog').selectedIndex==undefined?0:document.getElementById('selectLog').selectedIndex;
+    }
+
     $scope.$watch('logs.type', function(){
-        getLog()
+        getLog();
     });
 
     $scope.$watch('tabsettings.logs.active', function(){
-        getLog()
+        getLog();
+        $scope.getLogs();
     });
 
     $scope.$watch('bjobsOptions', function(){
@@ -113,18 +128,31 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.$watch('logs.sliding', function() {
         if(!$scope.logs.sliding)
-            $scope.getLogData($scope.logs.type);
+            if(!(($scope.logs.list[$scope.getLogIndex()])==undefined))
+                $scope.getLogData(($scope.logs.list[$scope.getLogIndex()]).name);
     });
 
-
-    
     $scope.selectValue = function() {
         return document.getElementById("selectFont").value;
     };
 
-//    $scope.$watch($scope.selectValue(), function() {
-//        console.log(document.getElementById("selectFont").value);
-//        document.getElementById("preLogs").style.fontSize= document.getElementById("selectFont").value + "px";
-//    });
+    function checkDisplayLog() {
+        if (document.getElementById('selectLog')!=null)
+            return document.getElementById('selectLog').selectedIndex;
+        else
+            return -2
+    };
+
+    $scope.$watch(checkDisplayLog(), function() {
+       console.log(document.getElementById('selectLog').selectedIndex);
+    });
+
+    $scope.$watch("fontSize", function() {
+        var pres = Array.prototype.slice.call(document.getElementsByClassName("fontPre"));
+        pres.forEach(function(elem) {
+            elem.style.fontSize = $scope.fontSize + "px";
+        });
+    });
+
 
 }

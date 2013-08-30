@@ -3,10 +3,10 @@
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from json import dumps
+import os
 
 
 class GetBjobs(RESTResource):
-
     def __init__(self):
         self.authenticator.set_limit(0)
 
@@ -16,7 +16,7 @@ class GetBjobs(RESTResource):
         """
         ssh_exec = ssh_executor()
         try:
-            stdin,  stdout,  stderr = ssh_exec.execute(self.create_command(args))
+            stdin, stdout, stderr = ssh_exec.execute(self.create_command(args))
             out = stdout.read()
             err = stderr.read()
             if err:
@@ -38,7 +38,6 @@ class GetBjobs(RESTResource):
 
 
 class GetLogFeed(RESTResource):
-
     def __init__(self):
         self.authenticator.set_limit(0)
 
@@ -49,7 +48,7 @@ class GetLogFeed(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
-        name = 'logs/' + args[0] + '.log'
+        name = os.path.join('logs', args[0])
         nlines = -1
         if len(args) > 1:
             nlines = int(args[1])
@@ -67,3 +66,23 @@ class GetLogFeed(RESTResource):
         if nlines > 0:
             data = data[-nlines:]
         return dumps({"results": ''.join(data)})
+
+
+class GetLogs(RESTResource):
+    def __init__(self):
+        self.authenticator.set_limit(0)
+        self.path = "logs"
+
+    def GET(self, *args):
+        """
+        Gets a list of logs sorted by date.
+        """
+
+        files_dates = sorted([{"name": filename, "modified": os.path.getmtime(os.path.join(self.path, filename))}
+                              for filename in os.listdir(self.path)
+                              if os.path.isfile(os.path.join(self.path, filename))], key=lambda x: x["modified"],
+                             reverse=True)
+
+        return dumps({"results": files_dates})
+
+

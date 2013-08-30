@@ -54,46 +54,24 @@
                             </a>
                         </div>
                         <div class="row-fluid">
-                                <pre><div class="well"><span id="preBatch" style="font-size: 12px">{{results}}</span></div></pre>
-                        </div>
-                        <div class="row-fluid">
-                            <div class="span3" style="margin-top:20px;">
-                                    <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                                <div ng-show="update_batch['success']">
-                                    Success. Status code:<font color="green">{{update_batch['status_code']}}</font>
-                                </div>
-                                <div ng-show="update_batch['fail']">
-                                    Fail. Status code:<font color="red">{{update_batch['status_code']}}</font>
-                                </div>
-                            </div>
+                                <pre><div class="well"><span id="preBatch" class="fontPre">{{results}}</span></div></pre>
                         </div>
                     </pane>
                     <pane heading="Stats" active="tabsettings.stats.active">
                         <div class="row-fluid"><div class="offset4"><h2>Statistics</h2></div></div>
-                        <div class="row-fluid">
-                            <div class="span3" style="margin-top:20px;">
-                                <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                                <div ng-show="update_stats['success']">
-                                    Success. Status code:<font color="green">{{update_stats['status_code']}}</font>
-                                </div>
-                                <div ng-show="update_stats['fail']">
-                                    Fail. Status code:<font color="red">{{update_stats['status_code']}}</font>
-                                </div>
-                            </div>
-                        </div>
                     </pane>
                     <pane heading="Logs" active="tabsettings.logs.active">
                         <div class="row-fluid"><div class="offset4"><h2>Feed from logs</h2></div></div>
                         <div class="row-fluid">
-                            <div class="offset4">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'error'">error log</button>
-                                    <button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'inject'">injection log</button>
-                                    <button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'access'">access log</button>
-                                </div>
-                            <a ng-click="getLogData(logs.type)" rel="tooltip" title="Manually refresh log feed" >
-                                <i class="icon-refresh"></i>
-                            </a>
+                            <div class="offset4 span6">
+                                <!--<div class="btn-group">-->
+                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'error'">error log</button>-->
+                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'inject'">injection log</button>-->
+                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'access'">access log</button>-->
+                                <!--</div>-->
+                                <label>Log to display:
+                                    <select id="selectLog" class="span3" ng-model = "selectedLog" ng-options="log.name for log in logs.list"></select>
+                                </label>
                             </div>
                         </div>
                         <div class="row-fluid">
@@ -103,31 +81,34 @@
                                     <button type="button" class="btn btn-inverse btn-mini disabled" style="width:25px">{{getLines(logs.lines)}}</button>
                                 </div>
                                 <slider value="logs.lines" sliding="logs.sliding"></slider>
-                            </div>
-                            <div align="right">
-                                <label>Font size:
-                                    <select class="span1" id="selectFont" ng-model="fontSize">
-                                        <option ng-repeat="elem in items">{{elem}}</option>
-                                    </select>
-                                </label>
+                                <a ng-click="getLogData(logs.list[getLogIndex()].name)" rel="tooltip" title="Manually refresh log feed" >
+                                    <i class="icon-refresh"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="row-fluid">
-                               <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" style="font-size: 12px">{{logs.results}}</span></pre>
-                        </div>
-                        <div class="row-fluid">
-                            <div class="span3" style="margin-top:20px;">
-                                    <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                                <div ng-show="update_stats['success']">
-                                    Success. Status code:<font color="green">{{update_logs['status_code']}}</font>
-                                </div>
-                                <div ng-show="update_stats['fail']">
-                                    Fail. Status code:<font color="red">{{update_logs['status_code']}}</font>
-                                </div>
-                            </div>
+                               <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
                         </div>
                     </pane>
                 </tabs>
+                <div class="row-fluid">
+                    <div class="span3" style="margin-top:20px;">
+                            <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                        <div ng-show="update['success']">
+                            Success. Status code:<font color="green">{{update['status_code']}}</font>
+                        </div>
+                        <div ng-show="update['fail']">
+                            Fail. Status code:<font color="red">{{update['status_code']}}</font>
+                        </div>
+                    </div>
+                    <div align="right">
+                        <label>Font size:
+                            <select class="span1" id="selectFont" ng-model="fontSize">
+                                <option ng-repeat="elem in items">{{elem}}</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
             </div>
         </span>
     </body>
