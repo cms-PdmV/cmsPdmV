@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
+<head>
+        <title>Edit page McM</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        
+        <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
+        <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
+
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+         <!--[IF IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+           </script>
+         <![endif]-->
+         <![if !IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+           </script>
+         <![endif]>
+        <script src="scripts/main_controller.js"></script>
+        <script src="scripts/edit_many_controller.js"></script>
+
+        <!-- // <script src="scripts/codemirror-3.11/lib/codemirror.js"></script> -->
+        <!-- // <script src="scripts/codemirror-3.11/mode/python/python.js"></script> -->
+        <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
+        <script src="scripts/angular-ui.min.js"></script>
+
+        <style type="text/css">
+        .bs-docs-sidenav > li > a:hover {
+          background-color: #F5F5F5;
+        }
+        .bs-docs-sidenav > li > a {
+          border: 1px solid #E5E5E5;
+          display: block;
+          margin: 0 0 -1px;
+          padding: 8px 14px;
+        }
+        .bs-docs-sidenav {
+          background-color: #FFFFFF;
+          border-radius: 6px 6px 6px 6px;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.067);
+          margin: 30px 0 0;
+          padding: 0;
+          width: 228px;
+        }
+        .affix {
+          position: fixed;
+        }
+        </style>
+        
+</head>
+<body ng-controller="mainCtrl">
+  <span ng-controller="resultsCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <div class="container" ng-show="role(1);">
+    <b>You have not enough permission to access this ressource.</b>
+  </div>
+  <div class="container-fluid">
+    <div class="span3 bs-docs-sidebar"> <!--  sidebar span -->
+      <ul class="nav nav-list bs-docs-sidenav affix">
+        <li class="" ng-hide="role(1);">
+          <a ng-click="submit_edit()" ng-href="#">
+            <i class="icon-chevron-right"></i>
+            Commit
+          </a>
+        </li>
+        <li class="">
+          <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_self">
+            <i class="icon-chevron-right"></i>
+            View
+          </a>
+        </li>
+        <li class="" ng-hide="role(3);">
+          <a ng-click="delete_edit(result['prepid'])" ng-href="#">
+            <i class="icon-chevron-right"></i>
+            Delete
+          </a>
+        </li>
+        <li>
+          <a ng-show="update['success']">
+            Updated. Status code:<font color="green">{{update['status_code']}}</font>
+          </a>
+          <a ng-show="update['fail']">
+            Update failed. Status code:<font color="red">{{update['message']}}</font>
+          </a>
+        </li>
+        <li class="" ng-show="pendingHTTP">
+          <a ng-click="delete_edit(result['prepid'])">
+            <img ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+            Pending {{ pendingHTTPLenght }} HTTP request(-s)
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="span9" ng-hide="role(1);">
+      <legend align="middle" style="text-align:center;">{{prepid.split(',')}}</legend>
+      <table class="table table-bordered table-stripped" style="margin-top: 30px;">
+        <thead>
+        </thead>
+        <tbody>
+          <tr ng-repeat="column in defaults">
+            <th>
+              <input type="checkbox" ng-model="edited_fields[column.db_name]"></input>
+              {{column.text}}
+              <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}">
+                <i class="icon-question-sign"></i>
+              </a>
+            </th>
+            <td>
+              <ng-form name="antantasForm">
+                <div ng-switch on="column.text">
+                  <div ng-switch-when="Approvals">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form> 
+                  </div>
+                  <div ng-switch-when="Sequences">
+                    <div sequence-edit ng-model="result[column.db_name]"></div>
+                  </div>
+                  <div ng-switch-when="Generators">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Notes">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Submission details">
+                    <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
+                      <dt>{{key}}</dt>
+                      <dd>{{value}}</dd>                
+                    </dl>
+                  </div>
+                  <div ng-switch-when="Generator parameters">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Block white list">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Block black list">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="History">
+                    <div custom-history ng-model="result[column.db_name]"></div>
+                  </div>
+                  <div ng-switch-when="Valid">
+                    <input type="checkbox" ng-model="result[column.db_name]">
+                  </div>
+                  <div ng-switch-when="Validation">
+                    <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
+                  </div>
+                  <div ng-switch-when="Request parameters">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Reqmgr name">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Generator parameters">
+                    <div generator-params ng-model="result[column.db_name]"></div>
+                  </div>
+                  <div ng-switch-when="Fragment">
+                    <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
+                      <span ng-switch-when="true">
+                        <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
+                      </span>
+                      <span ng-switch-when="false">
+                        <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
+                      </span>
+                    </span>
+                  </div>
+                  <div ng-switch-when="Keep output">
+                    <ul ng-repeat="elem in result[column.db_name]">
+                      <li>
+                        Step {{ $index +1 }}:
+                        <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1 || $index ==(result[column.db_name].length-1)">
+                      </li>
+                    </ul>
+                  </div>
+                  <div ng-switch-when="Extension">
+                    <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]">
+                      <option ng-repeat="key in [0,1,2,3,4,5]" ng-selected ="result[column.db_name] == key">{{key}}</option>
+                    </select>
+                  </div>
+                  <div ng-switch-when="Action parameters">
+                    <ng-form name="fieldForm">
+                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                    </ng-form>
+                  </div>
+                  <div ng-switch-when="Allowed campaigns">
+                    <div select-campaign ng-model="result[column.db_name]"></div>
+                  </div>
+                  <div ng-switch-when="Pwg">
+                    <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                  </div>
+                  <div ng-switch-when="Next campaign">
+                    <select ng-model="result[column.db_name]" ng-options="value for value in allCampaigns"></select>
+                  </div>
+                  <div ng-switch-when="Announced">
+                    <input type="checkbox" ng-model="result[column.db_name]">
+                  </div>
+                  <div ng-switch-when="Text">
+                    <textarea ng-model="result[column.db_name]" style="width: 639px; height: 236px;"></textarea>
+                  </div>
+                  <div ng-switch-when="Analysis id">
+                    <custom-analysis-id ng-model="result[column.db_name]"></custom-analysis-id>
+                  </div>
+                  <div ng-switch-default style="width: 400px;">
+                    <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                  </div>
+                </div>
+              </ng-form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {{edited_fields | json}}
+    </div><!--END of span12-->
+  </div>
+</span>
+</body>
+</html>
