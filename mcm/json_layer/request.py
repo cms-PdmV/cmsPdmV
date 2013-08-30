@@ -1207,8 +1207,8 @@ class request(json_base):
         if events>=1:
             return int(events)
         else:
-            ##default to 1
-            return int(1)
+            ##default to 0
+            return int(0)
 
     def unique_string(self, step_i):
         ### create a string that supposedly uniquely identifies the request configuration for step 
