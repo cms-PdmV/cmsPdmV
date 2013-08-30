@@ -711,7 +711,7 @@ class request(json_base):
         for cmsd in self.build_cmsDrivers():
 
             # check if customization is needed to check it out from cvs
-            if '--customise' in cmsd:
+            if '--customise ' in cmsd:
                 cust = cmsd.split('--customise ')[1].split(' ')[0]
                 toks = cust.split('.')
                 cname = toks[0]+'.py'
@@ -746,7 +746,7 @@ class request(json_base):
                     infile+='cvs co -r 1.3 Configuration/DataProcessing/python/Utils.py \n'
 
                 #if self.little_release() > '420': 
-                if '--customise' in cmsd:
+                if '--customise ' in cmsd:
                     cust = cmsd.split('--customise ')[1].split()[0]
                     cust+=',Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
                     res +='--customise %s'%( cust )
