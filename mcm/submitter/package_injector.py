@@ -4,7 +4,7 @@ import os
 import logging
 from tools.logger import prep2_formatter, logger as logfactory
 from tools.locator import locator
-
+from couchdb_layer.prep_database import database
 
 class package_injector:
     logger = logfactory('mcm')
@@ -188,10 +188,12 @@ class package_injector:
             return False
 
         self.requestNames = []
+        inject_names = []
         self.config_ids = []
         for line in fullOutPutText.split('\n'):
             line_spl = line.split()
-            #if line.startswith('Injected workflow:'):
+            if line.startswith('Injected workflow:'):
+                inject_names.append(line.split()[2])
             if line.startswith('Approved workflow:'):
                 self.requestNames.append(line.split()[2])
             if len(line_spl) and line_spl[0] == 'DocID:':
@@ -201,6 +203,13 @@ class package_injector:
         self.fail_message = 'Log of injection: \n %s' % (fullOutPutText)
         if not len(self.requestNames):
             self.fail_message = 'There were no request manager name recorded \n %s' % (fullOutPutText)
+            if len(inject_names):
+                #then we can send them to be disgarded
+                invalidation = database('invalidations')
+                for r_inject_but_not_approved in inject_names:
+                    new_invalidation={"object" : r_inject_but_not_approved , "type" : "request", "status" : "new" , "prepid" : self.hname.replace('-dev','')}
+                    new_invalidation['_id'] = new_invalidation['object']
+                    invalidation.save( new_invalidation )
             return False
 
         ## this is not mandatory to catch and fail, because it could happen that this is empty legitimaly
