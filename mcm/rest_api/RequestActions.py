@@ -1429,6 +1429,12 @@ class RequestsReminder(RESTResource):
                     campaigns_and_ids[c] = []
                 if extracheck == None or extracheck(mcm_r):
                     campaigns_and_ids[c].append(mcm_r['prepid'])
+
+            #then remove the empty entries
+            for c in campaigns_and_ids.keys():
+                if not len(campaigns_and_ids[c]):
+                    campaigns_and_ids.pop(c)
+            
             return campaigns_and_ids
 
         com = communicator()
