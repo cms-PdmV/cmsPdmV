@@ -409,7 +409,7 @@ class request(json_base):
         tag=self.get_attribute('fragment_tag')
         if not tag:
             tag = self.get_attribute('cvs_tag')
-        if tag:
+        if tag and name:
             # remove this to allow back-ward compatibility of fragments/requests placed with PREP
             name=name.replace('Configuration/GenProduction/python/','')
             name=name.replace('Configuration/GenProduction/','')
