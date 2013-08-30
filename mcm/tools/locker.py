@@ -80,6 +80,5 @@ class SemaphoreEvents(object):
                 #in case the batch was created, sever cycled, and one tries to announce it on the "second" session
                 return True
 
-return self.event_dictionary[lock_id].is_set()
 
 semaphore_events = SemaphoreEvents()
