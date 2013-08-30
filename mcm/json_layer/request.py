@@ -1177,9 +1177,9 @@ class request(json_base):
         text+='%srequests?prepid=%s'%(l_type.baseurl(), self.get_attribute('prepid'))
         return text
 
-    def get_n_for_test(self):
+    def get_n_for_test(self, target=1.0):
         ## that's the number of events we want to get in output
-        events = 100.0
+        events = target
 
         #=> correct for the matching and filter efficiencies
         if self.get_attribute('generator_parameters'):
@@ -1358,7 +1358,7 @@ class runtest_genvalid(handler):
                 time.sleep( 10 )
                 mcm_r = request(self.db.get(self.rid))
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                n_for_test = mcm_r.get_n_for_test()
+                n_for_test = mcm_r.get_n_for_test(target=100.0)
                 ## the following does change something on the request object, to be propagated in case of success
                 there.write( mcm_r.get_setup_file( location.location() , n_for_test) )
 
