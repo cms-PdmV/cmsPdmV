@@ -78,6 +78,7 @@ class request(json_base):
             'flown_with':'',
             'time_event':-1,
             'size_event':-1,
+            'memory' : 2300, ## the default until now
             #'nameorfragment':'', 
             'name_of_fragment':'',
             'fragment':'',
@@ -1247,6 +1248,7 @@ class request(json_base):
             self.logger.error("For %s the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
             return
 
+        memory = None
         timing = None
         file_size = None
         for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
@@ -1257,7 +1259,8 @@ class request(json_base):
                         timing = float( perf.getAttribute('Value'))
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float( perf.getAttribute('Value')) 
-        
+                    if name= 'PeakValueRss':
+                        memory = float( perf.getAttribute('Value'))
 
         if file_size:
             file_size = int(  file_size / total_event)
@@ -1291,6 +1294,14 @@ class request(json_base):
                 to_be_saved=True
             if file_size and file_size>self.get_attribute('size_event'):
                 self.set_attribute('size_event', file_size)
+                to_be_saved=True
+            if memory and memory>self.get_attribute('memory'):
+                safe_margin = 1.2 
+                memory *= safe_margin
+                if memory > 4000:
+                    self.logger.error("Request %s has a requirement of %s MB in memory. %s of it exceed 4GB."%(self.get_attribute('prepid'), memory, safe_margin))
+                    #truncate to 4G, or catch it in ->define step ?
+                self.set_attribute('memory', memory)
                 to_be_saved=True
 
         if to_be_saved:
