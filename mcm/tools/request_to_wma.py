@@ -29,7 +29,7 @@ class request_to_wmcontrol:
         if mcm_r.get_attribute('priority') >= 1:
             command += ' --priority %s' %(mcm_r.get_attribute("priority"))
         command += ' --time-event %s' %(mcm_r.get_attribute('time_event'))
-        command += ' --size-event %s' %(mcm_r.get_attribute('size_event'))
+        command += ' --size-event %s' %(int(mcm_r.get_attribute('size_event')))
         command += ' --request-type %s' %(wmagent_type)
 
         ## check on the presence of docId ?...
