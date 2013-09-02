@@ -366,7 +366,7 @@ class request(json_base):
         if not at_least_an_action:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
-        sync_submission=False
+        sync_submission=True
         if sync_submission:
             # remains to the production manager to announce the batch the requests are part of
             from rest_api.RequestActions import InjectRequest
