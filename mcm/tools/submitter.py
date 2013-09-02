@@ -31,7 +31,7 @@ class installer:
 
 
 
-        self.batchName = BatchPrepId().generate_prepid( self.request.get_attribute('flown_with'), self.request.get_attribute('member_of_campaign'))
+        self.batchName = BatchPrepId().generate_prepid( self.request )
         self.batchNumber = int(self.batchName.split('-')[-1])
 
         # list of different production steps (represented as a different element in the request's "sequences" property)

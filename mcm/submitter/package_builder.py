@@ -102,7 +102,7 @@ class package_builder:
         self.__verbose = 4
 
         batchPrepIdCreator = BatchPrepId()
-        self.batchName = batchPrepIdCreator.generate_prepid(req_json['flown_with'], req_json['member_of_campaign'])
+        self.batchName = batchPrepIdCreator.generate_prepid( req_json )
         self.batchNumber = self.batchName.split("-")[-1]
         semaphore_events.increment(self.batchName)
         try:
