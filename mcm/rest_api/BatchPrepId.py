@@ -12,7 +12,13 @@ class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
-    def generate_prepid(self, flown_with, next_campaign, processstring=None):
+    def generate_prepid(self, for_request):
+
+        flown_with = for_request['flown_with']
+        next_campaign = for_request['member_of_campaign']
+        version = for_request['version']
+        extension = for_request['extension']
+        process_string = for_request['process_string']
 
         with locker.lock('batch name clashing protection'):
             if flown_with:
@@ -25,13 +31,20 @@ class BatchPrepId():
             res_this = filter(lambda x: x['prepid'].split('-')[0] == batchName, res)
             ## filter to have the ones of that family, that are NEW
             res_new = filter(lambda x: x['status']=='new', res_this)
+
+            ## add limitation to version, extension and process string
+            res_new = filter(lambda x: x['version'] == version, res_new)
+            res_new = filter(lambda x: x['extension'] == extension, res_new)
+            res_new = filter(lambda x: x['process_string'] == process_string, res_new)
+
+
             ##get only the serial number of those
             res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
 
             ##find out the next one
             if not res_new:
                 ##no open batch of this kind
-                res_next = filter(lambda x: x['prepid'].split('-')[0].endswith(next_campaign) , res)
+                res_next = filter(lambda x: x['prepid'].split('-')[0].split('_')[-1] == next_campaign , res)
                 if not res_next:
                     ## not even a document with *_<campaign>-* existing: ---> creating a new family
                     batchNumber=1
@@ -44,7 +57,11 @@ class BatchPrepId():
 
             batchName+='-%05d'%(batchNumber)
             if not self.bdb.document_exists(batchName):
-                newBatch = batch({'_id':batchName,'prepid':batchName})
+                newBatch = batch({'_id':batchName,
+                                  'prepid':batchName,
+                                  'version' : version,
+                                  'extension' : extension,
+                                  'process_string' : process_string})
                 notes=""
                 cdb = database('campaigns')
                 mcm_c = cdb.get( next_campaign )
