@@ -227,11 +227,20 @@ class chained_request(json_base):
         ## else if chained_request allows -> do it
         # check all approvals (if flow say yes -> allowing policy)
         if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
-            if not self.get_attribute('approval') in allowed_flow_approvals:
-                raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                             'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
-                                                                 mcm_f.get_attribute('approval'),
-                                                                 self.get_attribute('approval')))
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The flow (%s) is not in proper approval state (%s)'%( 
+                                                            mcm_f.get_attribute('prepid'),
+                                                            mcm_f.get_attribute('approval')))
+
+        if not self.get_attribute('approval') in allowed_flow_approvals:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The chained request (%s) is not in the proper approval state (%s)'% (
+                                                            self.get_attribute('_id'),
+                                                            self.get_attribute('approval')))
+        #raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+        #                                                 'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
+        #                                                         mcm_f.get_attribute('approval'),
+        #                                                         self.get_attribute('approval')))
 
         if next_campaign.get_attribute('status') == 'stopped':
             raise self.CampaignStoppedException(next_campaign_id)
