@@ -1089,8 +1089,16 @@ class request(json_base):
     def inspect_approved(self):
         ## try to inject the request
         not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
+        db = database( 'requests')
+        self.approve()
+        saved = db.save( self.json() )
+        if saved:
+            return {"prepid": self.get_attribute('prepid'), "results":True}
+        else:
+            not_good.update( {'message' : "Could not save the request after approve "} )
+            return not_good 
         not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status'%(self.get_attribute('status'))} ) 
-        return not_good 
+        return not_good
 
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results":False}
