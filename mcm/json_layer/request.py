@@ -728,7 +728,10 @@ class request(json_base):
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
-            configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
+            if l_type.isDev():
+                configuration_names.append( directory+self.get_attribute('prepid')+"-dev_"+str(previous+1)+'_cfg.py')
+            else:
+                configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
             res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
             #JR res += '--fileout step'+str(previous+1)+'.root '
             ## seems that we do not need that anymore
@@ -1090,7 +1093,7 @@ class request(json_base):
         ## try to inject the request
         not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
         db = database( 'requests')
-        if self.get_attribute('approval') == 'approved':
+        if self.get_attribute('approval') == 'approve':
             self.approve()
             saved = db.save( self.json() )
             if saved:
