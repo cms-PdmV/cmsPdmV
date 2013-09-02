@@ -74,9 +74,12 @@ class InspectInvalidation(RESTResource):
         """
 
         announce = False
+        clear = False
         if len(args) != 0:
             if args[0] == 'announce':
                 announce = True
+            if args[0] == 'clear':
+                clear = True
 
         idb = database('invalidations')
         r_to_be_rejected = map(invalidation, idb.queries(['status==new', 'type==request']))
@@ -138,6 +141,11 @@ class InspectInvalidation(RESTResource):
                          text,
                          sender)
 
+            for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
+                to_announce.set_announced()
+                idb.update(to_announce.json())
+
+        if clear and (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
             for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
                 to_announce.set_announced()
                 idb.update(to_announce.json())
