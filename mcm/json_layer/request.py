@@ -478,24 +478,27 @@ class request(json_base):
 
           inchains = self.get_attribute('member_of_chain')
           flownWith=None
-          if len(inchains) > 1:
-              #no flow can be determined
-              flownWith=None
-          elif len(inchains)==0:
-              ## not member of any chain, that's should happen only before one defines
-              flownWith=None
-          else:
+          if self.get_attribute('flown_with'):
               fdb = database('flows')
-              if not self.get_attribute('flown_with'):
-                  ##legacy to be removed once all request have a flown with parameter
-                  crdb = database('chained_requests')
-                  ccdb = database('chained_campaigns')
-                  cr = crdb.get(inchains[0])
-                  cc = ccdb.get(cr['member_of_campaign'])
-                  indexInChain = cr['chain'].index(self.get_attribute('prepid'))
-                  flownWith = fdb.get(cc['campaigns'][indexInChain][1])
-                  self.set_attribute('flown_with',cc['campaigns'][indexInChain][1])
               flownWith = fdb.get(self.get_attribute('flown_with'))
+          #if len(inchains) > 1:
+              #no flow can be determined
+          #    flownWith=None
+          #elif len(inchains)==0:
+          #    ## not member of any chain, that's should happen only before one defines
+          #    flownWith=None
+          #else:
+              #fdb = database('flows')
+              #if not self.get_attribute('flown_with'):
+              #    ##legacy to be removed once all request have a flown with parameter
+              #    crdb = database('chained_requests')
+              #    ccdb = database('chained_campaigns')
+              #    cr = crdb.get(inchains[0])
+              #    cc = ccdb.get(cr['member_of_campaign'])
+              #    indexInChain = cr['chain'].index(self.get_attribute('prepid'))
+              #    flownWith = fdb.get(cc['campaigns'][indexInChain][1])
+              #    self.set_attribute('flown_with',cc['campaigns'][indexInChain][1])
+              #flownWith = fdb.get(self.get_attribute('flown_with'))
 
           camp = cdb.get(self.get_attribute('member_of_campaign'))
           self.set_attribute('cmssw_release',camp['cmssw_release'])
