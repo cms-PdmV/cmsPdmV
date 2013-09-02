@@ -13,7 +13,7 @@ class batch(json_base):
             'notes':'',
             'status':self.get_status_steps()[0],
             'requests':[],
-            'extensions':0,
+            'extension':0,
             'process_string':'',
             'version':0
             }
