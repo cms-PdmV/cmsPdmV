@@ -617,9 +617,13 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.superSearch = function(data){
+    _.each($location.search(),function(elem,key){
+      $location.search(key,null);
+    });
     var search_data={};
     _.each($scope.searchable_fields, function(elem){
       if (elem.value !=""){
+        $location.search(elem.name,elem.value);
         search_data[elem.name] = elem.value;
       }
     });
@@ -927,11 +931,18 @@ testApp.directive("loadFields", function($http, $location){
           scope.getData();
         }
       };
+      scope.cleanSearchUrl = function(){
+        _.each($location.search(),function(elem,key){
+          $location.search(key,null);
+        });
+        $location.search("page",0);
+      };
       scope.getUrl = function(){
-        scope.url = "?";
+        scope.cleanSearchUrl();
+         //var url = "?";
         _.each(scope.listfields, function(value, key){
           if (value != ""){
-            scope.url += key +"=" +value+"&";
+            //url += key +"=" +value+"&";
             $location.search(key,String(value));
           }else{
             $location.search(key,null);//.remove(key);
