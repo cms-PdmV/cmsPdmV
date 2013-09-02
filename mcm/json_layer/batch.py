@@ -55,6 +55,14 @@ class batch(json_base):
         ## prepare the announcing message
         (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
         subject="New %s production, batch %d"%(campaign,int(batchNumber))
+
+        if self.get_attribute('version'):
+            subject+=', Resubmission'
+        if self.get_attribute('extension'):
+            subject+=', Extension'
+        if self.get_attribute('process_string'):
+            subject+=', (%s)' % (self.get_attribute('process_string'))
+
         message=""
         message+="Dear Data Operation Team,\n\n"
         message+="may you please consider the following batch number %d of %s requests for the campaign %s:\n\n"%(int(batchNumber),total_requests, campaign)
