@@ -368,14 +368,13 @@ class request(json_base):
 
         sync_submission=False
         if sync_submission:
-            ## the request manager could pull out those requests approved to be submitted
-            ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
             # remains to the production manager to announce the batch the requests are part of
-            #### not settting any status forward
             from rest_api.RequestActions import InjectRequest
             threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
             threaded_submission.start()
         else:
+            #### not settting any status forward
+            ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
             pass
 
     def has_at_least_an_action(self):
@@ -1259,7 +1258,7 @@ class request(json_base):
                         timing = float( perf.getAttribute('Value'))
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float( perf.getAttribute('Value')) 
-                    if name= 'PeakValueRss':
+                    if name == 'PeakValueRss':
                         memory = float( perf.getAttribute('Value'))
 
         if file_size:
@@ -1296,10 +1295,10 @@ class request(json_base):
                 self.set_attribute('size_event', file_size)
                 to_be_saved=True
             if memory and memory>self.get_attribute('memory'):
-                safe_margin = 1.2 
+                safe_margin = 1.05
                 memory *= safe_margin
                 if memory > 4000:
-                    self.logger.error("Request %s has a requirement of %s MB in memory. %s of it exceed 4GB."%(self.get_attribute('prepid'), memory, safe_margin))
+                    self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB."%(self.get_attribute('prepid'),safe_margin, memory))
                     #truncate to 4G, or catch it in ->define step ?
                 self.set_attribute('memory', memory)
                 to_be_saved=True
