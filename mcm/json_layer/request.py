@@ -1090,15 +1090,22 @@ class request(json_base):
         ## try to inject the request
         not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
         db = database( 'requests')
-        self.approve()
-        saved = db.save( self.json() )
-        if saved:
+        if self.get_attribute('approval') == 'approved':
+            self.approve()
+            saved = db.save( self.json() )
+            if saved:
+                return {"prepid": self.get_attribute('prepid'), "results":True}
+            else:
+                not_good.update( {'message' : "Could not save the request after approve "} )
+                return not_good 
+        elif self.get_attribute('approval') == 'submit': 
+            from rest_api.RequestActions import InjectRequest
+            threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
+            threaded_submission.start()
             return {"prepid": self.get_attribute('prepid'), "results":True}
         else:
-            not_good.update( {'message' : "Could not save the request after approve "} )
-            return not_good 
-        not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status'%(self.get_attribute('status'))} ) 
-        return not_good
+            not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status and approval %s'%(self.get_attribute('status'), self.get_attribute('approval'))} ) 
+            return not_good
 
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results":False}
