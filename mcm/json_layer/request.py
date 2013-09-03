@@ -481,24 +481,6 @@ class request(json_base):
           if self.get_attribute('flown_with'):
               fdb = database('flows')
               flownWith = fdb.get(self.get_attribute('flown_with'))
-          #if len(inchains) > 1:
-              #no flow can be determined
-          #    flownWith=None
-          #elif len(inchains)==0:
-          #    ## not member of any chain, that's should happen only before one defines
-          #    flownWith=None
-          #else:
-              #fdb = database('flows')
-              #if not self.get_attribute('flown_with'):
-              #    ##legacy to be removed once all request have a flown with parameter
-              #    crdb = database('chained_requests')
-              #    ccdb = database('chained_campaigns')
-              #    cr = crdb.get(inchains[0])
-              #    cc = ccdb.get(cr['member_of_campaign'])
-              #    indexInChain = cr['chain'].index(self.get_attribute('prepid'))
-              #    flownWith = fdb.get(cc['campaigns'][indexInChain][1])
-              #    self.set_attribute('flown_with',cc['campaigns'][indexInChain][1])
-              #flownWith = fdb.get(self.get_attribute('flown_with'))
 
           camp = cdb.get(self.get_attribute('member_of_campaign'))
           self.set_attribute('cmssw_release',camp['cmssw_release'])
@@ -605,41 +587,6 @@ class request(json_base):
         gens.append(genInfo.json())
         self.set_attribute('generator_parameters',  gens)
 
-## could not put that method here from RequestActions.py, because of cyclic dependence request <-> action
-## maybe we could do something later on 
-#    def add_action(self):
-#        # Check to see if the request is a root request
-#        camp = self.get_attribute('member_of_campaign')
-#        
-#        cdb = database('campaigns')
-#        if not cdb.document_exists(camp):
-#            return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
-#                
-#        # get campaign
-#        c = cdb.get(camp)
-#        
-#        adb = database('actions')
-#        if (c['root'] > 0) or (c['root'] <=0 and int(self.get_attribute('mcdb_id')) > -1):
-#            ## c['root'] > 0 
-#            ##            :: not a possible root --> no action in the table
-#            ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
-#            ##            ::a possible root and mcdbid=0 (import from WMLHE) or mcdbid>0 (imported from PLHE) --> no action on the table
-#            if adb.document_exists(self.get_attribute('prepid')):
-#                ## check that there was no already inserted actions, and remove it in that case
-#                adb.delete(self.get_attribute('prepid'))
-#            return True
-#        
-#        # check to see if the action already exists
-#        if not adb.document_exists(self.get_attribute('prepid')):
-#            # add a new action
-#            a= action('automatic')
-#            a.set_attribute('prepid',  self.get_attribute('prepid'))
-#            a.set_attribute('_id',  a.get_attribute('prepid'))
-#            a.set_attribute('member_of_campaign',  self.get_attribute('member_of_campaign'))
-#            a.find_chains()
-#            adb.save(a.json())
-#        return True
-
     def little_release(self):
         release_to_find=self.get_attribute('cmssw_release')
         return release_to_find.replace('CMSSW_','').replace('_','')
@@ -730,17 +677,12 @@ class request(json_base):
                     
             # tweak a bit more finalize cmsDriver command
             res = cmsd
-            #res += ' --python_filename '+directory+'config_0_'+str(previous+1)+'_cfg.py '
             if l_type.isDev():
                 configuration_names.append( directory+self.get_attribute('prepid')+"-dev_"+str(previous+1)+'_cfg.py')
             else:
                 configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
             res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
-            #JR res += '--fileout step'+str(previous+1)+'.root '
-            ## seems that we do not need that anymore
-            #if previous > 0:
-            #    #JR res += '--filein file:step'+str(previous)+'.root '
-            #    res += '--lazy_download '
+
 
             if run:
                 ## with a back port of number_out that would be much better
@@ -758,13 +700,10 @@ class request(json_base):
                     res +='--customise %s'%( cust )
                 else:
                     res += '--customise Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
-                #else:
-                    ## cannot have addMonitoring :-(
-                    #pass
 
                 res += ' || exit $? ; \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
-                #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
+
             else:
                 res += '-n %s || exit $? ; \n' % self.get_n_for_test()
 
@@ -855,11 +794,6 @@ class request(json_base):
             dump_python= '--dump_python' ### only there until it gets fully integrated in all releases
         if valid_sequence:
             self.setup_harvesting(directory,run)
-
-            ## until we have full integration in the release
-            cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
-            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
-            cmsd_list +='\nscram b -j5 \n'
 
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
