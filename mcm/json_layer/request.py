@@ -1013,7 +1013,7 @@ class request(json_base):
         rdb.update(self.json())
 
     def get_stats(self,
-                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS'],
+                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS','pdmv_open_evts_in_DAS'],
                   override_id=None):
         #existing rwma
         mcm_rr=self.get_attribute('reqmgr_name')
@@ -1128,8 +1128,8 @@ class request(json_base):
         if len(mcm_rr):
             if ('pdmv_status_in_DAS' in mcm_rr[-1]['content'] and 'pdmv_status_from_reqmngr' in mcm_rr[-1]['content']):
                 if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] == 'announced':
-                    ## how many events got completed for real
-                    self.set_attribute('completed_events' , mcm_rr[-1]['content']['pdmv_evts_in_DAS'] )
+                    ## how many events got completed for real: summing open and closed
+                    self.set_attribute('completed_events' , mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] )
 
                     if self.get_attribute('completed_events') <=0:
                         not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( mcm_rr[-1]['content']['pdmv_dataset_name'])})
