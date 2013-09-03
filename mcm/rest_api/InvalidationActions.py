@@ -112,6 +112,10 @@ class InspectInvalidation(RESTResource):
             add_prepid(ds, html)
             html += '</li>\n'
         html += '</ul>\n'
+        html += '<a href=%srestapi/invalidations/inspect/clear> Clear invalidation withouth announcing</a><br>\n'%( l_type.baseurl() )
+        html += '<a href=%srestapi/invalidations/inspect/announce> Announce invalidations</a><br>\n'%( l_type.baseurl() )
+        html += '<a href=%srestapi/invalidations/inspect> Back</a><br>\n'%( l_type.baseurl() )
+
         html += '</html></body>\n'
 
         if announce and (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
