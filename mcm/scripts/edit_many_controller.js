@@ -2,13 +2,14 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.defaults = [];
   $scope.edited_fields = {};
   $scope.dbName = $location.search()["db_name"];
+  $scope.update = [];
   $scope.underscore = _;
 
   $scope.minPrepid = function(string_of_prepids)
   {
-  	var list_of_prepids = string_of_prepids.split(',');
-  	var min = list_of_prepids[0];
-  	_.each(list_of_prepids,function(v){
+  	$scope.list_of_prepids = string_of_prepids.split(',');
+  	var min = $scope.list_of_prepids[0];
+  	_.each($scope.list_of_prepids,function(v){
   	  if(v<min)
   	  {
   	    min = v;
@@ -17,11 +18,11 @@ function resultsCtrl($scope, $http, $location, $window){
   	return min;
   }
   $scope.prepid = $scope.minPrepid($location.search()["prepid"]);
-  $scope.min_prepid = $location.search()["prepid"];
   if($scope.dbName == "requests")
   {
     // get the editable -> set false in list
-    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
+    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
+    $scope.non_multiple_editable= ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
     var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
     promise.then(function(data)
     {
@@ -47,23 +48,14 @@ function resultsCtrl($scope, $http, $location, $window){
             if($scope.not_editable_list.indexOf(column_name) ==-1){
               $scope.not_editable_list.push(column_name);
             }
+            if($scope.non_multiple_editable.indexOf(column_name) ==-1){
+              $scope.non_multiple_editable.push(column_name);
+            }
           }
         }
       });
     };
-    
-    $scope.delete_object = function(db, value){
-      $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
-        if (data["results"]){
-          alert('Object was deleted successfully.');
-        }else{
-          alert('Could not save data to database.');
-        }
-      }).error(function(status){
-        alert('Error no.' + status + '. Could not delete object.');
-      });
-    };
-    
+
     $scope.booleanize_sequence = function(sequence){
       _.each(sequence, function(value, key){
         if (_.isString(value))
@@ -81,10 +73,6 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       });
     };
-    //    $scope.listify_blocks = function(){
-    //      $scope.result["block_black_list"] = $scope.result["block_black_list"].split(",")
-    //      $scope.result["block_white_list"] = $scope.result["block_white_list"].split(",")
-    //    };
 
     $scope.submit_edit = function(){
       switch($scope.dbName){
@@ -92,7 +80,6 @@ function resultsCtrl($scope, $http, $location, $window){
           _.each($scope.result["sequences"], function(sequence){
             $scope.booleanize_sequence(sequence);
           });
-	//$scope.listify_blocks();
           break;
         case "campaigns":
           _.each($scope.result["sequences"], function(sequence){
@@ -107,7 +94,16 @@ function resultsCtrl($scope, $http, $location, $window){
         default:
           break;
       }
-      $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
+      var data_to_send = {};
+      data_to_send["updated_data"] = {};
+      _.each($scope.edited_fields, function(value,key){
+        if(value)
+        {
+          data_to_send["updated_data"][key] = $scope.result[key]
+        }
+      });
+      data_to_send["prepids"] = $scope.list_of_prepids;
+      $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update_many',data:angular.toJson(data_to_send)}).success(function(data,status){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["message"] = data["message"];
@@ -121,13 +117,11 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.getData();
         }
       }).error(function(data,status){
+        $scope.update["message"] = data;
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
         $scope.update["status_code"] = status;
       });
-    };
-    $scope.delete_edit = function(id){
-      $scope.delete_object($location.search()["db_name"], id);
     };
     $scope.display_approvals = function(data){
     };
@@ -178,6 +172,10 @@ function resultsCtrl($scope, $http, $location, $window){
           });
           if (add){
             $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+          }
+          if($scope.not_editable_list.indexOf(v[0].toUpperCase()+v.substring(1).replace(/\_/g,' ')) == -1)
+          {
+            $scope.not_editable_list.push(v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '));
           }
         });
         setTimeout(function(){ //update fragment field
@@ -241,6 +239,29 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.result["pwg"].push(elem);
     }
   };
+  $scope.toggleNotEditable = function(column_name)
+  {
+    var name_index = $scope.not_editable_list.indexOf(column_name)
+    if(name_index != -1)
+    {
+      $scope.not_editable_list.splice(name_index,1);
+    }else
+    {
+      $scope.not_editable_list.push(column_name);
+    }
+  }
+  $scope.changeData = function(elem){
+    var new_list = [elem]
+    _.each($scope.list_of_prepids, function(elem){
+      if (new_list.indexOf(elem) == -1)
+      {
+        new_list.push(elem);
+      }
+    });
+    $location.search("prepid", new_list.join(","));
+    $scope.prepid = elem;
+    $scope.getData();
+  }
 }
 var ModalDemoCtrl = function ($scope) {
   $scope.open = function (number) {
@@ -368,10 +389,10 @@ testApp.directive("sequenceEdit", function($http){
     '     <i class="icon-eye-close"></i>'+
     '   </a>'+
     '  <div ng-switch-when="requests">'+
-    // '   <div ng-show="showSequences">'+
+    '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1);">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1)">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
     '        <div modal="shouldBeOpen" close="close()">'+
@@ -393,11 +414,11 @@ testApp.directive("sequenceEdit", function($http){
     '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
     '          </div>'+
     '       </div>'+
-    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);">'+
+    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1)">'+
     '        <i class="icon-remove-sign"></i>'+
     '      </a>'+
     '    </li>'+
-    // '   </div>'+
+    '   </div>'+
     '  </div>'+
     '  <div ng-switch-default ng-show="showSequences">'+
     '    <li ng-repeat="(key,value) in driver">'+
@@ -408,10 +429,10 @@ testApp.directive("sequenceEdit", function($http){
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <li>{{CMSdriver[key][name]}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);">'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1)">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1)">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -443,15 +464,15 @@ testApp.directive("sequenceEdit", function($http){
     '      </ul>'+
     '        <div ng-controller="ModalDemoCtrl">'+ //add new sub-sequence
     '          <span ng-hide="showAddNewModal">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1)">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-zoom-in"></i>'+
     '          </a>'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1)">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          </span>'+
     '          <span ng-show="showAddNewModal">'+
-    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
+    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1)">'+ //add sequence
     '              <i class="icon-plus"></i>'+
     '            </a>'+
     '          </span>'+
@@ -493,12 +514,12 @@ testApp.directive("sequenceEdit", function($http){
     //ADD NEW SEQUENCE MODAL
     '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+ //add new sequence to sequence list
     '  <span ng-hide="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1)">'+ //button to get default sequences, and make plus-sign available
     '      <i class="icon-zoom-in"></i>'+
     '    </a>'+
     '  </span>'+
     '  <span ng-show="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
+    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1)">'+ //add sequence
     '      <i class="icon-plus"></i>'+
     '    </a>'+
     '  </span>'+
@@ -706,7 +727,7 @@ testApp.directive("generatorParams", function($http){
     '<div ng-controller="genParamModalCtrl">'+
     '  <ul ng-repeat="elem in genParam_data" ng-switch on="$index < genParam_data.length-1">'+
     '    <li ng-switch-when="true">'+ //when not the last element display only wrentch
-    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
+    '      <a ng-click="openGenParam($index)" ng-hide="not_editable_list.indexOf(\'Generator parameters\')!=-1"><i class="icon-wrench"></i></a>'+
         ///MODAL
     '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
     '            <div class="modal-header">'+
@@ -767,7 +788,7 @@ testApp.directive("generatorParams", function($http){
     '        <dt>{{"author username"}}</dt>'+
     '        <dd class="clearfix">{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
-    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
+    '      <a ng-click="openGenParam($index)" ng-hide="not_editable_list.indexOf(\'Generator parameters\')!=-1"><i class="icon-wrench"></i></a>'+
     '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
     '            <div class="modal-header">'+
     '              <h4>Generator parameters editer</h4>'+
@@ -812,7 +833,7 @@ testApp.directive("generatorParams", function($http){
     '          </div>'+ //end of modal footer
     '    </li>'+
     '  </ul>'+
-    '      <a ng-click="openAddParam()" ng-hide="addParamLoad"><i class="icon-plus"></i></a>'+
+    '      <a ng-click="openAddParam()" ng-hide="addParamLoad || not_editable_list.indexOf(\'Generator parameters\')!=-1"><i class="icon-plus"></i></a>'+
     '      <img ng-show="addParamLoad" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
     '      <div modal="addParamModal" close = "closeAddParam()">'+
     '            <div class="modal-header">'+
@@ -877,11 +898,11 @@ testApp.directive("customValidationEdit", function(){
     '    <fieldset>'+
     '      <div class="control-group">'+
     '        Valid:'+
-    '        <input type="checkbox" ng-model="validation_data.valid"></input>'+
+    '        <input type="checkbox" ng-model="validation_data.valid" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.valid">'+
     '        nEvents:'+
-    '        <input type="number" ng-model="validation_data.nEvents"></input>'+
+    '        <input type="number" ng-model="validation_data.nEvents" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.dqm">'+
     '        DQM:'+
@@ -894,7 +915,7 @@ testApp.directive("customValidationEdit", function(){
     '      </div>'+
     '    </fieldset>'+
     '  </form>'+
-    '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;"></input>'+
+    '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl){
@@ -922,7 +943,7 @@ testApp.directive("customAnalysisId", function(){
     '       {{elem}}'+
     '     </span>'+
     '     <span ng-show="editable[$index]">'+
-    '       <input ng-model="new_id"></input>'+
+    '       <input ng-model="new_id" ng-disabled="not_editable_list.indexOf(\'Analysis id\')!=-1"></input>'+
     '       <a ng-click="save($index, new_id)">'+
     '         <i class="icon-plus-sign"></i>'+
     '       </a>'+

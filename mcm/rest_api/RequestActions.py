@@ -519,12 +519,14 @@ class GetSetupForRequest(RESTResource):
         n = None
         if len(args) > 1:
             n = int(args[1])
-
+                
         if self.db.document_exists(pid):
             try:
                 self.request = request(self.db.get(pid))
             except request.IllegalAttributeName as ex:
                 return dumps({"results": False})
+            if n ==0:
+                n = self.request.get_n_for_test(target=100.0)
             setupText = self.request.get_setup_file(events=n)
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return setupText
@@ -1499,3 +1501,28 @@ class RequestsReminder(RESTResource):
                         )
 
         return dumps(res)
+
+class UpdateMany(RequestRESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.db = database(self.db_name)
+        RequestRESTResource.__init__(self)
+        self.updateSingle = UpdateRequest()
+
+    def PUT(self):
+        """
+        Updating an existing multiple requests with an updated dictionnary
+        """
+        return self.update_many(loads(cherrypy.request.body.read().strip()))
+
+    def update_many(self, data):
+        list_of_prepids = data["prepids"]
+        updated_values = data["updated_data"]
+        return_info = []
+        for elem in list_of_prepids:
+            document = self.db.get(elem)
+            for value in updated_values:
+                document[value] = updated_values[value]
+            return_info.append(loads(self.updateSingle.update_request(dumps(document))))
+        self.logger.log('updating requests: %s' %(return_info))
+        return dumps({"results":return_info})

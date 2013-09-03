@@ -74,12 +74,6 @@
             View
           </a>
         </li>
-        <li class="" ng-hide="role(3);">
-          <a ng-click="delete_edit(result['prepid'])" ng-href="#">
-            <i class="icon-chevron-right"></i>
-            Delete
-          </a>
-        </li>
         <li>
           <a ng-show="update['success']">
             Updated. Status code:<font color="green">{{update['status_code']}}</font>
@@ -97,14 +91,20 @@
       </ul>
     </div>
     <div class="span9" ng-hide="role(1);">
-      <legend align="middle" style="text-align:center;">{{min_prepid.split(',')}}</legend>
+      <div style="text-align:center;">
+        <span ng-click="changeData(elem)" ng-repeat="elem in list_of_prepids" ng-switch on="$index == list_of_prepids.length-1">
+          <a rel="tooltip" title="Preload data for {{elem}}" ng-href="#">{{elem}}</a>
+          <text ng-switch-when="false">,</text>
+          <text ng-switch-when="true"></text>
+        </span>
+      </div>
       <table class="table table-bordered table-stripped" style="margin-top: 30px;">
         <thead>
         </thead>
         <tbody>
           <tr ng-repeat="column in defaults">
             <th>
-              <input type="checkbox" ng-model="edited_fields[column.db_name]"></input>
+              <input type="checkbox" ng-model="edited_fields[column.db_name]" ng-click="toggleNotEditable(column.text)" ng-hide="non_multiple_editable.indexOf(column.text)!=-1"></input>
               {{column.text}}
               <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}">
                 <i class="icon-question-sign"></i>
@@ -238,7 +238,6 @@
           </tr>
         </tbody>
       </table>
-      {{edited_fields | json}}
     </div><!--END of span12-->
   </div>
 </span>
