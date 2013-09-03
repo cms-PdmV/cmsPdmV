@@ -1018,13 +1018,18 @@ class request(json_base):
         not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
         db = database( 'requests')
         if self.get_attribute('approval') == 'approve':
-            self.approve()
-            saved = db.save( self.json() )
-            if saved:
-                return {"prepid": self.get_attribute('prepid'), "results":True}
-            else:
-                not_good.update( {'message' : "Could not save the request after approve "} )
-                return not_good 
+            try:
+                self.approve()
+                saved = db.save( self.json() )
+                if saved:
+                    return {"prepid": self.get_attribute('prepid'), "results":True}
+                else:
+                    not_good.update( {'message' : "Could not save the request after approve "} )
+                    return not_good 
+            except Exception as ex:
+                not_good.update( {'message' : str(ex)})
+                return not_good
+
         elif self.get_attribute('approval') == 'submit': 
             from rest_api.RequestActions import InjectRequest
             threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)

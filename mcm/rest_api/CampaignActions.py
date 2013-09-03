@@ -323,14 +323,17 @@ class CampaignsRESTResource(RESTResource):
       prepids_list = map(lambda x:x['id'], all_campaigns)
       return prepids_list
         
-    def multiple_inspect(self, cid):
+    def multiple_inspect(self, cid, in_statuses=['submitted','approved']):
         clist=list(set(cid.rsplit(',')))
         res = []
         for c in clist:
 
             ## this query needs to be modified if we want to also inspect the request for submit !
-            rlist = self.rdb.queries( ["member_of_campaign==%s"%( c ),
-                                       "status==submitted"] )
+            rlist=[]
+            for in_status in in_statuses:
+                rlist.extend(self.rdb.queries( ["member_of_campaign==%s"%( c ),
+                                                "status==%s"%( in_status )] ))
+
             for r in rlist:
                 mcm_r = request( r )
                 if mcm_r:
