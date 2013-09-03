@@ -220,6 +220,10 @@ class chained_request(json_base):
         if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
             raise self.EnergyInconsistentException(next_campaign.get_attribute('prepid'))
 
+        if next_campaign.get_attribute('type') == 'MCReproc' and (not 'time_event' in mcm_f.get_attribute('request_parameters')):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'the flow is getting into a MCReproc campaign but not time per event is specified')
+
         ## check that it is allowed to flow
         allowed_flow_approvals = ['flow', 'submit']
         ###### cascade of checks
