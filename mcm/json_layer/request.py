@@ -821,23 +821,10 @@ class request(json_base):
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
 
-        """
-        val_sentence=self.get_attribute('validation')
-        if len(val_sentence):
-            val_spec=val_sentence.split(',')
-            for spec in val_spec:
-                spec_s = spec.split(':')
-                k = spec_s[0]
-                if k == 'nEvents':
-                    n_to_valid = int(spec_s[1])
-                    yes_to_valid = True
-                if k == 'valid':
-                    yes_to_valid = bool( spec_s[1] )
-        """
 
         l_type=locator()
-        if self.little_release() < '530':# or (not l_type.isDev()):
-            yes_to_valid= False        
+        #if self.little_release() < '530':# or (not l_type.isDev()):
+        #    yes_to_valid= False        
 
         if not yes_to_valid:
             return ("","")
