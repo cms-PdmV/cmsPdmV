@@ -767,12 +767,18 @@ class request(json_base):
                 #res += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/perf -H "Content-Type: application/xml" -X PUT --data "@%s%s_rt.xml" \n' %( self.get_attribute('prepid'),directory, self.get_attribute('prepid'))
             else:
                 res += '-n %s || exit $? ; \n' % self.get_n_for_test()
+
+            #try create a flash runtest
+            if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id')>0:
+                res += 'cmsDriver.py lhetest --filein lhe:%s --mc --step NONE --conditions auto:startup -n -1 --python lhetest.py --step NONE --no_exec \n'%( self.get_attribute('mcdb_id'), )
+                res += 'cmsRun lhetest.py || exit $? ; \n'
+
             #infile += res
             cmsd_list += res + '\n'
 
             previous += 1
 
-
+            
         (i,c) = self.get_genvalid_setup(directory, run)
         infile+=i
         cmsd_list+=c
