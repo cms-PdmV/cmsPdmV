@@ -687,19 +687,13 @@ class request(json_base):
             if run:
                 ## with a back port of number_out that would be much better
                 res += '-n '+str(events)+ ' '
-                #what if there was already a customise ?
-                monitor_location='Utils'
-                if self.little_release() < '420':
-                    infile+='addpkg Configuration/DataProcessing\n'
-                    infile+='cvs co -r 1.3 Configuration/DataProcessing/python/Utils.py \n'
 
-                #if self.little_release() > '420': 
                 if '--customise ' in cmsd:
                     cust = cmsd.split('--customise ')[1].split()[0]
-                    cust+=',Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
+                    cust+=',Configuration/DataProcessing/Utils.addMonitoring'
                     res +='--customise %s'%( cust )
                 else:
-                    res += '--customise Configuration/DataProcessing/%s.addMonitoring'%( monitor_location )
+                    res += '--customise Configuration/DataProcessing/Utils.addMonitoring'
 
                 res += ' || exit $? ; \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
