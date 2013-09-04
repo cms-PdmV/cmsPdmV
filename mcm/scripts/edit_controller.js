@@ -14,6 +14,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
     if ($scope.dbName == "campaigns"){
 	    $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
+      $scope.type_list = ["MCReproc","Prod","LHE"];
     }else if($scope.dbName == "requests"){
       // get the editable -> set false in list
 	    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
