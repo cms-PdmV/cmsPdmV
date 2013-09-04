@@ -5,6 +5,8 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.dbName = $location.search()["db_name"];
   }
 
+  $scope.puce = {};
+  $scope.r_status = {};
   $scope.update = [];
   $scope.filt = {}; //define an empty filter
   $scope.batches_defaults = [
@@ -189,6 +191,37 @@ function resultsCtrl($scope, $http, $location, $window){
         // alert to announce that uknown action is asked???
         break;
     }
+  };
+
+  $scope.loadStats = function(batch_requests){
+      //console.log( batch_requests);
+      _.each( batch_requests, function(elem,index){
+	      $http({method:'GET', url: 'public/restapi/requests/get_status/'+elem.content.pdmv_prep_id}).success(function(data,status){
+		      r_prepid=_.keys(data)[0];
+		      r_status = data[r_prepid];
+		      $scope.r_status[ r_prepid ] = r_status;
+		      status_map = { 'done' : 'led-green.gif',
+				     'submitted' : 'led-blue.gif',
+				     'approved' : 'led-orange.gif',
+				     'defined' : 'led-orange.gif',
+				     'validation' : 'led-red.gif',
+				     'new' : 'led-red.gif'}
+		      if (status_map[r_status]){
+			  $scope.puce[ r_prepid ] = status_map[r_status];
+		      }else{
+			  $scope.puce[ r_prepid ] = 'icon-question-sign';
+		      }
+		  }).error(function(status){
+			  alert('cannot get status for '+elem.content.pdmv_prep_id);
+		      });
+	  });
+  };
+  $scope.inspect = function(batchid){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+batchid}).success(function(data,status){
+	      $scope.getData();
+	  }).error(function(status){
+		  alert('Cannot inspect '+batchid);
+	      });
   };
   $scope.saveCookie = function(){
     var cookie_name = $scope.dbName+"shown";
