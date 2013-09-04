@@ -166,6 +166,9 @@
                 <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of this request" ng-href="#">
                   <i class="icon-screenshot"></i>
                 </a>
+                <a ng-href="injection_status?prepid={{data.prepid}}" rel="tooltip" ng-hide="role(3) || ( data.status!='approved' || data.approval!='submit');" title="See injection log for {{data.prepid}}" target="_self">
+                  <i class="icon-facetime-video"></i>
+                </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
@@ -425,6 +428,9 @@
         </a>
         <a ng-click="inspect_many()" rel="tooltip" ng-hide="role(3);" title="Inspect status of selected requests" ng-href="#">
           <i class="icon-screenshot"></i>
+        </a>
+        <a ng-href="injection_status?prepid={{selected_prepids.join()}}" rel="tooltip" ng-hide="role(3);" title="See injection logs" target="_self">
+          <i class="icon-facetime-video"></i>
         </a>
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </span>
