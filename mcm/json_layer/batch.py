@@ -78,15 +78,14 @@ class batch(json_base):
         message+="\n"
         message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
         message+="Link to the batch:\n"
-        #message+="https://cms-pdmv.cern.ch/mcm/batches/%s\n"%(self.get_attribute('prepid'))
         l_type = locator()
         message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
-            message+="Additional comments for this batch:\n"+current_notes+'\n\n'
+            message+="Additional comments for this batch:\n"+current_notes+'\n'
         
-        #message+="Thank you,\n"+user
+        if self.get_attribute('process_string'):
+            message+='Please use "%s" in the dataset name.\n' % self.get_attribute('process_string')
 
-        #self.logger.log(message)
         self.logger.log('Message send for batch %s'%(self.get_attribute('prepid')))
         
         self.get_current_user_role_level()
