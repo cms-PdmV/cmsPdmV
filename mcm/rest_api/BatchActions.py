@@ -121,13 +121,13 @@ class BatchAnnouncer(RESTResource):
 
     def announce_with_text(self, bid, message):
         if not semaphore_events.is_set(bid):
-            return {"results": False, "value": "Batch {0} has on-going submissions.".format(bid)}
+            return {"results": False, "message": "Batch {0} has on-going submissions.".format(bid) , "prepid" : bid}
         b = batch(self.bdb.get(bid))
         r = b.announce(message)
         if r:
-            return {"results":self.bdb.update(b.json()) , "value" : r}
+            return {"results":self.bdb.update(b.json()) , "message" : r , "prepid" : bid}
         else:
-            return {"results":False}
+            return {"results":False , "prepid" : bid}
         
 
 class AnnounceBatch(BatchAnnouncer):
@@ -156,26 +156,49 @@ class InspectBatches(BatchAnnouncer):
 
     def GET(self, *args):
         """
-        Look for batches that are new and with 5 requests or /N and announce them
+        Look for batches that are new and with 1 requests or /N and announce them, or /batchid or /batchid/N
         """
-        self.N_to_go=5
+        self.N_to_go=1
+        bid=None
         if len(args):
-            self.N_to_go=int(args[0])
+            if args[0].isdigit():
+                self.N_to_go=int(args[0])
+            else:
+                bid = args[0]
+            if len(args)==2:
+                self.N_to_go=int(args[1])
+
         res=[]
         new_batches = self.bdb.queries(['status==new'])
         for new_batch in new_batches:
+            if bid and new_batch['prepid']!=bid:  continue
             if len(new_batch['requests'])>=self.N_to_go:
                 ## it is good to be announced !
                 res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
         
-        #statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
         
         ## check on on-going batches
-        #announced_batches = self.bdb.queries(['status==announced'])
-        #for announced_batch in announced_batches:
-        #    for r in announced_batch['requests']:
-        #        wma_name = r['name']
-        #        rid = r['content']['pdmv_prep_id']
+        rdb = database('requests')
+        announced_batches = self.bdb.queries(['status==announced'])
+        for announced_batch in announced_batches:
+            if bid and announced_batch['prepid']!=bid:  continue
+            all_done=False
+            for r in announced_batch['requests']:
+                wma_name = r['name']
+                rid = r['content']['pdmv_prep_id']
+                mcm_r = rdb.get( rid )
+                all_done = ( mcm_r['status'] == 'done' )
+                if not all_done:
+                    ## no need to go further
+                    break
+            if all_done:
+                ## set the status and save
+                mcm_b = batch(announced_batch)
+                mcm_b.set_status()
+                self.bdb.update( mcm_b.json() )
+                res.append({"results": True, "prepid" : bid, "message" : "Set to done"})
+            else:
+                res.append({"results": False, "prepid" : bid, "message" : "Not completed"})
 
         return dumps(res)
 
