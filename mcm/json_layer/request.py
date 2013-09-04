@@ -150,6 +150,12 @@ class request(json_base):
         
     def get_editable(self):
         editable= {}
+        ## prevent anything to happen during validation procedure.
+        if self.get_attribute('status')=='new' and self.get_attribute('approval') == 'validation':
+            for key in self._json_base__schema:
+                editable[key]=False
+            return editable
+
         if self.get_attribute('status')!='new': ## after being new, very limited can be done on it
             for key in self._json_base__schema:
                 editable[key]=False
