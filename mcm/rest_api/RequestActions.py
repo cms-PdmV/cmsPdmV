@@ -692,10 +692,13 @@ class GetStatus(RESTResource):
         if not self.db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
 
-        req = request(json_input=self.db.get(rid))
+        mcm_r = self.db.get(rid)
+        
+        while not 'status' in mcm_r:
+            time.sleep(0.5)
+            mcm_r = self.db.get(rid)
 
-        #return {"prepid":rid, "results":req.get_attribute('status')}
-        return {rid: req.get_attribute('status')}
+        return {rid: mcm_r['status']}
 
 
 class InspectStatus(RESTResource):
