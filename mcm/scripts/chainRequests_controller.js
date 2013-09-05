@@ -159,6 +159,22 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
+  $scope.statusIcon = function(value){
+    icons = {'new' :  'icon-edit',
+	       'validation' : 'icon-eye-open',
+	       'defined' : 'icon-check',
+	       'approved' : 'icon-share',
+	       'submitted' : 'icon-inbox',
+	       'injected' : 'icon-envelope',
+	       'done' : 'icon-ok'
+    }
+    if (icons[value]){
+	    return icons[value] ;
+    }else{
+	    return "icon-question-sign" ;
+    }
+  };
+
   $scope.approvalIcon = function(value){
     icons = { 'none':'icon-off',
 		//'validation' : 'icon-eye-open',
