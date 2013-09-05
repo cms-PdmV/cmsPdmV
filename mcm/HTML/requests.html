@@ -160,6 +160,9 @@
                 <a ng-href='actions?prepid={{data.prepid}}&select={{data.member_of_campaign}}' rel="tooltip" title="View action on this request" target="_self"> 
                   <i class="icon-qrcode"></i>
                 </a>
+		<a ng-href='chained_requests?contains={{data.prepid}}' rel="tooltip" title="View chains containing {{data.prepid}}" target="_self">
+		  <i class="icon-indent-left"></i>
+		</a>
                 <a ng-href="injectAndLog?prepid={{data.prepid}}" rel="tooltip" title="Submit" ng-hide="role(3);" target="_self">
                   <i class="icon-play-circle"></i>
                 </a>
