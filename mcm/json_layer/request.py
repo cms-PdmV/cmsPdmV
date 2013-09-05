@@ -709,10 +709,11 @@ class request(json_base):
 
             #try create a flash runtest
             if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id')>0:
-                affordable_nevents = 5000000 #at a time
+                affordable_nevents = 2000000 #at a time
+                max_tests=1
                 skip_some=''
                 test_i=0
-                while affordable_nevents*test_i < self.get_attribute('total_events'):
+                while affordable_nevents*test_i < self.get_attribute('total_events') and test_i < max_tests:
                     res += 'cmsDriver.py lhetest --filein lhe:%s --mc  --conditions auto:startup -n %s --python lhetest_%s.py --step NONE --no_exec --no_output %s\n'%( self.get_attribute('mcdb_id'), affordable_nevents, test_i ,skip_some)
                     res += 'cmsRun lhetest_%s.py || exit $? & \n'%( test_i )
                     #prepare for next test job
@@ -1159,7 +1160,7 @@ class request(json_base):
                 events /=  (match*filter_eff)
 
         #=> estimate how long it will take
-        total_test_time = self.get_attribute('time_event') * events
+        total_test_time = float(self.get_attribute('time_event')) * events
         fraction = 0.5
         timeout = batch_control.timeout * 60. * fraction # in seconds
         # check that it is not going to time-out
