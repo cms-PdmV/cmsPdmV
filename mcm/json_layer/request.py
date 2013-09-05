@@ -1012,7 +1012,11 @@ class request(json_base):
             one_new=True
 
         if len(mcm_rr):
-            completed= mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] 
+            try:
+                completed= mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] 
+            except:
+                self.logger.error('Could not calculate completed from last request')
+                completed=0
             # above how much change do we update : 5%
             #self.logger.error('completed %s and there already %s' %( completed, self.get_attribute('completed_events')))
             if float(completed) > float( (1+limit_to_set) * self.get_attribute('completed_events')):
