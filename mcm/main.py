@@ -18,7 +18,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -316,6 +316,7 @@ root.restapi.news.update = UpdateNew()
 root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
+root.restapi.dashboard.get_stats = GetStats()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
