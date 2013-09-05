@@ -721,10 +721,14 @@ class package_builder:
             # test configuration
             cdb = database('campaigns')
             camp = campaign(cdb.get(self.request.get_attribute('member_of_campaign')))
-            if camp.get_attribute('root') == 1:
+            if camp.get_attribute('root') == 1: 
                 #self.__tarobj.add(self.directory)
                 self.logger.inject('Requests not from root or possible root campaigns do not need to be ran locally')
                 flag = True
+            elif True:
+                # forcing the removal of a runtest prior to submission, the run-test has been performed upstream
+                self.logger.inject('Run test is not performed anymore at submission time')
+                flag=True
             else:
                 self.logger.inject('Testing request for %d events' % (self.events))
                 tester = package_tester(self.request, self.directory, self.__pyconfigs)
