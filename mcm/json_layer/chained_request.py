@@ -160,15 +160,17 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'chained_campaign %s does not allow any further flowing.' % (
                                                              self.get_attribute('member_of_campaign')))
-            ## is the current request in the proper approval
+        ## is the current request in the proper approval
         allowed_request_approvals = ['submit']
         if current_request.get_attribute('approval') not in allowed_request_approvals:
             raise self.NotApprovedException(current_request.get_attribute('prepid'),
                                             current_request.get_attribute('approval'), allowed_request_approvals)
-            ## is the current request in the proper status
+        ## is the current request in the proper status
         allowed_request_statuses = ['submitted', 'done']
         if current_request.get_attribute('status') not in allowed_request_statuses:
-            raise self.NotInProperStateException(current_request.get_attribute('prepid'), allowed_request_statuses)
+            raise self.NotInProperStateException(current_request.get_attribute('prepid'), 
+                                                 current_request.get_attribute('status'),
+                                                 allowed_request_statuses)
 
         original_action_id = self.get_attribute('chain')[0]
         root_request_id = original_action_id
@@ -193,11 +195,7 @@ class chained_request(json_base):
         if not 'block_number' in original_action_item or not original_action_item['block_number']:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The action has no valid block number')
-
-        if current_request.get_attribute('completed_events') <= 0:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The number of events completed is negative or null')
-
+        
         ## what is the campaign to go to next and with which flow
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
         if not fdb.document_exists(flow_name):
@@ -223,6 +221,41 @@ class chained_request(json_base):
         if next_campaign.get_attribute('type') == 'MCReproc' and (not 'time_event' in mcm_f.get_attribute('request_parameters')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'the flow is getting into a MCReproc campaign but not time per event is specified')
+
+        #what is going to be the required number of events for the next request
+        #update the stats to its best
+        current_request.get_stats()
+
+        next_total_events=current_request.get_attribute('completed_events')
+        if current_request.get_attribute('completed_events') <= 0:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The number of events completed is negative or null')
+        else:
+            allowed_request_statuses = ['done']
+            ## determine if this is a root -> non-root transition to potentially apply staged number
+            at_a_transition=(current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
+            if ('staged' in original_action_item or 'threshold' in original_action_item) and at_a_transition:
+                allowed_request_statuses.append('submitted')            
+            ##check status
+            if not current_request.get_attribute('status') in allowed_request_statuses:
+                raise self.NotInProperStateException(current_request.get_attribute('prepid'), 
+                                                     current_request.get_attribute('status'),
+                                                     allowed_request_statuses)
+            ##special check at transition that the statistics is good enough
+            if at_a_transition:
+                # at a root -> non-root transition only does the staged/threshold functions !
+                if 'staged' in original_action_item:
+                    next_total_events = int(original_action_item['staged'])
+                if 'threshold' in original_action_item:
+                    next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
+        if current_request.get_attribute('completed_events') < next_total_events:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), next_total_events))
+
+        #and set to a fraction of the existing stat only if already completed ??? maybe not
+        #if at_a_transition and ('threshold' in original_action_item) and current_request.get_attribute('status') == 'done': 
+        #next_total_events = int(current_request.get_attribute('completed_events') * float(original_action_item['threshold'] / 100.))
+
 
         ## check that it is allowed to flow
         allowed_flow_approvals = ['flow', 'submit']
@@ -356,11 +389,15 @@ class chained_request(json_base):
         if input_dataset:
             next_request.set_attribute('input_filename', input_dataset)
 
+        #already taking stage and threshold into account
+        next_request.set_attribute('total_events', next_total_events)
+        """
         ## transfer the number of events to process (could be revised later on)
         next_request.set_attribute('total_events', current_request.get_attribute('completed_events'))
 
-        ## determine if this is a root -> non-root transition to potentially apply staged number
         if 'staged' in original_action_item or 'threshold' in original_action_item:
+            ##check whether there is enough stat available to flow staged.
+            ## determine if this is a root -> non-root transition to potentially apply staged number
             if current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1:
                 if 'staged' in original_action_item:
                     next_request.set_attribute('total_events', original_action_item['staged'])
@@ -368,6 +405,7 @@ class chained_request(json_base):
                     next_request.set_attribute('total_events', int(
                         current_request.get_attribute('completed_events') * float(
                             original_action_item['threshold']) / 100.))
+        """
 
         ## set blocks restriction if any
         if block_black_list:
