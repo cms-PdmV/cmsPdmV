@@ -935,7 +935,8 @@ class request(json_base):
 
     def get_stats(self,
                   keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS','pdmv_open_evts_in_DAS'],
-                  override_id=None):
+                  override_id=None,
+                  limit_to_set=0.05):
         #existing rwma
         mcm_rr=self.get_attribute('reqmgr_name')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
@@ -998,10 +999,14 @@ class request(json_base):
                              'name' : stats_r['pdmv_request_name']})
             one_new=True
 
-        #if one_new:
-            # order those requests properly
-            ### FIXME
-            #then set it back if at least one new    
+        if len(mcm_rr):
+            completed= mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] 
+            # above how much change do we update : 5%
+            #self.logger.error('completed %s and there already %s' %( completed, self.get_attribute('completed_events')))
+            if float(completed) > float( (1+limit_to_set) * self.get_attribute('completed_events')):
+                one_new=True
+            self.set_attribute('completed_events', completed)
+                
         self.set_attribute('reqmgr_name', mcm_rr)
         return one_new
 
