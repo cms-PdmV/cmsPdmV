@@ -96,43 +96,6 @@ class GetStats(RESTResource):
         Get a bunch of stat information, as a test
         """
 
-        rdb = database('requests')
-        crdb =database('chained_requests')
-        ccdb =database('chained_campaigns')
-        
-        html="<html><body>\n"
-        html+="This is a stats page internal to McM\n"
-
-        counts = defaultdict(lambda: defaultdict(int) )
-        counts_e = defaultdict(lambda: defaultdict(int) )
-        sums = defaultdict(int) 
-
-        a_cc = args[0]
-        if not ccdb.document_exists( a_cc ):
-            return "%s does not exists" %( a_cc )
-        mcm_cc = ccdb.get( a_cc )
-        all_cr = crdb.queries(['member_of_campaign==%s'%a_cc])
-
-        for cc in all_cr:
-            for r in cc['chain']:
-                mcm_r = rdb.get(r)
-                counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
-                if mcm_r['status'] in ['submitted','done']:
-                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
-                else:
-                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
-                
-        statuses=['new', 'validation', 'approved' , 'submitted', 'done']
-        data = []
-        data.append( ['Step'] + statuses )
-        for step in mcm_cc['campaigns']:
-            entry=[]
-            entry.append( step[0] ) # step[1] is the flow name
-            for s in statuses:
-                entry.append( counts_e[step[0]][s] )
-            data.append(entry)
-
-
         def render( fcns, divs):
             display='''\
 <html>
@@ -154,13 +117,16 @@ class GetStats(RESTResource):
 '''% ( fcns, divs )
             return display
 
-        def oneChart( title, data):
+        def oneChart( title, data, opt=''):
+            if opt=='log':
+                opt_s=',vAxis: {logScale:true}'
+
             fcn='''\
         var %s = google.visualization.arrayToDataTable( %s );
 
         var options_chart_%s = {
           title: "Status for %s",
-          hAxis: {title: "Campaign", titleTextStyle: {color: "red"}}
+          hAxis: {title: "Campaign", titleTextStyle: {color: "red"}}%s
         };
 
         var chart_%s = new google.visualization.ColumnChart(document.getElementById("chart_div_%s"));
@@ -168,9 +134,10 @@ class GetStats(RESTResource):
         '''%( title, dumps(data), 
               title,
               title,
+              opt_s,
               title,title,
               title,title,title )
-            div='<div id="chart_div_%s" style="width: 900px; height: 500px;"></div>\n'%( title )
+            div='<div id="chart_div_%s" style="width: 1000px; height: 500px;"></div>\n'%( title )
             return (fcn,div)
 
         def oneGauge( title, data):
@@ -190,6 +157,81 @@ class GetStats(RESTResource):
             div='<div id="gauge_div_%s"></div>\n'%( title )
             return (fcn,div)
 
+
+
+        rdb = database('requests')
+        crdb =database('chained_requests')
+        ccdb =database('chained_campaigns')
+        cdb = database('campaigns')
+
+        html="<html><body>\n"
+        html+="This is a stats page internal to McM\n"
+
+        counts = defaultdict(lambda: defaultdict(int) )
+        counts_e = defaultdict(lambda: defaultdict(int) )
+        sums = defaultdict(int) 
+
+        statuses=['new', 'validation', 'approved' , 'submitted', 'done']
+        data = []
+        data.append( ['Step'] + statuses )
+        data_g=[['Label','Value']]
+
+        a_cc = args[0]
+        if a_cc == 'all':
+            all_r = rdb.get_all()
+            #all_r = rdb.queries(['member_of_campaign==Summer12'])
+            for mcm_r in all_r:
+                counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
+
+                if mcm_r['status'] in ['submitted','done']:
+                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
+                else:
+                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
+                    
+            for c in sorted(counts.keys()):
+                a=0
+                entry=[]
+                entry.append( c ) # step[1] is the flow name       
+                for s in statuses:
+                    entry.append( counts_e[c][s] )
+                    a+=counts_e[c][s]
+                if not a:
+                    g=0.
+                else:
+                    g = int(float(counts_e[c]['done']) / float(a) * 100.)
+                data.append(entry)
+                data_g.append([c,g])
+
+
+            (f,d)=oneChart('all', data, opt='log')
+            (f1,d1)=oneGauge( a_cc+'_g', data_g)
+            f+=f1
+            d+=d1
+            return render( f,d)
+            
+            
+        if not ccdb.document_exists( a_cc ):
+            return "%s does not exists" %( a_cc )
+        mcm_cc = ccdb.get( a_cc )
+        all_cr = crdb.queries(['member_of_campaign==%s'%a_cc])
+
+        for cc in all_cr:
+            for r in cc['chain']:
+                mcm_r = rdb.get(r)
+                counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
+                if mcm_r['status'] in ['submitted','done']:
+                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
+                else:
+                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
+                
+        for step in mcm_cc['campaigns']:
+            entry=[]
+            entry.append( step[0] ) # step[1] is the flow name
+            for s in statuses:
+                entry.append( counts_e[step[0]][s] )
+            data.append(entry)
+
+
         (f,d)=oneChart( a_cc, data)
         data_g=[['Label','Value']]
         for step in mcm_cc['campaigns']:
@@ -205,6 +247,7 @@ class GetStats(RESTResource):
         f+=f1
         d+=d1
         return render( f,d)
+
         """
         all_r = rdb.get_all()
         #all_r = rdb.queries(['member_of_campaign==Summer12'])
