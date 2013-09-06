@@ -97,13 +97,27 @@ function resultsCtrl($scope, $http, $location, $window){
     //      $scope.result["block_black_list"] = $scope.result["block_black_list"].split(",")
     //      $scope.result["block_white_list"] = $scope.result["block_white_list"].split(",")
     //    };
-
     $scope.submit_edit = function(){
       switch($scope.dbName){
         case "requests":
           _.each($scope.result["sequences"], function(sequence){
             $scope.booleanize_sequence(sequence);
+            if (_.isString(sequence["step"]))
+            {
+              sequence["step"] = sequence["step"].split(",");
+            }
+            if (_.isString(sequence["datatier"]))
+            {
+              sequence["datatier"] = sequence["datatier"].split(",");
+            }
+            if (_.isString(sequence["eventcontent"]))
+            {
+              sequence["eventcontent"] = sequence["eventcontent"].split(",");
+            }
           });
+         $scope.result["time_event"] = parseFloat($scope.result["time_event"])
+         $scope.result["size_event"] = parseFloat($scope.result["size_event"])
+         $scope.result["memory"] = parseFloat($scope.result["memory"])
 	//$scope.listify_blocks();
           break;
         case "campaigns":
@@ -112,6 +126,18 @@ function resultsCtrl($scope, $http, $location, $window){
               if (key != "$$hashKey") //ignore angularhs hashkey 
               {
                 $scope.booleanize_sequence(subSequence);
+                if (_.isString(subSequence["step"]))
+                {
+                  subSequence["step"] = subSequence["step"].split(",");
+                }
+                if (_.isString(subSequence["datatier"]))
+                {
+                  subSequence["datatier"] = subSequence["datatier"].split(",");
+                }
+                if (_.isString(subSequence["eventcontent"]))
+                {
+                  subSequence["eventcontent"] = subSequence["eventcontent"].split(",");
+                }
               }
             });  
           });
@@ -372,17 +398,17 @@ testApp.directive("sequenceEdit", function($http){
     template:
     '<div >'+
     '  <ul ng-switch="dbName">'+
-    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-hide="showSequences">'+
+    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-hide="showSequences" ng-href="#">'+
     '     <i class="icon-eye-open"></i>'+
     '   </a>'+
-    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-show="showSequences">'+
+    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-show="showSequences" ng-href="#">'+
     '     <i class="icon-eye-close"></i>'+
     '   </a>'+
     '  <div ng-switch-when="requests" ng-show="showSequences">'+
     // '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1);">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
     '        <div modal="shouldBeOpen" close="close()">'+
@@ -393,8 +419,8 @@ testApp.directive("sequenceEdit", function($http){
     '            <form class="form-horizontal" name="sequenceForm">'+
     '              <div class="control-group" ng-repeat="key in underscore.keys(result.sequences[sequence_id])">'+
     '                <label class="control-label">{{key}}</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="result.sequences[sequence_id][key]">'+
+    '                <div class="controls" ng-switch on="key">'+
+    '                  <input type="text" ng-model="result.sequences[sequence_id][key]" ng-switch-default>'+
     '                </div>'+
     '              </div>'+
     '            </form>'+
@@ -404,7 +430,7 @@ testApp.directive("sequenceEdit", function($http){
     '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
     '          </div>'+
     '       </div>'+
-    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);">'+
+    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);" ng-href="#">'+
     '        <i class="icon-remove-sign"></i>'+
     '      </a>'+
     '    </li>'+
@@ -419,10 +445,10 @@ testApp.directive("sequenceEdit", function($http){
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <li>{{CMSdriver[key][name]}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);">'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);" ng-href="#">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
@@ -436,8 +462,8 @@ testApp.directive("sequenceEdit", function($http){
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
     '                    <label class="control-label">{{key}}</label>'+
-    '                    <div class="controls">'+
-    '                      <input type="text" ng-model="elem[key]">'+
+    '                    <div class="controls" ng-switch on="key">'+
+    '                      <input type="text" ng-model="elem[key]" ng-switch-default>'+
     '                    </div>'+
     '                  </div>'+
     '                </div>'+
@@ -454,15 +480,15 @@ testApp.directive("sequenceEdit", function($http){
     '      </ul>'+
     '        <div ng-controller="ModalDemoCtrl">'+ //add new sub-sequence
     '          <span ng-hide="showAddNewModal">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-zoom-in"></i>'+
     '          </a>'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
     '          </span>'+
     '          <span ng-show="showAddNewModal">'+
-    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
+    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
     '              <i class="icon-plus"></i>'+
     '            </a>'+
     '          </span>'+
@@ -485,8 +511,8 @@ testApp.directive("sequenceEdit", function($http){
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
     '                    <label class="control-label">{{key}}</label>'+
-    '                    <div class="controls">'+
-    '                      <input type="text" ng-model="newSequence[key]">'+
+    '                    <div class="controls" ng-switch on="key">'+
+    '                      <input type="text" ng-model="newSequence[key]" ng-switch-default>'+
     '                    </div>'+
     '                  </div>'+
     '                </div>'+
@@ -524,8 +550,8 @@ testApp.directive("sequenceEdit", function($http){
     '            <div ng-switch-when="$$hashKey"></div>'+
     '            <div ng-switch-default>'+
     '              <label class="control-label">{{key}}</label>'+
-    '              <div class="controls">'+
-    '                <input type="text" ng-model="newSequence[key]">'+
+    '              <div class="controls" ng-switch on="key">'+
+    '                <input type="text" ng-model="newSequence[key]" ng-switch-default>'+
     '              </div>'+
     '            </div>'+
     '          </div>'+
@@ -933,7 +959,7 @@ testApp.directive("customAnalysisId", function(){
     '       {{elem}}'+
     '     </span>'+
     '     <span ng-show="editable[$index]">'+
-    '       <input ng-model="new_id"></input>'+
+    '       <input type="text" ng-model="new_id" class="input-xxlarge"></input>'+
     '       <a ng-click="save($index, new_id)">'+
     '         <i class="icon-plus-sign"></i>'+
     '       </a>'+
@@ -942,21 +968,21 @@ testApp.directive("customAnalysisId", function(){
     '       </a>'+
     '     </span>'+
     '     <span ng-hide="editable[$index]">'+
-    '       <a ng-click="edit($index)" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '       <a ng-click="edit($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
     '         <i class="icon-wrench"></i>'+
     '       </a>'+
-    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
     '         <i class="icon-remove-sign"></i>'+
     '       </a>'+
     '     <span>'+
     '   </li>'+
     '  </ul>'+
-    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(\'Analysis id\')!=-1">'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
     '      <a ng-click="toggleAddNewAnalysisID()">'+
     '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
     '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
     '      </a>'+
-    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id"></i>'+
+    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id" class="input-xxlarge"></i>'+
     '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
     '    </form>'+
     '</div>'+
@@ -968,6 +994,7 @@ testApp.directive("customAnalysisId", function(){
         scope.new_analysis_id = "";
         scope.editable = {};
         scope.new_id = "";
+        scope.formColumn = scope.$eval(attr.column);
       };
       scope.toggleAddNewAnalysisID = function(){
         if(scope.add_analysis_id)

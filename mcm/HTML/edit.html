@@ -63,7 +63,7 @@
     <div class="span3 bs-docs-sidebar"> <!--  sidebar span -->
       <ul class="nav nav-list bs-docs-sidenav affix">
         <li class="" ng-hide="role(1);">
-          <a ng-click="submit_edit()">
+          <a ng-click="submit_edit()" ng-href="#">
             <i class="icon-chevron-right"></i>
             Commit
           </a>
@@ -75,7 +75,7 @@
           </a>
         </li>
         <li class="" ng-hide="role(3);">
-          <a ng-click="delete_edit(result['prepid'])">
+          <a ng-click="delete_edit(result['prepid'])" ng-href="#">
             <i class="icon-chevron-right"></i>
             Delete
           </a>
@@ -109,25 +109,22 @@
               <ng-form name="antantasForm">
                 <div ng-switch on="column.text">
                     <div ng-switch-when="Approvals">
-                        <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                          <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form> 
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form> 
                     </div>
                     <div ng-switch-when="Sequences">
                       <div sequence-edit ng-model="result[column.db_name]"></div>
                     </div>
                     <div ng-switch-when="Generators">
-                        <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                          <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form>
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
                     </div>
                     <div ng-switch-when="Notes">
-                        <ng-form name="fieldForm">
-                          <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                          <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                        </ng-form>
+                      <textarea ng-model="result[column.db_name]" style="width: 390px; height: 152px;"></textarea>
                     </div>
                     <div ng-switch-when="Submission details">
                       <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
@@ -135,23 +132,11 @@
                         <dd>{{value}}</dd>                
                       </dl>
                     </div>
-                    <div ng-switch-when="Generator parameters">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
-                    </div>
                     <div ng-switch-when="Block white list">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
+                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
                     </div>
                     <div ng-switch-when="Block black list">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
+                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
                     </div>
                     <div ng-switch-when="History">
                       <div custom-history ng-model="result[column.db_name]"></div>
@@ -160,10 +145,6 @@
                       <input type="checkbox" ng-model="result[column.db_name]">
                     </div>
                     <div ng-switch-when="Validation">
-                      <!-- <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form> -->
                       <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
                     </div>
                     <div ng-switch-when="Request parameters">
@@ -239,7 +220,10 @@
                       <textarea ng-model="result[column.db_name]" style="width: 639px; height: 236px;"></textarea>
                     </div>
                     <div ng-switch-when="Analysis id">
-                      <custom-analysis-id ng-model="result[column.db_name]"></custom-analysis-id>
+                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
+                    </div>
+                    <div ng-switch-when="Generators">
+                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
                     </div>
                     <div ng-switch-when="Type">
                       <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
