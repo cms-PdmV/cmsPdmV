@@ -118,6 +118,7 @@ class GetStats(RESTResource):
             return display
 
         def oneChart( title, data, opt=''):
+            opt_s=''
             if opt=='log':
                 opt_s=',vAxis: {logScale:true}'
 
