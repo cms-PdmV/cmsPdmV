@@ -137,13 +137,14 @@ class GetStats(RESTResource):
               opt_s,
               title,title,
               title,title,title )
-            div='<div id="chart_div_%s" style="width: 1000px; height: 500px;"></div>\n'%( title )
+            div='<div id="chart_div_%s" style="width: 100%%; height: 500px;"></div>\n'%( title )
             return (fcn,div)
 
         def oneGauge( title, data):
+            h = int(250 * (len(data)/5. +1))
             fcn='''\
         var %s = google.visualization.arrayToDataTable( %s );                                                                                                                                                                                                                               var options_gauge = {
-          height: 300,
+          height: %d,
           redFrom: 90, redTo: 100,
           yellowFrom:75, yellowTo: 90,
           minorTicks: 5
@@ -151,6 +152,7 @@ class GetStats(RESTResource):
         var gauge_%s = new google.visualization.Gauge(document.getElementById('gauge_div_%s'));
         gauge_%s.draw(%s,options_gauge)
         '''%( title, dumps(data),
+              h,
               title,title,
               title,title)
 
@@ -182,11 +184,14 @@ class GetStats(RESTResource):
             #all_r = rdb.queries(['member_of_campaign==Summer12'])
             for mcm_r in all_r:
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
-
+                to_add=mcm_r['total_events']
                 if mcm_r['status'] in ['submitted','done']:
-                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
-                else:
-                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
+                    to_add=mcm_r['completed_events']
+                try:
+                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += int(to_add)
+                except:
+                    self.logger.error('cannot seem to be able to digest "%s" for %s' % (to_add, mcm_r['prepid']))
+
                     
             for c in sorted(counts.keys()):
                 a=0
