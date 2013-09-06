@@ -85,6 +85,9 @@
                   <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
                     <i class="icon-refresh"></i>
                   </a>
+		  <a ng-href="/mcm/restapi/dashboard/get_stats/{{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank" ng-hide="role(3);">
+		    <i class="icon-picture"></i>
+		  </a>
                   <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;"> 
                     <i class="icon-screenshot"></i>
                   </a>
