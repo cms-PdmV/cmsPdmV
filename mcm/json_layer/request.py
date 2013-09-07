@@ -809,6 +809,11 @@ class request(json_base):
         if valid_sequence:
             self.setup_harvesting(directory,run)
 
+            ## until we have full integration in the release
+            cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
+            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
+            cmsd_list +='\nscram b -j5 \n' 
+
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
 
