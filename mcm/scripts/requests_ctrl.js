@@ -25,6 +25,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.action_status= {};
     $scope.underscore = _;
     $scope.file_was_uploaded = false;
+    $scope.image_width = 150;
     $scope.tabsettings = {
       "view":{
         active:false
@@ -660,7 +661,6 @@ function resultsCtrl($scope, $http, $location, $window){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
-
 };
 
 // NEW for directive

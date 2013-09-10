@@ -304,15 +304,24 @@
                   <li ng-repeat="rqmngr in data[value.db_name]">
                     <a ng-href='batches?contains={{rqmngr.name}}' rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>
                     <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>
-                    <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>
-                    ,<a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_self"> stats</a>
+                    <a ng-show="!isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>,
+                    <a ng-hide='stats_cache[rqmngr["name"]]' ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' rel="tooltip" title="Stats" target="_self"> stats</a>
                     <a ng-click='load_dataset_list(rqmngr["name"]);' ng-hide='stats_cache[rqmngr["name"]]' rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>
-                    <b><font color='red' ng-show='stats_cache[rqmngr["name"]] && !underscore.isObject(stats_cache[rqmngr["name"]])'> Stats Not Found</font></b>
-                    <div ng-show='underscore.isObject(stats_cache[rqmngr["name"]])'>
-                      <a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_self"> {{numberWithCommas(stats_cache[rqmngr["name"]].pdmv_evts_in_DAS)}} events</a>
-                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr["name"]}}' rel="tooltip" title="Perf" target="_self">perf </a>
-                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr["name"]}}' rel="tooltip" title="DS" target="_self">output</a>
-                      <a ng-href='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'><img width=150 ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'/></a>
+		    <b><font color='red' ng-show='stats_cache[rqmngr["name"]] && !underscore.isObject(stats_cache[rqmngr["name"]])'> Stats Not Found</font></b>
+                    <span ng-show='underscore.isObject(stats_cache[rqmngr["name"]])'>
+                      <a ng-href='http://cms-pdmv.cern.ch/stats/?RN={{rqmngr["name"]}}' target="_self"> {{numberWithCommas(stats_cache[rqmngr["name"]].pdmv_evts_in_DAS)}} events</a>,
+                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr["name"]}}' rel="tooltip" title="Perf" target="_self">perf</a>,
+                      <a ng-hide="role(3);" ng-href='https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr["name"]}}' rel="tooltip" title="DS" target="_self">output</a>,
+		      {{stats_cache[rqmngr["name"]].pdmv_status_from_reqmngr}},
+		      <span ng-repeat='c_site in stats_cache[rqmngr["name"]].pdmv_custodial_sites'>
+			@{{c_site}},
+		      </span>
+		      <span ng-show='stats_cache[rqmngr["name"]].pdmv_running_sites.length'>
+			Running at : {{stats_cache[rqmngr["name"]].pdmv_running_sites.join()}},
+		      </span>
+                      Last update on {{stats_cache[rqmngr["name"]].pdmv_monitor_time}}
+		      <br>
+                      <a ng-href='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'><img width={{image_width}} ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif' ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>
                       <ul style="margin-bottom: 0px;" ng-show='true;'>
                         <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
                           <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>
@@ -322,7 +331,7 @@
                         </li>
                       </ul>
 		    <a ng-click='full_details[rqmngr["name"]]=true;' ng-hide='role(3) || full_details[rqmngr["name"]]' rel="tooltip" title="Load Full details"> <i class="icon-eye-open"></i></a>
-                    </div>
+                    </span>
 		    <div ng-show='underscore.isObject(stats_cache[rqmngr["name"]]) && full_details[rqmngr["name"]]'>
 		      <a ng-click='full_details[rqmngr["name"]]=false;' rel="tooltip" title="Close details"><i class="icon-eye-close"></i></a>
                       <pre>{{stats_cache[rqmngr["name"]]|json}}</pre>
