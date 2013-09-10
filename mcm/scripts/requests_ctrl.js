@@ -20,6 +20,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
+    $scope.full_details = {};
     $scope.action_report= {};
     $scope.action_status= {};
     $scope.underscore = _;
@@ -151,13 +152,13 @@ function resultsCtrl($scope, $http, $location, $window){
     };
     */
     $scope.load_dataset_list = function (req_name){
-      getfrom='/stats/restapi/get_one/'+req_name;
-      $http({method:'GET', url: getfrom}).success(function(data,status){
-        $scope.stats_cache [req_name] = data;
+	getfrom='/stats/restapi/get_one/'+req_name;
+	$http({method:'GET', url: getfrom}).success(function(data,status){
+		$scope.stats_cache [req_name] = data;
 	    }).error(function(status){
-        $scope.stats_cache [req_name] = "Not found";
+		    $scope.stats_cache [req_name] = "Not found";
 		    console.log(getfrom,' --> error');
-      });
+		});
     };
 
     $scope.register = function(prepid){
