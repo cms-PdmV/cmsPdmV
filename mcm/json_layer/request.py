@@ -800,7 +800,7 @@ class request(json_base):
             valid_sequence = sequence( firstSequence )
             ## when integrated properly
             if firstStep=='LHE':
-                valid_sequence.set_attribute( 'step', [firstStep,'USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
+                valid_sequence.set_attribute( 'step', [firstStep,'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             else:
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
