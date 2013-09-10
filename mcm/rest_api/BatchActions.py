@@ -6,6 +6,7 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.prep_database import database
 from json_layer.batch import batch
 from tools.locker import semaphore_events
+from tools.settings import settings
 
 """
 class SetStatus(RESTResource):
@@ -169,36 +170,42 @@ class InspectBatches(BatchAnnouncer):
                 self.N_to_go=int(args[1])
 
         res=[]
-        new_batches = self.bdb.queries(['status==new'])
-        for new_batch in new_batches:
-            if bid and new_batch['prepid']!=bid:  continue
-            if len(new_batch['requests'])>=self.N_to_go:
-                ## it is good to be announced !
-                res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
+        if settings().get_value('batch_announce'):
+            new_batches = self.bdb.queries(['status==new'])
+            for new_batch in new_batches:
+                if bid and new_batch['prepid']!=bid:  continue
+                if len(new_batch['requests'])>=self.N_to_go:
+                    ## it is good to be announced !
+                    res.append( self.announce_with_text( new_batch['_id'], 'Automatic announcement.') )
+        else:
+            self.logger.log('Not announcing any batch')
         
-        
-        ## check on on-going batches
-        rdb = database('requests')
-        announced_batches = self.bdb.queries(['status==announced'])
-        for announced_batch in announced_batches:
-            if bid and announced_batch['prepid']!=bid:  continue
-            all_done=False
-            for r in announced_batch['requests']:
-                wma_name = r['name']
-                rid = r['content']['pdmv_prep_id']
-                mcm_r = rdb.get( rid )
-                all_done = ( mcm_r['status'] == 'done' )
-                if not all_done:
-                    ## no need to go further
-                    break
-            if all_done:
-                ## set the status and save
-                mcm_b = batch(announced_batch)
-                mcm_b.set_status()
-                self.bdb.update( mcm_b.json() )
-                res.append({"results": True, "prepid" : bid, "message" : "Set to done"})
-            else:
-                res.append({"results": False, "prepid" : bid, "message" : "Not completed"})
+        if settings().get_value('batch_set_done'):
+            ## check on on-going batches
+            rdb = database('requests')
+            announced_batches = self.bdb.queries(['status==announced'])
+            for announced_batch in announced_batches:
+                if bid and announced_batch['prepid']!=bid:  continue
+                all_done=False
+                for r in announced_batch['requests']:
+                    wma_name = r['name']
+                    rid = r['content']['pdmv_prep_id']
+                    mcm_r = rdb.get( rid )
+                    all_done = ( mcm_r['status'] == 'done' )
+                    if not all_done:
+                        ## no need to go further
+                        break
+                if all_done:
+                    ## set the status and save
+                    mcm_b = batch(announced_batch)
+                    mcm_b.set_status()
+                    self.bdb.update( mcm_b.json() )
+                    res.append({"results": True, "prepid" : bid, "message" : "Set to done"})
+                else:
+                    res.append({"results": False, "prepid" : bid, "message" : "Not completed"})
+        else:
+            self.logger.log('Not setting any batch to done')
 
+        #anyways return something
         return dumps(res)
 
