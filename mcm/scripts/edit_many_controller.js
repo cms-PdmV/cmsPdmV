@@ -79,6 +79,18 @@ function resultsCtrl($scope, $http, $location, $window){
         case "requests":
           _.each($scope.result["sequences"], function(sequence){
             $scope.booleanize_sequence(sequence);
+            if (_.isString(sequence["step"]))
+            {
+              sequence["step"] = sequence["step"].split(",");
+            }
+            if (_.isString(sequence["datatier"]))
+            {
+              sequence["datatier"] = sequence["datatier"].split(",");
+            }
+            if (_.isString(sequence["eventcontent"]))
+            {
+              sequence["eventcontent"] = sequence["eventcontent"].split(",");
+            }
           });
           break;
         case "campaigns":
@@ -87,6 +99,18 @@ function resultsCtrl($scope, $http, $location, $window){
               if (key != "$$hashKey") //ignore angularhs hashkey 
               {
                 $scope.booleanize_sequence(subSequence);
+                if (_.isString(subSequence["step"]))
+                {
+                  subSequence["step"] = subSequence["step"].split(",");
+                }
+                if (_.isString(subSequence["datatier"]))
+                {
+                  subSequence["datatier"] = subSequence["datatier"].split(",");
+                }
+                if (_.isString(subSequence["eventcontent"]))
+                {
+                  subSequence["eventcontent"] = subSequence["eventcontent"].split(",");
+                }
               }
             });  
           });
