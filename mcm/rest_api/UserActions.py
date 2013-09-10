@@ -4,7 +4,7 @@ import cherrypy
 from json import loads, dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.prep_database import database
-
+from tools.settings import settings
 
 class GetUserRole(RESTResource):
     def __init__(self):
@@ -51,10 +51,8 @@ class GetUserPWG(RESTResource):
 	    Retrieve the pwg of the provided user
 	    """
         ## this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
-        settings = database('settings')
-        all_pwgs = settings.get('pwg')['value']
-        #all_pwgs = ['BPH', 'B2G', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU',
-        #            'TRK', 'TOP', 'TSG', 'SMP','L1T']
+        
+        all_pwgs = settings().get_value('pwg')
 
         all_pwgs.sort()
         if len(args) == 0:
