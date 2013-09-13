@@ -186,6 +186,7 @@ class InspectBatches(BatchAnnouncer):
             announced_batches = self.bdb.queries(['status==announced'])
             for announced_batch in announced_batches:
                 if bid and announced_batch['prepid']!=bid:  continue
+                this_bid = announced_batch['prepid']
                 all_done=False
                 for r in announced_batch['requests']:
                     wma_name = r['name']
@@ -200,9 +201,9 @@ class InspectBatches(BatchAnnouncer):
                     mcm_b = batch(announced_batch)
                     mcm_b.set_status()
                     self.bdb.update( mcm_b.json() )
-                    res.append({"results": True, "prepid" : bid, "message" : "Set to done"})
+                    res.append({"results": True, "prepid" : this_bid, "message" : "Set to done"})
                 else:
-                    res.append({"results": False, "prepid" : bid, "message" : "Not completed"})
+                    res.append({"results": False, "prepid" : this_bid, "message" : "Not completed"})
         else:
             self.logger.log('Not setting any batch to done')
 
