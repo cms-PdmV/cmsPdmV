@@ -960,8 +960,6 @@ class InjectRequest(RESTResource):
                 res.extend(forks[-1].status())
                 ##forks the process directly
                 forks[-1].start()
-                ##wait just a bit so that batch numbers do not clash !
-                time.sleep(0.5)
             else:
                 ##makes you wait until it goes
                 self.logger.log('Running the injection of request %s ' % (pid))
