@@ -817,7 +817,7 @@ class request(json_base):
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
 
-            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py %s --no_exec \n'%(genvalid_request.build_cmsDriver(0),
+            self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py %s --no_exec || exit $? ;\n'%(genvalid_request.build_cmsDriver(0),
                                                                                                                                  int(n_to_valid),
                                                                                                                                  directory,
                                                                                                                                  dump_python)
@@ -837,7 +837,7 @@ class request(json_base):
         return (infile,cmsd_list)
 
     def setup_harvesting(self,directory,run):
-        self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec \n'%(directory)
+        self.harvesting_driver = 'cmsDriver.py step2 --filein file:genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %sgenvalid_harvesting.py --no_exec || exit $? ; \n'%(directory)
         if run:
             self.harvesting_driver +='cmsRun %sgenvalid_harvesting.py  || exit $? ; \n'%(directory)
 
