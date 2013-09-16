@@ -104,7 +104,17 @@ class batch_control:
         
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
 
-        if not stdin and not stdout and not stderr:
+        time_out=30
+        trials_time_out=10
+        trials=0
+        ## wait for afs to synchronize the output file
+        while (not stdin and not stdout and not stderr) and trials<trials_time_out:
+            time.sleep( retry_time_out )
+            stdin, stdout, stderr = self.ssh_exec.execute(cmd)
+            trials+=1
+        
+        if trials>=trials_time_out:
+            self.log_err = '%s could not be retrieved after %s tries in interval of %s s'%( self.test_out, trials, time_out )
             return False
 
         out = stdout.read()
