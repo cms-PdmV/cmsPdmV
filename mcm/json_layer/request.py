@@ -45,11 +45,11 @@ class request(json_base):
                 raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
 
         self._json_base__schema = {
-            '_id':'', 
+            '_id':'',
             'prepid':'',
-            'history':[],  
+            'history':[],
             'priority':0,
-            #'completion_date':'', 
+            #'completion_date':'',
             'cmssw_release':'',
             'input_filename':'',
             'pwg':'',
@@ -60,8 +60,8 @@ class request(json_base):
             'process_string':'',
             'extension': 0,
             #'input_block':'',
-            'block_black_list':[], 
-            'block_white_list':[], 
+            'block_black_list':[],
+            'block_white_list':[],
             'cvs_tag':'',
             'fragment_tag':'',
             #'pvt_flag':'',
@@ -79,7 +79,7 @@ class request(json_base):
             'time_event':-1,
             'size_event':-1,
             'memory' : 2300, ## the default until now
-            #'nameorfragment':'', 
+            #'nameorfragment':'',
             'name_of_fragment':'',
             'fragment':'',
             'config_id':[],
@@ -89,7 +89,7 @@ class request(json_base):
             'keep_output':[], ## list of booleans
             'generators':[],
             'sequences':[],
-            'generator_parameters':[], 
+            'generator_parameters':[],
             'reqmgr_name':[], # list of tuples (req_name, valid)
             'approval':self.get_approval_steps()[0],
             'analysis_id':[],
@@ -147,7 +147,7 @@ class request(json_base):
                 a_change += chain.set_processing_status( self.get_attribute('prepid'), self.get_attribute('status') )
                 if a_change:
                     crdb.save(chain.json())
-        
+
     def get_editable(self):
         editable= {}
         ## prevent anything to happen during validation procedure.
@@ -241,15 +241,18 @@ class request(json_base):
                 if similar['prepid'] == my_id: continue
                 if int(similar['extension']) == int(my_extension):
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'%( my_extension))
-        
+
         cdb = database('campaigns')
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
                 if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
-                    ##only requests belonging to a root==0 campaign can have mcdbid before being in a chain
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign')
+                    ##only requests belonging to a root==0 campaign can have mcdbid without input before being in a chain
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign.')
+            if self.get_attribute('mcdb_id')>0 and self.get_attribute('input_filename') and self.get_attribute('history')[0]['action'] != 'migrated':
+                ## not a migrated request, mcdb
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
 
         else:
             crdb = database('chained_requests')
@@ -301,17 +304,17 @@ class request(json_base):
                 self.logger.log('Matching labels %s'% matching_labels)
             else:
                 # do the intersect
-                matching_labels = matching_labels - (matching_labels - this_matching) 
+                matching_labels = matching_labels - (matching_labels - this_matching)
                 self.logger.log('Matching labels after changes %s'% matching_labels)
-                
+
 
         if len(matching_labels)==0:
             self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
             # try setting the process string ? or just raise an exception ?
             if not self.get_attribute('process_string'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
-                    
-                    
+
+
 
         ## select to synchronize status and approval toggling, or run the validation/run test
         de_synchronized=True
@@ -324,7 +327,7 @@ class request(json_base):
 
     def ok_to_move_to_approval_define(self):
         if self.current_user_level==0:
-            ##not allowed to do so 
+            ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'),'define','bad user admin level %s'%(self.current_user_level))
         ## we could restrict certain step to certain role level
         #if self.current_user_role != 'generator_contact':
@@ -339,7 +342,7 @@ class request(json_base):
 
     def ok_to_move_to_approval_approve(self):
         if self.current_user_level<=1:
-            ##not allowed to do so 
+            ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','bad user admin level %s'%(self.current_user_level))
 
         if 'defined' in self._json_base__status:
@@ -348,7 +351,7 @@ class request(json_base):
         else:
             if self.get_attribute('status')!='new':
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
-        
+
         # maybe too early in the chain of approvals
         #if not len(self.get_attribute('member_of_chain')):
         #    raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','This request is not part of any chain yet')
@@ -359,12 +362,12 @@ class request(json_base):
 
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level<3:
-            ##not allowed to do so                                                                                                      
+            ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
 
         if self.get_attribute('status')!='approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
-        
+
         if not len(self.get_attribute('member_of_chain')):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
 
@@ -404,9 +407,9 @@ class request(json_base):
                     if content['flag']== True:
                         at_least_an_action=True
                         break
-            
+
         return at_least_an_action
-        
+
 
     def retrieve_fragment(self,name=None,get=True):
         if not name:
@@ -430,7 +433,7 @@ class request(json_base):
         return get_me
 
     def get_fragment(self):
-        ## provides the name of the fragment depending on 
+        ## provides the name of the fragment depending on
         #fragment=self.get_attribute('name_of_fragment').decode('utf-8')
         fragment=self.get_attribute('name_of_fragment')
         if self.get_attribute('fragment') and not fragment:
@@ -443,7 +446,7 @@ class request(json_base):
     def build_cmsDriver(self, sequenceindex):
 
       fragment=self.get_fragment()
-          
+
       ##JR
       if fragment=='':
           fragment='step%d'%(sequenceindex+1)
@@ -453,10 +456,10 @@ class request(json_base):
           seq = sequence(self.get_attribute('sequences')[sequenceindex])
       except Exception:
           self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (self.get_attribute('prepid'), sequenceindex), level='critical')
-          return '' 
-      
+          return ''
+
       cmsDriverOptions=seq.build_cmsDriver()
-      
+
       if not cmsDriverOptions.strip():
           return '%s %s' % (command, cmsDriverOptions)
 
@@ -509,7 +512,7 @@ class request(json_base):
                         if name in fl['request_parameters']['sequences'][i]:
 				# if a seq name is defined, store that in the request
 				new_req['sequences'].append(step[name])
-				
+
 				# if the flow contains any parameters for the sequence,
 				# then override the default ones inherited from the campaign
 				if fl['request_parameters']['sequences'][i][name]:
@@ -523,7 +526,7 @@ class request(json_base):
 		# if no sequence has been found, use the default
 		if not flag:
 			new_req['sequences'].append(step['default'])
-	
+
 	    # override request's parameters
             for key in fl['request_parameters']:
                 if key == 'sequences':
@@ -544,7 +547,7 @@ class request(json_base):
           for i in range(len(camp['sequences'])):
                       freshKeep.append(False)
           freshKeep[-1]=True
-          self.set_attribute('keep_output',freshKeep)              
+          self.set_attribute('keep_output',freshKeep)
           if can_save:
               rdb = database('requests')
               rdb.update(new_req)
@@ -577,9 +580,9 @@ class request(json_base):
         if cd:
             commands.append(cd)
 
-      return commands  
+      return commands
 
-    
+
     def update_generator_parameters(self):
         """
         Create a new generator paramters at the end of the list
@@ -589,7 +592,7 @@ class request(json_base):
             genInfo = generator_parameters()
         else:
             genInfo = generator_parameters(gens[-1])
-            genInfo.set_attribute('submission_details', self._json_base__get_submission_details())
+            genInfo.set_attribute('submission_details', self.__get_submission_details())
             genInfo.set_attribute('version', genInfo.get_attribute('version')+1)
 
         gens.append(genInfo.json())
@@ -607,7 +610,7 @@ class request(json_base):
         release_to_find=self.get_attribute('cmssw_release')
         import xml.dom.minidom
         xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure https://cmstags.cern.ch/tc/ReleasesXML/?anytype=1').read())
-        
+
         for arch in xml_data.documentElement.getElementsByTagName("architecture"):
             scram_arch = arch.getAttribute('name')
             for project in arch.getElementsByTagName("project"):
@@ -640,7 +643,7 @@ class request(json_base):
         ##create a release directory "at the root" if not already existing
         infile += self.make_release()
         if directory:
-            ##create a release directory "in the request" directory if not already existing 
+            ##create a release directory "in the request" directory if not already existing
             infile += 'cd ' + os.path.abspath(directory) + '\n'
             infile += self.make_release()
 
@@ -649,7 +652,7 @@ class request(json_base):
 
         ## get the fragment if need be
         infile += self.retrieve_fragment()
-        
+
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
             infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(l_type.baseurl(),self.get_attribute('prepid'),self.get_fragment())
@@ -659,7 +662,7 @@ class request(json_base):
 
         # validate and build cmsDriver commands
         cmsd_list = ''
-        
+
         configuration_names = []
         if events:
             run = True
@@ -682,7 +685,7 @@ class request(json_base):
                     ## this works for back-ward compatiblity
                     #infile+= self.retrieve_fragment(name=cname.split('/')[-1])
                     infile+= self.retrieve_fragment(name=cname)
-                    
+
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             if l_type.isDev():
@@ -731,11 +734,11 @@ class request(json_base):
 
             previous += 1
 
-            
+
         (i,c) = self.get_genvalid_setup(directory, run)
         infile+=i
         cmsd_list+=c
-        
+
         infile += '\nscram b\n'
         infile += cmsd_list
         # since it's all in a subshell, there is
@@ -749,7 +752,7 @@ class request(json_base):
         #not in dev
         if directory and not l_type.isDev():
             infile += 'rm -rf %s' %( self.get_attribute('cmssw_release') )
-            
+
 
         return infile
 
@@ -777,7 +780,7 @@ class request(json_base):
 
         l_type=locator()
         #if self.little_release() < '530':# or (not l_type.isDev()):
-        #    yes_to_valid= False        
+        #    yes_to_valid= False
 
         if not yes_to_valid:
             return ("","")
@@ -812,7 +815,7 @@ class request(json_base):
             ## until we have full integration in the release
             cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
             cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
-            cmsd_list +='\nscram b -j5 \n' 
+            cmsd_list +='\nscram b -j5 \n'
 
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
@@ -852,24 +855,24 @@ class request(json_base):
                                                                                     self.get_attribute('version')
                                                                                     )
 
-        
+
         where ='https://cmsweb.cern.ch/dqm/relval'
         l_type = locator()
         if l_type.isDev():
             where ='https://cmsweb-testbed.cern.ch/dqm/dev'
         where ='https://cmsweb-testbed.cern.ch/dqm/dev'
-        self.harverting_upload = ''        
-        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file ) 
+        self.harverting_upload = ''
+        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file )
         self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
         self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh \n'
         self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin \n'
         self.harverting_upload += 'python visDQMUpload %s %s &> run.log || exit $? ; \n'%( where, dqm_file )
-        
+
         ##then the url back to the validation sample in the gui !!!
         val=self.get_attribute('validation')
         ### please do not put dqm gui url inside, but outside in java view ...
         """
-        val+=', %s'%( dqm_dataset ) 
+        val+=', %s'%( dqm_dataset )
         """
         val['dqm'] = dqm_dataset
         self.set_attribute('validation', val)
@@ -894,7 +897,7 @@ class request(json_base):
             else:
                 return 'MonteCarloFromGEN'
         elif  self.get_attribute('type') in ['LHE','LHEStepZero']:
-            return 'LHEStepZero' 
+            return 'LHEStepZero'
         elif self.get_attribute('type') == 'MCReproc':
             return 'ReDigi'
 
@@ -965,14 +968,14 @@ class request(json_base):
             if not len(keys_to_import):
                 keys_to_import = stats_r.keys()
             for k in keys_to_import:
-                mcm_content[k] = stats_r[k]            
+                mcm_content[k] = stats_r[k]
             return mcm_content
 
         ####
         ## update all existing
         earliest_date=0
-        for rwma_i in range(len(mcm_rr)):
-            rwma = mcm_rr[rwma_i]
+        earliest_time=0
+        for (rwma_i,rwma) in enumerate(mcm_rr):
             if not statsDB.document_exists( rwma['name'] ):
                 self.logger.error('the request %s is linked in McM already, but is not in stats DB'%(rwma['name']))
                 ## very likely, this request was aborted, rejected, or failed
@@ -981,6 +984,8 @@ class request(json_base):
             stats_r = statsDB.get( rwma['name'] )
             if earliest_date==0 or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
+            if earliest_time==0 or ('pdmv_submission_time' in stats_r and int(earliest_time)> int(stats_r['pdmv_submission_time'])):
+                earliest_time = stats_r['pdmv_submission_time']
             mcm_content=transfer( stats_r , keys_to_import )
             mcm_rr[rwma_i]['content'] = mcm_content
 
@@ -998,7 +1003,7 @@ class request(json_base):
                 return cmp(r1['pdmv_submission_date'] , r2['pdmv_submission_date'])
         stats_rr.sort( cmp = sortRequest )
 
-        self.logger.error('got stats with date %s , %s existings and %s matching'%( earliest_date, len(mcm_rr), len(stats_rr) ))
+        self.logger.error('got stats with date %s and time %s , %s existings and %s matching'%( earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
 
         #self.logger.error('found %s'%(stats_rr))
         one_new=False
@@ -1006,13 +1011,19 @@ class request(json_base):
             ## only add it if not present yet
             if stats_r['pdmv_request_name'] in map(lambda d : d['name'], mcm_rr):
                 continue
-            
+
+            ## we should not be blindly adding anything, if we could not determine the time of the submission.
+            #if not earliest_date:
+            #    continue
+
             ## only add if the date is later than the earliest_date
             if not 'pdmv_submission_date' in stats_r:
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
                 continue
-                
+            if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(stats_r['pdmv_submission_time']) < int(earliest_time):
+                continue
+
             mcm_content=transfer( stats_r , keys_to_import)
             mcm_rr.append( { 'content' : mcm_content,
                              'name' : stats_r['pdmv_request_name']})
@@ -1020,7 +1031,7 @@ class request(json_base):
 
         if len(mcm_rr):
             try:
-                completed= mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] 
+                completed= mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS']
             except:
                 self.logger.error('Could not calculate completed from last request')
                 completed=0
@@ -1029,7 +1040,7 @@ class request(json_base):
             if float(completed) > float( (1+limit_to_set) * self.get_attribute('completed_events')):
                 one_new=True
             self.set_attribute('completed_events', completed)
-                
+
         self.set_attribute('reqmgr_name', mcm_rr)
         return one_new
 
@@ -1043,13 +1054,13 @@ class request(json_base):
             return self.inspect_submitted()
         elif self.get_attribute('status') == 'approved':
             return self.inspect_approved()
-        
+
         not_good.update( {'message' : 'cannot inspect a request in %s status'%(self.get_attribute('status'))} )
         return not_good
 
     def inspect_approved(self):
         ## try to inject the request
-        not_good = {"prepid": self.get_attribute('prepid'), "results":False} 
+        not_good = {"prepid": self.get_attribute('prepid'), "results":False}
         db = database( 'requests')
         if self.get_attribute('approval') == 'approve':
             try:
@@ -1059,18 +1070,18 @@ class request(json_base):
                     return {"prepid": self.get_attribute('prepid'), "results":True}
                 else:
                     not_good.update( {'message' : "Could not save the request after approve "} )
-                    return not_good 
+                    return not_good
             except Exception as ex:
                 not_good.update( {'message' : str(ex)})
                 return not_good
 
-        elif self.get_attribute('approval') == 'submit': 
+        elif self.get_attribute('approval') == 'submit':
             from rest_api.RequestActions import InjectRequest
             threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
             threaded_submission.start()
             return {"prepid": self.get_attribute('prepid'), "results":True}
         else:
-            not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status and approval %s'%(self.get_attribute('status'), self.get_attribute('approval'))} ) 
+            not_good.update( {'message' : 'Not implemented yet to inspect a request in %s status and approval %s'%(self.get_attribute('status'), self.get_attribute('approval'))} )
             return not_good
 
     def inspect_submitted(self):
@@ -1192,7 +1203,7 @@ class request(json_base):
             return int(0)
 
     def unique_string(self, step_i):
-        ### create a string that supposedly uniquely identifies the request configuration for step 
+        ### create a string that supposedly uniquely identifies the request configuration for step
         uniqueString=''
         if self.get_attribute('fragment'):
             fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
@@ -1216,12 +1227,12 @@ class request(json_base):
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test(100.0)
-        
+
         xml_data = xml.dom.minidom.parseString( xml_doc )
-        
+
         if not len(xml_data.documentElement.getElementsByTagName("TotalEvents")):
             self.logger.error("There are no TotalEvents reported, bailing out from performnace test")
-            return 
+            return
 
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
         if total_event==0:
@@ -1238,7 +1249,7 @@ class request(json_base):
                     if name == 'AvgEventTime':
                         timing = float( perf.getAttribute('Value'))
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
-                        file_size = float( perf.getAttribute('Value')) 
+                        file_size = float( perf.getAttribute('Value'))
                     if name == 'PeakValueRss':
                         memory = float( perf.getAttribute('Value'))
 
@@ -1251,7 +1262,7 @@ class request(json_base):
         geninfo=None
         if len(self.get_attribute('generator_parameters')):
             geninfo = self.get_attribute('generator_parameters')[-1]
-               
+
         to_be_saved= False
 
         to_be_changed='filter_efficiency'
@@ -1326,7 +1337,7 @@ class request(json_base):
             if hash_ids.document_exists( hash_id ):
                 hash_ids.delete( hash_id )
         self.set_status(step=0,with_notification=True)
-        
+
 
 
 class runtest_genvalid(handler):
@@ -1337,7 +1348,7 @@ class runtest_genvalid(handler):
         handler.__init__(self, **kwargs)
         self.rid = kwargs['rid']
         self.db = database('requests')
-        
+
     def run(self):
         try:
             location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
