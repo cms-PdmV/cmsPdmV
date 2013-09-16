@@ -984,7 +984,7 @@ class request(json_base):
             stats_r = statsDB.get( rwma['name'] )
             if earliest_date==0 or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
-            if earliest_time==0 or ('pdmv_submission_time' in stats_r and int(earliest_time)> int(stats_r['pdmv_submission_time'])):
+            if ('pdmv_submission_time' in stats_r and earliest_time==0) or ('pdmv_submission_time' in stats_r and int(earliest_time)> int(stats_r['pdmv_submission_time'])):
                 earliest_time = stats_r['pdmv_submission_time']
             mcm_content=transfer( stats_r , keys_to_import )
             mcm_rr[rwma_i]['content'] = mcm_content
