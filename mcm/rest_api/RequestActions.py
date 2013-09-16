@@ -54,15 +54,26 @@ class RequestRESTResource(RESTResource):
 
         # get campaign
         #self.c = self.cdb.get(camp)
-
-        if (not force) and ((self.campaign['root'] > 0) or (
-                    self.campaign['root'] < 0 and int(self.request.get_attribute('mcdb_id')) > -1)):
-            ## c['root'] > 0 
+        rootness = self.campaign['root']
+        mcdbid = int(self.request.get_attribute('mcdb_id'))
+        inputds = self.request.get_attribute('input_filename')
+        if (not force) and ((rootness == 1 ) or (rootness == -1 and mcdbid > -1)):
+            ## c['root'] == 1
             ##            :: not a possible root --> no action in the table
-            ## c['root'] <=0 and self.request.get_attribute('mcdb_id') > -1 
+            ## c['root'] == -1 and mcdb > -1 
             ##            ::a possible root and mcdbid=0 (import from WMLHE) or mcdbid>0 (imported from PLHE) --> no action on the table
             if self.adb.document_exists(self.request.get_attribute('prepid')):
                 ## check that there was no already inserted actions, and remove it in that case
+
+                ##check that it empty !!!
+                mcm_a = self.adb.get(self.request.get_attribute('prepid'))
+                for (cc,c) in mcm_a['chains'].items():
+                    if 'flag' in c and c['flag']:
+                        raise Exception("The action item that corresponds to %s is set within %s"%( self.request.get_attribute('prepid'), cc))
+                    if 'chains' in c:
+                        for cr in c['chains']:
+                            raise Exception("The action item that corresponds to %s has a chained request %s attached within %s"%(  self.request.get_attribute('prepid'), cr, cc))
+                        
                 self.adb.delete(self.request.get_attribute('prepid'))
             return
 
@@ -158,8 +169,10 @@ class RequestRESTResource(RESTResource):
             return dumps({"results": False})
 
         # add an action to the action_db
-        self.add_action()
-
+        try:
+            self.add_action()
+        except Exception as ex:
+            return dumps({"results": False, "prepid": self.request.get_attribute('_id'), "message" : "It was not possible to set the action because %s"%(str(ex))})
         return dumps({"results": True, "prepid": self.request.get_attribute('_id')})
 
 
