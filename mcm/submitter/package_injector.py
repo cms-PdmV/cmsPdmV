@@ -202,7 +202,7 @@ class package_injector:
 
         self.fail_message = 'Log of injection: \n %s' % (fullOutPutText)
         if not len(self.requestNames):
-            self.fail_message = 'There were no request manager name recorded \n %s' % (fullOutPutText)
+            self.fail_message = 'There were no request manager name recorded \n %s \n\n\n %s' % (fullOutPutText, error)
             if len(inject_names):
                 #then we can send them to be disgarded
                 invalidation = database('invalidations')
