@@ -132,7 +132,7 @@ class json_base:
 
     def get_current_user_role_level(self):
         auth = authenticator()
-        updater_user = self._json_base__get_submission_details()
+        updater_user = self.__get_submission_details()
         updater = updater_user['author_username']
         self.current_user = None
         if updater != 'automatic':
