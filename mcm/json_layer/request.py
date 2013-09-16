@@ -1021,8 +1021,9 @@ class request(json_base):
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
                 continue
-            if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(stats_r['pdmv_submission_time']) < int(earliest_time):
-                continue
+            if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) == int(earliest_date):
+                if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(stats_r['pdmv_submission_time']) < int(earliest_time):
+                    continue
 
             mcm_content=transfer( stats_r , keys_to_import)
             mcm_rr.append( { 'content' : mcm_content,
