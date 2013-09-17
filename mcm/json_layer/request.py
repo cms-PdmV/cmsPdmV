@@ -376,6 +376,9 @@ class request(json_base):
         if not at_least_an_action:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
+        if self.get_attribute('size_event')<=0 or self.get_attribute('time_event')<=0:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','The time (%s) or size per event (%s) is inappropriate'%( self.get_attribute('time_event'), self.get_attribute('size_event')))
+
         sync_submission=True
         if sync_submission:
             # remains to the production manager to announce the batch the requests are part of
@@ -1351,7 +1354,7 @@ class runtest_genvalid(handler):
         self.rid = kwargs['rid']
         self.db = database('requests')
 
-    def run(self):
+    def unsafe_run(self):
         try:
             location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
 
