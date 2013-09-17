@@ -22,7 +22,7 @@ from submitter.package_builder import package_builder
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
-
+from tools.settings import settings
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -1486,7 +1486,7 @@ class RequestsReminder(RESTResource):
                 production_managers = udb.queries(['role==production_manager'])
                 message = 'A few request that needs to be submitted \n\n'
                 message += prepare_text_for(ids_for_production_managers, 'approved')
-                com.sendMail(map(lambda u: u['email'], production_managers) + ['pdmvserv@cern.ch'],
+                com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
                              'Gentle reminder on requests to be submitted',
                              message)
 
@@ -1499,7 +1499,7 @@ class RequestsReminder(RESTResource):
                 gen_conveners = udb.queries(['role==generator_convener'])
                 message = 'A few requests need your approvals \n\n'
                 message += prepare_text_for(ids_for_gen_conveners, 'defined')
-                com.sendMail(map(lambda u: u['email'], gen_conveners) + ['pdmvserv@cern.ch'],
+                com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')],
                              'Gentle reminder on requests to be approved by you',
                              message)
 
@@ -1511,7 +1511,7 @@ class RequestsReminder(RESTResource):
                     if len(campaigns_and_ids):
                         message = 'A few request need you action \n\n'
                         message += prepare_text_for(campaigns_and_ids, 'validation')
-                        com.sendMail([user['email'], 'pdmvserv@cern.ch'],
+                        com.sendMail([user['email'], settings().get_value('service_account')],
                                      'Gentle reminder on requests to be looked at',
                                      message
                         )
