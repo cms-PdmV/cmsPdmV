@@ -1,17 +1,27 @@
 from couchdb_layer.prep_database import database
+from tools.locker import locker
 
 class settings:
+    cache=dict()
     def __init__(self):
-        self.cache={}
-        pass
+        self.__db = database('settings')
     
-    def get(self, label ):
-        if not label in self.cache:
-            sdb = database('settings')
-            setting = sdb.get( label )
-            self.cache['label'] = setting
-        return self.cache['label']
+    def get(self, label):
+        with locker.lock(label):
+            if not label in self.cache:
+                setting = self.__db.get(label)
+                self.cache[label] = setting
+            return self.cache[label]
             
     def get_value(self, label ):
         return self.get(label)['value']
-    
+
+    def get_notes(self, label ):
+        return self.get(label)['notes']
+
+    def set(self, label, setting):
+        with locker.lock(label):
+            result = self.__db.update(setting)
+            self.cache[label] = setting
+            return result
+
