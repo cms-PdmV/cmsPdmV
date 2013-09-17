@@ -58,7 +58,7 @@ class SetStatus(RESTResource):
             return dumps({'results': False, 'message': '%s does not exists' % ( docid)})
 
         invalid = invalidation(invalidations.get(docid))
-        invalid.set_next_status()
+        invalid.set_status()
         invalidations.update(invalid.json())
         return dumps({'results': True})
 
@@ -129,11 +129,12 @@ class InspectInvalidation(RESTResource):
             text += '\nas a consequence of requests being reset.\n'
             com = communicator()
 
-            to_who = ['pdmvserv@cern.ch']
-            if not l_type.isDev():
-                to_who.append('hn-cms-dataopsrequests@cern.ch')
+            to_who = [settings().get_value('service_account')]
+            if l_type.isDev():
+                to_who.append( settings().get_value('hypernews_test'))
+            else:
+                to_who.append( settings().get_value('dataops_announce' ))
 
-            # set sender as current user, so the message can be sent to hs-cms-dataopsrequests@cern.ch
             try:
                 elem = (r_to_be_rejected + ds_to_be_invalidated)[0]
                 sender = elem.current_user_email
