@@ -24,8 +24,3 @@ class invalidation(json_base):
 
     def set_announced(self):
         self.set_attribute('status', 'announced')
-
-    def set_next_status(self):
-        current_status_id = self._json_base__status.index(self.get_attribute('status'))
-        if current_status_id + 1 != len(self._json_base__status):
-            self.set_attribute('status', self._json_base__status[current_status_id + 1])
