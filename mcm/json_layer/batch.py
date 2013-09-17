@@ -2,6 +2,7 @@ from couchdb_layer.prep_database import database
 from json_layer.json_base import json_base
 from tools.locator import locator
 import re
+from tools.settings import settings
 
 class batch(json_base):
     def __init__(self, json_input={}):
@@ -90,11 +91,13 @@ class batch(json_base):
         
         self.get_current_user_role_level()
 
-        to_who = ['pdmvserv@cern.ch']
+
+        to_who = [settings().get_value('service_account')]
         if l_type.isDev():
-            to_who.append( 'hn-cms-hnTest@cern.ch' )
+            to_who.append( settings().get_value('hypernews_test'))
         else:
-            to_who.append( 'hn-cms-dataopsrequests@cern.ch' )
+            to_who.append( settings().get_value('dataops_announce' ))
+
         self.notify(subject,
                     message,
                     who=to_who
