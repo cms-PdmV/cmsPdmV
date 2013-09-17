@@ -182,8 +182,9 @@ class request(json_base):
         if self.get_attribute('cmssw_release')==None or self.get_attribute('cmssw_release')=='None':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The release version is undefined')
 
-        if not self.get_attribute('dataset_name') or ' ' in self.get_attribute('dataset_name'):
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The dataset name is invalid: either null string or containing blanks')
+        bad_characters=[' ','?','/']
+        if not self.get_attribute('dataset_name') or any(map(lambda char : char in self.get_attribute('dataset_name'), bad_characters)):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The dataset name is invalid: either null string or containing %s'%(','.join(bad_characters)))
 
         gen_p = self.get_attribute('generator_parameters')
         if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
@@ -266,11 +267,11 @@ class request(json_base):
         ## check on chagnes in the sequences
         mcm_c = cdb.get( self.get_attribute('member_of_campaign') )
         if len(self.get_attribute('sequences')) != len(mcm_c['sequences']):
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has a different number of steps than the campaigns it belog to')
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has a different number of steps than the campaigns it belong to')
 
 
         def in_there( seq1, seq2):
-            items_that_do_not_matter=['conditions']
+            items_that_do_not_matter=['conditions','datatier','eventcontent']
             for (name,item) in seq1.json().items():
                 if name in items_that_do_not_matter:
                     #there are parameters which do not require specific processing string to be provided
