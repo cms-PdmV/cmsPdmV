@@ -250,6 +250,12 @@ function resultsCtrl($scope, $http, $location, $window){
    {
      $scope.upload($scope.uploaded_file);
    }
+    else if($location.search()['range']!=undefined)
+    {
+        var ranges = $location.search()['range'].split(",");
+        $scope.upload({contents: ranges[0] + " -> " + ranges[1]});
+        $scope.file_was_uploaded = false
+    }
    else
    {
     var query = ""
