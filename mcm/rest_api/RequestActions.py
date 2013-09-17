@@ -1303,7 +1303,7 @@ class RequestLister():
         self.logger.error("Got %s ids identified" % ( len(all_objects)))
         return dumps({"results": all_objects})
 
-    def identify_an_id(self, word):
+    def identify_an_id(self, word, in_range_line):
         if word.count('-') == 2:
             (pwg, campaign, serial) = word.split('-')
             if len(pwg) != 3:
@@ -1313,6 +1313,8 @@ class RequestLister():
             if not campaign in self.all_campaigns:
                 return None
             if self.rdb.document_exists(word):
+                return word
+            elif in_range_line:
                 return word
         return None
 
@@ -1353,7 +1355,7 @@ class RequestLister():
                 an_id = None
                 a_dsn = None
                 if possible_campaign == None:
-                    an_id = self.identify_an_id(word)
+                    an_id = self.identify_an_id(word, '->' in line)
 
                 if an_id:
                     all_ids.append(an_id)
