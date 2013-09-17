@@ -19,6 +19,7 @@ from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBa
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
+from rest_api.MccmActions import GetMccm, UpdateMccm
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -113,6 +114,9 @@ def getDefaultSequences(*args, **kwargs):
 def injection_status( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','injection_status.html'))
 @cherrypy.expose
+def mccms_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','mccms.html'))
+@cherrypy.expose
 def invalidations_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','invalidations.html'))
 @cherrypy.expose
@@ -161,6 +165,7 @@ root.injection_status = injection_status
 root.news = news_html
 root.dashboard = dashboard_html
 root.edit_many = edit_many_html
+root.mccms = mccms_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -175,6 +180,7 @@ root.restapi.batches = RESTResourceIndex()
 root.restapi.invalidations = RESTResourceIndex()
 root.restapi.news = RESTResourceIndex()
 root.restapi.dashboard = RESTResourceIndex()
+root.restapi.mccms = RESTResourceIndex()
 
 ## create a restriction-free urls, with limited capabilities
 root.public = RESTResourceIndex()
@@ -317,6 +323,12 @@ root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
 root.restapi.dashboard.get_stats = GetStats()
+
+
+# REST mccms Actions
+
+root.restapi.mccms.get = GetMccm()
+root.restapi.mccms.update = UpdateMccm()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
