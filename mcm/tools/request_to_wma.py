@@ -11,6 +11,11 @@ class request_to_wmcontrol:
     def get_command(self , mcm_r, batchNumber, to_execute=False):
         command = ''
 
+        ##JR in order to inject into the testbed instead of the production machine
+        l_type = locator()
+        dev=''
+        if l_type.isDev():
+            dev='-dev'
         if to_execute!=False:
             # crab setup
             command += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
@@ -29,8 +34,12 @@ class request_to_wmcontrol:
         if mcm_r.get_attribute('priority') >= 1:
             command += ' --priority %s' %(mcm_r.get_attribute("priority"))
         command += ' --time-event %s' %(mcm_r.get_attribute('time_event'))
-        command += ' --size-event %s' %(int(mcm_r.get_attribute('size_event')))
-        command += ' --request-type %s' %(wmagent_type)
+        command += ' --size-event %s' %(mcm_r.get_attribute('size_event'))
+        ##that type has disappeared
+        if wmagent_type == 'LHEStepZero':
+            command += ' --request-type MonteCarlo'
+        else:
+            command += ' --request-type %s' %(wmagent_type)
 
         ## check on the presence of docId ?...
         hash_ids = database('configs')
@@ -41,12 +50,11 @@ class request_to_wmcontrol:
             config_cache_id = hash_doc['docid']
             command += ' --step1-docID %s'%(config_cache_id)
         else:
-            command += ' --step1-cfg %s_1_cfg.py'%(mcm_r.get_attribute('prepid'))
+            command += ' --step1-cfg %s%s_1_cfg.py'%(mcm_r.get_attribute('prepid'),dev)
+            
         
         command += ' --request-id %s' %(mcm_r.get_attribute('prepid'))
 
-        ##JR in order to inject into the testbed instead of the production machine
-        l_type = locator()
         if l_type.isDev(): 
             command += ' --wmtest '
 
@@ -123,7 +131,7 @@ class request_to_wmcontrol:
                         config_cache_id = hash_doc['docid']
                         command += ' --step%d-docID %s'%(i+1,config_cache_id)
                     else:
-                        command += ' --step%d-cfg %s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'), i+1)
+                        command += ' --step%d-cfg %s%s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'),dev, i+1)
                 # set the output of 
                 if i < len(eventcontentlist)-1:
                     command += ' --step'+str(i+1)+'-output '+content
