@@ -98,7 +98,7 @@
                                 <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem}}' rel="tooltip" title="Details in request manager" target="_self">{{elem}}</a>
                             </li>
                             <li ng-show="isArray(elem);">
-                                <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="Requests in range" target="_self">{{elem[0]}} -> {{ elem[1]}}</a>
+                                <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="Requests in range" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
                             </li>
                         </div>
                     </ul>
