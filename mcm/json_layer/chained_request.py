@@ -222,6 +222,10 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'the flow is getting into a MCReproc campaign but not time per event is specified')
 
+        if next_campaign.get_attribute('type') == 'MCReproc' and (not 'size_event' in mcm_f.get_attribute('request_parameters')):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'the flow is getting into a MCReproc campaign but not size per event is specified')
+
         #what is going to be the required number of events for the next request
         #update the stats to its best
         current_request.get_stats()
