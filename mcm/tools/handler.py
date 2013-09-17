@@ -12,6 +12,7 @@ from couchdb_layer.prep_database import database
 from collections import Iterable
 #from json_layer.request import request
 from tools.installer import installer
+from tools.locker import semaphore_thread_number
 
 
 class PoolOfHandlers(Thread):
@@ -59,6 +60,7 @@ class handler(Thread):
     logger = logfactory('mcm')
     hname = '' # handler's name
     lock = None
+    thread_semaphore = semaphore_thread_number
 
     def __init__(self, **kwargs):
         Thread.__init__(self)
@@ -69,15 +71,16 @@ class handler(Thread):
             self.lock = kwargs['lock']
 
     def run(self):
-        try:
-            self.unsafe_run()
-            # set the status, save the request, notify ...
-            pass
-        except:
-            ## catch anything that comes this way and handle it
-            # logging, rolling back the request, notifying, ...
-            self.rollback()
-            pass
+        with semaphore_thread_number:
+            try:
+                self.unsafe_run()
+                # set the status, save the request, notify ...
+                pass
+            except:
+                ## catch anything that comes this way and handle it
+                # logging, rolling back the request, notifying, ...
+                self.rollback()
+                pass
 
     def unsafe_run(self):
         pass
@@ -98,7 +101,7 @@ class store_configuration(handler):
         self.rid = rid
         self.db = database('requests')
 
-    def run(self):
+    def unsafe_run(self):
         location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
         
         test_script = location.location()+'prepare.sh'

@@ -1,4 +1,4 @@
-from threading import RLock, Event
+from threading import RLock, Event, BoundedSemaphore
 from tools.logger import logger
 from collections import defaultdict
 
@@ -80,5 +80,7 @@ class SemaphoreEvents(object):
                 #in case the batch was created, sever cycled, and one tries to announce it on the "second" session
                 return True
 
-
 semaphore_events = SemaphoreEvents()
+
+from tools.settings import settings
+semaphore_thread_number = BoundedSemaphore(settings().get_value('max_number_of_threads'))

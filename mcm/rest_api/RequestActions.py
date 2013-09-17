@@ -21,7 +21,7 @@ from threading import Thread
 from submitter.package_builder import package_builder
 from tools.locator import locator
 from tools.communicator import communicator
-from tools.locker import locker
+from tools.locker import locker, semaphore_thread_number
 from tools.settings import settings
 
 class RequestRESTResource(RESTResource):
@@ -800,7 +800,7 @@ class prepare_and_submit(handler):
         self.rid = rid
         self.db = database('requests')
 
-    def run(self):
+    def unsafe_run(self):
         try:
             location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
 
@@ -869,6 +869,8 @@ class TestRequest(RESTResource):
 
 
 class InjectRequest(RESTResource):
+    global injector_test_number
+    injector_test_number = 0
     def __init__(self):
         # set user access to administrator
         self.authenticator.set_limit(4)
@@ -913,40 +915,41 @@ class InjectRequest(RESTResource):
                                  pid)})
 
         def run(self):
-            if len(self.act_on_pid):
-                self.res = []
-            for pid in self.act_on_pid:
-                time.sleep(self.wait)
-                if not locker.acquire(pid, blocking=False):
-                    self.res.append(
-                        {"prepid": pid, "results": False, "message": "The request is already being handled"})
-                    continue
-                try:
-                    req = request(self.db.get(pid))
-                    pb = None
-                    try:
-                        pb = package_builder(req_json=req.json())
-                    except:
-                        message = "Errors in making the request : \n" + traceback.format_exc()
-                        self.logger.inject(message, handler=pid)
-                        self.logger.error(message)
-                        self.res.append({"prepid": pid, "results": False, "message": message})
-                        req.test_failure(message)
+            with semaphore_thread_number:
+                if len(self.act_on_pid):
+                    self.res = []
+                for pid in self.act_on_pid:
+                    time.sleep(self.wait)
+                    if not locker.acquire(pid, blocking=False):
+                        self.res.append(
+                            {"prepid": pid, "results": False, "message": "The request is already being handled"})
                         continue
                     try:
-                        res_sub = pb.build_package()
-                    except:
-                        message = "Errors in building the request : \n" + traceback.format_exc()
-                        self.logger.inject(message, handler=pid)
-                        self.logger.error(message)
-                        self.res.append({"prepid": pid, "results": False, "message": message})
-                        req.test_failure(message)
-                        continue
+                        req = request(self.db.get(pid))
+                        pb = None
+                        try:
+                            pb = package_builder(req_json=req.json())
+                        except:
+                            message = "Errors in making the request : \n" + traceback.format_exc()
+                            self.logger.inject(message, handler=pid)
+                            self.logger.error(message)
+                            self.res.append({"prepid": pid, "results": False, "message": message})
+                            req.test_failure(message)
+                            continue
+                        try:
+                            res_sub = pb.build_package()
+                        except:
+                            message = "Errors in building the request : \n" + traceback.format_exc()
+                            self.logger.inject(message, handler=pid)
+                            self.logger.error(message)
+                            self.res.append({"prepid": pid, "results": False, "message": message})
+                            req.test_failure(message)
+                            continue
 
-                    self.res.append({"prepid": pid, "results": res_sub})
-                    ## now remove the directory maybe ?
-                finally:
-                    locker.release(pid)
+                        self.res.append({"prepid": pid, "results": res_sub})
+                        ## now remove the directory maybe ?
+                    finally:
+                        locker.release(pid)
 
         def status(self):
             return self.res
