@@ -4,7 +4,7 @@ import cherrypy
 from tools.logger import logger as logfactory
 from tools.authenticator import authenticator
 from tools.communicator import communicator
-
+from tools.settings import settings
 
 class json_base:
     __json = {}
@@ -298,16 +298,16 @@ class json_base:
             dest.extend(self.get_actors(what='author_email'))
         if service:
             #let the service know at any time
-            dest.append('pdmv.service@cern.ch')
+            dest.append(settings().get_value('service_account'))
         if HN:
             ## back bone HN notification ?
-            dest.append('hn-cms-hnTest@cern.ch')
+            dest.append(settings().get_value('hypernews_test'))
 
         #be sure to not have duplicates
         dest = list(set(dest))
 
         if not len(dest):
-            dest.append('pdmv.service@cern.ch')
+            dest.append(settings().get_value('service_account'))
             subject += '. And no destination was set'
 
         self.logger.log('Notification %s send to %s' % (subject, ', '.join(dest)))
