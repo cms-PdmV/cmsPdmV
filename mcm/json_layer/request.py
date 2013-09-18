@@ -550,7 +550,7 @@ class request(json_base):
               self.set_attribute('sequences',freshSeq)
           for i in range(len(camp['sequences'])):
                       freshKeep.append(False)
-s          freshKeep[-1]=True
+          freshKeep[-1]=True
           self.set_attribute('keep_output',freshKeep)
           if can_save:
               rdb = database('requests')
