@@ -550,7 +550,7 @@ class request(json_base):
               self.set_attribute('sequences',freshSeq)
           for i in range(len(camp['sequences'])):
                       freshKeep.append(False)
-          freshKeep[-1]=True
+s          freshKeep[-1]=True
           self.set_attribute('keep_output',freshKeep)
           if can_save:
               rdb = database('requests')
@@ -1368,28 +1368,34 @@ class runtest_genvalid(handler):
                 n_for_test = mcm_r.get_n_for_test(target=100.0)
                 ## the following does change something on the request object, to be propagated in case of success
                 there.write( mcm_r.get_setup_file( location.location() , n_for_test) )
-
-            batch_test = batch_control( self.rid, test_script )
-            success = batch_test.test()
-            self.logger.log("batch_test result is %s" % success)
+                
             try:
-                #suck in run-test if present
-                rt_xml=location.location()+'%s_rt.xml'%( self.rid )
-                if os.path.exists( rt_xml ):
-                    mcm_r.update_performance( open(rt_xml).read(), 'perf')
+                batch_test = batch_control( self.rid, test_script )
+                success = batch_test.test()
             except:
                 batch_test.log_err = traceback.format_exc()
-                self.logger.error('Failed to get perf reports \n %s'%( batch_test.log_err))
-                success = False
-            try:
-                gv_xml=location.location()+'%s_gv.xml'%( self.rid )
-                if os.path.exists( gv_xml ):
-                    mcm_r.update_performance( open(gv_xml).read(), 'eff')
-            except:
-                batch_test.log_err = traceback.format_exc()
-                self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
-                success = False
-
+                success = false
+        
+            if success:
+                self.logger.log("batch_test result is %s" % success)
+                try:
+                    #suck in run-test if present
+                     rt_xml=location.location()+'%s_rt.xml'%( self.rid )
+                     if os.path.exists( rt_xml ):
+                         mcm_r.update_performance( open(rt_xml).read(), 'perf')
+                except:
+                    batch_test.log_err = traceback.format_exc()
+                    self.logger.error('Failed to get perf reports \n %s'%( batch_test.log_err))
+                    success = False
+                    
+                try:
+                    gv_xml=location.location()+'%s_gv.xml'%( self.rid )
+                    if os.path.exists( gv_xml ):
+                        mcm_r.update_performance( open(gv_xml).read(), 'eff')
+                except:
+                    batch_test.log_err = traceback.format_exc()
+                    self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
+                    success = False
 
             self.logger.error('I came all the way to here and %s'%( success ))
             if not success:
@@ -1414,10 +1420,10 @@ class runtest_genvalid(handler):
                     mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
         finally:
-            mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (self.rid, traceback.format_exc())
-            self.logger.error( mess )
-            mcm_r = request(self.db.get(self.rid))
-            mcm_r.test_failure(message=mess,what='Validation run test',rewind=True)
+            #mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (self.rid, traceback.format_exc())
+            #self.logger.error( mess )
+            #mcm_r = request(self.db.get(self.rid))
+            #mcm_r.test_failure(message=mess,what='Validation run test',rewind=True)
             location.close()
 
 
