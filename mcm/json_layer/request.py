@@ -1414,6 +1414,10 @@ class runtest_genvalid(handler):
                     mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
         finally:
+            mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (self.rid, traceback.format_exc())
+            self.logger.error( mess )
+            mcm_r = request(self.db.get(self.rid))
+            mcm_r.test_failure(message=mess,what='Validation run test',rewind=True)
             location.close()
 
 
