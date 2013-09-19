@@ -783,9 +783,6 @@ class request(json_base):
             yes_to_valid=val_attributes['valid']
         
         #get a setting to disable gen valid for all
-        gen_valid = settings().get_value('gen_valid')
-        if not gen_valid:
-            yes_to_valid=False
 
         ##get the campaign enalbing/disabling
 
@@ -802,7 +799,10 @@ class request(json_base):
 
         dump_python=''
         if firstStep == 'GEN':
-
+            gen_valid = settings().get_value('gen_valid')
+            if not gen_valid:
+                return ("","")
+            
             cmsd_list += '\n\n'
             valid_sequence = sequence( firstSequence )
             valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
@@ -814,8 +814,14 @@ class request(json_base):
             valid_sequence = sequence( firstSequence )
             ## when integrated properly
             if firstStep=='LHE':
+                lhe_valid = settings().get_value('lhe_valid')
+                if not lhe_valid:
+                    return ("","")
                 valid_sequence.set_attribute( 'step', [firstStep,'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             else:
+                wlhe_valid = settings().get_value('wlhe_valid')
+                if not wlhe_valid:
+                    return ("","")
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
