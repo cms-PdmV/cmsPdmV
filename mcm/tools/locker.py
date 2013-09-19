@@ -82,5 +82,59 @@ class SemaphoreEvents(object):
 
 semaphore_events = SemaphoreEvents()
 
+
 from tools.settings import settings
-semaphore_thread_number = BoundedSemaphore(settings().get_value('max_number_of_threads'))
+class BoundedSemaphoreChangeableMax(object):
+    """
+    Class works like bounded semaphore, but the max value can be changed - either directly or the max can be taken
+    from function specified instead of max_val parameter (then the max property setter won't make difference).
+    """
+
+    def __init__(self, max_val = 1, max_func = None):
+        self._max = max_val
+        self._max_func = max_func
+        self._current = 0
+        self._lock = RLock()
+        self._event = Event()
+        self.logger = logger('mcm')
+
+
+    @property
+    def max(self):
+        with self._lock:
+            return self._max_func() if self._max_func else self._max
+
+    @max.setter
+    def max(self, value):
+        with self._lock:
+            self._max = value
+
+    def acquire(self, blocking = True):
+        while True:
+            with self._lock:
+                current_max = self.max
+                if self._current < current_max:
+                    self._current += 1
+                    self.logger.log("Bounded semaphore's value incremented to: {0} , maximum: {1}".format(self._current, current_max))
+                    if self._current == current_max:
+                        self._event.clear()
+                    return True
+                if not blocking:
+                    return False
+            self._event.wait()
+
+    def release(self):
+        with self._lock:
+            self._current -= 1
+            self.logger.log("Bounded semaphore's value decremented to: {0} , maximum: {1}".format(self._current, self.max))
+            if self._current < 0:
+                raise ValueError("Semaphore released too many times!")
+            self._event.set()
+
+    def __enter__(self):
+        self.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+
+semaphore_thread_number = BoundedSemaphoreChangeableMax(max_func = lambda : settings().get_value('max_number_of_threads'))
