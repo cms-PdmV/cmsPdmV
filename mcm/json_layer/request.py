@@ -20,6 +20,7 @@ from tools.locator import locator
 from tools.batch_control import batch_control
 from tools.installer import installer
 from tools.handler import handler
+from tools.settings import settings
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -780,7 +781,13 @@ class request(json_base):
                 yes_to_valid=True
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
+        
+        #get a setting to disable gen valid for all
+        gen_valid = settings().get_value('gen_valid')
+        if not gen_valid:
+            yes_to_valid=False
 
+        ##get the campaign enalbing/disabling
 
         l_type=locator()
         #if self.little_release() < '530':# or (not l_type.isDev()):
@@ -817,9 +824,11 @@ class request(json_base):
             self.setup_harvesting(directory,run)
 
             ## until we have full integration in the release
-            cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
-            cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
-            cmsd_list +='\nscram b -j5 \n'
+            genvalig_config = settings().get_value('genvalid_config')
+            cmsd_list += genvalig_config
+            #cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
+            #cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
+            #cmsd_list +='\nscram b -j5 \n'
 
             genvalid_request = request( self.json() )
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
