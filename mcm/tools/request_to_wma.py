@@ -42,15 +42,18 @@ class request_to_wmcontrol:
             command += ' --request-type %s' %(wmagent_type)
 
         ## check on the presence of docId ?...
-        hash_ids = database('configs')
-
-        hash_id = mcm_r.configuration_identifier(0)
-        if hash_ids.document_exists( hash_id ):
-            hash_doc = hash_ids.get( hash_id )
-            config_cache_id = hash_doc['docid']
-            command += ' --step1-docID %s'%(config_cache_id)
+        if len(mcm_r.get_attribute('config_id')):
+            command += ' --step1-docID %s'%( mcm_r.get_attribute('config_id')[0])
         else:
-            command += ' --step1-cfg %s%s_1_cfg.py'%(mcm_r.get_attribute('prepid'),dev)
+            ## get the config ID from hash instead of cfg.py
+            hash_ids = database('configs')
+            hash_id = mcm_r.configuration_identifier(0)
+            if hash_ids.document_exists( hash_id ):
+                hash_doc = hash_ids.get( hash_id )
+                config_cache_id = hash_doc['docid']
+                command += ' --step1-docID %s'%(config_cache_id)
+            else:
+                command += ' --step1-cfg %s%s_1_cfg.py'%(mcm_r.get_attribute('prepid'),dev)
             
         
         command += ' --request-id %s' %(mcm_r.get_attribute('prepid'))
@@ -125,13 +128,17 @@ class request_to_wmcontrol:
                     command += ' --keep-step'+str(i+1)+' True'
 
                 if i > 0:
-                    hash_id = mcm_r.configuration_identifier(i)
-                    if hash_ids.document_exists( hash_id ):
-                        hash_doc = hash_ids.get( hash_id )
-                        config_cache_id = hash_doc['docid']
-                        command += ' --step%d-docID %s'%(i+1,config_cache_id)
+                    if len(mcm_r.get_attribute('config_id')):
+                        command += ' --step%d-docID %s'%(i+1, mcm_r.get_attribute('config_id')[i])
                     else:
-                        command += ' --step%d-cfg %s%s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'),dev, i+1)
+                        hash_id = mcm_r.configuration_identifier(i)
+                        if hash_ids.document_exists( hash_id ):
+                            hash_doc = hash_ids.get( hash_id )
+                            config_cache_id = hash_doc['docid']
+                            command += ' --step%d-docID %s'%(i+1,config_cache_id)
+                        else:
+                            command += ' --step%d-cfg %s%s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'),dev, i+1)
+
                 # set the output of 
                 if i < len(eventcontentlist)-1:
                     command += ' --step'+str(i+1)+'-output '+content
