@@ -118,6 +118,9 @@ def injection_status( *args, **kwargs):
 def mccms_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','mccms.html'))
 @cherrypy.expose
+def settings_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','settings.html'))
+@cherrypy.expose
 def invalidations_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','invalidations.html'))
 @cherrypy.expose
@@ -167,6 +170,7 @@ root.news = news_html
 root.dashboard = dashboard_html
 root.edit_many = edit_many_html
 root.mccms = mccms_html
+root.settings = settings_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
