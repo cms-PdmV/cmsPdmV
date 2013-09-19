@@ -13,7 +13,7 @@ from RestAPIMethod import RESTResource
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.invalidation import invalidation
-
+from tools.settings import settings
 
 class Invalidate(RESTResource):
 
