@@ -869,8 +869,7 @@ class TestRequest(RESTResource):
 
 
 class InjectRequest(RESTResource):
-    global injector_test_number
-    injector_test_number = 0
+    
     def __init__(self):
         # set user access to administrator
         self.authenticator.set_limit(4)
