@@ -15,15 +15,14 @@ class GetMccm(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": {}})
-        return self.get_request(args[0])
+        return self.get_doc(args[0])
 
-    def get_request(self, data):
+    def get_doc(self, data):
         if not self.db.document_exists(data):
             return dumps({"results": {}})
-        mcm_r = self.db.get(prepid=data)
-        # cast the sequence for schema evolution !!! here or not ?
+        mccm_doc = self.db.get(prepid=data)
 
-        return dumps({"results": mcm_r})
+        return dumps({"results": mccm_doc})
 
 class UpdateMccm(RESTResource):
     def __init__(self):
