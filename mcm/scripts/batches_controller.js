@@ -193,6 +193,19 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
+  $scope.resetBatch = function(batch_requests){
+      ids=[];
+      _.each( batch_requests, function(elem,index){
+	      ids.push(elem.content.pdmv_prep_id);
+	  });
+      console.log(ids);
+      $http({method:'GET', url: 'restapi/requests/reset/'+ids.join()}).success(function(data,status){
+	      alert('successfully resetted the batch');
+	  }).error(function(status){
+		  alert('failed');
+	      });
+  };
+
   $scope.loadStats = function(batch_requests){
       //console.log( batch_requests);
       _.each( batch_requests, function(elem,index){
