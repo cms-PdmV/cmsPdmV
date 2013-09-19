@@ -20,6 +20,7 @@ from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
 from rest_api.MccmActions import GetMccm, UpdateMccm
+from rest_api.SettingsActions import GetSetting, UpdateSetting
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -181,6 +182,7 @@ root.restapi.invalidations = RESTResourceIndex()
 root.restapi.news = RESTResourceIndex()
 root.restapi.dashboard = RESTResourceIndex()
 root.restapi.mccms = RESTResourceIndex()
+root.restapi.settings = RESTResourceIndex()
 
 ## create a restriction-free urls, with limited capabilities
 root.public = RESTResourceIndex()
@@ -329,6 +331,12 @@ root.restapi.dashboard.get_stats = GetStats()
 
 root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()
+
+
+# REST settings Actions
+
+root.restapi.settings.get = GetSetting()
+root.restapi.settings.update = UpdateSetting()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
