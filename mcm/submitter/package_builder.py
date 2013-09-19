@@ -803,7 +803,7 @@ class package_builder:
                                 if not saved:
                                     self.logger.inject('Could not save the has document %s' % ( hash_id ), level='warning',
                                                        handler=self.hname)
-                                    return False
+                                    # return False
 
 
                         ##put it also in the batch DBe
