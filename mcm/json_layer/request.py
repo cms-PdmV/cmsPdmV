@@ -782,9 +782,11 @@ class request(json_base):
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
         
-        #get a setting to disable gen valid for all
-
         ##get the campaign enalbing/disabling
+        #cdb = database('campaigns')
+        #mcm_c = cdb.get( self.get_attribute('member_of_campaign'))
+        #c_val_attributes = mcm_c['validation']
+        ### then do something with that object, once it will be an object
 
         l_type=locator()
         #if self.little_release() < '530':# or (not l_type.isDev()):
