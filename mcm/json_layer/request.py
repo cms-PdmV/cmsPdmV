@@ -77,7 +77,7 @@ class request(json_base):
             'member_of_chain':[],
             'member_of_campaign':'',
             'flown_with':'',
-            'time_event':-1,
+            'time_event':float(-1),
             'size_event':-1,
             'memory' : 2300, ## the default until now
             #'nameorfragment':'',
