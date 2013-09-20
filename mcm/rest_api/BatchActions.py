@@ -5,6 +5,7 @@ from json import loads,dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.prep_database import database
 from json_layer.batch import batch
+from json_layer.request import request
 from tools.locker import semaphore_events
 from tools.settings import settings
 
@@ -210,3 +211,30 @@ class InspectBatches(BatchAnnouncer):
         #anyways return something
         return dumps(res)
 
+class ResetBatch(BatchAnnouncer):
+    def __init__(self):
+        self.access_limit = 3
+
+    def GET(self, *args):
+        """
+        Reset all requests in a batch (or list of) and set the status to reset
+        """
+        res=[]
+        bdb = database('batches')
+        rdb = database('requests')
+        bids = args[0]
+        for bid in bids.split(','):
+            mcm_b = bdb.get(bid)
+            for r in mcm_b['requests']:
+                if not 'pdmv_prep_id' in r['content']: 
+                    continue
+                rid = r['content']['pdmv_prep_id']
+                if not rdb.document_exists( rid ):
+                    continue
+                mcm_r = request( rdb.get( rid ) )
+                mcm_r.reset()
+                rdb.update( mcm_r.json() )
+            mcm_b['status'] = 'reset'
+            bdb.update( mcm_b )
+            res.append({'prepid':bid, 'resutls': True})
+        return dumps(res)
