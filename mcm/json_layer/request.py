@@ -444,7 +444,7 @@ class request(json_base):
         if self.get_attribute('fragment') and not fragment:
             #fragment='Configuration/GenProduction/python/%s_fragment.py'%(self.get_attribute('prepid').replace('-','_'))
             fragment='Configuration/GenProduction/python/%s-fragment.py'%(self.get_attribute('prepid'))
-        if not fragment.startswith('Configuration/GenProduction/python/'):
+        if fragment and not fragment.startswith('Configuration/GenProduction/python/'):
             fragment='Configuration/GenProduction/python/'+fragment
         return fragment
 
