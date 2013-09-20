@@ -84,7 +84,7 @@ class InspectInvalidation(RESTResource):
         idb = database('invalidations')
         r_to_be_rejected = map(invalidation, idb.queries(['status==new', 'type==request']))
         ds_to_be_invalidated = map(invalidation, idb.queries(['status==new', 'type==dataset']))
-        ds_to_be_invalidated = map(lambda ds : not 'None-' in ds, ds_to_be_invalidated)
+        ds_to_be_invalidated = filter(lambda ds : not 'None-' in ds.get_attribute('object'), ds_to_be_invalidated)
         l_type = locator()
 
         def add_prepid(invalid, html):
