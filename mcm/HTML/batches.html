@@ -104,7 +104,7 @@
                     <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                   </div> <!--end of modal footer-->
                   </div>
-		  <a ng-click="resetBatch(data.prepid);" rel="tooltip" title="Reset all requests in the batch"><i class="icon-repeat"></i></a>
+		  <a ng-click="resetBatch(data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);"><i class="icon-repeat"></i></a>
 		  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status"><i class="icon-eye-open"></i></a>
 		  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ><i class="icon-screenshot"></i></a>
                 </div> <!--end of modalControler DIV-->
