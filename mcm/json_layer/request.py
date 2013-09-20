@@ -816,13 +816,13 @@ class request(json_base):
             valid_sequence = sequence( firstSequence )
             ## when integrated properly
             if firstStep=='LHE':
-                lhe_valid = settings().get_value('lhe_valid')
-                if not lhe_valid:
+                wlhe_valid = settings().get_value('wlhe_valid')
+                if not wlhe_valid:
                     return ("","")
                 valid_sequence.set_attribute( 'step', [firstStep,'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             else:
-                wlhe_valid = settings().get_value('wlhe_valid')
-                if not wlhe_valid:
+                lhe_valid = settings().get_value('lhe_valid')
+                if not lhe_valid:
                     return ("","")
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
