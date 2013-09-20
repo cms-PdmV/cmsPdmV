@@ -789,7 +789,7 @@ testApp.directive("sequenceDisplay", function($http){
     '     <i class="icon-share"></i>'+
     '    </a>'+
     '    <ul>'+
-    '      <li ng-repeat="sequence in driver">{{sequence}}</li>'+
+    '      <li ng-repeat="sequence in driver"><div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div></li>'+
     '    </ul>'+
     '  </div>'+
     '</div>',
