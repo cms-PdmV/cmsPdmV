@@ -80,13 +80,19 @@
       </thead>
       <tbody>
       	<tr ng-repeat="settings_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
+      	  <td ng-repeat="data in defaults" ng-show="data.select">
       	  <div ng-switch on="data.text">
           <div ng-switch-when="Actions">
-            <a rel="tooltip" title="Edit settings" ng-href="edit?db_name=settings&prepid={{settings_info.prepid}}" ng-hide="role(4);" target="_self">
+            <a rel="tooltip" title="Edit settings" ng-href="edit?db_name=settings&prepid={{settings_info['prepid']}}" ng-hide="role(4);" target="_self">
               <i class="icon-wrench"></i>
             </a>
       	    </div>
+	  <div ng-switch-when="Notes">
+	    <div style="width:400px"><pre>{{settings_info[data.db_name]}} </pre></div>
+	  </div>
+	  <div ng-switch-when="Value">
+	    <pre>{{settings_info[data.db_name]}}</pre>
+	  </div>
           <div ng-switch-default>
                 {{settings_info[data.db_name]}}
           </div>
