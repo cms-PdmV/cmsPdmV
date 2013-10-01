@@ -82,28 +82,30 @@
       	<tr ng-repeat="invalidations_info in result | orderBy:sort.column: sort.descending">
       	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
-	      <div ng-switch-when="Object">
-		<!--<a ng-href='invalidations?object={{invalidations_info[data.db_name]}}' target="_self" rel="tooltip" title="View only invalidation {{invalidations_info[data.db_name]}}">{{invalidations_info[data.db_name]}}</a>-->
-		<a ng-show="invalidations_info.type=='dataset'" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{invalidations_info[data.db_name]}}'  rel="tooltip" title="View dataset in DAS" target="_self" >{{invalidations_info[data.db_name]}}</a>
-		<a ng-show="invalidations_info.type=='request' && isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
-		<a ng-show="invalidations_info.type=='request' && !isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
-
-		<a ng-href="admin/_utils/document.html?invalidations/{{objectToId(invalidations_info[data.db_name])}}" rel="tooltip" title="Admin view of {{invalidations_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
-	      </div>
-          <div ng-switch-when="Actions">
-            <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
-              <i class="icon-wrench"></i>
-            </a>
-          </div>
-          <div ng-switch-when="Type">
-            <a ng-href='invalidations?type={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with type {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
-          </div>
-	      <div ng-switch-when="Status">
-		<a ng-href='invalidations?status={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with status {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
-	      </div>
-          <div ng-switch-default>
+	            <div ng-switch-when="Object">
+                <!--<a ng-href='invalidations?object={{invalidations_info[data.db_name]}}' target="_self" rel="tooltip" title="View only invalidation {{invalidations_info[data.db_name]}}">{{invalidations_info[data.db_name]}}</a>-->
+                <a ng-show="invalidations_info.type=='dataset'" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{invalidations_info[data.db_name]}}'  rel="tooltip" title="View dataset in DAS" target="_self" >{{invalidations_info[data.db_name]}}</a>
+                <a ng-show="invalidations_info.type=='request' && isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
+                <a ng-show="invalidations_info.type=='request' && !isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
+                <a ng-href="admin/_utils/document.html?invalidations/{{objectToId(invalidations_info[data.db_name])}}" rel="tooltip" title="Admin view of {{invalidations_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
+	            </div>
+                <div ng-switch-when="Actions">
+                  <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
+                    <i class="icon-wrench"></i>
+                  </a>
+                </div>
+                <div ng-switch-when="Type">
+                  <a ng-href='invalidations?type={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with type {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
+                </div>
+	            <div ng-switch-when="Status">
+                <a ng-href='invalidations?status={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with status {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
+	            </div>
+              <div ng-switch-when="Prepid">
+                <a ng-href='requests?prepid={{invalidations_info[data.db_name]}}' target="_self" ng-hfre="#">{{invalidations_info[data.db_name]}}</a>
+              </div>
+              <div ng-switch-default>
                 {{invalidations_info[data.db_name]}}
-          </div>
+              </div>
       	    </div>
       	  </td>
       	</tr>
