@@ -38,6 +38,9 @@ function resultsCtrl($scope, $http, $location, $window){
     }
     else if($scope.dbName == "news"){
       $scope.not_editable_list = ["Author", "Date"];
+    }
+    else if($scope.dbName == "settings"){
+      $scope.not_editable_list = ["Prepid"];
     }else{
       $scope.not_editable_list = [];
     }
@@ -309,6 +312,11 @@ var ModalDemoCtrl = function ($scope) {
     };
     $scope.shouldBeOpen = false;
   };
+
+  $scope.isBoolean = function(value){
+    return angular.isBoolean(value);
+  };
+
   $scope.saveNewSequence = function(){
     var shift = 0;
     if ($scope.dbName != "requests"){
