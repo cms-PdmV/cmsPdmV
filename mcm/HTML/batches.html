@@ -104,11 +104,10 @@
                     <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                   </div> <!--end of modal footer-->
                   </div>
-		  <a ng-click="resetBatch(data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);"><i class="icon-repeat"></i></a>
-		  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status"><i class="icon-eye-open"></i></a>
-		  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ><i class="icon-screenshot"></i></a>
+                  <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);"><i class="icon-repeat"></i></a>
+                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status"><i class="icon-eye-open"></i></a>
+                  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ><i class="icon-screenshot"></i></a>
                 </div> <!--end of modalControler DIV-->
-
         <!--     END OF MODAL                 -->  
               </div>
               <div ng-switch-when="PrepId">
@@ -131,7 +130,7 @@
                     <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
 		                ,
                     <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
-		    <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
+                    <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
                   </li>
               	</ul>
               </div>
