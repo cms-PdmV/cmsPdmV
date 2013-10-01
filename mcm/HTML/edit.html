@@ -238,7 +238,17 @@
                       </select>
                     </div>
                     <div ng-switch-default style="width: 400px;">
-                      <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                        <div ng-switch on="result[column.db_name]">
+                            <div ng-switch-when="true">
+                                <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                            </div>
+                            <div ng-switch-when="false">
+                                <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                            </div>
+                            <div ng-switch-default>
+                                <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
               </ng-form>
