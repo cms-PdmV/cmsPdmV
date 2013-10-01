@@ -187,6 +187,9 @@ function resultsCtrl($scope, $http, $location, $window){
       case "delete":
         $scope.delete_object('batches', $scope.toggle_prepid);
         break;
+      case "reset":
+        $scope.resetBatch($scope.toggle_prepid);
+        break;
       default:
         // alert to announce that uknown action is asked???
         break;
