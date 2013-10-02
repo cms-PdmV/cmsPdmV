@@ -611,7 +611,10 @@ function resultsCtrl($scope, $http, $location, $window){
     //replace anything that is /.../DQM
     replacePattern3 = /.*,\s+(\/.*DQM)/gim;
     //replacePattern3 = /(\/.*DQM)/gim;
-    replacedText = replacedText.replace(replacePattern3, '<a href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset=$1;workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for $1" target="_blank"><i class="icon-th-large"></i></a>');
+    if ($scope.isDevMachine()){
+	replacedText = replacedText.replace(replacePattern3, '<a href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset=$1;workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for $1" target="_blank"><i class="icon-th-large"></i></a>');}
+    else{
+	replacedText = replacedText.replace(replacePattern3, '<a href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset=$1;workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for $1" target="_blank"><i class="icon-th-large"></i></a>');}
 
     return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
   }
