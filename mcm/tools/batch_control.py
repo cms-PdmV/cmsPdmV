@@ -110,11 +110,13 @@ class batch_control:
         ## wait for afs to synchronize the output file
         while (not stdin and not stdout and not stderr) and trials<trials_time_out:
             time.sleep( retry_time_out )
+            self.logger('Trying to get %s another time'%( self.test_out ))
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
             trials+=1
         
         if trials>=trials_time_out:
             self.log_err = '%s could not be retrieved after %s tries in interval of %s s'%( self.test_out, trials, time_out )
+            self.logger( self.log_err )
             return False
 
         out = stdout.read()
@@ -133,7 +135,9 @@ class batch_control:
                 self.log_err = stdout.read()
                 return False
 
-        return None
+        self.log_out = "We could get %s, but it does not look properly formatted. /n %s" %( self.test_out, out)
+        self.log_err = stderr.read()
+        return False
 
     """
     def __read_job_log_file(self):
@@ -172,6 +176,10 @@ class batch_control:
         #wait for afs to sync the .out file
         time.sleep(30)
         result = self.get_job_result()
+        #try another time
+        if not result:
+            result = self.get_job_result()
+
         self.ssh_exec.close_executor()
         if not result:
             return False
