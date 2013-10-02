@@ -835,7 +835,7 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        from submitter.handlers import ConfigMakerAndUploader
+        from tools.handlers import ConfigMakerAndUploader
         ids_list = args[0].split(',')
         #new_list = []
         #for rid in ids_list:
