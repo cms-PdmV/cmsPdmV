@@ -55,7 +55,8 @@ class PoolOfHandlers(Thread):
 
 class handler(Thread):
     """
-    a class which threads a list of operations
+    A class which threads a list of operations. Override internal_run for main processing and rollback if you want to
+    have a rollback option in case of process failure.
     """
     logger = logfactory('mcm')
     hname = '' # handler's name
@@ -71,9 +72,12 @@ class handler(Thread):
             self.lock = kwargs['lock']
 
     def run(self):
+        """
+        Should not be overridden! Use internal_run instead.
+        """
         with semaphore_thread_number:
             try:
-                self.unsafe_run()
+                self.internal_run()
                 # set the status, save the request, notify ...
                 pass
             except:
@@ -82,7 +86,7 @@ class handler(Thread):
                 self.rollback()
                 pass
 
-    def unsafe_run(self):
+    def internal_run(self):
         pass
 
     def rollback(self):
@@ -101,7 +105,7 @@ class store_configuration(handler):
         self.rid = rid
         self.db = database('requests')
 
-    def unsafe_run(self):
+    def internal_run(self):
         location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
         
         test_script = location.location()+'prepare.sh'
