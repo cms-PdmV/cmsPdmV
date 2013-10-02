@@ -226,10 +226,8 @@
               </div>
               <div ng-switch-when="Config id">
                 <ul style="margin-bottom: 0px;">
-                  <li ng-repeat="req in data[value.db_name]">
-                    <a ng-show="isDevMachine();" ng-repeat="configid in req" ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_self"><i class="icon-th"></i></a>
-                    <a ng-show="!isDevMachine();" ng-repeat="configid in req" ng-href='https://cmsweb.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_self"><i class="icon-th"></i></a>
-                  </li>
+                    <li ng-show="isDevMachine();" ng-repeat="configid in data[value.db_name]"> <a ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_self"><i class="icon-th"></i></a></li>
+                    <li ng-show="!isDevMachine();" ng-repeat="configid in data[value.db_name]"> <a ng-href='https://cmsweb.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip" title="View production configuration file {{configid}}" target="_self"><i class="icon-th"></i></a></li>
                 </ul>
               </div>
               <div ng-switch-when="Flown with">
@@ -282,7 +280,7 @@
                   <li ng-show="data[value.db_name].nEvents!=undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li>
                   <li ng-show="data[value.db_name].dqm!=undefined"> dqm
                     <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
-                    <a ng-show="!isDevMachine()"href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
+                    <a ng-show="!isDevMachine()"href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                   </li>
 		              <!--<li ng-repeat="att in data[value.db_name]">
 		                {{att}}
