@@ -800,7 +800,7 @@ class prepare_and_submit(handler):
         self.rid = rid
         self.db = database('requests')
 
-    def unsafe_run(self):
+    def internal_run(self):
         try:
             location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
 
@@ -835,14 +835,16 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-
+        from submitter.handlers import ConfigMakerAndUploader
         ids_list = args[0].split(',')
-        new_list = []
+        #new_list = []
+        #for rid in ids_list:
+        #    new_list.append({'rid': rid})
+        #pool = PoolOfHandlers(runtest_genvalid, new_list)
+        #pool.start()
         for rid in ids_list:
-            new_list.append({'rid': rid})
-        pool = PoolOfHandlers(runtest_genvalid, new_list)
-        pool.start()
-
+            conf = ConfigMakerAndUploader(prepid=rid, lock=locker.lock(rid))
+            conf.start()
 
         #rdb = database('actions')
         #res = rdb.query('member_of_campaign==Summer11')
