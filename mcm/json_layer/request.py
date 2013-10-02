@@ -881,7 +881,7 @@ class request(json_base):
         l_type = locator()
         if l_type.isDev():
             where ='https://cmsweb-testbed.cern.ch/dqm/dev'
-        where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+
         self.harverting_upload = ''
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file )
         self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
@@ -1371,7 +1371,7 @@ class runtest_genvalid(handler):
         self.rid = kwargs['rid']
         self.db = database('requests')
 
-    def unsafe_run(self):
+    def internal_run(self):
         try:
             location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
 
