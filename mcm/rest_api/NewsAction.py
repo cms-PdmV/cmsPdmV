@@ -49,6 +49,7 @@ class CreateNews(RESTResourceIndex):
     def __init__(self):
         self.db = database('news')#
         self.New = None
+        self.access_limit = 3
 
     def create_new(self, data):
         try:
@@ -78,6 +79,7 @@ class CreateNews(RESTResourceIndex):
 class UpdateNew(RESTResourceIndex):
     def __init__(self):
         self.db = database('news')#
+        self.access_limit = 3
 
     def update_new(self, data):
         try:
