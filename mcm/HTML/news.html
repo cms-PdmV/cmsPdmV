@@ -84,7 +84,7 @@
       	    <div ng-switch on="data.text">
       	      <div ng-switch-when="Subject">
       	        {{news_info[data.db_name]}}
-                <a ng-href="edit?db_name=news&prepid={{news_info['_id']}}" target="_self"><i class="icon-wrench"></i></a>
+                <a ng-hide="role(3);" ng-href="edit?db_name=news&prepid={{news_info['_id']}}" target="_self"><i class="icon-wrench"></i></a>
       	      </div>
       	      <div ng-switch-when="Text">
       	        <textarea ng-disabled="true" style="width: 939px; height: 235px;">{{news_info[data.db_name]}}</textarea>
