@@ -245,6 +245,48 @@ function resultsCtrl($scope, $http, $location, $window){
     }
    };
 
+  $scope.parseColumns = function(){
+    if ($scope.result.length != 0){
+    columns = _.keys($scope.result[0]);
+    rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+    $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+    _.each(rejected, function(v){
+      add = true;
+      _.each($scope.requests_defaults, function(column){
+        if (column.db_name == v){
+          add = false;
+        }
+      });
+      if (add){
+        $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+      }
+    });
+    var shown = "";
+    if ($.cookie($scope.dbName+"shown") !== undefined){
+      shown = $.cookie($scope.dbName+"shown");
+    }
+    if ($location.search()["shown"] !== undefined){
+      shown = $location.search()["shown"];
+    }
+    if (shown != ""){
+      $location.search("shown", shown);
+      binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+      _.each($scope.requests_defaults, function(column){
+        column_index = $scope.requests_defaults.indexOf(column);
+        binary_bit = binary_shown.charAt(column_index);
+        if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+          if (binary_bit == 1){
+            column.select = true;
+          }else{
+            column.select = false;
+          }
+        }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+          column.select = false;
+        }
+      });
+    }
+  }
+  }
   $scope.getData = function(){
     if($scope.file_was_uploaded)
    {
@@ -273,46 +315,7 @@ function resultsCtrl($scope, $http, $location, $window){
         alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
         return; //stop doing anything if results are undefined
       }
-      if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-        $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-          add = true;
-          _.each($scope.requests_defaults, function(column){
-            if (column.db_name == v){
-              add = false;
-            }
-          });
-          if (add){
-            $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-          }
-        });
-        var shown = "";
-        if ($.cookie($scope.dbName+"shown") !== undefined){
-          shown = $.cookie($scope.dbName+"shown");
-        }
-        if ($location.search()["shown"] !== undefined){
-          shown = $location.search()["shown"];
-        }
-        if (shown != ""){
-          $location.search("shown", shown);
-          binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-          _.each($scope.requests_defaults, function(column){
-            column_index = $scope.requests_defaults.indexOf(column);
-            binary_bit = binary_shown.charAt(column_index);
-            if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-              if (binary_bit == 1){
-                column.select = true;
-              }else{
-                column.select = false;
-              }
-            }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-              column.select = false;
-            }
-          });
-        }
-      }
+      $scope.parseColumns();
     },function(){
       alert("Error getting information");
     });
@@ -657,6 +660,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
       $scope.result = data.results;
       $scope.got_results = true;
+      $scope.parseColumns();
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
