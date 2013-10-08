@@ -791,9 +791,9 @@ class TestRequest(RESTResource):
         this is test for admins only
         """
         ids_list = args[0].split(',')
-        from tools.handlers import ConfigMakerAndUploader
+        from tools.handlers import ConfigMakerAndUploader, RequestInjector
         for id_r in ids_list:
-            hand = ConfigMakerAndUploader(prepid=id_r, lock=locker.lock(id_r))
+            hand = RequestInjector(prepid=id_r, lock=locker.lock(id_r))
             hand.start()
 
         #rdb = database('actions')
@@ -1370,14 +1370,18 @@ class RequestsReminder(RESTResource):
 
     def GET(self, *args):
         """
-        Goes through all requests and send reminder to whom is concerned
+        Goes through all requests and send reminder to whom is concerned. /production_manager for things to be submitted. /generator_convener for things to be approved. /generator_contact for things to be looked at by /generator_contact/contact (if specified)
         """
         what = None
+        who = None
         if len(args):
             #we've been passed parameters
             what = args[0].split(',')
             if 'all' in what:
                 what = None
+
+            if len(args)>=2:
+                who = args[1].split(',')
 
         udb = database('users')
         rdb = database('requests')
@@ -1402,11 +1406,13 @@ class RequestsReminder(RESTResource):
                 if extracheck == None or extracheck(mcm_r):
                     campaigns_and_ids[c].add(mcm_r['prepid'])
 
-            #then remove the empty entries
+            #then remove the empty entries, and sort the others
             for c in campaigns_and_ids.keys():
                 if not len(campaigns_and_ids[c]):
                     campaigns_and_ids.pop(c)
-            
+                else:
+                    campaigns_and_ids[c].sort()
+
             return campaigns_and_ids
 
         com = communicator()
@@ -1420,7 +1426,7 @@ class RequestsReminder(RESTResource):
                 if username_for_link:
                     message += '%srequests?page=-1&member_of_campaign=%s&status=%s&actor=%s \n' % (
                         l_type.baseurl(), camp, status_for_link, username_for_link)
-                else:
+                elif status_for_link:
                     message += '%srequests?page=-1&member_of_campaign=%s&status=%s \n' % (
                         l_type.baseurl(), camp, status_for_link)
 
@@ -1485,6 +1491,9 @@ class RequestsReminder(RESTResource):
             #then remove the non generator
             gen_contacts = map(lambda u : u['username'], udb.queries(['role==generator_contact']))
             for contact in ids_for_users.keys():
+                if who and not contact in who:
+                    ids_for_users.pop( contact )
+                    continue
                 if contact not in gen_contacts: 
                     # not a contact
                     ids_for_users.pop( contact )
@@ -1493,6 +1502,8 @@ class RequestsReminder(RESTResource):
                 for c in ids_for_users[contact].keys():
                     if not len(ids_for_users[contact][c]):
                         ids_for_users[contact].pop(c)
+                    else:
+                        ids_for_users[contact][c] = sorted( ids_for_users[contact][c] )
                     #for serialization only in dumps
                     #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
                 
@@ -1509,7 +1520,7 @@ class RequestsReminder(RESTResource):
                     mcm_u = udb.get( contact )
                     if len(campaigns_and_ids):
                         message = 'A few request need you action \n\n'
-                        message += prepare_text_for(campaigns_and_ids, 'new', username_for_link=contact)
+                        message += prepare_text_for(campaigns_and_ids, '')
                         to_who=[settings().get_value('service_account')]
                         if l_type.isDev():
                             message += '\nto %s' %( mcm_u['email'] )
