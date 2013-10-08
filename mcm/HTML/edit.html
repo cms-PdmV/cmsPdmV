@@ -237,18 +237,22 @@
                         <option value="1" ng-selected="result[column.db_name] == 1">No</option>
                       </select>
                     </div>
+                    <div ng-switch-when="Requests">
+                      <custom-requests-edit ng-model="result[column.db_name]"></custom-requests-edit>
+                      <!-- <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form> -->
+                    </div>
                     <div ng-switch-default style="width: 400px;">
-                        <div ng-switch on="result[column.db_name]">
-                            <div ng-switch-when="true">
-                                <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                            </div>
-                            <div ng-switch-when="false">
-                                <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                            </div>
-                            <div ng-switch-default>
-                                <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
-                            </div>
+                      <div ng-switch on="underscore.isBoolean(result[column.db_name])">
+                        <div ng-switch-when="true">
+                          <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
                         </div>
+                        <div ng-switch-default>
+                          <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                        </div>
+                      </div>
                     </div>
                 </div>
               </ng-form>
