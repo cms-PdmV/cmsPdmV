@@ -1,28 +1,25 @@
 #!/usr/bin/env python
 
 import cherrypy
-import sys
 import traceback
 import string
 import time
-from math import sqrt
 from json import loads, dumps
+from threading import Thread
+
 from couchdb_layer.prep_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
-from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.sequence import sequence
-from json_layer.request import runtest_genvalid
 from json_layer.action import action
 from json_layer.campaign import campaign
-from json_layer.generator_parameters import generator_parameters
-from threading import Thread
 from submitter.package_builder import package_builder
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker, semaphore_thread_number
 from tools.settings import settings
+
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -784,48 +781,6 @@ class SetStatus(RESTResource):
         return {"prepid": rid, "results": self.db.update(req.json())}
 
 
-from tools.request_to_wma import request_to_wmcontrol
-from tools.handler import handler, PoolOfHandlers
-from tools.installer import installer
-from tools.ssh_executor import ssh_executor
-
-
-class prepare_and_submit(handler):
-    """
-    operate a runtest with the configs in config cache, operate submission, toggles the status to submitted
-    """
-
-    def __init__(self, rid):
-        handler.__init__(self)
-        self.rid = rid
-        self.db = database('requests')
-
-    def internal_run(self):
-        try:
-            location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
-
-            test_script = location.location() + 'inject.sh'
-            there = open(test_script, 'w')
-            mcm_r = request(self.db.get(self.rid))
-            there.write(mcm_r.get_setup_file(location.location()))
-            there.write('\n')
-            r2wm = request_to_wmcontrol()
-            there.write(r2wm.get_command(mcm_r, 167, True))
-            there.close()
-
-            r2wm.get_requests(mcm_r)
-
-            #ssh = ssh_executor( location.location(), self.rid )
-            #stdin,  stdout,  stderr = ssh.execute('bash %s'%( test_script))
-
-            ## now need to get the request manager name !
-
-            self.logger.error(stdout.read())
-            self.logger.error(stderr.read())
-        finally:
-            location.close()
-
-
 class TestRequest(RESTResource):
     ## a rest api to make a creation test of a request
     def __init__(self):
@@ -835,16 +790,11 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        from tools.handlers import ConfigMakerAndUploader
         ids_list = args[0].split(',')
-        #new_list = []
-        #for rid in ids_list:
-        #    new_list.append({'rid': rid})
-        #pool = PoolOfHandlers(runtest_genvalid, new_list)
-        #pool.start()
-        for rid in ids_list:
-            conf = ConfigMakerAndUploader(prepid=rid, lock=locker.lock(rid))
-            conf.start()
+        from tools.handlers import ConfigMakerAndUploader
+        for id_r in ids_list:
+            hand = ConfigMakerAndUploader(prepid=id_r, lock=locker.lock(id_r))
+            hand.start()
 
         #rdb = database('actions')
         #res = rdb.query('member_of_campaign==Summer11')
@@ -1448,9 +1398,9 @@ class RequestsReminder(RESTResource):
                 ## check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
                 if not c in campaigns_and_ids:
-                    campaigns_and_ids[c] = []
+                    campaigns_and_ids[c] = set()
                 if extracheck == None or extracheck(mcm_r):
-                    campaigns_and_ids[c].append(mcm_r['prepid'])
+                    campaigns_and_ids[c].add(mcm_r['prepid'])
 
             #then remove the empty entries
             for c in campaigns_and_ids.keys():
@@ -1463,12 +1413,17 @@ class RequestsReminder(RESTResource):
         l_type = locator()
 
 
-        def prepare_text_for(campaigns_and_ids, status_for_link):
+        def prepare_text_for(campaigns_and_ids, status_for_link, username_for_link=None):
             message = ''
             for (camp, ids) in campaigns_and_ids.items():
                 message += 'For campaign: %s \n' % ( camp )
-                message += '%srequests?page=-1&member_of_campaign=%s&status=%s \n' % (
-                    l_type.baseurl(), camp, status_for_link)
+                if username_for_link:
+                    message += '%srequests?page=-1&member_of_campaign=%s&status=%s&actor=%s \n' % (
+                        l_type.baseurl(), camp, status_for_link, username_for_link)
+                else:
+                    message += '%srequests?page=-1&member_of_campaign=%s&status=%s \n' % (
+                        l_type.baseurl(), camp, status_for_link)
+
                 for rid in ids:
                     message += '\t%s\n' % ( rid)
                 message += '\n'
@@ -1479,6 +1434,7 @@ class RequestsReminder(RESTResource):
                 return True
             else:
                 return False
+
 
         if not what or 'production_manager' in what:
             ## send the reminder to the production managers
@@ -1494,7 +1450,7 @@ class RequestsReminder(RESTResource):
                              'Gentle reminder on requests to be submitted',
                              message)
 
-        if not what or 'gen_conveners' in what:
+        if not what or 'gen_conveners' in what or 'generator_convener' in what:
         ## send the reminder to generator conveners
             ids_for_gen_conveners = get_all_in_status('defined')
             for c in ids_for_gen_conveners:
@@ -1507,19 +1463,63 @@ class RequestsReminder(RESTResource):
                              'Gentle reminder on requests to be approved by you',
                              message)
 
-        if not what:
+        if not what or 'gen_contact' in what or 'generator_contact' in what:
+            all_ids = set()
+            ## remind the gen contact about requests that are:
+            ##   - in status new, and have been flown            
+            for mcm_r in rdb.queries(['status==new']):
+                c = mcm_r['member_of_campaign']
+                rid = mcm_r['prepid']
+                if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
+                fw = mcm_r['flown_with']
+                if not fw : continue # to get a remind only on request that have been flown
+                all_involved = request(mcm_r).get_actors()
+                for contact in all_involved:
+                    if not contact in ids_for_users:
+                        ids_for_users[contact]={}
+                    
+                    if not c in ids_for_users[contact]:
+                        ids_for_users[contact][c] = set()
+                    ids_for_users[contact][c].add( rid )
+                    
+            #then remove the non generator
+            gen_contacts = map(lambda u : u['username'], udb.queries(['role==generator_contact']))
+            for contact in ids_for_users.keys():
+                if contact not in gen_contacts: 
+                    # not a contact
+                    ids_for_users.pop( contact )
+                    continue
+
+                for c in ids_for_users[contact].keys():
+                    if not len(ids_for_users[contact][c]):
+                        ids_for_users[contact].pop(c)
+                    #for serialization only in dumps
+                    #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
+                
+                #if there is nothing left. remove
+                if not len( ids_for_users[contact].keys() ):
+                    ids_for_users.pop( contact )
+                    continue
+
             if len(ids_for_users):
-                gen_contacts = udb.queries(['role==generator_contact'])
-                users = udb.queries(['role==user'])
-                for (user, campaigns_and_ids) in ids_for_users.items():
+                for (contact, campaigns_and_ids) in ids_for_users.items():
+                    for c in campaigns_and_ids:
+                        all_ids.update( campaigns_and_ids[c] )
+
+                    mcm_u = udb.get( contact )
                     if len(campaigns_and_ids):
                         message = 'A few request need you action \n\n'
-                        message += prepare_text_for(campaigns_and_ids, 'validation')
-                        com.sendMail([user['email'], settings().get_value('service_account')],
-                                     'Gentle reminder on requests to be looked at',
+                        message += prepare_text_for(campaigns_and_ids, 'new', username_for_link=contact)
+                        to_who=[settings().get_value('service_account')]
+                        if l_type.isDev():
+                            message += '\nto %s' %( mcm_u['email'] )
+                        else:
+                            to_who.append( mcm_u['email'] )
+                        com.sendMail(to_who,
+                                     'Gentle reminder on requests to be looked at by %s'%(contact),
                                      message
-                        )
-
+                                     )
+                res = map (lambda i : {"results": True, "prepid": i}, all_ids)
         return dumps(res)
 
 class UpdateMany(RequestRESTResource):
