@@ -12,7 +12,7 @@ class GetSetting(RESTResource):
 
     def GET(self, *args):
         """
-        Retreive the dictionnary for a given mccm
+        Retrieve dictionary regarding given setting
         """
         if not args:
             self.logger.error('No arguments were given')
@@ -33,7 +33,7 @@ class UpdateSetting(RESTResource):
 
     def PUT(self):
         """
-        Updating an existing mccm with an updated dictionary
+        Updating an existing setting with an updated dictionary
         """
         try:
             res = self.update(cherrypy.request.body.read().strip())
