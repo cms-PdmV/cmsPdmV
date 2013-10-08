@@ -787,8 +787,8 @@ class package_builder:
                         self.request.set_attribute('reqmgr_name', requests)
 
                         cf_ids = self.request.get_attribute('config_id')
-                        cf_ids.append(injector.config_ids)
-                        self.request.set_attribute('config_id', cf_ids)
+                        if not len( cf_ids):
+                            self.request.set_attribute('config_id',injector.config_ids )
                         hash_ids = database('configs')
                         for (step_i, docid) in enumerate(injector.config_ids):
                             hash_id = self.request.configuration_identifier(step_i)
