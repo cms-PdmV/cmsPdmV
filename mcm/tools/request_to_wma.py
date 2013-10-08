@@ -20,8 +20,8 @@ class request_to_wmcontrol:
             # crab setup
             command += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
             # certificate
-            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin \n'
-            #command +=  mcm_r.make_release()
+            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem 2> /dev/null\n'
+            command +=  mcm_r.make_release()
             #command += 'eval `scram runtime -sh`\n'
             command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
 
@@ -41,6 +41,8 @@ class request_to_wmcontrol:
         else:
             command += ' --request-type %s' %(wmagent_type)
 
+        config_id_from_hashkey=[]
+
         ## check on the presence of docId ?...
         if len(mcm_r.get_attribute('config_id')):
             command += ' --step1-docID %s'%( mcm_r.get_attribute('config_id')[0])
@@ -52,6 +54,7 @@ class request_to_wmcontrol:
                 hash_doc = hash_ids.get( hash_id )
                 config_cache_id = hash_doc['docid']
                 command += ' --step1-docID %s'%(config_cache_id)
+                config_id_from_hashkey=[ config_cache_id ]
             else:
                 command += ' --step1-cfg %s%s_1_cfg.py'%(mcm_r.get_attribute('prepid'),dev)
             
@@ -136,6 +139,7 @@ class request_to_wmcontrol:
                             hash_doc = hash_ids.get( hash_id )
                             config_cache_id = hash_doc['docid']
                             command += ' --step%d-docID %s'%(i+1,config_cache_id)
+                            config_id_from_hashkey.append( config_cache_id )
                         else:
                             command += ' --step%d-cfg %s%s_%d_cfg.py'%( i+1, mcm_r.get_attribute('prepid'),dev, i+1)
 
@@ -153,6 +157,9 @@ class request_to_wmcontrol:
             command += ' --process-string '+processString
             
         command += '\n'
+
+        if len(config_id_from_hashkey):
+            mcm_r.set_attribute('config_id', config_id_from_hashkey)
 
         return command
 
