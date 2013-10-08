@@ -1038,3 +1038,69 @@ testApp.directive("customAnalysisId", function(){
     }
   }
 });
+testApp.directive("customRequestsEdit", function(){
+  return {
+    require: 'ngModel',
+    replace: true,
+    restrict: 'E',
+    template: 
+    '<div>'+
+    '  <ul>'+
+    '    <li ng-repeat="elem in requests_data">'+
+    '      <span ng-switch on="underscore.isArray(elem)">'+
+    '        <span ng-switch-when="true">'+
+    '        {{elem[0]}} <i class="icon-arrow-right"></i> {{elem[1]}}'+
+    '        </span>'+
+    '        <span ng-switch-when="false">'+
+    '          {{elem}}'+
+    '          <a ng-href="#" ng-click="addNewRequest(elem)" ng-hide="show_new[elem]"><i class="icon-plus"></i></a>'+
+    '          <a ng-href="#" ng-click="toggleNewRequest(elem)" ng-show="show_new[elem]"><i class="icon-minus"></i></a>'+
+    '          <input type="text" ng-model="tmpRequest" ng-show="show_new[elem]"></input>'+
+    '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[elem]"><i class="icon-plus-sign"></i></a>'+
+    '        </span>'+
+    '      </span>'+
+    '    </li>'+
+    '  </ul>'+
+    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
+    '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus"></i></a>'+
+    '  <input type="text" ng-model="tmpRequest" ng-show="show_new[\'new\']"></input>'+
+    '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl){
+      ctrl.$render = function(){
+        scope.requests_data = ctrl.$viewValue;
+        scope.show_new = {};
+        scope.tmpRequest = "";
+      };
+      scope.toggleNewRequest = function(elem)
+      {
+        if(scope.show_new[elem] == true)
+        {
+          scope.show_new[elem] = false;
+        }else
+        {
+          scope.show_new[elem] = true;
+        }
+      }
+      scope.addNewRequest = function(elem)
+      {
+        scope.toggleNewRequest(elem);
+      };
+      scope.saveNewRequest = function(index)
+      {
+        var __request = scope.requests_data[index];
+        scope.requests_data[index] = [];
+        scope.requests_data[index].push(__request); 
+        scope.requests_data[index].push(scope.tmpRequest);
+        scope.show_new[__request] = false;
+      };
+      scope.pushNewRequest = function()
+      {
+        scope.requests_data.push(scope.tmpRequest);
+        scope.toggleNewRequest('new');
+        scope.tmpRequest = "";
+      };
+    }
+  }
+});
