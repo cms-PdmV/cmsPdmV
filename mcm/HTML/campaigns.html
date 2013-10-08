@@ -165,6 +165,9 @@
 	          <div ng-switch-when="Type">
 	            <a ng-href='campaigns?type={{data[value.db_name]}}' rel="tooltip" title="View campaigns of type {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-book"></i></a>
 	          </div>
+            <div ng-switch-when="Energy">
+              <a ng-href='campaigns?energy={{data[value.db_name]}}' rel="tooltip" title="View campaigns of energy {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+            </div>
             <div ng-switch-when="History">
               <div custom-history ng-model="data[value.db_name]"></div>
             </div>
