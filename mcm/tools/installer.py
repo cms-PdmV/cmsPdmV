@@ -54,3 +54,9 @@ class installer:
                 shutil.rmtree(self.directory)
             except Exception as ex:
                 self.logger.error('Could not delete directory "%s". Reason: %s' % (self.directory, ex))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
