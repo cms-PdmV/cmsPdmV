@@ -2,7 +2,7 @@
 
 import cherrypy
 from json import loads,dumps
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.campaign import campaign
