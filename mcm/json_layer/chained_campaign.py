@@ -3,7 +3,7 @@
 from chained_request import chained_request
 from json_base import json_base
 from request import request
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from rest_api.RequestChainId import RequestChainId
 from json import loads,  dumps
 
@@ -61,7 +61,7 @@ class chained_campaign(json_base):
         self.logger.log('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id'))) 
 
         try:
-            from couchdb_layer.prep_database import database
+            from couchdb_layer.mcm_database import database
         except ImportError as ex:
             self.logger.error('Could not import database connector class. Reason: %s' % (ex),  level='critical')
             return False
