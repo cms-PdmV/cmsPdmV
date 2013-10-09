@@ -4,7 +4,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from json import dumps
 import os
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from collections import defaultdict
 
 class GetBjobs(RESTResource):
