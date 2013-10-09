@@ -1,25 +1,19 @@
 #!/usr/bin/env python
 
-import copy
-import os 
+import os
 import re
 import pprint
-import time 
 import xml.dom.minidom
 from math import sqrt
 import hashlib
-import traceback
 
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 
-from json import loads,dumps
 from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools.locator import locator
 from tools.batch_control import batch_control
-from tools.installer import installer
-from tools.handler import handler
 from tools.settings import settings
 
 class request(json_base):
@@ -321,7 +315,8 @@ class request(json_base):
         ## select to synchronize status and approval toggling, or run the validation/run test
         de_synchronized=True
         if de_synchronized:
-            threaded_test = runtest_genvalid( rid=str(self.get_attribute('prepid')))
+            from tools.handlers import RuntestGenvalid
+            threaded_test = RuntestGenvalid( rid=str(self.get_attribute('prepid')))
             ## this will set the status on completion, or reset the request.
             threaded_test.start()
         else:
@@ -597,7 +592,7 @@ class request(json_base):
             genInfo = generator_parameters()
         else:
             genInfo = generator_parameters(gens[-1])
-            genInfo.set_attribute('submission_details', self.__get_submission_details())
+            genInfo.set_attribute('submission_details', self._json_base__get_submission_details())
             genInfo.set_attribute('version', genInfo.get_attribute('version')+1)
 
         gens.append(genInfo.json())
@@ -625,13 +620,15 @@ class request(json_base):
         return self.scram_arch
 
     def make_release(self):
-        makeRel =''
+        makeRel = 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
+        makeRel += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
         makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
         makeRel += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
         makeRel += 'else\n'
         makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
         makeRel += 'fi\n'
         makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        makeRel += 'eval `scram runtime -sh`\n' ## setup the cmssw
         return makeRel
 
     def get_setup_file(self,directory='',events=None):
@@ -642,18 +639,15 @@ class request(json_base):
             ## go into the request directory itself to setup the release, since we cannot submit more than one at a time ...
             infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
 
-        infile += 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
-        infile += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
 
         ##create a release directory "at the root" if not already existing
-        infile += self.make_release()
+
         if directory:
             ##create a release directory "in the request" directory if not already existing
             infile += 'cd ' + os.path.abspath(directory) + '\n'
             infile += self.make_release()
-
-        ## setup from the last release directory used
-        infile += 'eval `scram runtime -sh`\n'
+        else:
+            infile += self.make_release()
 
         ## get the fragment if need be
         infile += self.retrieve_fragment()
@@ -1113,18 +1107,22 @@ class request(json_base):
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database( 'requests')
         if len(mcm_rr):
-            if ('pdmv_status_in_DAS' in mcm_rr[-1]['content'] and 'pdmv_status_from_reqmngr' in mcm_rr[-1]['content']):
-                if mcm_rr[-1]['content']['pdmv_status_in_DAS'] == 'VALID' and mcm_rr[-1]['content']['pdmv_status_from_reqmngr'] in ['announced','normal-archived']:
+            wma_r = mcm_rr[-1]
+            wma_r_N = mcm_rr[-1] # so that we can decouple the two
+            if ('pdmv_status_in_DAS' in wma_r['content'] and 'pdmv_status_from_reqmngr' in wma_r['content']):
+                if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content']['pdmv_status_from_reqmngr'] in ['announced','normal-archived']:
                     ## how many events got completed for real: summing open and closed
-                    self.set_attribute('completed_events' , mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS'] )
+
+
+                    self.set_attribute('completed_events' , wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content']['pdmv_open_evts_in_DAS'] )
 
                     if self.get_attribute('completed_events') <=0:
-                        not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( mcm_rr[-1]['content']['pdmv_dataset_name'])})
+                        not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( wma_r['content']['pdmv_dataset_name'])})
                         saved = db.save( self.json() )
                         return not_good
-                    tier_produced=mcm_rr[-1]['content']['pdmv_dataset_name'].split('/')[-1]
+                    tier_produced=wma_r['content']['pdmv_dataset_name'].split('/')[-1]
                     if not tier_produced in self.get_attribute('sequences')[-1]['datatier']:
-                        not_good.update( {'message' : '%s completed but tier does no match any of %s'%( mcm_rr[-1]['content']['pdmv_dataset_name'], self.get_attribute('sequences')[-1]['datatier'])} )
+                        not_good.update( {'message' : '%s completed but tier does no match any of %s'%( wma_r['content']['pdmv_dataset_name'], self.get_attribute('sequences')[-1]['datatier'])} )
                         saved = db.save( self.json() )
                         return not_good
                     ## set next status: which can only be done at this stage
@@ -1138,12 +1136,12 @@ class request(json_base):
                         return not_good
                 else:
                     if one_new: db.save( self.json() )
-                    not_good.update( {'message' : "last request %s is not ready"%(mcm_rr[-1]['name'])})
+                    not_good.update( {'message' : "last request %s is not ready"%(wma_r['name'])})
                     return not_good
             else:
                 if one_new: db.save( self.json() )
-                not_good.update( {'message' : "last request %s is malformed %s"%(mcm_rr[-1]['name'],
-                                                                                 mcm_rr[-1]['content'])})
+                not_good.update( {'message' : "last request %s is malformed %s"%(wma_r['name'],
+                                                                                 wma_r['content'])})
                 return not_good
         else:
             ## add a reset acion here, in case in prod instance ?
@@ -1360,87 +1358,5 @@ class request(json_base):
                 hash_ids.delete( hash_id )
         self.set_status(step=0,with_notification=True)
 
-
-
-class runtest_genvalid(handler):
-    """
-    operate the run test, operate the gen_valid, upload to the gui and toggles the status to validation
-    """
-    def __init__(self, **kwargs):
-        handler.__init__(self, **kwargs)
-        self.rid = kwargs['rid']
-        self.db = database('requests')
-
-    def internal_run(self):
-        try:
-            location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
-
-            test_script = location.location()+'validation_run_test.sh'
-            with open( test_script ,'w') as there:
-                ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                time.sleep( 10 )
-                mcm_r = request(self.db.get(self.rid))
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                n_for_test = mcm_r.get_n_for_test(target=100.0)
-                ## the following does change something on the request object, to be propagated in case of success
-                there.write( mcm_r.get_setup_file( location.location() , n_for_test) )
-                
-            try:
-                batch_test = batch_control( self.rid, test_script )
-                success = batch_test.test()
-            except:
-                batch_test.log_err = traceback.format_exc()
-                success = false
-        
-            if success:
-                self.logger.log("batch_test result is %s" % success)
-                try:
-                    #suck in run-test if present
-                     rt_xml=location.location()+'%s_rt.xml'%( self.rid )
-                     if os.path.exists( rt_xml ):
-                         mcm_r.update_performance( open(rt_xml).read(), 'perf')
-                except:
-                    batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get perf reports \n %s'%( batch_test.log_err))
-                    success = False
-                    
-                try:
-                    gv_xml=location.location()+'%s_gv.xml'%( self.rid )
-                    if os.path.exists( gv_xml ):
-                        mcm_r.update_performance( open(gv_xml).read(), 'eff')
-                except:
-                    batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
-                    success = False
-
-            self.logger.error('I came all the way to here and %s'%( success ))
-            if not success:
-                ## need to provide all the information back
-                the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                # reset the content of the request
-                mcm_r = request(self.db.get(self.rid))
-                mcm_r.test_failure(message=the_logs,what='Validation run test',rewind=True)
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-            else:
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                ## change the status with notification
-                mcm_current = request(self.db.get(self.rid))
-                if mcm_current.json()['_rev']==mcm_r.json()['_rev']:
-                    ## it's fine to push it through
-                    mcm_r.set_status(with_notification=True)
-                    saved = self.db.update( mcm_r.json() )
-                    if not saved:
-                        mcm_current.test_failure(message='The request could not be saved after the run test procedure',what='Validation run test',rewind=True)
-                else:
-                    mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-        finally:
-            #mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (self.rid, traceback.format_exc())
-            #self.logger.error( mess )
-            #mcm_r = request(self.db.get(self.rid))
-            #mcm_r.test_failure(message=mess,what='Validation run test',rewind=True)
-            location.close()
 
 
