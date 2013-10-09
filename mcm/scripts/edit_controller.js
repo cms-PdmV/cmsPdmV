@@ -12,37 +12,46 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.prepid = $location.search()["query"];
     }
 
-    if ($scope.dbName == "campaigns"){
-	    $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next"];
-      $scope.type_list = ["MCReproc","Prod","LHE"];
-    }else if($scope.dbName == "requests"){
-      // get the editable -> set false in list
-	    $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
-      var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
-      promise.then(function(data){
-        $scope.parseEditableObject(data.data.results);
-      });
-    }
-    else if($scope.dbName == "chained_requests"){
-      $scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];
-    }else if($scope.dbName == "chained_campaigns"){
-      $scope.not_editable_list = ["Prepid", "Campaigns"];
-    }else if($scope.dbName == "flows"){
-      $scope.not_editable_list = ["Prepid", "Approval"];
-      var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+    switch($scope.dbName)
+    {
+      case "campaigns":
+        $scope.not_editable_list = ["Prepid", "Member of campaign","Completed events", "Status","Approval","Next", "Total events"];
+        $scope.type_list = ["MCReproc","Prod","LHE"];
+        break;
+      case "requests":
+        $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version"]; //user non-editable columns
+        var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
         promise.then(function(data){
-        $scope.allCampaigns = data.data.results;
-      },function(){
-        alert("Error getting all campaign list for flows");
-      });
-    }
-    else if($scope.dbName == "news"){
-      $scope.not_editable_list = ["Author", "Date"];
-    }
-    else if($scope.dbName == "settings"){
-      $scope.not_editable_list = ["Prepid"];
-    }else{
-      $scope.not_editable_list = [];
+          $scope.parseEditableObject(data.data.results);
+        });
+        break;
+      case "chained_requests":
+        $scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];
+        break;
+      case "chained_campaigns":
+        $scope.not_editable_list = ["Prepid", "Campaigns"];
+        break;
+      case "flows":
+        $scope.not_editable_list = ["Prepid", "Approval"];
+        var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+          promise.then(function(data){
+          $scope.allCampaigns = data.data.results;
+        },function(){
+          alert("Error getting all campaign list for flows");
+        });
+        break;
+      case "news":
+        $scope.not_editable_list = ["Author", "Date"];
+        break;
+      case "settings":
+        $scope.not_editable_list = ["Prepid"];
+        break;
+      case "users":
+        $scope.not_editable_list = ["Username", "Role"];
+        break;
+      default:
+        $scope.not_editable_list = [];
+        break;
     }
 
     if($location.search()["page"] === undefined){
@@ -357,7 +366,10 @@ var genParamModalCtrl = function($scope, $http) {
       $scope.new_gen_params = data.data.results;
       $scope.addParamLoad = false;
       $scope.addParamModal = true;
-    }, function(){ alert("Error getting new generator parameters"); });
+    }, function(){
+      $scope.addParamLoad = false;
+      alert("Error getting new generator parameters");
+    });
   };
   $scope.saveAddParam = function(){
     $scope.addParamModal = false;
@@ -1053,25 +1065,30 @@ testApp.directive("customRequestsEdit", function(){
     '        </span>'+
     '        <span ng-switch-when="false">'+
     '          {{elem}}'+
-    '          <a ng-href="#" ng-click="addNewRequest(elem)" ng-hide="show_new[elem]"><i class="icon-plus"></i></a>'+
-    '          <a ng-href="#" ng-click="toggleNewRequest(elem)" ng-show="show_new[elem]"><i class="icon-minus"></i></a>'+
-    '          <input type="text" ng-model="tmpRequest" ng-show="show_new[elem]"></input>'+
-    '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[elem]"><i class="icon-plus-sign"></i></a>'+
+    '          <span class="input-prepend input-append">'+
+    '            <a class="btn" ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index]"><i class="icon-minus"></i></a>'+
+    '            <a class="btn" ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index]"><i class="icon-plus"></i></a>'+
+    '            <a class="btn" ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]"><i class="icon-minus-sign"></i></a>'+
+    '            <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]"></input>'+
+    '            <a class="btn" ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign"></i></a>'+
+    '          </span>'+
     '        </span>'+
     '      </span>'+
     '    </li>'+
     '  </ul>'+
-    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
-    '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus"></i></a>'+
-    '  <input type="text" ng-model="tmpRequest" ng-show="show_new[\'new\']"></input>'+
-    '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
+    '  <span class="input-prepend input-append">'+
+    '    <a class="btn" ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
+    '    <a class="btn" ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
+    '    <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']"></input>'+
+    '    <a class="btn" ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
+    '  </span>'+
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
         scope.requests_data = ctrl.$viewValue;
         scope.show_new = {};
-        scope.tmpRequest = "";
+        scope.tmpRequest = {};
       };
       scope.toggleNewRequest = function(elem)
       {
@@ -1092,14 +1109,24 @@ testApp.directive("customRequestsEdit", function(){
         var __request = scope.requests_data[index];
         scope.requests_data[index] = [];
         scope.requests_data[index].push(__request); 
-        scope.requests_data[index].push(scope.tmpRequest);
+        scope.requests_data[index].push(scope.tmpRequest[index]);
         scope.show_new[__request] = false;
       };
       scope.pushNewRequest = function()
       {
-        scope.requests_data.push(scope.tmpRequest);
+        scope.requests_data.push(scope.tmpRequest["new"]);
         scope.toggleNewRequest('new');
-        scope.tmpRequest = "";
+        scope.tmpRequest["new"] = "";
+      };
+      scope.removeOldRequest = function(index)
+      {
+        if (_.isArray(scope.requests_data[index]))
+        {
+          scope.requests_data.pop();
+        }else
+        {
+          scope.requests_data.splice(index,1);
+        }
       };
     }
   }
