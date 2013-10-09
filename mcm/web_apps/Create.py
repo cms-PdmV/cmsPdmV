@@ -2,7 +2,7 @@
 
 import json
 from Page import Page
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.campaign import campaign
