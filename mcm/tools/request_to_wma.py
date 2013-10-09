@@ -1,6 +1,6 @@
 from tools.locator import locator
 from tools.ssh_executor import ssh_executor
-from couchdb_layer.prep_database import database 
+from couchdb_layer.mcm_database import database
 
 class request_to_wmcontrol:
     """
