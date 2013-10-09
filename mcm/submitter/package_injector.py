@@ -4,7 +4,7 @@ import os
 import logging
 from tools.logger import prep2_formatter, logger as logfactory
 from tools.locator import locator
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 
 class package_injector:
     logger = logfactory('mcm')
