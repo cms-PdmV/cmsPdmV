@@ -586,6 +586,24 @@ class DeleteRequest(RESTResource):
         for doc in mcm_crs:
             self.crdb.delete(doc['prepid'])
 
+class GetRequestByDataset(RESTResource):
+    def __init__(self):   
+        pass
+    
+    def GET(self, *args):
+        """
+        retrieve the dictionnary of a request, based on the output dataset specified
+        """
+        if not args: 
+            return dumps({"results": {}})
+        datasetname = '/'+'/'.join(args)
+        rdb =database('requests')
+        r=rdb.queries(['produce==%s' % ( datasetname )])
+        if len(r):
+            return dumps({"results" : r[0]})
+        else:
+            return dumps({"results": {}})
+        
 
 class GetRequest(RESTResource):
     def __init__(self):
