@@ -39,6 +39,9 @@ class RequestRESTResource(RESTResource):
             ## get campaign
         self.campaign = self.cdb.get(camp)
         self.request.set_attribute('energy', self.campaign['energy'])
+        if not self.request.get_attribute('cmssw_release'):
+            self.request.build_cmsDrivers(cast=1,can_save=False)
+
         return True
 
     ## duplicate version to be centralized in a unique class
@@ -200,21 +203,15 @@ class CloneRequest(RequestRESTResource):
 
         if self.db.document_exists(pid):
             new_json = self.db.get(pid)
+            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','generator_parameters','priority','analysis_id']
+            if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
+                ## this is a cloning accross campaign: a few other things need to be cleanedup
+                to_wipe.extend( ['cmssw_release','energy','sequences'] )
+
             new_json.update(data)
-            del new_json['_id']
-            del new_json['_rev']
-            del new_json['prepid']
-            del new_json['approval']
-            del new_json['status']
-            del new_json['history']
-            del new_json['config_id']
-            del new_json['member_of_chain']
-            del new_json['validation']
-            del new_json['completed_events']
-            new_json['version'] = 0
-            del new_json['generator_parameters']
-            del new_json['reqmgr_name']
-            del new_json['priority']
+            ## remove some of the parameters to get then fresh from a new request.
+            for w in to_wipe:
+                del new_json[w]
 
             return self.import_request(new_json, label='clone')
         else:
@@ -791,9 +788,9 @@ class TestRequest(RESTResource):
         this is test for admins only
         """
         ids_list = args[0].split(',')
-        from tools.handlers import ConfigMakerAndUploader, RequestInjector
+        from tools.handlers import ConfigMakerAndUploader, RequestSubmitter
         for id_r in ids_list:
-            hand = RequestInjector(prepid=id_r, lock=locker.lock(id_r))
+            hand = RequestSubmitter(prepid=id_r, lock=locker.lock(id_r))
             hand.start()
 
         #rdb = database('actions')
