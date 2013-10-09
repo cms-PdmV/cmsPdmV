@@ -590,6 +590,71 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.set_fail(status);
     });
   };
+
+  $scope.cloneModal = false;
+  $scope.closeCloneModal = function()
+  {
+    $scope.clonableID = "";
+    $scope.clonePWG = "";
+    $scope.cloneCampaign = "";
+    $scope.cloneModal = false;
+  }
+  $scope.openCloneModal = function(id, pwg, campaign)
+  {
+    if(!$scope.all_pwgs){
+      var promise = $http.get("restapi/users/get_pwg")
+      promise.then(function(data){
+        $scope.all_pwgs = data.data.results;
+      });
+    }
+    if(!$scope.allCampaigns)
+    {
+      var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+      promise.then(function(data){
+        $scope.allCampaigns = data.data.results;
+      });
+    }
+    $scope.clonePWG = pwg;
+    $scope.cloneCampaign = campaign;
+    $scope.clonableID = id;
+    $scope.cloneModal = true;
+  }
+  $scope.clonePrepid = function()
+  {
+    var tmpClone = {};
+    _.each($scope.result, function(elem)
+    {
+      if(elem.prepid == $scope.clonableID)
+      {
+        tmpClone = _.clone(elem);
+      }
+    });
+    tmpClone["member_of_campaign"] = $scope.cloneCampaign;
+    tmpClone["pwg"] = $scope.clonePWG;
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/clone/', data:tmpClone}).success(function(data,status){
+      $scope.cloneModal = false;
+
+      $scope.update["success"] = data["results"];
+      $scope.update["fail"] = !data["results"];
+      $scope.update["status_code"] = status;
+      if (data["message"])
+      {
+        $scope.update["status_code"] = data["message"];
+      }
+      if (data["prepid"])
+      {
+        $window.open("edit?db_name=requests&query="+data["prepid"]);
+      }
+      $scope.update["message"] = data;
+    }).error(function(data,status){
+      $scope.cloneModal = false;
+
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+      $scope.update["message"] = data;
+    });
+  }
   /* --Modals actions END--*/
 
   $scope.update_filtered = function(){
