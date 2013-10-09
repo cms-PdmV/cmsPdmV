@@ -2,7 +2,7 @@
 
 from json import dumps
 
-from couchdb_layer.prep_database import database 
+from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from tools.locker import locker
 
@@ -13,7 +13,6 @@ class BatchPrepId():
         self.bdb = database('batches')
 
     def generate_prepid(self, for_request):
-
         flown_with = for_request['flown_with']
         next_campaign = for_request['member_of_campaign']
         version = for_request['version']
