@@ -1,6 +1,6 @@
 from rest_api.RestAPIMethod import RESTResource
 from json import dumps, loads
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 import cherrypy
 
