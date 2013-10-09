@@ -3,7 +3,7 @@ from json_layer.request import request
 from json_layer.campaign import campaign
 from flow import flow
 
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 import json
 from tools.priority import priority
 import traceback
