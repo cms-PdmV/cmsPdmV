@@ -335,7 +335,7 @@ class transformer:
 
     def get_campaign(self, cid):
         try:
-            from couchdb_layer.prep_database import database
+            from couchdb_layer.mcm_database import database
             cdb=database('campaigns')
             return cdb.get(cid)
             #return json.loads(open('sync/campaigns/%s.json' % (cid)).read())
