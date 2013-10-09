@@ -4,7 +4,7 @@ import cherrypy
 import simplejson
 
 #from Page import Page
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 import copy
 from tools.locator import locator
 
