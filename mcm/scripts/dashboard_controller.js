@@ -22,7 +22,11 @@ function resultsCtrl($scope, $http, $location, $window){
     for(var i = 9;i<18;i++){
         $scope.items.push(i)
     }
-
+    if ($location.search()["db_name"] === undefined){
+      $scope.dbName = "dashboard";
+    }else{
+      $scope.dbName = $location.search()["db_name"];
+    }
     function groupName(){
         if($scope.isDevMachine())
             return " -g dev";
