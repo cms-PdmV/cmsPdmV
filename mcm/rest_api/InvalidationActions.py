@@ -8,7 +8,7 @@ import time
 import itertools
 from math import sqrt
 from json import loads, dumps
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.communicator import communicator
 from tools.locator import locator
