@@ -7,7 +7,7 @@ import time
 from json import loads, dumps
 from threading import Thread
 
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.request import request
