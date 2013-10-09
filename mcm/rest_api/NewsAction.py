@@ -2,7 +2,7 @@ import json
 import time
 import cherrypy
 
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
 
 # generates the next valid prepid 
