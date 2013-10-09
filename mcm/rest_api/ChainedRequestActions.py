@@ -2,7 +2,7 @@
 
 import cherrypy
 from json import loads,dumps
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from RequestChainId import RequestChainId
 from json_layer.chained_request import chained_request
