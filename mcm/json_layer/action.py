@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from json_layer.json_base import json_base
 from json_layer.chained_request import chained_request
