@@ -12,7 +12,7 @@ from tools.logger import prep2_formatter, logger as logfactory
 from json_layer.request import request
 from json_layer.campaign import campaign
 from json_layer.batch import batch
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 
