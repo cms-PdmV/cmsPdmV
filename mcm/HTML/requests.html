@@ -322,10 +322,16 @@
                       <a ng-href='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif'><img width={{image_width}} ng-src='https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr["name"]}}.gif' ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>
                       <ul style="margin-bottom: 0px;" ng-show='true;'>
                         <li ng-repeat='DS in stats_cache[rqmngr["name"]].pdmv_dataset_list'>
-                          <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>
+                          <span ng-switch on="stats_cache[rqmngr['name']].pdmv_status_in_DAS == 'VALID'">
+                            <a ng-switch-when="true" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>
+                            <a ng-switch-when="false" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}' rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>
+                          </span>
                         </li>
                         <li ng-show='data["status"]=="done" && rqmngr.content.pdmv_dataset_name && !underscore.isObject(stats_cache[rqmngr["name"]])'>
-                          <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}' rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr.content.pdmv_dataset_name}}</a>
+                          <span ng-switch on="stats_cache[rqmngr['name']].pdmv_status_in_DAS == 'VALID'">
+                            <a ng-switch-when="true" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}' rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr.content.pdmv_dataset_name}}</a>
+                            <a ng-switch-when="false" ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}' rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self"><del>{{ rqmngr.content.pdmv_dataset_name}}</del></a>
+                          </span>
                         </li>
                       </ul>
                       <a ng-click='full_details[rqmngr["name"]]=true;' ng-hide='role(3) || full_details[rqmngr["name"]]' rel="tooltip" title="Load Full details"> <i class="icon-eye-open"></i></a>
