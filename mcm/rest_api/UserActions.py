@@ -3,7 +3,7 @@
 import cherrypy
 from json import loads, dumps
 from RestAPIMethod import RESTResource
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from tools.settings import settings
 
 class GetUserRole(RESTResource):
