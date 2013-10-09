@@ -30,7 +30,7 @@ class flow(json_base):
         
         # import database connector
         try:
-            from couchdb_layer.prep_database import database
+            from couchdb_layer.mcm_database import database
         except ImportError as ex:
             self.logger.error('Could not import database connector class. Reason: %s' % (ex), level='critical')
             return False
