@@ -3,7 +3,7 @@
 import cherrypy
 import re
 from json import loads, dumps
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 
 
