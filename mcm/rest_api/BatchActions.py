@@ -3,7 +3,7 @@
 import cherrypy
 from json import loads,dumps
 from RestAPIMethod import RESTResource
-from couchdb_layer.prep_database import database
+from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request
 from tools.locker import semaphore_events
