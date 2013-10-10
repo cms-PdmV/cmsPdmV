@@ -1426,7 +1426,7 @@ class RequestsReminder(RESTResource):
                 if not len(campaigns_and_ids[c]):
                     campaigns_and_ids.pop(c)
                 else:
-                    campaigns_and_ids[c].sort()
+                    campaigns_and_ids[c] = sorted( campaigns_and_ids[c] )
 
             return campaigns_and_ids
 
