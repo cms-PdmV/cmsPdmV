@@ -375,8 +375,7 @@ class chained_request(json_base):
                 return True
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
-            next_request = request(rdb.get(next_id))
-            #next_request.set_attribute('version', next_request.get_attribute('version') + 1)
+            next_request = request( next_campaign.add_request( rdb.get(next_id)))
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'Unrecognized approach %s' % ( approach ))
