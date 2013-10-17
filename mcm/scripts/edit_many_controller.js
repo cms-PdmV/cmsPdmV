@@ -922,11 +922,11 @@ testApp.directive("customValidationEdit", function(){
     '    <fieldset>'+
     '      <div class="control-group">'+
     '        Valid:'+
-    '        <input type="checkbox" ng-model="validation_data.valid" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
+    '        <input type="checkbox" ng-disabled="disabled"  ng-model="validation_data.valid" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.valid">'+
     '        nEvents:'+
-    '        <input type="number" ng-model="validation_data.nEvents" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
+    '        <input type="number" ng-disabled="disabled"  ng-model="validation_data.nEvents" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.dqm">'+
     '        DQM:'+
@@ -951,6 +951,12 @@ testApp.directive("customValidationEdit", function(){
           delete(scope.validation_data.nEvents);
         }
       });
+
+      scope.$watch(function(){
+            return scope.$eval(attr.ngDisabled);
+        }, function(newVal){
+            scope.disabled = newVal
+      })
     }
   }
 });

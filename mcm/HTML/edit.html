@@ -145,7 +145,7 @@
                       <input type="checkbox" ng-model="result[column.db_name]">
                     </div>
                     <div ng-switch-when="Validation">
-                      <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
+                      <custom-validation-edit ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]"></custom-validation-edit>
                     </div>
                     <div ng-switch-when="Request parameters">
                       <ng-form name="fieldForm">

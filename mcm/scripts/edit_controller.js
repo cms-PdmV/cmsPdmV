@@ -293,10 +293,38 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 }
 var ModalDemoCtrl = function ($scope) {
-  $scope.open = function (number) {
+  $scope.open = function (seq1, seq2, number) {
     $scope.shouldBeOpen = true;
     $scope.sequenceNum = number;
     $scope.seqModalInfo = _.clone($scope.sequenceInfo[number]);
+    $scope.sequenceToShow = [];
+    $scope.sequenceHidden = [];
+    if($scope.dbName == "requests")
+    {
+      _.each($scope.result.sequences[number], function(value,key){
+        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value))
+        {
+          $scope.sequenceToShow.push(key);
+        }else
+        {
+          $scope.sequenceHidden.push(key);
+        }
+      });
+    }else
+    {
+      _.each($scope.result.sequences[seq1][seq2], function(value,key){
+        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value))
+        {
+          $scope.sequenceToShow.push(key);
+        }else
+        {
+          $scope.sequenceHidden.push(key);
+        }
+      });
+    }
+    //sort both lists ???
+    $scope.sequenceHidden.sort();
+    $scope.selected_hidden_sequence = $scope.sequenceHidden[0];
   };
 
   $scope.close = function (number) {
@@ -338,6 +366,12 @@ var ModalDemoCtrl = function ($scope) {
       $scope.driver.push($scope.newSequence); //add a string to display in table
       $scope.result.sequences.push($scope.newSequence); //add to original data -> to be commited
     }
+  };
+  $scope.showHiddenSequence = function()
+  {
+    $scope.sequenceToShow.push($scope.selected_hidden_sequence);
+    $scope.sequenceHidden.splice($scope.sequenceHidden.indexOf($scope.selected_hidden_sequence),1);
+    $scope.selected_hidden_sequence = $scope.sequenceHidden[0];
   };
 }
 var genParamModalCtrl = function($scope, $http) {
@@ -428,7 +462,7 @@ testApp.directive("sequenceEdit", function($http){
     // '   <div ng-show="showSequences">'+
     '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="open(\'\',\'\',sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
     '        <div modal="shouldBeOpen" close="close()">'+
@@ -437,7 +471,7 @@ testApp.directive("sequenceEdit", function($http){
     '          </div>'+
     '          <div class="modal-body">'+
     '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(result.sequences[sequence_id])">'+
+    '              <div class="control-group" ng-repeat="key in sequenceToShow">'+
     '                <label class="control-label">{{key}}</label>'+
     '                <div class="controls" ng-switch on="key">'+
     '                  <input type="text" ng-model="result.sequences[sequence_id][key]" ng-switch-default>'+
@@ -446,8 +480,16 @@ testApp.directive("sequenceEdit", function($http){
     '            </form>'+
     '          </div>'+
     '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="save()">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '            <div class="span3 input-append" style="text-align:left;">'+
+    '              <select ng-model="selected_hidden_sequence" ng-show="sequenceHidden.length > 0">'+
+    '                <option ng-repeat="elem in sequenceHidden">{{elem}}</option>'+
+    '              </select>'+
+    '              <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequenceHidden.length > 0"><i class="icon-plus-sign"></i></a>'+
+    '            </div>'+
+    '            <div class="span2">'+
+    '              <button class="btn btn-success" ng-click="save()">Save</button>'+
+    '              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '            </div>'+
     '          </div>'+
     '       </div>'+
     '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);" ng-href="#">'+
@@ -465,7 +507,7 @@ testApp.directive("sequenceEdit", function($http){
     ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
     '        <li>{{CMSdriver[key][name]}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open($index);" ng-hide="hideSequence(1);" ng-href="#">'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="open(key,name,$index);" ng-hide="hideSequence(1);" ng-href="#">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
     '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
@@ -474,10 +516,10 @@ testApp.directive("sequenceEdit", function($http){
     '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
     '            <div class="modal-header">'+
     '              <h4>Sequence edit modal</h4>'+
-    '            </div>'+ //end oFda.f modal header
+    '            </div>'+
     '          <div class="modal-body">'+
     '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(elem) ">'+
+    '              <div class="control-group" ng-repeat="key in sequenceToShow">'+
     '                <div ng-switch on="key">'+
     '                  <div ng-switch-when="$$hashKey"></div>'+
     '                  <div ng-switch-default>'+
@@ -491,8 +533,16 @@ testApp.directive("sequenceEdit", function($http){
     '            </form>'+
     '          </div>'+ //end of modal body
     '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="save()">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '            <div class="span3 input-append" style="text-align:left;">'+
+    '              <select ng-model="selected_hidden_sequence" ng-show="sequenceHidden.length > 0">'+
+    '                <option ng-repeat="el in sequenceHidden">{{el}}</option>'+
+    '              </select>'+
+    '              <a class="btn" ng-click="showHiddenSequence();" ng-href="#"  ng-show="sequenceHidden.length > 0"><i class="icon-plus-sign"></i></a>'+
+    '            </div>'+
+    '            <div class="span2">'+
+    '              <button class="btn btn-success" ng-click="save()">Save</button>'+
+    '              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '            </div>'+
     '          </div>'+ //end of modal footer
     '        </li>'+
     '      </div>'+ //end of modalControler DIV
@@ -590,6 +640,8 @@ testApp.directive("sequenceEdit", function($http){
         scope.showSequences = false;
         scope.showAddNewModal = false;
         scope.default_sequences = {};
+        scope.sequenceToShow = [];
+        scope.sequenceHidden = [];
       };
       scope.removeSequence = function(elem){
         scope.driver.splice(elem,1); //remove sequence from display
@@ -934,11 +986,11 @@ testApp.directive("customValidationEdit", function(){
     '    <fieldset>'+
     '      <div class="control-group">'+
     '        Valid:'+
-    '        <input type="checkbox" ng-model="validation_data.valid"></input>'+
+    '        <input ng-disabled="disabled" type="checkbox" ng-model="validation_data.valid"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.valid">'+
     '        nEvents:'+
-    '        <input type="number" ng-model="validation_data.nEvents"></input>'+
+    '        <input ng-disabled="disabled"  type="number" ng-model="validation_data.nEvents"></input>'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.dqm">'+
     '        DQM:'+
@@ -963,6 +1015,12 @@ testApp.directive("customValidationEdit", function(){
           delete(scope.validation_data.nEvents);
         }
       });
+
+        scope.$watch(function(){
+            return scope.$eval(attr.ngDisabled);
+        }, function(newVal){
+            scope.disabled = newVal
+        })
     }
   }
 });
@@ -1062,26 +1120,23 @@ testApp.directive("customRequestsEdit", function(){
     '      <span ng-switch on="underscore.isArray(elem)">'+
     '        <span ng-switch-when="true">'+
     '        {{elem[0]}} <i class="icon-arrow-right"></i> {{elem[1]}}'+
+    '          <a ng-href="#" ng-click="removeOldRequest($index)" rel="tooltip" title="Remove last from list"><i class="icon-minus"></i></a>'+
     '        </span>'+
     '        <span ng-switch-when="false">'+
     '          {{elem}}'+
-    '          <span class="input-prepend input-append">'+
-    '            <a class="btn" ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index]"><i class="icon-minus"></i></a>'+
-    '            <a class="btn" ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index]"><i class="icon-plus"></i></a>'+
-    '            <a class="btn" ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]"><i class="icon-minus-sign"></i></a>'+
-    '            <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]"></input>'+
-    '            <a class="btn" ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign"></i></a>'+
-    '          </span>'+
+    '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index]" rel="tooltip" title="Remove itself"><i class="icon-minus"></i></a>'+
+    '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index]" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
+    '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
+    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]"></input>'+
+    '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
     '        </span>'+
     '      </span>'+
     '    </li>'+
     '  </ul>'+
-    '  <span class="input-prepend input-append">'+
-    '    <a class="btn" ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
-    '    <a class="btn" ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '    <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']"></input>'+
-    '    <a class="btn" ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
-    '  </span>'+
+    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
+    '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
+    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']"></input>'+
+    '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl){
@@ -1122,11 +1177,12 @@ testApp.directive("customRequestsEdit", function(){
       {
         if (_.isArray(scope.requests_data[index]))
         {
-          scope.requests_data.pop();
+          scope.requests_data[index] = scope.requests_data[index][0]
         }else
         {
           scope.requests_data.splice(index,1);
         }
+        scope.show_new[index] = false;
       };
     }
   }
