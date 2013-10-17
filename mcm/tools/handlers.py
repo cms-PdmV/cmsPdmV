@@ -5,7 +5,7 @@ import traceback
 from tools.batch_control import batch_control
 from tools.installer import installer
 from tools.locker import semaphore_thread_number
-from tools.logger import logger as logfactory, logger
+from tools.logger import logger as logfactory
 from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -119,7 +119,9 @@ class ConfigMakerAndUploader(Handler):
         return cmd
 
     def internal_run(self):
-        with self.lock:
+        if not self.lock.acquire(blocking=False):
+            return False
+        try:
             req = request(self.request_db.get(self.prepid))
             additional_config_ids = {}
             cfgs_to_upload = {}
@@ -146,7 +148,7 @@ class ConfigMakerAndUploader(Handler):
                         return False
                     output = stdout.read()
                     error = stderr.read()
-                    if error: # money on the table that it will break
+                    if error and not output: # money on the table that it will break
                         self.logger.error('Error in wmupload: {0}'.format(error))
                         req.test_failure(error, what='Configuration upload')
                         return False
@@ -167,12 +169,14 @@ class ConfigMakerAndUploader(Handler):
                         if not saved:
                              self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning')
 
-                    self.logger.log("Full upload result: {0}".format(output))
+                    self.logger.inject("Full upload result: {0}".format(output))
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
-                self.logger.log("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids))
+                self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids))
                 req.set_attribute('config_id', sorted_additional_config_ids)
                 self.request_db.save(req.json())
                 return True
+        finally:
+            self.lock.release()
 
 
 class RuntestGenvalid(Handler):
@@ -289,16 +293,17 @@ class RequestSubmitter(Handler):
 
 
     def internal_run(self):
-        with self.lock:
+        try:
+            if not self.lock.acquire(blocking=False):
+                return False
             try:
                 okay, req = self.check_request()
                 if not okay: return False
-                self.logger.log(req.json())
                 batch_name = BatchPrepId().generate_prepid(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 try:
                     cmd = self.prepare_command(req, batch_name)
-                    self.logger.log("Command being used for injecting request {0}: {1}".format(self.prepid, cmd))
+                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd))
                     _, stdout, stderr = self.ssh_executor.execute(cmd)
                     if not stdout and not stderr:
                             self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
@@ -358,22 +363,33 @@ class RequestSubmitter(Handler):
                     for added_req in added_requests:
                         self.logger.inject('Request {0} sent to {1}'.format(added_req['name'], batch_name))
                     return True
-
                 finally:
                     semaphore_events.decrement(batch_name)
-            except Exception as e:
-                self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, e), req)
             finally:
-                self.ssh_executor.close_executor()
+                self.lock.release()
+        except Exception as e:
+            self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, e), req)
+        finally:
+            self.ssh_executor.close_executor()
 
 
 class RequestInjector(Handler):
 
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
+        self.lock = kwargs["lock"]
+        self.prepid = kwargs["prepid"]
         self.uploader = ConfigMakerAndUploader(**kwargs)
         self.submitter = RequestSubmitter(**kwargs)
 
     def internal_run(self):
-        if not self.uploader.internal_run(): return
-        self.submitter.internal_run()
+        if not self.lock.acquire(blocking=False):
+            return {"prepid": self.prepid, "results": False,
+                        "message": "The request with name {0} is being handled already" .format(self.prepid)}
+        try:
+            if not self.uploader.internal_run():
+                return  {"prepid": self.prepid, "results": False,
+                        "message": "Problem with uploading the configuration for request {0}" .format(self.prepid)}
+            self.submitter.internal_run()
+        finally:
+            self.lock.release()
