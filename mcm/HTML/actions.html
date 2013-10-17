@@ -83,6 +83,9 @@
                 <!-- END OF: SORTING lines -->
                 <input type="text" class="input-mini" ng-model="filt['prepid']">
               </span>
+              <span ng-switch-when="History">
+                  {{column.text}}
+              </span>
               <span ng-switch-default>
                 <a ng-href='chained_campaigns?prepid={{column.db_name}}' rel="tooltip" title="Show {{column.db_name}}" target="_self">{{column.text}}<i class="icon-align-right"></i></a>
                 <a ng-href='chained_requests?member_of_campaign={{column.db_name}}' rel="tooltip" title="Show chained requests in chained campaign {{column.db_name}}" target="_self">
@@ -131,6 +134,9 @@
                   <i class="icon-warning-sign"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+              </div>
+              <div ng-switch-when="History">
+                <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-default>
                 <custom-prep-id chain="value['db_name']" ng-model="data" changed="changed_prepids"></custom-prep-id>

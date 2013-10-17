@@ -29,7 +29,8 @@ class action(json_base):
     def __init__(self, json_input={}):
         self._json_base__schema = {
             '_id':'',
-            'prepid':'', 
+            'prepid':'',
+            'history':'',
             'member_of_campaign':'', 
             'dataset_name':'',
             'analysis_id':[],
