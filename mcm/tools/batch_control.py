@@ -22,7 +22,6 @@ class batch_control:
         self.test_id = test_id
         locat = locator()
         if locat.isDev():
-            self.test_id += '-dev'
             self.group = '/dev'
         else:
             self.group = '/prod'

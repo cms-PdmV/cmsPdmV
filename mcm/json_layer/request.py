@@ -687,10 +687,7 @@ class request(json_base):
 
             # tweak a bit more finalize cmsDriver command
             res = cmsd
-            if l_type.isDev():
-                configuration_names.append( directory+self.get_attribute('prepid')+"-dev_"+str(previous+1)+'_cfg.py')
-            else:
-                configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
+            configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
             res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
 
 

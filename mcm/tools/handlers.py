@@ -127,7 +127,6 @@ class ConfigMakerAndUploader(Handler):
             dev=''
             wmtest=''
             if l_type.isDev():
-                dev='-dev'
                 wmtest = '--wmtest'
             if req.get_attribute('config_id'): # we already have configuration ids saved in our request
                 return False
