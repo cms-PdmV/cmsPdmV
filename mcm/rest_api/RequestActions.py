@@ -597,7 +597,7 @@ class GetRequestByDataset(RESTResource):
             return dumps({"results": {}})
         datasetname = '/'+'/'.join(args)
         rdb =database('requests')
-        r=rdb.queries(['produce==%s' % ( datasetname )])
+        r=rdb.queries(['produces==%s' % ( datasetname )])
         if len(r):
             return dumps({"results" : r[0]})
         else:
@@ -1418,7 +1418,7 @@ class RequestsReminder(RESTResource):
 
                     mcm_u = udb.get( contact )
                     if len(campaigns_and_ids):
-                        message = 'A few request need you action \n\n'
+                        message = 'Few requests need your action \n\n'
                         message += prepare_text_for(campaigns_and_ids, '')
                         to_who=[settings().get_value('service_account')]
                         if l_type.isDev():
