@@ -5,7 +5,6 @@ import traceback
 import string
 import time
 from json import loads, dumps
-from threading import Thread
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -14,11 +13,11 @@ from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.action import action
 from json_layer.campaign import campaign
-from submitter.package_builder import package_builder
 from tools.locator import locator
 from tools.communicator import communicator
-from tools.locker import locker, semaphore_thread_number
+from tools.locker import locker
 from tools.settings import settings
+from tools.handlers import RequestInjector
 
 
 class RequestRESTResource(RESTResource):
@@ -806,32 +805,11 @@ class TestRequest(RESTResource):
         this is test for admins only
         """
         ids_list = args[0].split(',')
-        from tools.handlers import ConfigMakerAndUploader, RequestSubmitter
-        for id_r in ids_list:
-            hand = RequestSubmitter(prepid=id_r, lock=locker.lock(id_r))
-            hand.start()
-
-        #rdb = database('actions')
-        #res = rdb.query('member_of_campaign==Summer11')
-        #statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/') 
-        #res=statsDB.query(query='prepid==HIG-Summer11dr53X-00063')
-        #return dumps(res)
-        ### test for wmcontrol config
-        #rdb = database('requests')
-        #mcm_r = request( rdb.get(args[0]))
-        #return request_to_wmcontrol().get_command( mcm_r, 12345, True)
-
-        ### test for submission
-        #inject = prepare_and_submit(args[0])
-        #inject.run()
-
-        ######################
-        #### part of a test
-        ########################
-        #threaded_test = runtest_genvalid(args[0])
-        #threaded_test.start()
-        ###################
-
+        #from tools.handlers import ConfigMakerAndUploader, RequestSubmitter
+        #for id_r in ids_list:
+        #    hand = RequestSubmitter(prepid=id_r, lock=locker.lock(id_r))
+        #    hand.start()
+        r_db = database('requests')
         return dumps({"on-going": True})
 
 
@@ -844,116 +822,22 @@ class InjectRequest(RESTResource):
         self.db = database(self.db_name)
         self.access_limit = 3
 
-    class INJECTOR(Thread):
-        def __init__(self, pid, log, how_far=None,check_on_approval=True,wait=0):
-            Thread.__init__(self)
-            self.logger = log
-            self.wait=wait
-            self.db = database('requests')
-            self.act_on_pid = []
-            self.res = []
-            self.how_far = how_far
-            if not self.db.document_exists(pid):
-                self.res.append({"prepid": pid, "results": False, "message": "The request %s does not exist" % (pid)})
-                return
-
-            req = request(self.db.get(pid))
-            if req.get_attribute('status') != 'approved':
-                self.res.append({"prepid": pid, "results": False,
-                                 "message": "The request is in status %s, while approved is required" % (
-                                     req.get_attribute('status'))})
-                return
-            if check_on_approval and req.get_attribute('approval') != 'submit':
-                self.res.append({"prepid": pid, "results": False,
-                                 "message": "The request is in approval %s, while submit is required" % (
-                                     req.get_attribute('approval'))})
-                return
-            if not req.get_attribute('member_of_chain'):
-                self.res.append({"prepid": pid, "results": False, "message": "The request is not member of any chain"})
-                return
-
-            self.act_on_pid.append(pid)
-            ## this is a line that allows to brows back the logs efficiently
-            self.logger.inject('## Logger instance retrieved', level='info', handler=pid)
-
-            self.res.append({"prepid": pid, "results": True,
-                             "message": "The request %s will be forked unless same request is being handled already" % (
-                                 pid)})
-
-        def run(self):
-            with semaphore_thread_number:
-                if len(self.act_on_pid):
-                    self.res = []
-                for pid in self.act_on_pid:
-                    time.sleep(self.wait)
-                    if not locker.acquire(pid, blocking=False):
-                        self.res.append(
-                            {"prepid": pid, "results": False, "message": "The request is already being handled"})
-                        continue
-                    try:
-                        req = request(self.db.get(pid))
-                        pb = None
-                        try:
-                            pb = package_builder(req_json=req.json())
-                        except:
-                            message = "Errors in making the request : \n" + traceback.format_exc()
-                            self.logger.inject(message, handler=pid)
-                            self.logger.error(message)
-                            self.res.append({"prepid": pid, "results": False, "message": message})
-                            req.test_failure(message)
-                            continue
-                        try:
-                            res_sub = pb.build_package()
-                        except:
-                            message = "Errors in building the request : \n" + traceback.format_exc()
-                            self.logger.inject(message, handler=pid)
-                            self.logger.error(message)
-                            self.res.append({"prepid": pid, "results": False, "message": message})
-                            req.test_failure(message)
-                            continue
-
-                        self.res.append({"prepid": pid, "results": res_sub})
-                        ## now remove the directory maybe ?
-                    finally:
-                        locker.release(pid)
-
-        def status(self):
-            return self.res
-
     def GET(self, *args):
         """
-        Perform the thread (/ids/thread) or live preparation (/ids), testing, injection of a request, or coma separated list of requests.
+        Perform the thread preparation, injection of a request, or coma separated list of requests.
         """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
 
-        res = []
-        forking = False
-        if len(args) > 1 and args[1] == 'thread':
-            forking = True
-
-        forks = []
         ids = args[0].split(',')
-        for pid in ids:
-            forks.append(self.INJECTOR(pid, self.logger))
-            if forking:
-                self.logger.log('Forking the injection of request %s ' % (pid))
-                res.extend(forks[-1].status())
-                ##forks the process directly
-                forks[-1].start()
-            else:
-                ##makes you wait until it goes
-                self.logger.log('Running the injection of request %s ' % (pid))
-                forks[-1].run()
-                res.extend(forks[-1].status())
-
-        if len(res) > 1:
-            return dumps(res)
-        elif len(res) == 0:
-            return dumps({"results": False})
-        else:
-            return dumps(res)
+        res = []
+        for r_id in ids:
+            self.logger.log('Forking the injection of request {0} '.format(r_id))
+            RequestInjector(prepid=r_id, lock=locker.lock(r_id)).start()
+            res.append({"prepid": r_id, "results": True,
+                        "message": "The request {0} will be forked unless same request is being handled already" .format(r_id)})
+        return dumps(res)
 
 
 class GetEditable(RESTResource):

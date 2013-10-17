@@ -15,6 +15,7 @@ from json_layer.sequence import sequence
 from tools.locator import locator
 from tools.batch_control import batch_control
 from tools.settings import settings
+from tools.locker import locker
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -378,8 +379,8 @@ class request(json_base):
         sync_submission=True
         if sync_submission:
             # remains to the production manager to announce the batch the requests are part of
-            from rest_api.RequestActions import InjectRequest
-            threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
+            from tools.handlers import RequestInjector
+            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
             threaded_submission.start()
         else:
             #### not settting any status forward
@@ -1089,8 +1090,8 @@ class request(json_base):
                 return not_good
 
         elif self.get_attribute('approval') == 'submit':
-            from rest_api.RequestActions import InjectRequest
-            threaded_submission = InjectRequest.INJECTOR( self.get_attribute('prepid'), self.logger, check_on_approval=False,wait=5)
+            from tools.handlers import RequestInjector
+            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
             threaded_submission.start()
             return {"prepid": self.get_attribute('prepid'), "results":True}
         else:
