@@ -75,7 +75,7 @@ class batch(json_base):
                 pid=r['name'].split('_')[1]
             mcm_r = rdb.get(pid)
             total_events+=mcm_r['total_events']
-            message+=" * %s -> %s \n"%(pid,r['name'])
+            message+=" * %s (%s) -> %s\n"%(pid, mcm_r['dataset_name'], r['name'])
         message+="\n"
         message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
         message+="Link to the batch:\n"
