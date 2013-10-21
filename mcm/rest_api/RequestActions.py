@@ -597,7 +597,7 @@ class GetRequestByDataset(RESTResource):
             return dumps({"results": {}})
         datasetname = '/'+'/'.join(args)
         rdb =database('requests')
-        r=rdb.queries(['produces==%s' % ( datasetname )])
+        r=rdb.queries(['produce==%s' % ( datasetname )])
         if len(r):
             return dumps({"results" : r[0]})
         else:
