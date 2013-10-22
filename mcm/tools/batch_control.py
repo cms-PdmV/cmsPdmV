@@ -1,10 +1,6 @@
-import paramiko
 import time
 import os
-import re
-
-import logging
-from tools.logger import logger as logfactory, prep2_formatter
+from tools.logger import logger as logfactory
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 
@@ -16,21 +12,30 @@ class batch_control:
     hname = '' # handler's name
     group = 'no-group'
     timeout = 80 # in minutes
-        
+
     def __init__(self, test_id, test_script):
         self.script_for_test = test_script
         self.test_id = test_id
+        self.test_err = os.path.abspath( self.script_for_test + '.err')
+        self.test_out = os.path.abspath( self.script_for_test + '.out')
         locat = locator()
         if locat.isDev():
             self.group = '/dev'
         else:
             self.group = '/prod'
-        self.directory_for_test = self.script_for_test.rsplit('/',1)[0] +'/'
+        self.directory_for_test = os.path.dirname(self.script_for_test) +'/'
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
 
         self.log_out = 'Not available'
         self.log_err = 'Not available'
-        
+
+
+    def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
+        if not stdin and not stdout and not stderr:
+            self.logger.error(fail_message)
+            return False
+        return True
+
     def build_batch_command(self):
             
         cmd = 'bsub -J ' + self.test_id
@@ -39,12 +44,10 @@ class batch_control:
         #cmd += '-M 3000000 ' # 3G of mem
         cmd += ' -q 8nh -cwd ' + self.directory_for_test
         if self.timeout:
-            cmd += ' -W %s'% ( self.timeout )
-        self.test_err = os.path.abspath( self.script_for_test + '.err')
-        self.test_out = os.path.abspath( self.script_for_test + '.out')
+            cmd += ' -W %s'%  self.timeout
         cmd += ' -eo ' + self.test_err
         cmd += ' -oo ' + self.test_out
-        cmd += ' bash ' + os.path.abspath( self.script_for_test )
+        cmd += ' bash ' + os.path.abspath(self.script_for_test)
         
         return cmd
     
@@ -53,14 +56,11 @@ class batch_control:
         if not cmd:
             return False
 
-        self.logger.log('submission command: \n%s' % (cmd))
+        self.logger.log('submission command: \n%s' % cmd)
         
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
-        
-        if not stdin and not stdout and not stderr:
-            self.log_out = stdout.read()
-            self.log_err = stderr.read()
-            return False
+
+        if not self.check_ssh_outputs(stdin, stdout, stderr, "There was a problem with SSH remote execution!"): return False
         
         self.logger.log(stdout.read())
         self.logger.log('SSH remote execution stderr stream: \n%s' % (stderr.read()))
@@ -69,37 +69,34 @@ class batch_control:
     
     def monitor_job_status(self):
         
-        cmd = 'bjobs -w'
+        cmd = 'bjobs -w %s' % self.test_id
         
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
-        
-        if not stdin and not stdout and not stderr:
-            return False
+
+        if not self.check_ssh_outputs(stdin, stdout, stderr, "Problem with SSH execution of command bjobs -w %s" % self.test_id): return False
             
-        for line in stdout.read().split('\n'):
-            if self.test_id in line:
-                jid = line.split()[0]
-                self.logger.log(self.get_job_percentage(jid))
-                return False
+        for line in [l for l in stdout.read().split('\n') if self.test_id in l]:
+            jid = line.split()[0]
+            self.logger.log(self.get_job_percentage(jid))
+            return False
         
         return True
 
     def get_job_percentage(self, jobid):
 
-        cmd = 'bjobs -WP'
+        cmd = 'bjobs -WP %s' % self.test_id
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
         if not stdin and not stdout and not stderr:
-            return 'Not found'
+            return 'SSH execution problem with command bjobs -WP %s' % self.test_id
 
-        for line in stdout.read().split('\n'):
-            if jobid in line:
-                return '<job monitor hearbeat> job completion: %s' % (line.strip().rsplit(' ')[-2])
+        for line in [l for l in stdout.read().split('\n') if jobid in l]:
+            return '<job monitor hearbeat> job completion: %s' % (line.strip().rsplit(' ')[-2])
 
-        return ''
+        return 'Not found the percentage for %s job' % jobid
 
     def get_job_result(self):
-        cmd = 'cat %s' % ( self.test_out )
+        cmd = 'cat %s' % self.test_out
         
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
 
@@ -107,15 +104,15 @@ class batch_control:
         trials_time_out=10
         trials=0
         ## wait for afs to synchronize the output file
-        while (not stdin and not stdout and not stderr) and trials<trials_time_out:
-            time.sleep( retry_time_out )
-            self.logger('Trying to get %s another time'%( self.test_out ))
-            stdin, stdout, stderr = self.ssh_exec.execute(cmd)
+        while not stdin and not stdout and not stderr and trials<trials_time_out:
+            time.sleep(time_out)
             trials+=1
+            self.logger.log('Trying to get %s %s time'% (self.test_out, trials+1) )
+            stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         
         if trials>=trials_time_out:
             self.log_err = '%s could not be retrieved after %s tries in interval of %s s'%( self.test_out, trials, time_out )
-            self.logger( self.log_err )
+            self.logger.error(self.log_err)
             return False
 
         out = stdout.read()
@@ -126,11 +123,9 @@ class batch_control:
                 # self.logger.error('workflow batch test returned: %s' % (line))
                 self.log_out = out
                 
-                cmd = 'cat %s' % ( self.test_err )
+                cmd = 'cat %s' % self.test_err
                 stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-                if not stdin and not stdout and not stderr:
-                    self.log_err = 'Could not be retrieved %s' %( stderr.read())
-                    return False
+                if not self.check_ssh_outputs(stdin, stdout, stderr, 'Could not read the error log file: %s' % self.test_err): return False
                 self.log_err = stdout.read()
                 return False
 
@@ -161,27 +156,24 @@ class batch_control:
 
     """
     def test(self):
-        
-        ## send the test in batch
-        submit_flag = self.batch_submit()
-        if not submit_flag:
-            return False
-        
-        ## check when it is finished
-        while not self.monitor_job_status():
-            time.sleep(60)
-            
-        ## check that it succeeded
-        #wait for afs to sync the .out file
-        time.sleep(30)
-        result = self.get_job_result()
-        #try another time
-        if not result:
+        try:
+            ## send the test in batch
+            if not self.batch_submit():
+                return False
+
+            ## check when it is finished
+            while not self.monitor_job_status():
+                time.sleep(60)
+
+            ## check that it succeeded
+            #wait for afs to sync the .out file
+            time.sleep(30)
             result = self.get_job_result()
 
-        self.ssh_exec.close_executor()
-        if not result:
-            return False
+            if not result:
+                return False
 
-        ## and we are done
-        return True
+            ## and we are done
+            return True
+        finally:
+            self.ssh_exec.close_executor()
