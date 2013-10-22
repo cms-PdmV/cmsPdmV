@@ -298,6 +298,10 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.upload({contents: ranges[0] + " -> " + ranges[1]});
         $scope.file_was_uploaded = false
     }
+    else if($location.url().indexOf("*")!=-1)
+    {
+      $scope.superSearch();
+    }
    else
    {
     var query = ""
@@ -695,21 +699,19 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.superSearch = function(data){
-    _.each($location.search(),function(elem,key){
-      $location.search(key,null);
-    });
+  $scope.superSearch = function(){
     var search_data={};
-    _.each($scope.searchable_fields, function(elem){
-      if (elem.value !=""){
-        $location.search(elem.name,elem.value);
-        search_data[elem.name] = elem.value;
+    _.each($location.search(),function(elem,key){
+      if (key != "page" && key != "shown" )
+      {
+        search_data[key] = elem;
       }
     });
       /*submit method*/
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/search', data: search_data}).success(function(data,status){
       $scope.result = data.results;
       $scope.got_results = true;
+      $scope.parseColumns();
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
