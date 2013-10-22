@@ -23,7 +23,7 @@ class batch_control:
             self.group = '/dev'
         else:
             self.group = '/prod'
-        self.directory_for_test = os.path.dirname(self.script_for_test) +'/'
+        self.directory_for_test = os.path.dirname(self.script_for_test)
         self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
 
         self.log_out = 'Not available'
@@ -69,11 +69,11 @@ class batch_control:
     
     def monitor_job_status(self):
         
-        cmd = 'bjobs -w %s' % self.test_id
+        cmd = 'bjobs -w -J %s -g %s' % (self.test_id, self.group)
         
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
-        if not self.check_ssh_outputs(stdin, stdout, stderr, "Problem with SSH execution of command bjobs -w %s" % self.test_id): return False
+        if not self.check_ssh_outputs(stdin, stdout, stderr, "Problem with SSH execution of command bjobs -w -J %s -g %s" % (self.test_id, self.group)): return False
             
         for line in [l for l in stdout.read().split('\n') if self.test_id in l]:
             jid = line.split()[0]
@@ -84,14 +84,14 @@ class batch_control:
 
     def get_job_percentage(self, jobid):
 
-        cmd = 'bjobs -WP %s' % self.test_id
+        cmd = 'bjobs -WP -J %s -g %s' % (self.test_id, self.group)
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
         if not stdin and not stdout and not stderr:
-            return 'SSH execution problem with command bjobs -WP %s' % self.test_id
+            return 'SSH execution problem with command bjobs -WP -J %s -g %s' % (self.test_id, self.group)
 
         for line in [l for l in stdout.read().split('\n') if jobid in l]:
-            return '<job monitor hearbeat> job completion: %s' % (line.strip().rsplit(' ')[-2])
+            return '<job %s monitor hearbeat> job completion: %s' % (self.test_id, line.strip().rsplit(' ')[-2])
 
         return 'Not found the percentage for %s job' % jobid
 
@@ -116,7 +116,7 @@ class batch_control:
             return False
 
         out = stdout.read()
-        for line in out.split('/n'):
+        for line in out.split('\n'):
             if 'Successfully completed.' in line:
                 return True
             elif 'Exited with' in line:
@@ -129,7 +129,7 @@ class batch_control:
                 self.log_err = stdout.read()
                 return False
 
-        self.log_out = "We could get %s, but it does not look properly formatted. /n %s" %( self.test_out, out)
+        self.log_out = "We could get %s, but it does not look properly formatted. \n %s" %( self.test_out, out)
         self.log_err = stderr.read()
         return False
 
@@ -167,7 +167,6 @@ class batch_control:
 
             ## check that it succeeded
             #wait for afs to sync the .out file
-            time.sleep(30)
             result = self.get_job_result()
 
             if not result:
