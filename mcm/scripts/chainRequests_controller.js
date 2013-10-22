@@ -187,6 +187,49 @@ function resultsCtrl($scope, $http, $location, $window){
 	    return "icon-question-sign";
     }
   };
+  $scope.parseColumns = function()
+  {
+    if ($scope.result.length != 0){
+      columns = _.keys($scope.result[0]);
+      rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+//       $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
+      _.each(rejected, function(v){
+        add = true;
+        _.each($scope.defaults, function(column){
+          if (column.db_name == v){
+            add = false;
+          }
+        });
+        if (add){
+          $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
+        }
+      });
+      var shown = "";
+      if ($.cookie($scope.dbName+"shown") !== undefined){
+        shown = $.cookie($scope.dbName+"shown");
+      }
+      if ($location.search()["shown"] !== undefined){
+        shown = $location.search()["shown"]
+      }
+      if (shown != ""){
+        $location.search("shown", shown);
+        binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+        _.each($scope.defaults, function(column){
+          column_index = $scope.defaults.indexOf(column);
+          binary_bit = binary_shown.charAt(column_index);
+          if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+            if (binary_bit == 1){
+              column.select = true;
+            }else{
+              column.select = false;
+            }
+          }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+            column.select = false;
+          }
+        });
+      }
+    }
+  };
 
   $scope.getData = function(){
     var query = ""
@@ -199,53 +242,31 @@ function resultsCtrl($scope, $http, $location, $window){
     var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
     promise.then(function(data){
       $scope.got_results = true;
-      $scope.result = data.data.results; 
-      if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-//         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-          add = true;
-          _.each($scope.defaults, function(column){
-            if (column.db_name == v){
-              add = false;
-            }
-          });
-          if (add){
-            $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-          }
-        });
-        var shown = "";
-        if ($.cookie($scope.dbName+"shown") !== undefined){
-          shown = $.cookie($scope.dbName+"shown");
-        }
-        if ($location.search()["shown"] !== undefined){
-          shown = $location.search()["shown"]
-        }
-        if (shown != ""){
-          $location.search("shown", shown);
-          binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-          _.each($scope.defaults, function(column){
-            column_index = $scope.defaults.indexOf(column);
-            binary_bit = binary_shown.charAt(column_index);
-            if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-              if (binary_bit == 1){
-                column.select = true;
-              }else{
-                column.select = false;
-              }
-            }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-              column.select = false;
-            }
-          });
-        }
-      }
+      $scope.result = data.data.results;
+      $scope.parseColumns();
     },function(){
        alert("Error getting information");
     });
   };
   $scope.$watch('list_page', function(){
-    $scope.getData();
+    if($location.search()["supersearch"])
+    {
+      
+      _.each($location.search(),function(elem,key){
+      if(key != "supersearch" || key != "page"){
+        _.each($scope.searchable_fields, function(el){
+          if (el["name"] == key)
+          {
+            el["value"] = elem;
+          }
+        });
+      }
+      });
+      $scope.superSearch($scope.searchable_fields);
+    }else
+    {
+      $scope.getData();
+    }
     $scope.selected_prepids = [];
   });
 
@@ -384,16 +405,22 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.superSearch = function(data){
+    _.each($location.search(),function(elem,key){
+      $location.search(key,null);
+    });
     var search_data={};
     _.each($scope.searchable_fields, function(elem){
       if (elem.value !=""){
+        $location.search(elem.name,elem.value);
         search_data[elem.name] = elem.value;
       }
     });
-      /*submit method*/
+    $location.search("supersearch",true);
+    /*submit method*/
     $http({method:'PUT', url:'restapi/requests/search/'+$scope.dbName, data: search_data}).success(function(data,status){
       $scope.result = data.results;
       $scope.got_results = true;
+      $scope.parseColumns();
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
