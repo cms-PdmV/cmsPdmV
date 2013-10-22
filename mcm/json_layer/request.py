@@ -159,7 +159,7 @@ class request(json_base):
                 for key in ['generator_parameters','notes','history','generators']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
-                for key in ['completed_events','reqmgr_name','member_of_chain','config_id','validation']:
+                for key in ['completed_events','reqmgr_name','member_of_chain']:
                     editable[key]=True
         else:
             for key in self._json_base__schema:
@@ -417,6 +417,7 @@ class request(json_base):
             name=self.get_attribute('name_of_fragment')
         get_me=''
         tag=self.get_attribute('fragment_tag')
+        fragment_retry_amount = 2
         if not tag:
             tag = self.get_attribute('cvs_tag')
         if tag and name:
@@ -424,7 +425,7 @@ class request(json_base):
             name=name.replace('Configuration/GenProduction/python/','')
             name=name.replace('Configuration/GenProduction/','')
             # curl from git hub which has all history tags
-            get_me='curl -s https://raw.github.com/cms-sw/genproductions/%s/python/%s '%( self.get_attribute('fragment_tag'), name )
+            get_me='curl -s https://raw.github.com/cms-sw/genproductions/%s/python/%s --retry %s'%( self.get_attribute('fragment_tag'), name, fragment_retry_amount )
             # add the part to make it local
             if get:
                 get_me+='--create-dirs -o  Configuration/GenProduction/python/%s '%( name )
