@@ -49,6 +49,9 @@ function resultsCtrl($scope, $http, $location, $window){
       case "users":
         $scope.not_editable_list = ["Username", "Role"];
         break;
+      case "mccms":
+        $scope.not_editable_list = ["Prepid", "Pwg"];
+        break;
       default:
         $scope.not_editable_list = [];
         break;
