@@ -298,7 +298,7 @@
                 {{numberWithCommas(data[value.db_name])}}
               </div>
               <div ng-switch-when="Reqmgr name">
-                <ul style="margin-bottom: 0px;">
+<!--                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="rqmngr in data[value.db_name]">
                     <a ng-href='batches?contains={{rqmngr.name}}' rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>
                     <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr["name"]}}' rel="tooltip" title="Details" target="_self">details</a>
@@ -341,7 +341,8 @@
                       <pre>{{stats_cache[rqmngr["name"]]|json}}</pre>
                     </div>
                   </li>
-                </ul>
+                </ul> -->
+                <reqmgr-Name ng-model="data[value.db_name]"></reqmgr-Name>
               </div>
               <div ng-switch-when="Block black list">
                 <ul>

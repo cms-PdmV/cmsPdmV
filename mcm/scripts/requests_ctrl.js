@@ -8,9 +8,9 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Dataset name',select:true, db_name:'dataset_name'},
         //{text:'SW Release',select:false, db_name:'cmssw_release'},
         //{text:'Type',select:false, db_name:'type'},
-        {text:'History',select:true, db_name:'history'},
+        {text:'History',select:true, db_name:'history'}
     ];
-    $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
+    //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
     $search_data = {};
 
     $scope.filt = {}; //define an empty filter
@@ -1061,6 +1061,66 @@ testApp.directive("loadFields", function($http, $location){
           }
         }
       },true);
+    }
+  }
+});
+testApp.directive("reqmgrName", function($http){
+  return {
+    replace: true,
+    require: 'ngModel',
+    restrict: 'E',
+    template:
+    '<div>'+
+    '  <ul style="margin-bottom: 0px;">'+
+    '    <li ng-repeat="rqmngr in data[value.db_name]">'+
+    '      <a ng-href="batches?contains={{rqmngr.name}}" rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>'+
+    '      <a ng-show="isDevMachine();" ng-href="https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr[\'name\']}}" rel="tooltip" title="Details" target="_self">details</a>'+
+    '      <a ng-show="!isDevMachine();" ng-href="https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr[\'name\']}}" rel="tooltip" title="Details" target="_self">details</a>,'+
+    '      <a ng-hide="stats_cache[rqmngr[\'name\']]" ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" rel="tooltip" title="Stats" target="_self"> stats</a>'+
+    '      <a ng-click="load_dataset_list(rqmngr[\'name\']);" ng-hide="stats_cache[rqmngr[\'name\']]" rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>'+
+    '      <b><font color="red" ng-show="stats_cache[rqmngr[\'name\']] && !underscore.isObject(stats_cache[rqmngr[\'name\']])"> Stats Not Found</font></b>'+
+    '      <span ng-show="underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
+    '        <a ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" target="_self"> {{numberWithCommas(stats_cache[rqmngr["name"]].pdmv_evts_in_DAS)}} events</a>,'+
+    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr[\'name\']}}" rel="tooltip" title="Perf" target="_self">perf</a>,'+
+    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr[\'name\']}}" rel="tooltip" title="DS" target="_self">output</a>,'+
+    '        {{stats_cache[rqmngr["name"]].pdmv_status_from_reqmngr}}, {{stats_cache[rqmngr["name"]].pdmv_status_in_DAS}},'+
+    '        <span ng-repeat="c_site in stats_cache[rqmngr[\'name\']].pdmv_custodial_sites">'+
+    '          @{{c_site}},'+
+    '        </span>'+
+    '        <span ng-show="stats_cache[rqmngr[\'name\']].pdmv_running_sites.length">'+
+    '          Running at : {{stats_cache[rqmngr["name"]].pdmv_running_sites.join()}},'+
+    '        </span>'+
+    '        Last update on {{stats_cache[rqmngr["name"]].pdmv_monitor_time}}'+
+    '        </br>'+
+    '        <a ng-href="https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr[\'name\']}}.gif"><img width={{image_width}} ng-src="https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/{{rqmngr[\'name\']}}.gif" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>'+
+    '        <ul style="margin-bottom: 0px;" ng-show="true;">'+
+    '          <li ng-repeat="DS in stats_cache[rqmngr[\'name\']].pdmv_dataset_list">'+
+    '            <span ng-switch on="stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS == \'VALID\'">'+
+    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>'+
+    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>'+
+    '            </span>'+
+    '          </li>'+
+    '          <li ng-show="data[\'status\']==\'done\' && rqmngr.content.pdmv_dataset_name && !underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
+    '            <span ng-switch on="stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS == \'VALID\'">'+
+    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr.content.pdmv_dataset_name}}</a>'+
+    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr.content.pdmv_dataset_name}} in DAS" target="_self"><del>{{ rqmngr.content.pdmv_dataset_name}}</del></a>'+
+    '            </span>'+
+    '          </li>'+
+    '        </ul>'+
+    '        <a ng-click="full_details[rqmngr[\'name\']]=true;" ng-hide="role(3) || full_details[rqmngr[\'name\']]" rel="tooltip" title="Load Full details"> <i class="icon-eye-open"></i></a>'+
+    '      </span>'+
+    '      <div ng-show="underscore.isObject(stats_cache[rqmngr[\'name\']]) && full_details[rqmngr[\'name\']]">'+
+    '        <a ng-click="full_details[rqmngr[\'name\']]=false;" rel="tooltip" title="Close details"><i class="icon-eye-close"></i></a>'+
+    '        <pre>{{stats_cache[rqmngr["name"]]|json}}</pre>'+
+    '      </div>'+
+    '    </li>'+
+    '  </ul>'+
+    '</div>',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.rqmngr_data = ctrl.$viewValue;
+      };
     }
   }
 });
