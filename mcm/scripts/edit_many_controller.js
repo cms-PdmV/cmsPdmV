@@ -763,6 +763,7 @@ testApp.directive("generatorParams", function($http){
     '                <label class="control-label">Cross section</label>'+
     '                <div class="controls">'+
     '                  <input type="text" ng-model="modal_data.cross_section">'+
+    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '                </div>'+
     '              </div>'+
     '              <div class="control-group">'+
@@ -800,7 +801,9 @@ testApp.directive("generatorParams", function($http){
     '    <li ng-switch-when="false">'+ //when last gen param to be shown
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '        <dt>{{"cross section"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["cross_section"]}}</dd>'+
+    '        <dd class="clearfix">{{genParam_data[$index]["cross_section"]}}'+
+    '          <a class="label label-info" rel="tooltip" title="pico barn" ng-hre="#">pb</a>'+
+    '        </dd>'+
     '        <dt>{{"filter efficiency"}}</dt>'+
     '        <dd class="clearfix">{{genParam_data[$index]["filter_efficiency"]}}</dd>'+
     '        <dt>{{"filter efficiency error"}}</dt>'+
@@ -823,6 +826,7 @@ testApp.directive("generatorParams", function($http){
     '                <label class="control-label">Cross section</label>'+
     '                <div class="controls">'+
     '                  <input type="text" ng-model="modal_data.cross_section">'+
+    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '                </div>'+
     '              </div>'+
     '              <div class="control-group">'+
@@ -869,6 +873,7 @@ testApp.directive("generatorParams", function($http){
     '                <label class="control-label">Cross section</label>'+
     '                <div class="controls">'+
     '                  <input type="text" ng-model="new_gen_params.cross_section">'+
+    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '                </div>'+
     '              </div>'+
     '              <div class="control-group">'+

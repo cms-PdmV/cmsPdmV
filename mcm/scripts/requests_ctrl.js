@@ -902,7 +902,9 @@ testApp.directive("generatorParams", function($http){
     // '          <dd>{{$index}}</dd>'+
     '          <dd class="clearfix">{{param["version"]}}</dd>'+
     '          <dt>{{"cross section"}}</dt>'+
-    '          <dd class="clearfix">{{param["cross_section"]}}</dd>'+
+    '          <dd class="clearfix">{{param["cross_section"]}}'+
+    '          <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
+    '          </dd>'+
     '          <dt>{{"filter efficiency"}}</dt>'+
     '          <dd class="clearfix">{{param["filter_efficiency"]}}</dd>'+
     '          <dt>{{"filter efficiency error"}}</dt>'+
@@ -922,7 +924,9 @@ testApp.directive("generatorParams", function($http){
     // '          <dd>{{$index}}</dd>'+
     '        <dd class="clearfix">{{param["version"]}}</dd>'+
     '        <dt>{{"cross section"}}</dt>'+
-    '        <dd class="clearfix">{{param["cross_section"]}}</dd>'+
+    '        <dd class="clearfix">{{param["cross_section"]}}'+
+    '          <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
+    '        </dd>'+
     '        <dt>{{"filter efficiency"}}</dt>'+
     '        <dd class="clearfix">{{param["filter_efficiency"]}}</dd>'+
     '        <dt>{{"filter efficiency error"}}</dt>'+

@@ -361,6 +361,18 @@
               <div ng-switch-when="Process string">
                 <a ng-href='requests?process_string={{data[value.db_name]}}' rel="tooltip" title="View only process_string={{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
+              <div ng-switch-when="Memory" align="center">
+                {{data[value.db_name]}}
+                <a class="label label-info" ng-show="data[value.db_name]" rel="tooltip" title="megabytes" ng-href="#">MB</a>
+              </div>
+              <div ng-switch-when="Size event" align="center">
+                {{data[value.db_name]}}
+                <a class="label label-info" ng-show="data[value.db_name]" rel="tooltip" title="kilobytes" ng-href="#">kB</a>
+              </div>
+              <div ng-switch-when="Time event" align="center">
+                {{data[value.db_name]}}
+                <a class="label label-info" ng-show="data[value.db_name]" rel="tooltip" title="seconds" ng-href="#">s</a>
+              </div>
               <div ng-switch-default align="center">{{data[value.db_name]}}</div>
             </div>
           </td>
