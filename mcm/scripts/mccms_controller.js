@@ -2,6 +2,7 @@ function resultsCtrl($scope, $http, $location, $window, $route){
   $scope.defaults = [
     {text:'Name', select:true, db_name:'prepid'},
     {text:'Actions', select:true, db_name:''},
+    {text:'Meeting', select:true, db_name:'meeting'},
     {text:'Approval', select:true, db_name:'approval'},
     {text:'Status', select:true, db_name:'status'},
     {text:'Deadline', select:true, db_name:'deadline'},
@@ -46,8 +47,9 @@ function resultsCtrl($scope, $http, $location, $window, $route){
       $scope.defaults[3].select = true;
       $scope.defaults[4].select = true;
       $scope.defaults[5].select = true;
-      $scope.defaults[8].select = true;
+      $scope.defaults[6].select = true;
       $scope.defaults[9].select = true;
+      $scope.defaults[10].select = true;
       $scope.selectedCount = false;
     }
   };
@@ -175,6 +177,46 @@ function resultsCtrl($scope, $http, $location, $window, $route){
       return angular.isArray(obj)
   };
 }
+
+var ModalDemoCtrl = function ($scope, $http, $window) {
+  $scope.open = function (id) {
+
+    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
+    promise.then(function(data){
+	    $scope.pwgs = data.data.results;
+	    $scope.selectedPwg= $scope.pwgs[0];
+	    $scope.shouldBeOpen = true;
+	    $scope.prepId = id;
+	});
+
+  };
+
+    $scope.close = function () {
+        $scope.shouldBeOpen = false;
+    };
+
+    $scope.save = function () {
+        $scope.shouldBeOpen = false;
+        if ($scope.selectedPwg){
+          $http({method: 'PUT', url:'restapi/mccms/save/', data:{prepid: $scope.selectedPwg, pwg: $scope.selectedPwg}})
+              .success(function(data, stauts){
+            console.log(data, status);
+            if (data.results){
+                $window.location.href ="edit?db_name=mccms&prepid="+data.prepid;
+            }else{
+                alert("Error:"+ data.message);
+                console.log(data, status);
+            }
+          }).error(function(data,status){
+            alert("Error:"+ status);
+            console.log(data, status);
+          });
+        }else{
+            alert("Error: no pwg defined!");
+        }
+    };
+
+};
 
 testApp.directive("customHistory", function(){
   return {

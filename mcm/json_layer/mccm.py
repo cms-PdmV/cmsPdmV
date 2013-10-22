@@ -10,8 +10,9 @@ class mccm(json_base):
         self._json_base__schema = {
             '_id':'',
             'prepid': '',
-            'approval': '',
+            'approval': self.get_approval_steps()[0],
             'block': 0,
+            'meeting' : '',
             'deadline': '',
             'history': [],
             'message_id': '',
@@ -19,7 +20,7 @@ class mccm(json_base):
             'pwg': '',
             'requests': [],
             'size': 0,
-            'status': ''
+            'status': self.get_status_steps()[0]
             }
         # update self according to json_input
         self.update(json_input)
@@ -30,4 +31,15 @@ class mccm(json_base):
         editable= {}
         for key in self._json_base__schema:
             editable[key] = True
+        editable['prepid'] = False
         return editable
+
+    @staticmethod
+    def get_meeting_date():
+        import datetime
+        from tools.settings import settings
+        t = datetime.date.today()
+        meeting_day = int(settings().get_value('mccm_meeting_day'))
+        w = 0 if meeting_day>t.weekday() else 1
+        t = t + datetime.timedelta(days=meeting_day-t.weekday(), weeks=w)
+        return t

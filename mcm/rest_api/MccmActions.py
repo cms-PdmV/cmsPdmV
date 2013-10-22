@@ -2,6 +2,7 @@ from rest_api.RestAPIMethod import RESTResource
 from json import dumps, loads
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
+from tools.locker import locker
 import cherrypy
 
 class GetMccm(RESTResource):
@@ -74,3 +75,59 @@ class UpdateMccm(RESTResource):
         # update history
         new_version.update_history({'action': 'update'})
         return dumps({"results": self.db.update(new_version.json())})
+
+
+
+class CreateMccm(RESTResource):
+
+    def __init__(self):
+        self.db = database('mccms')
+
+    def PUT(self):
+        """
+        Create the mccm with the provided json content
+        """
+        try:
+            mccm_d = mccm(loads(cherrypy.request.body.read().strip()))
+        except Exception as e:
+            self.logger.error(mccm_d.json())
+            self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(e))
+            return dumps({"results": False, "message": "Something went wrong with loading the mccm data:\n {0}".format(e)})
+
+        if not mccm_d.get_attribute('prepid'):
+            self.logger.error('Non-existent prepid')
+            return dumps({"results": False, "message": "The mccm ticket has no id!"})
+
+        if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'): # need to complete the pwg
+            mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg')))
+        elif self.db.document_exists(mccm_d.get_attribute('prepid')):
+            return dumps({"results": False, "message": "Mccm document {0} already exists".format(mccm_d.get_attribute('prepid'))})
+
+        mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
+        mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
+        mccm_d.update_history({'action': 'created'})
+        self.logger.log('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
+        return dumps({"results": self.db.save(mccm_d.json()), "prepid": mccm_d.get_attribute('prepid')})
+
+
+    def fill_id(self, pwg):
+        mccm_id = pwg
+        with locker.lock(mccm_id): # get date and number
+            t = mccm.get_meeting_date()
+            mccm_id += '-' + t.strftime("%Y%b%d") + '-' # date
+            final_mccm_id = mccm_id + '00001'
+            i = 2
+            while self.db.document_exists(final_mccm_id):
+                final_mccm_id = mccm_id + str(i).zfill(5)
+                i += 1
+            return final_mccm_id
+
+class DeleteMccm(RESTResource):
+
+    def __init__(self):
+        self.db = database('mccms')
+
+    def DELETE(self, *args):
+        if not args:
+            return dumps({"results": False, "message": "No id given to delete."})
+        return dumps({"results": self.db.delete(args[0])})
