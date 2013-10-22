@@ -1,6 +1,7 @@
 function resultsCtrl($scope, $http, $location, $window){
   $scope.defaults = [
     {text:'UserName', select:true, db_name:'username'},
+    {text:'Full name', select:true, db_name:'fullname'},
     {text:'Actions', select:false, db_name:''},
     {text:'Email', select:false, db_name:'email'},
     {text:'Role', select:true, db_name:'role'},

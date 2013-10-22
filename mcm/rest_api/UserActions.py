@@ -5,6 +5,7 @@ from json import loads, dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings
+from json_layer.user import user
 
 class GetUserRole(RESTResource):
     def __init__(self):
@@ -59,11 +60,11 @@ class GetUserPWG(RESTResource):
             return dumps({"results": all_pwgs})
         user_name = args[0]
         if self.db.document_exists(user_name):
-            user = self.db.get(args[0])
-            if user['role'] in ['production_manager', 'administrator', 'generator_convener']:
+            mcm_user = user(self.db.get(args[0]))
+            if mcm_user.get_attribute('role') in ['production_manager', 'administrator', 'generator_convener']:
                 return dumps({"results": all_pwgs})
             else:
-                return dumps({"results": user['pwg']})
+                return dumps({"results": mcm_user.get_attribute('pwg')})
         else:
             return dumps({"results": []})
 
@@ -120,18 +121,15 @@ class AddRole(RESTResource):
     def add_user(self):
         username = cherrypy.request.headers['ADFS-LOGIN']
         if self.db.document_exists(username):
-            return dumps({"results": False})
-        email = cherrypy.request.headers['REMOTE-USER']
-        role = self.authenticator.get_roles()[0]
-        user = {}
-        user["_id"] = username
-        user["username"] = username
-        user["email"] = email
-        #user["roles"] = [role]
-        user["role"] = role
-        user['pwg'] = []
+            return dumps({"results": "User {0} already in database".format(username)})
+        mcm_user = user({"_id": username,
+                         "username": username,
+                         "email": cherrypy.request.headers['REMOTE-USER'],
+                         "role": self.authenticator.get_roles()[0],
+                         "fullname": cherrypy.request.headers['ADFS-FIRSTNAME'] + " " + cherrypy.request.headers['ADFS-LASTNAME']})
+
         # save to db
-        if not self.db.save(user):
+        if not self.db.save(mcm_user.json()):
             self.logger.error('Could not save object to database')
             return dumps({"results": False})
         return dumps({"results": True})
@@ -151,22 +149,22 @@ class ChangeRole(RESTResource):
         self.access_limit = 3
 
     def change_role(self, username, action):
-        doc = self.db.get(username)
-        current_user = self.db.get(cherrypy.request.headers['ADFS-LOGIN'])
-        current_role = doc["role"]
+        doc = user(self.db.get(username))
+        current_user = user(self.db.get(cherrypy.request.headers['ADFS-LOGIN']))
+        current_role = doc.get_attribute("role")
         if action == '-1':
             if current_role != 'user': #if not the lowest role -> then him lower himself
-                doc["role"] = self.all_roles[self.all_roles.index(current_role) - 1]
-                self.authenticator.set_user_role(username, doc["role"])
-                return dumps({"results": self.db.update(doc)})
+                doc.set_attribute("role",  self.all_roles[self.all_roles.index(current_role) - 1])
+                self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                return dumps({"results": self.db.update(doc.json())})
             return dumps({"results": username + " already is user"}) #else return that hes already a user
         if action == '1':
-            if current_user["role"] != "administrator":
+            if current_user.get_attribute("role") != "administrator":
                 return dumps({"results": "Only administrators can upgrade roles"})
             if len(self.all_roles) != self.all_roles.index(current_role) + 1: #if current role is not the top one
-                doc["role"] = self.all_roles[self.all_roles.index(current_role) + 1]
-                self.authenticator.set_user_role(username, doc["role"])
-                return dumps({"results": self.db.update(doc)})
+                doc.set_attribute("role",  self.all_roles[self.all_roles.index(current_role) + 1])
+                self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                return dumps({"results": self.db.update(doc.json())})
             return dumps({"results": username + " already has top role"})
         return dumps({"results": "Failed to update user: " + username + " role"})
 
@@ -178,3 +176,26 @@ class ChangeRole(RESTResource):
             self.logger.error("No Arguments were given")
             return dumps({"results": 'Error: No arguments were given'})
         return self.change_role(args[0], args[1])
+
+class FillFullNames(RESTResource):
+    def __init__(self):
+        self.db = database('users')
+        self.access_limit = 4
+
+    def GET(self, *args):
+        """
+        Goes through database and fills full names of all the users, who have not had it filled yet
+        """
+        users = self.db.get_all()
+        results = []
+        for u_d in users:
+            u = user(u_d)
+            if not u.get_attribute('fullname'):
+                import subprocess
+                import re
+                output = subprocess.Popen(["phonebook", "-t", "firstname", "-t", "surname", "--login", u.get_attribute('username')], stdout = subprocess.PIPE)
+                split_out = [x for x in re.split("[^a-zA-Z0-9_\-]", output.communicate()[0]) if x and x!="-"]
+                fullname = " ".join(split_out)
+                u.set_attribute('fullname', fullname)
+                results.append((u.get_attribute('username'), self.db.save(u.json())))
+        return dumps({"results": results})
