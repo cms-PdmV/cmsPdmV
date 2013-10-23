@@ -28,7 +28,7 @@ function mainCtrl($scope, $http, $location, $window){
 
 // GET all news
   $scope.getNews = function(){ //we check for wich page to get news -> home page gets news all the time
-    var pages_not_to_get_news = ["chained_campaigns","flows","actions","requests","chained_requests","batch","dashboard","users","edit"];
+    var pages_not_to_get_news = ["chained_campaigns","flows","actions","chained_requests","batch","dashboard","users","edit"];
     var return_info = true;
     _.each(pages_not_to_get_news, function(elem){
       if($location.path().indexOf(elem) != -1)
