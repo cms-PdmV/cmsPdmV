@@ -1,4 +1,7 @@
 function mainCtrl($scope, $http, $location, $window){
+  $scope.stats_cache = {};
+  $scope.full_details = {};
+
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){
     // console.log('fOUND ie');
@@ -355,3 +358,89 @@ testApp.directive('dropdownToggle', ['$document', '$location', function ($docume
     }
   };
 }]);
+testApp.directive("reqmgrName", function($http){
+  return {
+    replace: true,
+    require: 'ngModel',
+    restrict: 'E',
+    template:
+    '<span>'+
+    '  <a ng-click="load_dataset_list(rqmngr_data[\'name\'], $index);" ng-hide="stats_cache[remngr_name]" rel="tooltip" title="Load statistics"> <i class="icon-eye-open"></i></a>'+
+    '  <b><font color="red" ng-show="stats_cache[remngr_name] && !underscore.isObject(stats_cache[remngr_name])"> Stats Not Found</font></b>'+
+    '  <span ng-show="underscore.isObject(stats_cache[remngr_name])">'+
+    '    <a ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr_data[\'name\']}}" target="_self"> {{numberWithCommas(stats_cache[rqmngr_data["name"]].pdmv_evts_in_DAS)}} events</a>,'+
+    '    <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr_data[\'name\']}}" rel="tooltip" title="Perf" target="_self">perf</a>,'+
+    '    <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr_data[\'name\']}}" rel="tooltip" title="DS" target="_self">output</a>,'+
+    '    {{stats_cache[rqmngr_data["name"]].pdmv_status_from_reqmngr}}, {{stats_cache[rqmngr_data["name"]].pdmv_status_in_DAS}},'+
+    '    <span ng-repeat="c_site in stats_cache[rqmngr_data[\'name\']].pdmv_custodial_sites">'+
+    '      @{{c_site}},'+
+    '    </span>'+
+    '    <span ng-show="stats_cache[remngr_name].pdmv_running_sites.length">'+
+    '      Running at : {{stats_cache[remngr_name].pdmv_running_sites.join()}},'+
+    '    </span>'+
+    '    Last update on {{stats_cache[remngr_name].pdmv_monitor_time}}'+
+    '    </br>'+
+    '    <a ng-href="{{links[$index]}}"><img width={{image_width}} ng-src="{{links[$index]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>'+
+    '    <ul style="margin-bottom: 0px;" ng-show="true;">'+
+    '      <li ng-repeat="DS in stats_cache[remngr_name].pdmv_dataset_list">'+
+    '        <span ng-switch on="stats_cache[remngr_name].pdmv_status_in_DAS == \'VALID\'">'+
+    '          <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>'+
+    '          <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>'+
+    '        </span>'+
+    '      </li>'+
+    '      <li ng-show="data[\'status\']==\'done\' && rqmngr_data.content.pdmv_dataset_name && !underscore.isObject(stats_cache[remngr_name])">'+
+    '        <span ng-switch on="stats_cache[remngr_name].pdmv_status_in_DAS == \'VALID\'">'+
+    '          <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr_data.content.pdmv_dataset_name}}</a>'+
+    '          <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self"><del>{{ rqmngr_data.content.pdmv_dataset_name}}</del></a>'+
+    '        </span>'+
+    '      </li>'+
+    '    </ul>'+
+    '    <a ng-click="full_details[remngr_name]=true;" ng-hide="role(3) || full_details[remngr_name]" rel="tooltip" title="Load Full details"> <i class="icon-eye-open"></i></a>'+
+    '  </span>'+
+    '  <div ng-show="underscore.isObject(stats_cache[remngr_name]) && full_details[remngr_name]">'+
+    '    <a ng-click="full_details[remngr_name]=false;" rel="tooltip" title="Close details"><i class="icon-eye-close"></i></a>'+
+    '    <pre>{{stats_cache[remngr_name]|json}}</pre>'+
+    '  </div>'+
+    '</span>',
+    link: function(scope, element, attr, ctrl)
+    {
+      //scope.stats_cache = {};
+      scope.links = {};
+      //scope.full_details = {};
+      scope.remngr_name = ctrl.$viewValue.name;
+      scope.load_dataset_list = function (req_name, index){
+        if (scope.dbName == "requests")
+        {
+          scope.rqmngr_data = ctrl.$viewValue;
+          scope.getrqmnr_data(scope.rqmngr_data.name, index);
+          scope.remngr_name = scope.rqmngr_data.name;
+        }
+        else{
+          console.log(req_name,index,scope.remngr_name);
+          var url = "restapi/requests/get/"+ctrl.$viewValue;
+          var promise = $http.get(url);
+          promise.then(function(data){
+            scope.rqmngr_data = data.data.results.reqmgr_name;
+            console.log("rqmnr data",scope.rqmngr_data);
+            if (scope.rqmngr_data.length > 0 )
+            {
+              scope.remngr_name = scope.rqmngr_data[0].name;
+              scope.getrqmnr_data(scope.rqmngr_data[index].name, index);
+            }
+          },function(data){
+            console.log("error",data);
+          });
+        }
+      };
+      scope.getrqmnr_data = function(req_name, index){
+        scope.links[index] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+req_name+".gif";
+        getfrom='/stats/restapi/get_one/'+req_name;
+        $http({method:'GET', url: getfrom}).success(function(data,status){
+          scope.stats_cache[req_name] = data;
+        }).error(function(status){
+          scope.stats_cache[req_name] = "Not found";
+        });
+      };
+    }
+  }
+});
