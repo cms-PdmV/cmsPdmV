@@ -388,10 +388,10 @@ testApp.directive("reqmgrName", function($http){
     '      <a ng-click="load_dataset_list(rqmngr.name, $index);" ng-hide="stats_cache[rqmngr[\'name\']]" rel="tooltip" title="Load statistics" ng-href="#"> <i class="icon-eye-open"></i></a>'+
     '      <b><font color="red" ng-show="stats_cache[rqmngr[\'name\']] && !underscore.isObject(stats_cache[rqmngr[\'name\']])"> Stats Not Found</font></b>'+
     '      <span ng-show="underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
-    '        <a ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr_data[\'name\']}}" target="_self"> {{numberWithCommas(stats_cache[rqmngr_data["name"]].pdmv_evts_in_DAS)}} events</a>,'+
+    '        <a ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" target="_self"> {{numberWithCommas(stats_cache[rqmngr[\'name\']].pdmv_evts_in_DAS)}} events</a>,'+
     '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr_data[\'name\']}}" rel="tooltip" title="Perf" target="_self">perf</a>,'+
     '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr_data[\'name\']}}" rel="tooltip" title="DS" target="_self">output</a>,'+
-    '        {{stats_cache[rqmngr_data["name"]].pdmv_status_from_reqmngr}}, {{stats_cache[rqmngr_data["name"]].pdmv_status_in_DAS}},'+
+    '        {{stats_cache[rqmngr[\'name\']].pdmv_status_from_reqmngr}}, {{stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS}},'+
     '        <span ng-repeat="c_site in stats_cache[rqmngr_data[\'name\']].pdmv_custodial_sites">'+
     '          @{{c_site}},'+
     '        </span>'+
