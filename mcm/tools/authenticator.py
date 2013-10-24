@@ -116,3 +116,12 @@ class authenticator:
             print 'Error: ' + str(ex)
             return False
         return flag
+
+    #def get_random_product_manager_email(self):
+    #    pms = self.__db.query(query="role==production_manager", page_num=-1)
+    #    from random import choice
+    #    while True:
+    #        pick = choice(pms)
+    #        if "email" in pick and pick["email"]:
+    #            return pick["email"]
+

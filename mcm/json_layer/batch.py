@@ -1,5 +1,6 @@
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
+from tools.authenticator import authenticator
 from tools.locator import locator
 import re
 from tools.settings import settings
@@ -97,11 +98,14 @@ class batch(json_base):
             to_who.append( settings().get_value('hypernews_test'))
         else:
             to_who.append( settings().get_value('dataops_announce' ))
-
+        #sender=None
+        #if self.current_user_level != 3:
+        #    auth = authenticator()
+        #    sender = auth.get_random_product_manager_email()
         self.notify(subject,
                     message,
-                    who=to_who
-                    )
+                    who=to_who)#,
+                    #sender=sender)
 
         ## toggle the status
         ### only when we are sure it functions self.set_status()
