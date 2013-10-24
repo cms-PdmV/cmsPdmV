@@ -32,6 +32,7 @@ class batch_control:
 
     def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
         if not stdin and not stdout and not stderr:
+            self.log_err = fail_message
             self.logger.error(fail_message)
             return False
         return True
@@ -60,7 +61,7 @@ class batch_control:
         
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
-        if not self.check_ssh_outputs(stdin, stdout, stderr, "There was a problem with SSH remote execution!"): return False
+        if not self.check_ssh_outputs(stdin, stdout, stderr, "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)): return False
         
         self.logger.log(stdout.read())
         self.logger.log('SSH remote execution stderr stream: \n%s' % (stderr.read()))
@@ -88,6 +89,7 @@ class batch_control:
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
         if not stdin and not stdout and not stderr:
+            self.log_err = 'SSH execution problem with command bjobs -WP -J %s -g %s' % (self.test_id, self.group)
             return 'SSH execution problem with command bjobs -WP -J %s -g %s' % (self.test_id, self.group)
 
         for line in [l for l in stdout.read().split('\n') if jobid in l]:
@@ -99,7 +101,7 @@ class batch_control:
         cmd = 'cat %s' % self.test_out
         
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-
+        self.logger.log("Reading file with command %s" % cmd)
         time_out=30
         trials_time_out=10
         trials=0
