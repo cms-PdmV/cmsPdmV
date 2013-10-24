@@ -22,6 +22,7 @@ class settings:
     def set(self, label, setting):
         with locker.lock(label):
             result = self.__db.update(setting)
-            self.cache[label] = setting
+            if result:
+                self.cache[label] = setting
             return result
 
