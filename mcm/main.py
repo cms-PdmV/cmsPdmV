@@ -19,7 +19,7 @@ from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBa
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields
 from rest_api.SettingsActions import GetSetting, UpdateSetting
 
 #to get campaign sequences
@@ -339,6 +339,7 @@ root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()
 root.restapi.mccms.save = CreateMccm()
 root.restapi.mccms.delete = DeleteMccm()
+root.restapi.mccms.editable = GetEditableMccmFields()
 
 
 # REST settings Actions

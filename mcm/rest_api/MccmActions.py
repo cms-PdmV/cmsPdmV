@@ -122,6 +122,7 @@ class CreateMccm(RESTResource):
                 i += 1
             return final_mccm_id
 
+
 class DeleteMccm(RESTResource):
 
     def __init__(self):
@@ -131,3 +132,24 @@ class DeleteMccm(RESTResource):
         if not args:
             return dumps({"results": False, "message": "No id given to delete."})
         return dumps({"results": self.db.delete(args[0])})
+
+
+class GetEditableMccmFields(RESTResource):
+
+    def __init__(self):
+        self.db_name = 'mccms'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+        """
+        Retrieve the fields that are currently editable for a given mccm
+        """
+        if not args:
+            self.logger.error('Mccm/GetEditable: No arguments were given')
+            return dumps({"results": 'Error: No arguments were given'})
+        return self.get_editable(args[0])
+
+    def get_editable(self, prepid):
+        mccm_d = mccm(self.db.get(prepid))
+        editable = mccm_d.get_editable()
+        return dumps({"results": editable})
