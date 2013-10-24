@@ -290,7 +290,8 @@ class json_base:
                who=[],
                actors=True,
                service=True,
-               HN=False):
+               HN=False,
+               sender = None):
 
         dest = map(lambda i: i, who)
         if actors:
@@ -310,11 +311,12 @@ class json_base:
             dest.append(settings().get_value('service_account'))
             subject += '. And no destination was set'
 
-        self.logger.log('Notification %s send to %s' % (subject, ', '.join(dest)))
+        sender = sender if sender else self.current_user_email
+        self.logger.log('Notification %s from %s send to %s' % (subject, sender,', '.join(dest)))
         self.com.sendMail(dest,
                           subject,
                           message,
-                          self.current_user_email
+                          sender
         )
 
 
