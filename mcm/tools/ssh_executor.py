@@ -5,11 +5,12 @@ import re
 
 import logging
 from tools.logger import logger as logfactory, prep2_formatter
+from threading import BoundedSemaphore
 
 
 class ssh_executor:
     logger = logfactory('mcm')
-
+    semaph = BoundedSemaphore(10)
     def __init__(self, directory=None, prepid=None, server='lxplus5.cern.ch'):
         self.ssh_client = None
         self.ssh_server = server
@@ -17,7 +18,7 @@ class ssh_executor:
         self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'
         self.hname = None
         if not (directory is None or prepid is None):
-            self.__logfile = directory + prepid + '.log'
+            self.__logfile = os.path.join(directory, prepid + '.log')
             # self.__ssh_logfile = directory + prepid + '_ssh_.log'
             self.hname = prepid
 
@@ -89,11 +90,22 @@ class ssh_executor:
     def __remote_exec(self,  cmd=''):
         if not cmd:
             return None,  None,  None
-        try:
-            return self.ssh_client.exec_command(cmd)
-        except paramiko.SSHException as ex:
-            self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
-            return None,  None,  None
+        retry = 1
+        retries = 2
+        while True:
+            try:
+                with self.semaph:
+                    return self.ssh_client.exec_command(cmd)
+            except paramiko.SSHException as ex:
+                self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
+                return None,  None,  None
+            except AttributeError as ex:
+                self.logger.inject('There was an AttributeError inside the paramiko during try nr %s. Error: %s ' % (retry, ex), level='error', handler=self.hname)
+                retry += 1
+                if retry > retries:
+                    self.logger.inject('Attribute error two times. Returning nothing.', level='error', handler=self.hname)
+                    return None, None, None
+
 
     def execute(self, cmd):
         stdin,  stdout,  stderr = self.__remote_exec(cmd)
