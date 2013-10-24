@@ -15,16 +15,17 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.dbName = $location.search()["db_name"];
   }
   
-  $scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
+  $scope.searchable_fields = [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
   $search_data = {};
   $scope.new = {};
   $scope.selectedAll = false;
   $scope.underscore = _;
-  $scope.puce= {};
+  $scope.puce = {};
   $scope.r_status = {};
   $scope.selected_prepids = [];
-  $scope.action_report= {};
-  $scope.action_status= {};
+  $scope.action_report = {};
+  $scope.action_status = {};
+  $scope.local_requests = {};
   $scope.tabsettings = {
     "view":{
       active:false
@@ -438,6 +439,19 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["fail"] = true;
       $scope.update["status_code"] = status;
     });
+  };
+  $scope.preloadRequest = function(chain)
+  {
+    var url = "restapi/requests/get/"+chain;
+    if ( !_.has($scope.local_requests,chain) ){
+      var promise = $http.get(url);
+      promise.then( function(data){
+        var local_data = data.data.results.reqmgr_name;
+        $scope.local_requests[chain] = local_data;
+      },function(data){
+        console.log("error",data);
+      });
+    }  
   };
 };
 

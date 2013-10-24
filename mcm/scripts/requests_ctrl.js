@@ -173,11 +173,13 @@ function resultsCtrl($scope, $http, $location, $window){
       for (i=0;i<$scope.result.length;i++){
         if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
           for (i_r=0;i_r!=$scope.result[i].reqmgr_name.length;i_r++){
-            $scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name);
+            $scope.$broadcast('loadDataSet', [$scope.result[i].reqmgr_name[i_r].name, i_r,$scope.result[i].prepid]);
+	          //$scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name, i_r);
           }
         }
       }
     };
+
 
     $scope.select_all_well = function(){
       $scope.selectedCount = true;
@@ -742,6 +744,7 @@ function resultsCtrl($scope, $http, $location, $window){
   allowDuplicates: true
 });
   }
+
 };
 
 // NEW for directive

@@ -141,7 +141,13 @@
                   <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
                   <img ng-show="puce[chain]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
-                  <div ng-show="r_status[chain] == 'submitted'"> <reqmgr-Name ng-model="chain"></reqmgr-Name> </div>
+                  <div ng-show="r_status[chain] == 'submitted'">
+                    <a ng-click="preloadRequest(chain);" ng-hide="underscore.has(local_requests,chain)" ng-href="#"><i class="icon-eye-open"></i></a>
+                    <span ng-show="underscore.has(local_requests,chain)">
+                      <reqmgr-Name ng-model="local_requests[''+chain+'']" prepid="data.prepid"></reqmgr-Name>
+                    </span>
+                  </div>
+                  <!-- <reqmgr-Name ng-model="chain" prepid="data.prepid"> -->
 		  
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
                     <a ng-switch-when="false">
@@ -205,19 +211,19 @@
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
         Multiple selection buttons
-	      <a ng-click="multiple_load()" rel="tooltip" title="Load short view for selected requests">
+	      <a ng-click="multiple_load()" rel="tooltip" title="Load short view for selected requests" ng-href="#">
 	        <i class="icon-eye-open"></i>
 	      </a>
-        <a ng-click="multiple_step('approve','/0')" rel="tooltip" ng-hide="role(3);" title="Reset selected requests">
+        <a ng-click="multiple_step('approve','/0')" rel="tooltip" ng-hide="role(3);" title="Reset selected requests" ng-href="#">
          <i class="icon-repeat"></i>
         </a>
-        <a ng-click="multiple_step('approve','')" rel="tooltip" title="Next step for selected chained requests" ng-hide="role(3);">
+        <a ng-click="multiple_step('approve','')" rel="tooltip" title="Next step for selected chained requests" ng-hide="role(3);" ng-href="#">
          <i class="icon-chevron-right"></i>
         </a>
-        <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests">
+        <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
          <i class="icon-forward"></i>
         </a>
-        <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);">
+        <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
         </a>
         <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
@@ -238,10 +244,10 @@
         <div class="pagination pagination-right">
           <ul>
             <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)">Prev</a>
+              <a ng-click="previous_page(list_page)" ng-href="#">Prev</a>
             </li>
             <li ng-class="{ disabled: result.length == 0 }">
-              <a ng-click="next_page(list_page)">Next</a>
+              <a ng-click="next_page(list_page)" ng-href="#">Next</a>
             </li>
           </ul>
         </div>
