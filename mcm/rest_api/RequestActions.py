@@ -202,7 +202,11 @@ class CloneRequest(RequestRESTResource):
 
         if self.db.document_exists(pid):
             new_json = self.db.get(pid)
-            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','generator_parameters','priority','analysis_id']
+            if new_json['flown_with']:
+                return dumps({"results": False, "message": "cannot clone a request that has been flown"})
+
+        
+            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','generator_parameters','priority','analysis_id', 'extension']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 ## this is a cloning accross campaign: a few other things need to be cleanedup
                 to_wipe.extend( ['cmssw_release','energy','sequences'] )
@@ -804,13 +808,13 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        ids_list = args[0].split(',')
+        #ids_list = args[0].split(',')
         #from tools.handlers import ConfigMakerAndUploader, RequestSubmitter
         #for id_r in ids_list:
         #    hand = RequestSubmitter(prepid=id_r, lock=locker.lock(id_r))
         #    hand.start()
         r_db = database('requests')
-        return dumps({"on-going": True})
+        return dumps({"on-going": r_db.queries(["member_of_campaign==Summer12PLHE", "mcdb_id==9310", "total_events==400000"])})
 
 
 class InjectRequest(RESTResource):
@@ -1330,7 +1334,8 @@ class RequestsReminder(RESTResource):
                         l_type.baseurl(), camp, status_for_link)
 
                 for rid in ids:
-                    message += '\t%s\n' % ( rid)
+                    req = request(rdb.get(rid))
+                    message += '\t%s (%s)\n' % ( rid, req.get_attribute('dataset_name'))
                 message += '\n'
             return message
 
