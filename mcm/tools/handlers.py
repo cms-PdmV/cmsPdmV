@@ -143,20 +143,22 @@ class ConfigMakerAndUploader(Handler):
                     command = self.prepare_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], directory_manager.location(), req, wmtest)
                     _, stdout, stderr = self.ssh_executor.execute(command)
                     if not stdout and not stderr:
-                        self.logger.error('ssh error for request {0}'.format(self.prepid))
-                        req.test_failure('ssh error for request {0}'.format(self.prepid), what='Configuration upload')
+                        self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid))
+                        self.logger.inject('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid), level='error', handler=self.prepid)
+                        req.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid), what='Configuration upload')
                         return False
                     output = stdout.read()
                     error = stderr.read()
                     if error and not output: # money on the table that it will break
                         self.logger.error('Error in wmupload: {0}'.format(error))
-                        req.test_failure(error, what='Configuration upload')
+                        req.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
                         return False
                     cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
                     if len(cfgs_to_upload) != len(cfgs_uploaded):
-                        self.logger.error('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}'.format(cfgs_to_upload, cfgs_uploaded))
-                        req.test_failure('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}'.format(cfgs_to_upload, cfgs_uploaded), what='Configuration upload')
+                        self.logger.error('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error))
+                        self.logger.inject('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error), level='error', handler=self.prepid)
+                        req.test_failure('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
                         return False
 
                     for i, line in zip(sorted(cfgs_to_upload), cfgs_uploaded): # filling the config ids for request and config database with uploaded configurations
@@ -167,11 +169,11 @@ class ConfigMakerAndUploader(Handler):
                                                  "prepid": self.prepid,
                                                  "unique_string": req.unique_string(i)})
                         if not saved:
-                             self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning')
+                             self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning', handler=self.prepid)
 
-                    self.logger.inject("Full upload result: {0}".format(output))
+                    self.logger.inject("Full upload result: {0}".format(output), handler=self.prepid)
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
-                self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids))
+                self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids), handler=self.prepid)
                 req.set_attribute('config_id', sorted_additional_config_ids)
                 self.request_db.save(req.json())
                 return True
@@ -229,7 +231,7 @@ class RuntestGenvalid(Handler):
                     self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
                     success = False
 
-            self.logger.error('I came all the way to here and %s'%( success ))
+            self.logger.error('I came all the way to here and %s (request %s)'%( success, self.rid ))
             if not success:
                 ## need to provide all the information back
                 the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
@@ -277,13 +279,13 @@ class RequestSubmitter(Handler):
         return cmd
 
     def injection_error(self, message, req):
-        self.logger.inject(message)
+        self.logger.inject(message, handler=self.prepid)
         if req:
             req.test_failure(message, what='Request injection')
 
     def check_request(self):
         if not self.request_db.document_exists(self.prepid):
-            self.logger.inject("The request {0} does not exist".format(self.prepid), level='error')
+            self.logger.inject("The request {0} does not exist".format(self.prepid), level='error', handler=self.prepid)
             return False, None
         req = request(self.request_db.get(self.prepid))
         if self.check_approval and req.get_attribute('approval') != 'submit':
@@ -303,7 +305,7 @@ class RequestSubmitter(Handler):
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 try:
                     cmd = self.prepare_command(req, batch_name)
-                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd))
+                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd), handler=self.prepid)
                     _, stdout, stderr = self.ssh_executor.execute(cmd)
                     if not stdout and not stderr:
                             self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
@@ -321,7 +323,7 @@ class RequestSubmitter(Handler):
                     objects_to_invalidate = [{"_id": inv_req, "object": inv_req, "type": "request", "status": "new" , "prepid": self.prepid}
                                              for inv_req in injected_requests if inv_req not in approved_requests]
                     if objects_to_invalidate:
-                        self.logger.inject("Some of the workflows had to be invalidated: {0}".format(objects_to_invalidate))
+                        self.logger.inject("Some of the workflows had to be invalidated: {0}".format(objects_to_invalidate), handler=self.prepid)
                         invalidation = database('invalidation')
                         saved = invalidation.save_all(objects_to_invalidate)
                         if not saved:
@@ -361,14 +363,14 @@ class RequestSubmitter(Handler):
                         return False
 
                     for added_req in added_requests:
-                        self.logger.inject('Request {0} sent to {1}'.format(added_req['name'], batch_name))
+                        self.logger.inject('Request {0} sent to {1}'.format(added_req['name'], batch_name), handler=self.prepid)
                     return True
                 finally:
                     semaphore_events.decrement(batch_name)
             finally:
                 self.lock.release()
         except Exception as e:
-            self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, e), req)
+            self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), req)
         finally:
             self.ssh_executor.close_executor()
 
@@ -383,6 +385,7 @@ class RequestInjector(Handler):
         self.submitter = RequestSubmitter(**kwargs)
 
     def internal_run(self):
+        self.logger.inject('## Logger instance retrieved', level='info', handler=self.prepid)
         if not self.lock.acquire(blocking=False):
             return {"prepid": self.prepid, "results": False,
                         "message": "The request with name {0} is being handled already" .format(self.prepid)}
