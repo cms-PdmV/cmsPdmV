@@ -219,7 +219,10 @@ class request(json_base):
             if self.get_attribute('mcdb_id')<0:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request should have a positive of null mcdb id')
 
+        cdb = database('campaigns')
+        mcm_c = cdb.get( self.get_attribute('member_of_campaign') )
         rdb=database('requests')
+
         ## same thing but using db query => faster
         find_similar = ['dataset_name==%s'%(self.get_attribute('dataset_name')),
                         'member_of_campaign==%s'%( self.get_attribute('member_of_campaign'))]
@@ -239,12 +242,11 @@ class request(json_base):
                 if int(similar['extension']) == int(my_extension):
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'%( my_extension))
 
-        cdb = database('campaigns')
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
             if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
-                if cdb.get(self.get_attribute('member_of_campaign'))['root'] in [-1,1]:
+                if mcm_c['root'] in [-1,1]:
                     ##only requests belonging to a root==0 campaign can have mcdbid without input before being in a chain
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign.')
             if self.get_attribute('mcdb_id')>0 and self.get_attribute('input_filename') and self.get_attribute('history')[0]['action'] != 'migrated':
@@ -261,7 +263,6 @@ class request(json_base):
 
 
         ## check on chagnes in the sequences
-        mcm_c = cdb.get( self.get_attribute('member_of_campaign') )
         if len(self.get_attribute('sequences')) != len(mcm_c['sequences']):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has a different number of steps than the campaigns it belong to')
 
