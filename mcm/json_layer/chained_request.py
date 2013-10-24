@@ -7,6 +7,7 @@ from couchdb_layer.mcm_database import database
 import json
 from tools.priority import priority
 import traceback
+from tools.locker import locker
 
 
 class chained_request(json_base):
@@ -522,12 +523,13 @@ class chained_request(json_base):
                 time_out += 1
                 #get it back from db to avoid _red issues
                 next_request = request(rdb.get(next_request.get_attribute('prepid')))
-                next_request.approve()
-                request_saved = rdb.save(next_request.json())
-                if not request_saved:
-                    raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                                 'Could not save the new request %s while trying to move to submit approval' % (
-                                                                     next_request.get_attribute('prepid')))
+                with locker.lock('{0}-wait-for-approval'.format( next_request.get_attribute('prepid') )):
+                    next_request.approve()
+                    request_saved = rdb.save(next_request.json())
+                    if not request_saved:
+                        raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                                     'Could not save the new request %s while trying to move to submit approval' % (
+                                next_request.get_attribute('prepid')))
                 current_r_approval = next_request.get_attribute('approval')
                 pass
 

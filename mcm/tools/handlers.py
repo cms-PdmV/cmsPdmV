@@ -131,7 +131,7 @@ class ConfigMakerAndUploader(Handler):
             if l_type.isDev():
                 wmtest = '--wmtest'
             if req.get_attribute('config_id'): # we already have configuration ids saved in our request
-                return False
+                return True
             for i in range(len(req.get_attribute('sequences'))):
                 hash_id = req.configuration_identifier(i)
                 if self.config_db.document_exists(hash_id): # cached in db
@@ -172,11 +172,11 @@ class ConfigMakerAndUploader(Handler):
                              self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning', handler=self.prepid)
 
                     self.logger.inject("Full upload result: {0}".format(output), handler=self.prepid)
-                sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
-                self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids), handler=self.prepid)
-                req.set_attribute('config_id', sorted_additional_config_ids)
-                self.request_db.save(req.json())
-                return True
+            sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
+            self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids), handler=self.prepid)
+            req.set_attribute('config_id', sorted_additional_config_ids)
+            self.request_db.save(req.json())
+            return True
         finally:
             self.lock.release()
 
@@ -386,13 +386,14 @@ class RequestInjector(Handler):
 
     def internal_run(self):
         self.logger.inject('## Logger instance retrieved', level='info', handler=self.prepid)
-        if not self.lock.acquire(blocking=False):
-            return {"prepid": self.prepid, "results": False,
+        with locker.lock('{0}-wait-for-approval'.format( self.prepid ) ):
+            if not self.lock.acquire(blocking=False):
+                return {"prepid": self.prepid, "results": False,
                         "message": "The request with name {0} is being handled already" .format(self.prepid)}
-        try:
-            if not self.uploader.internal_run():
-                return  {"prepid": self.prepid, "results": False,
-                        "message": "Problem with uploading the configuration for request {0}" .format(self.prepid)}
-            self.submitter.internal_run()
-        finally:
-            self.lock.release()
+            try:
+                if not self.uploader.internal_run():
+                    return  {"prepid": self.prepid, "results": False,
+                             "message": "Problem with uploading the configuration for request {0}" .format(self.prepid)}
+                self.submitter.internal_run()
+            finally:
+                self.lock.release()
