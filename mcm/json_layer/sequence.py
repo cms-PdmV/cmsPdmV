@@ -152,11 +152,14 @@ class sequence(json_base):
 
     def build_cmsDriver(self):
       ### always MC in McM. better to say it
-      command = ' --mc '
+      command = '--mc '
 
       for key in self.json():
-        command += self.to_command_line(key)
-        command += ' '
+          addone = self.to_command_line(key)
+          ##prevent from having over spaces
+          if addone:
+              command += addone
+              command += ' '
       return command 
     
 if __name__=='__main__':

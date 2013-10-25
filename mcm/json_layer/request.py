@@ -453,7 +453,7 @@ class request(json_base):
       ##JR
       if fragment=='':
           fragment='step%d'%(sequenceindex+1)
-      command = 'cmsDriver.py %s' % (fragment)
+      command = 'cmsDriver.py %s ' % (fragment)
 
       try:
           seq = sequence(self.get_attribute('sequences')[sequenceindex])
@@ -470,20 +470,20 @@ class request(json_base):
       if self.get_attribute('input_filename'):
           if sequenceindex==0:
               #command +=' --filein "dbs:%s" '%(self.get_attribute('input_filename'))
-              command +=' --dbsquery "find file where dataset=%s" '%(self.get_attribute('input_filename'))
-              command +=' --fileout file:step%d.root '%(sequenceindex+1)
+              command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_filename'))
+              command +='--fileout file:step%d.root '%(sequenceindex+1)
           else:
-              command+=' --filein file:step%d.root '%(sequenceindex)
-              command +=' --fileout file:step%d.root '%(sequenceindex+1)
+              command+='--filein file:step%d.root '%(sequenceindex)
+              command +='--fileout file:step%d.root '%(sequenceindex+1)
 
       elif self.get_attribute('mcdb_id')>0:
-          command +=' --filein lhe:%d '%(self.get_attribute('mcdb_id'))
+          command +='--filein lhe:%d '%(self.get_attribute('mcdb_id'))
 
       ##JR
       if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
-          command +=' --pileup_input "dbs:%s"'%(self.get_attribute('pileup_dataset_name'))
+          command +='--pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
 
-      return '%s %s' % (command, cmsDriverOptions)
+      return '%s%s' % (command, cmsDriverOptions)
 
     def build_cmsDrivers(self,cast=0, can_save=True):
       commands = []
