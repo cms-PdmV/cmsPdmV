@@ -20,7 +20,7 @@ from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields
-from rest_api.SettingsActions import GetSetting, UpdateSetting
+from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -346,6 +346,7 @@ root.restapi.mccms.editable = GetEditableMccmFields()
 
 root.restapi.settings.get = GetSetting()
 root.restapi.settings.update = UpdateSetting()
+root.restapi.settings.save = SaveSetting()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')

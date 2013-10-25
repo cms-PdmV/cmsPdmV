@@ -26,6 +26,42 @@ class GetSetting(RESTResource):
 
         return dumps({"results": setting})
 
+class SaveSetting(RESTResource):
+    def __init__(self):
+        self.db = database('settings')
+        self.access_limit = 4
+
+    def PUT(self):
+        """
+        Save a new setting
+        """
+        res = self.update(cherrypy.request.body.read().strip())
+        return res
+        try:
+            res = self.update(cherrypy.request.body.read().strip())
+            return res
+        except:
+            self.logger.error('Failed to update a setting from API')
+            return dumps({'results': False, 'message': 'Failed to update a setting from API'})
+
+    def update(self, body):
+        data = loads(body)
+        if '_rev' in data:
+            return dumps({"results": False, 'message': 'could save an object with revision'})
+
+        if '_id' in data and self.db.document_exists(data['_id']):
+            return dumps({"results": False, 'message': 'setting %s already exists.'% ( data['_id'])})
+        if 'prepid' in data and self.db.document_exists(data['prepid']):
+            return dumps({"results": False, 'message': 'setting %s already exists.'% ( data['prepid'])})
+
+        if not 'prepid' in data and not '_id' in data:
+            return dumps({"results": False, 'message': 'could save an object with no name'})
+
+        new_setting = setting(data)
+
+        return dumps({"results": settings().set(new_setting.get_attribute('prepid'), new_setting.json())})
+
+
 class UpdateSetting(RESTResource):
     def __init__(self):
         self.db = database('settings')
