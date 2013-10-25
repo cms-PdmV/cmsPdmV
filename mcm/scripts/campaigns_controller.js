@@ -388,7 +388,7 @@ testApp.directive("sequenceDisplay", function($http){
     '    <ul>'+
     '      <li ng-repeat="sequence in driver">'+
     '        <ul ng-repeat="(key,value) in sequence">'+
-    '          <li><b>{{key}}</b>: {{value}}</li>'+
+    '          <li><b>{{key}}</b>: <div style="width:600px;overflow:auto"><pre>{{value}}</pre></div></li>'+
     '        </ul>'+
     '      </li>'+
     '    </ul>'+
