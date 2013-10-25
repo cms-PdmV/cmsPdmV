@@ -51,6 +51,10 @@ function resultsCtrl($scope, $http, $location, $window){
         break;
       case "mccms":
         $scope.not_editable_list = ["Prepid", "Pwg"];
+        var promise = $http.get("restapi/mccms/editable/"+$scope.prepid)
+        promise.then(function(data){
+          $scope.parseEditableObject(data.data.results);
+        });
         break;
       default:
         $scope.not_editable_list = [];
@@ -112,6 +116,27 @@ function resultsCtrl($scope, $http, $location, $window){
     //      $scope.result["block_black_list"] = $scope.result["block_black_list"].split(",")
     //      $scope.result["block_white_list"] = $scope.result["block_white_list"].split(",")
     //    };
+
+    function isInt(n) {
+       return typeof n === 'number' && n % 1 == 0;
+    }
+
+    function parseSettingValue (string_value) {
+        if(!isNaN(string_value)) {
+            return +string_value
+        } else {
+            switch(string_value.toLowerCase()){
+            case "true":
+              return true;
+            case "false":
+              return false;
+            default:
+              break;
+          }
+        }
+        return string_value
+    }
+
     $scope.submit_edit = function(){
       switch($scope.dbName){
         case "requests":
@@ -157,6 +182,9 @@ function resultsCtrl($scope, $http, $location, $window){
             });  
           });
           break;
+          case "settings":
+              $scope.result["value"] = parseSettingValue($scope.result["value"]);
+              break;
         default:
           break;
       }
