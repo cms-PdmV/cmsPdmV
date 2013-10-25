@@ -1189,6 +1189,10 @@ class request(json_base):
         text+='%srequests?prepid=%s'%(l_type.baseurl(), self.get_attribute('prepid'))
         return text
 
+    def target_for_test(self):
+        #could reverse engineer the target 
+        return settings().get_value('test_target')
+
     def get_n_for_test(self, target=1.0):
         ## that's the number of events we want to get in output
         events = target
@@ -1203,8 +1207,8 @@ class request(json_base):
 
         #=> estimate how long it will take
         total_test_time = float(self.get_attribute('time_event')) * events
-        fraction = 0.5
-        timeout = batch_control.timeout * 60. * fraction # in seconds
+        fraction = settings().get_value('test_timeout_fraction')
+        timeout = settings().get_value('batch_timeout') * 60. * fraction # in seconds
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
         self.logger.log('running %s means running for %s s, and timeout is %s' %( events, total_test_time, timeout))
@@ -1212,7 +1216,7 @@ class request(json_base):
             #reduce the n events for test to fit in 75% of the timeout
             if self.get_attribute('time_event'):
                 events = timeout / float(self.get_attribute('time_event'))
-                self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out'%( events, fraction , batch_control.timeout))
+                self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out'%( events, fraction , settings().get_value('batch_timeout') ))
             else:
                 self.logger.error('time per event is set to 0 !')
 
@@ -1246,7 +1250,7 @@ class request(json_base):
         return hash_id
 
     def update_performance(self, xml_doc, what):
-        total_event_in = self.get_n_for_test(100.0)
+        total_event_in = self.get_n_for_test( self.target_for_test() )
 
         xml_data = xml.dom.minidom.parseString( xml_doc )
 

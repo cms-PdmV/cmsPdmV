@@ -3,6 +3,7 @@ import os
 from tools.logger import logger as logfactory
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
+from tools.settings import settings
 
 class batch_control:
     """
@@ -11,7 +12,6 @@ class batch_control:
     logger = logfactory('mcm')
     hname = '' # handler's name
     group = 'no-group'
-    timeout = 80 # in minutes
 
     def __init__(self, test_id, test_script):
         self.script_for_test = test_script
@@ -29,6 +29,7 @@ class batch_control:
         self.log_out = 'Not available'
         self.log_err = 'Not available'
 
+        self.timeout = settings().get_value('batch_timeout')
 
     def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
         if not stdin and not stdout and not stderr:
