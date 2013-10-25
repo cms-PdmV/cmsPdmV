@@ -19,6 +19,14 @@ class settings:
     def get_notes(self, label ):
         return self.get(label)['notes']
 
+    def add(self, label, setting):
+        with locker.lock(label):
+            result = self.__db.save(setting)
+            if result:
+                self.cache[label] = setting
+            return result
+
+
     def set(self, label, setting):
         with locker.lock(label):
             result = self.__db.update(setting)

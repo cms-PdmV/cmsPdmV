@@ -59,7 +59,7 @@ class SaveSetting(RESTResource):
 
         new_setting = setting(data)
 
-        return dumps({"results": settings().set(new_setting.get_attribute('prepid'), new_setting.json())})
+        return dumps({"results": settings().add(new_setting.get_attribute('prepid'), new_setting.json())})
 
 
 class UpdateSetting(RESTResource):
