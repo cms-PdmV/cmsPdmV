@@ -13,8 +13,7 @@ from json_layer.flow import flow
 
 class CreateCampaign(RESTResource):
     def __init__(self):
-        self.db_name = 'campaigns'
-        self.db = database(self.db_name)
+        self.db = database('campaigns')
         self.cdb = database('chained_campaigns')
         self.campaign = None
         self.acccess_limit =3 
@@ -71,42 +70,54 @@ class CreateCampaign(RESTResource):
 
 class UpdateCampaign(RESTResource):
     def __init__(self):
-        self.db_name = 'campaigns'
-        self.db = database(self.db_name)
-        self.request = None
+        self.db = database('campaigns')
+        self.campaign = None
         self.access_limit = 3
-        
+        self.cdb = database('chained_campaigns')
+
     def PUT(self):
         """
         Update the content of a campaign data with the provided information
         """
-        return self.update_request(cherrypy.request.body.read().strip())
+        return self.update_campaign(cherrypy.request.body.read().strip())
 
-    def update_request(self, data):
+    def update_campaign(self, data):
         if not '_rev' in data:
             return dumps({"results":False, 'message': 'There is no previous revision provided'})
         try:
-            self.request = campaign(json_input=loads(data))
+            self.campaign = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
             return dumps({"results":False})
         
-        if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
+        if not self.campaign.get_attribute('prepid') and not self.campaign.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
         
         #cast schema evolution of sequences
-        sequences = self.request.get_attribute('sequences')
+        sequences = self.campaign.get_attribute('sequences')
         for steps in sequences:
             for label in steps:
                 steps[label] = sequence( steps[label] ).json()
-        self.request.set_attribute('sequences', sequences)
+        self.campaign.set_attribute('sequences', sequences)
 
+        # create dedicated chained campaign
+        self.create_chained_campaign(self.campaign.get_attribute('_id'),  self.campaign.get_attribute('root'))
 
-        self.request.update_history({'action':'update'})
+        self.campaign.update_history({'action':'update'})
         
-        return self.save_request()
+        return self.save_campaign()
 
-    def save_request(self):
-        return dumps({"results":self.db.update(self.request.json())})
+    def save_campaign(self):
+        return dumps({"results":self.db.update(self.campaign.json())})
+
+    ##unfortunate duplicate
+    # creates a chained campaign containing only the given campaign
+    def create_chained_campaign(self,  cid,  root):
+	if root < 1:
+            dcc = chained_campaign()
+            dcc.set_attribute('prepid', 'chain_'+cid)
+            dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
+            dcc.add_campaign(cid) 
+            self.cdb.save(dcc.json())
 
 class DeleteCampaign(RESTResource):
     def __init__(self):
