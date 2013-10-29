@@ -1457,7 +1457,12 @@ class UpdateMany(RequestRESTResource):
         for elem in list_of_prepids:
             document = self.db.get(elem)
             for value in updated_values:
-                document[value] = updated_values[value]
+                if isinstance(updated_values[value],list):
+                    temp = updated_values[value]
+                    temp.extend(document[value])
+                    document[value] = list(set(temp))
+                else:
+                    document[value] = updated_values[value]
             return_info.append(loads(self.updateSingle.update_request(dumps(document))))
         self.logger.log('updating requests: %s' %(return_info))
         return dumps({"results":return_info})
