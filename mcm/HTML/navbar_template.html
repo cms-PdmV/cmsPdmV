@@ -45,7 +45,7 @@
         <a ng-href='users' target="_self">User <i class="icon-user"></i></a>
       </li>
       <li class="divider-vertical" ng-hide="role(4);"></li>
-      <li ng-hide="role(4);">
+      <li ng-hide="role(4);" ng-class='{ "active": dbName=="news"}'>
         <a ng-href='news' target="_self">News <i class="icon-globe"></i></a>
       </li>
       <li class="divider-vertical" ng-hide="role(4);"></li>
