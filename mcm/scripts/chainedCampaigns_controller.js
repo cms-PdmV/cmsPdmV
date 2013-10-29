@@ -122,13 +122,13 @@ function resultsCtrl($scope, $http, $location, $window){
   var query = ""
   var select=false;
   _.each($location.search(), function(value,key){
-	  if (key!= 'shown' && key!='select'){
+	  if (key != 'shown' && key != 'select' && key != 'fields'){
 	      query += "&"+key+"="+value;
 	  }
 	  if (key=='select'){
 	      select=true;
 	  }
-      });
+  });
   $scope.got_results = false; //to display/hide the 'found n results' while reloading
   var promise;
   if (select){
@@ -160,28 +160,45 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.chainedCampaigns_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
           }
         });
-        var shown = "";
-        if ($.cookie($scope.dbName+"shown") !== undefined){
-          shown = $.cookie($scope.dbName+"shown");
-        }
-        if ($location.search()["shown"] !== undefined){
-          shown = $location.search()["shown"]
-        }
-        if (shown != ""){
-          $location.search("shown", shown);
-          binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-          _.each($scope.chainedCampaigns_defaults, function(column){
-            column_index = $scope.chainedCampaigns_defaults.indexOf(column);
-            binary_bit = binary_shown.charAt(column_index);
-            if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-              if (binary_bit == 1){
-                column.select = true;
-              }else{
+        if ( _.keys($location.search()).indexOf('fields') == -1)
+        {
+          var shown = "";
+          if ($.cookie($scope.dbName+"shown") !== undefined){
+            shown = $.cookie($scope.dbName+"shown");
+          }
+          if ($location.search()["shown"] !== undefined){
+            shown = $location.search()["shown"]
+          }
+          if (shown != ""){
+            $location.search("shown", shown);
+            binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+            _.each($scope.chainedCampaigns_defaults, function(column){
+              column_index = $scope.chainedCampaigns_defaults.indexOf(column);
+              binary_bit = binary_shown.charAt(column_index);
+              if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
+                if (binary_bit == 1){
+                  column.select = true;
+                }else{
+                  column.select = false;
+                }
+              }else{ //if the binary index isnt available -> this means that column "by default" was not selected
                 column.select = false;
               }
-            }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-              column.select = false;
-            }
+            });
+          }
+        }
+        else
+        {
+          _.each($scope.chainedCampaigns_defaults, function(elem){
+            elem.select = false;
+          });
+          _.each($location.search()['fields'].split(','), function(column){
+            _.each($scope.chainedCampaigns_defaults, function(elem){
+              if ( elem.db_name == column )
+              {
+                elem.select = true;
+              }
+            });
           });
         }
       }
