@@ -21,6 +21,7 @@ from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
+from rest_api.TagActions import GetTags, AddTag, RemoveTag
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -187,6 +188,7 @@ root.restapi.news = RESTResourceIndex()
 root.restapi.dashboard = RESTResourceIndex()
 root.restapi.mccms = RESTResourceIndex()
 root.restapi.settings = RESTResourceIndex()
+root.restapi.tags = RESTResourceIndex()
 
 ## create a restriction-free urls, with limited capabilities
 root.public = RESTResourceIndex()
@@ -347,6 +349,12 @@ root.restapi.mccms.editable = GetEditableMccmFields()
 root.restapi.settings.get = GetSetting()
 root.restapi.settings.update = UpdateSetting()
 root.restapi.settings.save = SaveSetting()
+
+# REST settings Actions
+
+root.restapi.tags.get_all = GetTags()
+root.restapi.tags.add = AddTag()
+root.restapi.tags.remove = RemoveTag()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
