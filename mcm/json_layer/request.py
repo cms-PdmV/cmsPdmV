@@ -66,7 +66,6 @@ class request(json_base):
             'notes':'',
             #'description':'',
             #'remarks':'',
-            'notes':'',
             'completed_events':-1,
             'total_events':-1,
             'member_of_chain':[],
@@ -90,6 +89,7 @@ class request(json_base):
             'approval':self.get_approval_steps()[0],
             'analysis_id':[],
             'energy' : 0,
+            'tags': []
             }
         # update self according to json_input
         self.setup()
@@ -156,7 +156,7 @@ class request(json_base):
             for key in self._json_base__schema:
                 editable[key]=False
             if self.current_user_level!=0: ## not a simple user
-                for key in ['generator_parameters','notes','history','generators']:
+                for key in ['generator_parameters','notes','history','generators','tags']:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
                 for key in self._json_base__schema:#make it fully opened for admins ['completed_events','reqmgr_name','member_of_chain']:
