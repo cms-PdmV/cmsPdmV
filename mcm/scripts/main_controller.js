@@ -389,8 +389,8 @@ testApp.directive("reqmgrName", function($http){
     '      <b><font color="red" ng-show="stats_cache[rqmngr[\'name\']] && !underscore.isObject(stats_cache[rqmngr[\'name\']])"> Stats Not Found</font></b>'+
     '      <span ng-show="underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
     '        <a ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" target="_self"> {{numberWithCommas(stats_cache[rqmngr[\'name\']].pdmv_evts_in_DAS)}} events</a>,'+
-    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr_data[\'name\']}}" rel="tooltip" title="Perf" target="_self">perf</a>,'+
-    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr_data[\'name\']}}" rel="tooltip" title="DS" target="_self">output</a>,'+
+    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/couchdb/workloadsummary/_design/WorkloadSummary/_show/histogramByWorkflow/{{rqmngr[\'name\']}}" rel="tooltip" title="Perf" target="_self">perf</a>,'+
+    '        <a ng-hide="role(3);" ng-href="https://cmsweb.cern.ch/reqmgr/reqMgr/outputDatasetsByRequestName/{{rqmngr[\'name\']}}" rel="tooltip" title="DS" target="_self">output</a>,'+
     '        {{stats_cache[rqmngr[\'name\']].pdmv_status_from_reqmngr}}, {{stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS}},'+
     '        <span ng-repeat="c_site in stats_cache[rqmngr_data[\'name\']].pdmv_custodial_sites">'+
     '          @{{c_site}},'+
@@ -435,25 +435,7 @@ testApp.directive("reqmgrName", function($http){
       };
 
       scope.load_dataset_list = function (req_name, index){
-        // if (scope.dbName == "requests")
-        // {
-          scope.getrqmnr_data(req_name, index);
-        // }
-        // else
-        // {
-        //   var url = "restapi/requests/get/"+ctrl.$viewValue;
-        //   var promise = $http.get(url);
-        //   promise.then(function(data){
-        //     scope.rqmngr_data = data.data.results.reqmgr_name;
-        //     if (scope.rqmngr_data.length > 0 )
-        //     {
-        //       scope.remngr_name = scope.rqmngr_data[0].name;
-        //       scope.getrqmnr_data(scope.rqmngr_data[0].name, index);
-        //     }
-        //   },function(data){
-        //     console.log("error",data);
-        //   });
-        // }
+        scope.getrqmnr_data(req_name, index);
       };
       scope.getrqmnr_data = function(req_name, index){
         scope.links[index] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+req_name+".gif";
@@ -466,13 +448,18 @@ testApp.directive("reqmgrName", function($http){
       };
 
       scope.$on('loadDataSet', function(event, values){
-        //console.log("gotEvent!", values);
-        //console.log(scope.r_prepid);
-        if (values[2]== scope.r_prepid)
+        if(scope.dbName == "requests")
         {
-          console.log("gotEvent!", values);
-          console.log(scope.r_prepid);
-          scope.load_dataset_list(values[0], values[1]);
+          if (values[2]== scope.r_prepid)
+          {
+            scope.load_dataset_list(values[0], values[1]);
+          }
+        }else
+        {
+          if (values[2] == scope.r_prepid)
+          {
+            scope.load_dataset_list(values[0], values[1]);
+          }
         }
       });
     }

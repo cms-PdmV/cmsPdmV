@@ -142,7 +142,7 @@
                   <img ng-show="puce[chain]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
                   <div ng-show="r_status[chain] == 'submitted'">
-                    <a ng-click="preloadRequest(chain);" ng-hide="underscore.has(local_requests,chain)" ng-href="#"><i class="icon-eye-open"></i></a>
+                    <a ng-click="preloadRequest(chain,'');" ng-hide="underscore.has(local_requests,chain)" ng-href="#"><i class="icon-eye-open"></i></a>
                     <span ng-show="underscore.has(local_requests,chain)">
                       <reqmgr-Name ng-model="local_requests[''+chain+'']" prepid="data.prepid"></reqmgr-Name>
                     </span>
@@ -208,12 +208,17 @@
         </tr>
       </tbody>
     </table>
+    <!-- {{r_status}} -->
+    <!-- {{local_requests}} -->
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
         Multiple selection buttons
 	      <a ng-click="multiple_load()" rel="tooltip" title="Load short view for selected requests" ng-href="#">
 	        <i class="icon-eye-open"></i>
 	      </a>
+        <a ng-click="multiple_inspect()" rel="tooltip" title="Load detailled view selected requests" ng-href="#">
+          <i class="icon-barcode"></i>
+        </a>
         <a ng-click="multiple_step('approve','/0')" rel="tooltip" ng-hide="role(3);" title="Reset selected requests" ng-href="#">
          <i class="icon-repeat"></i>
         </a>

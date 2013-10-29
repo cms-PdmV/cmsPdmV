@@ -457,7 +457,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["status_code"] = status;
     });
   };
-  $scope.preloadRequest = function(chain)
+  $scope.preloadRequest = function(chain, load_single)
   {
     var url = "restapi/requests/get/"+chain;
     if ( !_.has($scope.local_requests,chain) ){
@@ -465,10 +465,39 @@ function resultsCtrl($scope, $http, $location, $window){
       promise.then( function(data){
         var local_data = data.data.results.reqmgr_name;
         $scope.local_requests[chain] = local_data;
+        if (load_single != "")
+        {
+          console.log($scope.local_requests[chain]);
+          _.each($scope.local_requests[chain],function(element, index){
+            console.log("braodcast: ",element.name, index, load_single);
+            $scope.$broadcast('loadDataSet', [element.name, index, load_single]);
+          });
+        }
       },function(data){
         console.log("error",data);
       });
     }  
+  };
+  $scope.multiple_inspect = function()
+  {
+    _.each($scope.selected_prepids, function(selected_id){
+        _.each($scope.result, function(element){
+          if( element.prepid == selected_id)
+          {
+            //works!
+            _.each($scope.r_status, function(v,k){
+              //also wroks
+              if (element.chain.indexOf(k)!= -1)
+              {
+                if (v =="submitted")
+                {
+                  $scope.preloadRequest(k,element.prepid);
+                }
+              }
+            });              
+          }
+        });
+    });
   };
 };
 
