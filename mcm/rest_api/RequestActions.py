@@ -667,8 +667,11 @@ class ApproveRequest(RESTResource):
         try:
             if val == 0:
                 req.reset()
+                saved = self.db.update(req.json())
             else:
-                req.approve(val)
+                with locker.lock('{0}-wait-for-approval'.format( rid ) ):
+                    req.approve(val)
+                    saved = self.db.update(req.json())
 
         except request.WrongApprovalSequence as ex:
             return {'prepid': rid, 'results': False, 'message': str(ex)}
@@ -678,8 +681,10 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except:
             return {'prepid': rid, 'results': False, 'message': traceback.format_exc()}
-
-        return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': self.db.update(req.json())}
+        if saved:
+            return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
+        else:
+            return {'prepid': rid, 'results': False, 'message': 'Could not save the request after approval'}
 
 
 class ResetRequestApproval(ApproveRequest):
