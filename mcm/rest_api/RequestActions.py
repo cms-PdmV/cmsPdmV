@@ -690,7 +690,7 @@ class ApproveRequest(RESTResource):
 class ResetRequestApproval(ApproveRequest):
     def __init__(self):
         ApproveRequest.__init__(self)
-        self.access_limit = 2
+        self.access_limit = 1
 
     def GET(self, *args):
         """

@@ -1325,6 +1325,11 @@ class request(json_base):
         return to_be_saved
 
     def reset(self):
+
+        ## check on who's trying to do so
+        if self.current_user_level == 1 and not self.get_attribute('status') in ['validation','defined', 'new']:
+            raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'You have not enough karma to reset the request')
+
         self.approve(0)
         ## make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
