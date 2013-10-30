@@ -348,6 +348,7 @@ class chained_request(json_base):
             for key in to_be_transfered:
                 next_request.set_attribute(key, current_request.get_attribute(key))
             next_request.set_attribute("member_of_chain", [self.get_attribute('_id')])
+            next_request.notify("Request {0} joined chain".format(next_request.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(next_request.get_attribute('prepid'), self.get_attribute('_id')))
             next_request.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
             chain = self.get_attribute('chain')
             chain.append(next_id)
@@ -370,6 +371,7 @@ class chained_request(json_base):
                 chains = next_request.get_attribute("member_of_chain")
                 chains.append(self.get_attribute("prepid"))
                 next_request.set_attribute("member_of_chain", chains)
+                next_request.notify("Request {0} joined chain".format(next_request.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(next_request.get_attribute('prepid'), self.get_attribute('_id')))
                 next_request.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
                 saved = rdb.update(next_request.json())
                 if not saved:
@@ -631,6 +633,7 @@ class chained_request(json_base):
         # update history
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         self.update_history({'action': 'add request', 'step': req.get_attribute('_id')})
+        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), self.get_attribute('_id')))
 
         # set request approval status to new
         #req.approve(0)

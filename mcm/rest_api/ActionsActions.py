@@ -272,6 +272,7 @@ class GenerateChainedRequests(RESTResource):
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
                 req.set_attribute('member_of_chain',list(set(inchains)))
+                req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']))
                 self.rdb.update(req.json())
                 
         if hasChainsChanged:
