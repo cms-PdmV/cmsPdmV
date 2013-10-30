@@ -8,7 +8,8 @@ function resultsCtrl($scope, $http, $location, $window){
         {text:'Dataset name',select:true, db_name:'dataset_name'},
         //{text:'SW Release',select:false, db_name:'cmssw_release'},
         //{text:'Type',select:false, db_name:'type'},
-        {text:'History',select:true, db_name:'history'}
+        {text:'History',select:true, db_name:'history'},
+        {text:'Tags',select:true, db_name:'tags'}
     ];
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
     $search_data = {};
@@ -752,17 +753,10 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $window.onload = function() {
-      $('#tokenfield-typeahead').tokenfield({
-  typeahead: {
-    name: 'tags',
-    local: ['red','blue','green','yellow','violet','brown','purple','black','white']
-  },
-  allowDuplicates: true
-});
+  $scope.findToken = function(tok){
+      $window.location.href = "requests?&tags="+tok.value
   }
-
-};
+}
 
 // NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});

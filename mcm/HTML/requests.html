@@ -4,12 +4,17 @@
         <title>Requests page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <!--<link href="scripts/css/typeahead.js-bootstrap.css" rel="stylesheet" type="text/css"/>-->
+        <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
         
          <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
          <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
          <script type="text/javascript" src="scripts/angular.min.js"></script>
          <script src="scripts/ui-bootstrap-custom-tpls-both-0.5.0.js"></script>
+         <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
+         <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
          <!--<script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>-->
 
          
@@ -290,6 +295,9 @@
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
+              </div>
+              <div ng-switch-when="Tags">
+                  <tokenfield ng-disabled="true" on-click="findToken" tokens="data[value.db_name]"/>
               </div>
               <div ng-switch-when="Total events" align="right">
                 {{numberWithCommas(data[value.db_name])}}

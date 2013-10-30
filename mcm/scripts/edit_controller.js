@@ -155,9 +155,10 @@ function resultsCtrl($scope, $http, $location, $window){
               sequence["eventcontent"] = sequence["eventcontent"].split(",");
             }
           });
-         $scope.result["time_event"] = parseFloat($scope.result["time_event"])
-         $scope.result["size_event"] = parseFloat($scope.result["size_event"])
-         $scope.result["memory"] = parseFloat($scope.result["memory"])
+         $scope.result["time_event"] = parseFloat($scope.result["time_event"]);
+         $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
+         $scope.result["memory"] = parseFloat($scope.result["memory"]);
+         $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
 	//$scope.listify_blocks();
           break;
         case "campaigns":
@@ -322,6 +323,15 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.result["pwg"].push(elem);
     }
   };
+
+  $scope.addToken = function(tok) {
+      $http({method:'PUT', url:'restapi/tags/add/', data:JSON.stringify({tag:tok.value})})
+  };
+
+  $scope.removeToken = function(tok) {
+      // for now let's store all tags, can be changed in future for some checks
+//      $http({method:'PUT', url:'restapi/tags/remove/', data:JSON.stringify({tag:tok.value})})
+  }
 }
 var ModalDemoCtrl = function ($scope) {
   $scope.open = function (seq1, seq2, number) {
