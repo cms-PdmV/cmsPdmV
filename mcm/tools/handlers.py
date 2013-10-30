@@ -291,6 +291,11 @@ class RequestSubmitter(Handler):
         if self.check_approval and req.get_attribute('approval') != 'submit':
             self.injection_error("The request is in approval {0}, while submit is required".format(req.get_attribute('approval')), req)
             return False, None
+
+        if req.get_attribute('status') != 'approved':
+            self.injection_error("The request is in status {0}, while approved is required".format(req.get_attribute('status')), req)
+            return False, None
+
         return True, req
 
 
