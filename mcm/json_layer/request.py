@@ -1259,8 +1259,10 @@ class request(json_base):
             return
 
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
-        if total_event==0:
+        if total_event==0 and total_event_in!=0:
             self.logger.error("For %s the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
+            ##fail it !
+            raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in ))
             return
 
         memory = None
@@ -1307,9 +1309,14 @@ class request(json_base):
             if timing and timing>self.get_attribute('time_event'):
                 self.set_attribute('time_event', timing)
                 to_be_saved=True
+            if timing and timing<self.get_attribute('time_event'):
+                self.notify('Runtest: time per event underestimate.','For this request, time/event=%s was given, %s was measured from %s events'%( self.get_attribute('time_event'), timing, total_event))
             if file_size and file_size>self.get_attribute('size_event'):
                 self.set_attribute('size_event', file_size)
                 to_be_saved=True
+            if file_size and file_size<self.get_attribute('size_event'):
+                self.notify('Runtest: size per event underestimate.','For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
+
             if memory and memory>self.get_attribute('memory'):
                 safe_margin = 1.05
                 memory *= safe_margin
