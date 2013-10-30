@@ -3,3 +3,5 @@
 .__afs*
 .idea
 .DS_Store
+logs/
+WMCore/
