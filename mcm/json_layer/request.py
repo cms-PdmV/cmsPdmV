@@ -1308,14 +1308,16 @@ class request(json_base):
         elif what =='perf':
             if timing and timing>self.get_attribute('time_event'):
                 self.set_attribute('time_event', timing)
+                #self.notify('Runtest for %s: time per event under-estimate.'%(self.get_attribute('prepid')),'For this request, time/event=%s was given, %s was measured and set to the request from %s events'%( self.get_attribute('time_event'), timing, total_event))
                 to_be_saved=True
             if timing and timing<self.get_attribute('time_event'):
-                self.notify('Runtest: time per event underestimate.','For this request, time/event=%s was given, %s was measured from %s events'%( self.get_attribute('time_event'), timing, total_event))
+                self.notify('Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid')),'For this request, time/event=%s was given, %s was measured from %s events'%( self.get_attribute('time_event'), timing, total_event))
             if file_size and file_size>self.get_attribute('size_event'):
                 self.set_attribute('size_event', file_size)
+                #self.notify('Runtest for %s: size per event under-estimate.'%(self.get_attribute('prepid')),'For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
                 to_be_saved=True
             if file_size and file_size<self.get_attribute('size_event'):
-                self.notify('Runtest: size per event underestimate.','For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
+                self.notify('Runtest for %s: size per event over-estimate.'%(self.get_attribute('prepid')),'For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
 
             if memory and memory>self.get_attribute('memory'):
                 safe_margin = 1.05
