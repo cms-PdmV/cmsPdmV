@@ -49,8 +49,8 @@ class GetUserPWG(RESTResource):
 
     def GET(self, *args):
         """
-	    Retrieve the pwg of the provided user
-	    """
+        Retrieve the pwg of the provided user
+        """
         ## this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
         
         all_pwgs = settings().get_value('pwg')
