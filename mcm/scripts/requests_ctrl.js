@@ -617,9 +617,12 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.openCloneModal = function(id, pwg, campaign)
   {
     if(!$scope.all_pwgs){
-      var promise = $http.get("restapi/users/get_pwg")
+      var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name)
       promise.then(function(data){
         $scope.all_pwgs = data.data.results;
+	if ($scope.all_pwgs.indexOf(pwg)==-1){
+	    $scope.all_pwgs.push( pwg );
+	}
       });
     }
     if(!$scope.allCampaigns)
