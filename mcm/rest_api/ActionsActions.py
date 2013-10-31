@@ -359,7 +359,7 @@ class SetAction(GenerateChainedRequests):
 
         chains[mcm_cc_name] = { "flag":True, "block_number" : block}
         if staged:
-            chains[mcm_cc_name]['staged']=stage
+            chains[mcm_cc_name]['staged']=staged
         if threshold:
             chains[mcm_cc_name]['threshold']=threshold
 
