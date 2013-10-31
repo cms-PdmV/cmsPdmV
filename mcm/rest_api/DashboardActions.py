@@ -174,7 +174,7 @@ class GetStats(RESTResource):
         counts_e = defaultdict(lambda: defaultdict(int) )
         sums = defaultdict(int) 
 
-        statuses=['new', 'validation', 'approved' , 'submitted', 'done']
+        statuses=['new', 'validation', 'approved' , 'submitted', 'done', 'upcoming']
         data = []
         data.append( ['Step'] + statuses )
         data_g=[['Label','Value']]
@@ -219,17 +219,27 @@ class GetStats(RESTResource):
         if not ccdb.document_exists( a_cc ):
             return "%s does not exists" %( a_cc )
         mcm_cc = ccdb.get( a_cc )
+        steps = map(lambda s : s[0], mcm_cc['campaigns'])
         all_cr = crdb.queries(['member_of_campaign==%s'%a_cc])
 
         for cc in all_cr:
+            upcoming=0
             for r in cc['chain']:
                 mcm_r = rdb.get(r)
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
-                if mcm_r['status'] in ['submitted','done']:
+                upcoming=mcm_r['total_events']
+                if mcm_r['status'] in ['done']:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
+                elif  mcm_r['status'] in ['submitted']:
+                    ##split the stat in done and submitted accordingly
+                    counts_e[str(mcm_r['member_of_campaign'])] ['done'] += mcm_r['completed_events']
+                    counts_e[str(mcm_r['member_of_campaign'])] ['submitted'] += max([0, mcm_r['total_events'] - mcm_r['completed_events']])
                 else:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
-                
+            #fill up the rest with upcoming
+            for noyet in steps[ len(cc['chain']):]:
+                counts_e[str(noyet)]['upcoming'] += upcoming
+
         for step in mcm_cc['campaigns']:
             entry=[]
             entry.append( step[0] ) # step[1] is the flow name
