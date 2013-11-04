@@ -289,7 +289,7 @@ class chained_request(json_base):
                 completed_events_to_pass = next_total_events
             else:
                 ## get the original expected events and allow a margin of 5% less statistics
-                completed_events_to_pass = current_request.get_attribute('total_events') * 0.95 
+                completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
 
         if current_request.get_attribute('completed_events') < completed_events_to_pass:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
