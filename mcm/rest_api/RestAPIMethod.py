@@ -33,7 +33,7 @@ class RESTResource(object):
         if not method:
             raise cherrypy.HTTPError(405, "Method not implemented.")
 
-        if self.access_limit:
+        if self.access_limit!=None:
             self.logger.log('Setting access limit to %s' % self.access_limit)
             self.authenticator.set_limit(self.access_limit)
         elif cherrypy.request.method in self.limit_per_method:
