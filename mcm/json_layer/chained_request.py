@@ -263,6 +263,8 @@ class chained_request(json_base):
         current_request.get_stats()
 
         next_total_events=current_request.get_attribute('completed_events')
+        completed_events_to_pass=next_total_events
+
         if current_request.get_attribute('completed_events') <= 0:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The number of events completed is negative or null')
@@ -284,14 +286,14 @@ class chained_request(json_base):
                     next_total_events = int(original_action_item['staged'])
                 if 'threshold' in original_action_item:
                     next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
-        if current_request.get_attribute('completed_events') < next_total_events:
+                completed_events_to_pass = next_total_events
+            else:
+                ## get the original expected events and allow a margin of 5% less statistics
+                completed_events_to_pass = current_request.get_attribute('total_events') * 0.95 
+
+        if current_request.get_attribute('completed_events') < completed_events_to_pass:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), next_total_events))
-
-        #and set to a fraction of the existing stat only if already completed ??? maybe not
-        #if at_a_transition and ('threshold' in original_action_item) and current_request.get_attribute('status') == 'done': 
-        #next_total_events = int(current_request.get_attribute('completed_events') * float(original_action_item['threshold'] / 100.))
-
+                                                         'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
 
 
         ## select what is to happened : [create, patch, use]
@@ -404,21 +406,7 @@ class chained_request(json_base):
 
         #already taking stage and threshold into account
         next_request.set_attribute('total_events', next_total_events)
-        """
-        ## transfer the number of events to process (could be revised later on)
-        next_request.set_attribute('total_events', current_request.get_attribute('completed_events'))
 
-        if 'staged' in original_action_item or 'threshold' in original_action_item:
-            ##check whether there is enough stat available to flow staged.
-            ## determine if this is a root -> non-root transition to potentially apply staged number
-            if current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1:
-                if 'staged' in original_action_item:
-                    next_request.set_attribute('total_events', original_action_item['staged'])
-                elif 'threshold' in original_action_item:
-                    next_request.set_attribute('total_events', int(
-                        current_request.get_attribute('completed_events') * float(
-                            original_action_item['threshold']) / 100.))
-        """
 
         ## set blocks restriction if any
         if block_black_list:
