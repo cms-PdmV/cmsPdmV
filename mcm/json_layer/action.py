@@ -67,7 +67,7 @@ class action(json_base):
         try:
             reqdb = database('requests')
             campaigndb = database('campaigns')
-        except datase.DatabaseAccessError as ex:
+        except database.DatabaseAccessError as ex:
             return False
         
         # validate prepid
@@ -94,7 +94,7 @@ class action(json_base):
         try:
             chaindb = database('chained_campaigns')
             cdb = database('campaigns')
-        except datase.DatabaseAccessError as ex:
+        except database.DatabaseAccessError as ex:
             return False
         
         # get all chains
