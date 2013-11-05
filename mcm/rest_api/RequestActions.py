@@ -1003,7 +1003,7 @@ class SearchableRequest(RESTResource):
             for request in all_requests:
                 for key in ['energy', 'dataset_name', 'status', 'approval', 'extension', 'generators',
                             'member_of_chain', 'pwg', 'process_string', 'mcdb_id', 'prepid', 'flown_with',
-                            'member_of_campaign']:
+                            'member_of_campaign','tags']:
                     if not key in searchable:
                         searchable[key] = set([])
                     if not key in request:
