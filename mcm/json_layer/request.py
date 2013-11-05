@@ -1315,14 +1315,14 @@ class request(json_base):
                 if timing *0.90 > self.get_attribute('time_event'):
                     ## notify if more than 10% discrepancy found !
                     self.notify('Runtest for %s: time per event under-estimate.'%(self.get_attribute('prepid')),
-                                'For this request, time/event=%s was given, %s was measured and set to the request from %s events'%( self.get_attribute('time_event'), timing, total_event))
+                                'For this request, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in))
                 self.set_attribute('time_event', timing)
                 to_be_saved=True
             if timing and timing < (0.90 * self.get_attribute('time_event')):
                 ## timing over-estimated
                 ## warn if over-estimated by more than 10% : we should actually fail those big time !!
                 self.notify('Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid')),
-                            'For this request, time/event=%s was given, %s was measured from %s events'%( self.get_attribute('time_event'), timing, total_event))
+                            'For this request, time/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in))
 
             ## size check
             if file_size and file_size>self.get_attribute('size_event'):
@@ -1330,14 +1330,14 @@ class request(json_base):
                 if file_size * 0.90 > self.get_attribute('size_event'):
                     ## notify if more than 10% discrepancy found !
                     self.notify('Runtest for %s: size per event under-estimate.'%(self.get_attribute('prepid')),
-                                'For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
+                                'For this request, size/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('size_event'), file_size, total_event, total_event_in))
                 self.set_attribute('size_event', file_size)                    
                 to_be_saved=True
             if file_size and file_size< int( 0.90 * self.get_attribute('size_event')):
                 ## size over-estimated
                 ## warn if over-estimated by more than 10% 
                 self.notify('Runtest for %s: size per event over-estimate.'%(self.get_attribute('prepid')),
-                            'For this request, size/event=%s was given, %s was measured from %s events'%( self.get_attribute('size_event'), file_size, total_event))
+                            'For this request, size/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('size_event'), file_size, total_event, total_event_in))
 
             if memory and memory>self.get_attribute('memory'):
                 safe_margin = 1.05
@@ -1345,7 +1345,7 @@ class request(json_base):
                 if memory > 4000:
                     self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB."%(self.get_attribute('prepid'),safe_margin, memory))
                     self.notify('Runtest for %s: memory over-usage' %( self.get_attribute('prepid')),
-                                'For this request, the memory usage is found to be large. Requiring %s MB. Setting to high memory queue'%( memory ))
+                                'For this request, the memory usage is found to be large. Requiring %s MB measured from %s events (ran %s). Setting to high memory queue'%( memory, total_event, total_event_in ))
                     #truncate to 4G, or catch it in ->define step ?
                 self.set_attribute('memory', memory)
                 to_be_saved=True
