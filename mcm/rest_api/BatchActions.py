@@ -238,3 +238,31 @@ class ResetBatch(BatchAnnouncer):
             bdb.update( mcm_b )
             res.append({'prepid':bid, 'resutls': True})
         return dumps(res)
+
+
+class HoldBatch(RESTResource):
+    def __init__(self):
+        self.access_limit = 3
+
+    def GET(self, *args):
+        """
+        Set batch status to hold (from new) or to new (from hold)
+        """
+        res=[]
+        bdb = database('batches')
+        if not len(args):
+            return dumps({'results': False, 'message': 'No batch ids given'})
+        bids = args[0]
+        for bid in bids.split(','):
+            mcm_b = bdb.get(bid)
+            if mcm_b['status']=='new':
+                mcm_b['status'] = 'hold'
+            elif mcm_b['status']=='hold':
+                mcm_b['status'] = 'new'
+            else:
+                res.append({'prepid':bid, 'results': False, 'message': 'Only status hold or new allowed'})
+                continue
+
+            bdb.update( mcm_b )
+            res.append({'prepid':bid, 'results': True})
+        return dumps(res)

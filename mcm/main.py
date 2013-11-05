@@ -15,7 +15,7 @@ from rest_api.RequestPrepId import RequestPrepId
 from rest_api.RequestChainId import RequestChainId
 from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames
-from rest_api.BatchActions import SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch
+from rest_api.BatchActions import HoldBatch, SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
@@ -316,6 +316,7 @@ root.restapi.batches.announce = AnnounceBatch()
 root.restapi.batches.redirect = GetIndex()
 root.restapi.batches.inspect = InspectBatches()
 root.restapi.batches.reset = ResetBatch()
+root.restapi.batches.hold = HoldBatch()
 
 # REST invalidation Actions
 root.restapi.invalidations.inspect = InspectInvalidation()

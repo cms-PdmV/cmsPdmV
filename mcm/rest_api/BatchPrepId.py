@@ -28,8 +28,8 @@ class BatchPrepId():
             #### doing the query by hand
             res = self.bdb.queries([])
             res_this = filter(lambda x: x['prepid'].split('-')[0] == batchName, res)
-            ## filter to have the ones of that family, that are NEW
-            res_new = filter(lambda x: x['status']=='new', res_this)
+            ## filter to have the ones of that family, that are NEW or on hold
+            res_new = filter(lambda x: x['status']=='new' or x['status']=='hold', res_this)
 
             ## add limitation to version, extension and process string
             res_new = filter(lambda x: x['version'] == version, res_new)

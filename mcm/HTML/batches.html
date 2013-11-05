@@ -107,6 +107,8 @@
                   <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);"><i class="icon-repeat"></i></a>
                   <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status"><i class="icon-eye-open"></i></a>
                   <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ><i class="icon-screenshot"></i></a>
+                  <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold batch {{data.prepid}}" ng-hide="role(3) || data.status!='new';" ><i class="icon-pause"></i></a>
+                  <a ng-click="hold(data.prepid);" rel="tooltip" title="Unhold batch {{data.prepid}}" ng-hide="role(3) || data.status!='hold';" ><i class="icon-play"></i></a>
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->  
               </div>
