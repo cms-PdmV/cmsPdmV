@@ -696,17 +696,20 @@ class request(json_base):
             configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
             res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
 
+            ## add monitoring at all times...
+            if '--customise ' in cmsd:
+                old_cust = cmsd.split('--customise ')[1].split()[0]
+                new_cust=old_cust
+                new_cust+=',Configuration/DataProcessing/Utils.addMonitoring'
+                res=res.replace('--customise %s'%(old_cust),'--customise %s'%(new_cust))
+                #res +='--customise %s'%( cust )
+            else:
+                res += '--customise Configuration/DataProcessing/Utils.addMonitoring'
 
             if run:
                 ## with a back port of number_out that would be much better
                 res += '-n '+str(events)+ ' '
 
-                if '--customise ' in cmsd:
-                    cust = cmsd.split('--customise ')[1].split()[0]
-                    cust+=',Configuration/DataProcessing/Utils.addMonitoring'
-                    res +='--customise %s'%( cust )
-                else:
-                    res += '--customise Configuration/DataProcessing/Utils.addMonitoring'
 
                 res += ' || exit $? ; \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
