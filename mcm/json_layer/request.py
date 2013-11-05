@@ -199,7 +199,10 @@ class request(json_base):
             else:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
+
         if self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
+            if re.match('^[\w/.-]+$', self.get_attribute('name_of_fragment')) is None:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation', 'The configuration fragment {0} name contains illegal characters'.format(self.get_attribute('name_of_fragment')))
             for line in self.parse_fragment():
                 if 'This is not the web page you are looking for' in line:
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The configuration fragment does not exist in git')
