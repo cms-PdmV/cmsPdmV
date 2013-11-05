@@ -341,14 +341,18 @@ class chained_request(json_base):
             else:
                 approach = 'create'
 
+        def transfer( current_request, next_request):
+            to_be_transfered = ['pwg', 'dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id','notes','tags']
+            for key in to_be_transfered:
+                next_request.set_attribute(key, current_request.get_attribute(key))
+
         if approach == 'create':
             from rest_api.RequestPrepId import RequestPrepId
 
             next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
             next_request = request(next_campaign.add_request({"prepid": next_id, "_id": next_id}))
-            to_be_transfered = ['pwg', 'dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id']
-            for key in to_be_transfered:
-                next_request.set_attribute(key, current_request.get_attribute(key))
+            transfer( current_request, next_request)
+
             next_request.set_attribute("member_of_chain", [self.get_attribute('_id')])
             next_request.notify("Request {0} joined chain".format(next_request.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(next_request.get_attribute('prepid'), self.get_attribute('_id')))
             next_request.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
@@ -368,6 +372,9 @@ class chained_request(json_base):
                 self.update_history({'action': 'flow', 'step': str(next_step)})
             self.set_attribute('step', next_step)
             next_request = request(rdb.get(next_id))
+            #reput some of the previous parameters in
+            transfer( current_request, next_request)
+
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
                 ## register the chain to the next request
                 chains = next_request.get_attribute("member_of_chain")
