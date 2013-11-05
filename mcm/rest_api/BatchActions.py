@@ -236,7 +236,7 @@ class ResetBatch(BatchAnnouncer):
                 rdb.update( mcm_r.json() )
             mcm_b['status'] = 'reset'
             bdb.update( mcm_b )
-            res.append({'prepid':bid, 'resutls': True})
+            res.append({'prepid':bid, 'results': True})
         return dumps(res)
 
 
@@ -254,15 +254,17 @@ class HoldBatch(RESTResource):
             return dumps({'results': False, 'message': 'No batch ids given'})
         bids = args[0]
         for bid in bids.split(','):
-            mcm_b = bdb.get(bid)
-            if mcm_b['status']=='new':
-                mcm_b['status'] = 'hold'
-            elif mcm_b['status']=='hold':
-                mcm_b['status'] = 'new'
+            mcm_b = batch(bdb.get(bid))
+            if mcm_b.get_attribute('status')=='new':
+                mcm_b.set_attribute('status', 'hold')
+                mcm_b.update_history({'action':'set status','step':'hold'})
+            elif mcm_b.get_attribute('status')=='hold':
+                mcm_b.set_attribute('status', 'new')
+                mcm_b.update_history({'action':'set status','step':'new'})
             else:
                 res.append({'prepid':bid, 'results': False, 'message': 'Only status hold or new allowed'})
                 continue
 
-            bdb.update( mcm_b )
+            bdb.update( mcm_b.json())
             res.append({'prepid':bid, 'results': True})
         return dumps(res)
