@@ -2,6 +2,8 @@
 
 from couchdb_layer.mcm_database import database
 from tools.locker import locker
+from collections import defaultdict
+from tools.settings import settings
 
 
 class authenticator:
@@ -10,6 +12,7 @@ class authenticator:
         self.__roles = ['user', 'generator_contact', 'generator_convener', 'production_manager', 'administrator']
         self.__db = database('users')
         self.__users_roles = dict()
+        self.__lookup_counter = defaultdict(int)
 
         # limit is the numeric representation of a base role that cane
         # access a specific page
@@ -41,6 +44,13 @@ class authenticator:
                             user = self.__db.get(username)
                             pass
                     self.__users_roles[username] = user['role']
+            else:
+                if self.__lookup_counter[username] == settings().get_value("user_cache_refresh_counter"):
+                    if self.__db.document_exists(username):
+                        self.__users_roles[username] = self.__db.get(username)['role']
+                    self.__lookup_counter[username] = 0
+                else:
+                    self.__lookup_counter[username] += 1
             return self.__users_roles[username]
 
     def get_user_role_index(self, username, email=None):
