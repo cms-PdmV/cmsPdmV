@@ -270,6 +270,14 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     });
   };
+
+ $scope.hold = function(batchid) {
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/hold/'+batchid}).success(function(data,status){
+	      $scope.getData();
+	  }).error(function(status){
+		  alert('Cannot hold or release '+batchid);
+	      });
+ }
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
