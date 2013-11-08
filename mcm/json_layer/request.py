@@ -700,11 +700,11 @@ class request(json_base):
             if '--customise ' in cmsd:
                 old_cust = cmsd.split('--customise ')[1].split()[0]
                 new_cust=old_cust
-                new_cust+=',Configuration/DataProcessing/Utils.addMonitoring'
+                new_cust+=',Configuration/DataProcessing/Utils.addMonitoring '
                 res=res.replace('--customise %s'%(old_cust),'--customise %s'%(new_cust))
                 #res +='--customise %s'%( cust )
             else:
-                res += '--customise Configuration/DataProcessing/Utils.addMonitoring'
+                res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
             if run:
                 ## with a back port of number_out that would be much better
