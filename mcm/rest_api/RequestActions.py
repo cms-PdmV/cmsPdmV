@@ -248,7 +248,7 @@ class UpdateRequest(RequestRESTResource):
             res = self.update_request(cherrypy.request.body.read().strip())
             return res
         except:
-            self.logger.error('Failed to update a request from API')
+            self.logger.error('Failed to update a request from API \n%s'%( traceback.format_exc() ))
             return dumps({'results': False, 'message': 'Failed to update a request from API'})
 
     def update_request(self, data):
