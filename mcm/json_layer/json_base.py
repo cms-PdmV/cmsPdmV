@@ -95,6 +95,9 @@ class json_base:
 
     def update_history(self, history):
         hist = self.get_attribute('history')
+        ## in case there was an issue with the history initialisation
+        if not hist:
+            hist=[]
         if not history:
             return
 
