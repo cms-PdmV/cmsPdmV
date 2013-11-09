@@ -7,6 +7,7 @@ from RestAPIMethod import RESTResource
 from RequestChainId import RequestChainId
 from json_layer.chained_request import chained_request
 from json_layer.request import request
+from json_layer.action import action
 
 """
 ## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
@@ -98,9 +99,10 @@ class UpdateChainedRequest(RESTResource):
 
 class DeleteChainedRequest(RESTResource):
     def __init__(self):
-        self.db_name = 'chained_requests'
-        self.db = database(self.db_name)
-    
+        self.crdb = database('chained_requests')
+        self.rdb = database('requests')
+        self.adb = database('actions')
+
     def DELETE(self, *args):
         """
         Simply delete a chained requests
@@ -109,8 +111,52 @@ class DeleteChainedRequest(RESTResource):
             return dumps({"results":False})
         return self.delete_request(args[0])
     
-    def delete_request(self, id):
-        return dumps({"results":self.db.delete(id)})
+    def delete_request(self, crid):
+
+        mcm_cr = chained_request(self.crdb.get(crid))
+        
+        ## get all objects
+        mcm_r_s=[]
+        for (i,rid) in enumerate(mcm_cr.get_attribute('chain')):
+            mcm_r = request(self.rdb.get(rid))
+            #this is not a valid check as it is allowed to remove a chain around already running requests
+            #    if mcm_r.get_attribute('status') != 'new':
+            #        return dumps({"results":False,"message" : "the request %s part of the chain %s for action %s is not in new status"%( mcm_r.get_attribute('prepid'),
+            #                                                                                                                             crid,
+            #                                                                                                                             mcm_a.get_attribute('prepid'))})
+            in_chains = mcm_r.get_attribute('member_of_chain')
+            in_chains.remove( crid )
+            mcm_r.set_attribute('member_of_chain', in_chains)
+            if i==0:
+                # the root is the action id
+                mcm_a = action(self.adb.get(rid))
+            else:
+                if len(in_chains)==0:
+                    return dumps({"results":False,"message" : "the request %s, not at the root of the chain will not be chained anymore"%( rid)})
+            mcm_r.update_history({'action':'leave','step':crid})
+            mcm_r_s.append( mcm_r )
+                    
+        ## check if possible to get rid of it !
+        # action for the chain is disabled
+        chains = mcm_a.get_chains( mcm_cr.get_attribute('member_of_campaign'))
+        if chains[crid] ['flag'] == True:
+            return dumps({"results":False,"message" : "the action %s for %s is not disabled"%(mcm_a.get_attribute('prepid'), crid)})
+        #take it out
+        mcm_a.remove_chain(  mcm_cr.get_attribute('member_of_campaign'),
+                             mcm_cr.get_attribute('prepid') )
+
+        if not self.adb.update( mcm_a.json()):
+            return dumps({"results":False,"message" : "Could not save action "+ mcm_a.get_attribute('prepid')})
+        ## then save all changes
+        for mcm_r in mcm_r_s:
+            if not self.rdb.update( mcm_r.json()):
+                return dumps({"results":False,"message" : "Could not save request "+ mcm_r.get_attribute('prepid')})
+            else:
+                mcm_r.notify("Request {0} left chain".format( mcm_r.get_attribute('prepid')),
+                             "Request {0} has successfuly left chain {1}".format( mcm_r.get_attribute('prepid'), crid))
+
+
+        return dumps({"results":self.crdb.delete(crid)})
 
 class GetChainedRequest(RESTResource):
     def __init__(self):
