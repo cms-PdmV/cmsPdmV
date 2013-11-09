@@ -30,7 +30,7 @@ class action(json_base):
         self._json_base__schema = {
             '_id':'',
             'prepid':'',
-            'history':'',
+            'history':[],
             'member_of_campaign':'', 
             'dataset_name':'',
             'analysis_id':[],
@@ -110,11 +110,11 @@ class action(json_base):
         new_chains = {}
         
         # cross examine (avoid deleted, keep new ones)
-        for id in ccids:
-            if id in chains:
-                new_chains[id] = chains[id]
+        for ccid in ccids:
+            if ccid in chains:
+                new_chains[ccid] = chains[ccid]
             else:
-                new_chains[id] = {'flag' : False }
+                new_chains[ccid] = {'flag' : False }
         
         # make persistent
         self.set_attribute('chains',  new_chains)
@@ -199,3 +199,15 @@ class action(json_base):
         if rd.document_exists(self.get_attribute('prepid')):
             r= request(rd.get(self.get_attribute('prepid')))
             self.set_attribute('dataset_name',r.get_attribute('dataset_name'))
+
+    def get_chains( self, chained_campaigned_id):
+        chains = self.get_attribute('chains')[chained_campaigned_id]
+        if 'chains' in chains:
+            return chains['chains']
+        else:
+            return {}
+    def remove_chain(self, chained_campaigned_id, chained_request_id):
+        chains = self.get_attribute('chains')
+        chains[chained_campaigned_id]['chains'].pop( chained_request_id)
+        self.set_attribute('chains', chains)
+        self.update_history({'action':'remove', 'step' : chained_request_id})
