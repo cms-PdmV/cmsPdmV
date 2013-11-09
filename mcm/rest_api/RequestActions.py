@@ -573,7 +573,7 @@ class DeleteRequest(RESTResource):
 
     def delete_request(self, pid):
         mcm_r = request(self.db.get( pid))
-        if mcm_r.get_attribute('member_of_chain')!=0:
+        if len(mcm_r.get_attribute('member_of_chain'))!=0:
             return dumps({"results": False,"message":"Not possible to delete a request that is part of a chain"})
 
         # delete actions !
