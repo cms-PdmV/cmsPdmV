@@ -271,6 +271,7 @@ class GenerateChainedRequests(RESTResource):
                 req = request(json_input=self.rdb.get(aid))
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
+                inchains.sort()
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']))
                 act.update_history({'action':'add','step' : new_cr['prepid']})
@@ -355,10 +356,10 @@ class SetAction(GenerateChainedRequests):
             return dumps("Not able to find %s for %s"%( mcm_cc_name, aid))
         
         #edit the chains content
-        if 'chains' in chains[mcm_cc_name]:
-            return dumps("Something already exists for %s in %s. You'll have to do it by hand"%( mcm_cc_name,aid))
+        #if 'chains' in chains[mcm_cc_name]:
+        #    return dumps("Something already exists for %s in %s. You'll have to do it by hand"%( mcm_cc_name,aid))
 
-        chains[mcm_cc_name] = { "flag":True, "block_number" : block}
+        chains[mcm_cc_name].update( { "flag":True, "block_number" : block})
         if staged:
             chains[mcm_cc_name]['staged']=staged
         if threshold:
