@@ -92,7 +92,7 @@ function resultsCtrl($scope, $http, $location, $window){
       if (data["results"]){
         alert('Object was deleted successfully.');
       }else{
-        alert('Could not save data to database.');
+        alert('Could not delete because '+data['message']);
       }
     }).error(function(status){
       alert('Error no.' + status + '. Could not delete object.');
