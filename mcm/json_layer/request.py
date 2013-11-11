@@ -314,7 +314,9 @@ class request(json_base):
             # try setting the process string ? or just raise an exception ?
             if not self.get_attribute('process_string'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
-
+        else:
+            if self.get_attribute('process_string'):
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The sequences is the same as one of the campaign, but a process string %s has been provided'%( self.get_attribute('process_string'))
 
 
         ## select to synchronize status and approval toggling, or run the validation/run test
