@@ -1404,7 +1404,7 @@ class request(json_base):
         if increase_revision:
             for req in req_to_invalidate:
                 # find the batch it is in
-                bs = bdd.queries(['contains=%s'%( req)])
+                bs = bdb.queries(['contains=%s'%( req)])
                 for b in bs:
                     if b['status'] in ['done','announced']:
                         increase_revision=False
