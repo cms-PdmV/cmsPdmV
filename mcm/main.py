@@ -8,7 +8,7 @@ from rest_api.RestAPIMethod import RESTResourceIndex
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, RequestsFromFile, SearchRequest, TestRequest, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep
+from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest, AddRequestToChain,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
@@ -135,6 +135,9 @@ def edit_many_html( *args, **kwargs):
 @cherrypy.expose
 def dashboard_html(*args, **kwargs):
     return open(os.path.join(file_location, 'HTML', 'dashboard.html'))
+@cherrypy.expose
+def graph_painter_html(*args, **kwargs):
+    return open(os.path.join(file_location, 'HTML', 'graph_painter.html'))
 
 ### END OF UPDATED METHODS###
 # root
@@ -172,6 +175,7 @@ root.dashboard = dashboard_html
 root.edit_many = edit_many_html
 root.mccms = mccms_html
 root.settings = settings_html
+root.graph = graph_painter_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -287,6 +291,7 @@ root.restapi.chained_requests.flow = FlowToNextStep()
 root.restapi.chained_requests.rewind = RewindToPreviousStep()
 root.restapi.chained_requests.approve = ApproveChainedRequest()
 root.restapi.chained_requests.inspect = InspectChain()
+root.restapi.chained_requests.fullhistory = GetConcatenatedHistory()
 
 # REST Actions
 root.restapi.actions.save = CreateAction()

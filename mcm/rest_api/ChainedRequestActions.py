@@ -422,3 +422,36 @@ class InspectChain(RESTResource):
             return dumps(res)
         else:
             return dumps(res[0])
+
+class GetConcatenatedHistory(RESTResource):
+    def __init__(self):
+        self.crdb = database('chained_requests')
+        self.rdb = database('requests')
+        self.acces_limit = 1
+
+    def GET(self, *args):
+        if not args:
+            return dumps({"results": 'Error: No arguments were given'})
+        return self.concatenate_history(args[0])
+
+    def concatenate_history(self, id_string):
+        res = {}
+        tmp_history = {}
+        id_list = id_string.split(',')
+        for elem in id_list: ##get data for single chain -> save in tmp_hist key as chain_id ???
+            tmp_history[elem] = []
+            chain_data = self.crdb.get(elem)
+            #/get request and then data!
+            for request in chain_data["chain"]:
+                request_data = self.rdb.get(request)
+                tmp_data = request_data["history"]
+                try:
+                    if tmp_data[0]["step"] != "new":  #we set 1st step to new -> so graph would not ignore undefined steps: clone, <flown> step, migrated
+                        tmp_data[0]["step"] = "new"
+                except:
+                    tmp_data[0]["step"] = "new"
+
+                for step in tmp_data:
+                    tmp_history[elem].append(step)
+        return dumps({"results":tmp_history, "key": id_string})
+                

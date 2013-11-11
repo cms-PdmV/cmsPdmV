@@ -4,12 +4,49 @@
         <title>Chained requests page McM</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        
+        <link href="scripts/nv.d3.min.css" rel="stylesheet" type="text/css">
+<style>
+
+body {
+  overflow-y:scroll;
+}
+
+text {
+  font: 12px sans-serif;
+}
+
+svg {
+  display: block;
+}
+
+#chart svg {
+  height: 500px;
+  min-width: 200px;
+  min-height: 100px;
+/*
+  margin: 50px;
+  Minimum height and width is a good idea to prevent negative SVG dimensions...
+  For example width should be =< margin.left + margin.right + 1,
+  of course 1 pixel for the entire chart would not be very useful, BUT should not have errors
+*/
+
+}
+#chart {
+  margin-top: 200px;
+  margin-left: 100px;
+}
+#chart .nv-lineChart circle.nv-point
+{
+    fill-opacity: 1;
+}
+</style>
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/d3.v3.min.js"></script>
+        <script type="text/javascript" src="scripts/nv.d3.min.js"></script>
+        <!--<script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>-->
          <!--[IF IE]>
           <script type="text/javascript">
             var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -125,6 +162,9 @@
                 <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
                   <i class="icon-screenshot"></i>
                 </a>
+                <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
+                  <i class="icon-picture"></i>
+                </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
@@ -205,6 +245,9 @@
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
           </td>
+          <!-- <td>
+            <growth-graph ng-model="data.prepid"></growth-graph>
+          </td> -->
         </tr>
       </tbody>
     </table>
@@ -230,6 +273,9 @@
         </a>
         <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
+        </a>
+        <a ng-href="graph?prepid={{selected_prepids.join()}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
+          <i class="icon-picture"></i>
         </a>
         <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </div>
