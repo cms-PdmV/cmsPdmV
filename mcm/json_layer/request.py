@@ -1367,16 +1367,23 @@ class request(json_base):
         self.approve(0)
         ## make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
+        req_to_invalidate=[]
         ds_to_invalidate=[]
+        
         # retrieve the latest requests for it
         self.get_stats()
         # increase the revision only if there was a request in req mng, or a dataset already on the table
         increase_revision=False
+        
         # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
+            ## save the reqname to invalidate
+            req_to_invalidate.append(wma['name'])
             new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object']
             invalidation.save( new_invalidation )
+            
+            ## save all dataset to be invalidated
             if 'content' in wma and 'pdmv_dataset_list' in wma['content']:
                 ds_to_invalidate.extend( wma['content']['pdmv_dataset_list'])
             if 'content' in wma and 'pdmv_dataset_name' in wma['content']:
@@ -1388,6 +1395,21 @@ class request(json_base):
             new_invalidation['_id'] = new_invalidation['object'].replace('/','')
             invalidation.save( new_invalidation )
             increase_revision=True
+
+        
+        ##do not increase version if not in an announced batch
+        bdb = database('batches')
+        if increase_revision:
+            for req in req_to_invalidate:
+                # find the batch it is in
+                bs = bdd.queries(['contains=%s'%( req)])
+                for b in bs:
+                    if b['status'] in ['done','announced']:
+                        increase_revision=False
+                        ## we're done checking
+                        break
+
+            
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name',[])
         self.set_attribute('config_id',[])
