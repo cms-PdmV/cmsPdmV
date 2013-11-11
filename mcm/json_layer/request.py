@@ -1406,7 +1406,7 @@ class request(json_base):
                 # find the batch it is in
                 bs = bdb.queries(['contains=%s'%( req)])
                 for b in bs:
-                    if b['status'] in ['done','announced']:
+                    if not b['status'] in ['done','announced']:
                         increase_revision=False
                         ## we're done checking
                         break
