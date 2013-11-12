@@ -7,6 +7,7 @@ import json
 import time
 import os
 import copy
+import ast
 from tools.locator import locator
 
 class database:
@@ -363,7 +364,7 @@ class database:
         if val.startswith('[') and val.endswith(']'):
             if op == '==':
                 try:                    
-                    e=eval(val)
+                    e=ast.literal_eval(val)
                     opts['key'] = e
                 except:
                     opts['key'] = val
