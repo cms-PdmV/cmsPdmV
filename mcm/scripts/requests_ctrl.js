@@ -985,12 +985,11 @@ testApp.directive("loadFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group" bindonce="searchable" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    '      <select ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
-    '        <option ng-repeat="elem in value">{{elem}}</option>'+
+    '      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     '      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in searchable[key] | filter: $viewValue | limitTo: 10">'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10">'+
     '      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
     '    </span>'+
     '  </form>'+
@@ -1008,6 +1007,7 @@ testApp.directive("loadFields", function($http, $location){
       scope.showUrl = false;
       scope.showOption = {};
       scope.is_prepid_in_url = $location.search()["prepid"];
+           console.log("blet");
       scope.getSearch = function(){
         scope.listfields = {};
         scope.showUrl = false;
