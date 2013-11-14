@@ -772,15 +772,12 @@ class request(json_base):
         ## gen valid configs
         self.genvalid_driver = None
         valid_sequence = None
-        n_to_valid=1000 #get it differently than that
-        yes_to_valid=False
         val_attributes = self.get_attribute('validation')
-        if 'nEvents' in val_attributes:
-            n_to_valid=val_attributes['nEvents']
-            if not n_to_valid:
-                yes_to_valid=False
-            else:
-                yes_to_valid=True
+        n_to_valid = self.get_n_for_valid()
+        yes_to_valid=False
+        if n_to_valid:
+            yes_to_valid=True
+
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
         
@@ -1201,6 +1198,13 @@ class request(json_base):
         #could reverse engineer the target 
         return settings().get_value('test_target')
 
+    def get_n_for_valid(self):
+        n_to_valid=1000 #get it differently than that
+        val_attributes = self.get_attribute('validation')
+        if 'nEvents' in val_attributes:
+            n_to_valid=val_attributes['nEvents']
+        return n_to_valid
+
     def get_n_for_test(self, target=1.0):
         ## that's the number of events we want to get in output
         events = target
@@ -1259,6 +1263,7 @@ class request(json_base):
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test( self.target_for_test() )
+        total_event_in_valid = self.get_n_for_valid()
 
         xml_data = xml.dom.minidom.parseString( xml_doc )
 
@@ -1290,8 +1295,8 @@ class request(json_base):
         if file_size:
             file_size = int(  file_size / total_event)
 
-        efficiency = total_event / total_event_in
-        efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in )
+        efficiency = total_event / total_event_in_valid
+        efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in_valid )
 
         geninfo=None
         if len(self.get_attribute('generator_parameters')):
@@ -1313,6 +1318,13 @@ class request(json_base):
                 added_geninfo[to_be_changed] = efficiency
                 added_geninfo[to_be_changed+'_error'] = efficiency_error
                 to_be_saved=True
+            if geninfo:
+                if abs(geninfo[to_be_changed]-efficiency)>0.05:
+                    ## efficiency is wrong by more than 0.05
+                    self.notify('Runtest for %s: %s efficiency seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
+                                'For this request, %s efficiency=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in))
+                    
+
         elif what =='perf':
             ## timing checks
             if timing and timing>self.get_attribute('time_event'):
