@@ -332,6 +332,7 @@ class chained_request(json_base):
                     mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
                     if len(mcm_cr.get_attribute('chain')) <= next_step:
                         #found one, but it has not enough content either
+                        ## JR : fix here the multiple actions on multiple chain HIG mess !
                         continue
                     else:
                         next_id = mcm_cr.get_attribute('chain')[next_step]
@@ -373,7 +374,10 @@ class chained_request(json_base):
             self.set_attribute('step', next_step)
             next_request = request(rdb.get(next_id))
             #reput some of the previous parameters in
+            ### should this be blown away ?
             transfer( current_request, next_request)
+
+            self.set_attribute('last_status', next_request.get_attribute('status'))
 
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
                 ## register the chain to the next request
@@ -391,6 +395,9 @@ class chained_request(json_base):
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
             next_request = request( next_campaign.add_request( rdb.get(next_id)))
+            ### shouldn't this be added ?
+            #transfer( current_request, next_request)
+
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'Unrecognized approach %s' % ( approach ))
