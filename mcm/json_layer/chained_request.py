@@ -320,10 +320,22 @@ class chained_request(json_base):
             ## look up all chained requests that start from the same root request
             ## remove <pwg>-chain_ and the -serial number, replacing _ with a .
             toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
-            related_crs = crdb.queries(['root_request==%s' % (root_request_id)])
+            ## make sure they get ordered by prepid
+            related_crs = sorted(crdb.queries(['root_request==%s' % (root_request_id)]), key=lambda cr : cr['prepid'])
+            
+            
+
+            vetoed_last=[]
             for existing_cr in related_crs:
+                ## exclude itself
+                if existing_cr['prepid']==self.get_attribute('prepid'):
+                    continue
                 ## prevent from using a request from within the same exact chained_campaigns
                 if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
+                    mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
+                    if len(mcm_cr.get_attribute('chain')) > next_step:
+                        ## one existing request in the very same chained campaign has already something used, make sure it is not going to be used
+                        vetoed_last.append( mcm_cr.get_attribute('chain')[next_step])
                     continue
                 truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
                 self.logger.error('to match : %s , this one %s' % ( toMatch, truncated ))
@@ -332,11 +344,11 @@ class chained_request(json_base):
                     mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
                     if len(mcm_cr.get_attribute('chain')) <= next_step:
                         #found one, but it has not enough content either
-                        ## JR : fix here the multiple actions on multiple chain HIG mess !
                         continue
-                    else:
-                        next_id = mcm_cr.get_attribute('chain')[next_step]
-                        break
+                    if mcm_cr.get_attribute('chain')[next_step] in vetoed_last:
+                        continue
+                    next_id = mcm_cr.get_attribute('chain')[next_step]
+                    break
             if next_id:
                 approach = 'use'
             else:
