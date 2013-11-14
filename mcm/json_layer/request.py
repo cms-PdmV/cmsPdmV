@@ -372,12 +372,13 @@ class request(json_base):
         if self.get_attribute('status')!='approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
 
-        if not len(self.get_attribute('member_of_chain')):
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
+        if not self.is_action_root():
+            if not len(self.get_attribute('member_of_chain')):
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
 
-        at_least_an_action = self.has_at_least_an_action()
-        if not at_least_an_action:
-            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
+            at_least_an_action = self.has_at_least_an_action()
+            if not at_least_an_action:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
         if self.get_attribute('size_event')<=0 or self.get_attribute('time_event')<=0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','The time (%s) or size per event (%s) is inappropriate'%( self.get_attribute('time_event'), self.get_attribute('size_event')))
@@ -392,6 +393,12 @@ class request(json_base):
             #### not settting any status forward
             ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
             pass
+
+    def is_action_root(self):
+        action_db = database('actions')
+        if action_db.document_exists(self.get_attribute('prepid')):
+            return True
+        return False
 
     def has_at_least_an_action(self):
         at_least_an_action=False
@@ -776,7 +783,7 @@ class request(json_base):
         n_to_valid = self.get_n_for_valid()
         yes_to_valid=False
         if n_to_valid:
-            yes_to_valid=True
+                yes_to_valid=True
 
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
@@ -1323,7 +1330,7 @@ class request(json_base):
                     ## efficiency is wrong by more than 0.05
                     self.notify('Runtest for %s: %s efficiency seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
                                 'For this request, %s efficiency=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in))
-                    
+
 
         elif what =='perf':
             ## timing checks
