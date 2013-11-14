@@ -783,7 +783,7 @@ class request(json_base):
         n_to_valid = self.get_n_for_valid()
         yes_to_valid=False
         if n_to_valid:
-                yes_to_valid=True
+            yes_to_valid=True
 
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
@@ -1205,24 +1205,26 @@ class request(json_base):
         #could reverse engineer the target 
         return settings().get_value('test_target')
 
-    def get_n_for_valid(self):
-        n_to_valid=1000 #get it differently than that
-        val_attributes = self.get_attribute('validation')
-        if 'nEvents' in val_attributes:
-            n_to_valid=val_attributes['nEvents']
-        return n_to_valid
-
-    def get_n_for_test(self, target=1.0):
-        ## that's the number of events we want to get in output
-        events = target
-
-        #=> correct for the matching and filter efficiencies
+    def get_n_unfold_efficiency(self, target):
         if self.get_attribute('generator_parameters'):
             ## get the last entry of generator parameters
             match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
             filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
             if match > 0 and filter_eff > 0:
-                events /=  (match*filter_eff)
+                target /=  (match*filter_eff)
+        return target
+
+    def get_n_for_valid(self):
+        n_to_valid=1000 #get it differently than that
+        val_attributes = self.get_attribute('validation')
+        if 'nEvents' in val_attributes:
+            n_to_valid=val_attributes['nEvents']
+
+        return self.get_n_unfold_efficiency(n_to_valid)
+
+    def get_n_for_test(self, target=1.0):
+        #=> correct for the matching and filter efficiencies
+        events = self.get_n_unfold_efficiency(target)
 
         #=> estimate how long it will take
         total_test_time = float(self.get_attribute('time_event')) * events
@@ -1279,11 +1281,15 @@ class request(json_base):
             return
 
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
-        if total_event==0 and total_event_in!=0:
-            self.logger.error("For %s the total number of events in output of the test is 0"%( self.get_attribute('prepid')))
-            ##fail it !
-            raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in ))
-            return
+        if what=='eff':
+            if total_event==0 and total_event_in_valid!=0:
+                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event_in_valid))
+                raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in_valid ))
+        else:    
+            if total_event==0 and total_event_in!=0:
+                ##fail it !
+                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event_in))
+                raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in ))
 
         memory = None
         timing = None
@@ -1328,8 +1334,8 @@ class request(json_base):
             if geninfo:
                 if abs(geninfo[to_be_changed]-efficiency)>0.05:
                     ## efficiency is wrong by more than 0.05
-                    self.notify('Runtest for %s: %s efficiency seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
-                                'For this request, %s efficiency=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in))
+                    self.notify('Runtest for %s: %s seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
+                                'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
 
 
         elif what =='perf':
