@@ -478,9 +478,8 @@ testApp.directive("reqmgrName", function($http){
     '</span>',
     link: function(scope, element, attrs, ctrl)
     {
-
+      scope.links = {};
       ctrl.$render = function(){
-        scope.links = {};
         //scope.remngr_name = ctrl.$viewValue.name;
         scope.rqmngr_data = ctrl.$viewValue;
         scope.r_prepid = scope.$eval(attrs.prepid);

@@ -467,9 +467,9 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.local_requests[chain] = local_data;
         if (load_single != "")
         {
-          console.log($scope.local_requests[chain]);
+          // console.log($scope.local_requests[chain]);
           _.each($scope.local_requests[chain],function(element, index){
-            console.log("braodcast: ",element.name, index, load_single);
+            // console.log("braodcast: ",element.name, index, load_single);
             $scope.$broadcast('loadDataSet', [element.name, index, load_single]);
           });
         }

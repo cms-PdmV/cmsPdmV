@@ -1007,7 +1007,6 @@ testApp.directive("loadFields", function($http, $location){
       scope.showUrl = false;
       scope.showOption = {};
       scope.is_prepid_in_url = $location.search()["prepid"];
-           console.log("blet");
       scope.getSearch = function(){
         scope.listfields = {};
         scope.showUrl = false;
