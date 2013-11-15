@@ -816,6 +816,8 @@ class request(json_base):
             valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
+            ## forfeit customisation until they are made fail-safe
+            valid_sequence.set_attribute( 'customise' , '')
 
         elif firstStep in ['LHE','NONE']:
             cmsd_list += '\n\n'
