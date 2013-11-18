@@ -372,13 +372,13 @@ class request(json_base):
         if self.get_attribute('status')!='approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit')
 
-        if not self.is_action_root():
-            if not len(self.get_attribute('member_of_chain')):
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
+        #if not self.is_action_root():
+        if not len(self.get_attribute('member_of_chain')):
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request is not part of any chain yet')
 
-            at_least_an_action = self.has_at_least_an_action()
-            if not at_least_an_action:
-                raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
+        at_least_an_action = self.has_at_least_an_action()
+        if not at_least_an_action:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','This request does not spawn from any valid action')
 
         if self.get_attribute('size_event')<=0 or self.get_attribute('time_event')<=0:
             raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','The time (%s) or size per event (%s) is inappropriate'%( self.get_attribute('time_event'), self.get_attribute('size_event')))
