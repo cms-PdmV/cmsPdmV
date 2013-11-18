@@ -787,7 +787,9 @@ class request(json_base):
 
         if 'valid' in val_attributes:
             yes_to_valid=val_attributes['valid']
-        
+        else:
+            yes_to_valid=False
+
         ##get the campaign enalbing/disabling
         #cdb = database('campaigns')
         #mcm_c = cdb.get( self.get_attribute('member_of_campaign'))
