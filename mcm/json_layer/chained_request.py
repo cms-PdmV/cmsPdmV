@@ -97,10 +97,10 @@ class chained_request(json_base):
         self.validate()
 
 
-    def flow_trial(self, input_dataset='', block_black_list=[], block_white_list=[]):
+    def flow_trial(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
         chainid = self.get_attribute('prepid')
         try:
-            if self.flow():
+            if self.flow(check_stats=check_stats):
                 db = database('chained_requests')
                 db.update(self.json())
                 ## toggle the last request forward
@@ -115,11 +115,11 @@ class chained_request(json_base):
             #except chained_request.ChainedRequestCannotFlowException as ex:
             #    return {"prepid":chainid,"results":False, "message":str(ex)}
 
-    def flow(self, input_dataset='', block_black_list=[], block_white_list=[]):
-        return self.flow_to_next_step(input_dataset, block_black_list, block_white_list)
+    def flow(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
+        return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)
         #return self.flow_to_next_step_clean(input_dataset,  block_black_list,  block_white_list)
 
-    def flow_to_next_step(self, input_dataset='', block_black_list=[], block_white_list=[]):
+    def flow_to_next_step(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
         self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
@@ -264,7 +264,7 @@ class chained_request(json_base):
 
         next_total_events=current_request.get_attribute('completed_events')
         completed_events_to_pass=next_total_events
-
+        notify_on_fail=True ## to be tuned according to the specific cases
         if current_request.get_attribute('completed_events') <= 0:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The number of events completed is negative or null')
@@ -286,12 +286,17 @@ class chained_request(json_base):
                     next_total_events = int(original_action_item['staged'])
                 if 'threshold' in original_action_item:
                     next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
+
                 completed_events_to_pass = next_total_events
             else:
                 ## get the original expected events and allow a margin of 5% less statistics
                 completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
 
-        if current_request.get_attribute('completed_events') < completed_events_to_pass:
+        if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
+            if notify_on_fail:
+                current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
+                                       'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s '%( current_request.get_attribute('completed_events'),
+                                                                                                                                                                         completed_events_to_pass))
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
 

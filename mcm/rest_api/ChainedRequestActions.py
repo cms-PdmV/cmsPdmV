@@ -249,34 +249,36 @@ class FlowToNextStep(RESTResource):
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given.'})
-        return self.multiple_flow(args[0])
+        if len(args)>1:
+            check_stats=(args[1]!='force')
+        return self.multiple_flow(args[0], check_stats)
         #return self.flow(args[0]) #old flow only for single request
 
-    def multiple_flow(self, rid):
+    def multiple_flow(self, rid, check_stats=True):
         if ',' in rid:
             rlist = rid.rsplit(',')
             res = []
             for r in rlist:
-                 res.append(self.flow(r))
+                 res.append(self.flow(r, check_stats=check_stats))
             return dumps(res)
         else:
-            return dumps(self.flow(rid))
-    
+            return dumps(self.flow(rid, check_stats=check_stats))
+
     def flow2(self,  data):
         try:
             vdata = loads(data)
         except ValueError as ex:
             self.logger.error('Could not start flowing to next step. Reason: %s' % (ex)) 
             return dumps({"results":str(ex)})
-        
+        db = database('chained_requests')
         try:
-            creq = chained_request(json_input=self.db.get(vdata['prepid']))
+            creq = chained_request(json_input=db.get(vdata['prepid']))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return dumps({"results":str(ex)})
 
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
-    
+
         # if the chained_request can flow, do it
         inputds = ''
         inblack = []
