@@ -64,7 +64,8 @@ class RESTResource(object):
             #meaning we are going public, only allow GET.
             #if cherrypy.request.method != 'GET' or not l_type.isDev():
             #	raise cherrypy.HTTPError(403, 'User credentials were not provided.')
-            self.logger.error('adfs-login not found: \n' + str(cherrypy.request.headers))
+            if not 'public' in str(cherrypy.url()):
+                self.logger.error('From within %s, adfs-login not found: \n %s \n %s'%(self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
         else:
             #self.logger.error("User name found: -%s-"%(loweredHeaders['adfs-login']))
             if not self.authenticator.can_access(loweredHeaders['adfs-login']):
