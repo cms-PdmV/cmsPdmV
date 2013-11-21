@@ -241,7 +241,7 @@ class FlowToNextStep(RESTResource):
         Allows to flow a chained request with the dataset and blocks provided in the json 
         """
         return self.flow2(cherrypy.request.body.read().strip())
-    
+
     def GET(self, *args):
         """
         Allow to flow a chained request with internal information
@@ -290,10 +290,12 @@ class FlowToNextStep(RESTResource):
             inblack = vdata['block_black_list']
         if 'block_white_list' in vdata:
             inwhite = vdata['block_white_list']
-            
-        return dumps(creq.flow_trial( inputds,  inblack,  inwhite))
+        if 'force' in vdata:
+            check_stats = vdata['force']!='force'
 
-    def flow(self,  chainid):
+        return dumps(creq.flow_trial( inputds,  inblack,  inwhite, check_stats))
+
+    def flow(self,  chainid, check_stats=True):
         try:
             creq = chained_request(json_input=self.db.get(chainid))
         except Exception as ex:
@@ -301,9 +303,9 @@ class FlowToNextStep(RESTResource):
             return {"results":str(ex)}
 
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
-        
+
         # if the chained_request can flow, do it
-        return creq.flow_trial()
+        return creq.flow_trial(check_stats=check_stats)
 
 class RewindToPreviousStep(RESTResource):
     def __init__(self):
