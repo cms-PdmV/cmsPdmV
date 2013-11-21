@@ -249,6 +249,7 @@ class FlowToNextStep(RESTResource):
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given.'})
+        check_stats=True
         if len(args)>1:
             check_stats=(args[1]!='force')
         return self.multiple_flow(args[0], check_stats)
