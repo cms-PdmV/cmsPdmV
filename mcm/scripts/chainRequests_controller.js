@@ -314,8 +314,8 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.flowChainedRequest = function(prepid){
-    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid);
+  $scope.flowChainedRequest = function(prepid, force){
+    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force);
     promise.then(function(data){
       $scope.parse_report([data.data],status);
     }, function(data){

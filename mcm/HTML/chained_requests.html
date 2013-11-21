@@ -156,8 +156,11 @@ svg {
                 <a ng-click="single_step('rewind',data.prepid, '')" rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
                   <i class="icon-backward"></i>
                 </a>
-                <a ng-click='flowChainedRequest(data.prepid)' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
+                <a ng-click='flowChainedRequest(data.prepid,"")' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
                   <i class="icon-forward"></i>
+                </a>
+                <a ng-click='flowChainedRequest(data.prepid,"/force")' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);">
+                  <i class="icon-fast-forward"></i>
                 </a>
                 <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
                   <i class="icon-screenshot"></i>
