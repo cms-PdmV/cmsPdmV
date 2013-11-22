@@ -1003,7 +1003,7 @@ done
         changes_happen=False
 
         ## make a connection check to stats ! Get the views
-        if not statsDB.document_exists('_desgin/stats'):
+        if not statsDB.document_exists('_design/stats'):
             self.logger.error('Connection to stats DB is down. Cannot get updated statistics')
             return False
 
