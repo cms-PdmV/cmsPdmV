@@ -993,38 +993,55 @@ done
         rdb.update(self.json())
 
     def get_stats(self,
-                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS','pdmv_open_evts_in_DAS'],
+                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS','pdmv_open_evts_in_DAS','pdmv_submission_date','pdmv_submission_time'],
                   override_id=None,
                   limit_to_set=0.05):
         #existing rwma
         mcm_rr=self.get_attribute('reqmgr_name')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
 
+        changes_happen=False
+
+        ## make a connection check to stats ! Get the views
+        if not statsDB.document_exists('_desgin/stats'):
+            self.logger.error('Connection to stats DB is down. Cannot get updated statistics')
+            return False
+
         def transfer( stats_r , keys_to_import):
             mcm_content={}
             if not len(keys_to_import):
                 keys_to_import = stats_r.keys()
             for k in keys_to_import:
-                mcm_content[k] = stats_r[k]
+                if k in stats_r:
+                    mcm_content[k] = stats_r[k]
             return mcm_content
 
         ####
         ## update all existing
         earliest_date=0
         earliest_time=0
+        failed_to_find=[]
         for (rwma_i,rwma) in enumerate(mcm_rr):
             if not statsDB.document_exists( rwma['name'] ):
                 self.logger.error('the request %s is linked in McM already, but is not in stats DB'%(rwma['name']))
-                ## very likely, this request was aborted, rejected, or failed
-                ## should we be removing it ?
-                continue
-            stats_r = statsDB.get( rwma['name'] )
+                ## very likely, this request was aborted, rejected, or failed : connection check was done just above
+                if rwma_i!=0:
+                    ## always keep the original request
+                    changes_happen=True
+                    failed_to_find.append(rwma['name'])
+                stats_r = rwma['content']
+            else:
+                stats_r = statsDB.get( rwma['name'] )
+
             if earliest_date==0 or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             if ('pdmv_submission_time' in stats_r and earliest_time==0) or ('pdmv_submission_time' in stats_r and int(earliest_time)> int(stats_r['pdmv_submission_time'])):
                 earliest_time = stats_r['pdmv_submission_time']
             mcm_content=transfer( stats_r , keys_to_import )
             mcm_rr[rwma_i]['content'] = mcm_content
+
+        ## take out the one which were not found !
+        mcm_rr = filter( lambda wmr : not wmr['name'] in failed_to_find, mcm_rr)
 
         ####
         ## look for new ones
@@ -1043,7 +1060,7 @@ done
         self.logger.error('got stats with date %s and time %s , %s existings and %s matching'%( earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
 
         #self.logger.error('found %s'%(stats_rr))
-        one_new=False
+
         for stats_r in stats_rr:
             ## only add it if not present yet
             if stats_r['pdmv_request_name'] in map(lambda d : d['name'], mcm_rr):
@@ -1065,7 +1082,7 @@ done
             mcm_content=transfer( stats_r , keys_to_import)
             mcm_rr.append( { 'content' : mcm_content,
                              'name' : stats_r['pdmv_request_name']})
-            one_new=True
+            changes_happen=True
 
         if len(mcm_rr):
             try:
@@ -1076,11 +1093,11 @@ done
             # above how much change do we update : 5%
             #self.logger.error('completed %s and there already %s' %( completed, self.get_attribute('completed_events')))
             if float(completed) > float( (1+limit_to_set) * self.get_attribute('completed_events')):
-                one_new=True
+                changes_happen=True
             self.set_attribute('completed_events', completed)
 
         self.set_attribute('reqmgr_name', mcm_rr)
-        return one_new
+        return changes_happen
 
     def inspect(self):
         ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
@@ -1125,7 +1142,7 @@ done
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results":False}
         ## get fresh up to date stats
-        one_new = self.get_stats()
+        changes_happen = self.get_stats()
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database( 'requests')
         if len(mcm_rr):
@@ -1157,11 +1174,11 @@ done
                         not_good.update( {'message' : "Set status to %s could not be saved in DB"%(self.get_attribute('status'))})
                         return not_good
                 else:
-                    if one_new: db.save( self.json() )
+                    if changes_happen: db.save( self.json() )
                     not_good.update( {'message' : "last request %s is not ready"%(wma_r['name'])})
                     return not_good
             else:
-                if one_new: db.save( self.json() )
+                if changes_happen: db.save( self.json() )
                 not_good.update( {'message' : "last request %s is malformed %s"%(wma_r['name'],
                                                                                  wma_r['content'])})
                 return not_good
