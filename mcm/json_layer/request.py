@@ -1033,12 +1033,14 @@ done
             else:
                 stats_r = statsDB.get( rwma['name'] )
 
-            if earliest_date==0 or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
+            if ('pdmv_submission_date' in stats_r and earliest_date==0) or ('pdmv_submission_date' in stats_r and int(earliest_date)> int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             if ('pdmv_submission_time' in stats_r and earliest_time==0) or ('pdmv_submission_time' in stats_r and int(earliest_time)> int(stats_r['pdmv_submission_time'])):
                 earliest_time = stats_r['pdmv_submission_time']
-            mcm_content=transfer( stats_r , keys_to_import )
-            mcm_rr[rwma_i]['content'] = mcm_content
+
+            if not len(failed_to_find) or rwma['name']!=failed_to_find[-1]: ## no need to copy over if it has just been noticed that it is not taken from stats but the mcm document itself
+                mcm_content=transfer( stats_r , keys_to_import )
+                mcm_rr[rwma_i]['content'] = mcm_content
 
         ## take out the one which were not found !
         mcm_rr = filter( lambda wmr : not wmr['name'] in failed_to_find, mcm_rr)
@@ -1359,7 +1361,12 @@ done
                 added_geninfo[to_be_changed+'_error'] = efficiency_error
                 to_be_saved=True
             if geninfo:
-                if abs(geninfo[to_be_changed]-efficiency)>0.05:
+                if efficiency==0.:
+                    ## that is a very bad thing !
+                    self.notify('Runtest for %s: %s seems very wrong.'%( self.get_attribute('prepid'), to_be_changed),
+                                'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
+                    #raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
+                elif abs(geninfo[to_be_changed]-efficiency)/efficiency>0.05:
                     ## efficiency is wrong by more than 0.05
                     self.notify('Runtest for %s: %s seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
                                 'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
