@@ -306,7 +306,7 @@ class RequestSubmitter(Handler):
             try:
                 okay, req = self.check_request()
                 if not okay: return False
-                batch_name = BatchPrepId().generate_prepid(req.json())
+                batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 try:
                     cmd = self.prepare_command(req, batch_name)
