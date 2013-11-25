@@ -14,8 +14,6 @@ from tools.priority import priority
 class CreateAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.db = database(self.db_name)
-        self.action = None
         self.access_limit = 3
     def PUT(self):
         """
@@ -24,26 +22,26 @@ class CreateAction(RESTResource):
         return self.import_request(cherrypy.request.body.read().strip())
 
     def import_request(self, data):
+        db = database(self.db_name)
         try:
-            self.action = action(json_input=loads(data))
+            action_mcm = action(json_input=loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        self.logger.log('Building new action %s by hand...'%(self.action.get_attribute('_id')))
-        
-        self.action.inspect_priority()
+        self.logger.log('Building new action %s by hand...'%(action_mcm.get_attribute('_id')))
+
+        action_mcm.inspect_priority()
 
         rd = database('requests')
-        if rd.document_exists(self.action.get_attribute('prepid')):
-            r= request(rd.get(self.action.get_attribute('prepid')))
-            self.action.set_attribute('dataset_name',r.get_attribute('dataset_name'))
+        if rd.document_exists(action_mcm.get_attribute('prepid')):
+            r= request(rd.get(action_mcm.get_attribute('prepid')))
+            action_mcm.set_attribute('dataset_name',r.get_attribute('dataset_name'))
 
-	return dumps({'results':self.db.save(self.action.json())})
+        return dumps({'results':db.save(action_mcm.json())})
 
 
 class UpdateAction(RESTResource):
     def __init__(self):
-        self.adb = database('actions')
         self.access_limit = 3
 
     def PUT(self):
@@ -54,6 +52,7 @@ class UpdateAction(RESTResource):
         return dumps(res)
 
     def import_action(self, content):
+        adb = database('actions')
         try:
             mcm_a = action( content ) 
         except request.IllegalAttributeName as ex:
@@ -76,8 +75,8 @@ class UpdateAction(RESTResource):
 
 
         mcm_a.inspect_priority()
-        
-        saved = self.adb.update( mcm_a.json() )
+
+        saved = adb.update( mcm_a.json() )
         if saved:
             return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
         else:
@@ -93,7 +92,7 @@ class UpdateMultipleActions(UpdateAction):
         """
         self.logger.log('Updating multiple actions')
         data = loads(cherrypy.request.body.read().strip())
-        
+
         results=[]
         for single_action in data:
             results.append(self.import_action(single_action))
@@ -131,14 +130,13 @@ class UpdateMultipleActions(UpdateAction):
         return dumps({"results": output})
         """
 
-        
-            
+
+
 
 class GetAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.db = database(self.db_name)
-    
+
     def GET(self, *args):
         """
         Retrieve the json content of a given action id
@@ -146,18 +144,18 @@ class GetAction(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
-            
+
         return self.get_request(args[0])
-    
+
     def get_request(self, id):
-        return dumps({"results":self.db.get(id)})
+        db = database(self.db_name)
+        return dumps({"results":db.get(id)})
 
 class SelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.db = database(self.db_name)
         self.access_limit = 4
-        
+
     def GET(self, *args):
         """
         Allows to select a given chained request for a given action id /action_id/chain_id
@@ -166,20 +164,21 @@ class SelectChain(RESTResource):
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given'})
-            
+
         return self.select_chain(args[0],  args[1])
-    
+
     def select_chain(self, aid,  chainid):
+        db = database(self.db_name)
         self.logger.log('Selecting chain %s for action %s...' % (chainid, aid))
         # if action exists
-        if self.db.document_exists(aid):
+        if db.document_exists(aid):
             # initialize the object
-            a = action(json_input=self.db.get(aid))
+            a = action(json_input=db.get(aid))
             # and set it to 1 (default ?)
             a.select_chain(chainid)
-            
+
             # save
-            self.db.update(a.json())
+            db.update(a.json())
             return dumps({'results':True})
         else:
             return dumps({"results":False})
@@ -187,9 +186,8 @@ class SelectChain(RESTResource):
 class DeSelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.db = database(self.db_name)
         self.access_limit = 4
-    
+
     def GET(self, *args):
         """
         Allows to UN-select a given chained request for a given action id /action_id/chain_id
@@ -197,29 +195,26 @@ class DeSelectChain(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
-            
+
         return self.deselect_chain(args[0],  args[1])
-    
+
     def deselect_chain(self,  aid,  chainid):
+        db = database(self.db_name)
         self.logger.log('Deselecting chain %s for action %s...' % (chainid, aid))        
         # if action exists
-        if self.db.document_exists(aid):
+        if db.document_exists(aid):
             # initialize the object
-            a = action(json_input=self.db.get(aid))
+            a = action(json_input=db.get(aid))
             # and set it to 1 (default ?)
             a.deselect_chain(chainid)
             # save
-            self.db.update(a.json())
+            db.update(a.json())
             return dumps({'results':True})
         else:
             return dumps({"results":False})
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
-        self.adb = database('actions')
-        self.ccdb = database('chained_campaigns')
-        self.crdb = database('chained_requests')
-        self.rdb = database('requests')
         self.access_limit = 3
 
     def GET(self,  *args):
@@ -232,25 +227,29 @@ class GenerateChainedRequests(RESTResource):
         res=[]
         for aid in args[0].split(','):
             res.append( self.generate_request(aid))
-            
+
         if len(res)==1:
             return dumps(res[0])
         else:
             return dumps(res)
-    
+
     def generate_request(self, aid):
-        if not self.adb.document_exists(aid):
+        adb = database('actions')
+        ccdb = database('chained_campaigns')
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        if not adb.document_exists(aid):
             return dumps({'results':False, 'message':'%s does not exist'%(aid)})
-        
+
         self.logger.log('Generating all selected chained_requests for action %s' % (aid))
-        act = action(self.adb.get(aid))
+        act = action(adb.get(aid))
         chains = act.get_attribute('chains')
         hasChainsChanged=False 
         for cc in chains:  
             if 'flag' in chains[cc] and chains[cc]['flag']:
                 ## in the new convention, that means that something needs to be created
 
-                mcm_cc = chained_campaign( self.ccdb.get(cc) )
+                mcm_cc = chained_campaign( ccdb.get(cc) )
                 new_cr = mcm_cc.generate_request( aid )
                 if not 'chains' in chains[cc]:
                     chains[cc]['chains'] = {}
@@ -261,26 +260,26 @@ class GenerateChainedRequests(RESTResource):
                         chains[cc]['chains'][new_cr['prepid']] [item] = chains[cc][item]
                         chains[cc].pop(item)
                 hasChainsChanged=True
-                if not self.crdb.save(new_cr):
+                if not crdb.update(new_cr):
                     return dumps({'results':False,'message':'could not save %s'%( new_cr['prepid'])})
-                
+
                 ## update the cc history
-                self.ccdb.update(mcm_cc.json())
+                ccdb.update(mcm_cc.json())
 
                 # then let the root request know that it is part of a chained request
-                req = request(json_input=self.rdb.get(aid))
+                req = request(json_input=rdb.get(aid))
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
                 inchains.sort()
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']))
                 act.update_history({'action':'add','step' : new_cr['prepid']})
-                self.rdb.update(req.json())
-                
+                rdb.update(req.json())
+
         if hasChainsChanged:
             #the chains parameter might have changed
             act.set_attribute('chains',chains)
-            self.adb.update(act.json())
+            adb.update(act.json())
 
         #and set priorities properly to all requests concerned
         act.inspect_priority()
@@ -290,20 +289,21 @@ class GenerateChainedRequests(RESTResource):
 class GenerateAllChainedRequests(GenerateChainedRequests):
     def __init__(self):
         GenerateChainedRequests.__init__(self)
-        
+
     def GET(self,  *args):
         """
         Generate all chained requests for all actions where applicable
         """
         return self.generate_requests()
-    
+
     def generate_requests(self):
+        adb = database('actions')
         self.logger.log('Generating all possible (and selected) chained_requests...')
-        allacs = self.db.get_all(-1) # no pagination
+        allacs = adb.get_all(-1) # no pagination
         res=[]
         for a in allacs:
             res.append(self.generate_request(a['key']))
-        
+
         return dumps(res)
 
 class SetAction(GenerateChainedRequests):
@@ -318,6 +318,8 @@ class SetAction(GenerateChainedRequests):
         if len(args)<3:
             return dumps("Not enough arguments")
 
+        adb = database('actions')
+        ccdb = database('chained_campaigns')
 
         (aid,cc,block) = args[0:3]
         extra=None
@@ -336,10 +338,10 @@ class SetAction(GenerateChainedRequests):
 
         block=int(block)
 
-        mcm_a = action( self.adb.get(aid) )
-        ccs = self.ccdb.queries(['alias==%s'% cc])
+        mcm_a = action( adb.get(aid) )
+        ccs = ccdb.queries(['alias==%s'% cc])
         if not len(ccs):
-            ccs = self.ccdb.queries(['prepid==%s'% cc])
+            ccs = ccdb.queries(['prepid==%s'% cc])
         if not len(ccs) :
             return dumps("%s not a chained campaigns"%( cc ))
 
@@ -354,7 +356,7 @@ class SetAction(GenerateChainedRequests):
 
         if mcm_cc_name not in chains:
             return dumps("Not able to find %s for %s"%( mcm_cc_name, aid))
-        
+
         #edit the chains content
         #if 'chains' in chains[mcm_cc_name]:
         #    return dumps("Something already exists for %s in %s. You'll have to do it by hand"%( mcm_cc_name,aid))
@@ -369,14 +371,13 @@ class SetAction(GenerateChainedRequests):
         mcm_a.set_attribute('chains',chains)
 
         #save it since it is retrieved from scratch later
-        self.adb.save( mcm_a.json() )
-        
+        adb.save( mcm_a.json() )
+
         #and generate the chained requests
         return self.generate_request(aid)
 
 class DetectChains(RESTResource):
     def __init__(self):
-        self.db = database('actions')
         self.access_limit = 3
 
     def GET(self,  *args):
@@ -394,23 +395,25 @@ class DetectChains(RESTResource):
                 res.append(self.find_chains(aid))
 
         return dumps(res)
-    
-    def find_chains(self,  aid):
+
+    def find_chains(self,  aid, db):
         self.logger.log('Identifying all possible chains for action %s' % (aid))
+        
         try:
-            ac = action(json_input=self.db.get(aid))
+            ac = action(json_input=db.get(aid))
             ac.find_chains()
-            saved= self.db.update(ac.json())
+            saved= db.update(ac.json())
             return {'results':saved,'prepid': aid}
         except Exception as ex:
             return {'results':False, 'prepid': aid, 'message' :str(ex)}
 
     def find_all_chains(self):
+        db = database('actions')
         self.logger.log('Identifying all possible chains for all actions in the database...')
-        aids = lambda x: x['prepid'] , self.db.queries([])
+        aids = lambda x: x['prepid'] , db.queries([])
         res=[]
         for aid in aids:
-            res.append(self.find_chains(aid))
+            res.append(self.find_chains(aid, db))
 
         return dumps(res)
 """
@@ -421,7 +424,7 @@ class DetectChains(RESTResource):
             return dumps({'results': False,'message' : str(ex)})
         return dumps({'results': True})
 """
-        
+
 from rest_api.RequestActions import RequestLister
 class ActionsFromFile(RequestLister,RESTResource): 
     def __init__(self):

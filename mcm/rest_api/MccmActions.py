@@ -6,8 +6,6 @@ from tools.locker import locker
 import cherrypy
 
 class GetMccm(RESTResource):
-    def __init__(self):
-        self.db = database('mccms')
 
     def GET(self, *args):
         """
@@ -19,15 +17,14 @@ class GetMccm(RESTResource):
         return self.get_doc(args[0])
 
     def get_doc(self, data):
-        if not self.db.document_exists(data):
+        db = database('mccms')
+        if not db.document_exists(data):
             return dumps({"results": {}})
-        mccm_doc = self.db.get(prepid=data)
+        mccm_doc = db.get(prepid=data)
 
         return dumps({"results": mccm_doc})
 
 class UpdateMccm(RESTResource):
-    def __init__(self):
-        self.db = database('mccms')
 
     def PUT(self):
         """
@@ -45,11 +42,11 @@ class UpdateMccm(RESTResource):
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
             return dumps({"results": False, 'message': 'could not locate revision number in the object'})
-
-        if not self.db.document_exists(data['_id']):
+        db = database('mccms')
+        if not db.document_exists(data['_id']):
             return dumps({"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])})
         else:
-            if self.db.get(data['_id'])['_rev'] != data['_rev']:
+            if db.get(data['_id'])['_rev'] != data['_rev']:
                 return dumps({"results": False, 'message': 'revision clash'})
 
         new_version = mccm(json_input=data)
@@ -59,7 +56,7 @@ class UpdateMccm(RESTResource):
             raise ValueError('Prepid returned was None')
 
         ## operate a check on whether it can be changed
-        previous_version = mccm(self.db.get(new_version.get_attribute('prepid')))
+        previous_version = mccm(db.get(new_version.get_attribute('prepid')))
         editable = previous_version.get_editable()
         for (key, right) in editable.items():
             # does not need to inspect the ones that can be edited
@@ -74,14 +71,11 @@ class UpdateMccm(RESTResource):
 
         # update history
         new_version.update_history({'action': 'update'})
-        return dumps({"results": self.db.update(new_version.json())})
+        return dumps({"results": db.update(new_version.json())})
 
 
 
 class CreateMccm(RESTResource):
-
-    def __init__(self):
-        self.db = database('mccms')
 
     def PUT(self):
         """
@@ -97,27 +91,27 @@ class CreateMccm(RESTResource):
         if not mccm_d.get_attribute('prepid'):
             self.logger.error('Non-existent prepid')
             return dumps({"results": False, "message": "The mccm ticket has no id!"})
-
+        db = database('mccms')
         if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'): # need to complete the pwg
-            mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg')))
-        elif self.db.document_exists(mccm_d.get_attribute('prepid')):
+            mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg'), db))
+        elif db.document_exists(mccm_d.get_attribute('prepid')):
             return dumps({"results": False, "message": "Mccm document {0} already exists".format(mccm_d.get_attribute('prepid'))})
 
         mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
         mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
         mccm_d.update_history({'action': 'created'})
         self.logger.log('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
-        return dumps({"results": self.db.save(mccm_d.json()), "prepid": mccm_d.get_attribute('prepid')})
+        return dumps({"results": db.save(mccm_d.json()), "prepid": mccm_d.get_attribute('prepid')})
 
 
-    def fill_id(self, pwg):
+    def fill_id(self, pwg, db):
         mccm_id = pwg
         with locker.lock(mccm_id): # get date and number
             t = mccm.get_meeting_date()
             mccm_id += '-' + t.strftime("%Y%b%d") + '-' # date
             final_mccm_id = mccm_id + '00001'
             i = 2
-            while self.db.document_exists(final_mccm_id):
+            while db.document_exists(final_mccm_id):
                 final_mccm_id = mccm_id + str(i).zfill(5)
                 i += 1
             return final_mccm_id
@@ -125,20 +119,17 @@ class CreateMccm(RESTResource):
 
 class DeleteMccm(RESTResource):
 
-    def __init__(self):
-        self.db = database('mccms')
-
     def DELETE(self, *args):
         if not args:
             return dumps({"results": False, "message": "No id given to delete."})
-        return dumps({"results": self.db.delete(args[0])})
+        db = database('mccms')
+        return dumps({"results": db.delete(args[0])})
 
 
 class GetEditableMccmFields(RESTResource):
 
     def __init__(self):
         self.db_name = 'mccms'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -150,6 +141,7 @@ class GetEditableMccmFields(RESTResource):
         return self.get_editable(args[0])
 
     def get_editable(self, prepid):
-        mccm_d = mccm(self.db.get(prepid))
+        db = database(self.db_name)
+        mccm_d = mccm(db.get(prepid))
         editable = mccm_d.get_editable()
         return dumps({"results": editable})

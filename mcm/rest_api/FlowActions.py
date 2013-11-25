@@ -4,9 +4,7 @@ import cherrypy
 from json import loads, dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
 from json_layer.campaign import campaign
-from json_layer.chained_campaign import chained_campaign
 from json_layer.flow import flow
 from json_layer.action import action
 import traceback
@@ -15,11 +13,6 @@ import traceback
 class FlowRESTResource(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
-        self.db = database(self.db_name)
-        self.cdb = database('campaigns')
-        self.ccdb = database('chained_campaigns')
-        self.adb = database('actions')
-        self.f = None
         self.access_limit = 3
 
     # takes  a 2 lists and returns a tuple of what is present in the second and not in the first and
@@ -45,9 +38,10 @@ class FlowRESTResource(RESTResource):
 
     def update_actions(self, c):
         self.logger.log('Updating actions...')
+        adb = database('actions')
 
         # find all actions that belong to a campaign
-        allacs = self.adb.queries(['member_of_campaign==%s' % (c)])
+        allacs = adb.queries(['member_of_campaign==%s' % c])
 
         # for each action
         for ac in allacs:
@@ -56,46 +50,48 @@ class FlowRESTResource(RESTResource):
             # calculate the available chains
             a.find_chains()
             # save to db
-            self.adb.update(a.json())
+            adb.update(a.json())
 
-    def set_default_request_parameters(self, nc):
+    def set_default_request_parameters(self, nc, cdb, f):
         # add a skeleton of the sequences of the next (landing) campaign
         # in the new flow (allows for dynamic changing of sequences upon flowing)
-        rp = self.f.get_attribute('request_parameters')
+        rp = f.get_attribute('request_parameters')
         if nc:
-            camp = self.cdb.get(nc)
+            camp = cdb.get(nc)
             ## that erase all previous values in the flows requests parameters ...
             if not 'sequences' in rp or len(rp['sequences']) != len(camp['sequences']):
                 rp['sequences'] = []
                 for seq in camp['sequences']:
                     rp['sequences'].append({})
-                self.f.set_attribute('request_parameters', rp)
+                f.set_attribute('request_parameters', rp)
 
 
     def __compare_json(self, old, new):
         return self.update_derived_objects(old, new)
 
     def update_derived_objects(self, old, new):
-        next = new['next_campaign']
+
+        cdb = database('campaigns')
+        next_c = new['next_campaign']
         allowed = new['allowed_campaigns']
 
         # get the changes
         tbc, tbr = self.__compare_list(old['allowed_campaigns'], new['allowed_campaigns'])
 
-        # check to see if you need to update a campaign (if next is altered, or a new allowed campaign)
+        # check to see if you need to update a campaign (if next_c is altered, or a new allowed campaign)
         if old['next_campaign'] != new['next_campaign'] or tbc:
             try:
-                self.update_campaigns(next, allowed)
+                self.update_campaigns(next_c, allowed, cdb)
             except Exception as ex:
-                self.logger.error('Could not update campaigns. Reason: %s' % (ex))
+                self.logger.error('Could not update campaigns. Reason: %s' % ex)
                 return dumps({"results": 'Error: update_campaigns returned:' + str(ex)})
 
         # create new chained campaigns
         try:
-            #self.update_chained_campaigns(next,  tbc)
-            self.update_chained_campaigns(next, allowed) #JR. to make sure everything gets propagated
+            #self.update_chained_campaigns(next_c,  tbc)
+            self.update_chained_campaigns(next_c, allowed) #JR. to make sure everything gets propagated
         except Exception as ex:
-            self.logger.error('Could not build derived chained_campaigns. Reason: %s' % (ex))
+            self.logger.error('Could not build derived chained_campaigns. Reason: %s' % ex)
             self.logger.error(traceback.format_exc())
             return dumps({"results": 'Error while creating derived chained_campaigns: ' + str(ex)})
 
@@ -105,47 +101,47 @@ class FlowRESTResource(RESTResource):
         # if reached, then successful
         return dumps({'results': True})
 
-    def update_campaigns(self, next, allowed):
-        # check to see if next is legal
-        if not self.cdb.document_exists(next):
-            raise ValueError('Campaign ' + str(next) + ' does not exist.')
+    def update_campaigns(self, next_c, allowed, cdb):
+        # check to see if next_c is legal
+        if not cdb.document_exists(next_c):
+            raise ValueError('Campaign ' + str(next_c) + ' does not exist.')
 
-        if not next:
+        if not next_c:
             return
 
-        n = self.cdb.get(next)
+        n = cdb.get(next_c)
         if n['root'] == 0:
-            raise ValueError('Campaign ' + str(next) + ' is a root campaign.')
+            raise ValueError('Campaign ' + str(next_c) + ' is a root campaign.')
 
-        # iterate through all allowed campaigns and update the next field
+        # iterate through all allowed campaigns and update the next_c field
         for c in allowed:
-            camp = campaign(json_input=self.cdb.get(c))
+            camp = campaign(json_input=cdb.get(c))
             try:
                 # append campaign
-                camp.add_next(next)
-            except campaign.CampaignExistsException as ex:
+                camp.add_next(next_c)
+            except campaign.CampaignExistsException:
                 pass
 
             # save to database
-            self.cdb.update(camp.json())
+            cdb.update(camp.json())
 
-    def is_energy_consistent(self, next_c, allowed_c):
+    def is_energy_consistent(self, next_c, allowed_c, cdb):
         """
         Checks if the energy of campaigns is consistent (it cannot differ)
         """
         next_energy = next_c.get_attribute('energy')
         for camp in allowed_c:
-            mcm_c = campaign(self.cdb.get(camp))
+            mcm_c = campaign(cdb.get(camp))
             if mcm_c.get_attribute('energy') != next_energy:
                 return False
         return True
 
-    def are_campaigns_correct(self, next_c, allowed_c):
+    def are_campaigns_correct(self, next_c, allowed_c, cdb):
         if next_c:
-            if not self.cdb.document_exists(next_c):
+            if not cdb.document_exists(next_c):
                 return {"results": False, "message": '{0} is not a valid campaign for next'.format(next_c)}
-            next_mcm_c = campaign(self.cdb.get(next_c))
-            if not self.is_energy_consistent(next_mcm_c, allowed_c):
+            next_mcm_c = campaign(cdb.get(next_c))
+            if not self.is_energy_consistent(next_mcm_c, allowed_c, cdb):
                 return {"results": False,
                         "message": 'Next campaign {0} and allowed campaigns have inconsistent energies'.format(next_c)}
             ##consistency check
@@ -154,106 +150,106 @@ class FlowRESTResource(RESTResource):
         return True
 
     # create all possible chained campaigns going from allowed.member to next
-    def update_chained_campaigns(self, next, allowed):
+    def update_chained_campaigns(self, next_c, allowed):
         #### we can switch this method off in order to not generate godzillions of chained campaigns
         ## we have the SelectChainedCampaigns ability for that
         return
 
-        # check to see if next is legal
-        if not self.cdb.document_exists(next):
-            raise ValueError('Campaign ' + str(next) + ' does not exist.')
-
-        n = self.cdb.get(next)
-        self.logger.log('investigating for next ' + next)
-        if n['root'] == 0:
-            self.logger.error('Campaign %s is a root campaign.' % (next))
-            raise ValueError('Campaign ' + str(next) + ' is a root campaign.')
-
-        for c in allowed:
-            #self.logger.log('investigating for '+c)
-            # check to see if this chained campaign is already created
-            fid = self.f.get_attribute('_id')
-            ##JR. could not find the reason for the next lines
-            #if fid:
-            #    if self.ccdb.document_exists('chain_'+c+'_'+fid):
-            #        continue
-            #else:
-            #    if self.ccdb.document_exists('chain_'+c):
-            #        continue
-
-            # init campaign objects
-            camp = self.cdb.get(c)
-            #if c is NOT a root campaign
-            if camp['root'] == 1 or camp['root'] == -1:
-                # get all chained campaigns that have the allowed c as the last step
-                ccs = self.ccdb.queries(['last_campaign==%s' % (c)])
-                self.logger.log('for alst campaign %s' % ( c ))
-                self.logger.log('found %d to deal with' % (len(ccs)))
-                self.logger.log('found %s' % ( map(lambda doc: doc['prepid'], ccs) ))
-                # for each chained campaign
-                for cc in ccs:
-                    ## skipping the chained campaign that has only the last campaign in it ... WHY ?
-                    #if cc['_id'] == 'chain_'+camp['_id']:
-                    #    continue
-
-                    nextName = cc['_id'] + '_' + self.f.get_attribute('prepid')
-
-                    if self.ccdb.document_exists(nextName):
-                        continue
-
-                    self.logger.log('treating ' + cc['_id'])
-
-                    # init a ccamp object based on the old
-                    ccamp = chained_campaign(json_input=cc)
-
-                    # disable it
-                    ccamp.stop()
-                    # update to db
-                    self.ccdb.update(ccamp.json())
-
-                    # append the next campaign in the chain
-                    ccamp.add_campaign(next, self.f.get_attribute('prepid'))
-                    # update the id
-                    ccamp.set_attribute('_id', nextName)#ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
-                    ccamp.set_attribute('prepid', ccamp.get_attribute('_id'))
-
-                    # reset the alias
-                    ccamp.set_attribute('alias', '')
-
-                    # restart chained campaign
-                    ccamp.start()
-
-                    # save new chained campaign to database
-                    self.ccdb.save(ccamp.json())
-
-            # else if c is root campaign:
-            #if camp['root']==0 or camp['root']==-1:
-            if camp['root'] == 0:
-                ccamp = chained_campaign()
-                # add allowed root
-                ccamp.add_campaign(c) # assume root. flow=None
-
-                # add next with given flow
-                ccamp.add_campaign(next, self.f.get_attribute('prepid'))
-
-                # init campaign objects
-                camp = campaign(self.cdb.get(c))
-                # add meta (energy)
-                ### not there anymore ccamp.set_attribute('energy', camp['energy'])
-
-                # add a prepid
-                if fid:
-                    ccamp.set_attribute('prepid',
-                                        'chain_' + camp.get_attribute('prepid') + '_' + self.f.get_attribute('_id'))
-                else:
-                    ccamp.set_attribute('prepid', 'chain_' + camp.get_attribute('prepid'))
-
-                ccamp.set_attribute('_id', ccamp.get_attribute('prepid'))
-
-                self.ccdb.save(ccamp.json())
-
-            # update actions
-            self.update_actions(c)
+        # # check to see if next is legal
+        # if not self.cdb.document_exists(next):
+        #     raise ValueError('Campaign ' + str(next) + ' does not exist.')
+        #
+        # n = self.cdb.get(next)
+        # self.logger.log('investigating for next ' + next)
+        # if n['root'] == 0:
+        #     self.logger.error('Campaign %s is a root campaign.' % (next))
+        #     raise ValueError('Campaign ' + str(next) + ' is a root campaign.')
+        #
+        # for c in allowed:
+        #     #self.logger.log('investigating for '+c)
+        #     # check to see if this chained campaign is already created
+        #     fid = self.f.get_attribute('_id')
+        #     ##JR. could not find the reason for the next lines
+        #     #if fid:
+        #     #    if self.ccdb.document_exists('chain_'+c+'_'+fid):
+        #     #        continue
+        #     #else:
+        #     #    if self.ccdb.document_exists('chain_'+c):
+        #     #        continue
+        #
+        #     # init campaign objects
+        #     camp = self.cdb.get(c)
+        #     #if c is NOT a root campaign
+        #     if camp['root'] == 1 or camp['root'] == -1:
+        #         # get all chained campaigns that have the allowed c as the last step
+        #         ccs = self.ccdb.queries(['last_campaign==%s' % (c)])
+        #         self.logger.log('for alst campaign %s' % ( c ))
+        #         self.logger.log('found %d to deal with' % (len(ccs)))
+        #         self.logger.log('found %s' % ( map(lambda doc: doc['prepid'], ccs) ))
+        #         # for each chained campaign
+        #         for cc in ccs:
+        #             ## skipping the chained campaign that has only the last campaign in it ... WHY ?
+        #             #if cc['_id'] == 'chain_'+camp['_id']:
+        #             #    continue
+        #
+        #             nextName = cc['_id'] + '_' + self.f.get_attribute('prepid')
+        #
+        #             if self.ccdb.document_exists(nextName):
+        #                 continue
+        #
+        #             self.logger.log('treating ' + cc['_id'])
+        #
+        #             # init a ccamp object based on the old
+        #             ccamp = chained_campaign(json_input=cc)
+        #
+        #             # disable it
+        #             ccamp.stop()
+        #             # update to db
+        #             self.ccdb.update(ccamp.json())
+        #
+        #             # append the next campaign in the chain
+        #             ccamp.add_campaign(next, self.f.get_attribute('prepid'))
+        #             # update the id
+        #             ccamp.set_attribute('_id', nextName)#ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
+        #             ccamp.set_attribute('prepid', ccamp.get_attribute('_id'))
+        #
+        #             # reset the alias
+        #             ccamp.set_attribute('alias', '')
+        #
+        #             # restart chained campaign
+        #             ccamp.start()
+        #
+        #             # save new chained campaign to database
+        #             self.ccdb.save(ccamp.json())
+        #
+        #     # else if c is root campaign:
+        #     #if camp['root']==0 or camp['root']==-1:
+        #     if camp['root'] == 0:
+        #         ccamp = chained_campaign()
+        #         # add allowed root
+        #         ccamp.add_campaign(c) # assume root. flow=None
+        #
+        #         # add next with given flow
+        #         ccamp.add_campaign(next, self.f.get_attribute('prepid'))
+        #
+        #         # init campaign objects
+        #         camp = campaign(self.cdb.get(c))
+        #         # add meta (energy)
+        #         ### not there anymore ccamp.set_attribute('energy', camp['energy'])
+        #
+        #         # add a prepid
+        #         if fid:
+        #             ccamp.set_attribute('prepid',
+        #                                 'chain_' + camp.get_attribute('prepid') + '_' + self.f.get_attribute('_id'))
+        #         else:
+        #             ccamp.set_attribute('prepid', 'chain_' + camp.get_attribute('prepid'))
+        #
+        #         ccamp.set_attribute('_id', ccamp.get_attribute('prepid'))
+        #
+        #         self.ccdb.save(ccamp.json())
+        #
+        #     # update actions
+        #     self.update_actions(c)
 
 
 class CreateFlow(FlowRESTResource):
@@ -267,65 +263,67 @@ class CreateFlow(FlowRESTResource):
         return self.create_flow(cherrypy.request.body.read().strip())
 
     def create_flow(self, jsdata):
+        cdb = database('campaigns')
+        db = database(self.db_name)
         data = loads(jsdata)
         if '_rev' in data:
             return dumps({"results": 'Cannot create a flow with _rev'})
         try:
-            self.f = flow(json_input=data)
+            f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
             return dumps({"results": str(ex)})
         except ValueError as ex:
-            self.logger.error('Could not initialize flow object. Reason: %s' % (ex))
+            self.logger.error('Could not initialize flow object. Reason: %s' % ex)
             return dumps({"results": str(ex)})
 
-        if not self.f.get_attribute('prepid'):
+        if not f.get_attribute('prepid'):
             self.logger.error('prepid is not defined.')
             return dumps({"results": 'Error: PrepId was not defined.'})
 
-        self.f.set_attribute('_id', self.f.get_attribute('prepid'))
+        f.set_attribute('_id', f.get_attribute('prepid'))
 
         #uniquing the allowed campaigns if passed duplicates by mistake
-        if len(list(set(self.f.get_attribute('allowed_campaigns')))) != self.f.get_attribute('allowed_campaigns'):
-            self.f.set_attribute('allowed_campaigns', list(set(self.f.get_attribute('allowed_campaigns'))))
+        if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
+            f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
 
-        self.logger.log('Creating new flow %s ...' % (self.f.get_attribute('_id')))
+        self.logger.log('Creating new flow %s ...' % (f.get_attribute('_id')))
 
-        nc = self.f.get_attribute('next_campaign')
+        nc = f.get_attribute('next_campaign')
 
-        result = self.are_campaigns_correct(nc, self.f.get_attribute('allowed_campaigns'))
+        result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
         if result is not True:
             return dumps(result)
 
         ## adjust the requests parameters based on what was provided as next campaign
-        self.set_default_request_parameters(nc)
+        self.set_default_request_parameters(nc, cdb, f)
 
         # update history
-        self.f.update_history({'action': 'created'})
+        f.update_history({'action': 'created'})
 
         # save the flow to db
-        if not self.db.save(self.f.json()):
-            self.logger.error('Could not save newly created flow %s to database.' % (self.f.get_attribute('_id')))
+        if not db.save(f.json()):
+            self.logger.error('Could not save newly created flow %s to database.' % (f.get_attribute('_id')))
             return dumps({"results": False})
 
         #return right away instead of trying and failing on missing next or allowed
-        if not nc or not len(self.f.get_attribute('allowed_campaigns')):
+        if not nc or not len(f.get_attribute('allowed_campaigns')):
             return dumps({"results": True})
 
         # update all relevant campaigns with the "Next" parameter
         try:
-            self.update_campaigns(self.f.get_attribute('next_campaign'), self.f.get_attribute('allowed_campaigns'))
+            self.update_campaigns(f.get_attribute('next_campaign'), f.get_attribute('allowed_campaigns'), cdb)
         except Exception as ex:
             self.logger.error('Error: update_campaigns returned:' + str(ex))
             return dumps({"results": 'Error: update_campaigns returned:' + str(ex)})
 
         # create all possible chained_campaigns from the next and allowed campaigns
         try:
-            self.update_chained_campaigns(self.f.get_attribute('next_campaign'),
-                                          self.f.get_attribute('allowed_campaigns'))
+            self.update_chained_campaigns(f.get_attribute('next_campaign'),
+                                          f.get_attribute('allowed_campaigns'))
         except Exception as ex:
             self.logger.error(
                 'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
-                    self.f.get_attribute('_id'), ex))
+                    f.get_attribute('_id'), ex))
             return dumps({"results": 'Error while creating derived chained_campaigns: ' + str(ex)})
 
         # save to database
@@ -343,50 +341,50 @@ class UpdateFlow(FlowRESTResource):
         return self.update_flow(cherrypy.request.body.read().strip())
 
     def update_flow(self, jsdata):
+
+        cdb = database('campaigns')
+        db = database(self.db_name)
         data = loads(jsdata)
         if not '_rev' in data:
             return dumps({"results": "Cannot update without _rev"})
         try:
-            self.f = flow(json_input=data)
+            f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
             return dumps({"results": str(ex)})
 
-        if not self.f.get_attribute('prepid') and not self.f.get_attribute('_id'):
+        if not f.get_attribute('prepid') and not f.get_attribute('_id'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
 
         # find out what is the change
-        old = self.db.get(self.f.get_attribute('_id'))
+        old = db.get(f.get_attribute('_id'))
 
         #uniquing the allowed campaigns if passed duplicates by mistake
-        if len(list(set(self.f.get_attribute('allowed_campaigns')))) != self.f.get_attribute('allowed_campaigns'):
-            self.f.set_attribute('allowed_campaigns', list(set(self.f.get_attribute('allowed_campaigns'))))
+        if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
+            f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
 
-        nc = self.f.get_attribute('next_campaign')
-        result = self.are_campaigns_correct(nc, self.f.get_attribute('allowed_campaigns'))
+        nc = f.get_attribute('next_campaign')
+        result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
         if result is not True:
             return dumps(result)
 
         ## adjust the requests parameters based on what was provided as next campaign
-        self.set_default_request_parameters(nc)
+        self.set_default_request_parameters(nc, cdb, f)
 
         # update history
-        self.f.update_history({'action': 'update'})
+        f.update_history({'action': 'update'})
 
         # save to db
-        if not self.db.update(self.f.json()):
-            self.logger.error('Could not update flow {0}.'.format(self.f.get_attribute('_id')))
+        if not db.update(f.json()):
+            self.logger.error('Could not update flow {0}.'.format(f.get_attribute('_id')))
             return dumps({'results': False})
 
-        return self.update_derived_objects(old, self.f.json())
+        return self.update_derived_objects(old, f.json())
 
 
 class DeleteFlow(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
-        self.fdb = database(self.db_name)
-        self.ccdb = database('chained_campaigns')
-        self.cdb = database('campaigns')
 
     def DELETE(self, *args):
         """
@@ -398,25 +396,28 @@ class DeleteFlow(RESTResource):
 
     def delete_flow(self, fid):
 
+        fdb = database(self.db_name)
+        ccdb = database('chained_campaigns')
+        cdb = database('campaigns')
         # delete all chained campaigns with this flow
         ## exception can be thrown on impossibility of removing
         try:
-            self.delete_chained_campaigns(fid)
+            self.delete_chained_campaigns(fid, ccdb)
         except Exception as ex:
             return dumps({'results': str(ex)})
 
         # update relevant campaigns
         try:
-            self.update_campaigns(fid)
+            self.update_campaigns(fid, fdb, cdb, ccdb)
         except Exception as ex:
             return dumps({'results': str(ex)})
 
-        return dumps({"results": self.fdb.delete(fid)})
+        return dumps({"results": fdb.delete(fid)})
 
 
-    def delete_chained_campaigns(self, fid):
+    def delete_chained_campaigns(self, fid, ccdb):
         # get all campaigns that contain the flow : fid
-        ccamps = self.ccdb.queries(['contains==%s' % (fid)])
+        ccamps = ccdb.queries(['contains==%s' % fid])
 
         # check that all relelvant chained campaigns are empty
         crdb = database('chained_requests')
@@ -430,26 +431,26 @@ class DeleteFlow(RESTResource):
         ## all chained campaigns are empty : 
         #=> remove them one by one
         for cc in ccamps:
-            self.ccdb.delete(cc['prepid'])
+            ccdb.delete(cc['prepid'])
 
 
-    def update_campaigns(self, fid):
+    def update_campaigns(self, fid, fdb, cdb, ccdb):
         # get the flow
-        f = self.fdb.get(fid)
+        f = fdb.get(fid)
 
         next_c = f['next_campaign']
         # get all campaigns that contain the flow's next campaign in the campaign's next
-        camps = self.cdb.queries(['next==%s' % (next_c)])
+        camps = cdb.queries(['next==%s' % next_c])
 
         for c in camps:
             ##check that nothing allows to flow in it
             # get the list of chained campaign that still contain both 
-            mcm_ccs = self.ccdb.queries(['contains==' + c['prepid'], 'contains==' + next_c])
+            mcm_ccs = ccdb.queries(['contains==' + c['prepid'], 'contains==' + next_c])
             if not len(mcm_ccs):
                 #there a no chained campaign left, that uses both that campaign and next_c
                 c['next'].remove(fid)
                 try:
-                    self.cdb.update(c)
+                    cdb.update(c)
                 except Exception as ex:
                     return dumps({'results': str(ex)})
 
@@ -457,7 +458,6 @@ class DeleteFlow(RESTResource):
 class GetFlow(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -469,12 +469,12 @@ class GetFlow(RESTResource):
         return self.get_request(args[0])
 
     def get_request(self, data):
-        return dumps({"results": self.db.get(prepid=data)})
+        db = database(self.db_name)
+        return dumps({"results": db.get(prepid=data)})
 
 
 class ApproveFlow(RESTResource):
     def __init__(self):
-        self.db = database('flows')
         self.access_limit = 3
 
     def GET(self, *args):
@@ -500,13 +500,14 @@ class ApproveFlow(RESTResource):
             return dumps(self.approve(rid, val))
 
     def approve(self, rid, val):
-        if not self.db.document_exists(rid):
+        db = database('flows')
+        if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given flow id does not exist.'}
-        f = flow(json_input=self.db.get(rid))
+        f = flow(json_input=db.get(rid))
 
         try:
             f.approve(int(val))
         except:
             return {"prepid": rid, "results": False}
 
-        return {"prepid": rid, "results": self.db.update(f.json())}
+        return {"prepid": rid, "results": db.update(f.json())}

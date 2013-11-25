@@ -46,26 +46,25 @@ class SetStatus(RESTResource):
 """
 class SaveBatch(RESTResource):
     def __init__(self):
-        self.bdb = database('batches')
         self.access_limit = 3
 
     def PUT(self):
         """
         Save the content of a batch given the json content
         """
+        bdb = database('batches')
         data = loads(cherrypy.request.body.read().strip())
       
         data.pop('_rev')
 
         mcm_b = batch( data )
         
-        self.bdb.save( mcm_b.json() )
+        bdb.save( mcm_b.json() )
 
 
 class GetBatch(RESTResource):
     def __init__(self):
         self.db_name = 'batches'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -77,12 +76,12 @@ class GetBatch(RESTResource):
         return self.get_request(args[0])
 
     def get_request(self, data):
-        return dumps({"results":self.db.get(prepid=data)})
+        db = database(self.db_name)
+        return dumps({"results":db.get(prepid=data)})
 
 class GetAllBatches(RESTResource):
     def __init__(self):
         self.db_name = 'batches'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -91,12 +90,12 @@ class GetAllBatches(RESTResource):
         return self.get_all()
 
     def get_all(self):
-        return dumps({"results":self.db.get_all()})
+        db = database(self.db_name)
+        return dumps({"results":db.get_all()})
 
 class GetIndex(RESTResource):
     def __init__(self):
         self.db_name = 'batches'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -105,29 +104,30 @@ class GetIndex(RESTResource):
         if not args:
             self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
-        id=args[0]
-        if not self.db.document_exists(id):
-            return dumps({"results":False, "message": "%s is not a valid batch name"%(id)})
+        db = database(self.db_name)
+        b_id=args[0]
+        if not db.document_exists(b_id):
+            return dumps({"results":False, "message": "%s is not a valid batch name"%(b_id)})
         #yurks ?
         redirect="""\
 <html>
 <meta http-equiv="REFRESH" content="0; url=/mcm/batches?prepid=%s&page=0">
 </html>
-"""%(id)
+"""% b_id
         return redirect
 
 class BatchAnnouncer(RESTResource):
     def __init__(self):
-        self.bdb = database('batches')
         self.access_limit = 3
 
     def announce_with_text(self, bid, message):
+        bdb = database('batches')
         if not semaphore_events.is_set(bid):
             return {"results": False, "message": "Batch {0} has on-going submissions.".format(bid) , "prepid" : bid}
-        b = batch(self.bdb.get(bid))
+        b = batch(bdb.get(bid))
         r = b.announce(message)
         if r:
-            return {"results":self.bdb.update(b.json()) , "message" : r , "prepid" : bid}
+            return {"results":bdb.update(b.json()) , "message" : r , "prepid" : bid}
         else:
             return {"results":False , "prepid" : bid}
         
@@ -145,9 +145,10 @@ class AnnounceBatch(BatchAnnouncer):
     def announce(self, data):
         if not 'prepid' in data or not 'notes' in data:
             raise ValueError('no prepid nor notes in batch announcement api')
+        bdb = database('batches')
         bid=data['prepid']
-        if not self.bdb.document_exists(bid):
-            return dumps({"results":False, "message": "%s is not a valid batch name"%(bid)})
+        if not bdb.document_exists(bid):
+            return dumps({"results":False, "message": "%s is not a valid batch name"% bid})
         
         return dumps(self.announce_with_text(bid, data['notes'] ))
 
@@ -169,10 +170,10 @@ class InspectBatches(BatchAnnouncer):
                 bid = args[0]
             if len(args)==2:
                 self.N_to_go=int(args[1])
-
+        bdb = database('batches')
         res=[]
         if settings().get_value('batch_announce'):
-            new_batches = self.bdb.queries(['status==new'])
+            new_batches = bdb.queries(['status==new'])
             for new_batch in new_batches:
                 if bid and new_batch['prepid']!=bid:  continue
                 if len(new_batch['requests'])>=self.N_to_go:
@@ -184,7 +185,7 @@ class InspectBatches(BatchAnnouncer):
         if settings().get_value('batch_set_done'):
             ## check on on-going batches
             rdb = database('requests')
-            announced_batches = self.bdb.queries(['status==announced'])
+            announced_batches = bdb.queries(['status==announced'])
             for announced_batch in announced_batches:
                 if bid and announced_batch['prepid']!=bid:  continue
                 this_bid = announced_batch['prepid']
@@ -201,7 +202,7 @@ class InspectBatches(BatchAnnouncer):
                     ## set the status and save
                     mcm_b = batch(announced_batch)
                     mcm_b.set_status()
-                    self.bdb.update( mcm_b.json() )
+                    bdb.update( mcm_b.json() )
                     res.append({"results": True, "prepid" : this_bid, "message" : "Set to done"})
                 else:
                     res.append({"results": False, "prepid" : this_bid, "message" : "Not completed"})

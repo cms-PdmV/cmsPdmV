@@ -11,7 +11,6 @@ class ReadInjectionLog(RESTResource):
     def __init__(self):
         self.logfile = 'logs/inject.log'
         self.db_name = 'requests'
-        self.db = database(self.db_name)
 
     def GET(self, *args):
         """
@@ -27,9 +26,10 @@ class ReadInjectionLog(RESTResource):
         return self.read_logs(pid, nlines)
 
     def read_logs(self, pid, nlines):
-        if not self.db.document_exists(pid):
-            self.logger.error('Given prepid "%s" does not exist in the database.' % (pid))
-            return dumps({"results": 'Error:Given prepid "%s" does not exist in the database.' % (pid)})
+        db = database(self.db_name)
+        if not db.document_exists(pid):
+            self.logger.error('Given prepid "%s" does not exist in the database.' % pid)
+            return dumps({"results": 'Error:Given prepid "%s" does not exist in the database.' % pid})
 
         try:
             data = open(self.logfile).read()

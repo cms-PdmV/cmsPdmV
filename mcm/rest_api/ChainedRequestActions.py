@@ -4,7 +4,7 @@ import cherrypy
 from json import loads,dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
-from RequestChainId import RequestChainId
+from ChainedRequestPrepId import ChainedRequestPrepId
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.action import action
@@ -23,8 +23,6 @@ class SearchChainedRequest(RESTResource):
 class CreateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.db = database(self.db_name)
-        self.req = None
         self.access_limit = 4
 
     def PUT(self):
@@ -32,31 +30,33 @@ class CreateChainedRequest(RESTResource):
         Create a chained request from the provided json content
         """
         return self.import_request(cherrypy.request.body.read().strip())
+
     def import_request(self, data):
-        try:
-            self.req = chained_request(json_input=loads(data))
-        except chained_request.IllegalAttributeName as ex:
+        db = database(self.db_name)
+        json_input=loads(data)
+        if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
+            self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return dumps({"results":False})
+        cr_id = ChainedRequestPrepId().generate_id(json_input['pwg'], json_input['member_of_campaign'])
+        req = chained_request(db.get(cr_id))
+        for key in json_input:
+            if key not in ['prepid', '_id', '_rev', 'history']:
+                req.set_attribute(key, json_input[key])
 
-        id = RequestChainId().generate_id(self.req.get_attribute('pwg'), self.req.get_attribute('member_of_campaign'))
-        self.req.set_attribute('prepid',loads(id)['results'])
-
-        if not self.req.get_attribute('prepid'):
+        if not req.get_attribute('prepid'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
 
-        self.req.set_attribute('_id', self.req.get_attribute('prepid'))
-        self.json = self.req.json()
 
-        self.logger.log('Creating new chained_request %s' % (self.json['_id']))
-	
-	# update history with the submission details
-	self.req.update_history({'action': 'created'})
+        self.logger.log('Created new chained_request %s' % cr_id)
 
-        return self.save_request()
+        # update history with the submission details
+        req.update_history({'action': 'created'})
 
-    def save_request(self):
-        if self.db.save(self.req.json()):
+        return self.save_request(db, req)
+
+    def save_request(self, db, req):
+        if db.update(req.json()):
             self.logger.log('new chained_request successfully saved.')
             return dumps({"results":True})
         else:
@@ -66,8 +66,6 @@ class CreateChainedRequest(RESTResource):
 class UpdateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.db = database(self.db_name)
-        self.request = None
         self.access_limit = 4
 
     def PUT(self):
@@ -78,30 +76,27 @@ class UpdateChainedRequest(RESTResource):
 
     def update_request(self, data):
         try:
-            self.request = chained_request(json_input=loads(data))
+            req = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        if not self.request.get_attribute('prepid') and not self.request.get_attribute('_id'):
+        if not req.get_attribute('prepid') and not req.get_attribute('_id'):
             self.logger.error('prepid returned was None') 
             raise ValueError('Prepid returned was None')
-            #self.request.set_attribute('_id', self.request.get_attribute('prepid')
+            #req.set_attribute('_id', req.get_attribute('prepid')
 
-        self.logger.log('Updating chained_request %s' % (self.request.get_attribute('_id')))
+        self.logger.log('Updating chained_request %s' % (req.get_attribute('_id')))
 
-	# update history
-	self.request.update_history({'action': 'update'})
+        # update history
+        req.update_history({'action': 'update'})
 
-        return self.save_request()
-        
-    def save_request(self):
-        return dumps({"results":self.db.update(self.request.json())})
+        return self.save_request(req)
+
+    def save_request(self, req):
+        db = database(self.db_name)
+        return dumps({"results":db.update(req.json())})
 
 class DeleteChainedRequest(RESTResource):
-    def __init__(self):
-        self.crdb = database('chained_requests')
-        self.rdb = database('requests')
-        self.adb = database('actions')
 
     def DELETE(self, *args):
         """
@@ -110,15 +105,18 @@ class DeleteChainedRequest(RESTResource):
         if not args:
             return dumps({"results":False})
         return self.delete_request(args[0])
-    
+
     def delete_request(self, crid):
 
-        mcm_cr = chained_request(self.crdb.get(crid))
-        
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        adb = database('actions')
+        mcm_cr = chained_request(crdb.get(crid))
+        mcm_a = None
         ## get all objects
         mcm_r_s=[]
         for (i,rid) in enumerate(mcm_cr.get_attribute('chain')):
-            mcm_r = request(self.rdb.get(rid))
+            mcm_r = request(rdb.get(rid))
             #this is not a valid check as it is allowed to remove a chain around already running requests
             #    if mcm_r.get_attribute('status') != 'new':
             #        return dumps({"results":False,"message" : "the request %s part of the chain %s for action %s is not in new status"%( mcm_r.get_attribute('prepid'),
@@ -129,40 +127,38 @@ class DeleteChainedRequest(RESTResource):
             mcm_r.set_attribute('member_of_chain', in_chains)
             if i==0:
                 # the root is the action id
-                mcm_a = action(self.adb.get(rid))
+                mcm_a = action(adb.get(rid))
             else:
                 if len(in_chains)==0:
-                    return dumps({"results":False,"message" : "the request %s, not at the root of the chain will not be chained anymore"%( rid)})
+                    return dumps({"results":False,"message" : "the request %s, not at the root of the chain will not be chained anymore"% rid})
             mcm_r.update_history({'action':'leave','step':crid})
             mcm_r_s.append( mcm_r )
-                    
+
         ## check if possible to get rid of it !
         # action for the chain is disabled
         chains = mcm_a.get_chains( mcm_cr.get_attribute('member_of_campaign'))
-        if chains[crid] ['flag'] == True:
+        if chains[crid]['flag']:
             return dumps({"results":False,"message" : "the action %s for %s is not disabled"%(mcm_a.get_attribute('prepid'), crid)})
         #take it out
-        mcm_a.remove_chain(  mcm_cr.get_attribute('member_of_campaign'),
-                             mcm_cr.get_attribute('prepid') )
+        mcm_a.remove_chain(  mcm_cr.get_attribute('member_of_campaign'), mcm_cr.get_attribute('prepid') )
 
-        if not self.adb.update( mcm_a.json()):
+        if not adb.update( mcm_a.json()):
             return dumps({"results":False,"message" : "Could not save action "+ mcm_a.get_attribute('prepid')})
         ## then save all changes
         for mcm_r in mcm_r_s:
-            if not self.rdb.update( mcm_r.json()):
+            if not rdb.update( mcm_r.json()):
                 return dumps({"results":False,"message" : "Could not save request "+ mcm_r.get_attribute('prepid')})
             else:
                 mcm_r.notify("Request {0} left chain".format( mcm_r.get_attribute('prepid')),
                              "Request {0} has successfuly left chain {1}".format( mcm_r.get_attribute('prepid'), crid))
 
 
-        return dumps({"results":self.crdb.delete(crid)})
+        return dumps({"results":crdb.delete(crid)})
 
 class GetChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.db = database(self.db_name)
-    
+
     def GET(self, *args):
         """
         Retrieve the content of a chained request id
@@ -171,15 +167,14 @@ class GetChainedRequest(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results":{}})
         return self.get_request(args[0])
-    
+
     def get_request(self, data):
-        return dumps({"results":self.db.get(prepid=data)})
+        db = database(self.db_name)
+        return dumps({"results":db.get(prepid=data)})
 
 # REST method to add a new request to the chain
 class AddRequestToChain(RESTResource):
     def __init__(self):
-        self.rdb = database('requests')
-        self.db = database('chained_requests')
         self.access_limit =4 
     def PUT(self):
         """
@@ -187,9 +182,11 @@ class AddRequestToChain(RESTResource):
         """
         return dumps({"results" : "Not implemented"})
 
-        return self.add_to_chain(cherrypy.request.body.read().strip())
-        
+        # return self.add_to_chain(cherrypy.request.body.read().strip())
+
     def add_to_chain(self, data):
+        rdb = database('requests')
+        db = database('chained_requests')
 
         self.logger.log('Adding a new request to chained_request')
         try:
@@ -201,39 +198,38 @@ class AddRequestToChain(RESTResource):
             req = request(json_input=loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
-            
+
         if not req.get_attribute("member_of_chain"):
             self.logger.error('Attribute "member_of_chain" attribute was None')
             return dumps({"results":'Error: "member_of_chain" attribute was None.'})
-            
+
         if not req.get_attribute("member_of_campaign"):
             self.logger.error('Attribute "member_of_campaign" attribute was None.')
             return dumps({"results":'Error: "member_of_campaign" attribute was None.'})        
-        
+
         try:
-            creq = chained_request(json_input=self.db.get(req.get_attribute('member_of_chain')))
+            creq = chained_request(json_input=db.get(req.get_attribute('member_of_chain')))
         except chained_request.IllegalAttributeName as ex:
             return dumps({"results":str(ex)})
-            
+
         try:
             new_req = creq.add_request(req.json())
         except chained_request.CampaignAlreadyInChainException as ex:
             return dumps({"results":str(ex)})
-            
+
         if not new_req:
             self.logger.error('Could not save newly created request to database')
             return dumps({"results":False})
 
         # finalize and make persistent
-        self.db.update(creq.json())
-        self.rdb.save(new_req)
+        db.update(creq.json())
+        rdb.save(new_req)
         return dumps({"results":True})
 
 # REST method that makes the chained request flow to the next
 # step of the chain
 class FlowToNextStep(RESTResource):
     def __init__(self):
-        self.db = database('chained_requests')
         self.access_limit = 3
 
     def PUT(self):
@@ -297,7 +293,8 @@ class FlowToNextStep(RESTResource):
 
     def flow(self,  chainid, check_stats=True):
         try:
-            creq = chained_request(json_input=self.db.get(chainid))
+            db = database('chained_requests')
+            creq = chained_request(json_input=db.get(chainid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex)) 
             return {"results":str(ex)}
@@ -309,8 +306,6 @@ class FlowToNextStep(RESTResource):
 
 class RewindToPreviousStep(RESTResource):
     def __init__(self):
-        self.crdb = database('chained_requests')
-        self.rdb = database('requests')
         self.access_limit = 3
 
     def GET(self,  *args):
@@ -319,8 +314,10 @@ class RewindToPreviousStep(RESTResource):
         """
         if not len(args):
             return dumps({"results":False})
+        crdb = database('chained_requests')
+        rdb = database('requests')
         crid=args[0]
-        mcm_cr = chained_request( self.crdb.get( crid) )
+        mcm_cr = chained_request( crdb.get( crid) )
         current_step = mcm_cr.get_attribute('step')
         if current_step==0:
             ## or should it be possible to cancel the initial requests of a chained request
@@ -329,29 +326,28 @@ class RewindToPreviousStep(RESTResource):
         ## supposedly all the other requests were already reset!
         for next in mcm_cr.get_attribute('chain')[current_step+1:]:
             ## what if that next one is not in the db
-            if not self.rdb.document_exists( next):
+            if not rdb.document_exists( next):
                 self.logger.error('%s is part of %s but does not exist'%( next, crid))
-                die=now
                 continue
-            mcm_r = request(self.rdb.get( next ))
+            mcm_r = request(rdb.get( next ))
             if mcm_r.get_attribute('status')!='new':
                 # this cannot be right!
                 self.logger.error('%s is after the current request and is not new: %s' %( next, mcm_r.get_attribute('status')))
-                die=now
 
         ##get the one to be reset
         current_id=mcm_cr.get_attribute('chain')[current_step]
-        mcm_r = request( self.rdb.get( current_id ))
+        mcm_r = request( rdb.get( current_id ))
         mcm_r.reset()
-        saved = self.rdb.update( mcm_r.json() )
+        saved = rdb.update( mcm_r.json() )
         if not saved:
             return dumps({"results":False, "message":"could not save the last request of the chain"})
         mcm_cr.set_attribute('step',current_step -1 )
         # set status, last status
         mcm_cr.set_last_status()
-        mcm_cr.set_processing_status()
-        
-        saved = self.crdb.update( mcm_cr.json())
+        #mcm_cr.set_processing_status()
+        mcm_cr.set_attribute('status','processing')
+
+        saved = crdb.update( mcm_cr.json())
         if saved:
             return dumps({"results":True})
         else:
@@ -359,7 +355,6 @@ class RewindToPreviousStep(RESTResource):
 
 class ApproveRequest(RESTResource):
     def __init__(self):
-        self.db = database('chained_requests')
         self.acces_limit = 3 
 
     def GET(self,  *args):
@@ -382,17 +377,18 @@ class ApproveRequest(RESTResource):
             return dumps(res)
         else:
             return dumps(self.approve(rid, val))
-        
+
     def approve(self,  rid,  val=-1):
-        if not self.db.document_exists(rid):
+        db = database('chained_requests')
+        if not db.document_exists(rid):
             return {"prepid": rid, "results":'Error: The given chained_request id does not exist.'}
-        creq = chained_request(json_input=self.db.get(rid))
+        creq = chained_request(json_input=db.get(rid))
         try:
             creq.approve(val)
         except Exception as ex:
             return {"prepid": rid, "results":False, 'message' : str(ex)} 
 
-        saved = self.db.update(creq.json())
+        saved = db.update(creq.json())
         if saved:
             return {"prepid":rid, "results":True}
         else:
@@ -401,8 +397,6 @@ class ApproveRequest(RESTResource):
 
 class InspectChain(RESTResource):
     def __init__(self):
-        self.crdb = database('chained_requests')
-        self.rdb = database('requests')
         self.acces_limit = 3
 
     def GET(self, *args):
@@ -416,12 +410,13 @@ class InspectChain(RESTResource):
     def multiple_inspect(self, crid):
         crlist=crid.rsplit(',')
         res = []
+        crdb = database('chained_requests')
         for cr in crlist:
-            if self.crdb.document_exists( cr):
-                mcm_cr = chained_request( self.crdb.get( cr) )
+            if crdb.document_exists( cr):
+                mcm_cr = chained_request( crdb.get( cr) )
                 res.append( mcm_cr.inspect() )
             else:
-                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist'%(cr)})
+                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist'% cr})
 
         if len(res)>1:
             return dumps(res)
@@ -430,8 +425,6 @@ class InspectChain(RESTResource):
 
 class GetConcatenatedHistory(RESTResource):
     def __init__(self):
-        self.crdb = database('chained_requests')
-        self.rdb = database('requests')
         self.acces_limit = 1
 
     def GET(self, *args):
@@ -442,13 +435,15 @@ class GetConcatenatedHistory(RESTResource):
     def concatenate_history(self, id_string):
         res = {}
         tmp_history = {}
+        crdb = database('chained_requests')
+        rdb = database('requests')
         id_list = id_string.split(',')
         for elem in id_list: ##get data for single chain -> save in tmp_hist key as chain_id ???
             tmp_history[elem] = []
-            chain_data = self.crdb.get(elem)
+            chain_data = crdb.get(elem)
             #/get request and then data!
             for request in chain_data["chain"]:
-                request_data = self.rdb.get(request)
+                request_data = rdb.get(request)
                 tmp_data = request_data["history"]
                 try:
                     if tmp_data[0]["step"] != "new":  #we set 1st step to new -> so graph would not ignore undefined steps: clone, <flown> step, migrated

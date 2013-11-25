@@ -7,12 +7,11 @@ from RestAPIMethod import RESTResourceIndex
 
 # generates the next valid prepid 
 class GetAllNews(RESTResourceIndex):
-    def __init__(self):
-        self.db = database('news')
 
     def get_all_news(self):
+        db = database('news')
         #return self.db.get_all()
-        return self.db.queries(['announced=="true"'])
+        return db.queries(['announced=="true"'])
 
     def GET(self, *args):
         """
@@ -27,13 +26,12 @@ class GetAllNews(RESTResourceIndex):
         return json.dumps(all_news)
 
 class GetSingleNew(RESTResourceIndex):
-    def __init__(self):
-        self.db = database('news')#
 
     def get_single_new(self, doc_id):
-        if not self.db.document_exists(doc_id):
-            return dumps({"results": {}})
-        mcm_new = self.db.get(prepid=doc_id)
+        db = database('news')
+        if not db.document_exists(doc_id):
+            return json.dumps({"results": {}})
+        mcm_new = db.get(prepid=doc_id)
         return json.dumps({"results":mcm_new})
 
     def GET(self, *args):
@@ -47,13 +45,12 @@ class GetSingleNew(RESTResourceIndex):
 
 class CreateNews(RESTResourceIndex):
     def __init__(self):
-        self.db = database('news')#
-        self.New = None
         self.access_limit = 3
 
     def create_new(self, data):
+        db = database('news')
         try:
-            self.New = json.loads(data)
+            new_news = json.loads(data)
         except Exception as ex:
             return json.dumps({"results":False})
         
@@ -65,9 +62,9 @@ class CreateNews(RESTResourceIndex):
         #datetime = datetime.rstrip('-')
         #datetime = '-'.join( map ('%02d'%localtime[0:5]))
         datetime = time.strftime('%Y-%m-%d-%H-%M')
-        self.New['date'] = datetime
-        self.New['announced'] = False
-        self.db.save(self.New)
+        new_news['date'] = datetime
+        new_news['announced'] = False
+        db.save(new_news)
         return json.dumps({"results":True})
 
     def PUT(self):
@@ -78,7 +75,6 @@ class CreateNews(RESTResourceIndex):
 
 class UpdateNew(RESTResourceIndex):
     def __init__(self):
-        self.db = database('news')#
         self.access_limit = 3
 
     def update_new(self, data):
@@ -86,11 +82,12 @@ class UpdateNew(RESTResourceIndex):
           news_data = json.loads(data)
         except Exception as ex:
             return json.dumps({"results":False, 'message': str(ex)})
-        if not self.db.document_exists(news_data['_id']):
+        db = database('news')
+        if not db.document_exists(news_data['_id']):
             return json.dumps({"results":False, 'message' : 'new %s does not exist in News DB'%( data['_id']) })
        # self.db.update(dnews_ata)
         #mcm_new = self.db.get(prepid=doc_id)
-        return json.dumps({"results":self.db.update(news_data)})
+        return json.dumps({"results":db.update(news_data)})
 
     def PUT(self):
         """

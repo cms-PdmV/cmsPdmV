@@ -12,7 +12,7 @@ from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRe
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
-from rest_api.RequestChainId import RequestChainId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames
 from rest_api.BatchActions import HoldBatch, SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch
@@ -281,7 +281,7 @@ root.restapi.chained_campaigns.inspectall = InspectChainedCampaigns()
 root.restapi.chained_campaigns.select = SelectNewChainedCampaigns()
 
 # REST Chained Request Actions
-root.restapi.chained_requests.request_chainid = RequestChainId()
+root.restapi.chained_requests.request_chainid = ChainedRequestPrepId()
 root.restapi.chained_requests.save = CreateChainedRequest()
 root.restapi.chained_requests.update = UpdateChainedRequest()
 root.restapi.chained_requests.delete = DeleteChainedRequest()

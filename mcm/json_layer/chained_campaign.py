@@ -4,7 +4,7 @@ from chained_request import chained_request
 from json_base import json_base
 from request import request
 from couchdb_layer.mcm_database import database
-from rest_api.RequestChainId import RequestChainId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from json import loads,  dumps
 
 class chained_campaign(json_base):
@@ -107,6 +107,7 @@ class chained_campaign(json_base):
         self.logger.log('Building a new chained_request for chained_campaign %s. Root request: %s' % (self.get_attribute('_id'), root_request_id ))
         try:
             rdb = database('requests')
+            crdb = database('chained_requests')
         except database.DatabaseAccessError as ex:
             return {}
             
@@ -115,12 +116,16 @@ class chained_campaign(json_base):
             return {}
         
         # init new creq
-        creq = chained_request()
-        
+
         # parse request id
         tok = root_request_id.split('-')
         pwg = tok[0]
         camp = tok[1]
+        # generate new chain id
+        id = ChainedRequestPrepId().generate_id(pwg, self.get_attribute('prepid'))
+
+        creq = chained_request(crdb.get(id))
+
         
         # set values
         creq.set_attribute('pwg',  pwg)
@@ -129,13 +134,9 @@ class chained_campaign(json_base):
         ## approval is not a member of chained campaign 
         # creq.set_attribute('approval', self.get_attribute('approval'))
 
-        # generate new chain id
-        id = RequestChainId().generate_id(creq.get_attribute('pwg'), creq.get_attribute('member_of_campaign'))
-        creq.set_attribute('prepid',loads(id)['results'])
 
         if not creq.get_attribute('prepid'):
             raise ValueError('Prepid returned was None')
-        creq.set_attribute('_id', creq.get_attribute('prepid'))
         
         # set the default values that will be carried over to the next step in the chain
         req = rdb.get(root_request_id)

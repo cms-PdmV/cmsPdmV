@@ -163,7 +163,6 @@ class GetInvalidation(RESTResource):
 
     def __init__(self):
         self.access_limit = 4
-        self.db = database('invalidations')
 
     def GET(self, *args):
         """
@@ -175,4 +174,5 @@ class GetInvalidation(RESTResource):
         return self.get_request(args[0])
 
     def get_request(self, object_name):
-        return dumps({"results": self.db.get(object_name)})
+        db = database('invalidations')
+        return dumps({"results": db.get(object_name)})

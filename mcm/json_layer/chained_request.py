@@ -368,7 +368,7 @@ class chained_request(json_base):
             from rest_api.RequestPrepId import RequestPrepId
 
             next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
-            next_request = request(next_campaign.add_request({"prepid": next_id, "_id": next_id}))
+            next_request = request(rdb.get(next_id))
             transfer( current_request, next_request)
 
             next_request.set_attribute("member_of_chain", [self.get_attribute('_id')])
@@ -390,11 +390,12 @@ class chained_request(json_base):
                 self.update_history({'action': 'flow', 'step': str(next_step)})
             self.set_attribute('step', next_step)
             next_request = request(rdb.get(next_id))
-            #reput some of the previous parameters in
-            ### should this be blown away ?
-            transfer( current_request, next_request)
 
             self.set_attribute('last_status', next_request.get_attribute('status'))
+
+            #reput some of the previous parameters in
+            #### to be removed ???? #### where is it coming from ???? ####
+            transfer( current_request, next_request)
 
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
                 ## register the chain to the next request
