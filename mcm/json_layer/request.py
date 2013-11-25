@@ -1121,8 +1121,9 @@ done
         db = database( 'requests')
         if self.get_attribute('approval') == 'approve':
             try:
-                self.approve()
-                saved = db.save( self.json() )
+                with locker.lock('{0}-wait-for-approval'.format( self.get_attribute('prepid'))):
+                    self.approve()
+                    saved = db.save( self.json() )
                 if saved:
                     return {"prepid": self.get_attribute('prepid'), "results":True}
                 else:
