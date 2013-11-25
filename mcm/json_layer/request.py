@@ -1353,7 +1353,13 @@ done
         self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % ( efficiency, efficiency_error, timing, file_size ))
 
         if what =='eff':
-            if not geninfo or geninfo[to_be_changed+'_error'] > efficiency_error:
+            do_update=False
+            if not geninfo:
+                do_update=True
+            if geninfo and geninfo[to_be_changed] and efficiency:
+                if (geninfo[to_be_changed+'_error'] / geninfo[to_be_changed] ) > (efficiency_error/ efficiency):
+                    do_update=True
+            if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
                 self.update_generator_parameters()
                 added_geninfo = self.get_attribute('generator_parameters')[-1]
