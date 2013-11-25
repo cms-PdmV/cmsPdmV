@@ -37,7 +37,9 @@ class CreateChainedRequest(RESTResource):
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return dumps({"results":False})
-        cr_id = ChainedRequestPrepId().generate_id(json_input['pwg'], json_input['member_of_campaign'])
+        cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
+        if not cr_id:
+            return dumps({"results":False})
         req = chained_request(db.get(cr_id))
         for key in json_input:
             if key not in ['prepid', '_id', '_rev', 'history']:

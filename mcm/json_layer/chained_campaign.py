@@ -122,9 +122,9 @@ class chained_campaign(json_base):
         pwg = tok[0]
         camp = tok[1]
         # generate new chain id
-        id = ChainedRequestPrepId().generate_id(pwg, self.get_attribute('prepid'))
+        cid = ChainedRequestPrepId().next_id(pwg, self.get_attribute('prepid'))
 
-        creq = chained_request(crdb.get(id))
+        creq = chained_request(crdb.get(cid))
 
         
         # set values

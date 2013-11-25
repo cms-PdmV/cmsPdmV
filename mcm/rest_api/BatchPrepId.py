@@ -12,7 +12,7 @@ class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
-    def generate_prepid(self, for_request):
+    def next_id(self, for_request):
         flown_with = for_request['flown_with']
         next_campaign = for_request['member_of_campaign']
         version = for_request['version']
