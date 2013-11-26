@@ -28,8 +28,8 @@ class ChainedRequestPrepId(RESTResourceIndex):
                 return None
 
             # get the list of the prepids with the same pwg and campaign name
-            results = creq_db.queries(['member_of_campaign=%s'%(campaign),
-                                       'pwg=%s'%(pwg)])
+            results = creq_db.queries(['member_of_campaign==%s'%(campaign),
+                                       'pwg==%s'%(pwg)])
             results = map(lambda cr : int(cr['prepid'].split('-')[-1]), results)
             sn=1
             if len(results):
