@@ -384,15 +384,16 @@ class DetectChains(RESTResource):
         """
         Update the action content with the possible chains
         """
+        db = database('actions')
         if not args:
-            return self.find_all_chains()
+            return self.find_all_chains(db)
         res=[]
         aids=args[0].split(',')
         if len(aids)==1:
-            res=self.find_chains(aids[0])
+            res=self.find_chains(aids[0],db)
         else:
             for aid in aids:
-                res.append(self.find_chains(aid))
+                res.append(self.find_chains(aid,db))
 
         return dumps(res)
 
@@ -407,8 +408,7 @@ class DetectChains(RESTResource):
         except Exception as ex:
             return {'results':False, 'prepid': aid, 'message' :str(ex)}
 
-    def find_all_chains(self):
-        db = database('actions')
+    def find_all_chains(self, db):
         self.logger.log('Identifying all possible chains for all actions in the database...')
         aids = lambda x: x['prepid'] , db.queries([])
         res=[]
@@ -416,14 +416,6 @@ class DetectChains(RESTResource):
             res.append(self.find_chains(aid, db))
 
         return dumps(res)
-"""
-        try:
-            map(lambda x: self.find_chains(x['key']),  self.db.get_all(-1))
-        except Exception as ex:
-            self.logger.error('Could not finish detecting chains. Reason: %s' % (ex))   
-            return dumps({'results': False,'message' : str(ex)})
-        return dumps({'results': True})
-"""
 
 from rest_api.RequestActions import RequestLister
 class ActionsFromFile(RequestLister,RESTResource): 
