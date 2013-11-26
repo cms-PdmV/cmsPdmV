@@ -1152,7 +1152,7 @@ class RequestPerformance(RESTResource):
 
 class RequestLister():
     def __init__(self):
-        self.retrieve_db = None
+        pass 
 
     def get_objects(self, all_ids, retrieve_db):
         all_objects = []
@@ -1164,7 +1164,7 @@ class RequestLister():
         self.logger.error("Got %s ids identified" % ( len(all_objects)))
         return dumps({"results": all_objects})
 
-    def identify_an_id(self, word, in_range_line, cdb, rdb):
+    def identify_an_id(self, word, in_range_line, cdb, odb):
         all_campaigns = map(lambda x: x['id'], cdb.raw_query("prepid"))
         if word.count('-') == 2:
             (pwg, campaign, serial) = word.split('-')
@@ -1174,7 +1174,7 @@ class RequestLister():
                 return None
             if not campaign in all_campaigns:
                 return None
-            if rdb.document_exists(word):
+            if odb.document_exists(word):
                 return word
             elif in_range_line:
                 return word
@@ -1189,7 +1189,7 @@ class RequestLister():
                 return None
             return dsn
 
-    def get_list_of_ids(self, rdb):
+    def get_list_of_ids(self, odb):
         self.logger.error("Got a file from uploading")
         data = loads(cherrypy.request.body.read().strip())
         text = data['contents']
@@ -1219,7 +1219,7 @@ class RequestLister():
                 an_id = None
                 a_dsn = None
                 if possible_campaign is None:
-                    an_id = self.identify_an_id(word, '->' in line, cdb, rdb)
+                    an_id = self.identify_an_id(word, '->' in line, cdb, odb)
 
                 if an_id:
                     all_ids.append(an_id)
@@ -1250,7 +1250,7 @@ class RequestLister():
             if not cdb.document_exists(possible_campaign):
                 continue
                 ## get all requests
-            all_requests = rdb.queries(['member_of_campaign==%s' % possible_campaign])
+            all_requests = odb.queries(['member_of_campaign==%s' % possible_campaign])
             for request in all_requests:
                 if request['dataset_name'] in possible_dsn:
                     all_ids.append(request['prepid'])
