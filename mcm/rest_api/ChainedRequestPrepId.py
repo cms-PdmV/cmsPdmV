@@ -28,14 +28,18 @@ class ChainedRequestPrepId(RESTResourceIndex):
                 return None
 
             # get the list of the prepids with the same pwg and campaign name
-            results = creq_db.get_all()
-            results = filter(lambda x: pwg+'-'+campaign+'-' in x,map(lambda x: x['_id'], results))
-            if not results:
-                self.logger.log('Beginning new prepid family: %s' % (pwg+"-"+campaign+"-00001"))
-                return pwg+"-"+campaign+"-00001"
-            # increase the serial number of the request by one
-            sn = int(results[-1].rsplit('-')[2])+1
+            results = creq_db.queries(['member_of_campaign=%s'%(campaign),
+                                       'pwg=%s'%(pwg)])
+            results = map(lambda cr : int(cr['prepid'].split('-')[-1]), results)
+            sn=1
+            if len(results):
+                # increase the biggest serial number by one
+                sn = max(results) + 1
+            
+            ## construct the new id
             new_prepid = pwg + '-' + campaign + '-' + str(sn).zfill(5)
+            if sn==1:
+                self.logger.log('Beginning new prepid family: %s' % (new_prepid))
 
             new_request = chained_request({'_id':new_prepid, 'prepid':new_prepid})
             new_request.update_history({'action':'created'})
