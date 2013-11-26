@@ -430,5 +430,5 @@ class ActionsFromFile(RequestLister,RESTResource):
         """
         rdb = database('requests')
         all_ids = self.get_list_of_ids( rdb )
-        return self.get_objects( all_ids )
+        return self.get_objects( all_ids , rdb )
 
