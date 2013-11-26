@@ -436,6 +436,7 @@ class ActionsFromFile(RequestLister,RESTResource):
         """
         Parse the posted text document for request id and request ranges for display of actions
         """
-        all_ids = self.get_list_of_ids()
+        rdb = database('requests')
+        all_ids = self.get_list_of_ids( rdb )
         return self.get_objects( all_ids )
 
