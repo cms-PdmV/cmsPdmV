@@ -19,6 +19,7 @@ class mccm(json_base):
             'notes': '',
             'pwg': '',
             'requests': [],
+            'chains' :[],
             'size': 0,
             'status': 'new'
             }
@@ -42,6 +43,8 @@ class mccm(json_base):
         if self.get_attribute('status') == 'new':
             for key in self._json_base__schema:
                 editable[key] = True
+            for key in ["status", "prepid","meeting","pwg","approval","message_id"]:
+                editable[key] = False
         else:
             for key in self._json_base__schema:
                 editable[key] = False

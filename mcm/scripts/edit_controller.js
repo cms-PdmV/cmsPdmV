@@ -50,7 +50,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.not_editable_list = ["Username", "Role"];
         break;
       case "mccms":
-        $scope.not_editable_list = ["Prepid", "Pwg"];
+	  $scope.not_editable_list = ["Prepid", "Pwg"];
         var promise = $http.get("restapi/mccms/editable/"+$scope.prepid)
         promise.then(function(data){
           $scope.parseEditableObject(data.data.results);
@@ -159,7 +159,7 @@ function resultsCtrl($scope, $http, $location, $window){
          $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
          $scope.result["memory"] = parseFloat($scope.result["memory"]);
          $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
-	//$scope.listify_blocks();
+  //$scope.listify_blocks();
           break;
         case "campaigns":
           _.each($scope.result["sequences"], function(sequence){
@@ -1229,6 +1229,74 @@ testApp.directive("customRequestsEdit", function(){
           scope.requests_data.splice(index,1);
         }
         scope.show_new[index] = false;
+      };
+    }
+  }
+});
+testApp.directive("customMccmChains", function($http){
+  return {
+    replace: false,
+    restrict: 'E',   
+    require: 'ngModel',
+    template: 
+    '<div>'+
+    '  <ul>'+
+    '   <li ng-repeat="elem in chain_data">'+
+    '     <span>'+
+    '       {{elem}}'+
+    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '         <i class="icon-remove-sign"></i>'+
+    '       </a>'+
+    '     <span>'+
+    '   </li>'+
+    '  </ul>'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '      <a ng-click="toggleAddNewChain()">'+
+    '        <i class="icon-plus" ng-hide="add_chain"></i>'+
+    '        <i class="icon-minus" ng-show="add_chain"></i>'+
+    '      </a>'+
+    '      <select ng-model="new_chain" ng-options="elem for elem in list_of_chained_campaigs" ng-show="add_chain" class="input-xxlarge"></select>'+
+    '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_chain"></i>'+
+    '    </form>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.chain_data = ctrl.$viewValue;
+        scope.new_chain = "";
+        scope.list_of_chained_campaigs = [];
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true");
+        promise.then(function (data) {
+          _.each(data.data.results, function (elem) {
+            if (scope.chain_data.indexOf(elem.prepid) == -1) //add only if its not already in chains
+            {
+              scope.list_of_chained_campaigs.push(elem.prepid);
+            }
+          });
+          scope.list_of_chained_campaigs.sort(); //sort list to be in ascending order
+          scope.new_chain = scope.list_of_chained_campaigs[0];
+        });
+      };
+      scope.toggleAddNewChain = function(){
+        if(scope.add_chain)
+        {
+          scope.add_chain = false;
+        } else
+        {
+           scope.add_chain = true;
+        }
+      };
+      scope.remove = function(index){
+        scope.list_of_chained_campaigs.push(scope.chain_data[index]);
+        scope.list_of_chained_campaigs.sort(); //re-sort the list in select fields
+        scope.chain_data.splice(index,1);
+      }
+      scope.pushNewAnalysisID = function(){
+        scope.chain_data.push(scope.new_chain);
+        scope.list_of_chained_campaigs.splice(scope.list_of_chained_campaigs.indexOf(scope.new_chain), 1); //lets remove not to duplicate
+        //scope.add_chain = false; //uncomment if we cant to close select field after each new chain_campaign addition
+        scope.new_chain = scope.list_of_chained_campaigs[0];
       };
     }
   }
