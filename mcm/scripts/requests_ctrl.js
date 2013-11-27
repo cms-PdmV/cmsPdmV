@@ -76,21 +76,26 @@ function resultsCtrl($scope, $http, $location, $window){
   };
     
     $scope.parse_one = function( report ){
-	$scope.action_status[report['prepid']] = report['results'];
-	if ( report ['results'] == true){
-	    $scope.action_report[report['prepid']] = 'OK';
-	    return false;
-	}else{
-	    $scope.action_report[report['prepid']] = report['message'];
-	    console.log( report )
-	    return true;
-	}
+      $scope.action_status[report['prepid']] = report['results'];
+      if ( report ['results'] == true)
+      {
+	      $scope.action_report[report['prepid']] = 'OK';
+	      return false;
+      }else
+      {
+	      $scope.action_report[report['prepid']] = report['message'];
+	      console.log( report )
+	      return true;
+      }
     };
     $scope.parse_one_only = function (report,status){
-	if ($scope.parse_one( report )){
-	    $scope.set_fail(status);}
-	else{
-	    $scope.set_success(status);}
+      if ($scope.parse_one( report ))
+      {
+	      $scope.set_fail(status);
+      }else
+      {
+	      $scope.set_success(status);
+      }
     };
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -985,7 +990,7 @@ testApp.directive("loadFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group" bindonce="searchable" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group" bindonce="searchable" ng-repeat="(key, value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
     '      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     '      </select>'+
