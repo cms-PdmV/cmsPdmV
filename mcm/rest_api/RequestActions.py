@@ -10,6 +10,7 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
 from json_layer.request import request
+from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
 from json_layer.action import action
 from json_layer.campaign import campaign
@@ -762,12 +763,25 @@ class InspectStatus(RESTResource):
         rlist = rid.rsplit(',')
         res = []
         db = database('requests')
+        crdb = database('chained_requests')
         for r in rlist:
             mcm_r = request(db.get(r))
             if mcm_r:
-                res.append(mcm_r.inspect())
+                answer = mcm_r.inspect()
+                res.append(answer)
+                ### trigger chained request inspection on "true" results from inspection
+                if answer['results']:
+                    crs = mcm_r.get_attribute('member_of_chain')
+                    for cr in crs:
+                        if crdb.document_exists( cr ):
+                            mcm_cr = chained_request( crdb.get( cr ) )
+                            res.append( mcm_cr.inspect() )
+                        else:
+                            res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist'% cr})
             else:
                 res.append({"prepid": r, "results": False, 'message': '%s does not exist' % r})
+
+
         if len(res) > 1:
             return dumps(res)
         else:
