@@ -21,6 +21,10 @@ function mainCtrl($scope, $http, $location, $window){
     $scope.user.name = data.data.username;
     $scope.user.role = data.data.role;
     $scope.user.roleIndex = parseInt(data.data.role_index);
+    if (['anorkus', 'ijurkows'].indexOf($scope.user.name) == -1 ) //if user is the one to get news
+    {
+      $scope.setNews();
+    }
   },function(data){
     alert("Error getting user information. Error: "+data.status);
   });
@@ -38,31 +42,34 @@ function mainCtrl($scope, $http, $location, $window){
     });
       return return_info;
   };
-  if ($scope.getNews()){
-    var promise = $http.get("restapi/news/getall/5");
-    promise.then(function(data){
-      $scope.news = data.data;
-      var new_marquee = document.createElement('marquee');
-      var news_banner = document.getElementById("news_banner");
-      if(news_banner){
-        new_marquee.setAttribute('direction','left');
-        new_marquee.setAttribute('behavior','scroll');
-        var sorted_news = _.sortBy($scope.news, function(elem){ //sort news array by date
-          return elem.date;
-        });
-        //changed in the rest api directly
-        sorted_news.reverse(); //lets reverse it so newest new is in beggining of array
-    //    sorted_news = sorted_news.splice(0,5); //take only 5 newest and best news
-        _.each(sorted_news, function(v){
-          new_new = "<span> <i class='icon-globe'></i><b>"+v.subject+"</b>  <i>"+v.date+" </i></span>";
-            new_marquee.innerHTML += new_new;
-        });
-        news_banner.appendChild(new_marquee);
-        news_banner.appendChild(new_marquee);
-      }
-    },function(data){
-      alert("Error getting news. Error: "+data.status);
-    });
+  $scope.setNews = function ()
+  {
+    if ($scope.getNews()){
+      var promise = $http.get("restapi/news/getall/5");
+      promise.then(function(data){
+        $scope.news = data.data;
+        var new_marquee = document.createElement('marquee');
+        var news_banner = document.getElementById("news_banner");
+        if(news_banner){
+          new_marquee.setAttribute('direction','left');
+          new_marquee.setAttribute('behavior','scroll');
+          var sorted_news = _.sortBy($scope.news, function(elem){ //sort news array by date
+            return elem.date;
+          });
+          //changed in the rest api directly
+          sorted_news.reverse(); //lets reverse it so newest new is in beggining of array
+      //    sorted_news = sorted_news.splice(0,5); //take only 5 newest and best news
+          _.each(sorted_news, function(v){
+            new_new = "<span> <i class='icon-globe'></i><b>"+v.subject+"</b>  <i>"+v.date+" </i></span>";
+              new_marquee.innerHTML += new_new;
+          });
+          news_banner.appendChild(new_marquee);
+          news_banner.appendChild(new_marquee);
+        }
+      },function(data){
+        alert("Error getting news. Error: "+data.status);
+      });
+    }
   }
 // Endo of news!
 
@@ -436,7 +443,8 @@ testApp.directive("reqmgrName", function($http){
     '      <a ng-href="batches?contains={{rqmngr.name}}" rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>'+
     '      <a ng-show="isDevMachine();" ng-href="https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{rqmngr[\'name\']}}" rel="tooltip" title="Details" target="_self">details</a>'+
     '      <a ng-show="!isDevMachine();" ng-href="https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr[\'name\']}}" rel="tooltip" title="Details" target="_self">details</a>,'+
-    '      <a ng-hide="stats_cache[rqmngr[\'name\']]" ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" rel="tooltip" title="Stats" target="_self"> stats</a>'+
+    '      <a ng-hide="stats_cache[rqmngr[\'name\']]" ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr[\'name\']}}" rel="tooltip" title="Stats" target="_self"> stats</a>,'+
+    '      <a ng-show="r_prepid.split(\'-\').length < 3" ng-href="requests?prepid={{rqmngr.content.pdmv_prep_id}}" rel="tooltip" title="view request {{rqmngr.content.pdmv_prep_id}}" target="_self"> {{rqmngr.content.pdmv_prep_id}}</a>'+
     '      <a ng-click="load_dataset_list(rqmngr.name, $index);" ng-hide="stats_cache[rqmngr[\'name\']]" rel="tooltip" title="Load statistics" ng-href="#"> <i class="icon-eye-open"></i></a>'+
     '      <b><font color="red" ng-show="stats_cache[rqmngr[\'name\']] && !underscore.isObject(stats_cache[rqmngr[\'name\']])"> Stats Not Found</font></b>'+
     '      <span ng-show="underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
