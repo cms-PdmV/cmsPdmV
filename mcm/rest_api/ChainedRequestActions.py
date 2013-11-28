@@ -172,7 +172,16 @@ class GetChainedRequest(RESTResource):
 
     def get_request(self, data):
         db = database(self.db_name)
-        return dumps({"results":db.get(prepid=data)})
+        if ',' in data:
+            rlist = data.rsplit(',')
+            res = []
+            for rid in rlist:
+                 tmp_data = db.get(prepid=rid)
+                 if len(tmp_data) > 0:
+                     res.append(tmp_data)
+            return dumps({"results":res})
+        else:
+            return dumps({"results":db.get(prepid=data)})
 
 # REST method to add a new request to the chain
 class AddRequestToChain(RESTResource):
@@ -456,4 +465,52 @@ class GetConcatenatedHistory(RESTResource):
                 for step in tmp_data:
                     tmp_history[elem].append(step)
         return dumps({"results":tmp_history, "key": id_string})
-                
+
+class SearchableChainedRequest(RESTResource):
+    def __init__(self):
+        self.access_limit = 0
+
+    def GET(self, *args):
+        """
+        Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
+        """
+        rdb = database('chained_requests')
+        if len(args) and args[0] == 'do':
+            all_requests = rdb.queries([])
+
+            searchable = {}
+
+            for request in all_requests:
+                for key in ["prepid", "approval", "status", "pwg", "step",
+                            "last_status", "member_of_campaign", "dataset_name"]:
+                    if not key in searchable:
+                        searchable[key] = set([])
+                    if not key in request:
+                        ## that should make things break down, and due to schema evolution missed-migration
+                        continue
+                    if type(request[key]) == list:
+                        for item in request[key]:
+                            searchable[key].add(str(item))
+                    else:
+                        searchable[key].add(str(request[key]))
+
+            #unique it
+            for key in searchable:
+                searchable[key] = list(searchable[key])
+                searchable[key].sort()
+
+            #store that value
+            search = database('searchable')
+            if search.document_exists('chained_requests'):
+                search.delete('chained_requests')
+            searchable.update({'_id': 'chained_requests'})
+            search.save(searchable)
+            searchable.pop('_id')
+            return dumps(searchable)
+        else:
+            ## just retrieve that value
+            search = database('searchable')
+            searchable = search.get('chained_requests')
+            searchable.pop('_id')
+            searchable.pop('_rev')
+            return dumps(searchable)

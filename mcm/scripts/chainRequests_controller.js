@@ -32,6 +32,12 @@ function resultsCtrl($scope, $http, $location, $window){
     },
     "search":{
       active:false
+    },
+    "navigation":{
+      active:false
+    },
+    "navigation2":{
+      active:false
     }
   };
 
@@ -250,21 +256,53 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.getData = function(){
-    var query = ""
-    _.each($location.search(), function(value,key){
-      if (key!= 'shown' && key != 'fields'){
-        query += "&"+key+"="+value;
-      }
-    });
-    $scope.got_results = false; //to display/hide the 'found n results' while reloading
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
-    promise.then(function(data){
-      $scope.got_results = true;
-      $scope.result = data.data.results;
-      $scope.parseColumns();
-    },function(){
-       alert("Error getting information");
-    });
+    if ( ! $location.search()['searchByRequests']){
+      var query = ""
+      _.each($location.search(), function(value,key){
+        if (key!= 'shown' && key != 'fields'){
+          query += "&"+key+"="+value;
+        }
+      });
+      $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      promise.then(function(data){
+        $scope.got_results = true;
+        $scope.result = data.data.results;
+        $scope.parseColumns();
+      },function(){
+         alert("Error getting information");
+      });
+    }else{
+      var list_of_chain = [];
+      //lets get requests data
+      var query = ""
+      _.each($location.search(), function(value, key){
+        if (key != 'shown' && key != 'fields' && key != 'searchByRequests'){
+          query += "&"+key+"="+value;
+        }
+      });
+      var promise1 = $http.get("search/?db_name=requests"+query);
+      $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      promise1.then(function(data){  //we get data from requests DB;
+        if (data.data.results.length != 0)
+        {
+          _.each(data.data.results, function(elem){
+            list_of_chain = _.union(list_of_chain, elem.member_of_chain); //parse it and make a list of unique chained requests
+          });
+          var promise2 = $http.get("restapi/"+$scope.dbName+"/get/"+list_of_chain.join(",")); //we get chained requests as ussual
+          promise2.then(function(data){
+            $scope.got_results = true;
+            $scope.result = data.data.results;
+            $scope.parseColumns();
+          },function(){
+             alert("Error getting information");
+          });
+        }else{
+          $scope.result = [];
+          $scope.got_results = true;
+        }
+      });
+    }
   };
   $scope.$watch('list_page', function(){
     if($location.search()["supersearch"])
@@ -556,9 +594,11 @@ testApp.directive("loadFields", function($http, $location){
     '  <form class="form-inline">'+
     '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    '      <select ng-model="listfields[key]">'+
-    '        <option ng-repeat="elem in value">{{elem}}</option>'+
-    '      </select>'+
+    //'      <select ng-model="listfields[key]">'+
+    //'        <option ng-repeat="elem in value">{{elem}}</option>'+
+    //'      </select>'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
+    //'      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
@@ -568,9 +608,14 @@ testApp.directive("loadFields", function($http, $location){
     '</div>'
     ,
     link: function(scope, element, attr){
+      scope.listfields = {};
+      scope.showUrl = false;
+      scope.showOption = {};
+
+      scope.getSearch = function () {
         scope.listfields = {};
         scope.showUrl = false;
-        var promise = $http.get("restapi/"+"requests"+"/searchable");
+        var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
         scope.loadingData = true;
         promise.then(function(data){
           scope.loadingData = false;
@@ -583,35 +628,133 @@ testApp.directive("loadFields", function($http, $location){
           scope.loadingData = false;
           alert("Error getting searchable fields: "+data.status);
         });
-        scope.getSearch = function(){
-          scope.listfields = {};
-          scope.showUrl = false;
-          var promise = $http.get("restapi/"+"requests"+"/searchable/do");
-          scope.loadingData = true;
-          promise.then(function(data){
-            scope.loadingData = false;
-            scope.searchable = data.data;
-            _.each(scope.searchable, function(element,key){
-              element.unshift("------"); //lets insert into begining of array an default value to not include in search
-              scope.listfields[key] = "------";
+      };
+      scope.cleanSearchUrl = function () {
+        _.each($location.search(),function(elem,key){
+          $location.search(key,null);
+        });
+        $location.search("page",0);
+      };
+      scope.getUrl = function () {
+        scope.cleanSearchUrl();
+         //var url = "?";
+        _.each(scope.listfields, function(value, key){
+          if (value != ""){
+            //url += key +"=" +value+"&";
+            $location.search(key,String(value));
+          }else{
+            $location.search(key,null);//.remove(key);
+          }
+        });
+        scope.getData();
+      };
+      scope.$watch('tabsettings.navigation.active', function(){
+        if (scope.tabsettings.navigation.active)
+        {
+          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
+          {
+            var promise = $http.get("restapi/"+scope.dbName+"/searchable");
+            scope.loadingData = true;
+            promise.then(function(data){
+              scope.loadingData = false;
+              scope.searchable = data.data;
+            }, function(data){
+              scope.loadingData = false;
+              alert("Error getting searchable fields: "+data.status);
             });
-          }, function(data){
-            scope.loadingData = false;
-            alert("Error getting searchable fields: "+data.status);
+          }
+        }
+      },true);
+    }
+  }
+});
+testApp.directive("loadRequestsFields", function($http, $location){
+  return {
+    replace: true,
+    restrict: 'E',
+    template:
+    '<div>'+
+    '  <form class="form-inline">'+
+    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '      <label style="width:140px;">{{key}}</label>'+
+    //'      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
+    //'      </select>'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
+    //'      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
+    '    </span>'+
+    '  </form>'+
+    '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
+    '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
+    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
+    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '</div>',
+    link: function (scope, element, attr) {
+      scope.listfields = {};
+      scope.showUrl = false;
+      scope.showOption = {};
+
+      scope.getSearch = function () {
+        scope.listfields = {};
+        scope.showUrl = false;
+        var promise = $http.get("restapi/requests/searchable/do");
+        scope.loadingData = true;
+        promise.then(function(data){
+          scope.loadingData = false;
+          scope.searchable = data.data;
+          _.each(scope.searchable, function(element,key){
+            element.unshift("------"); //lets insert into begining of array an default value to not include in search
+            scope.listfields[key] = "------";
           });
-        };
-        scope.getUrl = function(){
-          scope.url = "?";
-          _.each(scope.listfields, function(value, key){
-            if (value != "------"){
-              scope.url += key +"=" +value+"&";
-              $location.search(key,String(value));
-            }else{
-              $location.search(key,null);//.remove(key);
-            }
-          });
-          scope.getData();
-        };
+        }, function(data){
+          scope.loadingData = false;
+          alert("Error getting searchable fields: "+data.status);
+        });
+      };
+      scope.cleanSearchUrl = function () {
+        _.each($location.search(),function(elem,key){
+          $location.search(key,null);
+        });
+        $location.search("page",0);
+      };
+      scope.getUrl = function () {
+        scope.cleanSearchUrl();
+        _.each(scope.listfields, function(value, key){
+          if (value != ""){
+            $location.search(key, String(value));
+          }else{
+            $location.search(key, null);//.remove(key);
+          }
+        });
+        $location.search("searchByRequests", true);
+        scope.getData();
+      };
+      scope.toggleSelectOption = function(option){
+        if (scope.showOption[option])
+        {
+          scope.showOption[option] = false;
+        }else
+        {
+          scope.showOption[option] = true;
+        }
+      };
+      scope.$watch('tabsettings.navigation2.active', function(){
+        $location.search("searchByRequests",null);//.remove(key);
+        if (scope.tabsettings.navigation2.active)
+        {
+          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
+          {
+            var promise = $http.get("restapi/requests/searchable");
+            scope.loadingData = true;
+            promise.then(function(data){
+              scope.loadingData = false;
+              scope.searchable = data.data;
+            }, function(data){
+              scope.loadingData = false;
+              alert("Error getting searchable fields: "+data.status);
+            });
+          }
+        }
+      },true);
     }
   }
 });

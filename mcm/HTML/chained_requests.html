@@ -5,48 +5,13 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/nv.d3.min.css" rel="stylesheet" type="text/css">
-<style>
 
-body {
-  overflow-y:scroll;
-}
-
-text {
-  font: 12px sans-serif;
-}
-
-svg {
-  display: block;
-}
-
-#chart svg {
-  height: 500px;
-  min-width: 200px;
-  min-height: 100px;
-/*
-  margin: 50px;
-  Minimum height and width is a good idea to prevent negative SVG dimensions...
-  For example width should be =< margin.left + margin.right + 1,
-  of course 1 pixel for the entire chart would not be very useful, BUT should not have errors
-*/
-
-}
-#chart {
-  margin-top: 200px;
-  margin-left: 100px;
-}
-#chart .nv-lineChart circle.nv-point
-{
-    fill-opacity: 1;
-}
-</style>
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script type="text/javascript" src="scripts/d3.v3.min.js"></script>
-        <script type="text/javascript" src="scripts/nv.d3.min.js"></script>
-        <!--<script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>-->
+        <script src="scripts/ui-bootstrap-custom-tpls-both-0.5.0.js"></script>
+
          <!--[IF IE]>
           <script type="text/javascript">
             var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -54,7 +19,7 @@ svg {
          <![endif]-->
          <![if !IE]>
            <script type="text/javascript">
-             var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
            </script>
          <![endif]>
         <script src="scripts/main_controller.js"></script>
@@ -94,10 +59,13 @@ svg {
             <button class="btn btn-mini" align="middle" ng-click="upload(cf);">Upload</button>
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Lists_Requests" rel="tooltip" title="Help on listing from file"><i class="icon-question-sign"></i></a>
           </div>
-        </pane>
-        <pane heading="Navigation">
-          <load-fields></load-fields>
         </pane>-->
+        <pane heading="Navigation" active="tabsettings.navigation.active">
+          <load-fields></load-fields>
+        </pane>
+        <pane heading="Navigation by requests" active="tabsettings.navigation2.active">
+          <load-requests-fields></load-requests-fields>
+        </pane>
       </tabs>
     </div> <!--End of container-->
     <table class="table table-bordered table-stripped">
