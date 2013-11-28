@@ -9,6 +9,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.r_status = {};
   $scope.update = [];
   $scope.filt = {}; //define an empty filter
+  $scope.local_requests = {};
+  $scope.underscore = _;
+
   $scope.batches_defaults = [
     {text:'PrepId',select:true, db_name:'prepid'},
     {text:'Actions',select:false, db_name:''},
@@ -223,7 +226,6 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.loadStats = function(batch_requests){
-      //console.log( batch_requests);
       _.each( batch_requests, function(elem,index){
 	      $http({method:'GET', url: 'public/restapi/requests/get_status/'+elem.content.pdmv_prep_id}).success(function(data,status){
 		      r_prepid=_.keys(data)[0];
@@ -271,13 +273,42 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
 
- $scope.hold = function(batchid) {
-      $http({method:'GET', url:'restapi/'+$scope.dbName+'/hold/'+batchid}).success(function(data,status){
-	      $scope.getData();
+  $scope.hold = function(batchid) {
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/hold/'+batchid}).success(function(data,status){
+	    $scope.getData();
 	  }).error(function(status){
 		  alert('Cannot hold or release '+batchid);
-	      });
- }
+	  });
+  };
+
+  $scope.preloadRequest = function (chain, load_single) {
+    var url = "restapi/requests/get/"+chain;
+    if ( !_.has($scope.local_requests,chain) ){
+      var promise = $http.get(url);
+      promise.then( function(data){
+        var local_data = data.data.results.reqmgr_name;
+        $scope.local_requests[chain] = local_data;
+        if (load_single != "")
+        {
+          _.each($scope.local_requests[chain],function(element, index){
+            $scope.$broadcast('loadDataSet', [element.name, index, load_single]);
+          });
+        }
+      },function(data){
+        console.log("error",data);
+      });
+    }  
+  };
+
+  $scope.broadcast_inspect = function (requests_data, column_id) {
+    //$scope.loadStats(requests_data);
+    _.each(requests_data, function (element, index){
+      if ($scope.r_status[element.content.pdmv_prep_id] == "submitted")
+      {
+        $scope.preloadRequest(element.content.pdmv_prep_id, column_id);
+      }
+    });
+  }
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {

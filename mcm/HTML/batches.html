@@ -85,10 +85,10 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='open_isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);">
+                  <a ng-click='open_isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);" ng-href="#">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';">
+                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
                     <i class="icon-envelope"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
@@ -104,10 +104,13 @@
                     <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                   </div> <!--end of modal footer-->
                   </div>
-                  <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);"><i class="icon-repeat"></i></a>
-                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status"><i class="icon-eye-open"></i></a>
-                  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ><i class="icon-screenshot"></i></a>
-                  <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold/unhold batch {{data.prepid}}"  ><i class="icon-pause" ng-hide="role(3) || data.status!='new';"></i><i class="icon-play" ng-hide="role(3) || data.status!='hold';"></i></a>
+                  <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
+                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
+                  <a ng-click="broadcast_inspect(data.requests, data.prepid);" rel="tooltip" title="Load detailled view requests" ng-href="#">
+                    <i class="icon-barcode"></i>
+                  </a>
+                  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ng-href="#"><i class="icon-screenshot"></i></a>
+                  <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold/unhold batch {{data.prepid}}"  ng-href="#"><i class="icon-pause" ng-hide="role(3) || data.status!='new';"></i><i class="icon-play" ng-hide="role(3) || data.status!='hold';"></i></a>
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->  
               </div>
@@ -116,7 +119,7 @@
                 <a ng-href="admin/_utils/document.html?batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Notes">
-                <textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px; height: {{data[value.db_name].length}}px"></textarea>
+                <textarea ng-model="data[value.db_name]" ng-disabled="true;" style="width: 400px;" rows="{{data[value.db_name].split('\n').length+1}}"></textarea>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
@@ -132,6 +135,12 @@
 		                ,
                     <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
                     <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
+                    <div ng-show="r_status[elem.content.pdmv_prep_id] == 'submitted'">
+                      <a ng-click="preloadRequest(elem.content.pdmv_prep_id,'');" ng-hide="underscore.has(local_requests,elem.content.pdmv_prep_id)" ng-href="#"><i class="icon-eye-open"></i></a>
+                      <span ng-show="underscore.has(local_requests,elem.content.pdmv_prep_id)">
+                        <reqmgr-Name ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
+                      </span>
+                    </div>
                   </li>
               	</ul>
               </div>
