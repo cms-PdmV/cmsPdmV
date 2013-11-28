@@ -109,6 +109,9 @@ class request_to_wmcontrol:
         elif wmagent_type == 'ReDigi':
 
             command += ' --input-ds %s' %(mcm_r.get_attribute('input_filename'))
+
+            command += ' --primary-dataset %s' %(mcm_r.get_attribute('dataset_name'))
+
             ## if PU dataset name is defined : add it
             if mcm_r.get_attribute('pileup_dataset_name') and mcm_r.get_attribute('pileup_dataset_name').strip():
                 command += ' --pileup-ds '+mcm_r.get_attribute('pileup_dataset_name')
