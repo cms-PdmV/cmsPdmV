@@ -1,9 +1,49 @@
 #!/usr/bin/env python
 
-from couchdb_layer.mcm_database import database
-from tools.locker import locker
 from collections import defaultdict
+import cherrypy
+from tools.locker import locker
 from tools.settings import settings
+from couchdb_layer.mcm_database import database
+
+class user_pack:
+    """
+    Class used for transmission between user representation in requests and packed user representation
+    """
+    def __init__(self):
+        self.user_dict = user_pack.get_request_header_dictionary()
+
+    @staticmethod
+    def get_request_header_dictionary():
+        """
+        Parse cherrypy header and get what's in there
+        """
+        if not cherrypy.request.headers:
+            return defaultdict(lambda: None)
+        user_dict = defaultdict(lambda: None, [(key.lower().replace('-','_'), value) if 'adfs' not in key.lower() else (key.lower().replace('adfs-', ''), value) for (key, value) in cherrypy.request.headers.iteritems()])
+        return user_dict
+
+    def __getattr__(self, name):
+        if name.startswith('get_'):
+            return lambda : self.user_dict['_'.join(name.split('_')[1:])]
+        else:
+            return self.user_dict[name]
+
+    def get_username(self):
+        return self.get_login()
+
+    def get_email(self):
+        return self.email if self.email else self.remote_user
+
+    def get_name(self):
+        return self.get_firstname()
+
+    def get_surname(self):
+        return self.get_lastname()
+
+    def get_fullname(self):
+        return self.get_firstname() + " " + self.get_lastname() if self.get_firstname() and self.get_lastname() else None
+
 
 
 class authenticator:

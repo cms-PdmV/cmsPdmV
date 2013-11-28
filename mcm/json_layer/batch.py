@@ -1,6 +1,6 @@
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
-from tools.authenticator import authenticator
+from tools.user_management import authenticator
 from tools.locator import locator
 import re
 from tools.settings import settings

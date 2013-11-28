@@ -2,7 +2,7 @@
 
 import cherrypy
 from tools.logger import logger as logfactory
-from tools.authenticator import authenticator
+from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
 from tools.settings import settings
 
@@ -113,12 +113,9 @@ class json_base:
         #    self.set_attribute('version', int(self.get_attribute('version')) + 1)
 
     def __get_submission_details(self):
-        if cherrypy.request.headers:
-            if 'ADFS-LOGIN' in cherrypy.request.headers and 'ADFS-FIRSTNAME' in cherrypy.request.headers and 'ADFS-LASTNAME' in cherrypy.request.headers and 'ADFS-EMAIL' in cherrypy.request.headers:
-                return submission_details().build(author_username=cherrypy.request.headers['ADFS-LOGIN'],
-                                                  author_name='%s %s' % (cherrypy.request.headers['ADFS-FIRSTNAME'],
-                                                                         cherrypy.request.headers['ADFS-LASTNAME']),
-                                                  author_email=cherrypy.request.headers['ADFS-EMAIL'])
+        user_p = user_pack()
+        if user_p.get_username() and user_p.get_fullname() and user_p.get_email():
+            return submission_details().build(user_p.get_username(), user_p.get_fullname(), user_p.get_email())
         return submission_details().build('automatic')
 
     def set_attribute(self, attribute='', value=None):
@@ -257,7 +254,7 @@ class json_base:
         comm = {'action': 'comment', 'step': comment}
         self.update_history(comm)
 
-        return comments
+        return comm
 
     def json(self):
         return self.__json

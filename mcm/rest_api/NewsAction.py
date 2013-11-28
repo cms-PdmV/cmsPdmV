@@ -2,6 +2,7 @@ import json
 import time
 import cherrypy
 
+from tools.user_management import user_pack
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
 
@@ -53,8 +54,8 @@ class CreateNews(RESTResourceIndex):
             new_news = json.loads(data)
         except Exception as ex:
             return json.dumps({"results":False})
-        
-        self.New['author'] = cherrypy.request.headers['ADFS-LOGIN']
+        user_p = user_pack()
+        new_news['author'] = user_p.get_username()
         #localtime = time.localtime(time.time())
         #datetime = ''
         #for i in range(5):

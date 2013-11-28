@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import cherrypy
 from json_base import json_base
+from tools.user_management import user_pack
 
 
 class invalidation(json_base):
@@ -19,8 +19,8 @@ class invalidation(json_base):
         # update self according to json_input
         self.update(json_input)
         self.validate()
-        self.current_user_email = cherrypy.request.headers['ADFS-EMAIL'] if 'ADFS-EMAIL' in cherrypy.request.headers \
-            else None
+        user_p = user_pack()
+        self.current_user_email = user_p.get_email()
 
     def set_announced(self):
         self.set_attribute('status', 'announced')

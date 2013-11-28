@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-from tools.authenticator import authenticator as auth_obj
+from tools.user_management import authenticator as auth_obj, user_pack
 from tools.logger import logger as logfactory
 from tools.locator import locator
-import logging
-import logging.handlers
 import cherrypy
-import string
 
 
 class RESTResource(object):
@@ -33,7 +30,7 @@ class RESTResource(object):
         if not method:
             raise cherrypy.HTTPError(405, "Method not implemented.")
 
-        if self.access_limit!=None:
+        if self.access_limit is not None:
             self.logger.log('Setting access limit to %s' % self.access_limit)
             self.authenticator.set_limit(self.access_limit)
         elif cherrypy.request.method in self.limit_per_method:
@@ -47,31 +44,21 @@ class RESTResource(object):
         #elif cherrypy.request.method == 'DELETE':
         #	self.authenticator.set_limit(3)
         else:
-            raise cherrypy.HTTPError(403, 'You cannot access this page with method %s' % ( cherrypy.request.method ))
-            #                print '######'
-        #                print
-        #
-        #                print '######'
-        #self.logger.error(cherrypy.request.headers)
-        loweredHeaders = {}
-        findHeaders = map(string.lower, ['adfs-login', 'user-agent'])
-        for key in cherrypy.request.headers:
-            if key.lower() in findHeaders:
-                loweredHeaders[key.lower()] = cherrypy.request.headers[key]
+            raise cherrypy.HTTPError(403, 'You cannot access this page with method %s' %  cherrypy.request.method )
+
+        user_p = user_pack()
 
         l_type = locator()
-        if not 'adfs-login' in loweredHeaders:
+        if not user_p.get_username():
             #meaning we are going public, only allow GET.
             #if cherrypy.request.method != 'GET' or not l_type.isDev():
             #	raise cherrypy.HTTPError(403, 'User credentials were not provided.')
             if not 'public' in str(cherrypy.url()):
                 self.logger.error('From within %s, adfs-login not found: \n %s \n %s'%(self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
         else:
-            #self.logger.error("User name found: -%s-"%(loweredHeaders['adfs-login']))
-            if not self.authenticator.can_access(loweredHeaders['adfs-login']):
+            if not self.authenticator.can_access(user_p.get_username()):
                 raise cherrypy.HTTPError(403, 'You cannot access this page')
-        #self.logger.log('method: ' + str(vpath) + ' params' + str(params))
-        return method(*vpath, **params);
+        return method(*vpath, **params)
 
     def GET(self):
         pass
