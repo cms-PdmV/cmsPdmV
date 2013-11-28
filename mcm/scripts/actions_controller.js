@@ -221,6 +221,7 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   }
   $scope.getData = function(prepid){
+  $scope.multiple_selection = {};
    if($scope.file_was_uploaded)
    {
      $scope.upload($scope.uploaded_file);
@@ -564,6 +565,10 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.multiple_selection[id][columnId.db_name]['selected'] = true;
           }
         }else{
+          if ($scope.multiple_selection[id][columnId.db_name] === undefined)
+          {
+            $scope.multiple_selection[id][columnId.db_name] = {};
+          }
           if ($scope.multiple_selection[id][columnId.db_name]['selected'] === undefined){
             $scope.multiple_selection[id][columnId.db_name]['selected'] = false;
           }
