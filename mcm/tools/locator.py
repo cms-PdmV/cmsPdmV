@@ -15,15 +15,15 @@ class locator:
         #for (l_type,spec) in self.locations.items():
         #    if host in spec['servers']:
         #        return 
-        if host in ['preptest']:
+        if host in ['cms-pdmv-mcmdev']:
             return True
-        elif host in ['cms-pdmv-mcm']:
+        elif host in ['cms-pdmv-mcm', 'cms-pdmv-mcmint']:
             return False
         return True
 
     def dbLocation(self):
         if self.isDev():
-            return 'http://preptest.cern.ch:5984/'
+            return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
         else:
             return 'http://cms-pdmv-mcm-db:5984/'
     def workLocation(self):

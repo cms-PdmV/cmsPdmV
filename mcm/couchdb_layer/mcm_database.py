@@ -61,7 +61,7 @@ class database:
         if url == None:
             l_type =locator()
             if l_type.isDev():
-                url = 'http://preptest.cern.ch:5984/'
+                url = 'http://cms-pdmv-mcmdev.cern.ch:5984/'
             else:
                 url = 'http://cms-pdmv-mcm-db:5984/'
         #self.logger.log('I chose the url %s'%(url))
