@@ -9,7 +9,7 @@ from collections import defaultdict
 
 class GetBjobs(RESTResource):
     def __init__(self):
-        self.authenticator.set_limit(0)
+        self.access_limit = 0
 
     def GET(self, *args):
         """
@@ -40,7 +40,7 @@ class GetBjobs(RESTResource):
 
 class GetLogFeed(RESTResource):
     def __init__(self):
-        self.authenticator.set_limit(0)
+        self.access_limit = 0
 
     def GET(self, *args):
         """
@@ -71,7 +71,7 @@ class GetLogFeed(RESTResource):
 
 class GetLogs(RESTResource):
     def __init__(self):
-        self.authenticator.set_limit(0)
+        self.access_limit = 0
         self.path = "logs"
 
     def GET(self, *args):
@@ -280,20 +280,20 @@ class GetStats(RESTResource):
 
                       
 
-        html+="Counts<br>\n"
-        html+="<ul>\n"
-        for c in counts:
-            html+="<li> %s </li>\n" % c
-            html+="<ul>\n"
-            for (n,v) in counts[c].items():
-                html+="<li> %15s : %10d </li>\n" % ( n, v )
-            html+="</ul>"                
-        html+="</ul>"
-        html+="<ul>\n"
-        for (n,v) in sums.items():
-            html+="<li> %15s : %10d </li>\n" % ( n, v )
-        html+="</ul>"
-
-
-        html+="</body></html>"
-        return html
+        # html+="Counts<br>\n"
+        # html+="<ul>\n"
+        # for c in counts:
+        #     html+="<li> %s </li>\n" % c
+        #     html+="<ul>\n"
+        #     for (n,v) in counts[c].items():
+        #         html+="<li> %15s : %10d </li>\n" % ( n, v )
+        #     html+="</ul>"
+        # html+="</ul>"
+        # html+="<ul>\n"
+        # for (n,v) in sums.items():
+        #     html+="<li> %15s : %10d </li>\n" % ( n, v )
+        # html+="</ul>"
+        #
+        #
+        # html+="</body></html>"
+        # return html
