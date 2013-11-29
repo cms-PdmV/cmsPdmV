@@ -4,7 +4,8 @@ from json_base import json_base
 
 class mccm(json_base):
 
-    def __init__(self, json_input={}):
+    def __init__(self, json_input=None):
+        if not json_input: json_input = {}
         self._json_base__approvalsteps = ['none','approved']
         self._json_base__status = ['new', 'done']
         self._json_base__schema = {
@@ -34,7 +35,7 @@ class mccm(json_base):
         from tools.settings import settings
         t = datetime.date.today()
         meeting_day = int(settings().get_value('mccm_meeting_day'))
-        w = 0 if meeting_day>t.weekday() else 1
+        w = 0 if meeting_day>=t.weekday() else 1
         t = t + datetime.timedelta(days=meeting_day-t.weekday(), weeks=w)
         return t
 
