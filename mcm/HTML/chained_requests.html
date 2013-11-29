@@ -152,12 +152,12 @@
                   <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
                   <img ng-show="puce[chain]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}" />
                   <i class="{{puce[chain]}}" rel="tooltip" title="{{r_status[chain]}}"></i>
-                  <div ng-show="r_status[chain] == 'submitted'">
+                  <span ng-show="r_status[chain] == 'submitted'">
                     <a ng-click="preloadRequest(chain,'');" ng-hide="underscore.has(local_requests,chain)" ng-href="#"><i class="icon-eye-open"></i></a>
                     <span ng-show="underscore.has(local_requests,chain)">
                       <reqmgr-Name ng-model="local_requests[''+chain+'']" prepid="data.prepid"></reqmgr-Name>
                     </span>
-                  </div>
+                  </span>
                   <!-- <reqmgr-Name ng-model="chain" prepid="data.prepid"> -->
 		  
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->

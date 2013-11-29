@@ -487,6 +487,7 @@ testApp.directive("reqmgrName", function($http){
     link: function(scope, element, attrs, ctrl)
     {
       scope.links = {};
+      scope.image_width =150;
       ctrl.$render = function(){
         //scope.remngr_name = ctrl.$viewValue.name;
         scope.rqmngr_data = ctrl.$viewValue;

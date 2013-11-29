@@ -135,12 +135,12 @@
 		                ,
                     <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
                     <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
-                    <div ng-show="r_status[elem.content.pdmv_prep_id] == 'submitted'">
+                    <span ng-show="r_status[elem.content.pdmv_prep_id] == 'submitted'">
                       <a ng-click="preloadRequest(elem.content.pdmv_prep_id,'');" ng-hide="underscore.has(local_requests,elem.content.pdmv_prep_id)" ng-href="#"><i class="icon-eye-open"></i></a>
                       <span ng-show="underscore.has(local_requests,elem.content.pdmv_prep_id)">
                         <reqmgr-Name ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
                       </span>
-                    </div>
+                    </span>
                   </li>
               	</ul>
               </div>
