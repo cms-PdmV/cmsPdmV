@@ -2,6 +2,14 @@ function mainCtrl($scope, $http, $location, $window){
   $scope.stats_cache = {};
   $scope.full_details = {};
 
+  $scope.mcm_revision = "";
+  
+  var promise = $http.get("restapi/dashboard/get_revision");
+  promise.then(function(data){
+	  $scope.mcm_revision=data.data;
+      });
+      
+
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){
     // console.log('fOUND ie');

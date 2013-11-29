@@ -18,7 +18,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import HoldBatch, SaveBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
@@ -340,7 +340,7 @@ root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
 root.restapi.dashboard.get_stats = GetStats()
-
+root.restapi.dashboard.get_revision = GetRevision()
 
 # REST mccms Actions
 

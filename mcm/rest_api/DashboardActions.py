@@ -68,6 +68,16 @@ class GetLogFeed(RESTResource):
             data = data[-nlines:]
         return dumps({"results": ''.join(data)})
 
+class GetRevision(RESTResource):
+    def __init__(self):
+        self.access_limit = 0
+    def GET(self, *args):
+        """ 
+        returns the current tag of the software running
+        """
+        revision=os.getenv('MCM_REVISION')
+        return revision
+
 
 class GetLogs(RESTResource):
     def __init__(self):
