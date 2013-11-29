@@ -88,6 +88,14 @@ function resultsCtrl($scope, $http, $location, $window){
 	      return true;
       }
     };
+    $scope.parse_one_report = function (report,status){
+	if (_.isArray(report)){
+	    return $scope.parse_one_only(report[0], status);
+	}else{
+	    return $scope.parse_one_only(report, status);
+	}
+    };
+
     $scope.parse_one_only = function (report,status){
       if ($scope.parse_one( report ))
       {
@@ -169,7 +177,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
     $scope.inspect = function(prepid){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+prepid}).success(function(data,status){
-        $scope.parse_one_only(data,status);
+        $scope.parse_one_report(data,status);
 	    }).error(function(status){
 		    $scope.set_fail(status);
 		  });
