@@ -50,7 +50,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.not_editable_list = ["Username", "Role"];
         break;
       case "mccms":
-	  $scope.not_editable_list = ["Prepid", "Pwg"];
+	      $scope.not_editable_list = ["Prepid", "Pwg"];
         var promise = $http.get("restapi/mccms/editable/"+$scope.prepid)
         promise.then(function(data){
           $scope.parseEditableObject(data.data.results);
@@ -112,10 +112,6 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       });
     };
-    //    $scope.listify_blocks = function(){
-    //      $scope.result["block_black_list"] = $scope.result["block_black_list"].split(",")
-    //      $scope.result["block_white_list"] = $scope.result["block_white_list"].split(",")
-    //    };
 
     function isInt(n) {
        return typeof n === 'number' && n % 1 == 0;
@@ -1255,7 +1251,7 @@ testApp.directive("customMccmChains", function($http){
     '        <i class="icon-plus" ng-hide="add_chain"></i>'+
     '        <i class="icon-minus" ng-show="add_chain"></i>'+
     '      </a>'+
-    '      <select ng-model="new_chain" ng-options="elem for elem in list_of_chained_campaigs" ng-show="add_chain" class="input-xxlarge"></select>'+
+    '      <select ng-model="new_chain" ng-options="elem for elem in list_of_chained_campaigns" ng-show="add_chain" class="input-xxlarge"></select>'+
     '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_chain"></i>'+
     '    </form>'+
     '</div>'+
@@ -1265,17 +1261,22 @@ testApp.directive("customMccmChains", function($http){
       ctrl.$render = function(){
         scope.chain_data = ctrl.$viewValue;
         scope.new_chain = "";
-        scope.list_of_chained_campaigs = [];
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true");
+        scope.list_of_chained_campaigns = [];
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1");
         promise.then(function (data) {
           _.each(data.data.results, function (elem) {
             if (scope.chain_data.indexOf(elem.prepid) == -1) //add only if its not already in chains
             {
-              scope.list_of_chained_campaigs.push(elem.prepid);
+              if (elem.alias != "")
+              {
+                scope.list_of_chained_campaigns.push(elem.alias);
+              }else{
+                scope.list_of_chained_campaigns.push(elem.prepid);
+              };
             }
           });
-          scope.list_of_chained_campaigs.sort(); //sort list to be in ascending order
-          scope.new_chain = scope.list_of_chained_campaigs[0];
+          scope.list_of_chained_campaigns.sort(); //sort list to be in ascending order
+          scope.new_chain = scope.list_of_chained_campaigns[0];
         });
       };
       scope.toggleAddNewChain = function(){
@@ -1288,15 +1289,15 @@ testApp.directive("customMccmChains", function($http){
         }
       };
       scope.remove = function(index){
-        scope.list_of_chained_campaigs.push(scope.chain_data[index]);
-        scope.list_of_chained_campaigs.sort(); //re-sort the list in select fields
+        scope.list_of_chained_campaigns.push(scope.chain_data[index]);
+        scope.list_of_chained_campaigns.sort(); //re-sort the list in select fields
         scope.chain_data.splice(index,1);
       }
       scope.pushNewAnalysisID = function(){
         scope.chain_data.push(scope.new_chain);
-        scope.list_of_chained_campaigs.splice(scope.list_of_chained_campaigs.indexOf(scope.new_chain), 1); //lets remove not to duplicate
+        scope.list_of_chained_campaigns.splice(scope.list_of_chained_campaigns.indexOf(scope.new_chain), 1); //lets remove not to duplicate
         //scope.add_chain = false; //uncomment if we cant to close select field after each new chain_campaign addition
-        scope.new_chain = scope.list_of_chained_campaigs[0];
+        scope.new_chain = scope.list_of_chained_campaigns[0];
       };
     }
   }
