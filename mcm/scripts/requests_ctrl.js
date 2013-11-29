@@ -151,21 +151,6 @@ function resultsCtrl($scope, $http, $location, $window){
 	      $scope.set_fail(status);
       });
     };
-    /*
-    $scope.submit = function (prepid){
-      $http({method:'GET', url: 'restapi/'+$scope.dbName+'/inject/'+prepid}).success(function(data,status){
-	      
-        $scope.update["success"] = data["results"];
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = data["results"];
-	 //        $window.location.reload();
-      }).error(function(status){
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["status_code"] = status;
-      });
-    };
-    */
 
     $scope.register = function(prepid){
 	    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+prepid}).success(function(data,status){
@@ -1092,5 +1077,36 @@ testApp.directive("loadFields", function($http, $location){
         }
       },true);
     }
+  }
+});
+testApp.directive("customActorList", function($http){
+  return {
+    restrict: 'EA',
+    template:
+    '<span>'+
+    '  <a ng-href="#" ng-click="getActors();" tooltip-html-unsafe="{{actors}}" tooltip-trigger="click" tooltip-placement="bottom">'+
+    '    <i class="icon-user"></i>'+
+    '  </a>'+
+    '</span>',
+    link: function(scope, element, attrs){
+      scope.actors = "<ul> </ul>";
+      scope.prepid = scope.$eval(attrs.prepid);
+      scope.getActors = function () {
+        if ( scope.actors == "<ul> </ul>")
+        {
+          var promise = $http.get("public/restapi/requests/get_actors/"+scope.prepid);
+          promise.then(function (data) {
+            scope.actors = "<ul>";
+            _.each(data.data, function (user) {
+              tmp = "<li>" + "<a href='users?page=0&username=" + user + "' target='_blank'>"+user+"</a>" + "</li>";
+              scope.actors += tmp;
+            });
+            scope.actors += "</ul>"
+          }, function (data){
+            alert("Error getting actor list: ", data.data.results);
+          });
+        }
+      }
+   }
   }
 });
