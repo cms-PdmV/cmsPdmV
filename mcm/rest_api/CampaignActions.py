@@ -246,7 +246,7 @@ class ToggleCampaignStatus(RESTResource):
         db = database('campaigns')
         if not db.document_exists(rid):
             return dumps({"results":'Error: The given campaign id does not exist.'})
-        camp = campaign(json_input=self.db.get(rid))
+        camp = campaign(json_input=db.get(rid))
         try:
             camp.toggle_status()
             saved = db.update(camp.json())
