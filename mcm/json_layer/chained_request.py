@@ -342,6 +342,15 @@ class chained_request(json_base):
                         ## one existing request in the very same chained campaign has already something used, make sure it is not going to be used
                         vetoed_last.append( mcm_cr.get_attribute('chain')[next_step])
                     continue
+                else:
+                    continue
+            for existing_cr in related_crs:
+                ## exclude itself
+                if existing_cr['prepid']==self.get_attribute('prepid'):
+                    continue
+                ## prevent from using a request from within the same exact chained_campaigns
+                if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
+                    continue
                 truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
                 self.logger.error('to match : %s , this one %s' % ( toMatch, truncated ))
                 if truncated == toMatch:
