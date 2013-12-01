@@ -90,6 +90,9 @@ class request_to_wmcontrol:
                 command += ' --blocks "'+','.join(mcm_r.get_attribute('block_white_list'))+'"'
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "'+','.join(mcm_r.get_attribute('block_black_list'))+'"'
+
+            command += ' --number-events %s' %(mcm_r.get_attribute('total_events'))
+
         elif wmagent_type == 'LHEStepZero':
 
             command += ' --number-events %s' %(mcm_r.get_attribute('total_events'))
