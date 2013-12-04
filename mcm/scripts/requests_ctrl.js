@@ -303,9 +303,20 @@ function resultsCtrl($scope, $http, $location, $window){
    }
     else if($location.search()['range']!=undefined)
     {
-        var ranges = $location.search()['range'].split(",");
-        $scope.upload({contents: ranges[0] + " -> " + ranges[1]});
-        $scope.file_was_uploaded = false
+      var tmp = $location.search()['range'].split(";");
+      var imaginary_file = [];
+      _.each(tmp, function (elem) {
+        var ranges = elem.split(",");
+        if (ranges.length > 1 )
+        {
+          imaginary_file.push(ranges[0] + " -> " + ranges[1]);
+        }else
+        {
+          imaginary_file.push(ranges[0]);
+        }
+      });
+      $scope.upload({contents: imaginary_file.join("\n")});
+      $scope.file_was_uploaded = false
     }
     else if($location.url().indexOf("*")!=-1)
     {

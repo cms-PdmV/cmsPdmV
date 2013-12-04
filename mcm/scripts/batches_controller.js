@@ -308,7 +308,22 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.preloadRequest(element.content.pdmv_prep_id, column_id);
       }
     });
-  }
+  };
+  $scope.generateAllRequests = function (input_data)
+  {
+    var tmp_url = [];
+    if (input_data.length > 0)
+    {
+      _.each(input_data, function (elem) {
+          tmp_url.push(elem.content.pdmv_prep_id);
+      });
+      tmp_url = _.uniq(tmp_url);
+      return tmp_url.join(";");
+    }else
+    {
+      return "";
+    }
+  };
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
