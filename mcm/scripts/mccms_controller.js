@@ -12,6 +12,7 @@ function resultsCtrl($scope, $http, $location, $window, $route){
     {text:'Pwg', select:true, db_name:'pwg'},
     {text:'Requests', select:true, db_name:'requests'},
     {text:'Size', select:false, db_name:'size'},
+    {text:'Chains', select:false, db_name:'chains'},
     {text:'History', select:false, db_name:'history'}
   ];
   $scope.update = [];
@@ -191,7 +192,27 @@ function resultsCtrl($scope, $http, $location, $window, $route){
   };
 
   $scope.isArray = function(obj){
-      return angular.isArray(obj)
+    return angular.isArray(obj)
+  };
+  $scope.generateAllRequests = function (input_data)
+  {
+    var tmp_url = [];
+    if (input_data.length > 0)
+    {
+      _.each(input_data, function (elem) {
+        if (_.isArray(elem))
+        {
+          tmp_url.push(elem[0]+","+elem[1]);
+        }else
+        {
+          tmp_url.push(elem);
+        }
+      });
+      return tmp_url.join(";");
+    }else
+    {
+      return "";
+    }
   };
 }
 

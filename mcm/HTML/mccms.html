@@ -83,41 +83,53 @@
       	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
-                <a rel="tooltip" title="Edit mccm" ng-href="edit?db_name=mccms&prepid={{mccm_info['_id']}}" ng-hide="role(3);" target="_self">
-                  <i class="icon-wrench"></i>
-                </a>
+                <a rel="tooltip" title="Edit mccm" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(3);" target="_self"><i class="icon-wrench"></i></a>
+                <a rel="tooltip" title="Generate chains" ng-href="restapi/mccms/generate/{{mccm_info['prepid']}}" ng-hide="role(3);"><i class="icon-play"></i></a>
+                <a rel="tooltip" title="Generate chains and reserve" ng-href="restapi/mccms/generate/{{mccm_info['prepid']}}/reserve" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
+                <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
+              </div>
+              <div ng-switch-when="Prepid">
+                <a ng-href='mccms?prepid={{mccm_info[data.db_name]}}' rel="tooltip" title="View only mccm_info[data.db_name]" target="_self">{{mccm_info[data.db_name]}}</a>
+                <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Pwg">
-                    <a ng-href='mccms?pwg={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+                <a ng-href='mccms?pwg={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
               </div>
               <div ng-switch-when="Meeting">
-                    <a ng-href='mccms?meeting={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+                <a ng-href='mccms?meeting={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
               </div>
               <div ng-switch-when="Status">
-                    <a ng-href='mccms?status={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+                <a ng-href='mccms?status={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
               </div>
               <div ng-switch-when="Approval">
-                    <a ng-href='mccms?approval={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+                <a ng-href='mccms?approval={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
               </div>
               <div ng-switch-when="Name">
-    		    {{mccm_info[data.db_name]}}
+                {{mccm_info[data.db_name]}}
                 <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Requests">
-                    <ul>
-                        <div ng-repeat="elem in mccm_info[data.db_name]">
-                            <li ng-hide="isArray(elem);">
-                                <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem}}' rel="tooltip" title="Details in request manager" target="_self">{{elem}}</a>
-                                <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem}}' rel="tooltip" title="Details in request manager" target="_self">{{elem}}</a>
-                            </li>
-                            <li ng-show="isArray(elem);">
-                                <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="Requests in range" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
-                            </li>
-                        </div>
-                    </ul>
+                <ul>
+                    <div ng-repeat="elem in mccm_info[data.db_name]">
+                      <li ng-hide="isArray(elem);">
+                        <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
+                      </li>
+                      <li ng-show="isArray(elem);">
+                        <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
+                      </li>
+                    </div>
+                </ul>
               </div>
               <div ng-switch-when="History">
-                    <div custom-history ng-model="mccm_info[data.db_name]"></div>
+                <div custom-history ng-model="mccm_info[data.db_name]"></div>
+              </div>
+              <div ng-switch-when="Chains">
+                <ul ng-repeat="el in mccm_info[data.db_name]">
+                  <li ng-switch="el.indexOf('_') == -1">
+                    <a ng-switch-when="true" ng-href="chained_campaigns?alias={{el}}" target="_self">{{el}}</a>
+                    <a ng-switch-when="false" ng-href="chained_campaigns?prepid={{el}}" target="_self">{{el}}</a>
+                  </li>
+                </ul>
               </div>
       	      <div ng-switch-default>
     		        {{mccm_info[data.db_name]}}
