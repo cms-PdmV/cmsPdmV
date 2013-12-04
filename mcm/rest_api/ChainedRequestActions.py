@@ -257,20 +257,23 @@ class FlowToNextStep(RESTResource):
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given.'})
         check_stats=True
+        reserve = False
         if len(args)>1:
             check_stats=(args[1]!='force')
-        return self.multiple_flow(args[0], check_stats)
+            self.logger.log(args)
+            reserve = args[1]=='reserve'
+        return self.multiple_flow(args[0], check_stats, reserve)
         #return self.flow(args[0]) #old flow only for single request
 
-    def multiple_flow(self, rid, check_stats=True):
+    def multiple_flow(self, rid, check_stats=True, reserve=False):
         if ',' in rid:
             rlist = rid.rsplit(',')
             res = []
             for r in rlist:
-                 res.append(self.flow(r, check_stats=check_stats))
+                 res.append(self.flow(r, check_stats=check_stats, reserve = reserve))
             return dumps(res)
         else:
-            return dumps(self.flow(rid, check_stats=check_stats))
+            return dumps(self.flow(rid, check_stats=check_stats, reserve = reserve))
 
     def flow2(self,  data):
         try:
@@ -299,10 +302,11 @@ class FlowToNextStep(RESTResource):
             inwhite = vdata['block_white_list']
         if 'force' in vdata:
             check_stats = vdata['force']!='force'
-
+        if 'reserve' in vdata and vdata["reserve"]:
+            return dumps(creq.reserve())
         return dumps(creq.flow_trial( inputds,  inblack,  inwhite, check_stats))
 
-    def flow(self,  chainid, check_stats=True):
+    def flow(self,  chainid, check_stats=True, reserve = False):
         try:
             db = database('chained_requests')
             creq = chained_request(json_input=db.get(chainid))
@@ -310,9 +314,12 @@ class FlowToNextStep(RESTResource):
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex)) 
             return {"results":str(ex)}
 
-        self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
 
         # if the chained_request can flow, do it
+        if reserve:
+            self.logger.log('Attempting to reserve to next step for chained_request %s' %  (creq.get_attribute('_id')))
+            return creq.reserve()
+        self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
         return creq.flow_trial(check_stats=check_stats)
 
 class RewindToPreviousStep(RESTResource):
