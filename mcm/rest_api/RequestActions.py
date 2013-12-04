@@ -34,8 +34,8 @@ class RequestRESTResource(RESTResource):
         if not cdb.document_exists(camp):
             return None
             ## get campaign
-        camp = cdb.get(camp)
-        mcm_req.set_attribute('energy', camp['energy'])
+        camp = campaign(cdb.get(camp))
+        mcm_req.set_attribute('energy', camp.get_attribute('energy'))
         if not mcm_req.get_attribute('cmssw_release'):
             mcm_req.build_cmsDrivers(cast=1,can_save=False)
 
@@ -52,7 +52,7 @@ class RequestRESTResource(RESTResource):
         # get campaign
         #self.c = cdb.get(camp)
         adb = database('actions')
-        rootness = camp['root']
+        rootness = camp.get_attribute('root')
         mcdbid = int(mcm_req.get_attribute('mcdb_id'))
         inputds = mcm_req.get_attribute('input_filename')
         if (not force) and (rootness == 1 or rootness == -1 and mcdbid > -1):
@@ -109,7 +109,7 @@ class RequestRESTResource(RESTResource):
             return dumps({"results": False, "message": 'Error: Campaign ' + mcm_req.get_attribute(
                 'member_of_campaign') + ' does not exist.'})
 
-        if camp['status'] != 'started':
+        if camp.get_attribute('status') != 'started':
             return dumps({"results": False, "message": "Cannot create a request in a campaign that is not started"})
 
         self.logger.log('Building new request...')
@@ -147,7 +147,7 @@ class RequestRESTResource(RESTResource):
 
 
         ## put a generator info by default in case of possible root request
-        if camp['root'] <= 0:
+        if camp.get_attribute('root') <= 0:
             mcm_req.update_generator_parameters()
 
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
