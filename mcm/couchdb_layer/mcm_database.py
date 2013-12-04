@@ -59,11 +59,7 @@ class database:
     def __init__(self,  db_name='',url=None):
         host = os.environ['HOSTNAME'] 
         if url == None:
-            l_type =locator()
-            if l_type.isDev():
-                url = 'http://cms-pdmv-mcmdev.cern.ch:5984/'
-            else:
-                url = 'http://cms-pdmv-mcm-db:5984/'
+            url =locator().dbLocation()
         #self.logger.log('I chose the url %s'%(url))
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
