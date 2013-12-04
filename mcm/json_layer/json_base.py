@@ -141,7 +141,7 @@ class json_base:
         self.current_user_level, self.current_user_role = auth.get_user_role_index(updater)
         #return self.current_user_level
 
-    def get_actors(self, N=-1, what='author_username'):
+    def get_actors(self, N=-1, what='author_username', Nchild=-1):
         actors = []
         #that's a way of removing history ...
         ban = ['nnazirid', 'automatic']
@@ -291,12 +291,13 @@ class json_base:
                actors=True,
                service=True,
                HN=False,
-               sender = None):
+               sender = None,
+               Nchild=-1):
 
         dest = map(lambda i: i, who)
         if actors:
             #add the actors to the object
-            dest.extend(self.get_actors(what='author_email'))
+            dest.extend(self.get_actors(what='author_email',Nchild=Nchild))
         if service:
             #let the service know at any time
             dest.append(settings().get_value('service_account'))

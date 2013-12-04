@@ -961,20 +961,26 @@ done
         return True
 
 
-    def get_actors(self,N=-1,what='author_username'):
+    def get_actors(self,N=-1,what='author_username',Nchild=-1):
         #get the actors from itself, and all others it is related to
         actors=json_base.get_actors(self,N,what)
         crdb=database('chained_requests')
         lookedat=[]
+        ## initiate the list with myself
+        if Nchild==0:
+            return actors
+
         for cr in self.get_attribute('member_of_chain'):
             ## this protection is bad against malformed db content. it should just fail badly with exception
             if not crdb.document_exists(cr):
                 self.logger.error('For requests %s, the chain %s of which it is a member of does not exist.'%( self.get_attribute('prepid'), cr))
                 continue
             crr = crdb.get(cr)
-            for other in crr['chain']:
-            #limit to those before this one ? NO, the comment could go backward as it could go "forward"
-            #for other in crr['chain'][0:crr['chain'].index(self.get_attribute('prepid'))]:
+            for (other_i,other) in enumerate(crr['chain']):
+                ## skip myself
+                if other == self.get_attribute('prepid'): continue
+                if other in lookedat: continue
+                if Nchild>0 and other_i>Nchild: break
                 rdb = database('requests')
                 other_r = request(rdb.get(other))
                 lookedat.append(other_r.get_attribute('prepid'))
