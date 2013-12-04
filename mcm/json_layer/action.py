@@ -164,7 +164,7 @@ class action(json_base):
         # persistent
         self.set_attribute('chains',  new_chains)
         
-    def inspect_priority(self):
+    def inspect_priority(self, forChains=None):
         ##JR: until put in the proper place
         chains=self.get_attribute('chains')
         crdb = database('chained_requests')
@@ -174,7 +174,7 @@ class action(json_base):
             if 'flag' in chains[inCC] and chains[inCC]['flag']:
                 if 'chains' in chains[inCC]:
                     for acr in chains[inCC]['chains']:
-                        #if not crdb.document_exists(acr):   continue
+                        if forChains and not acr in forChains: continue
                         cr=chained_request(crdb.get(acr))
                         cc=cr.get_attribute('member_of_campaign')
                         #if 'block_number' in chains[cc] and chains[cc]['block_number']:
@@ -186,6 +186,7 @@ class action(json_base):
             ## new convention
             if 'chains' in chains[inCC] and type(chains[inCC]['chains'])==dict:
                 for acr in chains[inCC]['chains']:
+                    if forChains and not acr in forChains: continue
                     bn=chains[inCC]['chains'][acr]['block_number']
                     cr=chained_request(crdb.get(acr))
                     if bn:
