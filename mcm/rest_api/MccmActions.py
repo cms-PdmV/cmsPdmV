@@ -145,3 +145,66 @@ class GetEditableMccmFields(RESTResource):
         mccm_d = mccm(db.get(prepid))
         editable = mccm_d.get_editable()
         return dumps({"results": editable})
+
+class GenerateChains(RESTResource):
+    def __init__(self):
+        self.access_limit = 3
+        from ActionsActions import SetAction
+        self.setter = SetAction()
+        
+
+    def GET(self, *args):
+        """
+        Operate the chaining for a given MccM document id
+        """
+        if not args:
+            return dumps({"results": 'Error: No arguments were given'})
+        mid=args[0]
+        reserve=False
+        if len(args)>1:
+            reserve= (args[1]=='reserve')
+
+        return dumps(self.generate(mid, reserve))
+
+    def generate(self, mid, reserve=False):
+        mdb = database('mccms')
+        mcm_m = mccm(mdb.get( mid ))
+
+        if mcm_m.get_attribute('status')!='new':
+            return {"prepid":mid,
+                    "results" : False,
+                    "message" : "status is %s, expecting new"%( mcm_m.get_attribute('status'))}
+        if mcm_m.get_attribute('block')==0:
+            return {"prepid":mid,
+                    "results" : False, 
+                    "message" : "No block selected"}
+        if len(mcm_m.get_attribute('chains'))==0:
+            return {"prepid":mid,
+                    "results" : False, 
+                    "message" : "No chains selected"}
+        if len(mcm_m.get_attribute('requests'))==0:
+            return {"prepid":mid,
+                    "results" : False, 
+                    "message" : "No requests selected"}
+            
+        aids = []
+        for r in mcm_m.get_attribute('requests'):
+            if type(r)==list:
+                return {"prepid":mid,
+                        "results" : False,
+                        "message" : "range of id not supported yet"}
+            else:
+                aids.append( r )
+
+        res=[]
+        for aid in aids:
+            for times in range(mcm_m.get_attribute('repetitions')):
+                for cc in mcm_m.get_attribute('chains'):
+                    res.append( {"prepid":mid,"results" : True,"message": "%s %s %s %s"%( times, aid, cc, mcm_m.get_attribute('block'))})
+                    res.append(self.setter.set_action(aid, cc, mcm_m.get_attribute('block'), reserve=reserve))
+
+        mcm_m.set_status()
+        mdb.update( mcm_m.json())
+        return {"prepid":mid,
+                "results" : True,
+                "message" : res}

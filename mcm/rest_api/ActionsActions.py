@@ -233,7 +233,7 @@ class GenerateChainedRequests(RESTResource):
         else:
             return dumps(res)
 
-    def generate_request(self, aid):
+    def generate_request(self, aid, reserve=False, with_notify=True):
         adb = database('actions')
         ccdb = database('chained_campaigns')
         crdb = database('chained_requests')
@@ -245,6 +245,7 @@ class GenerateChainedRequests(RESTResource):
         act = action(adb.get(aid))
         chains = act.get_attribute('chains')
         hasChainsChanged=False 
+        new_chains = []
         for cc in chains:  
             if 'flag' in chains[cc] and chains[cc]['flag']:
                 ## in the new convention, that means that something needs to be created
@@ -265,14 +266,15 @@ class GenerateChainedRequests(RESTResource):
 
                 ## update the cc history
                 ccdb.update(mcm_cc.json())
-
+                new_chains.append( new_cr['prepid'] )
                 # then let the root request know that it is part of a chained request
                 req = request(json_input=rdb.get(aid))
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
                 inchains.sort()
                 req.set_attribute('member_of_chain',list(set(inchains)))
-                req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']))
+                if with_notify:
+                    req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']), Nchild=0)
                 act.update_history({'action':'add','step' : new_cr['prepid']})
                 rdb.update(req.json())
 
@@ -282,7 +284,15 @@ class GenerateChainedRequests(RESTResource):
             adb.update(act.json())
 
         #and set priorities properly to all requests concerned
-        act.inspect_priority()
+        act.inspect_priority(forChains=new_chains)
+
+        ## do the reservation of the whole chain ?
+        res=[]
+        if reserve:
+            for cr in new_chains:
+                mcm_cr = chained_request(crdb.get( cr ))
+                res.append(mcm_cr.reserve())
+                crdb.update( mcm_cr.json())
 
         return dumps({'results':True})
 
@@ -318,10 +328,9 @@ class SetAction(GenerateChainedRequests):
         if len(args)<3:
             return dumps("Not enough arguments")
 
-        adb = database('actions')
-        ccdb = database('chained_campaigns')
-
         (aid,cc,block) = args[0:3]
+
+
         extra=None
         if len(args)==4:
             extra=args[3]
@@ -337,6 +346,12 @@ class SetAction(GenerateChainedRequests):
                 staged=int(extra)
 
         block=int(block)
+
+        return self.set_action( aid, cc, block, staged, threshold)
+
+    def set_action(self, aid, cc, block, staged=None, threshold=None,reserve=False):
+        adb = database('actions')
+        ccdb = database('chained_campaigns')
 
         mcm_a = action( adb.get(aid) )
         ccs = ccdb.queries(['alias==%s'% cc])
@@ -374,7 +389,7 @@ class SetAction(GenerateChainedRequests):
         adb.save( mcm_a.json() )
 
         #and generate the chained requests
-        return self.generate_request(aid)
+        return self.generate_request(aid, reserve)
 
 class DetectChains(RESTResource):
     def __init__(self):
