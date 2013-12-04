@@ -1,18 +1,11 @@
 function mainCtrl($scope, $http, $location, $window){
   $scope.stats_cache = {};
   $scope.full_details = {};
-
   $scope.mcm_revision = "";
-  
-  var promise = $http.get("restapi/dashboard/get_revision");
-  promise.then(function(data){
-	  $scope.mcm_revision=data.data;
-      });
-      
+  $scope.user = {name: "guest", role:"user",roleIndex:0};
 
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){
-    // console.log('fOUND ie');
     if ($window.location.href.indexOf('#') == -1){
       var newLocation = $window.location.href.replace(/\#/g,''); //for safety remove all # to not add ##?
       newLocation = newLocation.replace('?','#?');
@@ -20,8 +13,21 @@ function mainCtrl($scope, $http, $location, $window){
      $window.location.href = newLocation;
     }
   }
-  // console.log(browserName);
-  $scope.user = {name: "guest", role:"user",roleIndex:0};
+
+  var get_rev = true;
+  _.each(["campaigns","chained_campaigns","flows","actions","requests","chained_requests","batch","invalidations","mccms","dashboard","users","edit","news","settings"], function (elem){
+    if ($location.path().indexOf(elem) != -1)
+    {
+      get_rev = false;
+    } 
+  });
+  if (get_rev)
+  {
+    var promise = $http.get("restapi/dashboard/get_revision");
+    promise.then(function (data) {
+      $scope.mcm_revision = data.data;
+    });
+  }
 
 // GET username and role
   var promise = $http.get("restapi/users/get_role",{ cache: true});
