@@ -3,7 +3,8 @@
 from json_base import json_base
 
 class flow(json_base):
-    def __init__(self, json_input={}):
+    def __init__(self, json_input=None):
+        if not json_input: json_input = {}
         self._json_base__approvalsteps = ['none','flow', 'submit']
 
         self._json_base__schema = {

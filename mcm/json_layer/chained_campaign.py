@@ -24,7 +24,8 @@ class chained_campaign(json_base):
         def __str__(self):
             return 'Error: Flow ' + self.f + ' does not exist.'
     
-    def __init__(self, json_input={}):
+    def __init__(self, json_input=None):
+        if not json_input: json_input = {}
         self._json_base__schema = {
             '_id':'',
             'prepid':'',

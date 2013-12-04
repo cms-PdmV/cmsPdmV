@@ -6,15 +6,15 @@ from flow import flow
 from couchdb_layer.mcm_database import database
 import json
 from tools.priority import priority
-import traceback
 from tools.locker import locker
+from tools.locator import locator
 
 
 class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):
         def __init__(self, campaign):
             self.c = campaign
-            chained_request.logger.error('Campaign %s is already member of the chain.' % (self.c))
+            chained_request.logger.error('Campaign %s is already member of the chain.' % self.c)
 
         def __str__(self):
             return 'Error: Campaign', self.c, 'already represented in the chain.'
@@ -52,7 +52,7 @@ class chained_request(json_base):
     class CampaignStoppedException(NotApprovedException):
         def __init__(self, oname):
             self.name = str(oname)
-            chained_request.logger.error('Campaign %s is stopped' % (self.name))
+            chained_request.logger.error('Campaign %s is stopped' % self.name)
 
         def __str__(self):
             return 'Error: ' + self.name + ' is stopped.'
@@ -60,13 +60,14 @@ class chained_request(json_base):
     class EnergyInconsistentException(NotApprovedException):
         def __init__(self, oname):
             self.name = str(oname)
-            chained_request.logger.error('Campaign %s has inconsistent energy' % (self.name))
+            chained_request.logger.error('Campaign %s has inconsistent energy' % self.name)
 
         def __str__(self):
             return 'Error: Campaign ' + self.name + ' has inconsistent energy.'
 
-    def __init__(self, json_input={}):
+    def __init__(self, json_input=None):
 
+        if not json_input: json_input = {}
         self._json_base__approvalsteps = ['none', 'flow', 'submit']
         #self._json_base__status = ['new','started','done']
 
@@ -97,7 +98,9 @@ class chained_request(json_base):
         self.validate()
 
 
-    def flow_trial(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
+    def flow_trial(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False):
+        if not block_black_list: block_black_list = []
+        if not block_white_list: block_white_list = []
         chainid = self.get_attribute('prepid')
         try:
             if self.flow(check_stats=check_stats):
@@ -115,11 +118,43 @@ class chained_request(json_base):
             #except chained_request.ChainedRequestCannotFlowException as ex:
             #    return {"prepid":chainid,"results":False, "message":str(ex)}
 
-    def flow(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
+    def request_join(self, req):
+        with locker.lock(req.get_attribute('prepid')):
+            chain = req.get_attribute("member_of_chain")
+            chain.append(self.get_attribute('_id'))
+            req.set_attribute("member_of_chain", chain)
+        loc = locator()
+        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfully joined chain {1}\n\tRequest: {2}".format(req.get_attribute('prepid'),
+                                                                                                                                                          self.get_attribute('_id'),
+                                                                                                                                                          "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])))
+        req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
+        if not req.get_attribute('prepid') in self.get_attribute('chain'):
+            chain = self.get_attribute('chain')
+            chain.append(req.get_attribute('prepid'))
+            self.set_attribute("chain", chain)
+            self.update_history({'action': 'add request', 'step': req.get_attribute('prepid')})
+
+    def reserve(self):
+        while True:
+            try:
+                if not self.flow_to_next_step(check_stats=False, reserve=True):
+                    break
+                saved = self.reload('chained_requests')
+                if not saved: return {"prepid": self.get_attribute("prepid"), "results": False, "message": "Failed to save chained request to database"}
+            except Exception as ex:
+                return {"prepid": self.get_attribute("prepid"), "results": False, "message": str(ex)}
+        return {"prepid": self.get_attribute("prepid"), "results": True}
+
+
+    def flow(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True):
+        if not block_black_list: block_black_list = []
+        if not block_white_list: block_white_list = []
         return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)
         #return self.flow_to_next_step_clean(input_dataset,  block_black_list,  block_white_list)
 
-    def flow_to_next_step(self, input_dataset='', block_black_list=[], block_white_list=[], check_stats=True):
+    def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False):
+        if not block_white_list: block_white_list = []
+        if not block_black_list: block_black_list = []
         self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
@@ -140,76 +175,62 @@ class chained_request(json_base):
         fdb = database('flows')
         adb = database('actions')
 
-        current_step = self.get_attribute('step')
+        current_step = len(self.get_attribute('chain'))-1 if reserve else self.get_attribute('step')
         current_id = self.get_attribute('chain')[current_step]
         next_step = current_step + 1
 
         if not rdb.document_exists(current_id):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'the current request %s does not exist' % ( current_id))
+                                                         'the request %s does not exist' % current_id)
 
         current_request = request(rdb.get(current_id))
         current_campaign = campaign(cdb.get(current_request.get_attribute('member_of_campaign')))
 
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'the chain rqeuest %s is member of %s that does not exist' % (
+                                                         'the chain request %s is member of %s that does not exist' % (
                                                              self.get_attribute('_id'),
                                                              self.get_attribute('member_of_campaign')))
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
         if next_step >= len(mcm_cc['campaigns']):
+            if reserve: return False
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'chained_campaign %s does not allow any further flowing.' % (
                                                              self.get_attribute('member_of_campaign')))
-        ## is the current request in the proper approval
-        allowed_request_approvals = ['submit']
-        if current_request.get_attribute('approval') not in allowed_request_approvals:
-            raise self.NotApprovedException(current_request.get_attribute('prepid'),
-                                            current_request.get_attribute('approval'), allowed_request_approvals)
-        ## is the current request in the proper status
-        allowed_request_statuses = ['submitted', 'done']
-        if current_request.get_attribute('status') not in allowed_request_statuses:
-            raise self.NotInProperStateException(current_request.get_attribute('prepid'), 
-                                                 current_request.get_attribute('status'),
-                                                 allowed_request_statuses)
+
+        if not reserve:
+            ## is the current request in the proper approval
+            allowed_request_approvals = ['submit']
+            if current_request.get_attribute('approval') not in allowed_request_approvals:
+                raise self.NotApprovedException(current_request.get_attribute('prepid'),
+                                                current_request.get_attribute('approval'), allowed_request_approvals)
+            ## is the current request in the proper status
+            allowed_request_statuses = ['submitted', 'done']
+            if current_request.get_attribute('status') not in allowed_request_statuses:
+                raise self.NotInProperStateException(current_request.get_attribute('prepid'),
+                                                     current_request.get_attribute('status'),
+                                                     allowed_request_statuses)
 
         original_action_id = self.get_attribute('chain')[0]
-        root_request_id = original_action_id
-        if not adb.document_exists(original_action_id):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'the chained request spawned from %s which does not exist' % (
-                                                             original_action_id))
 
-        ## retrieve what is the action the chained request started with
-        original_action = adb.get(original_action_id)
-        original_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]['chains']
-        if not self.get_attribute('prepid') in original_action_item:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'has no valid action in %s' % ( original_action_id))
+        original_action_item = self.retrieve_original_action_item(adb, original_action_id)
 
-        original_action_item = original_action_item[self.get_attribute('prepid')]
-        if 'flag' not in original_action_item:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The action %s is malformated' % ( original_action_id))
-        if not original_action_item['flag']:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The action is disabled')
-        if not 'block_number' in original_action_item or not original_action_item['block_number']:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The action has no valid block number')
-        
         ## what is the campaign to go to next and with which flow
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
         if not fdb.document_exists(flow_name):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The flow %s does not exist' % ( flow_name ))
-        if not cdb.document_exists(next_campaign_id):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The next campaign %s does not exist' % ( next_campaign_id))
+                                                         'The flow %s does not exist' % flow_name )
+
         mcm_f = flow(fdb.get(flow_name))
         if not 'sequences' in mcm_f.get_attribute('request_parameters'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The flow %s does not contain sequences information.' % (
                                                              flow_name))
+
+        if not cdb.document_exists(next_campaign_id):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The next campaign %s does not exist' % next_campaign_id)
+
         next_campaign = campaign(cdb.get(next_campaign_id))
         if len(next_campaign.get_attribute('sequences')) != len(mcm_f.get_attribute('request_parameters')['sequences']):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
@@ -248,7 +269,7 @@ class chained_request(json_base):
                                                             self.get_attribute('_id'),
                                                             self.get_attribute('approval')))
         """
-        if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
+        if not reserve and not mcm_f.get_attribute('approval') in allowed_flow_approvals:
             if not self.get_attribute('approval') in allowed_flow_approvals:
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
@@ -260,46 +281,45 @@ class chained_request(json_base):
 
         #what is going to be the required number of events for the next request
         #update the stats to its best
-        current_request.get_stats()
+        if not reserve:
+            current_request.get_stats()
+            next_total_events=current_request.get_attribute('completed_events')
 
-        next_total_events=current_request.get_attribute('completed_events')
-        completed_events_to_pass=next_total_events
-        notify_on_fail=True ## to be tuned according to the specific cases
-        if current_request.get_attribute('completed_events') <= 0:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The number of events completed is negative or null')
-        else:
-            allowed_request_statuses = ['done']
-            ## determine if this is a root -> non-root transition to potentially apply staged number
-            at_a_transition=(current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
-            if ('staged' in original_action_item or 'threshold' in original_action_item) and at_a_transition:
-                allowed_request_statuses.append('submitted')            
-            ##check status
-            if not current_request.get_attribute('status') in allowed_request_statuses:
-                raise self.NotInProperStateException(current_request.get_attribute('prepid'), 
-                                                     current_request.get_attribute('status'),
-                                                     allowed_request_statuses)
-            ##special check at transition that the statistics is good enough
-            if at_a_transition:
-                # at a root -> non-root transition only does the staged/threshold functions !
-                if 'staged' in original_action_item:
-                    next_total_events = int(original_action_item['staged'])
-                if 'threshold' in original_action_item:
-                    next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
-
-                completed_events_to_pass = next_total_events
+            notify_on_fail=True ## to be tuned according to the specific cases
+            if current_request.get_attribute('completed_events') <= 0:
+                raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                             'The number of events completed is negative or null')
             else:
-                ## get the original expected events and allow a margin of 5% less statistics
-                completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
+                allowed_request_statuses = ['done']
+                ## determine if this is a root -> non-root transition to potentially apply staged number
+                at_a_transition=(current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
+                if ('staged' in original_action_item or 'threshold' in original_action_item) and at_a_transition:
+                    allowed_request_statuses.append('submitted')
+                ##check status
+                if not current_request.get_attribute('status') in allowed_request_statuses:
+                    raise self.NotInProperStateException(current_request.get_attribute('prepid'),
+                                                         current_request.get_attribute('status'),
+                                                         allowed_request_statuses)
+                ##special check at transition that the statistics is good enough
+                if at_a_transition:
+                    # at a root -> non-root transition only does the staged/threshold functions !
+                    if 'staged' in original_action_item:
+                        next_total_events = int(original_action_item['staged'])
+                    if 'threshold' in original_action_item:
+                        next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
 
-        if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
-            if notify_on_fail:
-                current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
-                                       'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s '%( current_request.get_attribute('completed_events'),
-                                                                                                                                                                         completed_events_to_pass))
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
+                    completed_events_to_pass = next_total_events
+                else:
+                    ## get the original expected events and allow a margin of 5% less statistics
+                    completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
 
+            if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
+                if notify_on_fail:
+                    current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
+                                           'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s '%( current_request.get_attribute('completed_events'),
+                                                                                                                                                                             completed_events_to_pass))
+                raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                             'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
 
         ## select what is to happened : [create, patch, use]
         next_id = None
@@ -326,7 +346,7 @@ class chained_request(json_base):
             ## remove <pwg>-chain_ and the -serial number, replacing _ with a .
             toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
             ## make sure they get ordered by prepid
-            related_crs = sorted(crdb.queries(['root_request==%s' % (root_request_id)]), key=lambda cr : cr['prepid'])
+            related_crs = sorted(crdb.queries(['root_request==%s' % original_action_id]), key=lambda cr : cr['prepid'])
             
             
 
@@ -368,56 +388,34 @@ class chained_request(json_base):
             else:
                 approach = 'create'
 
-        def transfer( current_request, next_request):
-            to_be_transfered = ['pwg', 'dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id','notes','tags']
-            for key in to_be_transfered:
-                next_request.set_attribute(key, current_request.get_attribute(key))
-
         if approach == 'create':
             from rest_api.RequestPrepId import RequestPrepId
 
             next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
             next_request = request(rdb.get(next_id))
-            transfer( current_request, next_request)
-
-            next_request.set_attribute("member_of_chain", [self.get_attribute('_id')])
-            next_request.notify("Request {0} joined chain".format(next_request.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(next_request.get_attribute('prepid'), self.get_attribute('_id')))
-            next_request.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
-            chain = self.get_attribute('chain')
-            chain.append(next_id)
-            self.set_attribute("chain", chain)
-            self.update_history({'action': 'add request', 'step': next_id})
+            request.transfer( current_request, next_request)
+            self.request_join(next_request)
 
         elif approach == 'use':
             ## there exists a request in another chained campaign that can be re-used here.
             # take this one. advance and go on
-            if not next_id in self.get_attribute('chain'):
-                #join to the chain
-                chain = self.get_attribute('chain')
-                chain.append(next_id)
-                self.set_attribute("chain", chain)
-                self.update_history({'action': 'flow', 'step': str(next_step)})
-            self.set_attribute('step', next_step)
             next_request = request(rdb.get(next_id))
-
-            self.set_attribute('last_status', next_request.get_attribute('status'))
+            if not reserve:
+                self.set_attribute('step', next_step)
+                self.set_attribute('last_status', next_request.get_attribute('status'))
+                self.update_history({'action': 'flow', 'step': str(next_step)})
 
             #reput some of the previous parameters in
             #### to be removed ???? #### where is it coming from ???? ####
-            transfer( current_request, next_request)
+            request.transfer( current_request, next_request)
 
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
                 ## register the chain to the next request
-                chains = next_request.get_attribute("member_of_chain")
-                chains.append(self.get_attribute("prepid"))
-                next_request.set_attribute("member_of_chain", chains)
-                next_request.notify("Request {0} joined chain".format(next_request.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(next_request.get_attribute('prepid'), self.get_attribute('_id')))
-                next_request.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
+                self.request_join(next_request)
                 saved = rdb.update(next_request.json())
                 if not saved:
                     raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                                 'Unable to save %s with updated member_of_chains' % (
-                                                                     next_id))
+                                                                 'Unable to save %s with updated member_of_chains' % next_id)
                 return True
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
@@ -427,7 +425,7 @@ class chained_request(json_base):
 
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'Unrecognized approach %s' % ( approach ))
+                                                         'Unrecognized approach %s' %  approach )
 
         #current_request -> next_request
         #current_campaign -> next_campaign
@@ -445,8 +443,6 @@ class chained_request(json_base):
         if input_dataset:
             next_request.set_attribute('input_filename', input_dataset)
 
-        #already taking stage and threshold into account
-        next_request.set_attribute('total_events', next_total_events)
 
 
         ## set blocks restriction if any
@@ -458,52 +454,13 @@ class chained_request(json_base):
         ## register the flow to the request
         next_request.set_attribute('flown_with', flow_name)
 
-        ## another copy/paste
-        def put_together(nc, fl, new_req):
-            # copy the sequences of the flow
-            sequences = []
-            for i, step in enumerate(nc.get_attribute('sequences')):
-                flag = False # states that a sequence has been found
-                for name in step:
-                    if name in fl.get_attribute('request_parameters')['sequences'][i]:
-                        # if a seq name is defined, store that in the request
-                        sequences.append(step[name])
-
-                        # if the flow contains any parameters for the sequence,
-                        # then override the default ones inherited from the campaign
-                        if fl.get_attribute('request_parameters')['sequences'][i][name]:
-                            for key in fl.get_attribute('request_parameters')['sequences'][i][name]:
-                                sequences[-1][key] = fl.get_attribute('request_parameters')['sequences'][i][name][key]
-                                # to avoid multiple sequence selection
-                            # continue to the next step (if a valid seq is found)
-                        flag = True
-                        break
-
-                # if no sequence has been found, use the default
-                if not flag:
-                    sequences.append(step['default'])
-
-            new_req.set_attribute('sequences', sequences)
-            ## setup the keep output parameter
-            keep = []
-            for s in sequences:
-                keep.append(False)
-            keep[-1] = True
-            new_req.set_attribute('keep_output', keep)
-
-            # override request's parameters
-            for key in fl.get_attribute('request_parameters'):
-                if key == 'sequences':
-                    continue
-                else:
-                    if key in new_req.json():
-                        new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
-
         ##assemble the campaign+flow => request
-        put_together(next_campaign, mcm_f, next_request)
+        request.put_together(next_campaign, mcm_f, next_request)
+        if not reserve:
+            #already taking stage and threshold into account
+            next_request.set_attribute('total_events', next_total_events)
 
-
-        next_request.update_history({'action': 'flow', 'step': self.get_attribute('prepid')})
+            next_request.update_history({'action': 'flow', 'step': self.get_attribute('prepid')})
         request_saved = rdb.save(next_request.json())
 
         if not request_saved:
@@ -513,26 +470,53 @@ class chained_request(json_base):
 
         ## inspect priority
         self.set_priority(original_action_item['block_number'])
-
-        # sync last status
-        self.set_attribute('last_status', next_request.get_attribute('status'))
-        # we can only be processing at this point
-        self.set_attribute('status', 'processing')
-        # set to next step
-        self.set_attribute('step', next_step)
-
-        notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
-        notification_text = 'The request %s has been flown within:\n \t %s \n into campaign:\n \t %s \n using:\n \t %s \n creating the new request:\n \t %s \n as part of:\n \t %s \n and from the produced dataset:\n %s \n ' % (
-            current_request.get_attribute('prepid'),
-            self.get_attribute('member_of_campaign'),
-            next_campaign_id,
-            flow_name,
-            next_request.get_attribute('prepid'),
-            self.get_attribute('prepid'),
-            next_request.get_attribute('input_filename')
-        )
-        current_request.notify(notification_subject, notification_text)
+        if not reserve:
+            # sync last status
+            self.set_attribute('last_status', next_request.get_attribute('status'))
+            # we can only be processing at this point
+            self.set_attribute('status', 'processing')
+            # set to next step
+            self.set_attribute('step', next_step)
+        if not reserve:
+            notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
+            notification_text = 'The request %s has been flown within:\n \t %s \n into campaign:\n \t %s \n using:\n \t %s \n creating the new request:\n \t %s \n as part of:\n \t %s \n and from the produced dataset:\n %s \n ' % (
+                current_request.get_attribute('prepid'),
+                self.get_attribute('member_of_campaign'),
+                next_campaign_id,
+                flow_name,
+                next_request.get_attribute('prepid'),
+                self.get_attribute('prepid'),
+                next_request.get_attribute('input_filename')
+            )
+            current_request.notify(notification_subject, notification_text)
+        else:
+            notification_subject = 'Reservation of request {0}'.format(next_request.get_attribute('prepid'))
+            notification_text = 'The request {0} of campaign \n\t{2}\nhas been reserved as part of \n\t{1}'.format(next_request.get_attribute('prepid'), self.get_attribute('prepid'), next_campaign_id)
+            next_request.notify(notification_subject, notification_text)
         return True
+
+    def retrieve_original_action_item(self, adb, original_action_id):
+        if not adb.document_exists(original_action_id):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'the chained request spawned from %s which does not exist' % original_action_id)
+        ## retrieve what is the action the chained request started with
+        original_action = adb.get(original_action_id)
+        original_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]['chains']
+        if not self.get_attribute('prepid') in original_action_item:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'has no valid action in %s' %  original_action_id)
+
+        original_action_item = original_action_item[self.get_attribute('prepid')]
+        if 'flag' not in original_action_item:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The action %s is malformated' %  original_action_id)
+        if not original_action_item['flag']:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The action is disabled')
+        if not 'block_number' in original_action_item or not original_action_item['block_number']:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The action has no valid block number')
+        return original_action_item
+
 
     def toggle_last_request(self):
 
@@ -570,19 +554,20 @@ class chained_request(json_base):
         return True
 
     # add a new request to the chain
-    def add_request(self, data={}):
-        self.logger.log('Adding new request to chained_request %s' % (self.get_attribute('_id')))
+    def add_request(self, data=None):
+        if not data: data = {}
+        self.logger.log('Adding new request to chained_request %s' % self.get_attribute('_id'))
 
         # import prep-id generator
         try:
             from rest_api.RequestPrepId import RequestPrepId
         except ImportError as ex:
-            self.logger.error('Could not import prep-id generator class. Reason: %s' % (ex), level='critical')
+            self.logger.error('Could not import prep-id generator class. Reason: %s' % ex, level='critical')
             return {}
         try:
             req = request(json_input=data)
         except Exception as ex:
-            self.logger.error('Could not build request object. Reason: %s' % (ex))
+            self.logger.error('Could not build request object. Reason: %s' % ex)
             return {}
 
         #chain_specific = ['threshold',  'block_number',  'staged']
@@ -662,7 +647,10 @@ class chained_request(json_base):
         # update history
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         self.update_history({'action': 'add request', 'step': req.get_attribute('_id')})
-        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), self.get_attribute('_id')))
+        loc = locator()
+        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}\n\tRequest: {2}".format(req.get_attribute('prepid'),
+                                                                                                                                                         self.get_attribute('_id'),
+                                                                                                                                                         "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])))
 
         # set request approval status to new
         #req.approve(0)

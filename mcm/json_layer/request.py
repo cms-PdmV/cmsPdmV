@@ -25,9 +25,10 @@ class request(json_base):
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
 
-    def __init__(self, json_input={}):
+    def __init__(self, json_input=None):
 
         # detect approval steps
+        if not json_input: json_input = {}
         self.is_root = False
         cdb = database('campaigns')
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
@@ -418,7 +419,7 @@ class request(json_base):
             ## new convention
             if type(my_action_item['chains'])==dict:
                 for (cr,content) in my_action_item['chains'].items():
-                    if content['flag']== True:
+                    if content['flag']:
                         at_least_an_action=True
                         break
 
@@ -465,7 +466,7 @@ class request(json_base):
       ##JR
       if fragment=='':
           fragment='step%d'%(sequenceindex+1)
-      command = 'cmsDriver.py %s ' % (fragment)
+      command = 'cmsDriver.py %s ' % fragment
 
       try:
           seq = sequence(self.get_attribute('sequences')[sequenceindex])
@@ -502,7 +503,6 @@ class request(json_base):
       if cast==1 and self.get_attribute('status')=='new':
           cdb = database('campaigns')
 
-          inchains = self.get_attribute('member_of_chain')
           flownWith=None
           if self.get_attribute('flown_with'):
               fdb = database('flows')
@@ -514,58 +514,19 @@ class request(json_base):
           self.set_attribute('type',camp['type'])
           ## putting things together from the campaign+flow
           freshSeq=[]
-          freshKeep=[]
-          ##JR
-          ## there is a method in the chained_requests that needs to be put in common, as a static method for example: although, this could create circulare dependencies....
-          new_req = self.json()
-          new_req['sequences']=[]
-          def puttogether(nc,fl,new_req):
-            # copy the sequences of the flow
-            for i, step in enumerate(nc['sequences']):
-		flag = False # states that a sequence has been found
-		for name in step:
-                        if name in fl['request_parameters']['sequences'][i]:
-				# if a seq name is defined, store that in the request
-				new_req['sequences'].append(step[name])
-
-				# if the flow contains any parameters for the sequence,
-				# then override the default ones inherited from the campaign
-				if fl['request_parameters']['sequences'][i][name]:
-					for key in fl['request_parameters']['sequences'][i][name]:
-						new_req['sequences'][-1][key] = fl['request_parameters']['sequences'][i][name][key]
-				# to avoid multiple sequence selection
-				# continue to the next step (if a valid seq is found)
-				flag = True
-				break
-
-		# if no sequence has been found, use the default
-		if not flag:
-			new_req['sequences'].append(step['default'])
-
-	    # override request's parameters
-            for key in fl['request_parameters']:
-                if key == 'sequences':
-                    continue
-		else:
-			if key in new_req:
-				new_req[key] = fl['request_parameters'][key]
           if flownWith:
               #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
               #                                                                       camp['prepid'],
               #                                                                       new_req['prepid']))
-              puttogether(camp,flownWith,new_req)
+              request.put_together(camp, flownWith, self)
           else:
               for i in range(len(camp['sequences'])):
                       fresh = sequence(camp['sequences'][i]["default"])
                       freshSeq.append(fresh.json())
               self.set_attribute('sequences',freshSeq)
-          for i in range(len(camp['sequences'])):
-                      freshKeep.append(False)
-          freshKeep[-1]=True
-          self.set_attribute('keep_output',freshKeep)
           if can_save:
               rdb = database('requests')
-              rdb.update(new_req)
+              rdb.update(self.json())
           else:
               ## could re-assign the new_req to itself
               pass
@@ -818,7 +779,7 @@ done
             gen_valid = settings().get_value('gen_valid')
             if not gen_valid:
                 return ("","")
-            
+
             cmsd_list += '\n\n'
             valid_sequence = sequence( firstSequence )
             valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
@@ -829,6 +790,7 @@ done
 
         elif firstStep in ['LHE','NONE']:
             cmsd_list += '\n\n'
+            genvalid_request = request( self.json() )
             valid_sequence = sequence( firstSequence )
             ## when integrated properly
             if firstStep=='LHE':
@@ -840,6 +802,8 @@ done
                 lhe_valid = settings().get_value('lhe_valid')
                 if not lhe_valid:
                     return ("","")
+                #genvalid_request.set_attribute('name_of_fragment', 'GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff')
+                #valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
                 valid_sequence.set_attribute( 'step', ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator','GEN','VALIDATION:genvalid_all'])
             valid_sequence.set_attribute( 'eventcontent' , ['DQM'])
             valid_sequence.set_attribute( 'datatier' , ['DQM'])
@@ -854,7 +818,7 @@ done
             #cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
             #cmsd_list +='\nscram b -j5 \n'
 
-            genvalid_request = request( self.json() )
+
             genvalid_request.set_attribute( 'sequences' , [valid_sequence.json()])
 
             self.genvalid_driver = '%s --fileout file:genvalid.root --mc -n %d --python_filename %sgenvalid.py %s --no_exec || exit $? ;\n'%(genvalid_request.build_cmsDriver(0),
@@ -998,11 +962,12 @@ done
         rdb = database('requests')
         rdb.update(self.json())
 
-    def get_stats(self,
-                  keys_to_import = ['pdmv_dataset_name','pdmv_dataset_list','pdmv_status_in_DAS','pdmv_status_from_reqmngr','pdmv_evts_in_DAS','pdmv_open_evts_in_DAS','pdmv_submission_date','pdmv_submission_time'],
-                  override_id=None,
-                  limit_to_set=0.05):
+    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05):
         #existing rwma
+        if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS',
+                                                 'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
+                                                 'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
+                                                 'pdmv_submission_time']
         mcm_rr=self.get_attribute('reqmgr_name')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
 
@@ -1432,6 +1397,54 @@ done
 
         return to_be_saved
 
+    @staticmethod
+    ## another copy/paste
+    def put_together(nc, fl, new_req):
+        # copy the sequences of the flow
+        sequences = []
+        for i, step in enumerate(nc.get_attribute('sequences')):
+            flag = False # states that a sequence has been found
+            for name in step:
+                if name in fl.get_attribute('request_parameters')['sequences'][i]:
+                    # if a seq name is defined, store that in the request
+                    sequences.append(step[name])
+
+                    # if the flow contains any parameters for the sequence,
+                    # then override the default ones inherited from the campaign
+                    if fl.get_attribute('request_parameters')['sequences'][i][name]:
+                        for key in fl.get_attribute('request_parameters')['sequences'][i][name]:
+                            sequences[-1][key] = fl.get_attribute('request_parameters')['sequences'][i][name][key]
+                            # to avoid multiple sequence selection
+                        # continue to the next step (if a valid seq is found)
+                    flag = True
+                    break
+
+            # if no sequence has been found, use the default
+            if not flag:
+                sequences.append(step['default'])
+
+        new_req.set_attribute('sequences', sequences)
+        ## setup the keep output parameter
+        keep = []
+        for s in sequences:
+            keep.append(False)
+        keep[-1] = True
+        new_req.set_attribute('keep_output', keep)
+
+        # override request's parameters
+        for key in fl.get_attribute('request_parameters'):
+            if key == 'sequences':
+                continue
+            else:
+                if key in new_req.json():
+                    new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
+
+    @staticmethod
+    def transfer( current_request, next_request):
+        to_be_transferred = ['pwg', 'dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id','notes','tags']
+        for key in to_be_transferred:
+            next_request.set_attribute(key, current_request.get_attribute(key))
+
     def reset(self):
 
         ## check on who's trying to do so
@@ -1443,12 +1456,12 @@ done
         invalidation = database('invalidations')
         req_to_invalidate=[]
         ds_to_invalidate=[]
-        
+
         # retrieve the latest requests for it
         self.get_stats()
         # increase the revision only if there was a request in req mng, or a dataset already on the table
         increase_revision=False
-        
+
         # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
             ## save the reqname to invalidate
@@ -1456,7 +1469,7 @@ done
             new_invalidation={"object" : wma['name'], "type" : "request", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object']
             invalidation.save( new_invalidation )
-            
+
             ## save all dataset to be invalidated
             if 'content' in wma and 'pdmv_dataset_list' in wma['content']:
                 ds_to_invalidate.extend( wma['content']['pdmv_dataset_list'])
@@ -1470,7 +1483,7 @@ done
             invalidation.save( new_invalidation )
             increase_revision=True
 
-        
+
         ##do not increase version if not in an announced batch
         bdb = database('batches')
         if increase_revision:
@@ -1483,7 +1496,7 @@ done
                         ## we're done checking
                         break
 
-            
+
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name',[])
         self.set_attribute('config_id',[])
