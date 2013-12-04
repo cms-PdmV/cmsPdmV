@@ -21,6 +21,7 @@ class mccm(json_base):
             'pwg': '',
             'requests': [],
             'chains' :[],
+            'repetitions' : 1,
             'size': 0,
             'status': 'new'
             }
