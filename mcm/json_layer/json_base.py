@@ -5,6 +5,8 @@ from tools.logger import logger as logfactory
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
 from tools.settings import settings
+from tools.locker import locker
+from couchdb_layer.mcm_database import database
 
 class json_base:
     __json = {}
@@ -75,6 +77,22 @@ class json_base:
                 #    if key not in self.__schema:
                 #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
 
+
+    def reload(self, db_name):
+        """
+        Updates or creates document in database with name db_name
+        and reloads the object with info from database (new revision)
+        """
+        db = database(db_name)
+        with locker.lock(self.get_attribute('_id')):
+            if not db.document_exists(self.get_attribute('_id')):
+                saved = db.save(self.json())
+            else:
+                saved = db.update(self.json())
+            if not saved:
+                return False
+            self.__init__(db.get(self.get_attribute('_id')))
+            return True
 
     def update(self, json_input):
         self._json_base__json = {}
