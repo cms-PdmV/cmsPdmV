@@ -1356,7 +1356,10 @@ class RequestsReminder(RESTResource):
 
                 for rid in ids:
                     req = request(rdb.get(rid))
-                    message += '\t%s (%s)\n' % ( rid, req.get_attribute('dataset_name'))
+                    message += '\t%s (%s) (%d chains) (prio %s) \n' % ( rid, 
+                                                                     req.get_attribute('dataset_name'),
+                                                                     len(req.get_attribute('member_of_chain')),
+                                                                     req.get_attribute('priority'))
                 message += '\n'
             return message
 
