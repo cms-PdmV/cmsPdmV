@@ -468,7 +468,7 @@ testApp.directive("reqmgrName", function($http){
     '        </span>'+
     '        Last update on {{stats_cache[rqmngr[\'name\']].pdmv_monitor_time}}'+
     '        </br>'+
-    '        <a ng-href="{{links[$index]}}"><img width={{image_width}} ng-src="{{links[$index]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>'+
+    '        <a ng-href="{{links[rqmngr.name]}}"><img width={{image_width}} ng-src="{{links[rqmngr.name]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>'+
     '        <ul style="margin-bottom: 0px;" ng-show="true;">'+
     '          <li ng-repeat="DS in stats_cache[rqmngr[\'name\']].pdmv_dataset_list">'+
     '            <span ng-switch on="stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS == \'VALID\'">'+
@@ -497,7 +497,6 @@ testApp.directive("reqmgrName", function($http){
       scope.links = {};
       scope.image_width =150;
       ctrl.$render = function(){
-        //scope.remngr_name = ctrl.$viewValue.name;
         scope.rqmngr_data = ctrl.$viewValue;
         scope.r_prepid = scope.$eval(attrs.prepid);
       };
@@ -506,7 +505,7 @@ testApp.directive("reqmgrName", function($http){
         scope.getrqmnr_data(req_name, index);
       };
       scope.getrqmnr_data = function(req_name, index){
-        scope.links[index] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+req_name+".gif";
+        scope.links[req_name] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+req_name+".gif";
         getfrom='/stats/restapi/get_one/'+req_name;
         $http({method:'GET', url: getfrom}).success(function(data,status){
           scope.stats_cache[req_name] = data;

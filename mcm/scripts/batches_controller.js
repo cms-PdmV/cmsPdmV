@@ -281,7 +281,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	  });
   };
 
-  $scope.preloadRequest = function (chain, load_single) {
+  $scope.preloadRequest = function (chain, load_single, number) {
     var url = "restapi/requests/get/"+chain;
     if ( !_.has($scope.local_requests,chain) ){
       var promise = $http.get(url);
@@ -290,22 +290,21 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.local_requests[chain] = local_data;
         if (load_single != "")
         {
-          _.each($scope.local_requests[chain],function(element, index){
-            $scope.$broadcast('loadDataSet', [element.name, index, load_single]);
+          _.each($scope.local_requests[chain], function (element) {
+            $scope.$broadcast('loadDataSet', [element.name, number, load_single]);
           });
         }
       },function(data){
-        console.log("error",data);
+        alert("error " + data.results);
       });
     }  
   };
 
   $scope.broadcast_inspect = function (requests_data, column_id) {
-    //$scope.loadStats(requests_data);
     _.each(requests_data, function (element, index){
       if ($scope.r_status[element.content.pdmv_prep_id] == "submitted")
       {
-        $scope.preloadRequest(element.content.pdmv_prep_id, column_id);
+        $scope.preloadRequest(element.content.pdmv_prep_id, column_id, index);
       }
     });
   };
