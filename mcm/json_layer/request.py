@@ -607,7 +607,10 @@ class request(json_base):
         makeRel += 'eval `scram runtime -sh`\n' ## setup the cmssw
         return makeRel
 
-    def get_setup_file(self,directory='',events=None):
+    def get_setup_file(self,directory='',events=None, run=False, do_valid=False):
+        #run is for adding cmsRun
+        #do_valid id for adding the file upload
+
         l_type = locator()
         infile = ''
         infile += '#!/bin/bash\n'
@@ -639,10 +642,9 @@ class request(json_base):
         cmsd_list = ''
 
         configuration_names = []
-        if events:
-            run = True
-        else:
-            run= False
+        if events is None:
+            events = self.get_n_for_test( self.target_for_test() )
+
 
         for cmsd in self.build_cmsDrivers():
 
@@ -676,16 +678,11 @@ class request(json_base):
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
+
+            res += '-n '+str(events)+ ' || exit $? ; \n'
             if run:
-                ## with a back port of number_out that would be much better
-                res += '-n '+str(events)+ ' '
-
-
-                res += ' || exit $? ; \n'
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
 
-            else:
-                res += '-n %s || exit $? ; \n' % self.get_n_for_test()
 
             #try create a flash runtest
             if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id')>0:
@@ -725,7 +722,7 @@ done
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
-        if run and self.genvalid_driver:
+        if run and do_valid and self.genvalid_driver:
             infile += self.harverting_upload
 
         infile += 'cd ../../\n'
@@ -758,7 +755,7 @@ done
             yes_to_valid=False
 
         ##get the campaign enalbing/disabling
-        #cdb = database('campaigns')
+        #cdb = database('campaigns', cache=True)
         #mcm_c = cdb.get( self.get_attribute('member_of_campaign'))
         #c_val_attributes = mcm_c['validation']
         ### then do something with that object, once it will be an object
@@ -775,6 +772,8 @@ done
         firstStep = firstSequence['step'][0]
 
         dump_python=''
+        genvalid_request = request( self.json() )
+
         if firstStep == 'GEN':
             gen_valid = settings().get_value('gen_valid')
             if not gen_valid:
@@ -790,7 +789,6 @@ done
 
         elif firstStep in ['LHE','NONE']:
             cmsd_list += '\n\n'
-            genvalid_request = request( self.json() )
             valid_sequence = sequence( firstSequence )
             ## when integrated properly
             if firstStep=='LHE':
@@ -1216,10 +1214,11 @@ done
         return target
 
     def get_n_for_valid(self):
-        n_to_valid=1000 #get it differently than that
+        n_to_valid = settings().get_value('min_n_to_valid')
         val_attributes = self.get_attribute('validation')
         if 'nEvents' in val_attributes:
-            n_to_valid=val_attributes['nEvents']
+            if val_attributes['nEvents'] > n_to_valid:
+                n_to_valid=val_attributes['nEvents']
 
         return self.get_n_unfold_efficiency(n_to_valid)
 

@@ -200,9 +200,8 @@ class RuntestGenvalid(Handler):
                 time.sleep( 10 )
                 mcm_r = request(self.db.get(self.rid))
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                n_for_test = mcm_r.get_n_for_test(target= mcm_r.target_for_test() )
                 ## the following does change something on the request object, to be propagated in case of success
-                there.write( mcm_r.get_setup_file( location.location() , n_for_test) )
+                there.write( mcm_r.get_setup_file( location.location() , run=True, do_valid=True) )
             batch_test = batch_control( self.rid, test_script )
             try:
                 success = batch_test.test()

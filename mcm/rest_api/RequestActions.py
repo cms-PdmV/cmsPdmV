@@ -526,8 +526,13 @@ class GetFragmentForRequest(RESTResource):
 
 
 class GetSetupForRequest(RESTResource):
-    def __init__(self):
+    def __init__(self, mode='setup'):
         self.db_name = 'requests'
+        self.opt = mode
+        if self.opt not in ['setup','test','valid']:
+            raise Exception("Cannot create this resource with mode %s"% self.opt)
+        if self.opt=='valid':
+            self.access_limit = 4
 
     def GET(self, *args):
         """
@@ -540,31 +545,25 @@ class GetSetupForRequest(RESTResource):
         n = None
         if len(args) > 1:
             n = int(args[1])
+
+        run=False
+        do_valid=False
+        if self.opt=='test' or self.opt=='valid':
+            run=True
+        if self.opt=='valid':
+            do_valid=True
+
         db = database(self.db_name)
         if db.document_exists(pid):
             try:
                 mcm_req = request(db.get(pid))
             except request.IllegalAttributeName:
                 return dumps({"results": False})
-            if n ==0:
-                n = mcm_req.get_n_for_test(target=100.0)
-            setupText = mcm_req.get_setup_file(events=n)
+            setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=n)
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return setupText
         else:
             return dumps({"results": False, "message": "%s does not exist" % pid})
-
-    """
-    def get_fragment(self, data):
-    try:
-    mcm_req = request(json_input=data)
-    except request.IllegalAttributeName as ex:
-    return dumps({"results":False})
-    
-    setupText = mcm_req.get_setup_file()
-    return setupText
-    """
-
 
 class DeleteRequest(RESTResource):
     def __init__(self):
