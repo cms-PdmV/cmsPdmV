@@ -682,7 +682,10 @@ class request(json_base):
             res += '-n '+str(events)+ ' || exit $? ; \n'
             if run:
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
-
+                res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                res += 'grep "PeakValueRss" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                
 
             #try create a flash runtest
             if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id')>0:
@@ -826,6 +829,7 @@ done
             if run:
                 self.genvalid_driver += 'cmsRun -e -j %s%s_gv.xml %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
                                                                                                directory)
+                self.genvalid_driver += 'grep "TotalEvents" %s%s_gv.xml \n'%(directory, self.get_attribute('prepid'))
                 ## put back the perf report to McM ! wil modify the request object while operating on it.
                 # and therefore the saving of the request will fail ...
                 #self.genvalid_driver += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/eff -H "Content-Type: application/xml" -X PUT --data "@%s%s_gv.xml" \n' %(self.get_attribute('prepid'), directory, self.get_attribute('prepid'))
