@@ -8,6 +8,7 @@ from json_layer.batch import batch
 from json_layer.request import request
 from tools.locker import semaphore_events
 from tools.settings import settings
+from tools.locator import locator
 
 """
 class SetStatus(RESTResource):
@@ -269,3 +270,40 @@ class HoldBatch(RESTResource):
             bdb.update( mcm_b.json())
             res.append({'prepid':bid, 'results': True})
         return dumps(res)
+
+class NotifyBatch(RESTResource):
+    def __init__(self):
+        self.access_limit = 1
+        self.bdb = database('batches')
+
+    def PUT(self):
+        data = loads(cherrypy.request.body.read().strip())
+        if not 'prepid' in data or not 'notes' in data:
+            raise ValueError('no prepid nor notes in batch announcement api')
+        bid=data['prepid']
+        if not self.bdb.document_exists(bid):
+            return dumps({"results":False, "message": "%s is not a valid batch name"% bid})
+        return dumps(self.notify_batch(bid, data['notes'] ))
+
+    def notify_batch(self, batch_id, message_notes):
+        message = message_notes
+        to_who = [settings().get_value('service_account')]
+        l_type = locator()
+        if l_type.isDev():
+            to_who.append( settings().get_value('hypernews_test'))
+        else:
+            to_who.append( settings().get_value('dataops_announce' ))
+
+        single_batch = batch(self.bdb.get(batch_id))
+        subject = single_batch.get_subject('[Notification]')
+        current_message_id = single_batch.get_attribute('message_id')
+
+        self.logger.log('current msgID: %s' %current_message_id)
+        if current_message_id != '':
+            result = single_batch.notify(subject,message,who=to_who,sender=None,reply_msg_ID=current_message_id)
+            self.logger.log('result if True : %s' %result)
+        else:
+            result = single_batch.notify(subject,message,who=to_who,sender=None)
+            self.logger.log('result if False : %s' %result)
+
+        return dumps({'results':result})

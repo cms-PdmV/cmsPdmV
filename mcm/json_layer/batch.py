@@ -17,6 +17,7 @@ class batch(json_base):
             'requests':[],
             'extension':0,
             'process_string':'',
+            'message_id':'',
             'version':0
             }
         self.setup()
@@ -36,6 +37,20 @@ class batch(json_base):
         b_notes+=notes
         self.set_attribute('notes',b_notes)
 
+    def get_subject(self, added=""):
+        (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
+        subject="New %s production, batch %d"%(campaign,int(batchNumber))
+
+        if self.get_attribute('version'):
+            subject+=', Resubmission'
+        if self.get_attribute('extension'):
+            subject+=', Extension'
+        if self.get_attribute('process_string'):
+            subject+=', (%s)' % (self.get_attribute('process_string'))
+        if added:
+            subject+=" "+added
+
+        return subject
     def announce(self,notes="",user=""):
         if self.get_attribute('status')!='new':
             return False
@@ -56,14 +71,8 @@ class batch(json_base):
 
         ## prepare the announcing message
         (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
-        subject="New %s production, batch %d"%(campaign,int(batchNumber))
 
-        if self.get_attribute('version'):
-            subject+=', Resubmission'
-        if self.get_attribute('extension'):
-            subject+=', Extension'
-        if self.get_attribute('process_string'):
-            subject+=', (%s)' % (self.get_attribute('process_string'))
+        subject=self.get_subject()
 
         message=""
         message+="Dear Data Operation Team,\n\n"
@@ -102,10 +111,14 @@ class batch(json_base):
         #if self.current_user_level != 3:
         #    auth = authenticator()
         #    sender = auth.get_random_product_manager_email()
-        self.notify(subject,
-                    message,
-                    who=to_who)#,
-                    #sender=sender)
+        
+        #current_message_id = self.get_attribute('message_id')
+        returned_id = self.notify(subject,
+                                  message,
+                                  who=to_who)#,
+                                 #sender=sender)
+        self.set_attribute('message_id', returned_id)
+        self.reload('batches')
 
         ## toggle the status
         ### only when we are sure it functions self.set_status()

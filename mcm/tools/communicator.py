@@ -3,6 +3,7 @@ import os
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
+from email.utils import make_msgid
 from tools.locator import locator
 
 
@@ -14,7 +15,8 @@ class communicator:
                  destination,
                  subject,
                  text,
-                 sender=None):
+                 sender=None,
+                 reply_msg_ID=None):
 
         if not isinstance(destination, list):
             print "Cannot send email. destination should be a list of strings"
@@ -25,6 +27,12 @@ class communicator:
         msg['From'] = sender if sender else 'pdmvserv@cern.ch'
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
+        new_msg_ID = make_msgid()
+        msg['Message-ID'] = new_msg_ID
+        
+        if reply_msg_ID != None:
+            msg['In-Reply-To'] = reply_msg_ID
+            msg['References'] = reply_msg_ID
 
         ## add a mark on the subjcet automatically
         if locator().isDev():
@@ -42,6 +50,7 @@ class communicator:
             smtpObj.connect()
             smtpObj.sendmail(sender, destination, msg.as_string())
             smtpObj.quit()
+            return new_msg_ID
         except Exception as e:
             print "Error: unable to send email", e.__class__
 

@@ -91,18 +91,21 @@
                   <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
                     <i class="icon-envelope"></i>
                   </a>
+                  <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="role(1) || !data.message_id || data.status != 'announced'" ng-href="#">
+                    <i class="icon-volume-up"></i>
+                  </a>
                   <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
                     <div class="modal-header">
                       <h4>Announce batch: {{data.prepid}}</h4>
                     </div>  <!--end of modal header-->
-                  <div class="modal-body">
-                    Aditional notes:
-                    <textarea ng-model="mailContent"></textarea>
-                  </div> <!--end of modal body-->
-                  <div class="modal-footer">
-                    <button class="btn btn-success" ng-click="save()">Announce</button>
-                    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                  </div> <!--end of modal footer-->
+                    <div class="modal-body">
+                      Aditional notes:
+                      <textarea ng-model="mailContent"></textarea>
+                    </div> <!--end of modal body-->
+                    <div class="modal-footer">
+                      <button class="btn btn-success" ng-click="save()">Announce</button>
+                      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                    </div> <!--end of modal footer-->
                   </div>
                   <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
                   <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
@@ -163,6 +166,21 @@
       </div> <!--end of modal footer-->
     </div>
     <!-- END of isSure MODAL-->
+    <!-- Notify modal -->
+    <div modal="notifyModal" close="closeNotifyModal()"> <!--hidden modal template-->
+      <div class="modal-header">
+        <h4>Notify batch: {{notify_prepid}}</h4>
+      </div>  <!--end of modal header-->
+      <div class="modal-body">
+        Aditional notes:
+        <textarea ng-model="notifyMailContent"></textarea>
+      </div> <!--end of modal body-->
+      <div class="modal-footer">
+        <button class="btn btn-success" ng-click="notifyBatch()">Notify</button>
+        <button class="btn btn-warning cancel" ng-click="closeNotifyModal()">Cancel</button>
+      </div> <!--end of modal footer-->
+    </div>
+    <!--  END of notify MODAL -->
     <div class="row-fluid">
       <div class="span5" style="margin-top:20px;">
       </div>

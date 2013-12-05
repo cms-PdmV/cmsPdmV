@@ -310,7 +310,8 @@ class json_base:
                service=True,
                HN=False,
                sender = None,
-               Nchild=-1):
+               Nchild=-1,
+               reply_msg_ID=None):
 
         dest = map(lambda i: i, who)
         if actors:
@@ -332,11 +333,11 @@ class json_base:
 
         sender = sender if sender else self.current_user_email
         self.logger.log('Notification %s from %s send to %s' % (subject, sender,', '.join(dest)))
-        self.com.sendMail(dest,
+        return self.com.sendMail(dest,
                           subject,
                           message,
-                          sender
-        )
+                          sender,
+                          reply_msg_ID)
 
 
 class submission_details(json_base):

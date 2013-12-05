@@ -323,6 +323,36 @@ function resultsCtrl($scope, $http, $location, $window){
       return "";
     }
   };
+    /*Is Sure modal actions*/
+  $scope.openNotifyModal = function (prepid)
+  {
+    $scope.notifyModal = true;
+    $scope.notify_prepid = prepid;
+  };
+  $scope.closeNotifyModal = function ()
+  {
+    $scope.notifyModal = false;
+    $scope.notifyMailContent = "";
+  };
+  $scope.notifyBatch = function ()
+  {
+    $scope.shouldBeOpen = false;
+    $http({method: 'PUT', url:'restapi/batches/notify', data:{prepid: $scope.notify_prepid, notes: $scope.notifyMailContent}}).success(function(data, status){
+      $scope.update["success"] = true;
+      $scope.update["fail"] = false;
+      $scope.update["results"] = data.results;
+      $scope.update["status_code"] = status;
+      //$scope.getData();
+      //   $window.location.href ="edit?db_name=requests&query="+data.results;
+    }).error(function(data,status){
+      alert("Error:"+ status);
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
+    $scope.notifyModal = false;
+    $scope.mailContent = "";
+  };
 };
 
 var ModalDemoCtrl = function ($scope, $http, $window) {
