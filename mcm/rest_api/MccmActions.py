@@ -3,7 +3,12 @@ from json import dumps, loads
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from tools.locker import locker
+from tools.locator import locator
+from tools.communicator import communicator
+from tools.settings import settings
+
 import cherrypy
+
 
 class GetMccm(RESTResource):
 
@@ -25,6 +30,8 @@ class GetMccm(RESTResource):
         return dumps({"results": mccm_doc})
 
 class UpdateMccm(RESTResource):
+    def __init__(self):
+        self.access_limit = 1
 
     def PUT(self):
         """
@@ -76,6 +83,8 @@ class UpdateMccm(RESTResource):
 
 
 class CreateMccm(RESTResource):
+    def __init__(self):
+        self.access_limit = 1
 
     def PUT(self):
         """
@@ -208,3 +217,51 @@ class GenerateChains(RESTResource):
         return {"prepid":mid,
                 "results" : True,
                 "message" : res}
+
+class MccMReminder(RESTResource):
+    def __init__(self):
+        self.access_limit = 4
+
+    def GET(self, *args):
+        """
+        Send a reminder to the production managers for existing opened mccm documents
+        """
+        mdb = database('mccms')
+        mccms = mdb.queries(['status==new'])
+        udb = database('users')
+        
+        block_threshold = 0
+        if len(args):
+            block_threshold = int(args[0])
+
+        mccms = filter( lambda m : m['block'] <= block_threshold, mccms)
+        mccms = sorted( mccms, key = lambda m : m['block'])
+        if len(mccms)==0:
+            return dumps({"results": True,"message": "nothing to remind of at level %s, %s"% (block_threshold, mccms)})
+
+        l_type = locator()
+        com = communicator()
+
+        subject = 'Gentle reminder on tickets to be operated by you'
+        message = '''\
+Dear Production Managers,
+ please find below the details of %s opened MccM tickets that need to be operated.
+
+''' % (len(mccms))
+        
+        for mccm in mccms:
+            message += 'Ticket : %s (block %s)\n'%( mccm['prepid'], mccm['block'] )
+            message += ' %smccms?prepid=%s \n\n' % (l_type.baseurl(), mccm['prepid'])
+
+        message += '\n'
+
+        to_who = [settings().get_value('service_account')]
+        to_who.extend( map( lambda u : u['email'], udb.query(query="role==production_manager", page_num=-1)))
+
+        com.sendMail(to_who,
+                     subject,
+                     message)
+        
+        return dumps({"results" : True, "message" : map( lambda m : m['prepid'], mccms)})
+    
+

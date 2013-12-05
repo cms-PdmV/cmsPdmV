@@ -19,7 +19,7 @@ from rest_api.BatchActions import HoldBatch, SaveBatch, GetBatch, GetAllBatches,
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 
@@ -353,6 +353,7 @@ root.restapi.mccms.save = CreateMccm()
 root.restapi.mccms.delete = DeleteMccm()
 root.restapi.mccms.editable = GetEditableMccmFields()
 root.restapi.mccms.generate = GenerateChains()
+root.restapi.mccms.reminder = MccMReminder()
 
 # REST settings Actions
 
