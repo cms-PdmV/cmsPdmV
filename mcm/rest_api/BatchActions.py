@@ -62,6 +62,21 @@ class SaveBatch(RESTResource):
         
         bdb.save( mcm_b.json() )
 
+class UpdateBatch(RESTResource):
+    def __init__(self):
+        self.access_limit = 3
+
+    def PUT(self):
+        """
+        Update the content of a batch given the json content
+        """
+        bdb = database('batches')
+        data = loads(cherrypy.request.body.read().strip())
+      
+        mcm_b = batch( data )
+        
+        bdb.update( mcm_b.json() )
+
 
 class GetBatch(RESTResource):
     def __init__(self):
