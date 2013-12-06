@@ -199,9 +199,21 @@ class GenerateChains(RESTResource):
         aids = []
         for r in mcm_m.get_attribute('requests'):
             if type(r)==list:
-                return {"prepid":mid,
-                        "results" : False,
-                        "message" : "range of id not supported yet"}
+                if len(r) >2:
+                    return {"prepid":mid,
+                            "results" : False,
+                            "message" : "range of id too large"}
+
+                (pwg1, campaign1, serial1) = r[0].split('-')
+                (pwg2, campaign2, serial2) = r[1].split('-')
+                serial1=int(serial1)
+                serial2=int(serial2)
+                if pwg1!=pwg2 or campaign1!=campaign2:
+                    return {"prepid":mid,
+                            "results" : False,
+                            "message" : "inconsistent range of ids %s -> %s" %(r[0],r[1])}
+                
+                aids.extend( map( lambda s : "%s-%s-%05d"%( pwg1, campaign1, s), range( serial1, serial2+1)))
             else:
                 aids.append( r )
 
