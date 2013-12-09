@@ -24,8 +24,10 @@ class locator:
     def dbLocation(self):
         if self.isDev():
             return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
+            #return 'http://188.184.20.242:5984/'
         else:
             return 'http://cms-pdmv-mcm-db:5984/'
+            #return 'http://188.184.23.164:5984/'
     def workLocation(self):
         if self.isDev():
             return '/afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/'
