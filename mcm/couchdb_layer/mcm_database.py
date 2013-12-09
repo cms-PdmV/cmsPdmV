@@ -9,6 +9,7 @@ import os
 import copy
 import ast
 from tools.locator import locator
+from collections import defaultdict
 
 class database:
     logger = logfactory("mcm")
@@ -55,15 +56,22 @@ class database:
             self.param = str(param)
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
-            
-    def __init__(self,  db_name='',url=None):
+
+    cache_dictionary = defaultdict(lambda: None)
+
+    def __init__(self,  db_name='',url=None, cache=False):
         host = os.environ['HOSTNAME'] 
         if url == None:
             url =locator().dbLocation()
         #self.logger.log('I chose the url %s'%(url))
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
-        self.db_name = db_name 
+        self.db_name = db_name
+        self.cache = cache
+        if self.db_name in ['campaigns','chained_campaigns']:
+            ## force cache for those.
+            self.cache=True
+
         try:    
             self.db = Database(db_name, url=url)
             #            self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
@@ -81,13 +89,30 @@ class database:
             return False
        
     def get(self,  prepid=''):
+        if self.cache:
+            result = self.__get_from_cache(prepid)
+            if result: return result
+
         self.logger.log('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
         try:
-            return self.db.document(id=prepid)
+            doc = self.db.document(id=prepid)
+            if self.cache:
+                self.__save_to_cache( prepid, doc)
+            return doc
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return {}
-    
+
+    def __save_to_cache(self, key, value):
+        from tools.locker import locker
+        with locker.lock(key):
+            self.cache_dictionary[key]=value
+
+    def __get_from_cache(self, key):
+        from tools.locker import locker
+        with locker.lock(key):
+            return self.cache_dictionary[key]
+
     def __document_exists(self,  doc):
         if not doc:
             self.logger.error('Trying to locate empty string.', level='warning')
@@ -112,7 +137,7 @@ class database:
     
     def __id_exists(self,  prepid=''):
         try:
-            if self.db.documentExists(id=prepid):
+            if self.cache and self.__get_from_cache(prepid) or self.db.documentExists(id=prepid):
                 return True
             self.logger.error('Document "%s" does not exist.' % (prepid))
             return False  
@@ -133,6 +158,9 @@ class database:
         self.logger.log('Trying to delete document "%s"...' % (prepid))
         try:
             self.db.delete_doc(id=prepid)
+            if self.cache:
+                self.__save_to_cache(prepid, None)
+
             return True
         except Exception as ex:
             self.logger.error('Could not delete document: %s . Reason: %s ' % (prepid, ex))
@@ -142,6 +170,10 @@ class database:
         if '_id' in doc:
             self.logger.log('Updating document "%s" in "%s"' % (doc['_id'],self.db_name))
         if self.__document_exists(doc):
+            if self.cache:
+                ##JR the revision in the cache is not the one in the DB at this point
+                # will be retaken at next get
+                self.__save_to_cache(doc['_id'], None)
             return self.save(doc)
         self.logger.error('Failed to update document: %s' % (json.dumps(doc)))         
         return False
@@ -468,7 +500,7 @@ class database:
 #   obs.append(ob)
 #print 'requests:', db.save_all(obs)
 
-#db = database('campaigns')
+#db = database('campaigns', cache=True)
 #f = open('up_prepdb_json/campaigns', 'r')
 #lines = f.readlines()
 #f.close()
