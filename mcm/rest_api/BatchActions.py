@@ -325,4 +325,7 @@ class NotifyBatch(RESTResource):
             result = single_batch.notify(subject,message,who=to_who,sender=None)
             self.logger.log('result if False : %s' %result)
 
+        self.update_history({'action':'notify', 'step' : message})
+        self.reload()
+
         return dumps({'results':result})
