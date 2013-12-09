@@ -78,12 +78,16 @@ class json_base:
                 #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
 
 
-    def reload(self, db_name):
+    def reload(self):
         """
         Updates or creates document in database with name db_name
         and reloads the object with info from database (new revision)
         """
-        db = database(db_name)
+        try:
+            db = database(self.__class__.__name__ + "s")
+        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
+            self.logger.error("Problem with database creation:\n{0}".format(ex))
+            return False
         with locker.lock(self.get_attribute('_id')):
             if not db.document_exists(self.get_attribute('_id')):
                 saved = db.save(self.json())

@@ -118,7 +118,7 @@ class batch(json_base):
                                   who=to_who)#,
                                  #sender=sender)
         self.set_attribute('message_id', returned_id)
-        self.reload('batches')
+        self.reload()
 
         ## toggle the status
         ### only when we are sure it functions self.set_status()
