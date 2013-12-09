@@ -687,6 +687,7 @@ class request(json_base):
             res += '-n '+str(events)+ ' || exit $? ; \n'
             if run:
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
+                res += 'grep "TotalEvents" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "PeakValueRss" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
