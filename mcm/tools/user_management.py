@@ -10,8 +10,12 @@ class user_pack:
     """
     Class used for transmission between user representation in requests and packed user representation
     """
-    def __init__(self):
+    def __init__(self,db=False):
         self.user_dict = user_pack.get_request_header_dictionary()
+        if db:
+            udb = database('users')
+            u = udb.get( self.get_username())
+            self.user_dict['email'] = u['email']
 
     @staticmethod
     def get_request_header_dictionary():
