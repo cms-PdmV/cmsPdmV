@@ -65,7 +65,7 @@ class ssh_executor:
             data = f.readlines()
             f.close()
         except IOError as ex:
-            self.logger.inject('Could not access credential file. IOError: %s' % (ex), level='error', handler=self.hname)
+            self.logger.error('Could not access credential file. IOError: %s' % (ex), level='error')
             return None,  None
         
         username,  password = None,  None
