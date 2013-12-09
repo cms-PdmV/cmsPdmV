@@ -249,8 +249,12 @@ class ResetBatch(BatchAnnouncer):
                 if not rdb.document_exists( rid ):
                     continue
                 mcm_r = request( rdb.get( rid ) )
-                mcm_r.reset()
-                rdb.update( mcm_r.json() )
+                try:
+                    mcm_r.reset()
+                    rdb.update( mcm_r.json() )
+                except Exception as ex:
+                    continue
+
             mcm_b['status'] = 'reset'
             bdb.update( mcm_b )
             res.append({'prepid':bid, 'results': True})
