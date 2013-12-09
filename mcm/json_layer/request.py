@@ -1454,6 +1454,17 @@ done
         if self.current_user_level == 1 and not self.get_attribute('status') in ['validation','defined', 'new']:
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'You have not enough karma to reset the request')
 
+        chains = self.get_attribute('member_of_chain')
+        from json_layer.chained_request import chained_request
+        crdb= database('chained_requests')
+        for chain in chains:
+            cr = chained_request( crdb.get(chain))
+            if cr.get_attribute('chain').index( self.get_attribute('prepid')) < cr.get_attribute('step'):
+                ## cannot reset a request that is part of a further on-going chain
+                raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'The request is part of a chain (%s) that is currently processing another request (%s)' %( chain, cr.get_attribute('chain')[cr.get_attribute('step')]))
+            
+
+
         self.approve(0)
         ## make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
