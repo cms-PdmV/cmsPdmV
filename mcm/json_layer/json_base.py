@@ -106,7 +106,10 @@ class json_base:
             for key in self._json_base__schema:
                 if key in json_input:
                     try:
-                        self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
+                        if type(self._json_base__schema[key]) is int:
+                            self._json_base__json[key] = int(float(json_input[key]))
+                        else:
+                            self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
                     except:
                         self._json_base__json[key] = json_input[key]
                 else:
