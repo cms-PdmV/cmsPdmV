@@ -131,7 +131,7 @@ class json_base:
         #    self.set_attribute('version', int(self.get_attribute('version')) + 1)
 
     def __get_submission_details(self):
-        user_p = user_pack()
+        user_p = user_pack(db=True)
         if user_p.get_username() and user_p.get_fullname() and user_p.get_email():
             return submission_details().build(user_p.get_username(), user_p.get_fullname(), user_p.get_email())
         return submission_details().build('automatic')
