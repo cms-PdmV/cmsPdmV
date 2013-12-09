@@ -484,13 +484,18 @@ class request(json_base):
           if sequenceindex==0:
               #command +=' --filein "dbs:%s" '%(self.get_attribute('input_filename'))
               command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_filename'))
-              command +='--fileout file:step%d.root '%(sequenceindex+1)
           else:
               command+='--filein file:step%d.root '%(sequenceindex)
-              command +='--fileout file:step%d.root '%(sequenceindex+1)
 
       elif self.get_attribute('mcdb_id')>0:
           command +='--filein lhe:%d '%(self.get_attribute('mcdb_id'))
+
+      if sequenceindex == len(self.get_attribute('sequences'))-1:
+          ## last one
+          command +='--fileout file:%s.root '%(self.get_attribute('prepid'))
+      else:
+          command +='--fileout file:step%d.root '%(sequenceindex+1)
+
 
       ##JR
       if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
