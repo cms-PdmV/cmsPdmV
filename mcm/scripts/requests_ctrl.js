@@ -297,11 +297,11 @@ function resultsCtrl($scope, $http, $location, $window){
   }
   }
   $scope.getData = function(){
-    if($scope.file_was_uploaded)
-   {
-     $scope.upload($scope.uploaded_file);
-   }
-    else if($location.search()['range']!=undefined)
+    if ($scope.file_was_uploaded)
+    {
+      $scope.upload($scope.uploaded_file);
+    }
+    else if ($location.search()['range']!=undefined)
     {
       var tmp = $location.search()['range'].split(";");
       var imaginary_file = [];
@@ -317,33 +317,37 @@ function resultsCtrl($scope, $http, $location, $window){
       });
       $scope.upload({contents: imaginary_file.join("\n")});
       $scope.file_was_uploaded = false
-    }
-    else if($location.url().indexOf("*")!=-1)
+    } else if ($location.url().indexOf("*")!=-1)
     {
       $scope.superSearch();
+    }else
+    {
+      var query = ""
+      _.each($location.search(), function(value,key){
+        if (key!= 'shown' && key != 'fields'){
+          query += "&"+key+"="+value;
+        }
+      });
+      $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      if ($location.search()['allRevisions'])
+      {
+        $scope.requests_defaults.splice(1, 1, {text:'Revision', select:true, db_name:'_rev'});
+        var promise = $http.get("restapi/"+$scope.dbName+"/all_revs/"+$location.search()['prepid']);
+      }else{
+        var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      }
+      promise.then(function(data){
+        $scope.result = data.data.results;
+        $scope.got_results = true;
+        if ($scope.result === undefined ){
+          alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
+          return; //stop doing anything if results are undefined
+        }
+        $scope.parseColumns();
+      },function(){
+        alert("Error getting information");
+      });
     }
-   else
-   {
-    var query = ""
-    _.each($location.search(), function(value,key){
-      if (key!= 'shown' && key != 'fields'){
-        query += "&"+key+"="+value;
-      }
-    });
-    $scope.got_results = false; //to display/hide the 'found n results' while reloading
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
-    promise.then(function(data){
-      $scope.result = data.data.results;
-      $scope.got_results = true;
-      if ($scope.result === undefined ){
-        alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
-        return; //stop doing anything if results are undefined
-      }
-      $scope.parseColumns();
-    },function(){
-      alert("Error getting information");
-    });
-   }
   };
 
   $scope.$watch('list_page', function(){
