@@ -14,11 +14,9 @@ class request_to_wmcontrol:
         ##JR in order to inject into the testbed instead of the production machine
         l_type = locator()
         if to_execute!=False:
-            # crab setup
-            command += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
-            # certificate
-            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem 2> /dev/null\n'
-            command +=  mcm_r.make_release()
+            # set path to proxy certificate
+            command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert'
+            command += mcm_r.make_release()
             #command += 'eval `scram runtime -sh`\n'
             command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
 
