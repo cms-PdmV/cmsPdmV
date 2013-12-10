@@ -13,9 +13,11 @@ class user_pack:
     def __init__(self,db=False):
         self.user_dict = user_pack.get_request_header_dictionary()
         if db:
-            udb = database('users')
-            u = udb.get( self.get_username())
-            self.user_dict['email'] = u['email']
+            if  self.get_username():
+                ## the user name could be not provided in case of public/ apis
+                udb = database('users')
+                u = udb.get( self.get_username())
+                self.user_dict['email'] = u['email']
 
     @staticmethod
     def get_request_header_dictionary():
