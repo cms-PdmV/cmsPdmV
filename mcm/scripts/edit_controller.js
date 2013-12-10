@@ -180,7 +180,7 @@ function resultsCtrl($scope, $http, $location, $window){
           });
           break;
           case "settings":
-              $scope.result["value"] = parseSettingValue($scope.result["value"]);
+              $scope.result["value"] = parseSettingValue(""+$scope.result["value"]);
               break;
         default:
           break;
