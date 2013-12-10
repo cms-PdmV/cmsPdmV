@@ -975,7 +975,7 @@ done
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS',
                                                  'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
                                                  'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
-                                                 'pdmv_submission_time']
+                                                 'pdmv_submission_time','pdmv_type']
         mcm_rr=self.get_attribute('reqmgr_name')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
 
@@ -1128,7 +1128,12 @@ done
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database( 'requests')
         if len(mcm_rr):
-            wma_r = mcm_rr[-1]
+            wma_r = mcm_rr[-1] 
+            ## pick up the last request of type!='Resubmission'
+            #for wma in  mcm_rr :
+            #    if 'pdmv_type' in wma and wma['pdmv_type']!='Resubmission':
+            #        wma_r = wma
+
             wma_r_N = mcm_rr[-1] # so that we can decouple the two
             if ('pdmv_status_in_DAS' in wma_r['content'] and 'pdmv_status_from_reqmngr' in wma_r['content']):
                 if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content']['pdmv_status_from_reqmngr'] in ['announced','normal-archived']:
