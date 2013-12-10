@@ -1345,6 +1345,9 @@ done
             if geninfo and geninfo[to_be_changed] and efficiency:
                 if (geninfo[to_be_changed+'_error'] / geninfo[to_be_changed] ) > (efficiency_error/ efficiency):
                     do_update=True
+                if (efficiency!=1 and geninfo[to_be_changed]==1) or (efficiency==1 and  geninfo[to_be_changed]!=1):
+                    raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
+
             if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
                 self.update_generator_parameters()
