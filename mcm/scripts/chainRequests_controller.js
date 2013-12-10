@@ -289,14 +289,28 @@ function resultsCtrl($scope, $http, $location, $window){
           _.each(data.data.results, function(elem){
             list_of_chain = _.union(list_of_chain, elem.member_of_chain); //parse it and make a list of unique chained requests
           });
-          var promise2 = $http.get("restapi/"+$scope.dbName+"/get/"+list_of_chain.join(",")); //we get chained requests as ussual
-          promise2.then(function(data){
+          if (list_of_chain.length > 0)
+          {
+            var promise2 = $http.get("restapi/"+$scope.dbName+"/get/"+list_of_chain.join(",")); //we get chained requests as ussual
+            promise2.then(function(data){
+              $scope.got_results = true;
+              if (_.isArray(data.data.results)) {
+                $scope.result = data.data.results;
+              }else
+              {
+                console.log(data);
+                $scope.result = [data.data.results];
+                console.log($scope.result);
+              }
+              $scope.parseColumns();
+            },function(){
+               alert("Error getting information");
+            });
+          }else
+          {
+            $scope.result = [];
             $scope.got_results = true;
-            $scope.result = data.data.results;
-            $scope.parseColumns();
-          },function(){
-             alert("Error getting information");
-          });
+          }
         }else{
           $scope.result = [];
           $scope.got_results = true;
