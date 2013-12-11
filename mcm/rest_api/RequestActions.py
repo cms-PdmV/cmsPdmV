@@ -1454,8 +1454,11 @@ class RequestsReminder(RESTResource):
                             message += '\nto %s' %( mcm_u['email'] )
                         else:
                             to_who.append( mcm_u['email'] )
+                        name=contact
+                        if mcm_u['fullname']:
+                            name=mcm_u['fullname']
                         com.sendMail(to_who,
-                                     'Gentle reminder on requests to be looked at by %s'% contact,
+                                     'Gentle reminder on requests to be looked at by %s'% name,
                                      message
                                      )
                 res = map (lambda i : {"results": True, "prepid": i}, all_ids)
