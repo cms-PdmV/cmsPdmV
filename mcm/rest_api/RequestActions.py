@@ -1382,6 +1382,7 @@ class RequestsReminder(RESTResource):
 
         udb = database('users')
         rdb = database('requests')
+        crdb = database('chained_requests')
 
         #all_requests = rdb.queries([])
         # a dictionary  campaign : [ids]
@@ -1479,7 +1480,17 @@ class RequestsReminder(RESTResource):
                 rid = mcm_r['prepid']
                 if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
                 fw = mcm_r['flown_with']
-                if not fw : continue # to get a remind only on request that have been flown
+                # to get a remind only on request that have been flown
+                if not fw : continue 
+                # to get a remind only on request that are being necessary to move forward : being the request being processed
+                on_going=False
+                for in_chain in mcm_r.get_attribute('chain'):
+                    mcm_cr = chained_request( crdb.get( in_chain ) )
+                    if mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step')] == rid:
+                        on_going=True
+                        break
+                if not on_going: continue
+
                 all_involved = request(mcm_r).get_actors()
                 for contact in all_involved:
                     if not contact in ids_for_users:
