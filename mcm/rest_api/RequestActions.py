@@ -866,11 +866,57 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
+        from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
+        a = []
+        for i in range(400):
+            a.append(ChainedRequestPrepId().next_id("HIG", "chain_Summer12_flowGS2DR53RD"))
+        return dumps(a)
 
-        for i in range(0,10000000):
-            self.counter+=1
+        #rdb = database('requests')
+        #
+        #mcm_r = request( rdb.get(args[0]))
+        #
+        #def get_procString( mcm_r ):
+        #    proc= ""
+        #    if mcm_r.get_attribute('process_string') :
+        #        proc="_%s"%mcm_r.get_attribute('process_string')
+        #    ext=""
+        #    if mcm_r.get_attribute('extension'):
+        #        ext="_ext%s"%mcm_r.get_attribute('extension')
+        #
+        #def get_outputs( mcm_r):
+        #    outs=[]
+        #    keeps = mcm_r.get_attribute('keep_output')
+        #    proc= ""
+        #    if mcm_r.get_attribute('process_string') :
+        #        proc="_%s"%mcm_r.get_attribute('process_string')
+        #    ext=""
+        #    if mcm_r.get_attribute('extension'):
+        #        ext="_ext%s"%mcm_r.get_attribute('extension')
+        #    camp = mcm_r.get_attribute('member_of_campaign')
+        #    dsn = mcm_r.get_attribute('dataset_name')
+        #    v = mcm_r.get_attribute('version')
+        #
+        #    for (i,s) in enumerate( mcm_r.get_attribute('sequences')):
+        #        if not keeps[i]: continue
+        #        gt = s['conditions'].replace('::All','')
+        #        tiers = s['datatier']
+        #        for t in tiers:
+        #            outs.append( '/%s/%s-%s%s%s-v%s/%s' % ( dsn,
+        #                                                    camp,
+        #                                                    gt,
+        #                                                    proc,
+        #                                                    ext,
+        #                                                    v,
+        #                                                    t))
+        #    return outs
+        #
+        #outs= get_outputs( mcm_r )
+        #
+        ##check for collisions
+        #
+        #return dumps(outs)
 
-        return dumps({"result": self.counter})
 
 
 class InjectRequest(RESTResource):
