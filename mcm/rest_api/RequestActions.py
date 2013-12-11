@@ -603,13 +603,14 @@ class DeleteRequest(RESTResource):
                     return dumps({"results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)})
                 if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index( pid ):
                     ## we are currently processing that request
-                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)})
-        
+                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)})
+                ## found a chain that deserves the request to be pop-ep out from the end
+                new_chain = mcm_cr.get_attribute('chain')
+                new_chain.remove( pid )
+                mcm_cr.set_attribute('chain', new_chain)
+                mcm_cr.update_history({'action':'remove request', 'step': pid})
+                mcm_cr.reload()
 
-        self.logger.error("Technically, I would go and delete %s"%( pid ))
-
-        if len(mcm_r.get_attribute('member_of_chain'))!=0:
-            return dumps({"results": False,"message":"Not possible to delete a request that is part of a chain"})
 
         # delete actions !
         self.delete_action(pid)
@@ -1556,3 +1557,4 @@ class GetAllRevisions(RequestRESTResource):
                 list_of_revs.append(loads(single_doc))
         self.logger.log('Getting all revisions for: %s' % doc_id)
         return dumps({"results": list_of_revs})
+
