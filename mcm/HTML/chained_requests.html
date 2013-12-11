@@ -227,6 +227,9 @@
         <a ng-click="multiple_step('approve','')" rel="tooltip" title="Next step for selected chained requests" ng-hide="role(3);" ng-href="#">
          <i class="icon-chevron-right"></i>
         </a>
+	<a ng-click="multiple_step('rewind','')" rel="tooltip" title="Rewind selected chained requests" ng-hide="role(3);" ng-href="#">
+	  <i class="icon-backward"></i>
+	</a>
         <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
          <i class="icon-forward"></i>
         </a>

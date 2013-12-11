@@ -328,18 +328,29 @@ class RewindToPreviousStep(RESTResource):
 
     def GET(self,  *args):
         """
-        Rewind the current chained request of one step.
+        Rewind the provided coma separated chained requests of one step.
         """
         if not len(args):
             return dumps({"results":False})
+
+        res=[]
+
+        crids=args[0].split(",")
+        for crid in crids:
+            res.append( self.rewind_one( crid ) )
+        
+        return dumps(res)
+
+    def rewind_one(self, crid):
         crdb = database('chained_requests')
         rdb = database('requests')
-        crid=args[0]
+        if not crdb.document_exists( crid ):
+            return {"results":False, "message":"does not exist","prepid" : crid}
         mcm_cr = chained_request( crdb.get( crid) )
         current_step = mcm_cr.get_attribute('step')
         if current_step==0:
             ## or should it be possible to cancel the initial requests of a chained request
-            return dumps({"results":False, "message":"already at the root"})
+            return {"results":False, "message":"already at the root","prepid" : crid}
 
         ## supposedly all the other requests were already reset!
         for next in mcm_cr.get_attribute('chain')[current_step+1:]:
@@ -351,6 +362,7 @@ class RewindToPreviousStep(RESTResource):
             if mcm_r.get_attribute('status')!='new':
                 # this cannot be right!
                 self.logger.error('%s is after the current request and is not new: %s' %( next, mcm_r.get_attribute('status')))
+                return {"results":False, "message":"%s is not new"%(next),"prepid" : crid}
 
         ##get the one to be reset
         current_id=mcm_cr.get_attribute('chain')[current_step]
@@ -358,7 +370,7 @@ class RewindToPreviousStep(RESTResource):
         mcm_r.reset()
         saved = rdb.update( mcm_r.json() )
         if not saved:
-            return dumps({"results":False, "message":"could not save the last request of the chain"})
+            {"results":False, "message":"could not save the last request of the chain","prepid" : crid}
         mcm_cr.set_attribute('step',current_step -1 )
         # set status, last status
         mcm_cr.set_last_status()
@@ -367,9 +379,10 @@ class RewindToPreviousStep(RESTResource):
 
         saved = crdb.update( mcm_cr.json())
         if saved:
-            return dumps({"results":True})
+            return {"results":True,"prepid" : crid}
         else:
-            return dumps({"results":False, "message":"could not save chained requests. the DB is going to be inconsistent !"})
+            return {"results":False, "message":"could not save chained requests. the DB is going to be inconsistent !","prepid" : crid}
+        
 
 class ApproveRequest(RESTResource):
     def __init__(self):
