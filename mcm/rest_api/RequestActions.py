@@ -581,7 +581,33 @@ class DeleteRequest(RESTResource):
 
     def delete_request(self, pid):
         db = database(self.db_name)
+        crdb = database('chained_requests')
+        adb = database('actions')
         mcm_r = request(db.get( pid))
+
+        if mcm_r.get_attribute('status') != 'new':
+            return dumps({"results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))})
+
+        in_chains = mcm_r.get_attribute('member_of_chain')
+        for in_chain in in_chains:
+            mcm_cr = chained_request( crdb.get(in_chain) )
+            try:
+                action_item = mcm_cr.retrieve_original_action_item(adb)
+                ## this is a valid action item
+                return dumps({"results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)})
+            except:
+                ## this is not a valid action item
+                # further check
+                if mcm_cr.get_attribute('chain')[-1]!= pid:
+                    ## the pid is not the last of the chain
+                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)})
+                if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index( pid ):
+                    ## we are currently processing that request
+                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)})
+        
+
+        self.logger.error("Technically, I would go and delete %s"%( pid ))
+
         if len(mcm_r.get_attribute('member_of_chain'))!=0:
             return dumps({"results": False,"message":"Not possible to delete a request that is part of a chain"})
 

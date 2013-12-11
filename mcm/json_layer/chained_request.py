@@ -508,7 +508,10 @@ class chained_request(json_base):
             next_request.notify(notification_subject, notification_text)
         return True
 
-    def retrieve_original_action_item(self, adb, original_action_id):
+    def retrieve_original_action_item(self, adb, original_action_id=None):
+        if not original_action_id:
+            original_action_id = self.get_attribute('chain')[0]
+
         if not adb.document_exists(original_action_id):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'the chained request spawned from %s which does not exist' % original_action_id)
