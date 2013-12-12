@@ -1619,5 +1619,26 @@ class GetAllRevisions(RequestRESTResource):
         self.logger.log('Getting all revisions for: %s' % doc_id)
         return {"results": list_of_revs}
 
+class OptionResetForRequest(RESTResource):
+
+    def __init__(self):
+        self.db_name = 'requests'
+        self.access_limit = 3
+
+    def GET(self, *args):
+        """
+        Reset the options for request
+        """
+        rdb = database(self.db_name)
+        if not args:
+            self.logger.error('No ids given to option reset of request')
+            return dumps({"results": False, "message": "Provide comma-separated ids for option reset!"})
+        req_ids = args[0].split(',')
+        res = {}
+        for req_id in req_ids:
+            req = request(rdb.get(req_id))
+            res[req_id] = req.build_cmsDrivers(1)
+        return dumps({"results": res})
+
 
 

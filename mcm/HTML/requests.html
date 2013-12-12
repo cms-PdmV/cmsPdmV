@@ -130,10 +130,11 @@
                 <a ng-click="openCloneModal(data.prepid, data.pwg, data.member_of_campaign)" rel="tooltip" ng-hide="role(1);" title="Clone Request" ng-href="#">
                   <i class="icon-share-alt"></i>
                 </a>
-		<!-- I commented this one out because I do not want gen contacts to go back and forth on validation+defined steps-->
-                <!--- <a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-show="!role(3) || data.status=='validation';" target="_self">-->
                 <a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(1);" target="_self" ng-href="#">
                   <i class="icon-repeat"></i>
+                </a>
+                <a ng-click="open_isSureModal('option_reset',data.prepid)" rel="tooltip" title="Option Reset" ng-hide="role(1);" target="_self" ng-href="#">
+                  <i class="icon-share"></i>
                 </a>
                 <a ng-click="open_isSureModal('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);" ng-href="#">
                   <i class="icon-chevron-right"></i>
@@ -428,11 +429,11 @@
           <i class="icon-wrench"></i>
         </a>
         <![endif]>
-        <!-- <a ng-click="open_isSureModal('clone',data.prepid)" rel="tooltip" ng-hide="role(4);" title="Clone Request" ng-href="#">
-          <i class="icon-share-alt"></i>
-        </a> -->
         <a ng-click="previous_approval()" rel="tooltip" ng-hide="role(1);" title="Reset selected requests" ng-href="#">
          <i class="icon-repeat"></i>
+        </a>
+        <a ng-click="optionreset_several()" rel="tooltip" ng-hide="role(1);" title="Option Reset selected requests" ng-href="#">
+         <i class="icon-share"></i>
         </a>
         <a ng-click="next_approval()" rel="tooltip" title="Next step for selected requests" ng-hide="role(1);" ng-href="#">
          <i class="icon-chevron-right"></i>

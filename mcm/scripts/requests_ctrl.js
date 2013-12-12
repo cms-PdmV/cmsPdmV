@@ -429,6 +429,14 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
 
+  $scope.optionreset_several = function(){
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/option_reset/'+$scope.selected_prepids.join()}).success(function(data,status){
+	    $scope.parse_report(data,status);
+    }).error(function(data,status){
+      $scope.set_fail(status);
+    });
+  };
+
   $scope.status_toggle = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/status/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    $scope.parse_report(data,status);
@@ -552,6 +560,9 @@ function resultsCtrl($scope, $http, $location, $window){
         break;
       case "reset":
         $scope.single_step('reset',$scope.toggle_prepid);
+        break;
+      case "option_reset":
+        $scope.single_step('option_reset',$scope.toggle_prepid);
         break;
       case "delete":
         $scope.delete_object('requests', $scope.toggle_prepid);
@@ -887,10 +898,7 @@ testApp.directive("sequenceDisplay", function($http){
     '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
     '     <i class="icon-remove"></i>'+
     '    </a>'+
-    '    <a rel="tooltip" title="Reset" ng-click="resetCmsDriver();"ng-hide="role(1);">'+
-    '     <i class="icon-repeat"></i>'+
-    '    </a>'+
-    '    <a rel="tooltip" title="Cast" ng-click="castCmsDriver()" ng-hide="role(1);">'+
+    '    <a rel="tooltip" title="Option reset" ng-click="resetOptions()" ng-hide="role(1);">'+
     '     <i class="icon-share"></i>'+
     '    </a>'+
     '    <ul>'+
@@ -914,9 +922,16 @@ testApp.directive("sequenceDisplay", function($http){
         });
 	}
       };
+
       scope.getCmsDriver = function(){	  scope.genericCmsDriver("");      };
-      scope.resetCmsDriver = function(){	  scope.genericCmsDriver("/-1");      };
-      scope.castCmsDriver = function(){	  scope.genericCmsDriver("/1");      };
+      scope.resetOptions = function(){
+          var promise = $http.get("restapi/"+scope.dbName+"/option_reset/"+scope.sequencePrepId);
+          promise.then(function(data){
+            scope.driver = data.data.results[scope.sequencePrepId];
+          }, function(data){
+             alert("Error: ", data.status);
+        });
+      };
    }
   }
 });
