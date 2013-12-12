@@ -104,39 +104,6 @@ class UpdateMultipleActions(UpdateAction):
             results.append(self.import_action(single_action))
 
         return dumps({"results": results})
-        """
-        output = []
-        for elem in data["actions"]:
-            single_action = loads(self.action_getter.get_request(elem["prepid"]))["results"]
-            #self.logger.error(single_action)
-            single_action["chains"][elem["column"]]["block_number"] = data["values"]["block_number"]
-            if "staged" in data["values"]: #if staged in new values
-                if data["values"]["staged"] == None:  #if None -> user should want it to be deleted
-                    del single_action["chains"][elem["column"]]["staged"]
-                else:  #and not a None
-                    single_action["chains"][elem["column"]]["staged"] = data["values"]["staged"]
-            elif "staged" in single_action["chains"][elem["column"]]: #if staged not in update then delete from chain
-                del single_action["chains"][elem["column"]]["staged"]
-            if "threshold" in data["values"]: 
-                if data["values"]["staged"] == None:
-                    del single_action["chains"][elem["column"]]["threshold"]
-                else:
-                    single_action["chains"][elem["column"]]["threshold"] = data["values"]["threshold"]
-            elif "threshold" in single_action["chains"][elem["column"]]: #if threshold not in update then delete from chain
-                del single_action["chains"][elem["column"]]["threshold"]
-            if "flag" in data["values"]:
-                if data["values"]["flag"] == None:
-                    del single_action["chains"][elem["column"]]["flag"]
-                else:
-                    single_action["chains"][elem["column"]]["threshold"] = data["values"]["flag"]
-            elif "flag" in single_action["chains"][elem["column"]]: #if threshold not in update then delete from chain
-                del single_action["chains"][elem["column"]]["flag"]
-            self.logger.error(single_action)    
-            output += [self.single_updater.import_request(dumps(single_action))]
-        return dumps({"results": output})
-        """
-
-
 
 
 class GetAction(RESTResource):
