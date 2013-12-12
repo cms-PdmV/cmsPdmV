@@ -168,21 +168,21 @@ class action(json_base):
         ##JR: until put in the proper place
         chains=self.get_attribute('chains')
         crdb = database('chained_requests')
-        
+        okay = True
         for inCC in chains:
             ### this is the old convention
-            if 'flag' in chains[inCC] and chains[inCC]['flag']:
-                if 'chains' in chains[inCC]:
-                    for acr in chains[inCC]['chains']:
-                        if forChains and not acr in forChains: continue
-                        cr=chained_request(crdb.get(acr))
-                        cc=cr.get_attribute('member_of_campaign')
-                        #if 'block_number' in chains[cc] and chains[cc]['block_number']:
-                        if chains[cc]['block_number']:
-                            cr.set_priority(chains[cc]['block_number'])
-                            self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-                        else:
-                            self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+            #if 'flag' in chains[inCC] and chains[inCC]['flag']:
+            #    if 'chains' in chains[inCC]:
+            #        for acr in chains[inCC]['chains']:
+            #            if forChains and not acr in forChains: continue
+            #            cr=chained_request(crdb.get(acr))
+            #            cc=cr.get_attribute('member_of_campaign')
+            #            #if 'block_number' in chains[cc] and chains[cc]['block_number']:
+            #            if chains[cc]['block_number']:
+            #                cr.set_priority(chains[cc]['block_number'])
+            #                self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
+            #            else:
+            #                self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
             ## new convention
             if 'chains' in chains[inCC] and type(chains[inCC]['chains'])==dict:
                 for acr in chains[inCC]['chains']:
@@ -190,8 +190,9 @@ class action(json_base):
                     bn=chains[inCC]['chains'][acr]['block_number']
                     cr=chained_request(crdb.get(acr))
                     if bn:
-                        cr.set_priority( bn )
                         self.logger.log('Set priority block %s to %s'%( bn , acr))
+                        if not cr.set_priority( bn ):
+                            okay = False
                     else:
                         self.logger.error('Could not set block %s to %s'%( bn , acr))
                         
@@ -201,12 +202,15 @@ class action(json_base):
             r= request(rd.get(self.get_attribute('prepid')))
             self.set_attribute('dataset_name',r.get_attribute('dataset_name'))
 
+        return okay
+
     def get_chains( self, chained_campaigned_id):
         chains = self.get_attribute('chains')[chained_campaigned_id]
         if 'chains' in chains:
             return chains['chains']
         else:
             return {}
+
     def remove_chain(self, chained_campaigned_id, chained_request_id):
         chains = self.get_attribute('chains')
         chains[chained_campaigned_id]['chains'].pop( chained_request_id)

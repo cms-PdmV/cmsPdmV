@@ -713,16 +713,16 @@ class chained_request(json_base):
 
     def set_priority(self, level):
         rdb = database('requests')
+        okay = True
         for r in self.get_attribute('chain'):
             req = request(rdb.get(r))
             ##only those that can still be changed
-            if not req.get_attribute('status') in ['submitted', 'done']:
-                #set to the maximum priority
-                req.set_attribute('priority', max(req.get_attribute('priority'), priority().priority(level)))
-                saved = rdb.update(req.json())
-                if not saved:
-                    self.logger.log('Could not save updated priority for %s' % ( r))
-                    raise Exception('Could not save updated priority for %s' % ( r))
+            #set to the maximum priority
+            if not req.change_priority(priority().priority(level)):
+                self.logger.log('Could not save updated priority for %s' % r)
+                okay = False
+        return okay
+
 
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}

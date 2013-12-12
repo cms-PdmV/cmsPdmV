@@ -22,22 +22,25 @@ class CreateAction(RESTResource):
         return self.import_request(cherrypy.request.body.read().strip())
 
     def import_request(self, data):
-        db = database(self.db_name)
+        adb = database(self.db_name)
         try:
-            action_mcm = action(json_input=loads(data))
+            mcm_a = action(json_input=loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        self.logger.log('Building new action %s by hand...'%(action_mcm.get_attribute('_id')))
+        self.logger.log('Building new action %s by hand...'%(mcm_a.get_attribute('_id')))
 
-        action_mcm.inspect_priority()
+        priority_set = mcm_a.inspect_priority()
 
-        rd = database('requests')
-        if rd.document_exists(action_mcm.get_attribute('prepid')):
-            r= request(rd.get(action_mcm.get_attribute('prepid')))
-            action_mcm.set_attribute('dataset_name',r.get_attribute('dataset_name'))
+        saved = adb.update( mcm_a.json() )
+        if saved:
+            if priority_set:
+                return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+            else:
+                return {"results":False , "prepid": mcm_a.get_attribute('prepid'), "message":"Priorities not set properly"}
+        else:
+            return {"results":False , "prepid": mcm_a.get_attribute('prepid')}
 
-        return dumps({'results':db.save(action_mcm.json())})
 
 
 class UpdateAction(RESTResource):
@@ -74,11 +77,14 @@ class UpdateAction(RESTResource):
         mcm_a.set_attribute('chains',chains)
 
 
-        mcm_a.inspect_priority()
+        priority_set = mcm_a.inspect_priority()
 
         saved = adb.update( mcm_a.json() )
         if saved:
-            return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+            if priority_set:
+                return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+            else:
+                return {"results":False , "prepid": mcm_a.get_attribute('prepid'), "message":"Priorities not set properly"}
         else:
             return {"results":False , "prepid": mcm_a.get_attribute('prepid')}
 
@@ -239,11 +245,11 @@ class GenerateChainedRequests(RESTResource):
         crdb = database('chained_requests')
         rdb = database('requests')
         if not adb.document_exists(aid):
-            return dumps({'results':False, 'message':'%s does not exist'%(aid)})
+            return {'results':False, 'message':'%s does not exist'%(aid)}
 
         self.logger.log('Generating all selected chained_requests for action %s' % (aid))
-        act = action(adb.get(aid))
-        chains = act.get_attribute('chains')
+        mcm_a = action(adb.get(aid))
+        chains = mcm_a.get_attribute('chains')
         hasChainsChanged=False 
         new_chains = []
         for cc in chains:  
@@ -262,7 +268,7 @@ class GenerateChainedRequests(RESTResource):
                         chains[cc].pop(item)
                 hasChainsChanged=True
                 if not crdb.update(new_cr):
-                    return dumps({'results':False,'message':'could not save %s'%( new_cr['prepid'])})
+                    return {'results':False,'message':'could not save %s'%( new_cr['prepid'])}
 
                 ## update the cc history
                 ccdb.update(mcm_cc.json())
@@ -275,16 +281,16 @@ class GenerateChainedRequests(RESTResource):
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 if with_notify:
                     req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']), Nchild=0)
-                act.update_history({'action':'add','step' : new_cr['prepid']})
+                mcm_a.update_history({'action':'add','step' : new_cr['prepid']})
                 rdb.update(req.json())
 
         if hasChainsChanged:
             #the chains parameter might have changed
-            act.set_attribute('chains',chains)
-            adb.update(act.json())
+            mcm_a.set_attribute('chains',chains)
+            adb.update(mcm_a.json())
 
         #and set priorities properly to all requests concerned
-        act.inspect_priority(forChains=new_chains)
+        priority_set = mcm_a.inspect_priority(forChains=new_chains)
 
         ## do the reservation of the whole chain ?
         res=[]
@@ -294,7 +300,11 @@ class GenerateChainedRequests(RESTResource):
                 res.append(mcm_cr.reserve())
                 crdb.update( mcm_cr.json())
 
-        return dumps({'results':True})
+        if priority_set:
+            return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+        else:
+            return {"results":False , "prepid": mcm_a.get_attribute('prepid'), "message":"Priorities not set properly"}
+
 
 class GenerateAllChainedRequests(GenerateChainedRequests):
     def __init__(self):

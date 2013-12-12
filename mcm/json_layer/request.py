@@ -12,6 +12,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
+from tools import ssh_executor
 from tools.locator import locator
 from tools.batch_control import batch_control
 from tools.settings import settings
@@ -45,7 +46,7 @@ class request(json_base):
             '_id':'',
             'prepid':'',
             'history':[],
-            'priority':0,
+            'priority':20000,
             #'completion_date':'',
             'cmssw_release':'',
             'input_filename':'',
@@ -742,6 +743,52 @@ done
 
 
         return infile
+
+    def change_priority(self, new_priority):
+        if self.get_attribute('status') in ['done']:
+            return True
+        if self.get_attribute('priority') >= new_priority:
+            return True
+        if not isinstance(new_priority, int):
+            self.logger.error('Priority has to be an integer')
+            return False
+        with locker.lock(self.get_attribute('prepid')):
+            loc = locator()
+            reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
+            if len(reqmgr_names):
+                ssh_exec = ssh_executor.ssh_executor(server='pdmvserv-test.cern.ch')
+                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+                cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+                cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+                test = ""
+                if loc.isDev():
+                    test = '-u cmsweb-testbed.cern.ch'
+                for req_name in reqmgr_names:
+                    cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
+                _, stdout, stderr = ssh_exec.execute(cmd)
+                self.logger.log(cmd)
+                if not stdout and not stderr:
+                    self.logger.error('SSH error while changing priority of {0}'.format(self.get_attribute('prepid')))
+                    return False
+                output_text = stdout.read()
+                self.logger.log('wmpriority output:\n{0}'.format(output_text))
+                not_found=False
+                for line in output_text.split("\n"):
+                    if 'Unable to change priority of workflow' in line:
+                        self.logger.error("Request {0}. {1}".format(self.get_attribute('prepid'), line))
+                        not_found = True
+                if not_found:
+                    return False
+            self.set_attribute('priority', new_priority)
+            saved = self.reload()
+            if not saved:
+                self.logger.error('Could not save request {0} with new priority'.format(self.get_attribute('prepid')))
+                return False
+            self.logger.log('Priority of request {0} was changed to {1}'.format(self.get_attribute('prepid'), new_priority))
+            return True
+
+
+
 
     def get_genvalid_setup(self,directory,run):
         cmsd_list =""
