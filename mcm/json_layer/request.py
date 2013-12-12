@@ -531,8 +531,7 @@ class request(json_base):
                       freshSeq.append(fresh.json())
               self.set_attribute('sequences',freshSeq)
           if can_save:
-              rdb = database('requests')
-              rdb.update(self.json())
+              self.reload()
           else:
               ## could re-assign the new_req to itself
               pass
