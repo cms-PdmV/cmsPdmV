@@ -19,15 +19,16 @@ class GetMccm(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": {}})
-        return self.get_doc(args[0])
+        return dumps(self.get_doc(args[0]))
 
     def get_doc(self, data):
         db = database('mccms')
         if not db.document_exists(data):
-            return dumps({"results": {}})
+            return {"results": {}}
         mccm_doc = db.get(prepid=data)
 
-        return dumps({"results": mccm_doc})
+        return {"results": mccm_doc}
+
 
 class UpdateMccm(RESTResource):
     def __init__(self):
@@ -38,8 +39,7 @@ class UpdateMccm(RESTResource):
         Updating an existing mccm with an updated dictionary
         """
         try:
-            res = self.update(cherrypy.request.body.read().strip())
-            return res
+            return dumps(self.update(cherrypy.request.body.read().strip()))
         except:
             self.logger.error('Failed to update an mccm from API')
             return dumps({'results': False, 'message': 'Failed to update an mccm from API'})
@@ -48,13 +48,13 @@ class UpdateMccm(RESTResource):
         data = loads(body)
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
-            return dumps({"results": False, 'message': 'could not locate revision number in the object'})
+            return {"results": False, 'message': 'could not locate revision number in the object'}
         db = database('mccms')
         if not db.document_exists(data['_id']):
-            return dumps({"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])})
+            return {"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])}
         else:
             if db.get(data['_id'])['_rev'] != data['_rev']:
-                return dumps({"results": False, 'message': 'revision clash'})
+                return {"results": False, 'message': 'revision clash'}
 
         new_version = mccm(json_input=data)
 
@@ -71,14 +71,14 @@ class UpdateMccm(RESTResource):
             if previous_version.get_attribute(key) != new_version.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
                     key, previous_version.get_attribute(key), new_version.get_attribute(key), right))
-                return dumps({"results": False, 'message': 'Illegal change of parameter %s' % key})
+                return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
         self.logger.log('Updating mccm %s...' % (new_version.get_attribute('prepid')))
 
 
         # update history
         new_version.update_history({'action': 'update'})
-        return dumps({"results": db.update(new_version.json())})
+        return {"results": db.update(new_version.json())}
 
 
 
@@ -147,20 +147,20 @@ class GetEditableMccmFields(RESTResource):
         if not args:
             self.logger.error('Mccm/GetEditable: No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
-        return self.get_editable(args[0])
+        return dumps(self.get_editable(args[0]))
 
     def get_editable(self, prepid):
         db = database(self.db_name)
         mccm_d = mccm(db.get(prepid))
         editable = mccm_d.get_editable()
-        return dumps({"results": editable})
+        return {"results": editable}
+
 
 class GenerateChains(RESTResource):
     def __init__(self):
         self.access_limit = 3
         from ActionsActions import SetAction
         self.setter = SetAction()
-        
 
     def GET(self, *args):
         """
@@ -229,6 +229,7 @@ class GenerateChains(RESTResource):
         return {"prepid":mid,
                 "results" : True,
                 "message" : res}
+
 
 class MccMReminder(RESTResource):
     def __init__(self):

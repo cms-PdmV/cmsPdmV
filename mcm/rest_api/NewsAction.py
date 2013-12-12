@@ -31,9 +31,9 @@ class GetSingleNew(RESTResourceIndex):
     def get_single_new(self, doc_id):
         db = database('news')
         if not db.document_exists(doc_id):
-            return json.dumps({"results": {}})
+            return {"results": {}}
         mcm_new = db.get(prepid=doc_id)
-        return json.dumps({"results":mcm_new})
+        return {"results": mcm_new}
 
     def GET(self, *args):
         """
@@ -42,7 +42,8 @@ class GetSingleNew(RESTResourceIndex):
         if not args:
             self.logger.error('No arguments were given')
             return json.dumps({"results":{}})
-        return self.get_single_new(args[0])
+        return json.dumps(self.get_single_new(args[0]))
+
 
 class CreateNews(RESTResourceIndex):
     def __init__(self):
@@ -53,7 +54,7 @@ class CreateNews(RESTResourceIndex):
         try:
             new_news = json.loads(data)
         except Exception as ex:
-            return json.dumps({"results":False})
+            return {"results":False}
         user_p = user_pack()
         new_news['author'] = user_p.get_username()
         #localtime = time.localtime(time.time())
@@ -66,13 +67,14 @@ class CreateNews(RESTResourceIndex):
         new_news['date'] = datetime
         new_news['announced'] = False
         db.save(new_news)
-        return json.dumps({"results":True})
+        return {"results":True}
 
     def PUT(self):
         """
         Create a new in news DB
         """
-        return self.create_new(cherrypy.request.body.read().strip())
+        return json.dumps(self.create_new(cherrypy.request.body.read().strip()))
+
 
 class UpdateNew(RESTResourceIndex):
     def __init__(self):
@@ -80,18 +82,18 @@ class UpdateNew(RESTResourceIndex):
 
     def update_new(self, data):
         try:
-          news_data = json.loads(data)
+            news_data = json.loads(data)
         except Exception as ex:
-            return json.dumps({"results":False, 'message': str(ex)})
+            return {"results": False, 'message': str(ex)}
         db = database('news')
         if not db.document_exists(news_data['_id']):
-            return json.dumps({"results":False, 'message' : 'new %s does not exist in News DB'%( data['_id']) })
+            return {"results": False, 'message': 'new %s does not exist in News DB' % data['_id']}
        # self.db.update(dnews_ata)
         #mcm_new = self.db.get(prepid=doc_id)
-        return json.dumps({"results":db.update(news_data)})
+        return {"results": db.update(news_data)}
 
     def PUT(self):
         """
         Update existing new in news DB
         """
-        return self.update_new(cherrypy.request.body.read().strip())
+        return json.dumps(self.update_new(cherrypy.request.body.read().strip()))

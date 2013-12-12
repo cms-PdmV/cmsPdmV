@@ -616,9 +616,7 @@ class chained_request(json_base):
         #    req.set_attribute('mcdbid',0)
 
         # get the new prepid and append it to the chain
-        prepid = \
-            json.loads(RequestPrepId().generate_prepid(req.get_attribute("pwg"), req.get_attribute('member_of_campaign')))[
-                "prepid"]
+        prepid = RequestPrepId().generate_prepid(req.get_attribute("pwg"), req.get_attribute('member_of_campaign'))["prepid"]
         chain = self.get_attribute("chain")
         if not chain or chain is None:
             chain = []

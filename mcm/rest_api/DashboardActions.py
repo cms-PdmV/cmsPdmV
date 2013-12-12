@@ -53,7 +53,7 @@ class GetLogFeed(RESTResource):
         nlines = -1
         if len(args) > 1:
             nlines = int(args[1])
-        return self.read_logs(name, nlines)
+        return dumps(self.read_logs(name, nlines))
 
     def read_logs(self, name, nlines):
 
@@ -62,15 +62,17 @@ class GetLogFeed(RESTResource):
                 data = log_file.readlines()
             except IOError as ex:
                 self.logger.error('Could not access logs: "{0}". Reason: {1}'.format(name, ex))
-                return dumps({"results": "Error: Could not access logs."})
+                return {"results": "Error: Could not access logs."}
 
         if nlines > 0:
             data = data[-nlines:]
-        return dumps({"results": ''.join(data)})
+        return {"results": ''.join(data)}
+
 
 class GetRevision(RESTResource):
     def __init__(self):
         self.access_limit = 0
+
     def GET(self, *args):
         """ 
         returns the current tag of the software running

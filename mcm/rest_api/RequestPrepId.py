@@ -40,5 +40,5 @@ class RequestPrepId(RESTResourceIndex):
             return pid
 
     def generate_prepid(self, pwg, campaign):
-        return dumps({"prepid": self.next_prepid(pwg, campaign)})
+        return {"prepid": self.next_prepid(pwg, campaign)}
 

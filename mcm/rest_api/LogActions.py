@@ -23,19 +23,19 @@ class ReadInjectionLog(RESTResource):
         nlines = -1
         if len(args) > 1:
             nlines = int(args[1])
-        return self.read_logs(pid, nlines)
+        return dumps(self.read_logs(pid, nlines))
 
     def read_logs(self, pid, nlines):
         db = database(self.db_name)
         if not db.document_exists(pid):
             self.logger.error('Given prepid "%s" does not exist in the database.' % pid)
-            return dumps({"results": 'Error:Given prepid "%s" does not exist in the database.' % pid})
+            return {"results": 'Error:Given prepid "%s" does not exist in the database.' % pid}
 
         try:
             data = open(self.logfile).read()
         except IOError as ex:
             self.logger.error('Could not access logs: "%s". Reason: %s' % (self.logfile, ex))
-            return dumps({"results": "Error: Could not access logs."})
+            return {"results": "Error: Could not access logs."}
 
         #important = data[data.rindex('## Logger instance retrieved'):]
         ## needs this otherwise, simultaneous submission would be truncated to the last to write ## Logger instance retrieved

@@ -16,15 +16,15 @@ class GetSetting(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": {}})
-        return self.get_setting(args[0])
+        return dumps(self.get_setting(args[0]))
 
     def get_setting(self, data):
         db = database('settings')
         if not db.document_exists(data):
-            return dumps({"results": {}})
+            return {"results": {}}
         setting = db.get(prepid=data)
 
-        return dumps({"results": setting})
+        return {"results": setting}
 
 class SaveSetting(RESTResource):
     def __init__(self):
@@ -36,7 +36,7 @@ class SaveSetting(RESTResource):
         """
         try:
             res = self.update(cherrypy.request.body.read().strip())
-            return res
+            return dumps(res)
         except:
             self.logger.error('Failed to update a setting from API')
             return dumps({'results': False, 'message': 'Failed to update a setting from API'})
@@ -45,19 +45,19 @@ class SaveSetting(RESTResource):
         data = loads(body)
         db = database('settings')
         if '_rev' in data:
-            return dumps({"results": False, 'message': 'could save an object with revision'})
+            return {"results": False, 'message': 'could save an object with revision'}
 
         if '_id' in data and db.document_exists(data['_id']):
-            return dumps({"results": False, 'message': 'setting %s already exists.'% ( data['_id'])})
+            return {"results": False, 'message': 'setting %s already exists.'% ( data['_id'])}
         if 'prepid' in data and db.document_exists(data['prepid']):
-            return dumps({"results": False, 'message': 'setting %s already exists.'% ( data['prepid'])})
+            return {"results": False, 'message': 'setting %s already exists.'% ( data['prepid'])}
 
         if not 'prepid' in data and not '_id' in data:
-            return dumps({"results": False, 'message': 'could save an object with no name'})
+            return {"results": False, 'message': 'could save an object with no name'}
 
         new_setting = setting(data)
 
-        return dumps({"results": settings().add(new_setting.get_attribute('prepid'), new_setting.json())})
+        return {"results": settings().add(new_setting.get_attribute('prepid'), new_setting.json())}
 
 
 class UpdateSetting(RESTResource):
@@ -70,7 +70,7 @@ class UpdateSetting(RESTResource):
         """
         try:
             res = self.update(cherrypy.request.body.read().strip())
-            return res
+            return dumps(res)
         except:
             self.logger.error('Failed to update a setting from API')
             return dumps({'results': False, 'message': 'Failed to update a setting from API'})
@@ -80,13 +80,13 @@ class UpdateSetting(RESTResource):
         db = database('settings')
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
-            return dumps({"results": False, 'message': 'could not locate revision number in the object'})
+            return {"results": False, 'message': 'could not locate revision number in the object'}
 
         if not db.document_exists(data['_id']):
-            return dumps({"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])})
+            return {"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])}
         else:
             if db.get(data['_id'])['_rev'] != data['_rev']:
-                return dumps({"results": False, 'message': 'revision clash'})
+                return {"results": False, 'message': 'revision clash'}
 
         new_version = setting(json_input=data)
 
@@ -103,7 +103,7 @@ class UpdateSetting(RESTResource):
             if previous_version.get_attribute(key) != new_version.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
                     key, previous_version.get_attribute(key), new_version.get_attribute(key), right))
-                return dumps({"results": False, 'message': 'Illegal change of parameter %s' % key})
+                return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
         self.logger.log('Updating setting %s...' % (new_version.get_attribute('prepid')))
-        return dumps({"results": settings().set(new_version.get_attribute('prepid'), new_version.json())})
+        return {"results": settings().set(new_version.get_attribute('prepid'), new_version.json())}

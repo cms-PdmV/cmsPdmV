@@ -89,11 +89,11 @@ class GetBatch(RESTResource):
         if not args:
             self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
-        return self.get_request(args[0])
+        return dumps({'results':self.get_request(args[0])})
 
     def get_request(self, data):
         db = database(self.db_name)
-        return dumps({"results":db.get(prepid=data)})
+        return db.get(prepid=data)
 
 class GetAllBatches(RESTResource):
     def __init__(self):
@@ -103,11 +103,11 @@ class GetAllBatches(RESTResource):
         """
         Retrieve the json content of the batch db
         """
-        return self.get_all()
+        return dumps({'results':self.get_all()})
 
     def get_all(self):
         db = database(self.db_name)
-        return dumps({"results":db.get_all()})
+        return db.get_all()
 
 class GetIndex(RESTResource):
     def __init__(self):
@@ -156,7 +156,7 @@ class AnnounceBatch(BatchAnnouncer):
         """
         Annouce a given batch id, with the provided notes in json content
         """
-        return self.announce(loads(cherrypy.request.body.read().strip()))
+        return dumps(self.announce(loads(cherrypy.request.body.read().strip())))
     
     def announce(self, data):
         if not 'prepid' in data or not 'notes' in data:
@@ -164,9 +164,9 @@ class AnnounceBatch(BatchAnnouncer):
         bdb = database('batches')
         bid=data['prepid']
         if not bdb.document_exists(bid):
-            return dumps({"results":False, "message": "%s is not a valid batch name"% bid})
+            return {"results":False, "message": "%s is not a valid batch name" % bid}
         
-        return dumps(self.announce_with_text(bid, data['notes'] ))
+        return self.announce_with_text(bid, data['notes'])
 
     
 class InspectBatches(BatchAnnouncer):
@@ -328,4 +328,4 @@ class NotifyBatch(RESTResource):
         self.update_history({'action':'notify', 'step' : message})
         self.reload()
 
-        return dumps({'results':result})
+        return {'results': result}

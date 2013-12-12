@@ -84,7 +84,7 @@ class FlowRESTResource(RESTResource):
                 self.update_campaigns(next_c, allowed, cdb)
             except Exception as ex:
                 self.logger.error('Could not update campaigns. Reason: %s' % ex)
-                return dumps({"results": 'Error: update_campaigns returned:' + str(ex)})
+                return {"results": 'Error: update_campaigns returned:' + str(ex)}
 
         # create new chained campaigns
         try:
@@ -93,13 +93,13 @@ class FlowRESTResource(RESTResource):
         except Exception as ex:
             self.logger.error('Could not build derived chained_campaigns. Reason: %s' % ex)
             self.logger.error(traceback.format_exc())
-            return dumps({"results": 'Error while creating derived chained_campaigns: ' + str(ex)})
+            return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
 
         # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and 
         #               use this flow.
 
         # if reached, then successful
-        return dumps({'results': True})
+        return {'results': True}
 
     def update_campaigns(self, next_c, allowed, cdb):
         # check to see if next_c is legal
@@ -260,25 +260,25 @@ class CreateFlow(FlowRESTResource):
         """
         Create a flow from the provided json content
         """
-        return self.create_flow(cherrypy.request.body.read().strip())
+        return dumps(self.create_flow(cherrypy.request.body.read().strip()))
 
     def create_flow(self, jsdata):
         cdb = database('campaigns')
         db = database(self.db_name)
         data = loads(jsdata)
         if '_rev' in data:
-            return dumps({"results": 'Cannot create a flow with _rev'})
+            return {"results": 'Cannot create a flow with _rev'}
         try:
             f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
-            return dumps({"results": str(ex)})
+            return {"results": str(ex)}
         except ValueError as ex:
             self.logger.error('Could not initialize flow object. Reason: %s' % ex)
-            return dumps({"results": str(ex)})
+            return {"results": str(ex)}
 
         if not f.get_attribute('prepid'):
             self.logger.error('prepid is not defined.')
-            return dumps({"results": 'Error: PrepId was not defined.'})
+            return {"results": 'Error: PrepId was not defined.'}
 
         f.set_attribute('_id', f.get_attribute('prepid'))
 
@@ -292,7 +292,7 @@ class CreateFlow(FlowRESTResource):
 
         result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
         if result is not True:
-            return dumps(result)
+            return result
 
         ## adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc, cdb, f)
@@ -303,18 +303,18 @@ class CreateFlow(FlowRESTResource):
         # save the flow to db
         if not db.save(f.json()):
             self.logger.error('Could not save newly created flow %s to database.' % (f.get_attribute('_id')))
-            return dumps({"results": False})
+            return {"results": False}
 
         #return right away instead of trying and failing on missing next or allowed
         if not nc or not len(f.get_attribute('allowed_campaigns')):
-            return dumps({"results": True})
+            return {"results": True}
 
         # update all relevant campaigns with the "Next" parameter
         try:
             self.update_campaigns(f.get_attribute('next_campaign'), f.get_attribute('allowed_campaigns'), cdb)
         except Exception as ex:
             self.logger.error('Error: update_campaigns returned:' + str(ex))
-            return dumps({"results": 'Error: update_campaigns returned:' + str(ex)})
+            return {"results": 'Error: update_campaigns returned:' + str(ex)}
 
         # create all possible chained_campaigns from the next and allowed campaigns
         try:
@@ -324,10 +324,10 @@ class CreateFlow(FlowRESTResource):
             self.logger.error(
                 'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
                     f.get_attribute('_id'), ex))
-            return dumps({"results": 'Error while creating derived chained_campaigns: ' + str(ex)})
+            return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
 
         # save to database
-        return dumps({"results": True})
+        return {"results": True}
 
 
 class UpdateFlow(FlowRESTResource):
@@ -338,7 +338,7 @@ class UpdateFlow(FlowRESTResource):
         """
         Update a flow with the provided content
         """
-        return self.update_flow(cherrypy.request.body.read().strip())
+        return dumps(self.update_flow(cherrypy.request.body.read().strip()))
 
     def update_flow(self, jsdata):
 
@@ -346,11 +346,11 @@ class UpdateFlow(FlowRESTResource):
         db = database(self.db_name)
         data = loads(jsdata)
         if not '_rev' in data:
-            return dumps({"results": "Cannot update without _rev"})
+            return {"results": "Cannot update without _rev"}
         try:
             f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
-            return dumps({"results": str(ex)})
+            return {"results": str(ex)}
 
         if not f.get_attribute('prepid') and not f.get_attribute('_id'):
             self.logger.error('prepid returned was None')
@@ -366,7 +366,7 @@ class UpdateFlow(FlowRESTResource):
         nc = f.get_attribute('next_campaign')
         result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
         if result is not True:
-            return dumps(result)
+            return result
 
         ## adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc, cdb, f)
@@ -377,7 +377,7 @@ class UpdateFlow(FlowRESTResource):
         # save to db
         if not db.update(f.json()):
             self.logger.error('Could not update flow {0}.'.format(f.get_attribute('_id')))
-            return dumps({'results': False})
+            return {'results': False}
 
         return self.update_derived_objects(old, f.json())
 
@@ -392,7 +392,7 @@ class DeleteFlow(RESTResource):
         """
         if not args:
             return dumps({"results": 'Error: No Arguments were provided.'})
-        return self.delete_flow(args[0])
+        return dumps(self.delete_flow(args[0]))
 
     def delete_flow(self, fid):
 
@@ -404,15 +404,15 @@ class DeleteFlow(RESTResource):
         try:
             self.delete_chained_campaigns(fid, ccdb)
         except Exception as ex:
-            return dumps({'results': str(ex)})
+            return {'results': str(ex)}
 
         # update relevant campaigns
         try:
             self.update_campaigns(fid, fdb, cdb, ccdb)
         except Exception as ex:
-            return dumps({'results': str(ex)})
+            return {'results': str(ex)}
 
-        return dumps({"results": fdb.delete(fid)})
+        return {"results": fdb.delete(fid)}
 
 
     def delete_chained_campaigns(self, fid, ccdb):
@@ -452,7 +452,7 @@ class DeleteFlow(RESTResource):
                 try:
                     cdb.update(c)
                 except Exception as ex:
-                    return dumps({'results': str(ex)})
+                    return {'results': str(ex)}
 
 
 class GetFlow(RESTResource):
@@ -466,11 +466,11 @@ class GetFlow(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": {}})
-        return self.get_request(args[0])
+        return dumps(self.get_request(args[0]))
 
     def get_request(self, data):
         db = database(self.db_name)
-        return dumps({"results": db.get(prepid=data)})
+        return {"results": db.get(prepid=data)}
 
 
 class ApproveFlow(RESTResource):
@@ -485,8 +485,8 @@ class ApproveFlow(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
         if len(args) == 1:
-            return self.multiple_approve(args[0])
-        return self.multiple_approve(args[0], int(args[1]))
+            return dumps(self.multiple_approve(args[0]))
+        return dumps(self.multiple_approve(args[0], int(args[1])))
 
 
     def multiple_approve(self, rid, val=-1):
@@ -495,9 +495,9 @@ class ApproveFlow(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.approve(r, val))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.approve(rid, val))
+            return self.approve(rid, val)
 
     def approve(self, rid, val):
         db = database('flows')

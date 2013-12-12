@@ -171,8 +171,8 @@ class GetInvalidation(RESTResource):
         if not args:
             self.logger.error('No arguments were given.')
             return dumps({"results": False})
-        return self.get_request(args[0])
+        return dumps(self.get_request(args[0]))
 
     def get_request(self, object_name):
         db = database('invalidations')
-        return dumps({"results": db.get(object_name)})
+        return {"results": db.get(object_name)}

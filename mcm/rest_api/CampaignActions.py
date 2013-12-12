@@ -17,24 +17,24 @@ class CreateCampaign(RESTResource):
         """
         Create a request with the provided json content
         """
-        return self.create_campaign(cherrypy.request.body.read().strip())
+        return dumps(self.create_campaign(cherrypy.request.body.read().strip()))
 
     def create_campaign(self, data):
         db = database('campaigns')
         try:
             camp_mcm = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
-            return dumps({"results":False})
+            return {"results":False}
 
         #id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
         #self.json['prepid'] = loads(id)['prepid']
         if not camp_mcm.get_attribute('prepid'):
             self.logger.error('Invalid prepid: Prepid returned None')
-            return dumps({"results":False})
+            return {"results":False}
 
         if '_' in camp_mcm.get_attribute('prepid'):
             self.logger.error('Invalid campaign name %s'%(camp_mcm.get_attribute('prepid')))
-            return dumps({"results":False})
+            return {"results":False}
 
         camp_mcm.set_attribute('_id', camp_mcm.get_attribute('prepid'))
 
@@ -42,17 +42,17 @@ class CreateCampaign(RESTResource):
 
         ## this is to create, not to update
         if db.document_exists( camp_mcm.get_attribute('prepid') ):
-            return dumps({"results":False})
+            return {"results":False}
 
         # save to db
         if not db.save(camp_mcm.json()):
             self.logger.error('Could not save object to database')
-            return dumps({"results":False})
+            return {"results":False}
 
         # create dedicated chained campaign
         self.create_chained_campaign(camp_mcm.get_attribute('_id'), db, camp_mcm.get_attribute('energy'))
 
-        return dumps({"results":True})
+        return {"results":True}
 
     # creates a chained campaign containing only the given campaign
     def create_chained_campaign(self, cid, db, energy=-1):
@@ -73,15 +73,15 @@ class UpdateCampaign(RESTResource):
         """
         Update the content of a campaign data with the provided information
         """
-        return self.update_campaign(cherrypy.request.body.read().strip())
+        return dumps(self.update_campaign(cherrypy.request.body.read().strip()))
 
     def update_campaign(self, data):
         if not '_rev' in data:
-            return dumps({"results":False, 'message': 'There is no previous revision provided'})
+            return {"results":False, 'message': 'There is no previous revision provided'}
         try:
             camp_mcm = campaign(json_input=loads(data))
         except campaign.IllegalAttributeName as ex:
-            return dumps({"results":False})
+            return {"results":False}
 
         if not camp_mcm.get_attribute('prepid') and not camp_mcm.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
@@ -102,7 +102,7 @@ class UpdateCampaign(RESTResource):
 
     def save_campaign(self, camp_mcm):
         db = database('campaigns')
-        return dumps({"results": db.update(camp_mcm.json())})
+        return {"results": db.update(camp_mcm.json())}
 
     ##unfortunate duplicate
     # creates a chained campaign containing only the given campaign
@@ -125,17 +125,17 @@ class DeleteCampaign(RESTResource):
         """
         if not args:
             return dumps({"results":False})
-        return self.delete_request(args[0])
+        return dumps(self.delete_request(args[0]))
 
     def delete_request(self, cid):
         db = database(self.db_name)
         if not self.delete_all_requests(cid):
-                return dumps({"results":False})
+                return {"results":False}
 
         # delete all chained_campaigns and flows that have this campaign as a member
         self.resolve_dependencies(cid, db)
 
-        return dumps({"results":db.delete(cid)})
+        return {"results":db.delete(cid)}
 
     def delete_all_requests(self, cid):
         rdb = database('requests')
@@ -162,7 +162,7 @@ class DeleteCampaign(RESTResource):
             try:
                 from rest_api.ChainedCampaignActions import DeleteChainedCampaign
             except ImportError as ex:
-                return dumps({'results':str(ex)})
+                return {'results':str(ex)}
 
             # init deleter
             delr = DeleteChainedCampaign()
@@ -189,11 +189,11 @@ class GetCampaign(RESTResource):
         if not args:
             self.logger.error("No Arguments were given")
             return dumps({"results":'Error: No arguments were given'})
-        return self.get_request(args[0])
+        return dumps(self.get_request(args[0]))
 
     def get_request(self, data):
         db = database(self.db_name)
-        return dumps({"results": db.get(prepid=data)})
+        return {"results": db.get(prepid=data)}
 
 class GetAllCampaigns(RESTResource):
     def __init__(self):
@@ -203,11 +203,11 @@ class GetAllCampaigns(RESTResource):
         """
         Get the json content of all campaigns in McM
         """
-        return self.get_all()
+        return dumps(self.get_all())
 
     def get_all(self):
         db = database(self.db_name)
-        return dumps({"results":db.raw_query("prepid")})
+        return {"results":db.raw_query("prepid")}
 
 class ToggleCampaign(RESTResource):
     def __init__(self):
@@ -219,16 +219,16 @@ class ToggleCampaign(RESTResource):
         """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
-        return self.toggle_campaign(args[0])
+        return dumps(self.toggle_campaign(args[0]))
 
     def toggle_campaign(self,  rid):
         db = database('campaigns')
         if not db.document_exists(rid):
-            return dumps({"results":'Error: The given campaign id does not exist.'})
+            return {"results":'Error: The given campaign id does not exist.'}
         camp = campaign(json_input=db.get(rid))
         camp.toggle_approval()
 
-        return dumps({"results":db.update(camp.json())})
+        return {"results":db.update(camp.json())}
 
 class ToggleCampaignStatus(RESTResource):
     def __init__(self):
@@ -240,23 +240,23 @@ class ToggleCampaignStatus(RESTResource):
         """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
-        return self.toggle_campaign(args[0])
+        return dumps(self.toggle_campaign(args[0]))
 
     def toggle_campaign(self,  rid):
         db = database('campaigns')
         if not db.document_exists(rid):
-            return dumps({"results":'Error: The given campaign id does not exist.'})
+            return {"results":'Error: The given campaign id does not exist.'}
         camp = campaign(json_input=db.get(rid))
         try:
             camp.toggle_status()
             saved = db.update(camp.json())
             if saved:
-                return dumps({"results":True})
+                return {"results":True}
             else:
-                return dumps({"results":False, "message":"Could not save request"})
+                return {"results":False, "message":"Could not save request"}
 
         except Exception as ex:
-            return dumps({"results":False, "message": str(ex) })
+            return {"results":False, "message": str(ex) }
 
 class ApproveCampaign(RESTResource):
     def __init__(self):
@@ -270,8 +270,8 @@ class ApproveCampaign(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
         if len(args) < 2:
-            return self.multiple_toggle(args[0])
-        return self.multiple_toggle(args[0],  args[1])
+            return dumps(self.multiple_toggle(args[0]))
+        return dumps(self.multiple_toggle(args[0],  args[1]))
 
     def multiple_toggle(self, rid, val=-1):
         if ',' in rid:
@@ -279,9 +279,9 @@ class ApproveCampaign(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.toggle_campaign(r, val))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.toggle_campaign(rid, val))
+            return self.toggle_campaign(rid, val)
 
     def toggle_campaign(self,  rid,  index):
         db = database('campaigns')
@@ -307,15 +307,15 @@ class GetCmsDriverForCampaign(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given.'})
         db = database(self.db_name)
-        return self.get_cmsDriver(db.get(prepid=args[0]))
+        return dumps(self.get_cmsDriver(db.get(prepid=args[0])))
 
     def get_cmsDriver(self, data):
         try:
             camp_mcm = campaign(json_input=data)
         except campaign.IllegalAttributeName as ex:
-            return dumps({"results":''})
+            return {"results":''}
 
-        return dumps({"results":camp_mcm.build_cmsDrivers()})
+        return {"results":camp_mcm.build_cmsDrivers()}
 
 class CampaignsRESTResource(RESTResource):
 
@@ -344,11 +344,11 @@ class CampaignsRESTResource(RESTResource):
                 else:
                     res.append( {"prepid": r, "results":False, 'message' : '%s does not exist'%(r)})
         if len(res)>1:
-            return dumps(res)
+            return res
         elif len(res):
-            return dumps(res[0])
+            return res[0]
         else:
-            return dumps([])
+            return []
 
 class ListAllCampaigns(CampaignsRESTResource):
     def __init__(self):
@@ -372,7 +372,7 @@ class InspectRequests(CampaignsRESTResource):
         """
         if not args:
             return dumps({"results":'Error: No arguments were given'})
-        return self.multiple_inspect(args[0])
+        return dumps(self.multiple_inspect(args[0]))
 
 class InspectCampaigns(CampaignsRESTResource):
     def __init__(self):
@@ -388,4 +388,4 @@ class InspectCampaigns(CampaignsRESTResource):
         if args[0] != 'all':
             return dumps({"results":'Error: Incorrect argument provided'})
 
-        return self.multiple_inspect( ','.join(self.listAll()) )
+        return dumps(self.multiple_inspect( ','.join(self.listAll()) ))

@@ -98,20 +98,20 @@ class RequestRESTResource(RESTResource):
     def import_request(self, data, db, label='created'):
 
         if '_rev' in data:
-            return dumps({"results": False, 'message': 'could not save object with a revision number in the object'})
+            return {"results": False, 'message': 'could not save object with a revision number in the object'}
 
         try:
             #mcm_req = request(json_input=loads(data))
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName as ex:
-            return dumps({"results": False, "message": str(ex)})
+            return {"results": False, "message": str(ex)}
         camp = self.set_campaign(mcm_req)
         if not camp:
-            return dumps({"results": False, "message": 'Error: Campaign ' + mcm_req.get_attribute(
-                'member_of_campaign') + ' does not exist.'})
+            return {"results": False, "message": 'Error: Campaign ' + mcm_req.get_attribute(
+                'member_of_campaign') + ' does not exist.'}
 
         if camp.get_attribute('status') != 'started':
-            return dumps({"results": False, "message": "Cannot create a request in a campaign that is not started"})
+            return {"results": False, "message": "Cannot create a request in a campaign that is not started"}
 
         self.logger.log('Building new request...')
 
@@ -141,7 +141,7 @@ class RequestRESTResource(RESTResource):
 
             if not mcm_req.get_attribute('prepid'):
                 self.logger.error('prepid returned was None')
-                return dumps({"results": False, "message": "internal error and the request id is null"})
+                return {"results": False, "message": "internal error and the request id is null"}
 
         self.logger.log('New prepid: %s' % (mcm_req.get_attribute('prepid')))
 
@@ -170,18 +170,18 @@ class RequestRESTResource(RESTResource):
         if not existed:
             if not db.save(mcm_req.json()):
                 self.logger.error('Could not save results to database')
-                return dumps({"results": False})
+                return {"results": False}
         else:
             if not db.update(mcm_req.json()):
                 self.logger.error('Could not update request in database')
-                return dumps({"results": False})
+                return {"results": False}
 
         # add an action to the action_db
         try:
             self.add_action(mcm_req, camp)
         except Exception as ex:
-            return dumps({"results": False, "prepid": mcm_req.get_attribute('_id'), "message" : "It was not possible to set the action because %s"%(str(ex))})
-        return dumps({"results": True, "prepid": mcm_req.get_attribute('_id')})
+            return {"results": False, "prepid": mcm_req.get_attribute('_id'), "message" : "It was not possible to set the action because %s"%(str(ex))}
+        return {"results": True, "prepid": mcm_req.get_attribute('_id')}
 
 
 class CloneRequest(RequestRESTResource):
@@ -196,7 +196,7 @@ class CloneRequest(RequestRESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given.'})
-        return self.clone_request(args[0])
+        return dumps(self.clone_request(args[0]))
 
     def PUT(self):
         """
@@ -204,14 +204,14 @@ class CloneRequest(RequestRESTResource):
         """
         data = loads(cherrypy.request.body.read().strip())
         pid = data['prepid']
-        return self.clone_request(pid, data)
+        return dumps(self.clone_request(pid, data))
 
     def clone_request(self, pid, data={}):
         db = database(self.db_name)
         if db.document_exists(pid):
             new_json = db.get(pid)
             if new_json['flown_with']:
-                return dumps({"results": False, "message": "cannot clone a request that has been flown"})
+                return {"results": False, "message": "cannot clone a request that has been flown"}
 
         
             to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','generator_parameters','priority','analysis_id', 'extension']
@@ -226,7 +226,7 @@ class CloneRequest(RequestRESTResource):
 
             return self.import_request(new_json, db, label='clone')
         else:
-            return dumps({"results": False, "message": "cannot clone an inexisting id %s" % pid})
+            return {"results": False, "message": "cannot clone an inexisting id %s" % pid}
 
 
 class ImportRequest(RequestRESTResource):
@@ -239,7 +239,7 @@ class ImportRequest(RequestRESTResource):
         Saving a new request from a given dictionnary
         """
         db = database(self.db_name)
-        return self.import_request(loads(cherrypy.request.body.read().strip()), db)
+        return dumps(self.import_request(loads(cherrypy.request.body.read().strip()), db))
 
 
 class UpdateRequest(RequestRESTResource):
@@ -250,7 +250,7 @@ class UpdateRequest(RequestRESTResource):
         """
         Updating an existing request with an updated dictionary
         """
-        return self.update()
+        return dumps(self.update())
 
     def update(self):
         try:
@@ -258,25 +258,25 @@ class UpdateRequest(RequestRESTResource):
             return res
         except:
             self.logger.error('Failed to update a request from API \n%s'%( traceback.format_exc() ))
-            return dumps({'results': False, 'message': 'Failed to update a request from API'})
+            return {'results': False, 'message': 'Failed to update a request from API'}
 
     def update_request(self, data):
         data = loads(data)
         db = database(self.db_name)
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
-            return dumps({"results": False, 'message': 'could not locate revision number in the object'})
+            return {"results": False, 'message': 'could not locate revision number in the object'}
 
         if not db.document_exists(data['_id']):
-            return dumps({"results": False, 'message': 'request %s does not exist' % ( data['_id'])})
+            return {"results": False, 'message': 'request %s does not exist' % ( data['_id'])}
         else:
             if db.get(data['_id'])['_rev'] != data['_rev']:
-                return dumps({"results": False, 'message': 'revision clash'})
+                return {"results": False, 'message': 'revision clash'}
 
         try:
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName:
-            return dumps({"results": False, 'message': 'Mal-formatted request json in input'})
+            return {"results": False, 'message': 'Mal-formatted request json in input'}
 
         if not mcm_req.get_attribute('prepid') and not mcm_req.get_attribute('_id'):
             self.logger.error('prepid returned was None')
@@ -295,7 +295,7 @@ class UpdateRequest(RequestRESTResource):
             if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
                     key, previous_version.get_attribute(key), mcm_req.get_attribute(key), right))
-                return dumps({"results": False, 'message': 'Illegal change of parameter %s' % key})
+                return {"results": False, 'message': 'Illegal change of parameter %s' % key}
                 #raise ValueError('Illegal change of parameter')
 
         self.logger.log('Updating request %s...' % (mcm_req.get_attribute('prepid')))
@@ -309,8 +309,7 @@ class UpdateRequest(RequestRESTResource):
             # check on the action
             camp = self.set_campaign(mcm_req)
             if not camp:
-                return dumps({
-                    "results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'})
+                return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
             self.add_action(mcm_req, camp)
 
         # update history
@@ -319,7 +318,7 @@ class UpdateRequest(RequestRESTResource):
         return self.save_request(mcm_req, db)
 
     def save_request(self, mcm_req, db):
-        return dumps({"results": db.update(mcm_req.json())})
+        return {"results": db.update(mcm_req.json())}
 
 
 class ManageRequest(UpdateRequest):
@@ -336,7 +335,7 @@ class ManageRequest(UpdateRequest):
         """
         Updating an existing request with an updated dictionnary, leaving no trace in history, for admin only
         """
-        return self.update()
+        return dumps(self.update())
 
 
 class MigratePage(RequestRESTResource):
@@ -371,7 +370,8 @@ class MigrateRequest(RequestRESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
-        return self.migrate_from_prep(args[0])
+        res = self.migrate_from_prep(args[0])
+        return dumps(res) if isinstance(res, dict) else res
 
     def migrate_from_prep(self, pid):
 
@@ -383,8 +383,7 @@ class MigrateRequest(RequestRESTResource):
         db = database(self.db_name)
 
         if not cdb.document_exists(mcm_campaign):
-            return dumps(
-                {"results": False, "message": 'no campaign %s exists in McM to migrate %s' % (mcm_campaign, pid)})
+            return {"results": False, "message": 'no campaign %s exists in McM to migrate %s' % (mcm_campaign, pid)}
         camp = campaign(cdb.get(mcm_campaign))
 
         from sync.get_request import prep_scraper
@@ -392,21 +391,21 @@ class MigrateRequest(RequestRESTResource):
         prep = prep_scraper()
         mcm_requests = prep.get(pid)
         if not len(mcm_requests):
-            return dumps({"results": False, "message": "no conversions for prepid %s" % pid})
+            return {"results": False, "message": "no conversions for prepid %s" % pid}
         mcm_request = mcm_requests[0]
         try:
             mcm_req = mcm_r = request(mcm_request)
         except:
-            return dumps({"results": False, "message": "json does not cast into request type <br> %s" % mcm_request})
+            return {"results": False, "message": "json does not cast into request type <br> %s" % mcm_request}
 
         ## make the sequences right ? NO, because that cast also the conditions ...
         #mcm_r.build_cmsDrivers(cast=-1)
         #mcm_r.build_cmsDrivers(cast=1)
 
         if mcm_r.get_attribute('mcdb_id') > 0 and mcm_r.get_attribute('status') not in ['submitted', 'done']:
-            return dumps({"results": False,
+            return {"results": False,
                           "message": "A request which will require a step0 (%s) cannot be migrated in status %s, requires submitted or done" % (
-                              mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))})
+                              mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))}
 
         mcm_r.update_history({'action': 'migrated'})
         if not db.document_exists(mcm_r.get_attribute('prepid')):
@@ -416,8 +415,7 @@ class MigrateRequest(RequestRESTResource):
                 'done']: #['done','submitted']:
                 # no requests provided, the request should fail migration. 
                 # I have put fake docs in stats so that it never happens
-                return dumps(
-                    {"results": False, "message": "Could not find an entry in the stats DB for prepid %s" % pid})
+                return {"results": False, "message": "Could not find an entry in the stats DB for prepid %s" % pid}
 
             # set the completed events properly
             if mcm_r.get_attribute('status') == 'done' and len(
@@ -431,8 +429,7 @@ class MigrateRequest(RequestRESTResource):
             #it might be that later on, upon update of the request that the action get deleted
             if camp.get_attribute('root') <= 0:
                 if not self.set_campaign(mcm_req):
-                    return dumps({"results": 'Error: Campaign ' + mcm_req.get_attribute(
-                        'member_of_campaign') + ' does not exist.'})
+                    return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
                 self.add_action(mcm_req, camp, force=True)
         else:
             html = '<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
@@ -452,7 +449,7 @@ class MigrateRequest(RequestRESTResource):
             return html
             #return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
         else:
-            return dumps({"results": saved, "message": "could not save converted prepid %s in McM" % pid})
+            return {"results": saved, "message": "could not save converted prepid %s in McM" % pid}
 
             #return dumps({"results":True,"message":"not implemented"})
 
@@ -473,15 +470,19 @@ class GetCmsDriverForRequest(RESTResource):
         cast = 0
         if len(args) > 1:
             cast = int(args[1])
-        return self.get_cmsDriver(db.get(prepid=args[0]), cast)
+        return dumps(self.get_cmsDriver(db.get(prepid=args[0]), cast))
 
     def get_cmsDriver(self, data, cast):
         try:
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName:
-            return dumps({"results": ''})
+            return {"results": ''}
 
-        return dumps({"results": mcm_req.build_cmsDrivers(cast=cast)})
+        return {"results": mcm_req.build_cmsDrivers(cast=cast)}
+
+
+
+
 
 
 class GetFragmentForRequest(RESTResource):
@@ -499,13 +500,14 @@ class GetFragmentForRequest(RESTResource):
         if len(args) > 1:
             v = True
         db = database(self.db_name)
-        return self.get_fragment(db.get(prepid=args[0]), v)
+        res = self.get_fragment(db.get(prepid=args[0]), v)
+        return dumps(res) if isinstance(res, dict) else res
 
     def get_fragment(self, data, view):
         try:
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName:
-            return dumps({"results": ''})
+            return {"results": ''}
 
         fragmentText = mcm_req.get_attribute('fragment')
         if view:
@@ -577,7 +579,7 @@ class DeleteRequest(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": False})
-        return self.delete_request(args[0])
+        return dumps(self.delete_request(args[0]))
 
     def delete_request(self, pid):
         db = database(self.db_name)
@@ -586,7 +588,7 @@ class DeleteRequest(RESTResource):
         mcm_r = request(db.get( pid))
 
         if mcm_r.get_attribute('status') != 'new':
-            return dumps({"results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))})
+            return {"results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))}
 
         in_chains = mcm_r.get_attribute('member_of_chain')
         for in_chain in in_chains:
@@ -594,16 +596,16 @@ class DeleteRequest(RESTResource):
             try:
                 action_item = mcm_cr.retrieve_original_action_item(adb)
                 ## this is a valid action item
-                return dumps({"results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)})
+                return {"results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)}
             except:
                 ## this is not a valid action item
                 # further check
                 if mcm_cr.get_attribute('chain')[-1]!= pid:
                     ## the pid is not the last of the chain
-                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)})
+                    return {"results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)}
                 if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index( pid ):
                     ## we are currently processing that request
-                    return dumps({"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)})
+                    return {"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)}
                 ## found a chain that deserves the request to be pop-ep out from the end
                 new_chain = mcm_cr.get_attribute('chain')
                 new_chain.remove( pid )
@@ -618,7 +620,7 @@ class DeleteRequest(RESTResource):
         # delete chained requests !
         #self.delete_chained_requests(self,pid):
 
-        return dumps({"results": db.delete(pid)})
+        return {"results": db.delete(pid)}
 
     def delete_action(self, pid):
         adb = database('actions')
@@ -661,17 +663,17 @@ class GetRequest(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": {}})
-        return self.get_request(args[0])
+        return dumps(self.get_request(args[0]))
 
     def get_request(self, data):
         db = database(self.db_name)
         if not db.document_exists(data):
-            return dumps({"results": {}})
+            return {"results": {}}
         mcm_r = db.get(prepid=data)
         # cast the sequence for schema evolution !!! here or not ?
         for (i_s, s) in enumerate(mcm_r['sequences']):
             mcm_r['sequences'][i_s] = sequence(s).json()
-        return dumps({"results": mcm_r})
+        return {"results": mcm_r}
 
 
 class ApproveRequest(RESTResource):
@@ -683,8 +685,8 @@ class ApproveRequest(RESTResource):
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
         if len(args) == 1:
-            return self.multiple_approve(args[0])
-        return self.multiple_approve(args[0], int(args[1]))
+            return dumps(self.multiple_approve(args[0]))
+        return dumps(self.multiple_approve(args[0], int(args[1])))
 
     def multiple_approve(self, rid, val=-1):
         if ',' in rid:
@@ -692,9 +694,9 @@ class ApproveRequest(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.approve(r, val))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.approve(rid, val))
+            return self.approve(rid, val)
 
     def approve(self, rid, val=-1):
         db = database('requests')
@@ -739,7 +741,7 @@ class ResetRequestApproval(ApproveRequest):
         """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
-        return self.multiple_approve(args[0], 0)
+        return dumps(self.multiple_approve(args[0], 0))
 
 
 class GetStatus(RESTResource):
@@ -748,7 +750,7 @@ class GetStatus(RESTResource):
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
 
-        return self.multiple_status(args[0])
+        return dumps(self.multiple_status(args[0]))
 
     def multiple_status(self, rid):
         if ',' in rid:
@@ -756,9 +758,9 @@ class GetStatus(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.status(r))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.status(rid))
+            return self.status(rid)
 
     def status(self, rid):
         db = database('requests')
@@ -784,7 +786,7 @@ class InspectStatus(RESTResource):
         """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
-        return self.multiple_inspect(args[0])
+        return dumps(self.multiple_inspect(args[0]))
 
     def multiple_inspect(self, rid):
         rlist = rid.rsplit(',')
@@ -810,9 +812,9 @@ class InspectStatus(RESTResource):
 
 
         if len(res) > 1:
-            return dumps(res)
+            return res
         else:
-            return dumps(res[0])
+            return res[0]
 
 
 class SetStatus(RESTResource):
@@ -826,8 +828,8 @@ class SetStatus(RESTResource):
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
         if len(args) < 2:
-            return self.multiple_status(args[0])
-        return self.multiple_status(args[0], int(args[1]))
+            return dumps(self.multiple_status(args[0]))
+        return dumps(self.multiple_status(args[0], int(args[1])))
 
     def multiple_status(self, rid, val=-1):
         if ',' in rid:
@@ -835,9 +837,9 @@ class SetStatus(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.status(r, val))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.status(rid, val))
+            return self.status(rid, val)
 
     def status(self, rid, step=-1):
         db = database('requests')
@@ -955,13 +957,13 @@ class GetEditable(RESTResource):
         if not args:
             self.logger.error('Request/GetEditable: No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
-        return self.get_editable(args[0])
+        return dumps(self.get_editable(args[0]))
 
     def get_editable(self, prepid):
         db = database(self.db_name)
         request_in_db = request(db.get(prepid=prepid))
         editable = request_in_db.get_editable()
-        return dumps({"results": editable})
+        return {"results": editable}
 
 
 class GetDefaultGenParams(RESTResource):
@@ -976,13 +978,13 @@ class GetDefaultGenParams(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
 
-        return self.get_default_params(args[0])
+        return dumps(self.get_default_params(args[0]))
 
     def get_default_params(self, prepid):
         db = database(self.db_name)
         request_in_db = request(db.get(prepid=prepid))
         request_in_db.update_generator_parameters()
-        return dumps({"results": request_in_db.get_attribute('generator_parameters')[-1]})
+        return {"results": request_in_db.get_attribute('generator_parameters')[-1]}
 
 
 class NotifyUser(RESTResource):
@@ -999,7 +1001,8 @@ class NotifyUser(RESTResource):
         rdb = database('requests')
         for pid in pids:
             if not rdb.document_exists(pid):
-                return results.append({"prepid": pid, "results": False, "message": "%s does not exist" % pid})
+                results.append({"prepid": pid, "results": False, "message": "%s does not exist" % pid})
+                return dumps(results)
 
             req = request(rdb.get(pid))
             # notify the actors of the request
@@ -1008,7 +1011,8 @@ class NotifyUser(RESTResource):
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
             if not rdb.save(req.json()):
-                return results.append({"prepid": pid, "results": False, "message": "Could not save %s" % pid})
+                results.append({"prepid": pid, "results": False, "message": "Could not save %s" % pid})
+                return dumps(results)
 
             results.append({"prepid": pid, "results": True, "message": "Notification send for %s" % pid})
         return dumps(results)
@@ -1023,7 +1027,7 @@ class RegisterUser(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return self.multiple_register(args[0])
+        return dumps(self.multiple_register(args[0]))
 
     def multiple_register(self, rid):
         if ',' in rid:
@@ -1031,9 +1035,9 @@ class RegisterUser(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.register_user(r))
-            return dumps(res)
+            return res
         else:
-            return dumps(self.register_user(rid))
+            return self.register_user(rid)
 
     def register_user(self, pid):
         rdb = database('requests')
@@ -1066,16 +1070,16 @@ class GetActors(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
         if len(args) > 1:
-            return self.show_user(args[0], args[1])
-        return self.show_user(args[0])
+            return dumps(self.show_user(args[0], args[1]))
+        return dumps(self.show_user(args[0]))
 
     def show_user(self, pid, what=None):
         rdb = database('requests')
         request_in_db = request(rdb.get(pid))
         if what:
-            return dumps(request_in_db.get_actors(what=what))
+            return request_in_db.get_actors(what=what)
         else:
-            return dumps(request_in_db.get_actors())
+            return request_in_db.get_actors()
 
 
 class SearchableRequest(RESTResource):
@@ -1249,7 +1253,7 @@ class RequestLister():
                     all_objects.append(retrieve_db.get(oid))
 
         self.logger.error("Got %s ids identified" % ( len(all_objects)))
-        return dumps({"results": all_objects})
+        return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
         all_campaigns = map(lambda x: x['id'], cdb.raw_query("prepid"))
@@ -1358,7 +1362,7 @@ class RequestsFromFile(RequestLister, RESTResource):
         """
         rdb = database('requests')
         all_ids = self.get_list_of_ids(rdb)
-        return self.get_objects(all_ids, rdb)
+        return dumps(self.get_objects(all_ids, rdb))
 
 
 class RequestsReminder(RESTResource):
@@ -1558,7 +1562,7 @@ class UpdateMany(RequestRESTResource):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
-        return self.update_many(loads(cherrypy.request.body.read().strip()))
+        return dumps(self.update_many(loads(cherrypy.request.body.read().strip())))
 
     def update_many(self, data):
         list_of_prepids = data["prepids"]
@@ -1574,9 +1578,9 @@ class UpdateMany(RequestRESTResource):
                     document[value] = list(set(temp))
                 else:
                     document[value] = updated_values[value]
-            return_info.append(loads(self.updateSingle.update_request(dumps(document))))
+            return_info.append(self.updateSingle.update_request(dumps(document)))
         self.logger.log('updating requests: %s' % return_info)
-        return dumps({"results":return_info})
+        return {"results": return_info}
 
 class GetAllRevisions(RequestRESTResource):
     def __init__(self):
@@ -1592,7 +1596,7 @@ class GetAllRevisions(RequestRESTResource):
         if not args:
             self.logger.error('GetAllRevisions: No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return self.get_all_revs(args[0])
+        return dumps(self.get_all_revs(args[0]))
 
     def get_all_revs(self, prepid):
         list_of_revs = []
@@ -1613,5 +1617,7 @@ class GetAllRevisions(RequestRESTResource):
                 single_doc = single_result.read()
                 list_of_revs.append(loads(single_doc))
         self.logger.log('Getting all revisions for: %s' % doc_id)
-        return dumps({"results": list_of_revs})
+        return {"results": list_of_revs}
+
+
 

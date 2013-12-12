@@ -151,11 +151,11 @@ class GetAction(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
 
-        return self.get_request(args[0])
+        return dumps({"results": self.get_request(args[0])})
 
     def get_request(self, id):
         db = database(self.db_name)
-        return dumps({"results":db.get(id)})
+        return db.get(id)
 
 class SelectChain(RESTResource):
     def __init__(self):
@@ -171,7 +171,7 @@ class SelectChain(RESTResource):
             self.logger.error('No arguments were given.')
             return dumps({"results":'Error: No arguments were given'})
 
-        return self.select_chain(args[0],  args[1])
+        return dumps({'results':self.select_chain(args[0], args[1])})
 
     def select_chain(self, aid,  chainid):
         db = database(self.db_name)
@@ -185,9 +185,9 @@ class SelectChain(RESTResource):
 
             # save
             db.update(a.json())
-            return dumps({'results':True})
+            return True
         else:
-            return dumps({"results":False})
+            return False
 
 class DeSelectChain(RESTResource):
     def __init__(self):
@@ -202,9 +202,9 @@ class DeSelectChain(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
 
-        return self.deselect_chain(args[0],  args[1])
+        return dumps({'results':self.deselect_chain(args[0], args[1])})
 
-    def deselect_chain(self,  aid,  chainid):
+    def deselect_chain(self, aid, chainid):
         db = database(self.db_name)
         self.logger.log('Deselecting chain %s for action %s...' % (chainid, aid))        
         # if action exists
@@ -215,9 +215,10 @@ class DeSelectChain(RESTResource):
             a.deselect_chain(chainid)
             # save
             db.update(a.json())
-            return dumps({'results':True})
+            return True
         else:
-            return dumps({"results":False})
+            return False
+
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
@@ -314,7 +315,7 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
         """
         Generate all chained requests for all actions where applicable
         """
-        return self.generate_requests()
+        return dumps(self.generate_requests())
 
     def generate_requests(self):
         adb = database('actions')
@@ -324,7 +325,7 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
         for a in allacs:
             res.append(self.generate_request(a['key']))
 
-        return dumps(res)
+        return res
 
 class SetAction(GenerateChainedRequests):
     def __init__(self):
@@ -357,7 +358,7 @@ class SetAction(GenerateChainedRequests):
 
         block=int(block)
 
-        return self.set_action( aid, cc, block, staged, threshold)
+        return dumps(self.set_action( aid, cc, block, staged, threshold))
 
     def set_action(self, aid, cc, block, staged=None, threshold=None,reserve=False):
         adb = database('actions')
@@ -368,7 +369,7 @@ class SetAction(GenerateChainedRequests):
         if not len(ccs):
             ccs = ccdb.queries(['prepid==%s'% cc])
         if not len(ccs) :
-            return dumps("%s not a chained campaigns"%( cc ))
+            return {"results": False, "message": "%s not a chained campaigns"%( cc )}
 
         mcm_cc = chained_campaign( ccs[0] )
         mcm_cc_name=mcm_cc.get_attribute('prepid')
@@ -380,11 +381,7 @@ class SetAction(GenerateChainedRequests):
             chains = mcm_a.get_attribute('chains')
 
         if mcm_cc_name not in chains:
-            return dumps("Not able to find %s for %s"%( mcm_cc_name, aid))
-
-        #edit the chains content
-        #if 'chains' in chains[mcm_cc_name]:
-        #    return dumps("Something already exists for %s in %s. You'll have to do it by hand"%( mcm_cc_name,aid))
+            return {"results": False, "message": "Not able to find %s for %s"%( mcm_cc_name, aid)}
 
         chains[mcm_cc_name].update( { "flag":True, "block_number" : block})
         if staged:
@@ -411,7 +408,7 @@ class DetectChains(RESTResource):
         """
         db = database('actions')
         if not args:
-            return self.find_all_chains(db)
+            return dumps(self.find_all_chains(db))
         res=[]
         aids=args[0].split(',')
         if len(aids)==1:
@@ -440,7 +437,7 @@ class DetectChains(RESTResource):
         for aid in aids:
             res.append(self.find_chains(aid, db))
 
-        return dumps(res)
+        return res
 
 from rest_api.RequestActions import RequestLister
 class ActionsFromFile(RequestLister,RESTResource): 
@@ -454,6 +451,6 @@ class ActionsFromFile(RequestLister,RESTResource):
         Parse the posted text document for request id and request ranges for display of actions
         """
         adb = database('actions')
-        all_ids = self.get_list_of_ids( adb )
-        return self.get_objects( all_ids , adb )
+        all_ids = self.get_list_of_ids(adb)
+        return dumps(self.get_objects( all_ids, adb))
 
