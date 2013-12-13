@@ -84,8 +84,8 @@
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Edit mccm" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(1);" target="_self"><i class="icon-wrench"></i></a>
-                <a rel="tooltip" title="Generate chains" ng-href="restapi/mccms/generate/{{mccm_info['prepid']}}" ng-hide="role(3);"><i class="icon-play"></i></a>
-                <a rel="tooltip" title="Generate chains and reserve" ng-href="restapi/mccms/generate/{{mccm_info['prepid']}}/reserve" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
+                <a rel="tooltip" title="Generate chains" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
+                <a rel="tooltip" title="Generate chains and reserve" ng-click="generate(mccm_info.prepid,'/reserve')" ng-href="#" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
                 <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
               </div>
               <div ng-switch-when="Prepid">

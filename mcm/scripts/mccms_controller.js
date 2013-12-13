@@ -191,6 +191,22 @@ function resultsCtrl($scope, $http, $location, $window, $route){
     }
   };
 
+  $scope.generate = function( mccm_id, opt){
+      console.log( mccm_id );
+
+      var promise= $http.get("restapi/mccms/generate/"+mccm_id+opt);
+      promise.then(function(data){
+	      if (data.data.results){
+		  alert("Everything went fine");
+	      }
+	      else{
+		  alert(data.data.message);
+	      }
+	  },function(){
+	      alert("Something went wrong");
+	  });
+  };
+
   $scope.isArray = function(obj){
     return angular.isArray(obj)
   };
