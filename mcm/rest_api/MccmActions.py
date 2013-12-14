@@ -173,7 +173,13 @@ class GenerateChains(RESTResource):
         if len(args)>1:
             reserve= (args[1]=='reserve')
 
-        return dumps(self.generate(mid, reserve))
+        lock = locker.lock(mid)
+        if lock.acquire(blocking=False):       
+            res= self.generate(mid, reserve)
+            lock.release()
+            return dumps(res)
+        else:
+            return dumps({"results" : False, "message" : "%s is already being operated on"% mid} )
 
     def generate(self, mid, reserve=False):
         mdb = database('mccms')
@@ -277,4 +283,50 @@ Dear Production Managers,
         
         return dumps({"results" : True, "message" : map( lambda m : m['prepid'], mccms)})
     
+
+class MccMDisplay(RESTResource):
+    def __init__(self):
+        pass
+
+    def GET(self, *args):
+        """
+        Twiki display of mccm ticket for a given meeting date and /pwg optional
+        """
+        
+        date = args[0]
+        pwgs=None
+        if len(args)>1:
+            pwgs=args[1].split(',')
+
+        mdb = database('mccms')
+
+        to_be_shown= ['prepid','notes','deadline','requests','chains','repetitions']
+        l_type=locator()        
+        mdocs= mdb.queries(['meeting==%s'% date])
+        if pwgs:
+            text="---++ MccM Tickets for %s : %s \n"%( date, ', '.join(pwgs) )
+            for pwg in pwgs:
+                mdocs_pwg = filter ( lambda m : m['pwg']==pwg, mdocs)
+                text+="---+++ Tickets for %s \n" %pwg
+                text+="[[%smccms?meeting=%s&pwg=%s][link to McM]]\n"%( l_type.baseurl(), date, pwg)
+                for t in mdocs_pwg:
+                    text+="   * "
+                    for item in to_be_shown:
+                        if item in t:
+                            text+="%s "% t[item]
+                    text+='\n'
+        else:
+            text="---++ MccM Tickets for %s \n<br>"%( date )
+            text+="[[%smccms?meeting=%s][link to McM]]\n"%( l_type.baseurl(), date )
+            for t in mdocs:
+                text+="   * "
+                for item in to_be_shown:   
+                    if item in t:
+                        text+="%s "% t[item]       
+                text+='\n'
+
+        return text
+
+        
+        
 
