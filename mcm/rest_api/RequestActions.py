@@ -481,8 +481,26 @@ class GetCmsDriverForRequest(RESTResource):
         return {"results": mcm_req.build_cmsDrivers(cast=cast)}
 
 
+class OptionResetForRequest(RESTResource):
 
+    def __init__(self):
+        self.db_name = 'requests'
+        self.access_limit = 1
 
+    def GET(self, *args):
+        """
+        Reset the options for request
+        """
+        rdb = database(self.db_name)
+        if not args:
+            self.logger.error('No ids given to option reset of request')
+            return dumps({"results": False, "message": "Provide comma-separated ids for option reset!"})
+        req_ids = args[0].split(',')
+        res = {}
+        for req_id in req_ids:
+            req = request(rdb.get(req_id))
+            res[req_id] = req.build_cmsDrivers(1)
+        return dumps({"results": res})
 
 
 class GetFragmentForRequest(RESTResource):
@@ -868,11 +886,15 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
         a = []
-        for i in range(400):
-            a.append(ChainedRequestPrepId().next_id("HIG", "chain_Summer12_flowGS2DR53RD"))
+        rdb = database('requests')
+        for i in args:
+            mcm_r = request(rdb.get(i))
+            old_prio = int(mcm_r.get_attribute('priority'))
+            a.append({i : mcm_r.change_priority(6500)})
+            mcm_r.change_priority(old_prio)
         return dumps(a)
+
 
         #rdb = database('requests')
         #
@@ -1619,26 +1641,32 @@ class GetAllRevisions(RequestRESTResource):
         self.logger.log('Getting all revisions for: %s' % doc_id)
         return {"results": list_of_revs}
 
-class OptionResetForRequest(RESTResource):
-
+class ListRequestPrepids(RequestRESTResource):
     def __init__(self):
+        RequestRESTResource.__init__(self)
         self.db_name = 'requests'
-        self.access_limit = 3
+        self.db = database('requests')
 
     def GET(self, *args):
         """
-        Reset the options for request
+        List all prepids by given key(-s)
         """
-        rdb = database(self.db_name)
         if not args:
-            self.logger.error('No ids given to option reset of request')
-            return dumps({"results": False, "message": "Provide comma-separated ids for option reset!"})
-        req_ids = args[0].split(',')
-        res = {}
-        for req_id in req_ids:
-            req = request(rdb.get(req_id))
-            res[req_id] = req.build_cmsDrivers(1)
-        return dumps({"results": res})
+            self.logger.error(' No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        if len(args) >= 2:
+            return dumps(self.get_all_prepids(args[0], args[1]))
+        else:
+            return dumps(self.get_all_prepids(args[0]))
 
-
+    def get_all_prepids(self, view, key=None):
+        view_name = view
+        if key:
+            result = self.db.raw_query(view_name, {'key': key})
+            self.logger.log('All list raw_query view:%s searching for: %s' %(view_name, key))
+        else:
+            result = self.db.raw_query(view_name)
+            self.logger.log('All list raw_query view:%s searching for all' %(view_name))
+        data = [key['value'] for key in result]
+        return {"results": data}
 

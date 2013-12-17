@@ -410,4 +410,28 @@ class SelectNewChainedCampaigns(RESTResource):
             traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)], 'chain_' + allowed_c, allowed_campaigns_dict)
 
         return dumps({"results" : all_cc})
-        #return dumps({'results':'Got %s flows and %s campaigns'%(len(flows),len(campaigns))})
+
+
+class ListChainCampaignPrepids(RESTResource):
+    def __init__(self):
+        RESTResource.__init__(self)
+        self.db_name = 'chained_campaigns'
+        self.db = database(self.db_name)
+
+    def GET(self, *args):
+        """
+        List all prepids from view by given key(-s)
+        """
+        if not args:
+            self.logger.error(' No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        return dumps(self.get_all_prepids(args[0], args[1]))
+
+    def get_all_prepids(self, view, key=None):
+        view_name = view
+        if key:
+            search_key = key
+        result = self.db.raw_query(view_name, {'key': search_key})
+        self.logger.log('All list raw_query view:%s searching for: %s' %(view_name,search_key))
+        data = [key['value'] for key in result]
+        return {"results": data}
