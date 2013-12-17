@@ -250,21 +250,18 @@ class chained_request(json_base):
                                                          'the flow is getting into a MCReproc campaign but not size per event is specified')
 
 
-
+        
         ## check that it is allowed to flow
         allowed_flow_approvals = ['flow', 'submit']
         ###### cascade of checks
-        # if flow allows -> do it
-        ## else if chained_request allows -> do it
-        # check all approvals (if flow say yes -> allowing policy)
         """
-        if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
+        if not reserve and not mcm_f.get_attribute('approval') in allowed_flow_approvals:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The flow (%s) is not in proper approval state (%s)'%( 
                                                             mcm_f.get_attribute('prepid'),
                                                             mcm_f.get_attribute('approval')))
 
-        if not self.get_attribute('approval') in allowed_flow_approvals:
+        if not reserve and not self.get_attribute('approval') in allowed_flow_approvals:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The chained request (%s) is not in the proper approval state (%s)'% (
                                                             self.get_attribute('_id'),
