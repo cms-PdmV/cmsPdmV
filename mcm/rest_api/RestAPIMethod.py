@@ -3,7 +3,9 @@
 from tools.user_management import authenticator as auth_obj, user_pack
 from tools.logger import logger as logfactory
 from tools.locator import locator
+from tools.locker import locker
 import cherrypy
+from collections import defaultdict
 
 
 class RESTResource(object):
@@ -11,6 +13,7 @@ class RESTResource(object):
     #logger = cherrypy.log
     logger = logfactory('mcm')
     access_limit = None
+    counter = defaultdict(lambda: defaultdict(int))
 
     limit_per_method = {
         'GET': 0,
@@ -58,6 +61,9 @@ class RESTResource(object):
         else:
             if not self.authenticator.can_access(user_p.get_username()):
                 raise cherrypy.HTTPError(403, 'You cannot access this page')
+        # counter for calls
+        with locker.lock("rest-call-counter"):
+            self.counter[method.im_class.__name__][method.__name__] += 1
         return method(*vpath, **params)
 
     def GET(self):
@@ -103,13 +109,13 @@ class RESTResourceIndex(RESTResource):
         methods = ['GET', 'PUT', 'POST', 'DELETE']
         #self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Function info</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
         self.res += "<table border='1'><thead><tr><th>Path</th><th>Function name</th>" + ''.join(
-            map(lambda s: '<th>%s method info</th><th>Access level</th>' % (s), methods)) + "</tr></thead><tbody>"
+            map(lambda s: '<th>%s method info</th><th>Access level</th><th>Calls counter</th>' % (s), methods)) + "</tr></thead><tbody>"
         #for method in self.data:
         #	self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
         #	self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
         #	for r in self.data[method]:
         #		self.res += "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>"
-        #	self.res += "</table></li>"
+        #	self.res += "</table><\/li>"
         #self.res += "</ul>"
         #self.res += "<br>".join(self.__dict__.keys())
 
@@ -142,9 +148,10 @@ class RESTResourceIndex(RESTResource):
                             self.res += '<td align=center>+%s</td>' % (limit)
                         else:
                             self.res += '<td align=center>%s</td>' % (self.limit_per_method[m])
+                        self.res += '<td align=center>{0}</td>'.format(RESTResource.counter[o.__class__.__name__][m])
                     else:
                         #self.res +='<td><small>N/A</small> </td><td> <small>N/A</small> </td>'
-                        self.res += '<td>&nbsp;</small> </td><td>&nbsp;</td>'
+                        self.res += '<td>&nbsp;</small> </td><td>&nbsp;</td><td>&nbsp;</small> </td>'
                         #self.res += "<td>"
                         #if o.access_limit:
                         #	 self.res +=' + %s'%( o.access_limit )
