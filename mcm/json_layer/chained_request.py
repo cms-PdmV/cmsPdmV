@@ -405,10 +405,7 @@ class chained_request(json_base):
                 self.set_attribute('step', next_step)
                 self.set_attribute('last_status', next_request.get_attribute('status'))
                 self.update_history({'action': 'flow', 'step': str(next_step)})
-
-            #reput some of the previous parameters in
-            #### to be removed ???? #### where is it coming from ???? ####
-            request.transfer( current_request, next_request)
+                self.set_attribute('status', 'processing')
 
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
                 ## register the chain to the next request
