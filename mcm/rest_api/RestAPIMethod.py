@@ -9,7 +9,7 @@ import cherrypy
 class RESTResource(object):
     authenticator = auth_obj(limit=3)
     #logger = cherrypy.log
-    logger = logfactory('rest')
+    logger = logfactory('mcm')
     access_limit = None
 
     limit_per_method = {

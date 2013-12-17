@@ -392,19 +392,19 @@ logger = logging.getLogger()
 logger.setLevel(0)
 
 # Make a new RotatingFileHandler for the error log.
-h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-#h.setLevel(logging.DEBUG)
-h.setFormatter(rest_formatter())
-log.error_log.addHandler(h)
-
-# set up custom ReST logger
-logger = logging.getLogger("rest_error")
-logger.addHandler(h)
+#h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+##h.setLevel(logging.DEBUG)
+#h.setFormatter(rest_formatter())
+#
+## set up custom ReST logger
+#logger = logging.getLogger("rest_error")
+#logger.addHandler(h)
 
 # set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 #ha.setLevel(logging.DEBUG)
 ha.setFormatter(prep2_formatter())
+log.error_log.addHandler(ha)
 logger = logging.getLogger("mcm_error")
 logger.addHandler(ha)
 
