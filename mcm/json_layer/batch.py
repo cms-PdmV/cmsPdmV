@@ -5,6 +5,7 @@ from tools.locator import locator
 import re
 from tools.settings import settings
 
+
 class batch(json_base):
     def __init__(self, json_input={}):
         self._json_base__status = ['new','announced','done']
@@ -51,6 +52,7 @@ class batch(json_base):
             subject+=" "+added
 
         return subject
+
     def announce(self,notes="",user=""):
         if self.get_attribute('status')!='new':
             return False
@@ -88,6 +90,10 @@ class batch(json_base):
             message+=" * %s (%s) -> %s\n"%(pid, mcm_r['dataset_name'], r['name'])
         message+="\n"
         message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
+        if self.get_attribute('extension'):
+            message += "This batch is for an extension : {0}".format(self.get_attribute('extension'))
+        if self.get_attribute('version'):
+            message += "This batch is a resubmission : v{0}".format(self.get_attribute('version') + 1)
         message+="Link to the batch:\n"
         l_type = locator()
         message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))

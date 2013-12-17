@@ -342,15 +342,6 @@ class RequestSubmitter(Handler):
                         bdb = database('batches')
                         bat = batch(bdb.get(batch_name))
                         bat.add_requests(added_requests)
-                        note = []
-
-                        if req.get_attribute('extension'):
-                            note.append(' is an extension ({0})'.format( req.get_attribute('extension')))
-                        if len(req.get_attribute('reqmgr_name')) > 1 or req.get_attribute(
-                                'version') != 0: #>1 because you just added that submission request a few lines above
-                            note.append(' is a resubmission (v{0})'.format(req.get_attribute('version')+1))
-                        if note:
-                            bat.add_notes('\n{0}: {1}'.format(self.prepid, ','.join(note)))
                         bat.update_history({'action': 'updated', 'step': self.prepid})
                         saved = bdb.update(bat.json())
                     if not saved:
