@@ -246,6 +246,9 @@ class request(json_base):
                 if similar['prepid'] == my_id: continue
                 if int(similar['extension']) == int(my_extension):
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are the same extension mumber (%s)'%( my_extension))
+        # check whether there are similar requests (same mcdb_id, campaign and number of events) if the campaign is a root campaign
+        #if mcm_c['root'] == 0 and self.get_attribute('mcdb_id') > 0:
+        #    rdb.raw_query('mcdb_check', {'key': [mcm_c['prepid'], self.get_attribute('mcdb_id'), self.get_attribute('total_events')], 'group': True})
 
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
