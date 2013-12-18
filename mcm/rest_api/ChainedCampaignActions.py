@@ -331,7 +331,10 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         if args[0] != 'all':
             return dumps({"results":'Error: Incorrect argument provided'})
 
-        return dumps(self.multiple_inspect( ','.join(self.listAll())))
+        ccid_list = self.listAll()
+        from random import shuffle
+        shuffle(ccid_list)
+        return dumps(self.multiple_inspect( ','.join( ccid_list )))
 
 
 class SelectNewChainedCampaigns(RESTResource):
