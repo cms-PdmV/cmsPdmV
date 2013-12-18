@@ -1501,6 +1501,12 @@ done
         for key in fl.get_attribute('request_parameters'):
             if key == 'sequences':
                 continue
+            elif key =='process_string':
+                ##concatenate to existing
+                if new_req.get_attribute(key):
+                    new_req.set_attribute(key, new_req.get_attribute(key)+'_'+fl.get_attribute('request_parameters')[key])
+                else:
+                    new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
             else:
                 if key in new_req.json():
                     new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
