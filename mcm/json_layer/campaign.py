@@ -2,7 +2,6 @@
 
 #from couchdb_layer.prep_database import database
 from json_base import json_base
-from tools.logger import logger as logfactory
 from sequence import sequence
 
 class campaign(json_base):
