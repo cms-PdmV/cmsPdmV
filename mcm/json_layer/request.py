@@ -10,6 +10,8 @@ import hashlib
 from couchdb_layer.mcm_database import database
 
 from json_layer.json_base import json_base
+from json_layer.campaign import campaign
+from json_layer.flow import flow
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools import ssh_executor
@@ -515,22 +517,22 @@ class request(json_base):
           flownWith=None
           if self.get_attribute('flown_with'):
               fdb = database('flows')
-              flownWith = fdb.get(self.get_attribute('flown_with'))
+              flownWith = flow(fdb.get(self.get_attribute('flown_with')))
 
-          camp = cdb.get(self.get_attribute('member_of_campaign'))
-          self.set_attribute('cmssw_release',camp['cmssw_release'])
-          self.set_attribute('pileup_dataset_name',camp['pileup_dataset_name'])
-          self.set_attribute('type',camp['type'])
+          camp = campaign(cdb.get(self.get_attribute('member_of_campaign')))
+          self.set_attribute('cmssw_release',camp.get_attribute('cmssw_release'))
+          self.set_attribute('pileup_dataset_name',camp.get_attribute('pileup_dataset_name'))
+          self.set_attribute('type',camp.get_attribute('type'))
           ## putting things together from the campaign+flow
           freshSeq=[]
           if flownWith:
               #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
-              #                                                                       camp['prepid'],
+              #                                                                       camp.get_attribute('prepid'),
               #                                                                       new_req['prepid']))
               request.put_together(camp, flownWith, self)
           else:
-              for i in range(len(camp['sequences'])):
-                      fresh = sequence(camp['sequences'][i]["default"])
+              for i in range(len(camp.get_attribute('sequences'))):
+                      fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                       freshSeq.append(fresh.json())
               self.set_attribute('sequences',freshSeq)
           if can_save:
