@@ -3,16 +3,16 @@ function resultsCtrl($scope, $http, $location, $window, $route){
     {text:'Prepid', select:true, db_name:'prepid'},
     {text:'Actions', select:true, db_name:''},
     {text:'Meeting', select:true, db_name:'meeting'},
-    {text:'Approval', select:true, db_name:'approval'},
-    {text:'Status', select:true, db_name:'status'},
+    {text:'Approval', select:false, db_name:'approval'},
+    {text:'Status', select:false, db_name:'status'},
     {text:'Deadline', select:true, db_name:'deadline'},
     {text:'Block', select:true, db_name:'block'},
     {text:'Message ID', select:false, db_name:'message_id'},
     {text:'Notes', select:false, db_name:'notes'},
-    {text:'Pwg', select:true, db_name:'pwg'},
+    {text:'Pwg', select:false, db_name:'pwg'},
     {text:'Requests', select:true, db_name:'requests'},
     {text:'Size', select:false, db_name:'size'},
-    {text:'Chains', select:false, db_name:'chains'},
+    {text:'Chains', select:true, db_name:'chains'},
     {text:'History', select:false, db_name:'history'}
   ];
   $scope.update = [];
