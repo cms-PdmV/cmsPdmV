@@ -3,11 +3,12 @@ from json import dumps, loads
 from couchdb_layer.mcm_database import database
 from json_layer.setting import setting
 from tools.settings import settings
+from tools.user_management import access_rights
 import cherrypy
 
 class GetSetting(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -28,7 +29,7 @@ class GetSetting(RESTResource):
 
 class SaveSetting(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self):
         """
@@ -62,7 +63,7 @@ class SaveSetting(RESTResource):
 
 class UpdateSetting(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self):
         """

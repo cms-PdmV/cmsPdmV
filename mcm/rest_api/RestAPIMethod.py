@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from tools.user_management import access_rights, roles
 from tools.user_management import authenticator as auth_obj, user_pack
 from tools.logger import logfactory
 from tools.locator import locator
@@ -9,17 +10,17 @@ from collections import defaultdict
 
 
 class RESTResource(object):
-    authenticator = auth_obj(limit=3)
+    authenticator = auth_obj(limit=access_rights.production_manager)
     #logger = cherrypy.log
     logger = logfactory
     access_limit = None
     counter = defaultdict(lambda: defaultdict(int))
 
     limit_per_method = {
-        'GET': 0,
-        'PUT': 1,
-        'POST': 1,
-        'DELETE': 4
+        'GET': access_rights.user,
+        'PUT': access_rights.generator_contact,
+        'POST': access_rights.generator_contact,
+        'DELETE': access_rights.administrator
     }
 
     def __init__(self, content=''):
@@ -34,7 +35,7 @@ class RESTResource(object):
             raise cherrypy.HTTPError(405, "Method not implemented.")
 
         if self.access_limit is not None:
-            self.logger.log('Setting access limit to %s' % self.access_limit)
+            self.logger.log('Setting access limit to access_rights.%s (%s)' % (roles[self.access_limit], self.access_limit))
             self.authenticator.set_limit(self.access_limit)
         elif cherrypy.request.method in self.limit_per_method:
             self.authenticator.set_limit(self.limit_per_method[cherrypy.request.method])
@@ -52,7 +53,8 @@ class RESTResource(object):
                 self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
         else:
             if not self.authenticator.can_access(user_p.get_username()):
-                raise cherrypy.HTTPError(403, 'You cannot access this page')
+                raise cherrypy.HTTPError(403, 'You cannot access this page, the limit for the page is {0} ({1})'.format(roles[self.authenticator.get_limit()],
+                                                                                                                        self.authenticator.get_limit()))
         # counter for calls
         with locker.lock("rest-call-counter"):
             self.counter[method.im_class.__name__][method.__name__] += 1
@@ -77,7 +79,7 @@ class RESTResourceIndex(RESTResource):
         # this is the restriction for
         # the role of the user that can
         # access this method.
-        self.access_role = 0
+        self.access_role = access_rights.user
 
         self.res = ""
         self.data = data

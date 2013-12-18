@@ -2,7 +2,7 @@ import json
 import time
 import cherrypy
 
-from tools.user_management import user_pack
+from tools.user_management import user_pack, access_rights
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
 
@@ -47,7 +47,7 @@ class GetSingleNew(RESTResourceIndex):
 
 class CreateNews(RESTResourceIndex):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def create_new(self, data):
         db = database('news')
@@ -78,7 +78,7 @@ class CreateNews(RESTResourceIndex):
 
 class UpdateNew(RESTResourceIndex):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def update_new(self, data):
         try:

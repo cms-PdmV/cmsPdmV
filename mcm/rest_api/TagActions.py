@@ -2,10 +2,11 @@ from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json import dumps, loads
 import cherrypy
+from tools.user_management import access_rights
 
 class GetTags(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args):
         """
@@ -17,7 +18,7 @@ class GetTags(RESTResource):
 
 class AddTag(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def PUT(self, *args):
         """
@@ -33,7 +34,7 @@ class AddTag(RESTResource):
 
 class RemoveTag(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def PUT(self, *args):
         """

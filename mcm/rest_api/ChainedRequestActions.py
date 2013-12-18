@@ -8,12 +8,13 @@ from ChainedRequestPrepId import ChainedRequestPrepId
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.action import action
+from tools.user_management import access_rights
 
 """
 ## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
 class SearchChainedRequest(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
         self.getter
 
     def PUT(self):
@@ -23,7 +24,7 @@ class SearchChainedRequest(RESTResource):
 class CreateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self):
         """
@@ -68,7 +69,7 @@ class CreateChainedRequest(RESTResource):
 class UpdateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self):
         """
@@ -188,7 +189,7 @@ class GetChainedRequest(RESTResource):
 # REST method to add a new request to the chain
 class AddRequestToChain(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self):
         """
@@ -245,7 +246,7 @@ class AddRequestToChain(RESTResource):
 # step of the chain
 class FlowToNextStep(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -327,7 +328,7 @@ class FlowToNextStep(RESTResource):
 
 class RewindToPreviousStep(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -491,7 +492,7 @@ class GetConcatenatedHistory(RESTResource):
 
 class SearchableChainedRequest(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self, *args):
         """

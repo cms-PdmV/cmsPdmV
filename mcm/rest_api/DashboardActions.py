@@ -6,10 +6,11 @@ from json import dumps
 import os
 from couchdb_layer.mcm_database import database
 from collections import defaultdict
+from tools.user_management import access_rights
 
 class GetBjobs(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self, *args):
         """
@@ -40,7 +41,7 @@ class GetBjobs(RESTResource):
 
 class GetLogFeed(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self, *args):
         """
@@ -71,7 +72,7 @@ class GetLogFeed(RESTResource):
 
 class GetRevision(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self, *args):
         """ 
@@ -83,7 +84,7 @@ class GetRevision(RESTResource):
 
 class GetLogs(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
         self.path = "logs"
 
     def GET(self, *args):
@@ -101,7 +102,7 @@ class GetLogs(RESTResource):
 
 class GetStats(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """

@@ -6,6 +6,7 @@ from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.settings import settings
+from tools.user_management import access_rights
 
 import cherrypy
 
@@ -32,7 +33,7 @@ class GetMccm(RESTResource):
 
 class UpdateMccm(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def PUT(self):
         """
@@ -84,7 +85,7 @@ class UpdateMccm(RESTResource):
 
 class CreateMccm(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def PUT(self):
         """
@@ -158,7 +159,7 @@ class GetEditableMccmFields(RESTResource):
 
 class GenerateChains(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
         from ActionsActions import SetAction
         self.setter = SetAction()
 
@@ -239,7 +240,7 @@ class GenerateChains(RESTResource):
 
 class MccMReminder(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """

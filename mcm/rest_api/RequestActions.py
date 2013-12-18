@@ -20,12 +20,12 @@ from tools.communicator import communicator
 from tools.locker import locker
 from tools.settings import settings
 from tools.handlers import RequestInjector
-
+from tools.user_management import access_rights
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
         self.with_trace = True
 
     def set_campaign(self, mcm_req):
@@ -187,7 +187,7 @@ class RequestRESTResource(RESTResource):
 class CloneRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
-        #self.access_limit = 1 ## maybe that is wrong
+        #self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
     def GET(self, *args):
         """
@@ -232,7 +232,7 @@ class CloneRequest(RequestRESTResource):
 class ImportRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
-        #self.access_limit = 1 ## maybe that is wrong
+        #self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
     def PUT(self):
         """
@@ -328,7 +328,7 @@ class ManageRequest(UpdateRequest):
 
     def __init__(self):
         UpdateRequest.__init__(self)
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
         self.with_trace = False
 
     def PUT(self):
@@ -485,7 +485,7 @@ class OptionResetForRequest(RESTResource):
 
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = 1
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -553,7 +553,7 @@ class GetSetupForRequest(RESTResource):
         if self.opt not in ['setup','test','valid']:
             raise Exception("Cannot create this resource with mode %s"% self.opt)
         if self.opt=='valid':
-            self.access_limit = 4
+            self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -751,7 +751,7 @@ class ApproveRequest(RESTResource):
 class ResetRequestApproval(ApproveRequest):
     def __init__(self):
         ApproveRequest.__init__(self)
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args):
         """
@@ -796,7 +796,7 @@ class GetStatus(RESTResource):
 
 class InspectStatus(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -837,7 +837,7 @@ class InspectStatus(RESTResource):
 
 class SetStatus(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -948,7 +948,7 @@ class InjectRequest(RESTResource):
     def __init__(self):
         # set user access to administrator
         self.db_name = 'requests'
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -1106,7 +1106,7 @@ class GetActors(RESTResource):
 
 class SearchableRequest(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self, *args):
         """
@@ -1157,7 +1157,7 @@ class SearchableRequest(RESTResource):
 
 class SearchRequest(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def PUT(self, *args):
         """
@@ -1229,7 +1229,7 @@ class SearchRequest(RESTResource):
 
 class RequestPerformance(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def PUT(self, *args):
         """
@@ -1376,7 +1376,7 @@ class RequestLister():
 class RequestsFromFile(RequestLister, RESTResource):
     def __init__(self):
         RequestLister.__init__(self)
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def PUT(self, *args):
         """
@@ -1389,7 +1389,7 @@ class RequestsFromFile(RequestLister, RESTResource):
 
 class RequestsReminder(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """

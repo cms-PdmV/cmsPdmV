@@ -1,11 +1,11 @@
 import cherrypy
 from jinja2 import Environment, PackageLoader
-from tools.user_management import authenticator, user_pack
+from tools.user_management import authenticator, user_pack, access_rights
 
 class Page(object) :
     def __init__(self, title=None, result=None, signature=None, restful=False):
         # manages access
-        self.authenticator = authenticator(limit=0)
+        self.authenticator = authenticator(limit=access_rights.user)
 
         if not title:
             self.title = ''

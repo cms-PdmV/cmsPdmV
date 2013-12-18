@@ -10,11 +10,12 @@ from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
 from tools.priority import priority
+from tools.user_management import access_rights
 
 class CreateAction(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
     def PUT(self):
         """
         Create an action from the provided json content
@@ -45,7 +46,7 @@ class CreateAction(RESTResource):
 
 class UpdateAction(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -127,7 +128,7 @@ class GetAction(RESTResource):
 class SelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -159,7 +160,7 @@ class SelectChain(RESTResource):
 class DeSelectChain(RESTResource):
     def __init__(self):
         self.db_name = 'actions'
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -189,7 +190,7 @@ class DeSelectChain(RESTResource):
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -297,7 +298,7 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
 class SetAction(GenerateChainedRequests):
     def __init__(self):
         GenerateChainedRequests.__init__(self)
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -365,9 +366,10 @@ class SetAction(GenerateChainedRequests):
         #and generate the chained requests
         return self.generate_request(aid, reserve)
 
+
 class DetectChains(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -411,7 +413,7 @@ class ActionsFromFile(RequestLister,RESTResource):
     def __init__(self):
         RequestLister.__init__(self)
         self.retrieve_db = database('actions')
-        self.access_limit = 0 
+        self.access_limit = access_rights.user
 
     def PUT(self, *args):
         """

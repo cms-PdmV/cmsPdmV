@@ -5,6 +5,7 @@ import cherrypy
 from tools.locker import locker
 from tools.settings import settings
 from couchdb_layer.mcm_database import database
+from tools.enum import Enum
 
 class user_pack:
     """
@@ -51,23 +52,16 @@ class user_pack:
         return self.get_firstname() + " " + self.get_lastname() if self.get_firstname() and self.get_lastname() else None
 
 
+roles = ('user', 'generator_contact', 'generator_convener', 'production_manager', 'administrator')
+access_rights = Enum(*roles)
+
 
 class authenticator:
-    def __init__(self, limit=0):
+    def __init__(self, limit=access_rights.user):
         # roles list is a list of valid roles for a page
-        self.__roles = ['user', 'generator_contact', 'generator_convener', 'production_manager', 'administrator']
         self.__db = database('users')
         self.__users_roles = dict()
         self.__lookup_counter = defaultdict(int)
-
-        # limit is the numeric representation of a base role that cane
-        # access a specific page
-        self.__limit = 0
-
-        # base role is the minimum requirement of a user to have in
-        # order to access a specific page
-        self.__base_role = ''
-
         self.set_limit(limit)
 
     # get the roles that are registered to a specific username
@@ -75,7 +69,7 @@ class authenticator:
         with locker.lock(username):
             if username not in self.__users_roles:
                 if not self.__db.document_exists(username):
-                    self.__users_roles[username] = self.__roles[0]
+                    self.__users_roles[username] = access_rights.user
                 else:
                     user = self.__db.get(username)
                     if email and ('email' not in user or user['email'] != email):
@@ -101,56 +95,34 @@ class authenticator:
 
     def get_user_role_index(self, username, email=None):
         r = self.get_user_role(username, email)
-        return self.__roles.index(r), r
+        return getattr(access_rights, r), r
 
-    # aux: get the list of __roles
-    def get_roles(self):
-        return self.__roles
-
-    # aux: get the numeric access limit
     def get_limit(self):
         return self.__limit
-
-    def get_base_role(self):
-        return self.__base_role
-
-    # aux: set the list of valid roles
-    def set_roles(self, roles=[]):
-        if not roles:
-            return
-        self.__roles = roles
 
     def set_user_role(self, username, role):
         with locker.lock(username):
             self.__users_roles[username] = role
 
-    def set_limit(self, limit=0):
-        if limit < 0:
-            raise ValueError('Access Limit provided is invalid: ' + str(self.__limit))
-
-        if limit >= len(self.__roles):
-            raise ValueError('Access Limit provided is illegal: ' + str(self.__limit))
-
+    def set_limit(self, limit=access_rights.user):
+        try:
+            roles[limit]
+        except AttributeError:
+            raise ValueError('Access limit {0} is invalid. Use one of: {1} (numeric values: {2})'.format(limit, ['access_rights.' + x for x in roles], range(len(roles))))
         self.__limit = limit
 
-        self.__base_role = self.__roles[self.__limit]
-
-    # returns True, if a user matches the base role or higher
-    # returns False, otherwise.
     def can_access(self, username):
+        """
+        returns True, if a user matches the base role or higher
+        returns False, otherwise.
+        """
         role = self.get_user_role(username)
-
-        if self.__base_role == role:
-            return True
-
-        # if the user does not match the given role, then
-        # maybe he has higher access rights.
-        if role not in self.__roles:
-            ###exception actually
-            raise ValueError('role %s is not recognized' % ( role ))
-        if self.__roles.index(role) >= self.__limit:
-            return True
-        return False
+        try:
+            if getattr(access_rights, role) >= self.__limit:
+                return True
+            return False
+        except AttributeError:
+            raise ValueError('Role {0} is not recognized'.format(role))
 
     def get_login_box(self, username):
         res = '<div id="login_box" style="float: right; display: block;"> '

@@ -14,11 +14,12 @@ from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.invalidation import invalidation
 from tools.settings import settings
+from tools.user_management import access_rights
 
 class Invalidate(RESTResource):
 
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -43,7 +44,7 @@ class Invalidate(RESTResource):
 class SetStatus(RESTResource):
 
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
@@ -66,7 +67,7 @@ class SetStatus(RESTResource):
 class InspectInvalidation(RESTResource):
 
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -162,7 +163,7 @@ class InspectInvalidation(RESTResource):
 class GetInvalidation(RESTResource):
 
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """

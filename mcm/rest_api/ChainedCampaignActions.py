@@ -5,15 +5,15 @@ from json import loads,dumps
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
-from json_layer.campaign import campaign
-from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
 from collections import defaultdict
+from tools.user_management import access_rights
+
 
 class CreateChainedCampaign(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -98,7 +98,7 @@ class CreateChainedCampaign(RESTResource):
 
 class UpdateChainedCampaign(RESTResource):
         def __init__(self):
-                self.access_limit = 3
+                self.access_limit = access_rights.production_manager
 
         def PUT(self):
             """
@@ -239,7 +239,7 @@ class GetChainedCampaign(RESTResource):
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -275,7 +275,7 @@ class GenerateChainedRequests(RESTResource):
 
 class InspectChainedCampaignsRest(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def listAll(self):
         ccdb = database('chained_campaigns')
@@ -337,7 +337,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
 class SelectNewChainedCampaigns(RESTResource):
 
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """

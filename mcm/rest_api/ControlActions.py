@@ -1,10 +1,13 @@
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
+from tools.user_management import access_rights
+from tools.settings import settings
+from json import dumps
 
 
 class RenewCertificate(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """

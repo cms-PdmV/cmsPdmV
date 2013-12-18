@@ -9,12 +9,13 @@ from json_layer.request import request
 from tools.locker import semaphore_events
 from tools.settings import settings
 from tools.locator import locator
+from tools.user_management import access_rights
 
 """
 class SetStatus(RESTResource):
     def __init__(self):
         self.db = database('batches')
-        self.access_limit = 
+        self.access_limit = access_rights.administrator
     def GET(self, *args):
         if not args:
             return dumps({"results":'Error: No arguments were given'})
@@ -47,7 +48,7 @@ class SetStatus(RESTResource):
 """
 class SaveBatch(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -64,7 +65,7 @@ class SaveBatch(RESTResource):
 
 class UpdateBatch(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -134,7 +135,7 @@ class GetIndex(RESTResource):
 
 class BatchAnnouncer(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def announce_with_text(self, bid, message):
         bdb = database('batches')
@@ -230,7 +231,7 @@ class InspectBatches(BatchAnnouncer):
 
 class ResetBatch(BatchAnnouncer):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -263,7 +264,7 @@ class ResetBatch(BatchAnnouncer):
 
 class HoldBatch(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -292,7 +293,7 @@ class HoldBatch(RESTResource):
 
 class NotifyBatch(RESTResource):
     def __init__(self):
-        self.access_limit = 1
+        self.access_limit = access_rights.generator_contact
         self.bdb = database('batches')
 
     def PUT(self):
@@ -325,7 +326,7 @@ class NotifyBatch(RESTResource):
             result = single_batch.notify(subject,message,who=to_who,sender=None)
             self.logger.log('result if False : %s' %result)
 
-        single_batch.update_history({'action':'notify', 'step' : message})
-        single_batch.reload()
+        self.update_history({'action':'notify', 'step' : message})
+        self.reload()
 
         return {'results': result}

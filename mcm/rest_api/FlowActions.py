@@ -7,13 +7,14 @@ from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
 from json_layer.flow import flow
 from json_layer.action import action
+from tools.user_management import access_rights
 import traceback
 
 
 class FlowRESTResource(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     # takes  a 2 lists and returns a tuple of what is present in the second and not in the first and
     # what was present in the first and not in the second
@@ -475,7 +476,7 @@ class GetFlow(RESTResource):
 
 class ApproveFlow(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """

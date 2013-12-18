@@ -8,10 +8,11 @@ from json_layer.campaign import campaign
 from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
+from tools.user_management import access_rights
 
 class CreateCampaign(RESTResource):
     def __init__(self):
-        self.access_limit =3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -67,7 +68,7 @@ class CreateCampaign(RESTResource):
 
 class UpdateCampaign(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -211,7 +212,7 @@ class GetAllCampaigns(RESTResource):
 
 class ToggleCampaign(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -232,7 +233,7 @@ class ToggleCampaign(RESTResource):
 
 class ToggleCampaignStatus(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -260,7 +261,7 @@ class ToggleCampaignStatus(RESTResource):
 
 class ApproveCampaign(RESTResource):
     def __init__(self):
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self,  *args):
         """
@@ -364,7 +365,7 @@ class ListAllCampaigns(CampaignsRESTResource):
 class InspectRequests(CampaignsRESTResource):
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -377,7 +378,7 @@ class InspectRequests(CampaignsRESTResource):
 class InspectCampaigns(CampaignsRESTResource):
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """

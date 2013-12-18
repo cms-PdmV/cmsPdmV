@@ -6,12 +6,12 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings
 from json_layer.user import user
-from tools.user_management import user_pack
+from tools.user_management import user_pack, roles, access_rights
 
 
 class GetUserRole(RESTResource):
     def __init__(self):
-        self.authenticator.set_limit(0)
+        self.access_limit = access_rights.user
 
     def GET(self):
         """
@@ -21,14 +21,13 @@ class GetUserRole(RESTResource):
 
     def get_user_role(self):
         user_p = user_pack()
-        role = self.authenticator.get_user_role(user_p.get_username(), email=user_p.get_email())
-        role_index = self.authenticator.get_roles().index(role)
+        role_index, role = self.authenticator.get_user_role_index(user_p.get_username(), email=user_p.get_email())
         return {'username': user_p.get_username(), 'role': role, 'role_index': role_index}
 
 
 class GetAllRoles(RESTResource):
     def __init__(self):
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def GET(self):
         """
@@ -37,8 +36,7 @@ class GetAllRoles(RESTResource):
         return dumps(self.get_All_roles())
 
     def get_All_roles(self):
-        role = self.authenticator.get_roles()
-        return role
+        return roles
 
 
 class GetUserPWG(RESTResource):
@@ -98,7 +96,7 @@ class GetUser(RESTResource):
 class SaveUser(RESTResource):
     def __init__(self):
         self.db_name = 'users'
-        self.access_limit = 3
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
@@ -111,7 +109,7 @@ class SaveUser(RESTResource):
 class AddRole(RESTResource):
     def __init__(self):
         self.db_name = 'users'
-        self.access_limit = 0
+        self.access_limit = access_rights.user
 
     def add_user(self):
         db = database(self.db_name)
@@ -121,7 +119,7 @@ class AddRole(RESTResource):
         mcm_user = user({"_id": user_p.get_username(),
                          "username": user_p.get_username(),
                          "email": user_p.get_email(),
-                         "role": self.authenticator.get_roles()[0],
+                         "role": roles[access_rights.user],
                          "fullname": user_p.get_fullname()})
 
         # save to db
@@ -140,8 +138,8 @@ class AddRole(RESTResource):
 class ChangeRole(RESTResource):
     def __init__(self):
         self.db_name = 'users'
-        self.all_roles = self.authenticator.get_roles()
-        self.access_limit = 3
+        self.all_roles = roles
+        self.access_limit = access_rights.production_manager
 
     def change_role(self, username, action):
         db = database(self.db_name)
@@ -177,7 +175,7 @@ class ChangeRole(RESTResource):
 
 class FillFullNames(RESTResource):
     def __init__(self):
-        self.access_limit = 4
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
