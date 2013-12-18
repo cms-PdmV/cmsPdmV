@@ -1349,12 +1349,12 @@ done
         total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
         if what=='eff':
             if total_event==0 and total_event_in_valid!=0:
-                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event_in_valid))
+                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event, total_event_in_valid))
                 raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in_valid ))
         else:    
             if total_event==0 and total_event_in!=0:
                 ##fail it !
-                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event_in))
+                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event, total_event_in))
                 raise Exception("The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request"%( total_event_in ))
 
         memory = None
