@@ -5,7 +5,7 @@ import traceback
 from tools.batch_control import batch_control
 from tools.installer import installer
 from tools.locker import semaphore_thread_number
-from tools.logger import logger as logfactory
+from tools.logger import logfactory
 from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -22,7 +22,7 @@ class PoolOfHandlers(Thread):
     with lock for protection of concurrently-vulnerable parts of program (e.g. database access).
     """
 
-    logger = logfactory('mcm')
+    logger = logfactory
 
     def __init__(self, handler_class, arguments):
         """
@@ -59,7 +59,7 @@ class Handler(Thread):
     A class which threads a list of operations. Override internal_run for main processing and rollback if you want to
     have a rollback option in case of process failure.
     """
-    logger = logfactory('mcm')
+    logger = logfactory
     hname = '' # handler's name
     lock = None
     thread_semaphore = semaphore_thread_number

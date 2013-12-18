@@ -1,6 +1,6 @@
 import time
 import os
-from tools.logger import logger as logfactory
+from tools.logger import logfactory
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.settings import settings
@@ -9,7 +9,7 @@ class batch_control:
     """
     a class to which is passed a script for batch testing and provides monitoring and logging, and success status
     """
-    logger = logfactory('mcm')
+    logger = logfactory
     hname = '' # handler's name
     group = 'no-group'
 

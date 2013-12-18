@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from tools.logger import logger as logfactory
+from tools.logger import logfactory
 #from json_layer.campaign import campaign
 from WMCore.Database.CMSCouch import Database,CouchError
 import json
@@ -12,7 +12,7 @@ from tools.locator import locator
 from collections import defaultdict
 
 class database:
-    logger = logfactory("mcm")
+    logger = logfactory
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from tools.logger import logger as logfactory
+from tools.logger import logfactory
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
 from tools.settings import settings
@@ -12,7 +12,7 @@ class json_base:
     __json = {}
     __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
     __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
-    logger = logfactory("mcm")
+    logger = logfactory
 
     class WrongApprovalSequence(Exception):
         def __init__(self, status, approval, message=''):

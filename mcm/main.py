@@ -30,7 +30,8 @@ import json
 
 import logging
 import logging.handlers
-from tools.logger import rest_formatter, prep2_formatter
+from tools.logger import rest_formatter, mcm_formatter, logfactory
+from tools.settings import settings
 import cherrypy #to expose cherrypy methods serving the HTML files
 import os
 
@@ -405,7 +406,7 @@ logger.setLevel(0)
 # set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 #ha.setLevel(logging.DEBUG)
-ha.setFormatter(prep2_formatter())
+ha.setFormatter(mcm_formatter())
 log.error_log.addHandler(ha)
 logger = logging.getLogger("mcm_error")
 logger.addHandler(ha)
@@ -413,7 +414,7 @@ logger.addHandler(ha)
 # set up injection logger
 logger = logging.getLogger("mcm_inject")
 hi = logging.FileHandler('logs/inject.log', 'a')
-hi.setFormatter(prep2_formatter())
+hi.setFormatter(mcm_formatter())
  
 logger.addHandler(hi)
 
@@ -423,5 +424,6 @@ h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter())
 log.access_log.addHandler(h)
+logfactory.set_verbosity(int(settings().get_value("log_verbosity")))
 
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')

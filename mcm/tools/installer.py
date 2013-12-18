@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from tools.logger import prep2_formatter, logger as logfactory
+from tools.logger import mcm_formatter, logfactory
 from tools.locator import locator
 
 from rest_api.BatchPrepId import BatchPrepId
@@ -11,7 +11,7 @@ class installer:
     that class is meant for initializing the request directory and care of removing it
     
     """
-    logger = logfactory("mcm")
+    logger = logfactory
 
     def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True):
         

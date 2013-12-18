@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from tools.user_management import authenticator as auth_obj, user_pack
-from tools.logger import logger as logfactory
+from tools.logger import logfactory
 from tools.locator import locator
 from tools.locker import locker
 import cherrypy
@@ -11,7 +11,7 @@ from collections import defaultdict
 class RESTResource(object):
     authenticator = auth_obj(limit=3)
     #logger = cherrypy.log
-    logger = logfactory('mcm')
+    logger = logfactory
     access_limit = None
     counter = defaultdict(lambda: defaultdict(int))
 
@@ -38,16 +38,8 @@ class RESTResource(object):
             self.authenticator.set_limit(self.access_limit)
         elif cherrypy.request.method in self.limit_per_method:
             self.authenticator.set_limit(self.limit_per_method[cherrypy.request.method])
-        #elif cherrypy.request.method == 'GET':
-        #	self.authenticator.set_limit(0)
-        #elif cherrypy.request.method == 'PUT':
-        #	self.authenticator.set_limit(1)
-        #elif cherrypy.request.method == 'POST':
-        #	self.authenticator.set_limit(1)
-        #elif cherrypy.request.method == 'DELETE':
-        #	self.authenticator.set_limit(3)
         else:
-            raise cherrypy.HTTPError(403, 'You cannot access this page with method %s' %  cherrypy.request.method )
+            raise cherrypy.HTTPError(403, 'You cannot access this page with method %s' % cherrypy.request.method )
 
         user_p = user_pack()
 
@@ -57,7 +49,7 @@ class RESTResource(object):
             #if cherrypy.request.method != 'GET' or not l_type.isDev():
             #	raise cherrypy.HTTPError(403, 'User credentials were not provided.')
             if not 'public' in str(cherrypy.url()):
-                self.logger.error('From within %s, adfs-login not found: \n %s \n %s'%(self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
+                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
         else:
             if not self.authenticator.can_access(user_p.get_username()):
                 raise cherrypy.HTTPError(403, 'You cannot access this page')

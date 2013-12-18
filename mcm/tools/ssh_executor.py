@@ -4,12 +4,12 @@ import os
 import re
 
 import logging
-from tools.logger import logger as logfactory, prep2_formatter
+from tools.logger import logfactory, mcm_formatter
 from threading import BoundedSemaphore
 
 
 class ssh_executor:
-    logger = logfactory('mcm')
+    logger = logfactory
     semaph = BoundedSemaphore(10)
     def __init__(self, directory=None, prepid=None, server='lxplus5.cern.ch'):
         self.ssh_client = None
@@ -27,7 +27,7 @@ class ssh_executor:
             fh.setLevel(logging.DEBUG) # log filename is most verbose
 
             # format logs
-            fh.setFormatter(prep2_formatter())
+            fh.setFormatter(mcm_formatter())
 
             # add handlers to main logger - good to go
             self.logger.add_inject_handler(name=self.hname, handler=fh)

@@ -1,5 +1,5 @@
 from threading import RLock, Event, BoundedSemaphore
-from tools.logger import logger
+from tools.logger import logfactory
 from collections import defaultdict
 
 
@@ -17,7 +17,7 @@ class Locker(object):
     # using reentrant lock so other threads don't release it
     internal_lock = RLock()
     lock_dictionary = defaultdict(RLock)
-    logger = logger('mcm')
+    logger = logfactory
 
     def lock(self, lock_id):
         # defaultdict and setdefault are not atomic in python 2,6, some manual locking needed
@@ -48,7 +48,7 @@ class SemaphoreEvents(object):
     reaches 0. Non-waiting threads should use increment/decrement statements.
     """
 
-    logger = logger('mcm')
+    logger = logfactory
     event_dictionary = defaultdict(Event)
     count_dictionary = defaultdict(int)
 
@@ -96,7 +96,7 @@ class BoundedSemaphoreChangeableMax(object):
         self._current = 0
         self._lock = RLock()
         self._event = Event()
-        self.logger = logger('mcm')
+        self.logger = logfactory
 
 
     @property

@@ -4,6 +4,7 @@ import sys
 import time
 import logging
 
+
 class inject_formatter(logging.Formatter):
         def __init__(self, prepid):
                 self.prepid = prepid
@@ -65,7 +66,8 @@ class inject_formatter(logging.Formatter):
                 record.done = True
                 return logging.Formatter.format(self, record)
 
-class prep2_formatter(logging.Formatter):
+
+class mcm_formatter(logging.Formatter):
     def find_topmost_stack_frame(self):
         i = 0
         stack = []
@@ -107,7 +109,6 @@ class prep2_formatter(logging.Formatter):
 
         record.done = True
         return logging.Formatter.format(self, record)
-
 
 
 class rest_formatter(logging.Formatter):
@@ -153,8 +154,13 @@ class rest_formatter(logging.Formatter):
         record.done = True
         return logging.Formatter.format(self, record)
 
+
 class logger:
-    def __init__(self, logger_name='mcm'):# those are not used, error_log='logs/error.log', access_log='logs/access.log'):
+
+    error = None
+    log = None
+
+    def __init__(self, logger_name='mcm'):
         self.error_logger = logging.getLogger(logger_name+'_error')
         self.inject_logger = logging.getLogger(logger_name+'_inject')
 
@@ -162,14 +168,34 @@ class logger:
         self.inject_handlers = {}
         ## those are logging in the log/inject.log for central browsing
         self.inject_central_handlers = {}
-        #self.access_logger =logging.getLogger(logger_name+'_access')
+        if not self.error or not self.log:
+            self.error = self.error_f
+            self.log = self.log_f
+
+    def set_verbosity(self, verbosity_level):
+        if verbosity_level <= 0:
+            self.error = self.log = self.empty_log
+        elif verbosity_level == 1:
+            self.error = self.error_f
+            self.log = self.empty_log
+        elif verbosity_level >= 2:
+            self.error = self.error_f
+            self.log = self.log_f
+
+    def error_f(self, msg='', level='error'):
+        if msg:
+            getattr(self.error_logger, level)(msg)
+
+    def empty_log(self, msg='', level=''):
+        pass
+
+    def log_f(self, msg='', level='info'):
+        if msg:
+            getattr(self.error_logger, level)(msg)
 
     def add_inject_handler(self, name='', handler=None):
         if name and handler and name not in self.inject_handlers:
             self.inject_handlers[name] = handler
-            #hi = logging.FileHandler('logs/inject.log', 'a')
-            #hi.setFormatter(inject_formatter(name))
-            #self.inject_handlers[name+'_central'] = hi
         if name and name not in self.inject_central_handlers:
             hi = logging.FileHandler('logs/inject.log', 'a')
             hi.setFormatter(inject_formatter(name))
@@ -182,42 +208,6 @@ class logger:
         if name and name in self.inject_central_handlers:
             self.inject_central_handlers[name].close()
             del self.inject_central_handlers[name]
-
-    def error(self, msg='', level='error'):
-        if msg:
-            #could throw based on error in level
-            getattr(self.error_logger,level)(msg)
-            ##replace the if elif with just one line
-            #if level == 'warning':
-            #	self.error_logger.warning(msg)
-            #elif level == 'error':
-            #	self.error_logger.error(msg)
-                #elif level == 'critical':
-            #	self.error_logger.critical(msg)
-            #else:
-            #	self.error_logger.error(msg)
-
-
-    #def access(self, msg='', level='debug'):
-#		if msg:
-#			if level == 'debug':
-#				self.access_logger.debug(msg)
-#			elif level == 'info':
-#				self.access_logger.info(msg)
-#			else:
-#				self.access_logger.debug(msg)
-
-    def log(self, msg='', level='info'):
-        if msg:
-            #could throw based on error in level
-            getattr(self.error_logger,level)(msg)
-            #if level == 'info':
-            #	self.error_logger.info(msg)
-                        #elif level == 'debug':
-                        #        self.error_logger.debug(msg)
-                        #else:
-                        #        self.error_logger.info(msg)
-
 
     def inject(self, msg='', level='info', handler=''):
         if handler in self.inject_handlers:
@@ -232,20 +222,11 @@ class logger:
 
             if msg:
                 msg = msg.replace('\n', '<breakline>')
-                ##replace the if elif with just one line
                 getattr(self.inject_logger,level)(msg)
-                #if level == 'info':
-                #        self.inject_logger.info(msg)
-                #elif level == 'debug':
-                #	self.inject_logger.debug(msg)
-                #elif level == 'warning':
-                #	self.inject_logger.warning(msg)
-                #elif level == 'error':
-                    #	self.inject_logger.error(msg)
-                #elif level == 'critical':
-                #	self.inject_logger.critical(msg)
                 try:
                     self.inject_logger.removeHandler(self.inject_handlers[handler])
-                    #self.inject_logger.removeHandler(self.inject_handlers[handler+'_central'])
                 except:
                     pass
+
+
+logfactory = logger("mcm")
