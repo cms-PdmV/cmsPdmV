@@ -176,6 +176,8 @@ class chained_request(json_base):
         fdb = database('flows')
         adb = database('actions')
 
+        l_type=locator()
+
         current_step = len(self.get_attribute('chain'))-1 if reserve else self.get_attribute('step')
         current_id = self.get_attribute('chain')[current_step]
         next_step = current_step + 1
@@ -314,8 +316,10 @@ class chained_request(json_base):
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
                     current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
-                                           'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s '%( current_request.get_attribute('completed_events'),
-                                                                                                                                                                             completed_events_to_pass))
+                                           'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n %srequests?prepid=%s'%( current_request.get_attribute('completed_events'),
+                                                                                                                                                                                                      completed_events_to_pass,
+                                                                                                                                                                                                      l_type.baseurl(),
+                                                                                                                                                                                                      current_request.get_attribute('prepid')))
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
 
@@ -473,7 +477,6 @@ class chained_request(json_base):
             # set to next step
             self.set_attribute('step', next_step)
         if not reserve:
-            l_type=locator()
             notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
             notification_text = 'The request %s has been flown within:\n \t %s \n into campaign:\n \t %s \n using:\n \t %s \n creating the new request:\n \t %s \n as part of:\n \t %s \n and from the produced dataset:\n %s \n\n%srequests?prepid=%s \n%srequests?prepid=%s \n' % (
                 current_request.get_attribute('prepid'),
@@ -490,7 +493,6 @@ class chained_request(json_base):
             )
             current_request.notify(notification_subject, notification_text)
         else:
-            l_type=locator()
             notification_subject = 'Reservation of request {0}'.format(next_request.get_attribute('prepid'))
             notification_text = 'The request {0} of campaign \n\t{2}\nhas been reserved as part of \n\t{1}\nas the next step for {4}\n\n{3}requests?prepid={4}\n{5}requests?prepid={6}\n'.format(
                 next_request.get_attribute('prepid'),
