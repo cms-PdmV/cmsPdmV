@@ -1525,6 +1525,9 @@ done
         if self.current_user_level == 1 and not self.get_attribute('status') in ['validation','defined', 'new']:
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'You have not enough karma to reset the request')
 
+        if self.get_attribute('approval') == 'validation' and self.get_attribute('status')=='new':
+            raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'Cannot reset a request when running validation')
+
         chains = self.get_attribute('member_of_chain')
         from json_layer.chained_request import chained_request
         crdb= database('chained_requests')
