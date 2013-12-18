@@ -256,7 +256,10 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.getData = function(){
-    if ( ! $location.search()['searchByRequests']){
+    if ( $location.url().indexOf("*")!=-1 )
+    {
+      $scope.superSearch();
+    }else if ( ! $location.search()['searchByRequests']){
       var query = ""
       _.each($location.search(), function(value,key){
         if (key!= 'shown' && key != 'fields'){
@@ -332,7 +335,7 @@ function resultsCtrl($scope, $http, $location, $window){
         });
       }
       });
-      $scope.superSearch($scope.searchable_fields);
+      $scope.superSearch();
     }else
     {
       $scope.getData();
@@ -474,18 +477,14 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     });
   };
-  $scope.superSearch = function(data){
-    _.each($location.search(),function(elem,key){
-      $location.search(key,null);
-    });
+  $scope.superSearch = function(){
     var search_data={};
-    _.each($scope.searchable_fields, function(elem){
-      if (elem.value !=""){
-        $location.search(elem.name,elem.value);
-        search_data[elem.name] = elem.value;
+    _.each($location.search(),function(elem,key){
+      if ( key != "page" && key != "shown" && key != "searchByRequests")
+      {
+        search_data[key] = elem;
       }
     });
-    $location.search("supersearch",true);
     /*submit method*/
     $http({method:'PUT', url:'restapi/requests/search/'+$scope.dbName, data: search_data}).success(function(data,status){
       $scope.result = data.results;
