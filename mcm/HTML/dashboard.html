@@ -85,6 +85,16 @@
                                     <button type="button" class="btn btn-inverse btn-mini disabled" style="width:25px">{{getLines(logs.lines)}}</button>
                                 </div>
                                 <slider value="logs.lines" sliding="logs.sliding"></slider>
+                                <div class="btn-group">
+                                    <button type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
+                                        {{logs.verbosity}}
+                                    </button>
+                                      <ul class="dropdown-menu">
+                                        <li ng-repeat="(level, string) in logs.verbosities">
+                                          <a ng-click="verbositySelected(level)">{{string}}</a>
+                                        </li>
+                                      </ul>
+                                </div>
                                 <a ng-click="getLogData(logs.list[getLogIndex()].name)" rel="tooltip" title="Manually refresh log feed" >
                                     <i class="icon-refresh"></i>
                                 </a>

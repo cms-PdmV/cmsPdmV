@@ -13,7 +13,7 @@ from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
-from rest_api.LogActions import ReadInjectionLog
+from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
@@ -22,7 +22,7 @@ from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, G
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.ControlActions import RenewCertificate
+from rest_api.ControlActions import RenewCertificate, ChangeVerbosity
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -352,6 +352,7 @@ root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
 root.restapi.dashboard.get_stats = GetStats()
 root.restapi.dashboard.get_revision = GetRevision()
+root.restapi.dashboard.get_verbosities = GetVerbosities()
 
 # REST mccms Actions
 
@@ -378,6 +379,7 @@ root.restapi.tags.remove = RemoveTag()
 # REST control Actions
 
 root.restapi.control.renew_cert = RenewCertificate()
+root.restapi.control.set_verbosity = ChangeVerbosity()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')

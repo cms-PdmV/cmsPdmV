@@ -28,10 +28,16 @@ class settings:
                 self.cache[label] = setting
             return result
 
+    def set_value(self, label, value):
+        with locker.lock(label):
+            setting = self.get(label)
+            setting['value'] = value
+            return self.set(label, setting)
+
     def set(self, label, setting):
         with locker.lock(label):
             result = self.__db.update(setting)
             if result:
-                self.cache[label] = setting
+                self.cache[label] = self.__db.get(label)
             return result
 

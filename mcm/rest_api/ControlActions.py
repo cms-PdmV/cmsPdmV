@@ -27,3 +27,25 @@ class RenewCertificate(RESTResource):
             # certificate
             command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert 2> /dev/null\n'
             return command
+
+
+class ChangeVerbosity(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self, *args):
+        """
+        Change verbosity of logger
+        """
+        if not args:
+            return dumps({"results": False, "message": "No new verbosity given"})
+        try:
+            lvl = int(args[0])
+        except ValueError:
+            return dumps({"results": False, "message": "New verbosity was not an integer"})
+
+        if settings().set_value('log_verbosity', lvl):
+            self.logger.set_verbosity(lvl)
+        else:
+            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
+        return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})

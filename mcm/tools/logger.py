@@ -157,30 +157,36 @@ class rest_formatter(logging.Formatter):
 
 class logger:
 
-    error = None
-    log = None
-
     def __init__(self, logger_name='mcm'):
         self.error_logger = logging.getLogger(logger_name+'_error')
         self.inject_logger = logging.getLogger(logger_name+'_inject')
+        self.verbosities = {0: "Basic logging", 1: "Error logging", 2: "Error and info logging", 3: "Full logging"}
+        self.verbosity = 0
+        self.error = None
+        self.log = None
 
         ## those are the handlers for seperate log files when requried
         self.inject_handlers = {}
         ## those are logging in the log/inject.log for central browsing
         self.inject_central_handlers = {}
-        if not self.error or not self.log:
+        self.set_verbosity(max(self.verbosities))
+
+    def set_verbosity(self, verbosity_level):
+        self.verbosity = verbosity_level
+        if self.verbosity <= 0:
+            self.error = self.log = self.empty_log
+        elif self.verbosity == 1:
+            self.error = self.error_f
+            self.log = self.empty_log
+        elif self.verbosity >= 2:
             self.error = self.error_f
             self.log = self.log_f
 
-    def set_verbosity(self, verbosity_level):
-        if verbosity_level <= 0:
-            self.error = self.log = self.empty_log
-        elif verbosity_level == 1:
-            self.error = self.error_f
-            self.log = self.empty_log
-        elif verbosity_level >= 2:
-            self.error = self.error_f
-            self.log = self.log_f
+    def get_verbosity(self):
+        return self.verbosity
+
+    def get_verbosities(self):
+        return self.verbosities
 
     def error_f(self, msg='', level='error'):
         if msg:

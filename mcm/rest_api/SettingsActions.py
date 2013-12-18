@@ -6,6 +6,7 @@ from tools.settings import settings
 from tools.user_management import access_rights
 import cherrypy
 
+
 class GetSetting(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
@@ -22,10 +23,11 @@ class GetSetting(RESTResource):
     def get_setting(self, data):
         db = database('settings')
         if not db.document_exists(data):
+            self.logger.error('Setting for {0} does not exist'.format(data))
             return {"results": {}}
-        setting = db.get(prepid=data)
 
-        return {"results": setting}
+        return {"results": settings().get(data)}
+
 
 class SaveSetting(RESTResource):
     def __init__(self):

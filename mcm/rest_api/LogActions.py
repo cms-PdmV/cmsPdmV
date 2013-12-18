@@ -5,6 +5,7 @@ import re
 from json import loads, dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
+from tools.user_management import access_rights
 
 
 class ReadInjectionLog(RESTResource):
@@ -51,3 +52,14 @@ class ReadInjectionLog(RESTResource):
         for line in lines:
             res += '%s<br>' % (line.replace('<breakline>', '<br>'))
         return res
+
+
+class GetVerbosities(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def GET(self, *args):
+        """
+        Get all the possible verbosities and currently chosen one
+        """
+        return dumps({"results": (self.logger.get_verbosities(), self.logger.get_verbosity())})
