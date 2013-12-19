@@ -84,7 +84,10 @@ class json_base:
         and reloads the object with info from database (new revision)
         """
         try:
-            db = database(self.__class__.__name__ + "s")
+            if self.__class__.__name__ =="batch":
+                db = database(self.__class__.__name__ + "es")
+            else:
+                db = database(self.__class__.__name__ + "s")
         except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
             self.logger.error("Problem with database creation:\n{0}".format(ex))
             return False
