@@ -397,9 +397,9 @@ function resultsCtrl($scope, $http, $location, $window){
     };
   };
 
-  $scope.multiple_flow = function(){
+  $scope.multiple_flow = function(opt){
     if ($scope.selected_prepids.length > 0){
-      $http({method:'GET', url:'restapi/'+$scope.dbName+'/flow/'+$scope.selected_prepids.join()}).success(function(data,status){
+      $http({method:'GET', url:'restapi/'+$scope.dbName+'/flow/'+$scope.selected_prepids.join()+opt}).success(function(data,status){
         $scope.parse_report(data,status);
       }).error(function(status){
         $scope.set_fail(status);

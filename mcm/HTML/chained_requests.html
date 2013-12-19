@@ -230,8 +230,11 @@
 	<a ng-click="multiple_step('rewind','')" rel="tooltip" title="Rewind selected chained requests" ng-hide="role(3);" ng-href="#">
 	  <i class="icon-backward"></i>
 	</a>
-        <a ng-click="multiple_flow()" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
+        <a ng-click="multiple_flow('')" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
          <i class="icon-forward"></i>
+        </a>
+        <a ng-click="multiple_flow('/force')" rel="tooltip" ng-hide="role(3);" title="Force Flow selected requests" ng-href="#">
+         <i class="icon-fast-forward"></i>
         </a>
         <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
