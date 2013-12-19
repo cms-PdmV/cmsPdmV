@@ -1594,7 +1594,7 @@ class UpdateMany(RequestRESTResource):
         for elem in list_of_prepids:
             document = db.get(elem)
             for value in updated_values:
-                if value=='generator_parameters':
+                if value in ['generator_parameters','sequences']:
                     document[value] = updated_values[value]
                 elif isinstance(updated_values[value],list):
                     temp = updated_values[value]
