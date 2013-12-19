@@ -69,7 +69,7 @@ class authenticator:
         with locker.lock(username):
             if username not in self.__users_roles:
                 if not self.__db.document_exists(username):
-                    self.__users_roles[username] = access_rights.user
+                    self.__users_roles[username] = 'user'
                 else:
                     user = self.__db.get(username)
                     if email and ('email' not in user or user['email'] != email):
