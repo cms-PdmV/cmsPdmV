@@ -140,7 +140,7 @@ class chained_request(json_base):
             try:
                 if not self.flow_to_next_step(check_stats=False, reserve=True):
                     break
-                saved = self.reload('chained_requests')
+                saved = self.reload()
                 if not saved: return {"prepid": self.get_attribute("prepid"), "results": False, "message": "Failed to save chained request to database"}
             except Exception as ex:
                 return {"prepid": self.get_attribute("prepid"), "results": False, "message": str(ex)}
