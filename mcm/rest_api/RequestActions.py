@@ -1018,9 +1018,11 @@ class NotifyUser(RESTResource):
         data = loads(cherrypy.request.body.read().strip())
         # read a message from data
         message = data['message']
+        l_type = locator()
         pids = data['prepids']
         results = []
         rdb = database('requests')
+
         for pid in pids:
             if not rdb.document_exists(pid):
                 results.append({"prepid": pid, "results": False, "message": "%s does not exist" % pid})
@@ -1028,8 +1030,11 @@ class NotifyUser(RESTResource):
 
             req = request(rdb.get(pid))
             # notify the actors of the request
+            
             req.notify('Communication about request %s' % pid,
-                       message)
+                       '%s \n\n %srequests?prepid=%s\n'%(message, 
+                                                       l_type.baseurl(), 
+                                                       pid))
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
             if not rdb.save(req.json()):
