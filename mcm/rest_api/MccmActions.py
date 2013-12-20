@@ -228,8 +228,16 @@ class GenerateChains(RESTResource):
         for aid in aids:
             for times in range(mcm_m.get_attribute('repetitions')):
                 for cc in mcm_m.get_attribute('chains'):
-                    res.append( {"prepid":mid,"results" : True,"message": "%s %s %s %s"%( times, aid, cc, mcm_m.get_attribute('block'))})
-                    res.append(self.setter.set_action(aid, cc, mcm_m.get_attribute('block'), reserve=reserve))
+                    b=mcm_m.get_attribute('block')
+                    s=None
+                    t=None
+                    if mcm_m.get_attribute('staged')!=0:
+                        s= mcm_m.get_attribute('staged')
+                    if mcm_m.get_attribute('threshold')!=0:
+                        t=mcm_m.get_attribute('threshold')
+                    
+                    res.append( {"prepid":mid,"results" : True,"message": "%s x %s in %s block %s s %s t %s"%( times, aid, cc, b, s ,t )})
+                    res.append(self.setter.set_action(aid, cc, b, staged=s, threshold=t, reserve=reserve))
 
         mcm_m.set_status()
         mdb.update( mcm_m.json())

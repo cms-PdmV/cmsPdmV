@@ -13,6 +13,8 @@ class mccm(json_base):
             'prepid': '',
             'approval': 'none',
             'block': 0,
+            'staged':0,
+            'threshold':0.,
             'meeting' : '',
             'deadline': '',
             'history': [],
