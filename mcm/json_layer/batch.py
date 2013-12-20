@@ -91,9 +91,9 @@ class batch(json_base):
         message+="\n"
         message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
         if self.get_attribute('extension'):
-            message += "This batch is for an extension : {0}".format(self.get_attribute('extension'))
+            message += "This batch is for an extension : {0}\n".format(self.get_attribute('extension'))
         if self.get_attribute('version'):
-            message += "This batch is a resubmission : v{0}".format(self.get_attribute('version') + 1)
+            message += "This batch is a resubmission : v{0}\n".format(self.get_attribute('version') + 1)
         message+="Link to the batch:\n"
         l_type = locator()
         message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))
