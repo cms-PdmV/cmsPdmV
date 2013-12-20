@@ -395,7 +395,7 @@ class request(json_base):
         crdb = database('chained_requests')
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
-            if mcm_cr['chain'].inde( self.get_attribute('prepid'))!=mcm_cr['step']:
+            if mcm_cr['chain'].index( self.get_attribute('prepid'))!=mcm_cr['step']:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'submit','The request (%s)is not the current step (%s) of its chain (%s)'%(
                         self.get_attribute('prepid'),
                         mcm_cr['step'],
