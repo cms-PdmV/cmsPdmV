@@ -1517,9 +1517,9 @@ done
             elif key =='process_string':
                 ##concatenate to existing
                 if new_req.get_attribute(key):
-                    to_add = '_'+fl.get_attribute('request_parameters')[key]
+                    to_add = fl.get_attribute('request_parameters')[key]
                     if not  new_req.get_attribute(key).endswith(to_add):
-                        new_req.set_attribute(key, new_req.get_attribute(key)+to_add)
+                        new_req.set_attribute(key, new_req.get_attribute(key)+'_'+to_add)
                 else:
                     new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
             else:
