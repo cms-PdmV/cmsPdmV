@@ -111,6 +111,7 @@ class ConfigMakerAndUploader(Handler):
     @staticmethod
     def prepare_command(cfgs, directory, req, test_string):
         cmd = req.get_setup_file(directory)
+        cmd += '\n'
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
