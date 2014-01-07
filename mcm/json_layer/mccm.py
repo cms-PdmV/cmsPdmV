@@ -47,7 +47,8 @@ class mccm(json_base):
         if self.get_attribute('status') == 'new':
             for key in self._json_base__schema:
                 editable[key] = True
-            for key in ["status", "prepid","meeting","pwg","approval","message_id"]:
+            not_editable=["status", "prepid","meeting","pwg","approval","message_id"]
+            for key in not_editable:
                 editable[key] = False
         else:
             for key in self._json_base__schema:
