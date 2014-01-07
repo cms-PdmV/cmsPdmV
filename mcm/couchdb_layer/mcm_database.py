@@ -68,7 +68,7 @@ class database:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
         self.cache = cache
-        if self.db_name in ['campaigns','chained_campaigns']:
+        if self.db_name in []:#['campaigns','chained_campaigns']:
             ## force cache for those.
             self.cache=True
 
