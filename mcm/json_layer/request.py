@@ -930,7 +930,7 @@ done
         where ='https://cmsweb.cern.ch/dqm/relval'
         l_type = locator()
         if l_type.isDev():
-            where ='https://cmsweb-testbed.cern.ch/dqm/dev'
+            where ='https://cmsweb-testbed.cern.ch/dqm/relval'
 
         self.harverting_upload = ''
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file )
