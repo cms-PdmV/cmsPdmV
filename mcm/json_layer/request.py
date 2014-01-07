@@ -934,10 +934,12 @@ done
 
         self.harverting_upload = ''
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file )
-        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload \n'
-        self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh \n'
-        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin \n'
+        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload ;\n'
+        self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; \n'
+        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --out voms_proxy.cert 2> /dev/null ; \n'
+        self.harverting_upload += 'export X509_USER_PROXY=voms_proxy.cert ;\n'
         self.harverting_upload += 'python visDQMUpload %s %s &> run.log || exit $? ; \n'%( where, dqm_file )
+
 
         ##then the url back to the validation sample in the gui !!!
         val=self.get_attribute('validation')
@@ -1538,7 +1540,7 @@ done
         if self.current_user_level == 1 and not self.get_attribute('status') in ['validation','defined', 'new']:
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'You have not enough karma to reset the request')
 
-        if self.get_attribute('approval') == 'validation' and self.get_attribute('status')=='new':
+        if self.current_user_level <=1 and self.get_attribute('approval') == 'validation' and self.get_attribute('status')=='new':
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'Cannot reset a request when running validation')
 
         chains = self.get_attribute('member_of_chain')
