@@ -485,7 +485,7 @@ class OptionResetForRequest(RESTResource):
 
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args):
         """
