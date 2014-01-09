@@ -1443,9 +1443,19 @@ done
                 to_be_saved=True
             if timing and timing < (0.90 * self.get_attribute('time_event')):
                 ## timing over-estimated
-                ## warn if over-estimated by more than 10% : we should actually fail those big time !!
-                self.notify('Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid')),
-                            'For this request, time/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in))
+                ## warn if over-estimated by more than 10%
+                subject='Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid'))
+                if total_event > 10:
+                    message='For this request, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in)
+                    self.set_attribute('time_event', timing)
+                    to_be_saved=True
+                else:
+                    message='For this request, time/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in)
+                    ## we should fail these requests because of wrong timing by >10% !
+                    raise Exception(message)
+                    
+                self.notify(subject, message)
+        
 
             ## size check
             if file_size and file_size>self.get_attribute('size_event'):
@@ -1461,6 +1471,9 @@ done
                 ## warn if over-estimated by more than 10% 
                 self.notify('Runtest for %s: size per event over-estimate.'%(self.get_attribute('prepid')),
                             'For this request, size/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('size_event'), file_size, total_event, total_event_in))
+                ## correct the value from the runtest.
+                self.set_attribute('size_event', file_size)                    
+                to_be_saved=True
 
             if memory and memory>self.get_attribute('memory'):
                 safe_margin = 1.05
