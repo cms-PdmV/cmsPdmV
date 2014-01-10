@@ -30,15 +30,16 @@ class campaign(json_base):
         self._json_base__status = ['stopped','started']
 
         self._json_base__schema = {
-                                 '_id':'', 
-                                 'prepid':'', 
+                                 '_id': '',
+                                 'prepid': '',
                                  #'start_date':'', 
                                  #'end_date':'', 
-                                 'energy':-1.0, 
-                                 'type':'', 
-                                 'next':[], 
+                                 'energy': -1.0,
+                                 'type': '',
+                                 'next': [],
                                  #'production_type':'', 
-                                 'cmssw_release':'', 
+                                 'cmssw_release': '',
+                                 'input_filename': '',
                                  #'description':'', 
                                  'notes' : '',
                                  #'remarks':'', 
@@ -47,14 +48,14 @@ class campaign(json_base):
                                  'validation':'',
                                  'pileup_dataset_name':'', 
                                  #'process_string':[], 
-                                 'generators':[], 
-                                 'www':'', 
-                                 'completed_events':-1, 
-                                 'total_events':-1, 
-                                 'root':1, # -1: possible root, 0: root, 1: non-root 
-                                 'sequences':[], # list of jsons of jsons
-                                 'approval':self.get_approval_steps()[0], 
-                                 'history':[]
+                                 'generators': [],
+                                 'www': '',
+                                 'completed_events': -1,
+                                 'total_events': -1,
+                                 'root': 1, # -1: possible root, 0: root, 1: non-root
+                                 'sequences': [], # list of jsons of jsons
+                                 'approval': self.get_approval_steps()[0],
+                                 'history': []
                                  }
 
         # update self according to json_input
@@ -100,11 +101,13 @@ class campaign(json_base):
         except self.IllegalAttributeName() as ex:
             return {}
 
-        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type']
+        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type', 'input_filename']
         for key in self._json_base__json:
             if key not in req.schema():
                 continue
             if not key in keys_to_transfer: 
+                continue
+            if not self.get_attribute(key):
                 continue
             req.set_attribute(key, self.get_attribute(key))
         req.set_attribute('member_of_campaign', self.get_attribute('_id'))
