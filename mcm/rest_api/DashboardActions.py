@@ -131,6 +131,7 @@ class GetStats(RESTResource):
             return display
 
         def oneChart( title, data, opt=''):
+            var_name=title.replace(",","")
             opt_s=''
             if opt=='log':
                 opt_s=',vAxis: {logScale:true}'
@@ -145,13 +146,13 @@ class GetStats(RESTResource):
 
         var chart_%s = new google.visualization.ColumnChart(document.getElementById("chart_div_%s"));
         chart_%s.draw(%s, options_chart_%s);
-        '''%( title, dumps(data), 
-              title,
+        '''%( var_name, dumps(data), 
+              var_name,
               title,
               opt_s,
-              title,title,
-              title,title,title )
-            div='<div id="chart_div_%s" style="width: 100%%; height: 500px;"></div>\n'%( title )
+              var_name,var_name,
+              var_name,var_name,var_name)
+            div='<div id="chart_div_%s" style="width: 100%%; height: 500px;"></div>\n'%( var_name )
             return (fcn,div)
 
         def oneGauge( title, data):
@@ -178,6 +179,7 @@ class GetStats(RESTResource):
         rdb = database('requests')
         crdb =database('chained_requests')
         ccdb =database('chained_campaigns')
+        #fdb = database('flows')
         cdb = database('campaigns')
 
         html="<html><body>\n"
@@ -192,8 +194,8 @@ class GetStats(RESTResource):
         data.append( ['Step'] + statuses )
         data_g=[['Label','Value']]
 
-        a_cc = args[0]
-        if a_cc == 'all':
+        main_arg = args[0]
+        if main_arg == 'all':
             all_r = rdb.get_all()
             #all_r = rdb.queries(['member_of_campaign==Summer12'])
             for mcm_r in all_r:
@@ -215,7 +217,7 @@ class GetStats(RESTResource):
                     entry.append( counts_e[c][s] )
                     a+=counts_e[c][s]
                 if not a:
-                    g=0.
+                    g=100.
                 else:
                     g = int(float(counts_e[c]['done']) / float(a) * 100.)
                 data.append(entry)
@@ -223,21 +225,80 @@ class GetStats(RESTResource):
 
 
             (f,d)=oneChart('all', data, opt='log')
-            (f1,d1)=oneGauge( a_cc+'_g', data_g)
+            (f1,d1)=oneGauge( 'main_g', data_g)
             f+=f1
             d+=d1
             return render( f,d)
-            
-            
-        if not ccdb.document_exists( a_cc ):
-            return "%s does not exists" %( a_cc )
-        mcm_cc = ccdb.get( a_cc )
-        steps = map(lambda s : s[0], mcm_cc['campaigns'])
-        all_cr = crdb.queries(['member_of_campaign==%s'%a_cc])
 
+
+        arg_list = main_arg.split(',')
+
+        #reduction to only cc
+        while True:
+            again=False
+            for arg in arg_list:
+                if not arg.startswith('chain'):
+                    # this is a flow
+                    ccs = ccdb.queries(['contains==%s'%( arg)])
+                    arg_list.extend( map (lambda cc: cc['prepid'], ccs))
+                    arg_list.remove( arg )
+                    again=True
+                    break
+            if not again:
+                break
+
+        ## arg_list contains only chained campaigns
+        steps=[] #what are the successive campaigns
+        all_cr=[] #what are the chained requests to look at
+        all_cc={}
+        #unique it
+        arg_list= list(set(arg_list))
+
+        ## collect all crs
+        for a_cc in arg_list:
+            if not ccdb.document_exists( a_cc ):
+                ## try to see if that's a flow
+                return "%s does not exists" %( a_cc )
+            mcm_cc = ccdb.get( a_cc) 
+            all_cc[a_cc] = mcm_cc ## keep it in mind
+            all_cr.extend( crdb.queries(['member_of_campaign==%s'%a_cc]))
+            these_steps = map(lambda s : s[0], mcm_cc['campaigns'])
+            if len(steps)==0:
+                steps=these_steps
+            else:
+                ## concatenate to existing steps
+                ##add possible steps at the beginning
+                connection=0
+                while not steps[connection] in these_steps:
+                    #self.logger.error('looking at %s and %s'%( these_steps, steps))
+                    connection+=1
+
+                new_start= these_steps.index( steps[connection] )
+                if new_start!=0:
+                    #they do not start at the same campaign
+                    for where in range(new_start):
+                        steps.insert(where, these_steps[where])
+                ##verify strict overlapping
+                for check in range(new_start, len(these_steps)):
+                    if check > len(steps) and these_steps[check] not in steps:
+                        steps.append( these_steps[check] )
+                    #if steps[check]!=these_steps[check]:
+                    #    return "%s cannot be consistently added, as part of %s, at %s"% ( these_steps, steps, check)
+
+
+        already_counted=set() ## avoid double counting
         for cc in all_cr:
             upcoming=0
-            for r in cc['chain']:
+            for (r_i,r) in enumerate(cc['chain']):
+                if r_i > cc['step']:
+                    ## this is a reserved request, will count as upcoming later
+                    continue
+
+                if r in already_counted:
+                    continue
+                else:
+                    already_counted.add(r)
+
                 mcm_r = rdb.get(r)
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
                 upcoming=mcm_r['total_events']
@@ -249,30 +310,35 @@ class GetStats(RESTResource):
                     counts_e[str(mcm_r['member_of_campaign'])] ['submitted'] += max([0, mcm_r['total_events'] - mcm_r['completed_events']])
                 else:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
+            
+            for noyet in all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:]: 
+                self.logger.log( '%s if saying %s'%( cc['prepid'], all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:])) 
+                counts_e[ noyet[0] ]['upcoming']+=upcoming
             #fill up the rest with upcoming
-            for noyet in steps[ len(cc['chain']):]:
-                counts_e[str(noyet)]['upcoming'] += upcoming
+            #for noyet in steps[ len(cc['chain']):]:
+            #    counts_e[str(noyet)]['upcoming'] += upcoming
 
-        for step in mcm_cc['campaigns']:
+        for step in steps:
             entry=[]
-            entry.append( step[0] ) # step[1] is the flow name
+            entry.append( step )
             for s in statuses:
-                entry.append( counts_e[step[0]][s] )
+                entry.append( counts_e[step][s] )
             data.append(entry)
 
 
-        (f,d)=oneChart( a_cc, data)
+        (f,d)=oneChart( ','.join(arg_list), data)
         data_g=[['Label','Value']]
-        for step in mcm_cc['campaigns']:
+        for step in steps:
+        #for step in mcm_cc['campaigns']:
             a=0
             for s in statuses:
-                a+=counts_e[step[0]][s]
+                a+=counts_e[step][s]
             if not a: 
-                g=0.
+                g=100.
             else:
-                g = int(float(counts_e[step[0]]['done']) / float(a) * 100.)
-            data_g.append( [step[0],g ])
-        (f1,d1)=oneGauge( a_cc+'_g', data_g)
+                g = int(float(counts_e[step]['done']) / float(a) * 100.)
+            data_g.append( [step,g ])
+        (f1,d1)=oneGauge( 'g_g', data_g)
         f+=f1
         d+=d1
         return render( f,d)
