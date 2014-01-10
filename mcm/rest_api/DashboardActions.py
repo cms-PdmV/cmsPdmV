@@ -238,7 +238,7 @@ class GetStats(RESTResource):
             again=False
             for arg in arg_list:
                 if not arg.startswith('chain'):
-                    # this is a flow
+                    # this is a flow, or a campaign : does not matter for the query
                     ccs = ccdb.queries(['contains==%s'%( arg)])
                     arg_list.extend( map (lambda cc: cc['prepid'], ccs))
                     arg_list.remove( arg )
@@ -312,7 +312,7 @@ class GetStats(RESTResource):
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
             
             for noyet in all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:]: 
-                self.logger.log( '%s if saying %s'%( cc['prepid'], all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:])) 
+                #self.logger.log( '%s if saying %s'%( cc['prepid'], all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:])) 
                 counts_e[ noyet[0] ]['upcoming']+=upcoming
             #fill up the rest with upcoming
             #for noyet in steps[ len(cc['chain']):]:
