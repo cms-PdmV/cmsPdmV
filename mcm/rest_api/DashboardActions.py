@@ -278,10 +278,13 @@ class GetStats(RESTResource):
                     #they do not start at the same campaign
                     for where in range(new_start):
                         steps.insert(where, these_steps[where])
-                ##verify strict overlapping
+                ##verify strict overlapping ==> does not function properly and limits the flexibility
                 for check in range(new_start, len(these_steps)):
-                    if check > len(steps) and these_steps[check] not in steps:
+                    #if check > len(steps) and these_steps[check] not in steps:
+                    #    steps.append( these_steps[check] )
+                    if these_steps[check] not  in steps:
                         steps.append( these_steps[check] )
+
                     #if steps[check]!=these_steps[check]:
                     #    return "%s cannot be consistently added, as part of %s, at %s"% ( these_steps, steps, check)
 
