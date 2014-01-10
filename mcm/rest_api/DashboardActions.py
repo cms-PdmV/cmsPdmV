@@ -102,7 +102,7 @@ class GetLogs(RESTResource):
 
 class GetStats(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.generator_convener
 
     def GET(self, *args):
         """
