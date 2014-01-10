@@ -286,6 +286,12 @@ class GetStats(RESTResource):
                     #    return "%s cannot be consistently added, as part of %s, at %s"% ( these_steps, steps, check)
 
 
+        ## preload all requests !!!
+        all_requests = {}
+        for step in steps:
+            for r in rdb.queries(['member_of_campaign==%s'%( step)] ):
+                all_requests[r['prepid']] = r
+
         already_counted=set() ## avoid double counting
         for cc in all_cr:
             upcoming=0
@@ -299,7 +305,8 @@ class GetStats(RESTResource):
                 else:
                     already_counted.add(r)
 
-                mcm_r = rdb.get(r)
+                #mcm_r = rdb.get(r)
+                mcm_r = all_requests[r]
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
                 upcoming=mcm_r['total_events']
                 if mcm_r['status'] in ['done']:
