@@ -669,6 +669,39 @@ class GetRequestByDataset(RESTResource):
         else:
             return dumps({"results": {}})
         
+class GetRequestOutput(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        
+    def GET(self, *args):
+        """
+        Retrieve the list of datasets from a give request
+        """
+        ## how to structure better the output ? using a dict ?
+        main_arg = args[0]
+        res = { main_arg : []}
+        rdb = database('requests')
+
+        if len(args)>1 and args[1]=='chain':
+            collect = []
+            crdb = database('chained_requests')
+            for cr in crdb.queries(['contains==%s'% main_arg]):
+                for r in reversed(cr['chain']):
+                    if not r in collect:
+                        collect.append(r)
+        else:
+            collect = [main_arg]
+
+        for rid in collect:
+            mcm_r = rdb.get(rid)
+            if len(mcm_r['reqmgr_name']):
+                if 'pdmv_dataset_list' in mcm_r['reqmgr_name'][-1]['content']:
+                    res[main_arg].extend( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'] )
+                else:
+                    res[main_arg].append( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'] )
+                
+                
+        return dumps(res)
 
 class GetRequest(RESTResource):
     def __init__(self):
