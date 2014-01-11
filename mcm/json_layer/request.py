@@ -182,6 +182,9 @@ class request(json_base):
         if self.get_attribute('cmssw_release')==None or self.get_attribute('cmssw_release')=='None':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The release version is undefined')
 
+        if self.get_scram_arch()==None:
+            raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The architecture is invalid, probably has the release %s being deprecated'%(self.get_attribute('cmssw_release')))
+
         bad_characters=[' ','?','/']
         if not self.get_attribute('dataset_name') or any(map(lambda char : char in self.get_attribute('dataset_name'), bad_characters)):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The dataset name is invalid: either null string or containing %s'%(','.join(bad_characters)))
