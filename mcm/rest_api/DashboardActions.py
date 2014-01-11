@@ -138,7 +138,10 @@ class GetStats(RESTResource):
 
             fcn='''\
         var %s = google.visualization.arrayToDataTable( %s );
-
+        var formatter = new google.visualization.NumberFormat({fractionDigits:0});
+        for (var i=1;i<%s.getNumberOfColumns();i++){
+           formatter.format( %s ,i);
+        };
         var options_chart_%s = {
           title: "Status for %s",
           hAxis: {title: "Campaign", titleTextStyle: {color: "red"}}%s
@@ -147,6 +150,8 @@ class GetStats(RESTResource):
         var chart_%s = new google.visualization.ColumnChart(document.getElementById("chart_div_%s"));
         chart_%s.draw(%s, options_chart_%s);
         '''%( var_name, dumps(data), 
+              var_name,
+              var_name,
               var_name,
               title,
               opt_s,
