@@ -941,7 +941,7 @@ done
         self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; \n'
         self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --out voms_proxy.cert 2> /dev/null ; \n'
         self.harverting_upload += 'export X509_USER_PROXY=voms_proxy.cert ;\n'
-        self.harverting_upload += 'python visDQMUpload %s %s &> run.log || exit $? ; \n'%( where, dqm_file )
+        self.harverting_upload += 'python visDQMUpload %s %s &> /afs/cern.ch/cms/PPD/PdmV/work/McM/submit/dqm_upload_%s.log || exit $? ; \n'%( where, dqm_file, self.get_attribute('prepid') )
 
 
         ##then the url back to the validation sample in the gui !!!
