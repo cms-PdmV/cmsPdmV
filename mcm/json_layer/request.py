@@ -938,9 +938,7 @@ done
         self.harverting_upload = ''
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' %( dqm_file )
         self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload ;\n'
-        self.harverting_upload += 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; \n'
-        self.harverting_upload += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --out voms_proxy.cert 2> /dev/null ; \n'
-        self.harverting_upload += 'export X509_USER_PROXY=voms_proxy.cert ;\n'
+        self.harverting_upload += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert ;\n'
         self.harverting_upload += 'python visDQMUpload %s %s &> /afs/cern.ch/cms/PPD/PdmV/work/McM/submit/dqm_upload_%s.log || exit $? ; \n'%( where, dqm_file, self.get_attribute('prepid') )
 
 
