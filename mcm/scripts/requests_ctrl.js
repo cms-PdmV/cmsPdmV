@@ -912,9 +912,10 @@ testApp.directive("sequenceDisplay", function($http){
         scope.sequencePrepId = ctrl.$viewValue;
 //         scope.sequencePrepId = scope.dbName;
       };
-      scope.genericCmsDriver = function(extra){
-        if (scope.driver ===undefined || extra!=""){
-          var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.sequencePrepId+extra);
+
+      scope.getCmsDriver = function(){
+          if (scope.driver ===undefined){
+          var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.sequencePrepId);
           promise.then(function(data){
             scope.driver = data.data.results;
           }, function(data){
@@ -922,8 +923,6 @@ testApp.directive("sequenceDisplay", function($http){
         });
 	}
       };
-
-      scope.getCmsDriver = function(){	  scope.genericCmsDriver("");      };
       scope.resetOptions = function(){
           var promise = $http.get("restapi/"+scope.dbName+"/option_reset/"+scope.sequencePrepId);
           promise.then(function(data){

@@ -153,7 +153,8 @@ class RequestRESTResource(RESTResource):
 
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
         if not mcm_req.get_attribute('sequences'):
-            mcm_req.build_cmsDrivers(cast=1, can_save=False)
+            mcm_req.set_options(can_save=False)
+            mcm_req.build_cmsDrivers()
 
         #c = cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
@@ -467,18 +468,15 @@ class GetCmsDriverForRequest(RESTResource):
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given.'})
         db = database(self.db_name)
-        cast = 0
-        if len(args) > 1:
-            cast = int(args[1])
-        return dumps(self.get_cmsDriver(db.get(prepid=args[0]), cast))
+        return dumps(self.get_cmsDriver(db.get(prepid=args[0])))
 
-    def get_cmsDriver(self, data, cast):
+    def get_cmsDriver(self, data):
         try:
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName:
             return {"results": ''}
 
-        return {"results": mcm_req.build_cmsDrivers(cast=cast)}
+        return {"results": mcm_req.build_cmsDrivers()}
 
 
 class OptionResetForRequest(RESTResource):
@@ -499,7 +497,8 @@ class OptionResetForRequest(RESTResource):
         res = {}
         for req_id in req_ids:
             req = request(rdb.get(req_id))
-            res[req_id] = req.build_cmsDrivers(1)
+            req.set_options()
+            res[req_id] = True
         return dumps({"results": res})
 
 

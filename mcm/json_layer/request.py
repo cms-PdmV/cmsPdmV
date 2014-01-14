@@ -527,65 +527,58 @@ class request(json_base):
 
       return '%s%s' % (command, cmsDriverOptions)
 
-    def build_cmsDrivers(self,cast=0, can_save=True):
-      commands = []
-      if cast==1 and self.get_attribute('status')=='new':
-          cdb = database('campaigns')
+    def set_options(self, can_save=True):
+        if self.get_attribute('status') is 'new':
+            cdb = database('campaigns')
 
-          flownWith=None
-          if self.get_attribute('flown_with'):
-              fdb = database('flows')
-              flownWith = flow(fdb.get(self.get_attribute('flown_with')))
+            flownWith = None
+            if self.get_attribute('flown_with'):
+                fdb = database('flows')
+                flownWith = flow(fdb.get(self.get_attribute('flown_with')))
 
-          camp = campaign(cdb.get(self.get_attribute('member_of_campaign')))
-          self.set_attribute('cmssw_release',camp.get_attribute('cmssw_release'))
-          self.set_attribute('pileup_dataset_name',camp.get_attribute('pileup_dataset_name'))
-          self.set_attribute('type',camp.get_attribute('type'))
-          ## putting things together from the campaign+flow
-          freshSeq=[]
-          if flownWith:
+            camp = campaign(cdb.get(self.get_attribute('member_of_campaign')))
+            self.set_attribute('cmssw_release', camp.get_attribute('cmssw_release'))
+            self.set_attribute('pileup_dataset_name', camp.get_attribute('pileup_dataset_name'))
+            self.set_attribute('type', camp.get_attribute('type'))
+            ## putting things together from the campaign+flow
+            freshSeq = []
+            if flownWith:
               #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
               #                                                                       camp.get_attribute('prepid'),
               #                                                                       new_req['prepid']))
-              request.put_together(camp, flownWith, self)
-          else:
-              for i in range(len(camp.get_attribute('sequences'))):
-                      fresh = sequence(camp.get_attribute('sequences')[i]["default"])
-                      freshSeq.append(fresh.json())
-              self.set_attribute('sequences',freshSeq)
-          if can_save:
-              self.reload()
-          else:
-              ## could re-assign the new_req to itself
-              pass
+                request.put_together(camp, flownWith, self)
+            else:
+                for i in range(len(camp.get_attribute('sequences'))):
+                    fresh = sequence(camp.get_attribute('sequences')[i]["default"])
+                    freshSeq.append(fresh.json())
+                self.set_attribute('sequences', freshSeq)
+            if can_save:
+                self.reload()
 
-      elif  cast==-1 and self.get_attribute('status')=='new':
-          ## a way of resetting the sequence and necessary parameters
-          self.set_attribute('cmssw_release','')
-          self.set_attribute('pileup_dataset_name','')
-          freshSeq=[]
-          freshKeep=[]
-          for i in range(len(self.get_attribute('sequences'))):
-              freshSeq.append(sequence().json())
-              freshKeep.append(False)
-          freshKeep[-1]=True
-          self.set_attribute('sequences',freshSeq)
-          self.set_attribute('keep_output',freshKeep)
-          ##then update itself in DB
-          if can_save:
-              rdb = database('requests')
-              rdb.update(self.json())
-          else:
-              ## could re-assign the new_req to itself
-              pass
+    def reset_options(self, can_save=True):
+        # a way of resetting the sequence and necessary parameters
+        if self.get_attribute('status') is 'new':
+            self.set_attribute('cmssw_release', '')
+            self.set_attribute('pileup_dataset_name', '')
+            freshSeq = []
+            freshKeep = []
+            for i in range(len(self.get_attribute('sequences'))):
+                freshSeq.append(sequence().json())
+                freshKeep.append(False)
+            freshKeep[-1] = True
+            self.set_attribute('sequences', freshSeq)
+            self.set_attribute('keep_output', freshKeep)
+            ##then update itself in DB
+            if can_save:
+                self.reload()
 
-      for i in range(len(self.get_attribute('sequences'))):
-        cd = self.build_cmsDriver(i)
-        if cd:
-            commands.append(cd)
-
-      return commands
-
+    def build_cmsDrivers(self):
+        commands = []
+        for i in range(len(self.get_attribute('sequences'))):
+            cd = self.build_cmsDriver(i)
+            if cd:
+                commands.append(cd)
+        return commands
 
     def update_generator_parameters(self):
         """
