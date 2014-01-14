@@ -231,7 +231,6 @@ class json_base:
                         self.textified()
             )
 
-
     def textified(self):
         return 'no body'
 
@@ -274,7 +273,6 @@ class json_base:
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action': 'set status', 'step': self.__json['status']})
-
 
     def add_comment(self, comment=''):
         if not comment:
@@ -348,6 +346,12 @@ class json_base:
                           message,
                           sender,
                           reply_msg_ID)
+
+    def correct_types(self):
+        for key in self.__schema:
+            if not isinstance(self.__json[key], type(self.__schema[key])):
+                return False
+        return True
 
 
 class submission_details(json_base):

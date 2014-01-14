@@ -6,6 +6,7 @@ import pprint
 import xml.dom.minidom
 from math import sqrt
 import hashlib
+import copy
 
 from couchdb_layer.mcm_database import database
 
@@ -176,10 +177,13 @@ class request(json_base):
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user admin level %s'%(self.current_user_level))
 
+        if not self.correct_types():
+            raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(self.get_attribute('prepid')))
+
         if self.get_attribute('status')!='new':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation')
 
-        if self.get_attribute('cmssw_release')==None or self.get_attribute('cmssw_release')=='None':
+        if not self.get_attribute('cmssw_release') or self.get_attribute('cmssw_release')=='None':
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The release version is undefined')
 
         if self.get_scram_arch()==None:
@@ -1502,7 +1506,7 @@ done
             for name in step:
                 if name in fl.get_attribute('request_parameters')['sequences'][i]:
                     # if a seq name is defined, store that in the request
-                    sequences.append(step[name])
+                    sequences.append(copy.deepcopy(step[name]))
 
                     # if the flow contains any parameters for the sequence,
                     # then override the default ones inherited from the campaign
@@ -1516,7 +1520,7 @@ done
 
             # if no sequence has been found, use the default
             if not flag:
-                sequences.append(step['default'])
+                sequences.append(copy.deepcopy(step['default']))
 
         new_req.set_attribute('sequences', sequences)
         ## setup the keep output parameter
