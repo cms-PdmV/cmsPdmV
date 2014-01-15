@@ -6,7 +6,6 @@ from tools.logger import logfactory
 from tools.locator import locator
 from tools.locker import locker
 import cherrypy
-from collections import defaultdict
 
 
 class RESTResource(object):
@@ -14,7 +13,6 @@ class RESTResource(object):
     #logger = cherrypy.log
     logger = logfactory
     access_limit = None
-    counter = defaultdict(lambda: defaultdict(int))
 
     limit_per_method = {
         'GET': access_rights.user,
@@ -28,7 +26,6 @@ class RESTResource(object):
 
     @cherrypy.expose
     def default(self, *vpath, **params):
-
 
         method = getattr(self, cherrypy.request.method, None)
         if not method:
@@ -57,7 +54,11 @@ class RESTResource(object):
                                                                                                                         self.authenticator.get_limit()))
         # counter for calls
         with locker.lock("rest-call-counter"):
-            self.counter[method.im_class.__name__][method.__name__] += 1
+            key = method.im_class.__name__ + method.__name__
+            try:
+                RESTResource.counter[key] += 1
+            except KeyError:
+                RESTResource.counter[key] = 0
         return method(*vpath, **params)
 
     def GET(self):
@@ -142,7 +143,12 @@ class RESTResourceIndex(RESTResource):
                             self.res += '<td align=center>+%s</td>' % (limit)
                         else:
                             self.res += '<td align=center>%s</td>' % (self.limit_per_method[m])
-                        self.res += '<td align=center>{0}</td>'.format(RESTResource.counter[o.__class__.__name__][m])
+                        try:
+                            c_key = o.__class__.__name__ + m
+                            c = RESTResource.counter[c_key]
+                        except KeyError:
+                            c = 0
+                        self.res += '<td align=center>{0}</td>'.format(c)
                     else:
                         #self.res +='<td><small>N/A</small> </td><td> <small>N/A</small> </td>'
                         self.res += '<td>&nbsp;</small> </td><td>&nbsp;</td><td>&nbsp;</small> </td>'
