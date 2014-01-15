@@ -145,10 +145,10 @@
     <div class="row-fluid">
         <div class="span5" style="margin-top:20px;">
           <div ng-controller="ModalDemoCtrl">
-            <input type="button" class="btn" ng-click="open()" value="Create new MCCM ticket" ng-hide="role(2);" align="left"/>
+            <input type="button" class="btn" ng-click="open()" value="Create new MccM ticket" ng-hide="role(1);" align="left"/>
             <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
               <div class="modal-header">
-                <h4>Create MCCM ticket</h4>
+                <h4>Create MccM ticket</h4>
               </div>
               <div class="modal-body">
                 Choose pwg for the ticket: <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
