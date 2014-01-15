@@ -38,7 +38,7 @@ class RequestRESTResource(RESTResource):
         camp = campaign(cdb.get(camp))
         mcm_req.set_attribute('energy', camp.get_attribute('energy'))
         if not mcm_req.get_attribute('cmssw_release'):
-            mcm_req.build_cmsDrivers(cast=1,can_save=False)
+            mcm_req.set_options(can_save=False)
 
         return camp
 
@@ -154,7 +154,7 @@ class RequestRESTResource(RESTResource):
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
         if not mcm_req.get_attribute('sequences'):
             mcm_req.set_options(can_save=False)
-            mcm_req.build_cmsDrivers()
+            mcm_req.set_options()
 
         #c = cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
