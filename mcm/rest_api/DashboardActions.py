@@ -82,6 +82,14 @@ class GetRevision(RESTResource):
         return revision
 
 
+class GetStartTime(RESTResource):
+    def __init__(self, time):
+        self.time = time
+
+    def GET(self, *args):
+        return dumps({"results": self.time})
+
+
 class GetLogs(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
