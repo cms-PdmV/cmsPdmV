@@ -121,6 +121,7 @@ class ConfigMakerAndUploader(Handler):
     def internal_run(self):
         if not self.lock.acquire(blocking=False):
             return False
+        to_release = []
         try:
             req = request(self.request_db.get(self.prepid))
             additional_config_ids = {}
@@ -134,10 +135,14 @@ class ConfigMakerAndUploader(Handler):
                 return True
             for i in range(len(req.get_attribute('sequences'))):
                 hash_id = req.configuration_identifier(i)
+                locker.acquire(hash_id)
                 if self.config_db.document_exists(hash_id): # cached in db
                     additional_config_ids[i] = self.config_db.get(hash_id)['docid']
+                    locker.release(hash_id)
                 else: # has to be setup and uploaded to config cache
+                    to_release.append(hash_id)
                     cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(req.get_attribute('prepid'), dev, i+1)
+
             if cfgs_to_upload:
                 with installer(self.prepid, care_on_existing=False) as directory_manager:
                     command = self.prepare_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], directory_manager.location(), req, wmtest)
@@ -164,10 +169,13 @@ class ConfigMakerAndUploader(Handler):
                     for i, line in zip(sorted(cfgs_to_upload), cfgs_uploaded): # filling the config ids for request and config database with uploaded configurations
                         docid = line.split()[-1]
                         additional_config_ids[i] = docid
-                        saved = self.config_db.save({"_id": req.configuration_identifier(i),
+                        hash_id = req.configuration_identifier(i)
+                        saved = self.config_db.save({"_id": hash_id,
                                                  "docid": docid,
                                                  "prepid": self.prepid,
                                                  "unique_string": req.unique_string(i)})
+                        to_release.remove(hash_id)
+                        locker.release(hash_id)
                         if not saved:
                              self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning', handler=self.prepid)
 
@@ -178,6 +186,8 @@ class ConfigMakerAndUploader(Handler):
             self.request_db.save(req.json())
             return True
         finally:
+            for i in to_release:
+                locker.release(i)
             self.lock.release()
 
 
