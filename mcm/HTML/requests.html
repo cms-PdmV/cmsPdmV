@@ -247,6 +247,13 @@
                     <dd>{{value}}</dd>                
                 </dl>
               </div>
+	      <div ng-switch-when="Output dataset">
+		<ul style="margin-bottom: 0px;">
+		  <li ng-repeat="ds in data[value.db_name]">
+		     <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{ds}}' rel="tooltip" title="Link to DAS" target="_self">{{ds}}</a>
+		  </li>
+		</ul>
+	      </div>
               <div ng-switch-when="Generators">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="gen in data[value.db_name]">

@@ -53,6 +53,7 @@ class request(json_base):
             #'completion_date':'',
             'cmssw_release':'',
             'input_filename':'',
+            'output_dataset' : [],
             'pwg':'',
             'validation':{},
             'dataset_name':'',
@@ -560,6 +561,7 @@ class request(json_base):
         if self.get_attribute('status') == 'new':
             self.set_attribute('cmssw_release', '')
             self.set_attribute('pileup_dataset_name', '')
+            self.set_attribute('output_dataset',[])
             freshSeq = []
             freshKeep = []
             for i in range(len(self.get_attribute('sequences'))):
@@ -1203,7 +1205,7 @@ done
 
 
                     self.set_attribute('completed_events' , wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content']['pdmv_open_evts_in_DAS'] )
-
+                    self.set_attribute('output_dataset', wma_r_N['content']['pdmv_dataset_list'])
                     if self.get_attribute('completed_events') <=0:
                         not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( wma_r['content']['pdmv_dataset_name'])})
                         saved = db.save( self.json() )
