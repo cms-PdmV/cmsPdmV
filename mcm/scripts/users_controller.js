@@ -8,6 +8,7 @@ function resultsCtrl($scope, $http, $location, $window){
     {text:'Pwg', select:true, db_name:'pwg'}
   ];
   $scope.update = [];
+  $scope.all_pwgs = [];
 
   $scope.show_well = false;
   if ($location.search()["db_name"] === undefined){
@@ -174,6 +175,29 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
+  $scope.askrole = function(pwg){
+      // pwg should be taken from a drop down
+   //    var promise_pwg = $http.get("restapi/users/get_pwg")
+   //    promise_pwg.then(function(data){
+	  //     //$scope.all_pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
+	  //     $scope.all_pwgs = data.data.results;
+	  //     console.log( $scope.all_pwgs );
+	  // });
+
+      var promise = $http.get("restapi/users/ask_role/"+pwg);
+      promise.then(function(data, status){
+	      $scope.update["success"] = true;
+	      $scope.update["fail"] = false;
+	      $scope.update["status_code"] = data.status;
+	      $scope.update["results"] = data.data.results;
+	      $scope.getData();
+	  },function(data, status){
+	      $scope.update["success"] = false;
+	      $scope.update["fail"] = true;
+	      $scope.update["status_code"] = data.status;
+	  });
+  };
+
   $scope.changeRole = function(username,step){
     var promise = $http.get("restapi/users/change_role/"+username+"/"+step);
     promise.then(function(data, status){
@@ -208,6 +232,41 @@ function resultsCtrl($scope, $http, $location, $window){
     if($location.search()["shown"]){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
+  };
+
+  $scope.pwgModal = false;
+  $scope.closePwgModal = function()
+  {
+    $scope.newPWG = "------";
+    $scope.pwgModal = false;
+  }
+  $scope.openPwgModal = function(curr_pwgs)
+  {
+    console.log(curr_pwgs);
+    $scope.newPWG = "------";
+    if ($scope.all_pwgs.length == 0)
+    {
+      var promise = $http.get("restapi/users/get_pwg")
+      promise.then(function(data){
+        $scope.all_pwgs = _.difference(data.data.results, curr_pwgs);
+        $scope.all_pwgs.splice(0,0,"------");
+        $scope.newPWG = $scope.all_pwgs[0];
+        $scope.pwgModal = true;
+      });
+    }
+    else
+    {
+      $scope.newPWG = $scope.all_pwgs[0];
+      $scope.pwgModal = true;
+    }
+  };
+  $scope.selectPwg = function()
+  {
+    if ($scope.newPWG != "------")
+    {
+     $scope.askrole($scope.newPWG);
+    };
+    $scope.closePwgModal();
   };
 };
 

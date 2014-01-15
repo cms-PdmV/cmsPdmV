@@ -9,7 +9,7 @@
         <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.5.0.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
            <script type="text/javascript">
@@ -82,11 +82,11 @@
       	<tr ng-repeat="user_info in result | orderBy:sort.column: sort.descending">
       	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
-	      <div ng-switch-when="UserName">
-		<a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
-		<a ng-href='requests?actor={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View requests operated by {{user_info[data.db_name]}}"><i class="icon-folder-open"></i></a>
-		<a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
-	      </div>
+	            <div ng-switch-when="UserName">
+                <a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
+                <a ng-href='requests?actor={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View requests operated by {{user_info[data.db_name]}}"><i class="icon-folder-open"></i></a>
+                <a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
+	            </div>
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Increase user role" ng-click="changeRole(user_info['username'],1)" ng-hide="role(4);">
                   <i class="icon-thumbs-up"></i>
@@ -94,29 +94,32 @@
                 <a rel="tooltip" title="Lower user role" ng-click="changeRole(user_info['username'],-1)" ng-hide="role(4);">
                   <i class="icon-thumbs-down"></i>
                 </a>
-                <a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
+                <!--<a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
+                  <i class="icon-question-sign"></i>
+                </a>-->
+                <a rel="tooltip" title="Ask for role increase" ng-click="openPwgModal(user_info['pwg']);" ng-show="(user_info['username'] == user.name)" ng-href="#">
                   <i class="icon-question-sign"></i>
                 </a>
-		<a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);" target="_self">
-		  <i class="icon-wrench"></i>
-		</a>
+                <a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);" target="_self">
+                  <i class="icon-wrench"></i>
+                </a>
               </div>
       	      <div ng-switch-when="Roles">
                 <a ng-href='users?role={{user_info[data.db_name].join()}}' rel="tooltip" title="View users with role {{user_info[data.db_name].join()}}" target="_self"> {{user_info[data.db_name].join()}}</a>
       	      </div>
-	      <div ng-switch-when="Email">
-		 <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}
-	      </div>
-	      <div ng-switch-when="Role">
-		<a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
-	      </div>
-	      <div ng-switch-when="Pwg">
-		<ul>
-		  <li ng-repeat="p in user_info[data.db_name]"> 
-		    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}
-		  </li>
-		</ul>
-	      </div>
+	            <div ng-switch-when="Email">
+                <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}
+	            </div>
+	            <div ng-switch-when="Role">
+                <a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
+	            </div>
+	            <div ng-switch-when="Pwg">
+                <ul>
+                  <li ng-repeat="p in user_info[data.db_name]"> 
+                    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}
+                    </li>
+                  </ul>
+	            </div>
       	      <div ng-switch-default>
     		        {{user_info[data.db_name]}}
       	      </div>
@@ -154,6 +157,22 @@
         </div>
       </div>
     </div>
+    <!--     New PWG MODAL -->
+    <div modal="pwgModal" close="closePwgModal()"> <!--hidden modal template-->
+      <div class="modal-header">
+        <h4>Select one of many pwgs</h4>
+      </div>  <!--end of modal header-->
+      <div class="modal-body">
+        <select ng-model="newPWG">
+          <option ng-repeat="elem in all_pwgs"  ng-selected="elem == newPWG">{{elem}}</option>
+        </select>
+      </div> <!--end of modal body-->
+      <div class="modal-footer">
+        <button class="btn btn-success" ng-click="selectPwg();" ng-disabled="newPWG == '------'">Increase!</button>
+        <button class="btn btn-warning cancel" ng-click="closePwgModal();">Close</button>
+      </div> <!--end of modal footer-->
+    </div>
+    <!--     END OF MODAL  -->
   </span>
   </body>
 </html> 

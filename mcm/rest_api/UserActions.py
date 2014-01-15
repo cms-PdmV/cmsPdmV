@@ -5,6 +5,7 @@ from json import loads, dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings
+from tools.communicator import communicator
 from json_layer.user import user
 from tools.user_management import user_pack, roles, access_rights
 
@@ -104,6 +105,40 @@ class SaveUser(RESTResource):
         """
         db = database(self.db_name)
         return dumps({"results": db.save(loads(cherrypy.request.body.read().strip()))})
+
+class AskRole(RESTResource):
+    def __init__(self):
+        self.db_name = 'users'
+
+    def GET(self, *args):
+        """
+        Ask for the increase of the role of the current user to the given pwg
+        """
+        if not args:
+            return dumps({"results" : False, "Message" : "not pwg provided"})
+
+        ## get who's there
+        user_p = user_pack()
+        udb = database(self.db_name)
+        mcm_u = user( udb.get( user_p.get_username()))
+
+        ## get the requested pwgs
+        pwgs = args[0].split(',')
+        #### set the pwgs to the current user
+        current = mcm_u.get_attribute('pwg')
+        current = list(set(current+pwgs))
+        mcm_u.set_attribute('pwg', current)
+        udb.update(mcm_u.json())
+
+        ## get the production managers emails
+        production_managers = udb.queries(['role==production_manager'])
+        ### send a notification to prod manager + service
+        to_who = map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')]
+        com = communicator()
+        com.sendMail( to_who,
+                      'Increase role for user %s' % mcm_u.get_attribute('fullname'),
+                      'Please increase the role of the user %s to the next level.' % mcm_u.get_attribute('username'))
+        return dumps({"results" : True, "message" : "user %s in for %s" %( mcm_u.get_attribute('username'), current)})
 
 
 class AddRole(RESTResource):
