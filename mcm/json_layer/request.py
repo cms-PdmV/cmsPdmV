@@ -1454,7 +1454,7 @@ done
                 else:
                     message='For this request, time/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in)
                     ## we should fail these requests because of wrong timing by >10% !
-                    raise Exception(message)
+                    ###raise Exception(message)
                     
                 self.notify(subject, message)
         
