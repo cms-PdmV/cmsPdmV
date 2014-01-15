@@ -528,7 +528,7 @@ class request(json_base):
       return '%s%s' % (command, cmsDriverOptions)
 
     def set_options(self, can_save=True):
-        if self.get_attribute('status') is 'new':
+        if self.get_attribute('status') == 'new':
             cdb = database('campaigns')
 
             flownWith = None
@@ -557,7 +557,7 @@ class request(json_base):
 
     def reset_options(self, can_save=True):
         # a way of resetting the sequence and necessary parameters
-        if self.get_attribute('status') is 'new':
+        if self.get_attribute('status') == 'new':
             self.set_attribute('cmssw_release', '')
             self.set_attribute('pileup_dataset_name', '')
             freshSeq = []
