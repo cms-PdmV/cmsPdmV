@@ -13,6 +13,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
 from json_layer.campaign import campaign
 from json_layer.flow import flow
+from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools import ssh_executor
@@ -20,6 +21,7 @@ from tools.locator import locator
 from tools.batch_control import batch_control
 from tools.settings import settings
 from tools.locker import locker
+from tools.user_management import access_rights
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -1547,13 +1549,13 @@ done
         for key in to_be_transferred:
             next_request.set_attribute(key, current_request.get_attribute(key))
 
-    def reset(self):
+    def reset(self,hard=True):
 
         ## check on who's trying to do so
-        if self.current_user_level == 1 and not self.get_attribute('status') in ['validation','defined', 'new']:
+        if self.current_user_level <= access_rights.generator_convener and not self.get_attribute('status') in ['validation','defined', 'new']:
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'You have not enough karma to reset the request')
 
-        if self.current_user_level <=1 and self.get_attribute('approval') == 'validation' and self.get_attribute('status')=='new':
+        if self.current_user_level <=access_rights.generator_convener and self.get_attribute('approval') == 'validation' and self.get_attribute('status')=='new':
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'Cannot reset a request when running validation')
 
         chains = self.get_attribute('member_of_chain')
@@ -1566,8 +1568,9 @@ done
                 raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'), 'The request is part of a chain (%s) that is currently processing another request (%s)' %( chain, cr.get_attribute('chain')[cr.get_attribute('step')]))
             
 
+        if hard:
+            self.approve(0)
 
-        self.approve(0)
         ## make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
         req_to_invalidate=[]
@@ -1593,6 +1596,7 @@ done
                 ds_to_invalidate.append( wma['content']['pdmv_dataset_name'])
             ds_to_invalidate=list(set(ds_to_invalidate))
             increase_revision=True
+
         for ds in ds_to_invalidate:
             new_invalidation={"object" : ds, "type" : "dataset", "status" : "new" , "prepid" : self.get_attribute('prepid')}
             new_invalidation['_id'] = new_invalidation['object'].replace('/','')
@@ -1605,26 +1609,36 @@ done
         if increase_revision:
             for req in req_to_invalidate:
                 # find the batch it is in
-                bs = bdb.queries(['contains=%s'%( req)])
+                bs = bdb.queries(['contains==%s'%( req )])
                 for b in bs:
-                    if not b['status'] in ['done','announced']:
+                    mcm_b = batch(b)
+                    if not mcm_b.get_attribute('status') in ['done','announced']:
                         increase_revision=False
-                        ## we're done checking
-                        break
+                        ## we could be done checking, but we'll move along to remove the requests from all existing non announced batches
+                        mcm_b.remove_request( self.get_attribute('prepid'))
 
+                        
 
+        ## aditionnal value to reset
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name',[])
         self.set_attribute('config_id',[])
         if increase_revision:
             self.set_attribute('version', self.get_attribute('version')+1)
+
         # remove the configs doc hash in reset
         hash_ids = database('configs')
         for i in range( len(self.get_attribute('sequences'))):
             hash_id = self.configuration_identifier(i)
             if hash_ids.document_exists( hash_id ):
                 hash_ids.delete( hash_id )
-        self.set_status(step=0,with_notification=True)
+
+        if hard:
+            self.set_status(step=0,with_notification=True)
+        else:
+            self.set_attribute('approval','approve')
+            self.set_status(step=self._json_base__status.index('approved')
+                            ,with_notification=True)
 
 
 

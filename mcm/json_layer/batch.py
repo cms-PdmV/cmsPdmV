@@ -26,6 +26,13 @@ class batch(json_base):
         self.validate()
         self.get_current_user_role_level()
 
+    def remove_request(self, rid):
+        b_requests = self.get_attribute('requests')
+        n_b= len(b_requests)
+        b_requests = filter(lambda r : r['content']['pdmv_prep_id'] != rid, b_requests)
+        self.set_attribute( 'requests', b_requests)
+        self.reload()
+ 
     def add_requests(self,a_list):
         b_requests=self.get_attribute('requests')
         b_requests.extend(a_list)

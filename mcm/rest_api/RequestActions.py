@@ -738,17 +738,17 @@ class ApproveRequest(RESTResource):
             return dumps(self.multiple_approve(args[0]))
         return dumps(self.multiple_approve(args[0], int(args[1])))
 
-    def multiple_approve(self, rid, val=-1):
+    def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
             rlist = rid.rsplit(',')
             res = []
             for r in rlist:
-                res.append(self.approve(r, val))
+                res.append(self.approve(r, val, hard))
             return res
         else:
-            return self.approve(rid, val)
+            return self.approve(rid, val, hard)
 
-    def approve(self, rid, val=-1):
+    def approve(self, rid, val=-1,hard=True):
         db = database('requests')
         if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
@@ -759,7 +759,7 @@ class ApproveRequest(RESTResource):
         #req.approve(val)
         try:
             if val == 0:
-                req.reset()
+                req.reset(hard)
                 saved = db.update(req.json())
             else:
                 with locker.lock('{0}-wait-for-approval'.format( rid ) ):
@@ -781,9 +781,10 @@ class ApproveRequest(RESTResource):
 
 
 class ResetRequestApproval(ApproveRequest):
-    def __init__(self):
+    def __init__(self,hard=True):
         ApproveRequest.__init__(self)
         self.access_limit = access_rights.generator_contact
+        self.hard = hard
 
     def GET(self, *args):
         """
@@ -791,7 +792,7 @@ class ResetRequestApproval(ApproveRequest):
         """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
-        return dumps(self.multiple_approve(args[0], 0))
+        return dumps(self.multiple_approve(args[0], 0, self.hard))
 
 
 class GetStatus(RESTResource):

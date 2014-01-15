@@ -154,7 +154,10 @@
                 <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify" ng-href="#">
                   <i class="icon-envelope"></i>
                 </a>
-                <a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status" ng-href="#">
+                <!--<a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status" ng-href="#">
+                  <i class="icon-step-backward"></i>
+                </a>-->
+                <a ng-click="open_isSureModal('soft_reset',data.prepid)" rel="tooltip" title="Soft Reset" ng-hide="role(3);" target="_self" ng-href="#">
                   <i class="icon-step-backward"></i>
                 </a>
                 <a ng-click="open_isSureModal('toggle',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status" ng-href="#">

@@ -564,6 +564,9 @@ function resultsCtrl($scope, $http, $location, $window){
       case "option_reset":
         $scope.single_step('option_reset',$scope.toggle_prepid);
         break;
+      case "soft_reset":
+        $scope.single_step('soft_reset',$scope.toggle_prepid);
+        break;
       case "delete":
         $scope.delete_object('requests', $scope.toggle_prepid);
         break;
