@@ -4,7 +4,7 @@ from web_apps.Search import Search
 #from web_apps.Edit import Edit
 #from web_apps.Create import Create
 #from web_apps.Actions import Actions
-from rest_api.RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, RequestsFromFile, SearchRequest, TestRequest, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
@@ -22,7 +22,7 @@ from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, G
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.ControlActions import RenewCertificate, ChangeVerbosity
+from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -34,6 +34,9 @@ from tools.logger import rest_formatter, mcm_formatter, logfactory
 from tools.settings import settings
 import cherrypy #to expose cherrypy methods serving the HTML files
 import os
+import shelve
+import subprocess
+import imp
 
 # Initialize Web UI Page Objects
 
@@ -386,6 +389,8 @@ root.restapi.tags.remove = RemoveTag()
 
 root.restapi.control.renew_cert = RenewCertificate()
 root.restapi.control.set_verbosity = ChangeVerbosity()
+root.restapi.control.turn_off = TurnOffServer()
+root.restapi.control.reset_rest_counter = ResetRESTCounters()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
@@ -434,4 +439,27 @@ h.setFormatter(rest_formatter())
 log.access_log.addHandler(h)
 logfactory.set_verbosity(int(settings().get_value("log_verbosity")))
 
+
+def start():
+    logfactory.log(".mcm_rest_counter persistence opening")
+    RESTResource.counter = shelve.open('.mcm_rest_counter')
+
+
+def stop():
+    logfactory.log(".mcm_rest_counter persistence closing")
+    RESTResource.counter.close()
+
+
+def maintain():
+    if not cherrypy.engine.execv:
+        logfactory.log("going to maintenance")
+        subprocess.call("python2.6 main_tenance.py &", shell=True)
+
+cherrypy.engine.subscribe('start', start)
+cherrypy.engine.subscribe('stop', stop)
+cherrypy.engine.subscribe('exit', maintain)
+cherrypy.engine.signal_handler.handlers['SIGINT'] = cherrypy.engine.exit
+
+
+#START the engine
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')

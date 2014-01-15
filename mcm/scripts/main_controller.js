@@ -1,10 +1,11 @@
-function mainCtrl($scope, $http, $location, $window){
+function mainCtrl($scope, $http, $location, $window, $route){
   $scope.stats_cache = {};
   $scope.full_details = {};
   $scope.mcm_revision = "";
   $scope.user = {name: "guest", role:"user",roleIndex:0};
   $scope.start_time = "";
-    $scope.title = $window.document.title;
+  $scope.turn_on_button_clicked = false;
+
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){
     if ($window.location.href.indexOf('#') == -1){
@@ -64,6 +65,22 @@ var promise;
     });
       return return_info;
   };
+
+    $scope.turnOnServer = function() {
+      if ($window.document.title == "McM maintenance") {
+      $scope.turn_on_button_clicked = true;
+      var promise = $http.get("restapi/control/turn_on");
+      promise.then(function(){
+            alert("Server turned on");
+          setTimeout(function(){$window.location.reload()}, 5000);
+      }, function(){
+            alert("Server failed to turn on");
+          $scope.turn_on_button_clicked = false;
+          setTimeout(function(){$window.location.reload()}, 1000);
+    });
+
+  }};
+
   $scope.setNews = function ()
   {
     if ($scope.getNews()){

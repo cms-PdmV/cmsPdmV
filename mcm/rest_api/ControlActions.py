@@ -3,6 +3,8 @@ from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 from tools.settings import settings
 from json import dumps
+from tools.locker import locker
+import cherrypy
 
 
 class RenewCertificate(RESTResource):
@@ -50,3 +52,38 @@ class ChangeVerbosity(RESTResource):
         else:
             return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
         return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})
+
+
+class TurnOffServer(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self, *args):
+        """
+        Turn off server.
+        """
+        self.logger.log("Shutting down the server")
+        cherrypy.engine.exit()
+
+
+class ResetRESTCounters(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self, *args):
+        """
+        Reset counters
+        """
+        res = {}
+        with locker.lock("rest-call-counter"):
+            for arg in args:
+                if arg in RESTResource:
+                    RESTResource.counter[arg] = 0
+                    res[arg] = True
+                else:
+                    res[arg] = False
+            if not args:
+                for key in RESTResource.counter:
+                    RESTResource.counter[key] = 0
+                    res[key] = True
+            return dumps(res)

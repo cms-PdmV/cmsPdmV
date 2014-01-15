@@ -1,6 +1,8 @@
 function resultsCtrl($scope, $http, $location, $window){
     $scope.update = [];
     $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
+    $scope.turn_off_button_clicked = false;
+    $scope.clear_rest_button_clicked = false;
     $scope.tabsettings={
         batch:{
             active:true
@@ -46,6 +48,31 @@ function resultsCtrl($scope, $http, $location, $window){
         });
         return output_array
     }
+
+    $scope.resetRestCounter = function() {
+        $scope.clear_rest_button_clicked = true;
+      var promise = $http.get("restapi/control/reset_rest_counter");
+      promise.then(function(){
+        alert("REST counters reset");
+        $scope.clear_rest_button_clicked = false;
+      }, function(){
+        alert("Error resetting REST counters");
+        $scope.clear_rest_button_clicked = false;
+    });
+    };
+
+    $scope.turnOffServer = function() {
+        $scope.turn_off_button_clicked = true;
+      var promise = $http.get("restapi/control/turn_off");
+      promise.then(function(){
+        alert("Server turned off");
+          setTimeout(function(){$window.location.reload()}, 5000);
+      }, function(){
+        alert("Couldn't turn off server");
+            $scope.turn_off_button_clicked = false;
+          setTimeout(function(){$window.location.reload()}, 1000);
+    });
+    };
 
     $scope.getBjobsData = function(){
         var bjobs_options_array = removeEmptyString($scope.bjobsOptions);

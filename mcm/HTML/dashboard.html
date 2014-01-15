@@ -104,6 +104,14 @@
                                <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
                         </div>
                     </pane>
+                    <pane heading="Control" active="tabsettings.control.active">
+                        <div class="row-fluid">
+                            <div class="well span4 offset4">
+                                <button type="button" class="btn btn-danger btn-block" ng-click="turnOffServer()" ng-disabled="role(4) || turn_off_button_clicked"><i class="icon-warning-sign icon-white"></i> Turn off McM <i class="icon-warning-sign icon-white"></i></button>
+                                <button type="button" class="btn btn-danger btn-block" ng-click="resetRestCounter()" ng-disabled="role(4) || clear_rest_button_clicked"><i class="icon-remove-sign icon-white"></i> Reset REST counters <i class="icon-remove-sign icon-white"></i></button>
+                            </div>
+                        </div>
+                    </pane>
                 </tabs>
                 <div class="row-fluid">
                     <div class="span3" style="margin-top:20px;">

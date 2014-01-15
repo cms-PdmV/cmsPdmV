@@ -3,5 +3,6 @@
 .__afs*
 .idea
 .DS_Store
+.mcm_rest_counter
 logs/
 WMCore/

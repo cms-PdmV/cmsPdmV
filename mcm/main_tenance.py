@@ -4,14 +4,16 @@ import logging
 import logging.handlers
 import json
 import time
-
+import shelve
+import subprocess
 from tools.logger import rest_formatter
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
+from rest_api.ControlActions import TurnOffServer
 
 file_location = os.path.dirname(__file__)
 
 @cherrypy.expose
-def maintenance_page():
+def maintenance_page(*args, **kwargs):
     return open(os.path.join(file_location,'HTML','maintenance.html'))
 
 #@cherrypy.expose
@@ -24,29 +26,15 @@ class GetDummyNews(RESTResource):
     def GET(self, *args):
         return json.dumps([{"announced":True, "subject":"McM is in maintenance", "text":"", "date" : time.strftime('%Y-%m-%d-%H-%M'),"author" : "support" }])
 
-
 root = maintenance_page
-root.search = maintenance_page
-root.campaigns = maintenance_page
-root.chained_campaigns = maintenance_page
-root.chained_requests = maintenance_page
-root.requests = maintenance_page
-root.flows = maintenance_page
-root.edit = maintenance_page
-root.create = maintenance_page
-root.actions = maintenance_page
-root.getDefaultSequences = maintenance_page
-root.injectAndLog = maintenance_page
-root.users = maintenance_page
-root.batches = maintenance_page
-root.invalidations = maintenance_page
-root.injection_status = maintenance_page
 
 root.restapi = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.users.get_role = GetDummyUserRole()
 root.restapi.news = RESTResourceIndex()
 root.restapi.news.getall = GetDummyNews()
+root.restapi.control = RESTResourceIndex()
+root.restapi.control.turn_on = TurnOffServer()
 
 log = cherrypy.log
 log.error_file = None
@@ -75,5 +63,22 @@ h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter())
 log.access_log.addHandler(h)
+
+
+def start():
+    RESTResource.counter = shelve.open('.mcm_rest_counter')
+
+
+def stop():
+    RESTResource.counter.close()
+
+
+def maintain():
+    if not cherrypy.engine.execv:
+        subprocess.call("python2.6 main.py &", shell=True)
+
+cherrypy.engine.subscribe('start', start)
+cherrypy.engine.subscribe('stop', stop)
+cherrypy.engine.subscribe('exit', maintain)
 
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')
