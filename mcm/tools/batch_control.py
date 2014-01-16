@@ -4,6 +4,8 @@ from tools.logger import logfactory
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.settings import settings
+import socket
+import errno
 
 class batch_control:
     """
@@ -72,9 +74,7 @@ class batch_control:
     def monitor_job_status(self):
         
         cmd = 'bjobs -w -J %s -g %s' % (self.test_id, self.group)
-        
-        stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
-
+        stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr, "Problem with SSH execution of command bjobs -w -J %s -g %s" % (self.test_id, self.group)): return False
             
         for line in [l for l in stdout.read().split('\n') if self.test_id in l]:
@@ -164,8 +164,20 @@ class batch_control:
             if not self.batch_submit():
                 return False
 
+            timeout_counter = 0
             ## check when it is finished
-            while not self.monitor_job_status():
+            finished = False
+            while not finished:
+                try:
+                    finished = self.monitor_job_status()
+                    timeout_counter = 0
+                except socket.error as e:
+                    if e.errno == errno.ETIMEDOUT:
+                        timeout_counter += 1
+                        if timeout_counter > 2:
+                            return False
+                    else:
+                        raise e
                 time.sleep(60)
 
             ## check that it succeeded
