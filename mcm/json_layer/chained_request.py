@@ -243,6 +243,8 @@ class chained_request(json_base):
         if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
             raise self.EnergyInconsistentException(next_campaign.get_attribute('prepid'))
 
+        ### make a check there for version of campaigns
+
         if next_campaign.get_attribute('type') == 'MCReproc' and (not 'time_event' in mcm_f.get_attribute('request_parameters')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'the flow is getting into a MCReproc campaign but not time per event is specified')
@@ -419,9 +421,8 @@ class chained_request(json_base):
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
             next_request = request( next_campaign.add_request( rdb.get(next_id)))
-            ### shouldn't this be added ?
-            #transfer( current_request, next_request)
-
+            ## propagate again some of the fields of the previous request.
+            request.transfer( current_request, next_request )
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'Unrecognized approach %s' %  approach )
