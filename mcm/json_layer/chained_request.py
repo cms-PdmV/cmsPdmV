@@ -284,6 +284,8 @@ class chained_request(json_base):
         if not reserve:
             current_request.get_stats()
             next_total_events=current_request.get_attribute('completed_events')
+            ## get the original expected events and allow a margin of 5% less statistics
+            completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
 
             notify_on_fail=True ## to be tuned according to the specific cases
             if current_request.get_attribute('completed_events') <= 0:
@@ -305,13 +307,11 @@ class chained_request(json_base):
                     # at a root -> non-root transition only does the staged/threshold functions !
                     if 'staged' in original_action_item:
                         next_total_events = int(original_action_item['staged'])
+                        completed_events_to_pass = next_total_events
                     if 'threshold' in original_action_item:
                         next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
+                        completed_events_to_pass = next_total_events
 
-                    completed_events_to_pass = next_total_events
-                else:
-                    ## get the original expected events and allow a margin of 5% less statistics
-                    completed_events_to_pass = int(current_request.get_attribute('total_events') * 0.95)
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
