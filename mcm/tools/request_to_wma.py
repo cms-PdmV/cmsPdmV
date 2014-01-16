@@ -80,7 +80,7 @@ class request_to_wmcontrol:
             # calculate eff dev                
             command += ' --filter-eff %s' %( efficiency(mcm_r) )  
 
-            command += ' --input-ds %s' %(mcm_r.get_attribute('input_filename'))
+            command += ' --input-ds %s' %(mcm_r.get_attribute('input_dataset'))
 
             command += ' --primary-dataset %s' %(mcm_r.get_attribute('dataset_name'))
 
@@ -109,7 +109,7 @@ class request_to_wmcontrol:
 
         elif wmagent_type == 'ReDigi':
 
-            command += ' --input-ds %s' %(mcm_r.get_attribute('input_filename'))
+            command += ' --input-ds %s' %(mcm_r.get_attribute('input_dataset'))
 
             command += ' --primary-dataset %s' %(mcm_r.get_attribute('dataset_name'))
 

@@ -298,8 +298,8 @@ class FlowToNextStep(RESTResource):
         inputds = ''
         inblack = []
         inwhite = []
-        if 'input_filename' in vdata:
-            inputds = vdata['input_filename']
+        if 'input_dataset' in vdata:
+            inputds = vdata['input_dataset']
         if 'block_black_list' in vdata:
             inblack = vdata['block_black_list']
         if 'block_white_list' in vdata:

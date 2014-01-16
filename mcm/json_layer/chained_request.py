@@ -440,7 +440,7 @@ class chained_request(json_base):
                     latestStatus = statsDB.get(last_wma['name'])
                     input_dataset = latestStatus['pdmv_dataset_name']
         if input_dataset:
-            next_request.set_attribute('input_filename', input_dataset)
+            next_request.set_attribute('input_dataset', input_dataset)
 
 
 
@@ -485,7 +485,7 @@ class chained_request(json_base):
                 flow_name,
                 next_request.get_attribute('prepid'),
                 self.get_attribute('prepid'),
-                next_request.get_attribute('input_filename'),
+                next_request.get_attribute('input_dataset'),
                 l_type.baseurl(),
                 current_request.get_attribute('prepid'),
                 l_type.baseurl(),

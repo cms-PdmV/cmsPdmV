@@ -82,7 +82,7 @@ class transformer:
         new['cmssw_release'] = req_json['swrelease']
             
         if req_json['inputfilename'] and req_json['inputfilename']!='None':
-            new['input_filename'] = req_json['inputfilename']
+            new['input_dataset'] = req_json['inputfilename']
             
         new['pwg'] = req_json['pwg']
         new['dataset_name'] = req_json['datasetname']

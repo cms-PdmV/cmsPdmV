@@ -107,7 +107,7 @@ def re_morph(req_json):
     new['status'] = req_json['status']
     new['completion_date'] = ''
     new['cmssw_release'] = req_json['swrelease']
-    new['input_filename'] = req_json['inputFileName']
+    new['input_dataset'] = req_json['inputFileName']
     new['pwg'] = req_json['pwg']
     new['validation'] = req_json['validation']
     new['dataset_name'] = req_json['dataSetName']
@@ -282,7 +282,7 @@ def morph_campaign(camp):
     new['pileup_dataset_name'] = camp['pileupDataSetName'].split(';')
     new['process_string'] = camp['processStr'].split(';')
     new['generators'] = camp['generators'].split(';')
-    new['input_filename'] = camp['inputFileName']
+    new['input_dataset'] = camp['inputFileName']
     new['www'] = camp['www']
     new['completed_events'] = -1
     new['total_events'] = camp['nbEvt']

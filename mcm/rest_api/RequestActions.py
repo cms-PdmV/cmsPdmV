@@ -55,7 +55,7 @@ class RequestRESTResource(RESTResource):
         adb = database('actions')
         rootness = camp.get_attribute('root')
         mcdbid = int(mcm_req.get_attribute('mcdb_id'))
-        inputds = mcm_req.get_attribute('input_filename')
+        inputds = mcm_req.get_attribute('input_dataset')
         if (not force) and (rootness == 1 or rootness == -1 and mcdbid > -1):
             ## c['root'] == 1
             ##            :: not a possible root --> no action in the table

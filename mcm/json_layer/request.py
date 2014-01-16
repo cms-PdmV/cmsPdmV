@@ -54,7 +54,7 @@ class request(json_base):
             'priority':20000,
             #'completion_date':'',
             'cmssw_release':'',
-            'input_filename':'',
+            'input_dataset':'',
             'output_dataset' : [],
             'pwg':'',
             'validation':{},
@@ -207,7 +207,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The time per event or size per event are invalid: negative or null')
 
         if not self.get_attribute('fragment') and (not ( self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'))):
-            if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_filename'):
+            if self.get_attribute('mcdb_id')>0 and not self.get_attribute('input_dataset'):
                 ##this case is OK
                 pass
             else:
@@ -265,11 +265,11 @@ class request(json_base):
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
             #not part of any chains ...
-            if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
+            if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_dataset'):
                 if mcm_c['root'] in [-1,1]:
                     ##only requests belonging to a root==0 campaign can have mcdbid without input before being in a chain
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not member of a root campaign.')
-            if self.get_attribute('mcdb_id')>0 and self.get_attribute('input_filename') and self.get_attribute('history')[0]['action'] != 'migrated':
+            if self.get_attribute('mcdb_id')>0 and self.get_attribute('input_dataset') and self.get_attribute('history')[0]['action'] != 'migrated':
                 ## not a migrated request, mcdb
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
 
@@ -278,7 +278,7 @@ class request(json_base):
             for cr in self.get_attribute('member_of_chain'):
                 mcm_cr = crdb.get(cr)
                 if mcm_cr['chain'].index( self.get_attribute('prepid') ) !=0:
-                    if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_filename'):
+                    if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_dataset'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
 
 
@@ -507,10 +507,10 @@ class request(json_base):
           return '%s %s' % (command, cmsDriverOptions)
 
       ##JR
-      if self.get_attribute('input_filename'):
+      if self.get_attribute('input_dataset'):
           if sequenceindex==0:
-              #command +=' --filein "dbs:%s" '%(self.get_attribute('input_filename'))
-              command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_filename'))
+              #command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
+              command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_dataset'))
           else:
               command+='--filein file:step%d.root '%(sequenceindex)
 
@@ -965,7 +965,7 @@ done
     def get_wmagent_type(self):
         if self.get_attribute('type') == 'Prod':
             if self.get_attribute('mcdb_id') == -1:
-                if self.get_attribute('input_filename'):
+                if self.get_attribute('input_dataset'):
                     return 'MonteCarloFromGEN'
                 else:
                     return 'MonteCarlo'
@@ -983,7 +983,7 @@ done
         ###check whether there are missing bits and pieces in the request
         ##maybe raise instead of just returning false
         wma_type= self.get_wmagent_type()
-        if wma_type in ['MonteCarloFromGEN','ReDigi'] and not self.get_attribute('input_filename'):
+        if wma_type in ['MonteCarloFromGEN','ReDigi'] and not self.get_attribute('input_dataset'):
             #raise Exception('Input Dataset name is not defined.')
             return True
         if wma_type in ['MonteCarlo','MonteCarloFromGEN','LHEStepZero']:
@@ -1265,7 +1265,7 @@ done
 
     def textified(self):
         l_type = locator()
-        view_in_this_order=['pwg','prepid','dataset_name','mcdb_id','analysis_id','notes','total_events','validation','approval','status','input_filename','member_of_chain','reqmgr_name','completed_events']
+        view_in_this_order=['pwg','prepid','dataset_name','mcdb_id','analysis_id','notes','total_events','validation','approval','status','input_dataset','member_of_chain','reqmgr_name','completed_events']
         text=''
         for view in view_in_this_order:
             if self.get_attribute(view):
@@ -1399,7 +1399,7 @@ done
         to_be_saved= False
 
         to_be_changed='filter_efficiency'
-        if self.get_attribute('input_filename'):
+        if self.get_attribute('input_dataset'):
             to_be_changed='match_efficiency'
 
         self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % ( efficiency, efficiency_error, timing, file_size ))

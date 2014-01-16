@@ -39,7 +39,7 @@ class campaign(json_base):
                                  'next': [],
                                  #'production_type':'', 
                                  'cmssw_release': '',
-                                 'input_filename': '',
+                                 'input_dataset': '',
                                  #'description':'', 
                                  'notes' : '',
                                  #'remarks':'', 
@@ -101,7 +101,7 @@ class campaign(json_base):
         except self.IllegalAttributeName() as ex:
             return {}
 
-        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type', 'input_filename']
+        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type', 'input_dataset']
         for key in self._json_base__json:
             if key not in req.schema():
                 continue

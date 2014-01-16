@@ -41,7 +41,7 @@ def get_campaign_key(campid):
 def get_all_requests(campid):
     key = get_campaign_key(campid)
     q1 = '''select Request.PrKeyPF as id, Request.priority, Request.code as prepid, Request.authorName as author_name, Request.authorCMSid as author_cmsid, Request.authorInstCode as author_inst_code,
-                Request.pwg, Request.status, Request.statusFlow as status_flow, Request.validation, Request.type, Request.swrelease as cmssw_release, Request.inputFileName as input_filename, Request.dataTier as data_tier, 
+                Request.pwg, Request.status, Request.statusFlow as status_flow, Request.validation, Request.type, Request.swrelease as cmssw_release, Request.inputFileName as input_dataset, Request.dataTier as data_tier,
                 Request.eventContent as event_content, Request.genFragment as gen_fragment, Request.dataSetName as dataset_name, Request.pileupDatasetName as pileup_dataset_name, Request.www,
                 Request.processStr as process_string, Request.inputBlock as input_block, Request.preSteps as pre_steps, Request.cvsTag as cvs_tag, Request.inputCMSgen as input_cms_gen, Request.PVTflag as pvt_flag,
                 Request.PVTcomment as pvt_comment, Request.conditions, Request.generators, Request.pileupScenario as pileup_scenario, Request.datamixerScenario as datamixer_scenario, Request.MCDBid as mcdb_id,
@@ -196,7 +196,7 @@ def get_campaign(campid):
     key = get_campaign_key(campid)
     q1 = '''select id as prepid, authorName as author_name,startDate as start_date, endDate as end_date, energy, type, prodType as production_type, 
     reprType as repr_type, swrelease as cmssw_release, description, remarks, validation, pileupDatasetName as pileup_dataset_name, 
-    processStr as process_string, conditions, generators, pileupScenario as pileup_scenario, datamixerScenario as datamixer_scenario, inputFileName as input_filename, 
+    processStr as process_string, conditions, generators, pileupScenario as pileup_scenario, datamixerScenario as datamixer_scenario, inputFileName as input_dataset,
     www, preSteps as pre_steps, dataTier as data_tier, eventContent as event_content, nbEvt as total_events, nbEvtCompleted as completed_events, approvals, 
     authorCMSid as author_cmsid, authorInstCode as author_inst_code
     from Campaign where id=''' + '\'' + str(campid) + '\';'
