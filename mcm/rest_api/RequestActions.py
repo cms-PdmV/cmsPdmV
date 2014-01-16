@@ -1537,8 +1537,10 @@ class RequestsReminder(RESTResource):
         if not what or 'gen_contact' in what or 'generator_contact' in what:
             all_ids = set()
             ## remind the gen contact about requests that are:
-            ##   - in status new, and have been flown            
-            for mcm_r in rdb.queries(['status==new']):
+            ##   - in status new, and have been flown
+            mcm_rs = rdb.queries(['status==new'])
+            mcm_rs.extend(rdb.queries(['status==validation']))
+            for mcm_r in mcm_rs:
                 c = mcm_r['member_of_campaign']
                 rid = mcm_r['prepid']
                 if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
