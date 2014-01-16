@@ -154,7 +154,6 @@ class RequestRESTResource(RESTResource):
         ##cast the campaign parameters into the request: knowing that those can be edited at will later
         if not mcm_req.get_attribute('sequences'):
             mcm_req.set_options(can_save=False)
-            mcm_req.set_options()
 
         #c = cdb.get(camp)
         #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
