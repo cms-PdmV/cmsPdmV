@@ -870,7 +870,7 @@ class InspectStatus(RESTResource):
 
 class SetStatus(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.administrator
 
     def GET(self, *args):
         """
