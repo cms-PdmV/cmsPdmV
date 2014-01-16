@@ -1385,11 +1385,11 @@ done
             for summary in item.getElementsByTagName("PerformanceSummary"):
                 for perf in summary.getElementsByTagName("Metric"):
                     name=perf.getAttribute('Name')
-                    if name == 'AvgEventTime':
+                    if name == 'AvgEventTime' and name == timing_method:
                         timing = float( perf.getAttribute('Value'))
-                    if name == 'AvgEventCPU':
+                    if name == 'AvgEventCPU' and name == timing_method:
                         timing = float( perf.getAttribute('Value'))
-                    if name == 'TotalJobCPU':
+                    if name == 'TotalJobCPU' and name == timing_method:
                         timing = float( perf.getAttribute('Value'))                        
                         timing = timing / total_event_in
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
@@ -1448,18 +1448,18 @@ done
 
         elif what =='perf':
             ## timing checks
-            timing_faction = settings().get_value('timing_faction')
+            timing_fraction = settings().get_value('timing_fraction')
             timing_threshold = settings().get_value('timing_threshold')
             timing_n_limit = settings().get_value('timing_n_limit')
             if timing and timing>self.get_attribute('time_event'):
                 ## timing under-estimated
-                if timing * timing_faction > self.get_attribute('time_event'):
+                if timing * timing_fraction > self.get_attribute('time_event'):
                     ## notify if more than 10% discrepancy found !
                     self.notify('Runtest for %s: time per event under-estimate.'%(self.get_attribute('prepid')),
                                 'For this request, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in))
                 self.set_attribute('time_event', timing)
                 to_be_saved=True
-            if timing and timing < (timing_faction * self.get_attribute('time_event')):
+            if timing and timing < (timing_fraction * self.get_attribute('time_event')):
                 ## timing over-estimated
                 ## warn if over-estimated by more than 10%
                 subject='Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid'))
