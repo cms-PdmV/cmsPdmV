@@ -1410,8 +1410,10 @@ done
                 do_update=True
             if geninfo and geninfo[to_be_changed] and efficiency:
                 if (geninfo[to_be_changed+'_error'] / geninfo[to_be_changed] ) > (efficiency_error/ efficiency):
+                    ## better error reached with the runtest => set the value
                     do_update=True
                 if (efficiency!=1 and geninfo[to_be_changed]==1) or (efficiency==1 and  geninfo[to_be_changed]!=1):
+                    ## the efficiency is set to 1 but not strictly 1 => fail
                     raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
 
             if do_update:
@@ -1421,40 +1423,45 @@ done
                 added_geninfo[to_be_changed] = efficiency
                 added_geninfo[to_be_changed+'_error'] = efficiency_error
                 to_be_saved=True
+
+            efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
                 if efficiency==0.:
-                    ## that is a very bad thing !
+                    ## the efficiency, although we have ran events is exactly zero ! should have failed a few lines above anyways
                     self.notify('Runtest for %s: %s seems very wrong.'%( self.get_attribute('prepid'), to_be_changed),
                                 'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
                     #raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
-                elif abs(geninfo[to_be_changed]-efficiency)/efficiency>0.05:
-                    ## efficiency is wrong by more than 0.05
+                elif abs(geninfo[to_be_changed]-efficiency)/efficiency>efficiency_fraction:
+                    ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
                     self.notify('Runtest for %s: %s seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
                                 'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
 
 
         elif what =='perf':
             ## timing checks
+            timing_faction = settings().get_value('timing_faction')
+            timing_threshold = settings().get_value('timing_threshold')
+            timing_n_limit = settings().get_value('timing_n_limit')
             if timing and timing>self.get_attribute('time_event'):
                 ## timing under-estimated
-                if timing *0.90 > self.get_attribute('time_event'):
+                if timing * timing_faction > self.get_attribute('time_event'):
                     ## notify if more than 10% discrepancy found !
                     self.notify('Runtest for %s: time per event under-estimate.'%(self.get_attribute('prepid')),
                                 'For this request, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in))
                 self.set_attribute('time_event', timing)
                 to_be_saved=True
-            if timing and timing < (0.90 * self.get_attribute('time_event')):
+            if timing and timing < (timing_faction * self.get_attribute('time_event')):
                 ## timing over-estimated
                 ## warn if over-estimated by more than 10%
                 subject='Runtest for %s: time per event over-estimate.'%(self.get_attribute('prepid'))
-                if total_event > 10:
+                if total_event > timing_n_limit or timing < timing_threshold:
                     message='For this request, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in)
                     self.set_attribute('time_event', timing)
                     to_be_saved=True
                 else:
                     message='For this request, time/event=%s was given, %s was measured from %s events (ran %s).'%( self.get_attribute('time_event'), timing, total_event, total_event_in)
                     ## we should fail these requests because of wrong timing by >10% !
-                    ###raise Exception(message)
+                    raise Exception(message)
                     
                 self.notify(subject, message)
         
