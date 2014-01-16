@@ -14,6 +14,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
+from itertools import izip
 
 
 class PoolOfHandlers(Thread):
@@ -242,12 +243,22 @@ class RuntestGenvalid(Handler):
 
             self.logger.error('I came all the way to here and %s (request %s)'%( success, self.rid ))
             if not success:
+                mcm_r = request(self.db.get(self.rid))
                 ## need to provide all the information back
-                the_logs='\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
+                if "TERM_RUNLIMIT" in batch_test.log_out:
+                    no_success_message = "LSF job was terminated after reaching run time limit.\n\n"
+                    no_success_message += "Average CPU time per event specified for request was {0} seconds. \n\n".format(mcm_r.get_attribute("time_event"))
+                    additiona_message = "Time report not found in LSF job."
+                    split_log = batch_test.log_err.split('\n')
+                    for l_id, line in izip(reversed(xrange(len(split_log))), reversed(split_log)):
+                        if "TimeReport>" in line:
+                            additiona_message = "\n".join(split_log[l_id:l_id + 12])
+                    no_success_message += additiona_message
+                else:
+                    no_success_message = '\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 # reset the content of the request
-                mcm_r = request(self.db.get(self.rid))
-                mcm_r.test_failure(message=the_logs,what='Validation run test',rewind=True)
+                mcm_r.test_failure(message=no_success_message, what='Validation run test',rewind=True)
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
             else:
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
