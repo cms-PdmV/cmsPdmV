@@ -103,7 +103,7 @@ class batch_control:
         
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         self.logger.log("Reading file with command %s" % cmd)
-        time_out=30
+        time_out=settings().get_value('batch_retry_timeout')
         trials_time_out=10
         trials=0
         ## wait for afs to synchronize the output file
@@ -178,7 +178,7 @@ class batch_control:
                             return False
                     else:
                         raise e
-                time.sleep(60)
+                time.sleep( settings().get_value('batch_retry_timeout') )
 
             ## check that it succeeded
             #wait for afs to sync the .out file
