@@ -707,10 +707,13 @@ class request(json_base):
             res += '-n '+str(events)+ ' || exit $? ; \n'
             if run:
                 res += 'cmsRun -e -j %s%s_rt.xml %s || exit $? ; \n'%( directory, self.get_attribute('prepid'), configuration_names[-1] )
+                res += 'echo %d events were ran \n'%( events )
                 res += 'grep "TotalEvents" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "PeakValueRss" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
-                res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                #res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                #res += 'grep "AvgEventCPU" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                res += 'grep "TotalJobCPU" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 
 
             #try create a flash runtest
@@ -901,6 +904,7 @@ done
             if run:
                 self.genvalid_driver += 'cmsRun -e -j %s%s_gv.xml %sgenvalid.py || exit $? ; \n'%( directory, self.get_attribute('prepid'),
                                                                                                directory)
+                self.genvalid_driver += 'echo %d events were ran \n' % ( n_to_valid )
                 self.genvalid_driver += 'grep "TotalEvents" %s%s_gv.xml \n'%(directory, self.get_attribute('prepid'))
                 ## put back the perf report to McM ! wil modify the request object while operating on it.
                 # and therefore the saving of the request will fail ...
@@ -1374,6 +1378,8 @@ done
 
         memory = None
         timing = None
+        timing_method = settings().get_value('timing_method')
+
         file_size = None
         for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
             for summary in item.getElementsByTagName("PerformanceSummary"):
@@ -1381,13 +1387,16 @@ done
                     name=perf.getAttribute('Name')
                     if name == 'AvgEventTime':
                         timing = float( perf.getAttribute('Value'))
+                    if name == 'AvgEventCPU':
+                        timing = float( perf.getAttribute('Value'))
+                    if name == 'TotalJobCPU':
+                        timing = float( perf.getAttribute('Value'))                        
+                        timing = timing / total_event_in
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float( perf.getAttribute('Value')) * 1024. # MegaBytes -> kBytes
+                        file_size = int(  file_size / total_event)
                     if name == 'PeakValueRss':
                         memory = float( perf.getAttribute('Value'))
-
-        if file_size:
-            file_size = int(  file_size / total_event)
 
         efficiency = total_event / total_event_in_valid
         efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in_valid )
