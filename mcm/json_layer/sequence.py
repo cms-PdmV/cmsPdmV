@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+from tools.settings import settings
 from json_base import json_base
 
 class sequence(json_base):
     def __init__(self,  json_input={}):
+        
+        """
         self._json_base__schema = {
             'index':-1,
             'step':[], 
@@ -40,6 +43,8 @@ class sequence(json_base):
             'inputCommands':'',
             'custom_conditions':'',
             'extra':''} 
+        """
+        self._json_base__schema = settings().get_value('cmsdriver_options')
 
         ## how to get the options ?
         # in cmssw
