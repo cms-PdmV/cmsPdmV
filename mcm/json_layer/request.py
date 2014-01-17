@@ -488,47 +488,55 @@ class request(json_base):
 
     def build_cmsDriver(self, sequenceindex):
 
-      fragment=self.get_fragment()
+        fragment=self.get_fragment()
 
-      ##JR
-      if fragment=='':
-          fragment='step%d'%(sequenceindex+1)
-      command = 'cmsDriver.py %s ' % fragment
+        ##JR
+        if fragment=='':
+            fragment='step%d'%(sequenceindex+1)
+        command = 'cmsDriver.py %s ' % fragment
 
-      try:
-          seq = sequence(self.get_attribute('sequences')[sequenceindex])
-      except Exception:
-          self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (self.get_attribute('prepid'), sequenceindex), level='critical')
-          return ''
+        try:
+            seq = sequence(self.get_attribute('sequences')[sequenceindex])
+        except Exception:
+            self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (self.get_attribute('prepid'), sequenceindex), level='critical')
+            return ''
 
-      cmsDriverOptions=seq.build_cmsDriver()
+        cmsDriverOptions=seq.build_cmsDriver()
 
-      if not cmsDriverOptions.strip():
-          return '%s %s' % (command, cmsDriverOptions)
+        if not cmsDriverOptions.strip():
+            return '%s %s' % (command, cmsDriverOptions)
 
-      ##JR
-      if self.get_attribute('input_dataset'):
-          if sequenceindex==0:
-              #command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
-              command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_dataset'))
-          else:
-              command+='--filein file:step%d.root '%(sequenceindex)
+        ##JR
+        if self.get_attribute('input_dataset'):
+            if sequenceindex==0:
+                #command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
+                command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_dataset'))
+            else:
+                command+='--filein file:step%d.root '%(sequenceindex)
 
-      elif self.get_attribute('mcdb_id')>0:
-          command +='--filein lhe:%d '%(self.get_attribute('mcdb_id'))
+        elif self.get_attribute('mcdb_id')>0:
+            command +='--filein lhe:%d '%(self.get_attribute('mcdb_id'))
 
-      if sequenceindex == len(self.get_attribute('sequences'))-1:
+        if sequenceindex == len(self.get_attribute('sequences'))-1:
           ## last one
-          command +='--fileout file:%s.root '%(self.get_attribute('prepid'))
-      else:
-          command +='--fileout file:step%d.root '%(sequenceindex+1)
+            command +='--fileout file:%s.root '%(self.get_attribute('prepid'))
+        else:
+            command +='--fileout file:step%d.root '%(sequenceindex+1)
 
 
-      ##JR
-      if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
-          command +='--pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
+        ##JR
+        if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
+            command +='--pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
 
-      return '%s%s' % (command, cmsDriverOptions)
+        return '%s%s' % (command, cmsDriverOptions)
+
+    def transfer_from(self, camp):
+        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset']
+        for k in keys_to_transfer:
+            try:
+                self.set_attribute(k, camp.get_attribute(k))
+            except request.IllegalAttributeName:
+                continue
 
     def set_options(self, can_save=True):
         if self.get_attribute('status') == 'new':
@@ -540,10 +548,7 @@ class request(json_base):
                 flownWith = flow(fdb.get(self.get_attribute('flown_with')))
 
             camp = campaign(cdb.get(self.get_attribute('member_of_campaign')))
-            self.set_attribute('cmssw_release', camp.get_attribute('cmssw_release'))
-            self.set_attribute('pileup_dataset_name', camp.get_attribute('pileup_dataset_name'))
-            self.set_attribute('type', camp.get_attribute('type'))
-            self.set_attribute('input_dataset', camp.get_attribute('input_dataset'))
+            self.transfer_from(camp)
             ## putting things together from the campaign+flow
             freshSeq = []
             if flownWith:

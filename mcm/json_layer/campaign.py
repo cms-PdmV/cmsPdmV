@@ -102,16 +102,7 @@ class campaign(json_base):
         except self.IllegalAttributeName() as ex:
             return {}
 
-        keys_to_transfer=['energy','cmssw_release','pileup_dataset_name','type', 'input_dataset']
-        for key in self._json_base__json:
-            if key not in req.schema():
-                continue
-            if not key in keys_to_transfer: 
-                continue
-            if not self.get_attribute(key):
-                continue
-            req.set_attribute(key, self.get_attribute(key))
-        req.set_attribute('member_of_campaign', self.get_attribute('_id'))
+        req.transfer_from(self)
         return req.json()
 
     def toggle_approval(self):
