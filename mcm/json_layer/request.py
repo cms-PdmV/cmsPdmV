@@ -712,8 +712,8 @@ class request(json_base):
                 res += 'grep "TotalEvents" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "PeakValueRss" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
-                #res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
-                #res += 'grep "AvgEventCPU" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                res += 'grep "AvgEventTime" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
+                res += 'grep "AvgEventCPU" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 res += 'grep "TotalJobCPU" %s%s_rt.xml \n'%(directory, self.get_attribute('prepid'))
                 
 
