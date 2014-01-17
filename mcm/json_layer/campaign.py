@@ -50,8 +50,8 @@ class campaign(json_base):
                                  #'process_string':[], 
                                  'generators': [],
                                  'www': '',
-                                 'completed_events': -1,
-                                 'total_events': -1,
+                                 #'completed_events': -1,
+                                 #'total_events': -1,
                                  'root': 1, # -1: possible root, 0: root, 1: non-root
                                  'sequences': [], # list of jsons of jsons
                                  'approval': self.get_approval_steps()[0],
