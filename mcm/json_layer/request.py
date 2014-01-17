@@ -543,6 +543,7 @@ class request(json_base):
             self.set_attribute('cmssw_release', camp.get_attribute('cmssw_release'))
             self.set_attribute('pileup_dataset_name', camp.get_attribute('pileup_dataset_name'))
             self.set_attribute('type', camp.get_attribute('type'))
+            self.set_attribute('input_dataset', camp.get_attribute('input_dataset'))
             ## putting things together from the campaign+flow
             freshSeq = []
             if flownWith:
