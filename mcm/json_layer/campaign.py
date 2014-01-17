@@ -3,6 +3,7 @@
 #from couchdb_layer.prep_database import database
 from json_base import json_base
 from sequence import sequence
+import re
 
 class campaign(json_base):
     class DuplicateApprovalStep(Exception):
@@ -151,3 +152,15 @@ class campaign(json_base):
             self.set_attribute('next',  new_next)
         else:
             raise self.CampaignExistsException(cid)
+
+    def is_release_greater_or_equal_to(self, cmssw_release):
+        my_release = filter(None, re.sub("[^0-9]", "", self.get_attribute('cmssw_release')).split('_'))
+        other_release = filter(None, re.sub("[^0-9]", "", cmssw_release).split('_'))
+        try:
+            for i in range(len(my_release)):
+                if int(my_release[i]) < int(other_release[i]):
+                    return False
+        except IndexError:
+            return True
+        return True
+

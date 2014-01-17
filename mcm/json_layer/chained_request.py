@@ -57,14 +57,6 @@ class chained_request(json_base):
         def __str__(self):
             return 'Error: ' + self.name + ' is stopped.'
 
-    class EnergyInconsistentException(NotApprovedException):
-        def __init__(self, oname):
-            self.name = str(oname)
-            chained_request.logger.error('Campaign %s has inconsistent energy' % self.name)
-
-        def __str__(self):
-            return 'Error: Campaign ' + self.name + ' has inconsistent energy.'
-
     def __init__(self, json_input=None):
 
         if not json_input: json_input = {}
@@ -241,9 +233,11 @@ class chained_request(json_base):
                                                              flow_name, next_campaign_id))
 
         if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
-            raise self.EnergyInconsistentException(next_campaign.get_attribute('prepid'))
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
 
-        ### make a check there for version of campaigns
+        if next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute("_id"), 'cannot flow any further. Request {0} has lower release version.'.format(next_campaign.get_attribute("prepid")))
 
         if next_campaign.get_attribute('type') == 'MCReproc' and (not 'time_event' in mcm_f.get_attribute('request_parameters')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
