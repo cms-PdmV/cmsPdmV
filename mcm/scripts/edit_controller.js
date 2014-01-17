@@ -420,7 +420,7 @@ var genParamModalCtrl = function($scope, $http) {
   $scope.closeGenParam = function(index) {
     $scope.modalOpen = false;
   };
-    $scope.saveGenParam = function(index) {
+  $scope.saveGenParam = function(index) {
     $scope.modalOpen = false;
     _.each($scope.modal_data, function(key,elem){
       if (_.isString(key) && elem !="$$hashKey"){ //ignore: submission details object, angularjs $$hashKey
@@ -428,6 +428,23 @@ var genParamModalCtrl = function($scope, $http) {
       }
     });
   };
+
+  $scope.openLastGenParam = function(index) {
+    $scope.modalLastOpen = true;
+    $scope.modal_data = _.clone($scope.genParam_data[index]);
+  };
+  $scope.closeLastGenParam = function(index) {
+    $scope.modalLastOpen = false;
+  };
+  $scope.saveLastGenParam = function(index) {
+    $scope.modalLastOpen = false;
+    _.each($scope.modal_data, function(key,elem){
+      if (_.isString(key) && elem !="$$hashKey"){ //ignore: submission details object, angularjs $$hashKey
+        $scope.genParam_data[index][elem] = parseFloat(key);
+      }
+    });
+  };
+
 
   //methods for adding a new Gen Param.
   $scope.openAddParam = function(){
@@ -916,8 +933,8 @@ testApp.directive("generatorParams", function($http){
     '        <dt>{{"author username"}}</dt>'+
     '        <dd class="clearfix">{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
-    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
-    '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
+    '      <a ng-click="openLastGenParam($index)"><i class="icon-wrench"></i></a>'+
+    '          <div modal="modalLastOpen" close="closeLastGenParam($index)">'+ //hidden modal template
     '            <div class="modal-header">'+
     '              <h4>Generator parameters editer</h4>'+
     '            </div>'+ //end of modal header
@@ -957,8 +974,8 @@ testApp.directive("generatorParams", function($http){
     '            </form>'+
     '          </div>'+ //end of modal body
     '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveGenParam($index)">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="closeGenParam($index)">Cancel</button>'+
+    '            <button class="btn btn-success" ng-click="saveLastGenParam($index)">Save</button>'+
+    '            <button class="btn btn-warning cancel" ng-click="closeLastGenParam($index)">Cancel</button>'+
     '          </div>'+ //end of modal footer
     '    </li>'+
     '  </ul>'+
