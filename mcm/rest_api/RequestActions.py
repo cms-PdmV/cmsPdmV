@@ -133,11 +133,10 @@ class RequestRESTResource(RESTResource):
 
             prepid = RequestPrepId().next_prepid(mcm_req.get_attribute('pwg'),
                                                  mcm_req.get_attribute('member_of_campaign'))
-            req_json = mcm_req.json()
             mcm_req = request(db.get(prepid))
-            for key in req_json:
+            for key in data:
                 if key not in ['prepid', '_id', 'history']:
-                    mcm_req.set_attribute(key, req_json[key])
+                    mcm_req.set_attribute(key, data[key])
 
             if not mcm_req.get_attribute('prepid'):
                 self.logger.error('prepid returned was None')
