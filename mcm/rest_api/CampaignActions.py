@@ -114,7 +114,8 @@ class UpdateCampaign(RESTResource):
             dcc.set_attribute('prepid', 'chain_'+cid)
             dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
             dcc.add_campaign(cid)
-            cdb.save(dcc.json())
+            if not cdb.document_exists(dcc.get_attribute('prepid')):
+                cdb.save(dcc.json())
 
 class DeleteCampaign(RESTResource):
     def __init__(self):
