@@ -61,17 +61,8 @@ class chained_campaign(json_base):
     def add_campaign(self, campaign_id,  flow_name=None):
         self.logger.log('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id'))) 
 
-        try:
-            from couchdb_layer.mcm_database import database
-        except ImportError as ex:
-            self.logger.error('Could not import database connector class. Reason: %s' % (ex),  level='critical')
-            return False
-            
-        try:
-            camp_db = database('campaigns')
-            flow_db = database('flows')
-        except database.DatabaseAccessError as ex:
-            return False
+        camp_db = database('campaigns')
+        flow_db = database('flows')
             
         if not camp_db.document_exists(campaign_id):
             raise self.CampaignDoesNotExistException(campaign_id) 
