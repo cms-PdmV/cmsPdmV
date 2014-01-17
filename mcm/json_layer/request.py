@@ -231,8 +231,8 @@ class request(json_base):
                 nevents_per_job = self.numberOfEventsPerJob()
                 if not nevents_per_job:
                     raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job cannot be retrieved for lhe production')
-                elif nevents_per_job == self.get_attribute('total_events'):
-                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is equal to the number of events requested')
+                elif nevents_per_job >= self.get_attribute('total_events'):
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The number of events per job is greater or equal to the number of events requested')
             if self.get_attribute('mcdb_id')<0:
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request should have a positive of null mcdb id')
 
