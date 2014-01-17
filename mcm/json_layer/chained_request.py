@@ -77,7 +77,7 @@ class chained_request(json_base):
             'prepid': '',
             #'alias':'', #prune
             'dataset_name': '',
-            'total_events': -1,
+            #'total_events': -1,
             'history': [],
             'member_of_campaign': '',
             #'generator_parameters':[], #prune
