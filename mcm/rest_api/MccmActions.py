@@ -226,14 +226,15 @@ class GenerateChains(RESTResource):
             else:
                 aids.append( r )
 
-        res=[]
         for aid in aids:
             mcm_r = rdb.get(aid)
             if mcm_r['status']=='new' and mcm_r['approval']=='validation':
                 return {"prepid":mid,
                         "results" : False, 
                         "message" : "A request (%s) is being validated" %( aid) }
-
+            
+        res=[]
+        for aid in aids:
             for times in range(mcm_m.get_attribute('repetitions')):
                 for cc in mcm_m.get_attribute('chains'):
                     b=mcm_m.get_attribute('block')
