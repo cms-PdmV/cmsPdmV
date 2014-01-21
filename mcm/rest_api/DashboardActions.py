@@ -207,40 +207,65 @@ class GetStats(RESTResource):
         data.append( ['Step'] + statuses )
         data_g=[['Label','Value']]
 
+        def human( n ):
+            if n<1000:
+                return "%s" % n
+            elif n>=1000 and n<1000000:
+                order = 1
+            elif n>=1000000 and n<1000000000:
+                order = 2
+            else:
+                order = 3
+            norm = pow(10,3*order)
+            value = float(n)/norm
+            letter = {1:'k',2:'M',3:'G'}
+            return "%d%s" % (value,letter[order])
+
         main_arg = args[0]
         if main_arg == 'all':
+            statuses.remove('upcoming')
+            data[-1].remove('upcoming')
             all_r = rdb.get_all()
             #all_r = rdb.queries(['member_of_campaign==Summer12'])
             for mcm_r in all_r:
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
                 to_add=mcm_r['total_events']
-                if mcm_r['status'] in ['submitted','done']:
-                    to_add=mcm_r['completed_events']
+                #if mcm_r['status'] in ['submitted','done']:
+                #    to_add=mcm_r['completed_events']
                 try:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += int(to_add)
                 except:
                     self.logger.error('cannot seem to be able to digest "%s" for %s' % (to_add, mcm_r['prepid']))
 
-                    
+
+            table='<table style="font-size: 30px;" border=1><thead><tr><th> Campaign </th>'
+            for s in statuses:
+                table+="<th> %s </th>"%(s)
+            table+="</tr></thead>\n"
             for c in sorted(counts.keys()):
                 a=0
                 entry=[]
                 entry.append( c ) # step[1] is the flow name       
+                table+="<tr><td> %s </td>"%(c)
                 for s in statuses:
                     entry.append( counts_e[c][s] )
                     a+=counts_e[c][s]
+                    table+="<td> %s </td>" %( human(counts_e[c][s]))
                 if not a:
                     g=100.
                 else:
                     g = int(float(counts_e[c]['done']) / float(a) * 100.)
                 data.append(entry)
                 data_g.append([c,g])
-
-
+                table+="</tr>\n"
+            table+="</table>"
             (f,d)=oneChart('all', data, opt='log')
             (f1,d1)=oneGauge( 'main_g', data_g)
             f+=f1
             d+=d1
+            ## add a simple table per campaign
+            d+="<br>\n<br>\n" + table
+
             return render( f,d)
 
 
@@ -351,19 +376,31 @@ class GetStats(RESTResource):
 
         (f,d)=oneChart( ','.join(arg_list), data)
         data_g=[['Label','Value']]
+
+
+        table='<table style="font-size: 30px;" border=1><thead><tr><th> Campaign / Status </th>'
+        for s in statuses:
+            table+="<th> %s </th>"%(s)
+        table+="</tr></thead>\n"
         for step in steps:
         #for step in mcm_cc['campaigns']:
             a=0
+            table+="<tr><td> %s </td>"%(step)
             for s in statuses:
                 a+=counts_e[step][s]
+                table+="<td> %s </td>" %( human( counts_e[step][s] ))
             if not a: 
                 g=100.
             else:
                 g = int(float(counts_e[step]['done']) / float(a) * 100.)
             data_g.append( [step,g ])
+            table+="</tr>\n"
+        table+="</table>"
+
         (f1,d1)=oneGauge( 'g_g', data_g)
         f+=f1
         d+=d1
+        d+="<br>\n<br>\n" + table
         return render( f,d)
 
         """
