@@ -616,7 +616,8 @@ class request(json_base):
         self.scram_arch=None
         release_to_find=self.get_attribute('cmssw_release')
         import xml.dom.minidom
-        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure https://cmstags.cern.ch/tc/ReleasesXML/?anytype=1').read())
+        release_announcement = settings().get_value('release_announcement')
+        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure %s '% ( release_announcement )).read())
 
         for arch in xml_data.documentElement.getElementsByTagName("architecture"):
             scram_arch = arch.getAttribute('name')
