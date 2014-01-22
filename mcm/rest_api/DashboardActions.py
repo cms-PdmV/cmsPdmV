@@ -4,6 +4,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from json import dumps
 import os
+import time
 from couchdb_layer.mcm_database import database
 from collections import defaultdict
 from tools.user_management import access_rights
@@ -218,27 +219,46 @@ class GetStats(RESTResource):
                 order = 3
             norm = pow(10,3*order)
             value = float(n)/norm
-            letter = {1:'k',2:'M',3:'G'}
+            letter = {1:'k',2:'M',3:'B'}
             return "%d%s" % (value,letter[order])
 
         main_arg = args[0]
         if main_arg == 'all':
+            a_date=None
+            if len(args)>1:
+                a_date=args[1]
+                a_date_t = time.mktime( time.strptime( a_date , "%Y-%m-%d-%H-%M" ))
             statuses.remove('upcoming')
             data[-1].remove('upcoming')
             all_r = rdb.get_all()
             #all_r = rdb.queries(['member_of_campaign==Summer12'])
             for mcm_r in all_r:
-                counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
+                last_status=mcm_r['status']
+                if a_date:
+                    for h in mcm_r['history']:
+                        h['date'] = time.mktime( time.strptime( h['updater']['submission_date'], "%Y-%m-%d-%H-%M" ))
+
+                    sh =  filter(lambda h : h['date']< a_date_t and h['action']=='set status', mcm_r['history'])
+                    if len(sh):
+                        last_status=sh[-1]['step']
+                    else:
+                        #this request had no status at the time
+                        #continue
+                        last_status='new'
+
+                counts[str(mcm_r['member_of_campaign'])] [last_status] +=1
                 to_add=mcm_r['total_events']
-                #if mcm_r['status'] in ['submitted','done']:
+                #if last_status in ['submitted','done']:
                 #    to_add=mcm_r['completed_events']
                 try:
-                    counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += int(to_add)
+                    counts_e[str(mcm_r['member_of_campaign'])] [last_status] += int(to_add)
                 except:
                     self.logger.error('cannot seem to be able to digest "%s" for %s' % (to_add, mcm_r['prepid']))
 
-
-            table='<table style="font-size: 30px;" border=1><thead><tr><th> Campaign </th>'
+            table=''
+            if a_date:
+                table+='Status of the campaigns on %s <br>\n'%( time.asctime(time.gmtime(a_date_t)))
+            table+='<table style="font-size: 30px;" border=1><thead><tr><th> Campaign </th>'
             for s in statuses:
                 table+="<th> %s </th>"%(s)
             table+="</tr></thead>\n"
