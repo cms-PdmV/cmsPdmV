@@ -92,6 +92,12 @@
                 <a ng-href='mccms?prepid={{mccm_info[data.db_name]}}' rel="tooltip" title="View only mccm_info[data.db_name]" target="_self">{{mccm_info[data.db_name]}}</a>
                 <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
+	      <div ng-switch-when="Size">
+		{{numberWithCommas(mccm_info[data.db_name])}}
+	      </div>
+	      <div ng-switch-when="Staged">
+		{{numberWithCommas(mccm_info[data.db_name])}}
+	      </div>
               <div ng-switch-when="Pwg">
                 <a ng-href='mccms?pwg={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
               </div>
