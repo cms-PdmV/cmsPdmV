@@ -1459,7 +1459,7 @@ class StalledReminder(RESTResource):
                     remaining=0.
             if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
                 reminded+=1
-                bs = bdb.queries(['contains==%s&status==announced'%r['prepid']])
+                bs = bdb.queries(['contains==%s'%r['prepid'],'status==announced'])
                 ## take the last one ?
                 in_batch = 'NoBatch'
                 if len (bs):
