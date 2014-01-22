@@ -6,6 +6,7 @@ import string
 import time
 import urllib2
 from json import loads, dumps
+from collections import defaultdict
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -1422,6 +1423,71 @@ class RequestsFromFile(RequestLister, RESTResource):
         all_ids = self.get_list_of_ids(rdb)
         return dumps(self.get_objects(all_ids, rdb))
 
+
+class StalledReminder(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self, *args):
+        """
+        Collect the requests that have been running for too long or will run for too long and send a reminder
+        """
+        time_since=15
+        time_remaining=15
+        if len(args)>0:
+            time_since=args[0]
+        if len(args)>1:
+            time_remaining=arg[1]
+        rdb = database('requests')
+        bdb = database('batches')
+        rs = rdb.queries(['status==submitted'])
+        today = time.mktime( time.gmtime())
+        subject="Gentle reminder of requests that appear stalled"
+        text="The following requests appear to be not progressing since %s days or will require more than %s days to complete:\n\n"%( time_since, time_remaining)
+        reminded=0
+        by_batch=defaultdict(list)
+        for r in rs:
+            date_s = filter( lambda h : 'step' in h and h['step']=='submitted', r['history'])[-1]['updater']['submission_date']
+            date= time.mktime( time.strptime(date_s, "%Y-%m-%d-%H-%M"))
+            elapsed_t = (today-date)
+            elapsed=(today-date)/60./60./24. #in days
+            remaining=float("inf")
+            if r['completed_events']:
+                remaining_t = (elapsed_t * ((r['total_events'] / float(r['completed_events']))-1))
+                remaining = remaining_t /60./60./24.
+                if remaining<0: ## already over stats
+                    remaining=0.
+            if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
+                reminded+=1
+                bs = bdb.queries(['contains==%s&status==announced'%r['prepid']])
+                ## take the last one ?
+                in_batch = 'NoBatch'
+                if len (bs):
+                    in_batch = bs[-1]['prepid']
+
+                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, priority %s \n "%( r['prepid'],
+                                                                                                                          elapsed,
+                                                                                                                          r['completed_events'],
+                                                                                                                          r['completed_events']*100./r['total_events'],
+                                                                                                                          remaining,
+                                                                                                                          r['priority'])
+                by_batch[in_batch].append(line)
+        l_type = locator()
+        for (b,lines) in by_batch.items():
+            text+="In batch %s:\n"%b
+            text+='%sbatches?prepid=%s\n'%( l_type.baseurl(), b)
+            for line in lines:
+                text+=line
+            text+='\n'
+        text+="\nAttention might be required\n"
+        com = communicator()
+
+        udb = database('users')
+        production_managers = udb.queries(['role==production_manager'])
+        if reminded!=0:
+            com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
+                         subject, text)
+        
 
 class RequestsReminder(RESTResource):
     def __init__(self):
