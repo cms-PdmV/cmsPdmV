@@ -1544,6 +1544,11 @@ class RequestsReminder(RESTResource):
         com = communicator()
         l_type = locator()
 
+        def count_entries(campaigns_and_ids):
+            s=0
+            for (camp, ids) in campaigns_and_ids.items():
+                s+=len(ids)
+            return s
 
         def prepare_text_for(campaigns_and_ids, status_for_link, username_for_link=None):
             message = ''
@@ -1583,7 +1588,7 @@ class RequestsReminder(RESTResource):
                 message = 'A few request that needs to be submitted \n\n'
                 message += prepare_text_for(ids_for_production_managers, 'approved')
                 com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
-                             'Gentle reminder on requests to be submitted',
+                             'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers)),
                              message)
 
         if not what or 'gen_conveners' in what or 'generator_convener' in what:
@@ -1596,7 +1601,7 @@ class RequestsReminder(RESTResource):
                 message = 'A few requests need your approvals \n\n'
                 message += prepare_text_for(ids_for_gen_conveners, 'defined')
                 com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')],
-                             'Gentle reminder on requests to be approved by you',
+                             'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners)),
                              message)
 
         if not what or 'gen_contact' in what or 'generator_contact' in what:
@@ -1672,7 +1677,7 @@ class RequestsReminder(RESTResource):
                         if mcm_u['fullname']:
                             name=mcm_u['fullname']
                         com.sendMail(to_who,
-                                     'Gentle reminder on requests to be looked at by %s'% name,
+                                     'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name),
                                      message
                                      )
                 res = map (lambda i : {"results": True, "prepid": i}, all_ids)
