@@ -1430,7 +1430,7 @@ class StalledReminder(RESTResource):
 
     def GET(self, *args):
         """
-        Collect the requests that have been running for too long or will run for too long and send a reminder
+        Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder. 
         """
         time_since=15
         time_remaining=15
