@@ -231,7 +231,11 @@ class GenerateChains(RESTResource):
             if mcm_r['status']=='new' and mcm_r['approval']=='validation':
                 return {"prepid":mid,
                         "results" : False, 
-                        "message" : "A request (%s) is being validated" %( aid) }
+                        "message" : "A request (%s) is being validated." %( aid) }
+            if mcm_r['flown_with']:
+                return {"prepid":mid,
+                        "results" : False,
+                        "message" : "A request (%s) is in the middle of a chain already."%(aid)}
             
         res=[]
         for aid in aids:
