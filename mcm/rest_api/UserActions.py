@@ -6,6 +6,7 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings
 from tools.communicator import communicator
+from tools.locator import locator
 from json_layer.user import user
 from tools.user_management import user_pack, roles, access_rights
 
@@ -134,10 +135,15 @@ class AskRole(RESTResource):
         production_managers = udb.queries(['role==production_manager'])
         ### send a notification to prod manager + service
         to_who = map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')]
+        to_who.append( user_p.get_email() )
         com = communicator()
+        l_type = locator()
         com.sendMail( to_who,
                       'Increase role for user %s' % mcm_u.get_attribute('fullname'),
-                      'Please increase the role of the user %s to the next level.' % mcm_u.get_attribute('username'))
+                      'Please increase the role of the user %s to the next level.\n\n%susers?prepid=%s' % ( mcm_u.get_attribute('username'),
+                                                                                                            l_type.baseurl(),
+                                                                                                            mcm_u.get_attribute('username')
+                                                                                                            ))
         return dumps({"results" : True, "message" : "user %s in for %s" %( mcm_u.get_attribute('username'), current)})
 
 
