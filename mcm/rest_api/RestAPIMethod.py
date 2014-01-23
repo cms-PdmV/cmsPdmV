@@ -115,7 +115,9 @@ class RESTResourceIndex(RESTResource):
         #self.res += "<br>".join(self.__dict__.keys())
 
         #self.res += "<ul>"
-        for key in self.__dict__.keys():
+        keys = self.__dict__.keys()
+        keys.sort()
+        for key in keys:
             o = getattr(self, key)
 
             #for m in methods:
