@@ -132,9 +132,12 @@ class DeleteChainedRequest(RESTResource):
             if i==0:
                 # the root is the action id
                 mcm_a = action(adb.get(rid))
+                if len(in_chains)==0 and mcm_r.get_attribute('status')!='new':
+                    return {"results":False,"message" : "the request %s, not in status new, at the root of the chain will not be chained anymore"% rid}
             else:
                 if len(in_chains)==0:
                     return {"results":False,"message" : "the request %s, not at the root of the chain will not be chained anymore"% rid}
+
             mcm_r.update_history({'action':'leave','step':crid})
             mcm_r_s.append( mcm_r )
 
