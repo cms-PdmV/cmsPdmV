@@ -220,7 +220,7 @@ class GetStats(RESTResource):
             norm = pow(10,3*order)
             value = float(n)/norm
             letter = {1:'k',2:'M',3:'B'}
-            return "%d%s" % (value,letter[order])
+            return "%.1f %s" % (value,letter[order])
 
         main_arg = args[0]
         if main_arg == 'all':
@@ -287,7 +287,6 @@ class GetStats(RESTResource):
             d+="<br>\n<br>\n" + table
 
             return render( f,d)
-
 
         arg_list = main_arg.split(',')
 
