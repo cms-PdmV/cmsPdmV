@@ -1303,7 +1303,7 @@ done
             filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
             if match > 0 and filter_eff > 0:
                 target /=  (match*filter_eff)
-        return target
+        return int(target)
 
     def get_n_for_valid(self):
         n_to_valid = settings().get_value('min_n_to_valid')
@@ -1372,7 +1372,7 @@ done
             self.logger.error("There are no TotalEvents reported, bailing out from performnace test")
             return
 
-        total_event= float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data)
+        total_event= int(float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data))
         if what=='eff':
             if total_event==0 and total_event_in_valid!=0:
                 self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event, total_event_in_valid))
@@ -1405,10 +1405,10 @@ done
                     if name == 'PeakValueRss':
                         memory = float( perf.getAttribute('Value'))
 
-        efficiency = total_event / total_event_in_valid
+        efficiency = float(total_event) / total_event_in_valid
         efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in_valid )
 
-        rough_efficiency = total_event / total_event_in
+        rough_efficiency = float(total_event) / total_event_in
         rough_efficiency_error = rough_efficiency * sqrt( 1./total_event + 1./total_event_in )
 
         geninfo=None
