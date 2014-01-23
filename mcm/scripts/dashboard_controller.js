@@ -48,7 +48,17 @@ function resultsCtrl($scope, $http, $location, $window){
         });
         return output_array
     }
-
+    
+    $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>"
+    $scope.get_stats = function(){
+    $scope.stats_url = "/mcm/restapi/dashboard/get_stats/all"
+	// var promise = $http.get("/mcm/restapi/dashboard/get_stats/all");
+	// promise.then(function(data, status){
+	// 	$scope.dashboard_stats = data.data;
+	//     }, function(data, status){
+	// 	alert("Error getting stats "+status);
+	//     });
+    };
     $scope.resetRestCounter = function() {
         $scope.clear_rest_button_clicked = true;
       var promise = $http.get("restapi/control/reset_rest_counter");
