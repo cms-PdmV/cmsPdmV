@@ -101,6 +101,8 @@ class UpdateChainedRequest(RESTResource):
 
 
 class DeleteChainedRequest(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
 
     def DELETE(self, *args):
         """

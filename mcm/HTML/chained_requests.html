@@ -91,7 +91,7 @@
           <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(4);">
+                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
