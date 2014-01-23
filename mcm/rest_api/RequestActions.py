@@ -587,6 +587,7 @@ class GetSetupForRequest(RESTResource):
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.access_limit = access_rights.production_manager
 
     def DELETE(self, *args):
         """
