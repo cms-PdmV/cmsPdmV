@@ -1408,6 +1408,9 @@ done
         efficiency = total_event / total_event_in_valid
         efficiency_error = efficiency * sqrt( 1./total_event + 1./total_event_in_valid )
 
+        rough_efficiency = total_event / total_event_in
+        rough_efficiency_error = rough_efficiency * sqrt( 1./total_event + 1./total_event_in )
+
         geninfo=None
         if len(self.get_attribute('generator_parameters')):
             geninfo = self.get_attribute('generator_parameters')[-1]
@@ -1454,6 +1457,19 @@ done
 
 
         elif what =='perf':
+
+            ## do a rough efficiency measurements anyways if the request is not valid enable
+            if geninfo and (not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
+                efficiency_fraction = settings().get_value('efficiency_fraction')
+                if abs(geninfo[to_be_changed]-rough_efficiency)/rough_efficiency > efficiency_fraction:
+                    self.notify('Runtest for %s: %s seems incorrect from rough estimate.'%( self.get_attribute('prepid'), to_be_changed),
+                                'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed,
+                                                                                                                                                                 geninfo[to_be_changed],
+                                                                                                                                                                 rough_efficiency,
+                                                                                                                                                                 total_event,
+                                                                                                                                                                 total_event_in))
+
+
             ## timing checks
             timing_fraction = settings().get_value('timing_fraction')
             timing_threshold = settings().get_value('timing_threshold')
