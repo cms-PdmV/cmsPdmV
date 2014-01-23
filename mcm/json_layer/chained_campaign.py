@@ -122,9 +122,6 @@ class chained_campaign(json_base):
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
-        ##inherit the approval of the chained_campaign
-        ## approval is not a member of chained campaign 
-        # creq.set_attribute('approval', self.get_attribute('approval'))
 
 
         if not creq.get_attribute('prepid'):
@@ -133,26 +130,10 @@ class chained_campaign(json_base):
         # set the default values that will be carried over to the next step in the chain
         req = rdb.get(root_request_id)
         
-        #creq.set_attribute("generators", req["generators"])
-        creq.set_attribute("total_events", req["total_events"])
+
         creq.set_attribute("dataset_name", req["dataset_name"])
         creq.set_attribute("pwg", req["pwg"])
-        #creq.set_attribute("priority", req["priority"] )
-        #creq.approve(0)
         
-        # set request parameters
-        ## legacy wat of passing the info to the chained request
-        """
-        reqp = self.get_attribute('action_parameters')
-        if root_request_id in reqp:
-            creq.set_attribute('request_parameters',  reqp[root_request_id])
-        
-            # delete the parameters for this chained request
-            #self.__remove_request_parameters(root_request_id)
-            del reqp[root_request_id]
-            self.set_attribute('action_parameters',  reqp)
-        """
-
         # add root request to chain
         creq.set_attribute('chain',  [root_request_id])
 
