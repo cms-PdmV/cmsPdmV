@@ -1619,7 +1619,7 @@ class RequestsReminder(RESTResource):
                 if not fw : continue 
                 # to get a remind only on request that are being necessary to move forward : being the request being processed
                 on_going=False
-                for in_chain in mcm_r.get_attribute('chain'):
+                for in_chain in mcm_r['member_of_chain']:
                     mcm_cr = chained_request( crdb.get( in_chain ) )
                     if mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step')] == rid:
                         on_going=True
