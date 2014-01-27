@@ -236,7 +236,7 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
 
-        if next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
+        if not next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
             raise self.ChainedRequestCannotFlowException(self.get_attribute("_id"), 'cannot flow any further. Request {0} has lower release version.'.format(next_campaign.get_attribute("prepid")))
 
         if next_campaign.get_attribute('type') == 'MCReproc' and (not 'time_event' in mcm_f.get_attribute('request_parameters')):
