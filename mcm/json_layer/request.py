@@ -509,8 +509,7 @@ class request(json_base):
         ##JR
         if self.get_attribute('input_dataset'):
             if sequenceindex==0:
-                #command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
-                command +='--dbsquery "find file where dataset=%s" '%(self.get_attribute('input_dataset'))
+                command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
             else:
                 command+='--filein file:step%d.root '%(sequenceindex)
 
