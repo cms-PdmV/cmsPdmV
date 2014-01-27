@@ -189,14 +189,12 @@ class ChangeRole(RESTResource):
         current_user = user(db.get(user_p.get_username()))
         current_role = doc.get_attribute("role")
         if action == '-1':
-            if current_role != 'user': #if not the lowest role -> then him lower himself
+            if current_role != self.all_roles[0]:
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) - 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
                 return {"results": db.update(doc.json())}
             return {"results": username + " already is user"} #else return that hes already a user
         if action == '1':
-            if current_user.get_attribute("role") != "administrator":
-                return {"results": "Only administrators can upgrade roles"}
             if len(self.all_roles) != self.all_roles.index(current_role) + 1: #if current role is not the top one
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) + 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
