@@ -533,7 +533,8 @@ class request(json_base):
         keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset']
         for k in keys_to_transfer:
             try:
-                self.set_attribute(k, camp.get_attribute(k))
+                if camp.get_attribute(k):
+                    self.set_attribute(k, camp.get_attribute(k))
             except request.IllegalAttributeName:
                 continue
 
