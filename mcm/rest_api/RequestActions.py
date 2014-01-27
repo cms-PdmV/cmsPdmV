@@ -1466,7 +1466,7 @@ class StalledReminder(RESTResource):
                 if len (bs):
                     in_batch = bs[-1]['prepid']
 
-                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, priority %s \n "%( r['prepid'],
+                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, priority %s \n"%( r['prepid'],
                                                                                                                           elapsed,
                                                                                                                           r['completed_events'],
                                                                                                                           r['completed_events']*100./r['total_events'],
