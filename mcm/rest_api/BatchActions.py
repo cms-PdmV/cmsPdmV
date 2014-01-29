@@ -210,6 +210,9 @@ class InspectBatches(BatchAnnouncer):
                 for r in announced_batch['requests']:
                     wma_name = r['name']
                     rid = r['content']['pdmv_prep_id']
+                    if not rdb.document_exists( rid ):
+                        ##it OK like this. It could happen that a request has been deleted and yet in a batch
+                        continue
                     mcm_r = rdb.get( rid )
                     all_done = ( mcm_r['status'] == 'done' )
                     if not all_done:
