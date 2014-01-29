@@ -1616,9 +1616,9 @@ class RequestsReminder(RESTResource):
                 rid = mcm_r['prepid']
                 if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
                 fw = mcm_r['flown_with']
-                # to get a remind only on request that have been flown
-                if not fw : continue 
-                # to get a remind only on request that are being necessary to move forward : being the request being processed
+                # to get a remind only on request that are in a chain (including flown by construction)
+                if len(mcm_r['member_of_chain'])==0: continue
+                # to get a remind only on request that are being necessary to move forward : being the request being processed in at least a chain.
                 on_going=False
                 for in_chain in mcm_r['member_of_chain']:
                     mcm_cr = chained_request( crdb.get( in_chain ) )
