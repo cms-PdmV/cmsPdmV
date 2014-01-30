@@ -107,10 +107,10 @@ class batch_control:
         trials_time_out=10
         trials=0
         ## wait for afs to synchronize the output file
-        while not stdin and not stdout and not stderr and trials<trials_time_out:
+        while ((not stdin and not stdout and not stderr) or stderr.read()) and trials<trials_time_out:
             time.sleep(time_out)
             trials+=1
-            self.logger.log('Trying to get %s %s time'% (self.test_out, trials+1) )
+            self.logger.log('Trying to get %s for the %s time'% (self.test_out, trials+1) )
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         
         if trials>=trials_time_out:
