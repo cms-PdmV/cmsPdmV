@@ -1370,9 +1370,10 @@ done
 
         if not len(xml_data.documentElement.getElementsByTagName("TotalEvents")):
             self.logger.error("There are no TotalEvents reported, bailing out from performnace test")
-            return
+            total_event = 0
+        else:
+            total_event= int(float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data))
 
-        total_event= int(float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data))
         if what=='eff':
             if total_event==0 and total_event_in_valid!=0:
                 self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s"%( self.get_attribute('prepid'), what , total_event, total_event_in_valid))
