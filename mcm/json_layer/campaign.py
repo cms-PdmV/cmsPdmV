@@ -148,7 +148,7 @@ class campaign(json_base):
         my_release = filter(None, re.sub("[^0-9_]", "", self.get_attribute('cmssw_release')).split('_'))
         other_release = filter(None, re.sub("[^0-9_]", "", cmssw_release).split('_'))
         try:
-            for i in range(len(my_release)):
+            for i in range(2 if len(my_release) > 2 else len(my_release)):
                 if int(my_release[i]) < int(other_release[i]):
                     return False
         except IndexError:
