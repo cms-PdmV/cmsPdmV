@@ -206,15 +206,27 @@ class InspectBatches(BatchAnnouncer):
             for announced_batch in announced_batches:
                 if bid and announced_batch['prepid']!=bid:  continue
                 this_bid = announced_batch['prepid']
+
                 all_done=False
                 for r in announced_batch['requests']:
+                    all_done=False
                     wma_name = r['name']
                     rid = r['content']['pdmv_prep_id']
                     if not rdb.document_exists( rid ):
                         ##it OK like this. It could happen that a request has been deleted and yet in a batch
                         continue
                     mcm_r = rdb.get( rid )
-                    all_done = ( mcm_r['status'] == 'done' )
+                    if mcm_r['status'] == 'done':
+                        ## if done, it's done
+                        all_done=True
+                    else:
+                        if len(mcm_r['requests'])==0:
+                            ## not done, and no requests in request manager, ignore = all_done
+                            all_done=True
+                        else:
+                            if wma_name!=mcm_r['requests'][0]['name']:
+                                ## not done, and a first requests that does not correspond to the one in the batch, ignore = all_done
+                                all_done=True
                     if not all_done:
                         ## no need to go further
                         break
