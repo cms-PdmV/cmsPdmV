@@ -412,7 +412,7 @@ class chained_request(json_base):
                 if not saved:
                     raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                                  'Unable to save %s with updated member_of_chains' % next_id)
-                return True
+            return True
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
             next_request = request( next_campaign.add_request( rdb.get(next_id)))
