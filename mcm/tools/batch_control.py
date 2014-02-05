@@ -104,21 +104,29 @@ class batch_control:
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         self.logger.log("Reading file with command %s" % cmd)
         time_out=settings().get_value('batch_retry_timeout')
+        out=""
+        err=""
+        if stdout:
+            out=stdout.read()
+            err=stderr.read()
+
         trials_time_out=10
         trials=0
         ## wait for afs to synchronize the output file
-        while ((not stdin and not stdout and not stderr) or stderr.read()) and trials<trials_time_out:
+        while ((not stdin and not stdout and not stderr) or err) and trials<trials_time_out:
             time.sleep(time_out)
             trials+=1
             self.logger.log('Trying to get %s for the %s time'% (self.test_out, trials+1) )
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-        
+            if stdout:
+                out=stdout.read()
+                err=stderr.read()
+
         if trials>=trials_time_out:
             self.log_err = '%s could not be retrieved after %s tries in interval of %s s'%( self.test_out, trials, time_out )
             self.logger.error(self.log_err)
             return False
 
-        out = stdout.read()
         for line in out.split('\n'):
             if 'Successfully completed.' in line:
                 return True
