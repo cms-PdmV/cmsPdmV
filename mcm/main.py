@@ -32,6 +32,7 @@ import logging
 import logging.handlers
 from tools.logger import rest_formatter, mcm_formatter, logfactory
 from tools.settings import settings
+from tools.communicator import communicator
 import cherrypy #to expose cherrypy methods serving the HTML files
 import os
 import shelve
@@ -450,7 +451,9 @@ def start():
 def stop():
     logfactory.log(".mcm_rest_counter persistence closing")
     RESTResource.counter.close()
-
+    logfactory.log("Flushing communications")
+    com = communicator()
+    com.flush(0)
 
 def maintain():
     if not cherrypy.engine.execv:
