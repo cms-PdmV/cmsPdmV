@@ -228,7 +228,8 @@ class json_base:
             self.notify('Approval %s for %s %s' % (self.__approvalsteps[next_step],
                                                    self.__class__.__name__,
                                                    self.get_attribute('prepid')),
-                        self.textified()
+                        self.textified(),
+                        accumulate=True
             )
 
     def textified(self):
@@ -269,7 +270,8 @@ class json_base:
         if with_notification:
             self.notify(
                 'Status changed for request %s to %s' % (self.get_attribute('prepid'), self.__status[next_step]),
-                self.textified())
+                self.textified(),
+                accumulate=True)
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action': 'set status', 'step': self.__json['status']})
@@ -319,7 +321,8 @@ class json_base:
                HN=False,
                sender = None,
                Nchild=-1,
-               reply_msg_ID=None):
+               reply_msg_ID=None,
+               accumulate=False):
 
         dest = map(lambda i: i, who)
         if actors:
@@ -342,10 +345,11 @@ class json_base:
         sender = sender if sender else self.current_user_email
         self.logger.log('Notification %s from %s send to %s' % (subject, sender,', '.join(dest)))
         return self.com.sendMail(dest,
-                          subject,
-                          message,
-                          sender,
-                          reply_msg_ID)
+                                 subject,
+                                 message,
+                                 sender,
+                                 reply_msg_ID,
+                                 accumulate=accumulate)
 
     def correct_types(self):
         for key in self.__schema:
