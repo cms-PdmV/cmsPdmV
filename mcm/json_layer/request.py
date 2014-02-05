@@ -809,6 +809,7 @@ done
                 if not_found:
                     return False
             self.set_attribute('priority', new_priority)
+            self.update_history({'action':'priority', 'step': new_priority})
             saved = self.reload()
             if not saved:
                 self.logger.error('Could not save request {0} with new priority'.format(self.get_attribute('prepid')))
