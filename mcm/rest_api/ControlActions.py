@@ -4,6 +4,7 @@ from tools.user_management import access_rights
 from tools.settings import settings
 from json import dumps
 from tools.locker import locker
+from tools.communicator import communicator
 import cherrypy
 
 
@@ -87,3 +88,20 @@ class ResetRESTCounters(RESTResource):
                     RESTResource.counter[key] = 0
                     res[key] = True
             return dumps(res)
+
+class Communicate(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self, *args):
+        """
+        Trigger the accumulated communications from McM, optionally above /N messages
+        """
+        N=0
+        if len(args):
+            N=args[0]
+        com = communicator()
+        res=com.flush(N)
+
+        return dumps({'results':True, 'subject' : res})
+        

@@ -22,7 +22,7 @@ from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, G
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters
+from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
 
 #to get campaign sequences
 from json_layer.sequence import sequence
@@ -392,6 +392,7 @@ root.restapi.control.renew_cert = RenewCertificate()
 root.restapi.control.set_verbosity = ChangeVerbosity()
 root.restapi.control.turn_off = TurnOffServer()
 root.restapi.control.reset_rest_counter = ResetRESTCounters()
+root.restapi.control.communicate = Communicate()
 
 #cherrypy.root = root
 #cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
