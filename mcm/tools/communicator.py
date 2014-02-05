@@ -20,7 +20,7 @@ class communicator:
         res=[]
         with locker.lock('accumulating_notifcations'):
             for key in self.cache.keys():
-                (subject,addressee,sender)=key
+                (subject,sender,addressee)=key
                 if self.cache[key]['N'] <= Nmin: 
                     ## flush only above a certain amount of messages
                     continue
@@ -84,7 +84,8 @@ class communicator:
 
         ### accumulate messages prior to sending emails
         com__accumulate=settings().get_value('com_accumulate')
-        if accumulate or com__accumulate:
+        force_com_accumulate=settings().get_value('force_com_accumulate')
+        if (force_com_accumulate) or (accumulate and com__accumulate):
             with locker.lock('accumulating_notifcations'):
                 # get a subject where the request name is taken out
                 subject_type=" ".join( filter(lambda w : w.count('-')!=2, msg['Subject'].split()) )
@@ -92,7 +93,7 @@ class communicator:
                 sendee = msg['From']
                 key = (subject_type, sendee, addressees)
                 if key in self.cache:
-                    self.cache[key]['Text']+='\n'
+                    self.cache[key]['Text']+='\n\n'
                     self.cache[key]['Text']+=text
                     self.cache[key]['N']+=1
                 else:
