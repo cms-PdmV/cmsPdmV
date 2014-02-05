@@ -1067,7 +1067,7 @@ class NotifyUser(RESTResource):
             req.notify('Communication about request %s' % pid,
                        '%s \n\n %srequests?prepid=%s\n'%(message, 
                                                        l_type.baseurl(), 
-                                                       pid))
+                                                       pid),accumulate=True)
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
             if not rdb.save(req.json()):
