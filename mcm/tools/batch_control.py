@@ -44,7 +44,7 @@ class batch_control:
             
         cmd = 'bsub -J ' + self.test_id
         cmd += ' -g ' + self.group
-        cmd += ' -R "type=SLC5_64" ' # on slc5 nodes
+        #cmd += ' -R "type=SLC5_64" ' # on slc5 nodes
         #cmd += '-M 3000000 ' # 3G of mem
         cmd += ' -q 8nh -cwd ' + self.directory_for_test
         if self.timeout:
