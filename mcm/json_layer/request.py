@@ -1433,9 +1433,6 @@ done
                 if (geninfo[to_be_changed+'_error'] / geninfo[to_be_changed] ) > (efficiency_error/ efficiency):
                     ## better error reached with the runtest => set the value
                     do_update=True
-                if (efficiency!=1 and geninfo[to_be_changed]==1) or (efficiency==1 and  geninfo[to_be_changed]!=1):
-                    ## the efficiency is set to 1 but not strictly 1 => fail
-                    raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
 
             if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
@@ -1447,16 +1444,25 @@ done
 
             efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
-                if efficiency==0.:
+                if do_update:
+                    self.notify('Runtest for %s: %s has improved.'%( self.get_attribute('prepid'), to_be_changed),
+                                'For this request, %s=%s +/- %s was given, %s +/- %s was measured from %s events (ran %s). The new value was set to the request.'%( to_be_changed,
+                                                                                                                                                                    geninfo[to_be_changed],
+                                                                                                                                                                    geninfo[to_be_changed+'_error'],
+                                                                                                                                                                    efficiency,
+                                                                                                                                                                    efficiency_error,
+                                                                                                                                                                    total_event, 
+                                                                                                                                                                    total_event_in_valid))
+                elif efficiency==0.:
                     ## the efficiency, although we have ran events is exactly zero ! should have failed a few lines above anyways
-                    self.notify('Runtest for %s: %s seems very wrong.'%( self.get_attribute('prepid'), to_be_changed),
-                                'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
-                    #raise Exception('For this request, %s=%s was given, %s was measured from %s events (ran %s). It is not possible to process the request'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
+                    message='For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid)
+                    self.notify('Runtest for %s: %s seems very wrong.'%( self.get_attribute('prepid'), to_be_changed), message)
+                    #raise Exception(message)
                 elif abs(geninfo[to_be_changed]-efficiency)/efficiency>efficiency_fraction:
                     ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
-                    self.notify('Runtest for %s: %s seems incorrect.'%( self.get_attribute('prepid'), to_be_changed),
-                                'For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid))
-
+                    message='For this request, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.'%( to_be_changed, geninfo[to_be_changed], efficiency, total_event, total_event_in_valid)
+                    self.notify('Runtest for %s: %s seems incorrect.'%( self.get_attribute('prepid'), to_be_changed), message)
+                    raise Exception(message)
 
         elif what =='perf':
 
@@ -1470,7 +1476,7 @@ done
                                                                                                                                                                  rough_efficiency,
                                                                                                                                                                  total_event,
                                                                                                                                                                  total_event_in))
-
+                    
 
             ## timing checks
             timing_fraction = settings().get_value('timing_fraction')
