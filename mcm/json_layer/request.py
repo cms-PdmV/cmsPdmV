@@ -774,13 +774,13 @@ done
         return infile
 
     def change_priority(self, new_priority):
-        if self.get_attribute('status') in ['done']:
-            return True
-        if self.get_attribute('priority') >= new_priority:
-            return True
         if not isinstance(new_priority, int):
             self.logger.error('Priority has to be an integer')
             return False
+        if self.get_attribute('status') in ['done']:
+            return True
+        if self.get_attribute('priority') == new_priority:
+            return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
