@@ -119,7 +119,8 @@ class chained_request(json_base):
         req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), 
                    "Request {0} has successfully joined chain {1}\n\n{2}\n".format(req.get_attribute('prepid'),
                                                                                           self.get_attribute('_id'),
-                                                                                          "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])))
+                                                                                          "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])),
+                   accumulate=True)
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         if not req.get_attribute('prepid') in self.get_attribute('chain'):
             chain = self.get_attribute('chain')
@@ -313,10 +314,12 @@ class chained_request(json_base):
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
                     current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
-                                           'For this request, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n %srequests?prepid=%s'%( current_request.get_attribute('completed_events'),
+                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n %srequests?prepid=%s'%( current_request.get_attribute('prepid'), 
+                                                                                                                                                                                                        current_request.get_attribute('completed_events'),
                                                                                                                                                                                                       completed_events_to_pass,
                                                                                                                                                                                                       l_type.baseurl(),
-                                                                                                                                                                                                      current_request.get_attribute('prepid')))
+                                                                                                                                                                                                      current_request.get_attribute('prepid')),
+                                           accumulate=True)
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
 
@@ -487,7 +490,7 @@ class chained_request(json_base):
                 l_type.baseurl(),
                 next_request.get_attribute('prepid')
             )
-            current_request.notify(notification_subject, notification_text)
+            current_request.notify(notification_subject, notification_text, accumulate=True)
         else:
             notification_subject = 'Reservation of request {0}'.format(next_request.get_attribute('prepid'))
             notification_text = 'The request {0} of campaign \n\t{2}\nhas been reserved as part of \n\t{1}\nas the next step for {4}\n\n{3}requests?prepid={4}\n{5}requests?prepid={6}\n'.format(
@@ -497,7 +500,7 @@ class chained_request(json_base):
                 l_type.baseurl(), current_request.get_attribute('prepid'),
                 l_type.baseurl(), next_request.get_attribute('prepid'),
                 )
-            next_request.notify(notification_subject, notification_text)
+            next_request.notify(notification_subject, notification_text, accumulate=True)
         return True
 
     def retrieve_original_action_item(self, adb, original_action_id=None):
@@ -656,7 +659,7 @@ class chained_request(json_base):
         loc = locator()
         req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}\n\tRequest: {2}".format(req.get_attribute('prepid'),
                                                                                                                                                          self.get_attribute('_id'),
-                                                                                                                                                         "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])))
+                                                                                                                                                         "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])), accumulate=True)
 
         # set request approval status to new
         #req.approve(0)
