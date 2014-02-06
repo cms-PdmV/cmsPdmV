@@ -773,12 +773,22 @@ done
 
         return infile
 
+    def modify_priority(self, new_priority):
+        self.set_attribute('priority', new_priority)
+        self.update_history({'action':'priority', 'step': new_priority})
+        saved = self.reload()
+        if not saved:
+            self.logger.error('Could not save request {0} with new priority'.format(self.get_attribute('prepid')))
+            return False
+        self.logger.log('Priority of request {0} was changed to {1}'.format(self.get_attribute('prepid'), new_priority))
+        return True
+
     def change_priority(self, new_priority):
         if not isinstance(new_priority, int):
             self.logger.error('Priority has to be an integer')
             return False
         if self.get_attribute('status') in ['done']:
-            return True
+            return self.modify_priority( new_priority )
         if self.get_attribute('priority') == new_priority:
             return True
         with locker.lock(self.get_attribute('prepid')):
@@ -808,16 +818,7 @@ done
                         not_found = True
                 if not_found:
                     return False
-            self.set_attribute('priority', new_priority)
-            self.update_history({'action':'priority', 'step': new_priority})
-            saved = self.reload()
-            if not saved:
-                self.logger.error('Could not save request {0} with new priority'.format(self.get_attribute('prepid')))
-                return False
-            self.logger.log('Priority of request {0} was changed to {1}'.format(self.get_attribute('prepid'), new_priority))
-            return True
-
-
+            return self.modify_priority( new_priority )
 
 
     def get_genvalid_setup(self,directory,run):
