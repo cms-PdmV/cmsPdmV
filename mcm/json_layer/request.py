@@ -1045,7 +1045,7 @@ done
             self.set_status(0)
             self.approve(0)
         self.update_history({'action':'failed'})
-        self.notify('%s failed for request %s'%(what,self.get_attribute('prepid')), message, accumulate=True)
+        self.notify('%s failed for request %s'%(what,self.get_attribute('prepid')), message)
         rdb = database('requests')
         rdb.update(self.json())
 
