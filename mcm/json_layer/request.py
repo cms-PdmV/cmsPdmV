@@ -630,7 +630,7 @@ class request(json_base):
     def make_release(self):
         makeRel = 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
         makeRel += 'export SCRAM_ARCH=%s\n'%(self.get_scram_arch())
-        makeRel += 'if [ -r %s ] ; then \n'%(self.get_attribute('cmssw_release'))
+        makeRel += 'if [ -r %s/src ] ; then \n'%(self.get_attribute('cmssw_release'))
         makeRel += ' echo release %s already exists\n'%(self.get_attribute('cmssw_release'))
         makeRel += 'else\n'
         makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
