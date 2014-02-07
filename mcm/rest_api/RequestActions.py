@@ -1218,6 +1218,8 @@ class SearchRequest(RESTResource):
 
         if len(reg_queries) == 0 and len(wild_search_dict) == 0:
             return dumps({"results": []})
+        if len(reg_queries) == 0:
+            return dumps({"results": []})
         rdb = database('requests')
         ## do all the regular search the regular way
         results = rdb.queries(reg_queries)
