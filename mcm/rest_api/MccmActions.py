@@ -226,8 +226,26 @@ class GenerateChains(RESTResource):
             else:
                 aids.append( r )
 
+        ccdb = database('chained_campaigns')
+        ccs=[]
+        for cc in mcm_m.get_attribute('chains'):
+            if cc.startswith('chain'):
+                ccs.extend( ccdb.queries(['prepid==%s'% cc]) )
+            else:
+                ccs.extend( ccdb.queries(['alias==%s'% cc]) )
+        ## collect the name of the campaigns it can belong to
+        ccs = list(set(map(lambda cc : cc['campaigns'][0][0], ccs)))
+        if len(ccs)!=1:
+            return {"prepid":mid,
+                    "results" : False,
+                    "message" : "inconsistent list of chains %s, leading to different root campaigns %s"%(mcm_m.get_attribute('chains'),ccs)}
+        allowed_campaign=ccs[0]
         for aid in aids:
             mcm_r = rdb.get(aid)
+            if mcm_r['member_of_campaign'] != allowed_campaign:
+                return {"prepid":mid,
+                        "results" : False, 
+                        "message" : "A request (%s) is not from the allowed root campaign %s" %( aid, allowed_campaign) }
             if mcm_r['status']=='new' and mcm_r['approval']=='validation':
                 return {"prepid":mid,
                         "results" : False, 
