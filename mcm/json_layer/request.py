@@ -1298,13 +1298,33 @@ done
         #could reverse engineer the target 
         return settings().get_value('test_target')
 
-    def get_n_unfold_efficiency(self, target):
+    def get_efficiency_error(self, relative=True):
+        match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency_error'])
+        filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency_error'])
+        error = sqrt( match*match + filter_eff*filter_eff)
+        
+        if relative:
+            eff = self.get_efficiency()
+            if eff:
+                return error/eff
+            else:
+                return 0.
+        else:
+            return error
+        
+    def get_efficiency(self):
+        ## use the trick of input_dataset ?
         if self.get_attribute('generator_parameters'):
-            ## get the last entry of generator parameters
             match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
             filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            if match > 0 and filter_eff > 0:
-                target /=  (match*filter_eff)
+            return match*filter_eff
+        return 1.
+
+    def get_n_unfold_efficiency(self, target):
+        if self.get_attribute('generator_parameters'):
+            eff = self.get_efficiency()
+            if eff !=0:
+                target /= eff
         return int(target)
 
     def get_n_for_valid(self):
