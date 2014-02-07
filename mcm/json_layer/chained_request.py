@@ -283,6 +283,8 @@ class chained_request(json_base):
             next_total_events=current_request.get_attribute('completed_events')
             ## get the original expected events and allow a margin of 5% less statistics
             statistics_fraction = settings().get_value('statistics_fraction')
+            current_eff_error = 1. - current_request.get_efficiency_error()
+            statistics_fraction = min( statistics_fraction, current_eff_error )
             completed_events_to_pass = int(current_request.get_attribute('total_events') * statistics_fraction )
 
             notify_on_fail=True ## to be tuned according to the specific cases
