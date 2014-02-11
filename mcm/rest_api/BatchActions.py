@@ -220,11 +220,11 @@ class InspectBatches(BatchAnnouncer):
                         ## if done, it's done
                         all_done=True
                     else:
-                        if len(mcm_r['requests'])==0:
+                        if len(mcm_r['reqmgr_name'])==0:
                             ## not done, and no requests in request manager, ignore = all_done
                             all_done=True
                         else:
-                            if wma_name!=mcm_r['requests'][0]['name']:
+                            if wma_name!=mcm_r['reqmgr_name'][0]['name']:
                                 ## not done, and a first requests that does not correspond to the one in the batch, ignore = all_done
                                 all_done=True
                     if not all_done:
