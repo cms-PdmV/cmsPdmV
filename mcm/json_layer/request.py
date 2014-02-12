@@ -689,8 +689,9 @@ class request(json_base):
 
                 if 'GenProduction' in cname:
                     ## this works for back-ward compatiblity
-                    #infile+= self.retrieve_fragment(name=cname.split('/')[-1])
                     infile+= self.retrieve_fragment(name=cname)
+                    ## force inline the customisation fragment in that case.
+                    res+= ' --inline_custom 1 '
 
             # tweak a bit more finalize cmsDriver command
             res = cmsd
