@@ -11,7 +11,7 @@ from threading import BoundedSemaphore
 class ssh_executor:
     logger = logfactory
     semaph = BoundedSemaphore(10)
-    def __init__(self, directory=None, prepid=None, server='lxplus5.cern.ch'):
+    def __init__(self, directory=None, prepid=None, server='lxplus.cern.ch'):
         self.ssh_client = None
         self.ssh_server = server
         self.ssh_server_port = 22
