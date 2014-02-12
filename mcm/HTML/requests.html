@@ -114,7 +114,7 @@
           <td ng-repeat="value in requests_defaults" ng-show="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(3);" title="Delete request">
+                <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(3);" title="Delete request" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <!--[IF IE]>
@@ -361,7 +361,7 @@
       <div class="modal-header">
         <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
       </div>  <!--end oFda.f modal header-->
-      <div class="modal-footer">
+      <div class="modal-footer" style="background-color:{{modal_color}}">
         <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
         <button class="btn btn-warning" ng-click="sureTotoggle()">Yes</button>
         <button class="btn btn-success" ng-click="closeisSureModal()">No</button>
