@@ -301,7 +301,7 @@ class MccMReminder(RESTResource):
         l_type = locator()
         com = communicator()
 
-        subject = 'Gentle reminder on tickets to be operated by you'
+        subject = 'Gentle reminder on %s tickets to be operated by you' % ( len( mccms)) 
         message = '''\
 Dear Production Managers,
  please find below the details of %s opened MccM tickets that need to be operated.
