@@ -66,7 +66,6 @@ class request(json_base):
             #'input_block':'',
             'block_black_list':[],
             'block_white_list':[],
-            'cvs_tag':'',
             'fragment_tag':'',
             #'pvt_flag':'',
             #'pvt_comment':'',
@@ -459,8 +458,6 @@ class request(json_base):
         get_me=''
         tag=self.get_attribute('fragment_tag')
         fragment_retry_amount = 2
-        if not tag:
-            tag = self.get_attribute('cvs_tag')
         if tag and name:
             # remove this to allow back-ward compatibility of fragments/requests placed with PREP
             name=name.replace('Configuration/GenProduction/python/','')
