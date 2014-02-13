@@ -127,7 +127,8 @@ var promise;
 
   //return everyting thats after main url
   $scope.getLocation = function(){
-    return $location.url();
+    var __location = $location.url();
+    return __location.replace(/page=\d+/g,"");
   };
 
   $scope.role = function(priority){
