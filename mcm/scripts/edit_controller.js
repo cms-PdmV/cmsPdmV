@@ -1181,8 +1181,8 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '        </span>'+
     '        <span ng-switch-when="false">'+
     '          {{elem}}'+
-    '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index]" rel="tooltip" title="Remove itself"><i class="icon-minus"></i></a>'+
-    '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index]" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
+    '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Remove itself" ><i class="icon-minus"></i></a>'+
+    '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
     '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
     '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in possible_sub_requests[$index] | filter: $viewValue | limitTo: 10"></input>'+
     '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
@@ -1191,7 +1191,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '      </span>'+
     '    </li>'+
     '  </ul>'+
-    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\']"><i class="icon-plus"></i></a>'+
+    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
     '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
     '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in possible_requests | filter: $viewValue | limitTo: 10"></input>'+
     '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
@@ -1348,13 +1348,13 @@ testApp.directive("customMccmChains", function($http, $rootScope){
     '   <li ng-repeat="elem in chain_data">'+
     '     <span>'+
     '       {{elem}}'+
-    '       <a ng-href="#" ng-click="remove($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '       <a ng-href="#" ng-click="remove($index)" ng-hide="not_editable_list.indexOf(\'Chains\')!=-1">'+
     '         <i class="icon-remove-sign"></i>'+
     '       </a>'+
     '     <span>'+
     '   </li>'+
     '  </ul>'+
-    '    <form class="form-inline" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(\'Chains\')!=-1">'+
     '      <a ng-href="#" ng-click="toggleAddNewChain();">'+
     '        <i class="icon-plus" ng-hide="add_chain"></i>'+
     '        <i class="icon-minus" ng-show="add_chain"></i>'+
