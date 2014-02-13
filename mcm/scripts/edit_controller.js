@@ -179,9 +179,6 @@ function resultsCtrl($scope, $http, $location, $window){
             });  
           });
           break;
-          case "settings":
-              $scope.result["value"] = parseSettingValue(""+$scope.result["value"]);
-              break;
         default:
           break;
       }
@@ -486,12 +483,13 @@ testApp.directive("inlineEditable", function(){
          scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
          scope.formColumn = scope.$eval(attr.column);
        }
-//        scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Reqmgr name", "Pileup dataset name", "Pwg", "Completed events", "Status", "Type", "Priority", "Completion date"]; //user non-editable columns
        scope.update = function () {
          var object = null;
          try{
            object = JSON.parse(scope.whatever_value);
-           ctrl.$setViewValue(object);
+           console.log(object);
+           console.log(angular.fromJson(object));
+           ctrl.$setViewValue(angular.fromJson(object));
            ctrl.$setValidity("bad_json", true);
          }catch (err){
            ctrl.$setValidity("bad_json", false);
