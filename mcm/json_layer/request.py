@@ -676,7 +676,7 @@ class request(json_base):
 
 
         for cmsd in self.build_cmsDrivers():
-
+            inline_c=''
             # check if customization is needed to check it out from cvs
             if '--customise ' in cmsd:
                 cust = cmsd.split('--customise ')[1].split(' ')[0]
@@ -691,23 +691,23 @@ class request(json_base):
                     ## this works for back-ward compatiblity
                     infile+= self.retrieve_fragment(name=cname)
                     ## force inline the customisation fragment in that case.
-                    res+= ' --inline_custom 1 '
+                    inline_c= '--inline_custom 1 '
 
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             configuration_names.append( directory+self.get_attribute('prepid')+"_"+str(previous+1)+'_cfg.py')
-            res += ' --python_filename %s --no_exec '%( configuration_names[-1] )
+            res += '--python_filename %s --no_exec '%( configuration_names[-1] )
 
             ## add monitoring at all times...
             if '--customise ' in cmsd:
                 old_cust = cmsd.split('--customise ')[1].split()[0]
                 new_cust=old_cust
-                new_cust+=',Configuration/DataProcessing/Utils.addMonitoring '
+                new_cust+=',Configuration/DataProcessing/Utils.addMonitoring'
                 res=res.replace('--customise %s'%(old_cust),'--customise %s'%(new_cust))
                 #res +='--customise %s'%( cust )
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
-
+            res+=inline_c
 
             res += '-n '+str(events)+ ' || exit $? ; \n'
             if run:
