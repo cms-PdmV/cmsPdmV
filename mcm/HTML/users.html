@@ -4,7 +4,8 @@
         <title>Users page McM</title>  
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        
+        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
+
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
@@ -127,7 +128,7 @@
       	</tr>
       </tbody>
     </table>
-    <div class="row-fluid">
+    <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
         <input type="button" class="btn" ng-click="addMe()" value="Add me !" align="left"/>
       </div>
@@ -147,10 +148,10 @@
         <div class="pagination pagination-right">
           <ul>
             <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)">Prev</a>
+              <a ng-click="previous_page(list_page)" ng-href="#">Prev</a>
             </li>
             <li ng-class="{ disabled: result.length == 0 }">
-              <a ng-click="next_page(list_page)">Next</a>
+              <a ng-click="next_page(list_page)" ng-href="#">Next</a>
             </li>
           </ul>
         </div>

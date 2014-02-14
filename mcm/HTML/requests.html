@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-<head>
+  <head>
         <title>Requests page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <!--<link href="scripts/css/typeahead.js-bootstrap.css" rel="stylesheet" type="text/css"/>-->
         <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
         
          <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/jquery-1.10.1.min.js"></script>
@@ -32,7 +33,7 @@
          <![endif]>
          <script src="scripts/main_controller.js"></script>
          <script src="scripts/requests_ctrl.js"></script>
-</head>
+  </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
@@ -76,7 +77,8 @@
     <!-- </div> -->
       
     </div><!--End of container-->
-    <table class="table table-bordered table-stripped" style="owerflow:auto;">
+    <!-- <div class="table-wrapper"> -->
+    <table class="table table-bordered table-stripped">
       <thead>
         <tr>
           <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
@@ -250,13 +252,13 @@
                     <dd>{{value}}</dd>                
                 </dl>
               </div>
-	      <div ng-switch-when="Output dataset">
-		<ul style="margin-bottom: 0px;">
-		  <li ng-repeat="ds in data[value.db_name]">
-		     <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{ds}}' rel="tooltip" title="Link to DAS" target="_self">{{ds}}</a>
-		  </li>
-		</ul>
-	      </div>
+              <div ng-switch-when="Output dataset">
+                <ul style="margin-bottom: 0px;">
+                  <li ng-repeat="ds in data[value.db_name]">
+                    <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{ds}}' rel="tooltip" title="Link to DAS" target="_self">{{ds}}</a>
+                  </li>
+                </ul>
+              </div>
               <div ng-switch-when="Generators">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="gen in data[value.db_name]">
@@ -356,6 +358,7 @@
         </tr>
       </tbody>
     </table>
+  <!-- </div> -->
     <!-- Are you Sure MODAL-->
     <div modal="isSure_Modal" close="closeisSureModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
       <div class="modal-header">
@@ -425,7 +428,7 @@
           </div> <!--end of modal footer-->
         </div>
     <!--     END OF MODAL  -->
-    <div class="row-fluid">
+    <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
         <span>
         Multiple selection buttons
@@ -488,10 +491,10 @@
         <div class="pagination pagination-right">
           <ul>
             <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)">Prev</a>
+              <a ng-click="previous_page(list_page)" ng-href="#">Prev</a>
             </li>
             <li ng-class="{ disabled: result.length == 0 }">
-              <a ng-click="next_page(list_page)">Next</a>
+              <a ng-click="next_page(list_page)" ng-href="#">Next</a>
             </li>
           </ul>
         </div>

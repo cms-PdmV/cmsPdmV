@@ -1,0 +1,45 @@
+body { 
+    height: 100%; 
+    width: 100%; 
+    margin: 0; 
+    padding-bottom: 70px;
+}
+
+body.dragging, body.dragging * {
+    cursor: move !important;
+}
+
+.dragged {
+    position: absolute;
+    opacity: 0.5;
+    z-index: 2000;
+}
+
+ul.nav li.placeholder {
+    position: relative;
+}
+
+ul.nav li.placeholder:before {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    border-top-color: black;
+    top: -2px;
+    margin-left: -5px;
+    border-bottom: none;
+}
+
+.axis path, .axis line {
+    fill: none;
+    stroke: black;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+.custom-footer{
+    background:white; 
+    height:70px; 
+    position: fixed; 
+    bottom: 0;
+}
