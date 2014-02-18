@@ -786,7 +786,7 @@ done
             self.logger.error('Priority has to be an integer')
             return False
         if self.get_attribute('status') in ['done']:
-            return self.modify_priority( new_priority )
+            return True
         if self.get_attribute('priority') == new_priority:
             return True
         with locker.lock(self.get_attribute('prepid')):
