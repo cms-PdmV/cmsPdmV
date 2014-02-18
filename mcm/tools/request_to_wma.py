@@ -158,6 +158,7 @@ class request_to_wmcontrol:
         if processString:
             command += ' --process-string '+processString
             
+        command += '|| exit $? ;'
         command += '\n'
 
         if len(config_id_from_hashkey):
