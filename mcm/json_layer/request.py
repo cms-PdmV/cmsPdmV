@@ -791,11 +791,11 @@ done
             return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
+            self.logger.log('tryign to change priority to %s at %s'%( self.get_attribute('prepid'), new_priority))
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
                 ssh_exec = ssh_executor.ssh_executor(server='pdmvserv-test.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
-                cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
@@ -808,13 +808,16 @@ done
                     self.logger.error('SSH error while changing priority of {0}'.format(self.get_attribute('prepid')))
                     return False
                 output_text = stdout.read()
-                self.logger.log('wmpriority output:\n{0}'.format(output_text))
-                not_found=False
+                self.logger.error('wmpriority output:\n{0}'.format(output_text))
+                changed=False
                 for line in output_text.split("\n"):
                     if 'Unable to change priority of workflow' in line:
                         self.logger.error("Request {0}. {1}".format(self.get_attribute('prepid'), line))
-                        not_found = True
-                if not_found:
+                        changed=False
+                    if 'Changed priority for' in line:
+                        changed=True
+                if not changed:
+                    self.logger.error("Could not change priority because %s"% output_text)
                     return False
             return self.modify_priority( new_priority )
 
