@@ -116,7 +116,7 @@ class ConfigMakerAndUploader(Handler):
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        cmd += "wmupload.py {1} -u pdmvserv -g ppd {0}".format(" ".join(cfgs), test_string)
+        cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
         return cmd
 
     def internal_run(self):
