@@ -163,14 +163,19 @@ class request(json_base):
             for key in self._json_base__schema:
                 editable[key]=False
             if self.current_user_level!=0: ## not a simple user
-                for key in ['generator_parameters','notes','history','generators','tags']:
+                always_editable = settings().get_value('editable_request')
+                for key in always_editable:
                     editable[key]=True
             if self.current_user_level>3: ## only for admins
-                for key in self._json_base__schema:#make it fully opened for admins ['completed_events','reqmgr_name','member_of_chain']:
+                for key in self._json_base__schema:
                     editable[key]=True
         else:
             for key in self._json_base__schema:
                 editable[key]=True
+            if self.current_user_level<=3: ## only for not admins
+                not_editable = settings().get_value('not_editable_request')
+                for key in not_editable:
+                    editable[key]=False
 
         return editable
 
