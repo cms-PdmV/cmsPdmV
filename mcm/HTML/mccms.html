@@ -84,10 +84,12 @@
       	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
+		<a rel="tooltip" title="Delete ticket" ng-click="remove(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
                 <a rel="tooltip" title="Edit details" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(1);" target="_self"><i class="icon-wrench"></i></a>
-                <a rel="tooltip" title="Generate chains" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
-                <a rel="tooltip" title="Generate chains and reserve" ng-click="generate(mccm_info.prepid,'/reserve')" ng-href="#" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
-                <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
+                <a rel="tooltip" title="Cancel ticket {{mccm_info.prepid}}" ng-click="cancel(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-thumbs-down"></i></a>
+                <a rel="tooltip" title="Generate chains for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
+                <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'/reserve')" ng-href="#" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
+                <a rel="tooltip" title="View all requests for {{mccm_info.prepid}}" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
               </div>
               <div ng-switch-when="Prepid">
                 <a ng-href='mccms?prepid={{mccm_info[data.db_name]}}' rel="tooltip" title="View only {{mccm_info[data.db_name]}}" target="_self">{{mccm_info[data.db_name]}}</a>

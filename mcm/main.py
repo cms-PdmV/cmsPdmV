@@ -19,7 +19,7 @@ from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, G
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision, GetStartTime
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccmFields, GenerateChains, MccMReminder
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
@@ -364,13 +364,13 @@ root.restapi.dashboard.get_stats = GetStats()
 root.restapi.dashboard.get_revision = GetRevision()
 root.restapi.dashboard.get_start_time = GetStartTime(start_time)
 root.restapi.dashboard.get_verbosities = GetVerbosities()
-
 # REST mccms Actions
 
 root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()
 root.restapi.mccms.save = CreateMccm()
 root.restapi.mccms.delete = DeleteMccm()
+root.restapi.mccms.cancel = CancelMccm()
 root.restapi.mccms.editable = GetEditableMccmFields()
 root.restapi.mccms.generate = GenerateChains()
 root.restapi.mccms.reminder = MccMReminder()

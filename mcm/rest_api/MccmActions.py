@@ -126,6 +126,29 @@ class CreateMccm(RESTResource):
                 i += 1
             return final_mccm_id
 
+class CancelMccm(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        
+    def GET(self,  *args):
+        """
+        Cancel the MccM ticket provided in argument. Does not delete it but put the status as cancelled.
+        """
+        if not args:
+            return dumps({"results": False, "message": "No id given to cancel."})
+        db = database('mccms')
+        mcm_mccm = mccm(db.get( args[0] ))
+        if mcm_mccm.get_attribute('status') == 'done':
+            return dumps({"results": False, "message": "Cannot cancel done tickets"})
+
+        mcm_mccm.set_attribute('status','cancelled')
+        mcm_mccm.update_history({'action': 'cancelled'})
+        saved = db.update(mcm_mccm.json())
+        if saved:
+            return dumps({"results": True})
+        else:
+            return dumps({"results": False, "message": "Could not save the ticket to be cancelled."})
+            
 
 class DeleteMccm(RESTResource):
 
@@ -133,6 +156,9 @@ class DeleteMccm(RESTResource):
         if not args:
             return dumps({"results": False, "message": "No id given to delete."})
         db = database('mccms')
+        mcm_mccm = db.get( args[0] )
+        if mcm_mccm['status'] == 'done':
+            return dumps({"results": False, "message" : "Cannot delete a ticket that is done"})
         return dumps({"results": db.delete(args[0])})
 
 

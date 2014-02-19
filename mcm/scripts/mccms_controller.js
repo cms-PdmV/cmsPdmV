@@ -190,7 +190,28 @@ function resultsCtrl($scope, $http, $location, $window, $route){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
-
+  $scope.cancel = function( mccm_id ){
+      $http({method:'GET', url:'restapi/mccms/cancel/'+ mccm_id}).success(function(data,status){
+	      if (data.results){
+		  alert("Ticket canceled");
+	      }else{
+		  alert(data.message);
+	      }
+	  }).error(function(status){
+		  alert("Could not cancel the ticket");
+	      });
+  };
+  $scope.remove = function( mccm_id){
+      $http({method:'DELETE', url:'restapi/mccms/delete/'+ mccm_id}).success(function(data,status){
+	      if (data.results){
+		  alert("Ticket deleted");
+	      }else{
+		  alert(data.message);
+	      }
+	  }).error(function(status){
+		  alert("Could not delete the ticket");
+	      });
+  };
   $scope.generate = function( mccm_id, opt){
       console.log( mccm_id );
 
