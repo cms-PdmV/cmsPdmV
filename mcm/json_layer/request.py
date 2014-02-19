@@ -1226,7 +1226,23 @@ done
 
 
                     self.set_attribute('completed_events' , wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content']['pdmv_open_evts_in_DAS'] )
-                    self.set_attribute('output_dataset', wma_r_N['content']['pdmv_dataset_list'])
+                    ## this is not enough to get all datasets
+                    collected=[]
+                    for wma in reversed(self.get_attribute('reqmgr_name')):
+                        if not 'pdmv_dataset_list' in wma['content']: continue
+                        those = wma['content']['pdmv_dataset_list']
+                        goodone=True
+                        if len(collected):
+                            for ds in those:
+                                (_,dsn,proc,tier)=ds.split('/')
+                                for goodds in collected:
+                                    (_,gdsn,gproc,gtier)=goodds.split('/')
+                                    if dsn!=gdsn or gproc!=proc:
+                                        goodone=False
+                        if goodone:
+                            collected.extend(those)
+                    collected = list(set(collected))
+                    self.set_attribute('output_dataset', collected)
                     if self.get_attribute('completed_events') <=0:
                         not_good.update( {'message' : '%s completed but with no statistics. stats DB lag. saving the request anyway.'%( wma_r['content']['pdmv_dataset_name'])})
                         saved = db.save( self.json() )
