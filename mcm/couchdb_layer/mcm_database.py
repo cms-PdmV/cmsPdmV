@@ -192,10 +192,10 @@ class database:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False        
         
-    def get_all(self, page_num=-1): 
+    def get_all(self, page_num=-1, limit=20):
         try:
-            limit, skip = self.__pagify(page_num)
-            if limit >= 0 and skip >= 0: 
+            limit, skip = self.__pagify(page_num, limit=limit)
+            if limit >= 0 and skip >= 0:
                 result = self.db.loadView(self.db_name, "all", options={'limit':limit,'skip':skip, 'include_docs':True})['rows']
                 res = map(lambda r : r['doc'], result)
                 return res
@@ -207,13 +207,13 @@ class database:
             return []
 
     
-    def query(self,  query='', page_num=0):
+    def query(self,  query='', page_num=0, limit=20):
         if not query:
-            result = self.get_all(page_num)
+            result = self.get_all(page_num, limit=limit)
             #res =  map(lambda r : r['doc'], result)
             return result
         try:
-            result = self.__query(query, page=page_num)
+            result = self.__query(query, page=page_num, limit=limit)
             #res =  map(lambda r : r['doc'], result)
             return result
         except Exception as ex:
@@ -234,18 +234,18 @@ class database:
             return return_dict
         return query_result
 
-    def queries( self, query_list):
+    def queries( self, query_list, limit=20):
         ##page_nume does not matter 
         if not len(query_list):
-            return self.get_all(page_num=-1)
+            return self.get_all(page_num=-1, limit=limit)
         try:
 
             results_list=[]
             ##make each query separately and retrieve only the doc with counting == len(query_list)
-            for (i,query_item) in enumerate(query_list):
-                res = self.query(query_item, page_num=-1)
+            for (i, query_item) in enumerate(query_list):
+                res = self.query(query_item, page_num=-1, limit=limit)
                 query_result = self.unique_res( res )
-                if i!=0:
+                if i != 0:
                     ## get only the one already in the intersection
                     id_list = map(lambda doc : doc['_id'], results_list)
                     results_list = filter(lambda doc : doc['_id'] in id_list, query_result)
@@ -282,8 +282,8 @@ class database:
     
     def __pagify(self, page_num=0, limit=20):
         if page_num < 0:
-            return -1,0
-        skip = limit*page_num
+            return -1, 0
+        skip = limit * page_num
         return limit, skip      
     
     def __execute_query(self, tokenized_query='', page=-1, limit=20):
@@ -298,18 +298,18 @@ class database:
                 if not view_name or not view_opts:
                     return []
                 if page > -1:
-                    view_opts['limit']=limit
-                    view_opts['skip']=page*limit                    
+                    view_opts['limit'] = limit
+                    view_opts['skip'] = page*limit
                 view_opts['include_docs']=True
                 result = self.db.loadView(self.db_name, view_name, options=view_opts)['rows']
-                res =  map(lambda r : r['doc'], result)
+                res = map(lambda r: r['doc'], result)
                 return res
             else:
                 return []
     
-    def raw_query(self,  view_name,  options={}):
+    def raw_query(self, view_name, options={}):
         self.logger.error('Executing raw query to the database. Accessed view: %s' % (view_name), level='warning') 
-        return self.db.loadView(self.db_name,  view_name,  options)['rows']
+        return self.db.loadView(self.db_name, view_name, options)['rows']
                 
     def __get_op(self, oper):
         if oper == '>':
