@@ -27,7 +27,7 @@ class user_pack:
         """
         if not cherrypy.request.headers:
             return defaultdict(lambda: None)
-        user_dict = defaultdict(lambda: None, [(key.lower().replace('-','_'), value) if 'adfs' not in key.lower() else (key.lower().replace('adfs-', ''), value) for (key, value) in cherrypy.request.headers.iteritems()])
+        user_dict = defaultdict(lambda: None, [(key.lower().replace('-','_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in cherrypy.request.headers.iteritems()])
         return user_dict
 
     def __getattr__(self, name):
