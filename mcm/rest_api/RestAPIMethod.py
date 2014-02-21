@@ -75,7 +75,7 @@ class RESTResource(object):
 
 
 class RESTResourceIndex(RESTResource):
-    def __init__(self, data={}):
+    def __init__(self, data=None):
 
         # this is the restriction for
         # the role of the user that can
@@ -83,8 +83,7 @@ class RESTResourceIndex(RESTResource):
         self.access_role = access_rights.user
 
         self.res = ""
-        self.data = data
-        if not self.data:
+        if not data:
             self.data = {'PUT': [('import_request', 'Request JSON', 'Import a request to the database')],
                          'GET': [('get_request', 'prepid', 'Retrieve a request from the database'), (
                              'request_prepid', 'Pwg, Campaign Name',
@@ -92,6 +91,8 @@ class RESTResourceIndex(RESTResource):
                                  ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')],
                          'DELETE': [('delete_request', 'prepid',
                                      'Delete a request from the d<th>GET Doc string</th>atabase and that\'s it ')]}
+        else:
+            self.data = data
 
     def GET(self):
         """
@@ -132,7 +133,7 @@ class RESTResourceIndex(RESTResource):
                 #else:
                 #	 self.res +=' <td><b>To be documented</b></td>'
                 limit = None
-                if o.access_limit != None:
+                if o.access_limit is not None:
                     limit = o.access_limit
                 for m in methods:
                     if m in o.__class__.__dict__:
@@ -141,10 +142,10 @@ class RESTResourceIndex(RESTResource):
                         else:
                             self.res += '<td><b>To be documented</b></td>'
                             #self.res +='<td>%s</td>'%(o.__class__.__dict__)
-                        if limit != None:
-                            self.res += '<td align=center>+%s</td>' % (limit)
+                        if limit is not None:
+                            self.res += '<td align=center>+%s</td>' % (roles[limit])
                         else:
-                            self.res += '<td align=center>%s</td>' % (self.limit_per_method[m])
+                            self.res += '<td align=center>%s</td>' % (roles[self.limit_per_method[m]])
                         try:
                             c_key = o.__class__.__name__ + m
                             c = RESTResource.counter[c_key]
