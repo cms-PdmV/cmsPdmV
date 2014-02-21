@@ -70,10 +70,10 @@ class UpdateAction(RESTResource):
                 if type(value)==dict:
                     for (cr,specs) in value.items():
                         for (s,spec) in specs.items():
-                            if spec==None:
+                            if spec is None:
                                 specs.pop(s)
                 else:
-                    if value==None:
+                    if value is None:
                         content.pop(o)
         mcm_a.set_attribute('chains',chains)
 
