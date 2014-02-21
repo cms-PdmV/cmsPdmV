@@ -236,6 +236,11 @@ class GenerateChainedRequests(RESTResource):
                         chains[cc]['chains'][new_cr['prepid']] [item] = chains[cc][item]
                         chains[cc].pop(item)
                 hasChainsChanged=True
+                ## get the root request
+                req = request(json_input=rdb.get(aid))
+                new_cr['last_status']= req.get_attribute('status')
+                if new_cr['last_status'] in ['submitted','done']:
+                    new_cr['status']='processing'
                 if not crdb.update(new_cr):
                     return {'results':False,'message':'could not save %s'%( new_cr['prepid'])}
 
@@ -243,7 +248,6 @@ class GenerateChainedRequests(RESTResource):
                 ccdb.update(mcm_cc.json())
                 new_chains.append( new_cr['prepid'] )
                 # then let the root request know that it is part of a chained request
-                req = request(json_input=rdb.get(aid))
                 inchains=req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
                 inchains.sort()
