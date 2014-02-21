@@ -47,7 +47,7 @@ class ssh_executor:
         try:
             self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
         except paramiko.AuthenticationException as ex:
-            self.logger.error('Could not authenticate to remove server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
+            self.logger.inject('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
             return
         except paramiko.BadHostKeyException as ex:
             self.logger.inject('Host key was invalid. Reason: %s' % (ex), level='error', handler=self.hname)
