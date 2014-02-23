@@ -10,6 +10,7 @@ from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
+from tools.settings import settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from json_layer.batch import batch
@@ -245,7 +246,7 @@ class RuntestGenvalid(Handler):
             if not success:
                 mcm_r = request(self.db.get(self.rid))
                 ## need to provide all the information back
-                if "TERM_RUNLIMIT" in batch_test.log_out:
+                if settings().get_value('check_term_runlimit') and "TERM_RUNLIMIT" in batch_test.log_out:
                     no_success_message = "LSF job was terminated after reaching run time limit.\n\n"
                     no_success_message += "Average CPU time per event specified for request was {0} seconds. \n\n".format(mcm_r.get_attribute("time_event"))
                     additiona_message = "Time report not found in LSF job."
