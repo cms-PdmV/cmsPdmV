@@ -3,7 +3,7 @@
 import sys
 import time
 import logging
-
+import os
 
 class inject_formatter(logging.Formatter):
         def __init__(self, prepid):
@@ -139,6 +139,18 @@ class rest_formatter(logging.Formatter):
         from tools.user_management import user_pack
         email = user_pack().get_email()
 
+	## memory usage
+	try:
+		_proc_status = '/proc/%d/status' % os.getpid()
+		t = open(_proc_status)
+		v = t.read()
+		t.close()
+		i = v.index('VmRSS')
+		v = v[i:].split(None, 3)  # whitespace
+		mem="%s %s"%(v[1],v[2])
+        except:
+		mem="N/A"
+
         if record.levelno > 20:
             if email:
                 record.msg = '[%s][user:%s][%s] {%s} %s' % ( rtime, email, record.levelname,
@@ -150,6 +162,8 @@ class rest_formatter(logging.Formatter):
                 record.msg = '[%s][user:%s][%s] %s' % ( rtime, email, record.levelname, record.msg)
             else:
                 record.msg = '[%s][%s] %s' % ( rtime, record.levelname, record.msg)
+
+	record.msg = "{%s} %s"%(mem, record.msg)
 
         record.done = True
         return logging.Formatter.format(self, record)
