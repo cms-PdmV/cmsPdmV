@@ -648,16 +648,16 @@ class request(json_base):
         l_type = locator()
         infile = ''
         infile += '#!/bin/bash\n'
-        if directory:
+        #if directory:
             ## go into the request directory itself to setup the release, since we cannot submit more than one at a time ...
-            infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
+        #    infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
 
 
         ##create a release directory "at the root" if not already existing
 
         if directory:
             ##create a release directory "in the request" directory if not already existing
-            infile += 'cd ' + os.path.abspath(directory) + '\n'
+            ##infile += 'cd ' + os.path.abspath(directory) + '\n'
             infile += self.make_release()
         else:
             infile += self.make_release()
