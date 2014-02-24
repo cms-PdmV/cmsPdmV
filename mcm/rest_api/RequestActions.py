@@ -845,6 +845,9 @@ class InspectStatus(RESTResource):
         db = database('requests')
         crdb = database('chained_requests')
         for r in rlist:
+            if not db.document_exists(r): 
+                res.append({"prepid": r, "results": False, 'message': '%s does not exist' % r})
+                continue
             mcm_r = request(db.get(r))
             if mcm_r:
                 answer = mcm_r.inspect()
