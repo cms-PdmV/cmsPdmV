@@ -103,6 +103,7 @@ class ConfigMakerAndUploader(Handler):
     """
     Class preparing and uploading (if needed) the configuration and adding it for the given request
     """
+
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
         self.prepid = kwargs["prepid"]
@@ -129,8 +130,8 @@ class ConfigMakerAndUploader(Handler):
             additional_config_ids = {}
             cfgs_to_upload = {}
             l_type = locator()
-            dev=''
-            wmtest=''
+            dev = ''
+            wmtest = ''
             if l_type.isDev():
                 wmtest = '--wmtest'
             if req.get_attribute('config_id'): # we already have configuration ids saved in our request
@@ -143,16 +144,19 @@ class ConfigMakerAndUploader(Handler):
                     locker.release(hash_id)
                 else: # has to be setup and uploaded to config cache
                     to_release.append(hash_id)
-                    cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(req.get_attribute('prepid'), dev, i+1)
+                    cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(req.get_attribute('prepid'), dev, i + 1)
 
             if cfgs_to_upload:
                 with installer(self.prepid, care_on_existing=False) as directory_manager:
-                    command = self.prepare_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], directory_manager.location(), req, wmtest)
+                    command = self.prepare_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)],
+                                                   directory_manager.location(), req, wmtest)
                     _, stdout, stderr = self.ssh_executor.execute(command)
                     if not stdout and not stderr:
                         self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid))
-                        self.logger.inject('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid), level='error', handler=self.prepid)
-                        req.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid), what='Configuration upload')
+                        self.logger.inject('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid),
+                                           level='error', handler=self.prepid)
+                        req.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(self.prepid),
+                                         what='Configuration upload')
                         return False
                     output = stdout.read()
                     error = stderr.read()
@@ -163,27 +167,37 @@ class ConfigMakerAndUploader(Handler):
                     cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
                     if len(cfgs_to_upload) != len(cfgs_uploaded):
-                        self.logger.error('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error))
-                        self.logger.inject('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error), level='error', handler=self.prepid)
-                        req.test_failure('Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
+                        self.logger.error(
+                            'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                cfgs_to_upload, cfgs_uploaded, output, error))
+                        self.logger.inject(
+                            'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                cfgs_to_upload, cfgs_uploaded, output, error), level='error', handler=self.prepid)
+                        req.test_failure(
+                            'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
                         return False
 
-                    for i, line in zip(sorted(cfgs_to_upload), cfgs_uploaded): # filling the config ids for request and config database with uploaded configurations
+                    for i, line in zip(sorted(cfgs_to_upload),
+                                       cfgs_uploaded): # filling the config ids for request and config database with uploaded configurations
                         docid = line.split()[-1]
                         additional_config_ids[i] = docid
                         hash_id = req.configuration_identifier(i)
                         saved = self.config_db.save({"_id": hash_id,
-                                                 "docid": docid,
-                                                 "prepid": self.prepid,
-                                                 "unique_string": req.unique_string(i)})
+                                                     "docid": docid,
+                                                     "prepid": self.prepid,
+                                                     "unique_string": req.unique_string(i)})
                         to_release.remove(hash_id)
                         locker.release(hash_id)
                         if not saved:
-                             self.logger.inject('Could not save the configuration {0}'.format( req.configuration_identifier(i) ), level='warning', handler=self.prepid)
+                            self.logger.inject(
+                                'Could not save the configuration {0}'.format(req.configuration_identifier(i)),
+                                level='warning', handler=self.prepid)
 
                     self.logger.inject("Full upload result: {0}".format(output), handler=self.prepid)
             sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
-            self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids), handler=self.prepid)
+            self.logger.inject("New configs for request {0} : {1}".format(self.prepid, sorted_additional_config_ids),
+                               handler=self.prepid)
             req.set_attribute('config_id', sorted_additional_config_ids)
             self.request_db.save(req.json())
             return True
@@ -197,24 +211,25 @@ class RuntestGenvalid(Handler):
     """
     operate the run test, operate the gen_valid, upload to the gui and toggles the status to validation
     """
+
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
         self.rid = kwargs['rid']
         self.db = database('requests')
 
     def internal_run(self):
-        location = installer( self.rid, care_on_existing=False, clean_on_exit=True)
+        location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
         try:
-            test_script = location.location()+'validation_run_test.sh'
-            with open( test_script ,'w') as there:
+            test_script = location.location() + 'validation_run_test.sh'
+            with open(test_script, 'w') as there:
                 ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
-                time.sleep( 10 )
+                time.sleep(10)
                 mcm_r = request(self.db.get(self.rid))
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 ## the following does change something on the request object, to be propagated in case of success
-                there.write( mcm_r.get_setup_file( location.location() , run=True, do_valid=True) )
-            batch_test = batch_control( self.rid, test_script )
+                there.write(mcm_r.get_setup_file(location.location(), run=True, do_valid=True))
+            batch_test = batch_control(self.rid, test_script)
             try:
                 success = batch_test.test()
             except:
@@ -224,31 +239,32 @@ class RuntestGenvalid(Handler):
             if success:
                 self.logger.log("batch_test result is %s" % success)
                 try:
-                    #suck in run-test if present
-                     rt_xml=location.location()+'%s_rt.xml'%( self.rid )
-                     if os.path.exists( rt_xml ):
-                         mcm_r.update_performance( open(rt_xml).read(), 'perf')
+                #suck in run-test if present
+                    rt_xml = location.location() + '%s_rt.xml' % self.rid
+                    if os.path.exists(rt_xml):
+                        mcm_r.update_performance(open(rt_xml).read(), 'perf')
                 except:
                     batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get perf reports \n %s'%( batch_test.log_err))
+                    self.logger.error('Failed to get perf reports \n %s' % batch_test.log_err)
                     success = False
 
                 try:
-                    gv_xml=location.location()+'%s_gv.xml'%( self.rid )
-                    if os.path.exists( gv_xml ):
-                        mcm_r.update_performance( open(gv_xml).read(), 'eff')
+                    gv_xml = location.location() + '%s_gv.xml' % self.rid
+                    if os.path.exists(gv_xml):
+                        mcm_r.update_performance(open(gv_xml).read(), 'eff')
                 except:
                     batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get gen valid reports \n %s'%( batch_test.log_err ))
+                    self.logger.error('Failed to get gen valid reports \n %s' % batch_test.log_err)
                     success = False
 
-            self.logger.error('I came all the way to here and %s (request %s)'%( success, self.rid ))
+            self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.rid ))
             if not success:
                 mcm_r = request(self.db.get(self.rid))
                 ## need to provide all the information back
                 if settings().get_value('check_term_runlimit') and "TERM_RUNLIMIT" in batch_test.log_out:
                     no_success_message = "LSF job was terminated after reaching run time limit.\n\n"
-                    no_success_message += "Average CPU time per event specified for request was {0} seconds. \n\n".format(mcm_r.get_attribute("time_event"))
+                    no_success_message += "Average CPU time per event specified for request was {0} seconds. \n\n".format(
+                        mcm_r.get_attribute("time_event"))
                     additiona_message = "Time report not found in LSF job."
                     split_log = batch_test.log_err.split('\n')
                     for l_id, line in izip(reversed(xrange(len(split_log))), reversed(split_log)):
@@ -256,29 +272,33 @@ class RuntestGenvalid(Handler):
                             additiona_message = "\n".join(split_log[l_id:l_id + 12])
                     no_success_message += additiona_message
                 else:
-                    no_success_message = '\t .out \n%s\n\t .err \n%s\n '% ( batch_test.log_out, batch_test.log_err)
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                    no_success_message = '\t .out \n%s\n\t .err \n%s\n ' % ( batch_test.log_out, batch_test.log_err)
+                    #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 # reset the content of the request
-                mcm_r.test_failure(message=no_success_message, what='Validation run test',rewind=True)
+                mcm_r.test_failure(message=no_success_message, what='Validation run test', rewind=True)
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
             else:
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 ## change the status with notification
                 mcm_current = request(self.db.get(self.rid))
-                if mcm_current.json()['_rev']==mcm_r.json()['_rev']:
+                if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
                     ## it's fine to push it through
                     mcm_r.set_status(with_notification=True)
-                    saved = self.db.update( mcm_r.json() )
+                    saved = self.db.update(mcm_r.json())
                     if not saved:
-                        mcm_current.test_failure(message='The request could not be saved after the run test procedure',what='Validation run test',rewind=True)
+                        mcm_current.test_failure(message='The request could not be saved after the run test procedure',
+                                                 what='Validation run test', rewind=True)
                 else:
-                    mcm_current.test_failure(message='The request has changed during the run test procedure, preventing from being saved',what='Validation run test',rewind=True)
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
+                    mcm_current.test_failure(
+                        message='The request has changed during the run test procedure, preventing from being saved',
+                        what='Validation run test', rewind=True)
+                    #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
         except:
-            mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (self.rid, traceback.format_exc())
-            self.logger.error( mess )
+            mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
+                self.rid, traceback.format_exc())
+            self.logger.error(mess)
             mcm_r = request(self.db.get(self.rid))
-            mcm_r.test_failure(message=mess,what='Validation run test',rewind=True)            
+            mcm_r.test_failure(message=mess, what='Validation run test', rewind=True)
         finally:
             location.close()
 
@@ -287,6 +307,7 @@ class RequestSubmitter(Handler):
     """
     Class injecting the request
     """
+
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
         self.prepid = kwargs["prepid"]
@@ -311,11 +332,13 @@ class RequestSubmitter(Handler):
             return False, None
         req = request(self.request_db.get(self.prepid))
         if self.check_approval and req.get_attribute('approval') != 'submit':
-            self.injection_error("The request is in approval {0}, while submit is required".format(req.get_attribute('approval')), req)
+            self.injection_error(
+                "The request is in approval {0}, while submit is required".format(req.get_attribute('approval')), req)
             return False, None
 
         if req.get_attribute('status') != 'approved':
-            self.injection_error("The request is in status {0}, while approved is required".format(req.get_attribute('status')), req)
+            self.injection_error(
+                "The request is in status {0}, while approved is required".format(req.get_attribute('status')), req)
             return False, None
 
         return True, req
@@ -332,31 +355,41 @@ class RequestSubmitter(Handler):
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 try:
                     cmd = self.prepare_command(req, batch_name)
-                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd), handler=self.prepid)
+                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd),
+                                       handler=self.prepid)
                     _, stdout, stderr = self.ssh_executor.execute(cmd)
                     if not stdout and not stderr:
-                            self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
-                            return False
+                        self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
+                        return False
                     output = stdout.read()
                     error = stderr.read()
                     if error and not output: # money on the table that it will break as well?
                         self.injection_error('Error in wmcontrol: {0}'.format(error), req)
                         return False
-                    injected_requests = [l.split()[-1] for l in output.split('\n') if l.startswith('Injected workflow:')]
-                    approved_requests = [l.split()[-1] for l in output.split('\n') if l.startswith('Approved workflow:')]
+                    injected_requests = [l.split()[-1] for l in output.split('\n') if
+                                         l.startswith('Injected workflow:')]
+                    approved_requests = [l.split()[-1] for l in output.split('\n') if
+                                         l.startswith('Approved workflow:')]
                     if not approved_requests:
-                        self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n{0}\n\nError: \n{1}'.format(output, error), req)
+                        self.injection_error(
+                            'Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n{0}\n\nError: \n{1}'.format(
+                                output, error), req)
                         return False
-                    objects_to_invalidate = [{"_id": inv_req, "object": inv_req, "type": "request", "status": "new" , "prepid": self.prepid}
-                                             for inv_req in injected_requests if inv_req not in approved_requests]
+                    objects_to_invalidate = [
+                        {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
+                        for inv_req in injected_requests if inv_req not in approved_requests]
                     if objects_to_invalidate:
-                        self.logger.inject("Some of the workflows had to be invalidated: {0}".format(objects_to_invalidate), handler=self.prepid)
+                        self.logger.inject(
+                            "Some of the workflows had to be invalidated: {0}".format(objects_to_invalidate),
+                            handler=self.prepid)
                         invalidation = database('invalidation')
                         saved = invalidation.save_all(objects_to_invalidate)
                         if not saved:
-                            self.injection_error('Could not save the invalidations {0}'.format(objects_to_invalidate), req)
+                            self.injection_error('Could not save the invalidations {0}'.format(objects_to_invalidate),
+                                                 req)
 
-                    added_requests = [{'name': app_req, 'content': {'pdmv_prep_id': self.prepid}} for app_req in approved_requests]
+                    added_requests = [{'name': app_req, 'content': {'pdmv_prep_id': self.prepid}} for app_req in
+                                      approved_requests]
                     requests = req.get_attribute('reqmgr_name')
                     requests.extend(added_requests)
                     req.set_attribute('reqmgr_name', requests)
@@ -369,7 +402,8 @@ class RequestSubmitter(Handler):
                         bat.update_history({'action': 'updated', 'step': self.prepid})
                         saved = bdb.update(bat.json())
                     if not saved:
-                        self.injection_error('There was a problem with registering request in the batch {0}'.format(batch_name), req)
+                        self.injection_error(
+                            'There was a problem with registering request in the batch {0}'.format(batch_name), req)
                         return False
 
                     #and in the end update request in database
@@ -381,20 +415,21 @@ class RequestSubmitter(Handler):
                         return False
 
                     for added_req in added_requests:
-                        self.logger.inject('Request {0} sent to {1}'.format(added_req['name'], batch_name), handler=self.prepid)
+                        self.logger.inject('Request {0} sent to {1}'.format(added_req['name'], batch_name),
+                                           handler=self.prepid)
                     return True
                 finally:
                     semaphore_events.decrement(batch_name)
             finally:
                 self.lock.release()
         except Exception as e:
-            self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), req)
+            self.injection_error(
+                'Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), req)
         finally:
             self.ssh_executor.close_executor()
 
 
 class RequestInjector(Handler):
-
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
         self.lock = kwargs["lock"]
@@ -404,14 +439,14 @@ class RequestInjector(Handler):
 
     def internal_run(self):
         self.logger.inject('## Logger instance retrieved', level='info', handler=self.prepid)
-        with locker.lock('{0}-wait-for-approval'.format( self.prepid ) ):
+        with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
             if not self.lock.acquire(blocking=False):
                 return {"prepid": self.prepid, "results": False,
-                        "message": "The request with name {0} is being handled already" .format(self.prepid)}
+                        "message": "The request with name {0} is being handled already".format(self.prepid)}
             try:
                 if not self.uploader.internal_run():
-                    return  {"prepid": self.prepid, "results": False,
-                             "message": "Problem with uploading the configuration for request {0}" .format(self.prepid)}
+                    return {"prepid": self.prepid, "results": False,
+                            "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
                 self.submitter.internal_run()
             finally:
                 self.lock.release()

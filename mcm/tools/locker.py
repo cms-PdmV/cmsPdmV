@@ -1,4 +1,4 @@
-from threading import RLock, Event, BoundedSemaphore
+from threading import RLock, Event
 from tools.logger import logfactory
 from collections import defaultdict
 

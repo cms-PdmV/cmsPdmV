@@ -50,13 +50,13 @@ class ssh_executor:
             self.logger.inject('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex), level='error', handler=self.hname)
             return
         except paramiko.BadHostKeyException as ex:
-            self.logger.inject('Host key was invalid. Reason: %s' % (ex), level='error', handler=self.hname)
+            self.logger.inject('Host key was invalid. Reason: %s' % ex, level='error', handler=self.hname)
             return
         except paramiko.SSHException as ex:
-            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % (ex), level='error', handler=self.hname)
+            self.logger.inject('There was a problem with the SSH connection. Reason: %s' % ex, level='error', handler=self.hname)
             return
         except SocketError  as ex:
-            self.logger.inject('Could not allocate socket for SSH. Reason: %s' % (ex), level='error', handler=self.hname)
+            self.logger.inject('Could not allocate socket for SSH. Reason: %s' % ex, level='error', handler=self.hname)
             return
 
     def __get_ssh_credentials(self):
@@ -65,7 +65,7 @@ class ssh_executor:
             data = f.readlines()
             f.close()
         except IOError as ex:
-            self.logger.error('Could not access credential file. IOError: %s' % (ex), level='error')
+            self.logger.error('Could not access credential file. IOError: %s' % ex, level='error')
             return None,  None
         
         username,  password = None,  None
@@ -97,7 +97,7 @@ class ssh_executor:
                 with self.semaph:
                     return self.ssh_client.exec_command(cmd)
             except paramiko.SSHException as ex:
-                self.logger.inject('Could not execute remote command. Reason: %s' % (ex), level='error', handler=self.hname)
+                self.logger.inject('Could not execute remote command. Reason: %s' % ex, level='error', handler=self.hname)
                 return None,  None,  None
             except AttributeError as ex:
                 self.logger.inject('There was an AttributeError inside the paramiko during try nr %s. Error: %s ' % (retry, ex), level='error', handler=self.hname)

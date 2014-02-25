@@ -24,19 +24,19 @@ class installer:
 
         # check if directory is empty
         if not self.directory:
-            self.logger.error('Data directory is not defined', handler=self.hname)
+            self.logger.error('Data directory is not defined')
             raise Exception('Data directory is not defined.')
 
         # check if exists (and force)
         if os.path.exists(self.directory):
             if self.careOfExistingDirectory:
-                self.logger.error( os.popen('echo %s; ls -f %s'%(self.directory, self.directory)).read())
+                self.logger.error( os.popen('echo %s; ls -f %s' % (self.directory, self.directory)).read())
                 self.logger.error('Directory ' + self.directory + ' already exists.')
-                raise Exception('Data directory %s already exists'%(self.directory))
+                raise Exception('Data directory %s already exists' % self.directory)
             else:
                 self.logger.log('Directory ' + self.directory + ' already exists.')
         else:
-            self.logger.log('Creating directory :'+self.directory)
+            self.logger.log('Creating directory :' + self.directory)
 
             # recursively create any needed parents and the dir itself
             os.makedirs(self.directory)
@@ -50,7 +50,7 @@ class installer:
     def close(self):
         if self.cleanup:
             try:
-                self.logger.error('Deleting the directory: %s' % (self.directory))
+                self.logger.error('Deleting the directory: %s' % self.directory)
                 shutil.rmtree(self.directory)
             except Exception as ex:
                 self.logger.error('Could not delete directory "%s". Reason: %s' % (self.directory, ex))

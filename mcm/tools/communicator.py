@@ -72,7 +72,7 @@ class communicator:
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID
         
-        if reply_msg_ID != None:
+        if reply_msg_ID is not None:
             msg['In-Reply-To'] = reply_msg_ID
             msg['References'] = reply_msg_ID
 
@@ -85,7 +85,7 @@ class communicator:
         ### accumulate messages prior to sending emails
         com__accumulate=settings().get_value('com_accumulate')
         force_com_accumulate=settings().get_value('force_com_accumulate')
-        if (force_com_accumulate) or (accumulate and com__accumulate):
+        if force_com_accumulate or (accumulate and com__accumulate):
             with locker.lock('accumulating_notifcations'):
                 # get a subject where the request name is taken out
                 subject_type=" ".join( filter(lambda w : w.count('-')!=2, msg['Subject'].split()) )

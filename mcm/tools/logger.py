@@ -5,69 +5,12 @@ import time
 import logging
 import os
 
+
 class inject_formatter(logging.Formatter):
-        def __init__(self, prepid):
-                self.prepid = prepid
-                logging.Formatter.__init__(self)
+    def __init__(self, prepid):
+        self.prepid = prepid
+        logging.Formatter.__init__(self)
 
-        def find_topmost_stack_frame(self):
-                i = 0
-                stack = []
-                while True:
-                        try:
-                                fr = sys._getframe(i)
-                                if fr.f_code.co_name == '__call__':
-                                        break
-                                stack.append(fr)
-                        except:
-                                break
-                        i += 1
-
-                # get second from top (because topmost belongs to mother class RestAPIMethod)
-                return "%s:%s" % (stack[-4].f_code.co_filename, stack[-4].f_lineno)
-
-        def format(self, record):
-                try:
-                        if record.done:
-                                return record.msg
-                except:
-                        record.done = False
-
-                rtime = time.strftime("%d/%b/%Y:%H:%M:%S", time.localtime(record.created))
-                from tools.user_management import user_pack
-                email = user_pack().get_email()
-                if record.levelno > 20: # above info
-                        if email:
-                                record.msg = '[%s][user:%s][%s][%s] {%s} %s' % ( rtime,
-                                                                        email,
-                                                                        record.levelname,
-                                                                        self.prepid,
-                                                                        self.find_topmost_stack_frame(),
-                                                                        record.msg)
-                        else:
-                                record.msg = '[%s][%s][%s] {%s} %s' % ( rtime,
-                                                                record.levelname,
-                                                                self.prepid,
-                                                                self.find_topmost_stack_frame(),
-                                                                record.msg)
-                else:
-                        if email:
-                                record.msg = '[%s][user:%s][%s][%s] %s' % ( rtime,
-                                                                        email,
-                                                                        record.levelname,
-                                                                        self.prepid,
-                                                                        record.msg)
-                        else:
-                                record.msg = '[%s][%s][%s] %s' % ( rtime,
-                                                                record.levelname,
-                                                                self.prepid,
-                                                                record.msg)
-
-                record.done = True
-                return logging.Formatter.format(self, record)
-
-
-class mcm_formatter(logging.Formatter):
     def find_topmost_stack_frame(self):
         i = 0
         stack = []
@@ -75,7 +18,7 @@ class mcm_formatter(logging.Formatter):
             try:
                 fr = sys._getframe(i)
                 if fr.f_code.co_name == '__call__':
-                        break
+                    break
                 stack.append(fr)
             except:
                 break
@@ -87,20 +30,82 @@ class mcm_formatter(logging.Formatter):
     def format(self, record):
         try:
             if record.done:
-                    return record.msg
+                return record.msg
         except:
             record.done = False
 
         rtime = time.strftime("%d/%b/%Y:%H:%M:%S", time.localtime(record.created))
         from tools.user_management import user_pack
+
+        email = user_pack().get_email()
+        if record.levelno > 20: # above info
+            if email:
+                record.msg = '[%s][user:%s][%s][%s] {%s} %s' % ( rtime,
+                                                                 email,
+                                                                 record.levelname,
+                                                                 self.prepid,
+                                                                 self.find_topmost_stack_frame(),
+                                                                 record.msg)
+            else:
+                record.msg = '[%s][%s][%s] {%s} %s' % ( rtime,
+                                                        record.levelname,
+                                                        self.prepid,
+                                                        self.find_topmost_stack_frame(),
+                                                        record.msg)
+        else:
+            if email:
+                record.msg = '[%s][user:%s][%s][%s] %s' % ( rtime,
+                                                            email,
+                                                            record.levelname,
+                                                            self.prepid,
+                                                            record.msg)
+            else:
+                record.msg = '[%s][%s][%s] %s' % ( rtime,
+                                                   record.levelname,
+                                                   self.prepid,
+                                                   record.msg)
+
+        record.done = True
+        return logging.Formatter.format(self, record)
+
+
+class mcm_formatter(logging.Formatter):
+    def find_topmost_stack_frame(self):
+        i = 0
+        stack = []
+        while True:
+            try:
+                fr = sys._getframe(i)
+                if fr.f_code.co_name == '__call__':
+                    break
+                stack.append(fr)
+            except:
+                break
+            i += 1
+
+        # get second from top (because topmost belongs to mother class RestAPIMethod)
+        return "%s:%s" % (stack[-4].f_code.co_filename, stack[-4].f_lineno)
+
+    def format(self, record):
+        try:
+            if record.done:
+                return record.msg
+        except:
+            record.done = False
+
+        rtime = time.strftime("%d/%b/%Y:%H:%M:%S", time.localtime(record.created))
+        from tools.user_management import user_pack
+
         email = user_pack().get_email()
 
         if record.levelno > 20:
             if email:
-                record.msg = '[%s][user:%s][%s] {%s} %s' % ( rtime, email, record.levelname, self.find_topmost_stack_frame(),
-                                                             record.msg)
+                record.msg = '[%s][user:%s][%s] {%s} %s' % (
+                    rtime, email, record.levelname, self.find_topmost_stack_frame(),
+                    record.msg)
             else:
-                record.msg = '[%s][%s] {%s} %s' % ( rtime, record.levelname, self.find_topmost_stack_frame(), record.msg)
+                record.msg = '[%s][%s] {%s} %s' % (
+                    rtime, record.levelname, self.find_topmost_stack_frame(), record.msg)
         else:
             if email:
                 record.msg = '[%s][user:%s][%s] %s' % ( rtime, email, record.levelname, record.msg)
@@ -137,43 +142,44 @@ class rest_formatter(logging.Formatter):
 
         rtime = time.strftime("%d/%b/%Y:%H:%M:%S", time.localtime(record.created))
         from tools.user_management import user_pack
+
         email = user_pack().get_email()
 
-	## memory usage
-	try:
-		_proc_status = '/proc/%d/status' % os.getpid()
-		t = open(_proc_status)
-		v = t.read()
-		t.close()
-		i = v.index('VmRSS')
-		v = v[i:].split(None, 3)  # whitespace
-		mem="%s %s"%(v[1],v[2])
+        ## memory usage
+        try:
+            _proc_status = '/proc/%d/status' % os.getpid()
+            t = open(_proc_status)
+            v = t.read()
+            t.close()
+            i = v.index('VmRSS')
+            v = v[i:].split(None, 3)  # whitespace
+            mem = "%s %s" % (v[1], v[2])
         except:
-		mem="N/A"
+            mem = "N/A"
 
         if record.levelno > 20:
             if email:
                 record.msg = '[%s][user:%s][%s] {%s} %s' % ( rtime, email, record.levelname,
                                                              self.find_topmost_stack_frame(), record.msg)
             else:
-                record.msg = '[%s][%s] {%s} %s' % ( rtime, record.levelname, self.find_topmost_stack_frame(), record.msg)
+                record.msg = '[%s][%s] {%s} %s' % (
+                    rtime, record.levelname, self.find_topmost_stack_frame(), record.msg)
         else:
             if email:
                 record.msg = '[%s][user:%s][%s] %s' % ( rtime, email, record.levelname, record.msg)
             else:
                 record.msg = '[%s][%s] %s' % ( rtime, record.levelname, record.msg)
 
-	record.msg = "{%s} %s"%(mem, record.msg)
+        record.msg = "{%s} %s" % (mem, record.msg)
 
         record.done = True
         return logging.Formatter.format(self, record)
 
 
 class logger:
-
     def __init__(self, logger_name='mcm'):
-        self.error_logger = logging.getLogger(logger_name+'_error')
-        self.inject_logger = logging.getLogger(logger_name+'_inject')
+        self.error_logger = logging.getLogger(logger_name + '_error')
+        self.inject_logger = logging.getLogger(logger_name + '_inject')
         self.verbosities = {0: "Basic logging", 1: "Error logging", 2: "Error and info logging", 3: "Full logging"}
         self.verbosity = 0
         self.error = None
@@ -242,7 +248,7 @@ class logger:
 
             if msg:
                 msg = msg.replace('\n', '<breakline>')
-                getattr(self.inject_logger,level)(msg)
+                getattr(self.inject_logger, level)(msg)
                 try:
                     self.inject_logger.removeHandler(self.inject_handlers[handler])
                 except:
