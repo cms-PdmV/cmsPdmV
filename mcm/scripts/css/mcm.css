@@ -43,3 +43,7 @@ ul.nav li.placeholder:before {
     position: fixed; 
     bottom: 0;
 }
+
+.table th.text-right, .table td.text-right {
+    text-align: right;
+}

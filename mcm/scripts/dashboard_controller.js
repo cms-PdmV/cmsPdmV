@@ -1,4 +1,12 @@
 function resultsCtrl($scope, $http, $location, $window){
+    //test
+    $scope.allRequestData=[];
+    $scope.requests = {};
+    $scope.requests.selections=['prepid', 'priority', 'pwg'];
+    $scope.requests.options={grouping:['member_of_campaign'], value:"total_events", stacking:[], coloring:"status" };
+    $scope.requests.settings={duration:1000, legend:true, sort:true};
+    $scope.requests.radio={'scale':["log", "linear"], 'operation':["sum", "count"]};
+    //endtest
     $scope.update = [];
     $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
     $scope.turn_off_button_clicked = false;
@@ -51,7 +59,15 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>"
     $scope.get_stats = function(){
-    $scope.stats_url = "/mcm/restapi/dashboard/get_stats/all"
+//    $scope.stats_url = "/mcm/restapi/dashboard/get_stats/all"
+    var promise = $http.get("search/?db_name=requests&page=-1");
+      promise.then(function(data){
+        $scope.allRequestData = data.data.results;
+      }, function(){
+        alert("Error getting requests");
+
+    });
+
 	// var promise = $http.get("/mcm/restapi/dashboard/get_stats/all");
 	// promise.then(function(data, status){
 	// 	$scope.dashboard_stats = data.data;
@@ -120,7 +136,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.$watch('tabsettings.batch.active', function(){
         if($scope.tabsettings.batch.active) {
             $scope.getBjobsData();
-            $scope.batch_int_id = setInterval($scope.getBjobsData, 60000);
+            //$scope.batch_int_id = setInterval($scope.getBjobsData, 60000);
         } else {
             clearInterval($scope.batch_int_id);
         }
@@ -227,3 +243,83 @@ function resultsCtrl($scope, $http, $location, $window){
 
 
 }
+
+testApp.directive("multiplePieCharts", function($compile) {
+   return  {
+       restrict : 'EA',
+       scope: {
+           data:"="
+       },
+       link: function(scope, element, attrs) {
+            scope.piechart_data = {};
+            scope.piechart_data_full = {};
+            scope.current_data = {};
+            var nested = d3.nest();
+            var data_terms_full = {"new":0, "validation":1, "approved":2, "submitted":3, "done":4};
+            nested.key(function(d){return d.member_of_campaign;});
+            nested.key(function(d){return d.status;});
+            nested.rollup(function(leaves){return d3.sum(leaves, function(d){return d.total_events;})});
+            scope.$watch('data', function(dat) {
+                var nested_data = nested.entries(dat);
+                for(var i=0; i<nested_data.length;i++) {
+                    var key = nested_data[i].key;
+
+                    var piechart_data = {terms:[
+                        {term:"done", count:0},
+                        {term: "to do", count: 0}
+                    ], status:{key:key, state: 0}};
+
+                    var piechart_data_full = {terms: [
+                        {term: "new", count: 0},
+                        {term: 'validation', count: 0},
+                        {term: 'approved', count: 0},
+                        {term: 'submitted', count: 0},
+                        {term: 'done', count: 0}
+                    ], status:{key:key, state: 1}};
+
+                    for(var j=0;j<nested_data[i].values.length;j++) {
+                        piechart_data_full.terms[data_terms_full[nested_data[i].values[j].key]].count=nested_data[i].values[j].values;
+                        if(nested_data[i].values[j].key=='done') {
+                            piechart_data.terms[0].count=nested_data[i].values[j].values;
+                        }
+                        else {
+                            piechart_data.terms[1].count+=nested_data[i].values[j].values;
+                        }
+                    }
+                    if(key in scope.current_data) {
+                        if(scope.current_data[key].data.status) {
+                            scope.current_data[key].data = piechart_data_full;
+                        } else {
+                             scope.current_data[key].data = piechart_data;
+                        }
+                    } else {
+                        scope.current_data[key] = {};
+                        scope.current_data[key].data = piechart_data;
+                    }
+                    scope.piechart_data[key] = piechart_data;
+                    scope.piechart_data_full[key] = piechart_data_full;
+                }
+            });
+
+           scope.changeChart = function (name, term, state) {
+               if(state.state) {
+                   scope.current_data[state.key].data = scope.piechart_data[state.key];
+               } else {
+                   scope.current_data[state.key].data = scope.piechart_data_full[state.key];
+               }
+           };
+
+           // domain for colors
+           scope.domain = ["new", "validation", "done" , "approved", "submitted", "nothing", "to do"];
+
+           var innerHtml = '<mcm-donut-chart ng-repeat="(key, terms) in current_data" data="terms.data" outer-radius="100" inner-radius="40" inner-title="{{key}}" on-click-title="changeChart" domain="domain"></mcm-donut-chart>';
+           innerHtml += '<table class="table table-bordered offset1 span10">';
+           innerHtml += '<thead><tr><th>Campaign</th><th>new</th><th>validation</th><th>approved</th><th>submitted</th><th>done</th></tr></thead>';
+           innerHtml += '<tbody><tr ng-repeat="(key, terms) in piechart_data_full">';
+           innerHtml += '<td>{{key}}</td> <td class="text-right" ng-repeat="element in terms.terms">{{element.count | number}}</td>';
+           innerHtml += '</tr></tbody>';
+           innerHtml += '</table>';
+           element.append($compile(innerHtml)(scope));
+       }
+   }
+});
