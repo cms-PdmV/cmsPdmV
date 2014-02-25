@@ -239,7 +239,7 @@ function resultsCtrl($scope, $http, $location, $window){
   {
     $scope.newPWG = "------";
     $scope.pwgModal = false;
-  }
+  };
   $scope.openPwgModal = function(curr_pwgs)
   {
     console.log(curr_pwgs);
@@ -265,8 +265,40 @@ function resultsCtrl($scope, $http, $location, $window){
     if ($scope.newPWG != "------")
     {
      $scope.askrole($scope.newPWG);
-    };
+    }
     $scope.closePwgModal();
+  };
+
+}
+
+var ModalDemoCtrl = function ($scope, $http, $window) {
+  $scope.mailContent = "";
+  $scope.mailSubject = "";
+  $scope.openPWGNotify = function (pwg) {
+    $scope.notifyModal = true;
+    $scope.pwg = pwg;
+  };
+
+  $scope.closePWGNotify = function () {
+    $scope.notifyModal = false;
+    $scope.mailContent = "";
+    $scope.mailSubject = "";
+  };
+  $scope.pwgNotify = function () {
+    if(!$scope.mailContent.length && !$scope.mailSubject.length) {
+        alert("Cannot send empty message with empty subject");
+        return;
+    }
+    $scope.notifyModal = false;
+    $http({method: 'PUT', url:'restapi/users/notify_pwg', data:{pwg: $scope.pwg, subject:$scope.mailSubject, content: $scope.mailContent}})
+        .success(function(data, status){
+            console.log(data);
+            alert("Notification sent");
+        }).error(function(data,status){
+            alert("Error:"+ status);
+        });
+    $scope.mailContent = "";
+    $scope.mailSubject = "";
   };
 };
 

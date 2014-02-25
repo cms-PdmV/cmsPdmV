@@ -237,3 +237,27 @@ class FillFullNames(RESTResource):
                 u.set_attribute('fullname', fullname)
                 results.append((u.get_attribute('username'), db.save(u.json())))
         return dumps({"results": results})
+
+
+class NotifyPWG(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def PUT(self):
+        """
+        Notifying given PWG
+        """
+        try:
+            res = self.notify(cherrypy.request.body.read().strip())
+            return dumps(res)
+        except Exception as e:
+            self.logger.error('Failed to notify pwg: ' + str(e))
+            return dumps({'results': False, 'message': 'Failed to notify pwg'})
+
+    def notify(self, body):
+        db = database('users')
+        data = loads(body)
+        list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
+        com = communicator()
+        com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
+        return {'results': True, 'message': 'Sent message to {0}'.format(list_of_mails)}

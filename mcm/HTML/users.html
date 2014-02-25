@@ -108,17 +108,46 @@
                 <a ng-href='users?role={{user_info[data.db_name].join()}}' rel="tooltip" title="View users with role {{user_info[data.db_name].join()}}" target="_self"> {{user_info[data.db_name].join()}}</a>
       	      </div>
 	            <div ng-switch-when="Email">
-                <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}
+                <a ng-href="mailto:{{user_info[data.db_name]}}" target="_blank"> {{user_info[data.db_name].replace('@','SPAMNOT')}}</a>
 	            </div>
 	            <div ng-switch-when="Role">
                 <a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
 	            </div>
-	            <div ng-switch-when="Pwg">
+	            <div ng-switch-when="Pwg" ng-controller="ModalDemoCtrl">
+                <div modal="notifyModal" close="closePWGNotify()"> <!--hidden modal template-->
+                  <div class="modal-header">
+                    <h4>Notify {{pwg}}</h4>
+                  </div>  <!--end of modal header-->
+                  <div class="modal-body">
+
+                      <form class="form-horizontal">
+                        <div class="control-group">
+                            <label class="control-label" style="width:auto">Subject</label>
+                                <div class="controls" style="margin-left:80px">
+                                    <input type="text" class="input-block-level" ng-model="mailSubject" placeholder="Subject">
+                                </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" style="width:auto">Body</label>
+                                <div class="controls" style="margin-left:80px">
+                                    <textarea rows="7"  style="resize:none" class="input-block-level" ng-model="mailContent" placeholder="Content"></textarea>
+                                </div>
+                        </div>
+                      </form>
+                  </div> <!--end of modal body-->
+                  <div class="modal-footer">
+                    <button class="btn btn-success" ng-click="pwgNotify()">Notify</button>
+                    <button class="btn btn-warning cancel" ng-click="closePWGNotify()">Cancel</button>
+                  </div> <!--end of modal footer-->
+                </div>
                 <ul>
                   <li ng-repeat="p in user_info[data.db_name]"> 
-                    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}
-                    </li>
-                  </ul>
+                    <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}</a>
+                    <a rel="tooltip" title="Notify {{p}} generator contacts" ng-click="openPWGNotify(p)" ng-href="#">
+                      <i class="icon-envelope"></i>
+                    </a>
+                   </li>
+                 </ul>
 	            </div>
       	      <div ng-switch-default>
     		        {{user_info[data.db_name]}}

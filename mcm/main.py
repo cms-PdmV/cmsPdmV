@@ -14,7 +14,7 @@ from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  Ge
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
-from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames
+from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
@@ -237,6 +237,7 @@ root.restapi.users.get = GetUser()
 root.restapi.users.save = SaveUser()
 root.restapi.users.update = SaveUser()
 root.restapi.users.fill_full_names = FillFullNames()
+root.restapi.users.notify_pwg = NotifyPWG()
 
 # REST request actions
 root.restapi.requests.save = ImportRequest()
