@@ -342,6 +342,9 @@ class request(json_base):
 
         ## select to synchronize status and approval toggling, or run the validation/run test
         de_synchronized=True
+        by_pass=settings().get_value('validation_bypass')
+        if self.get_attribute('prepid') in by_pass:            de_synchronized=False
+
         if de_synchronized:
             from tools.handlers import RuntestGenvalid
             threaded_test = RuntestGenvalid( rid=str(self.get_attribute('prepid')))
