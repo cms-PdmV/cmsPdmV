@@ -316,7 +316,7 @@ class chained_request(json_base):
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
                     current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
-                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s'%( current_request.get_attribute('prepid'), 
+                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n %srequests?prepid=%s'%( current_request.get_attribute('prepid'), 
                                                                                                                                                                                                         current_request.get_attribute('completed_events'),
                                                                                                                                                                                                       completed_events_to_pass,
                                                                                                                                                                                                       l_type.baseurl(),
@@ -565,106 +565,6 @@ class chained_request(json_base):
                 pass
 
         return True
-
-    # add a new request to the chain
-    def add_request(self, data=None):
-        if not data: data = {}
-        self.logger.log('Adding new request to chained_request %s' % self.get_attribute('_id'))
-
-        # import prep-id generator
-        try:
-            from rest_api.RequestPrepId import RequestPrepId
-        except ImportError as ex:
-            self.logger.error('Could not import prep-id generator class. Reason: %s' % ex, level='critical')
-            return {}
-        try:
-            req = request(json_input=data)
-        except Exception as ex:
-            self.logger.error('Could not build request object. Reason: %s' % ex)
-            return {}
-
-        #chain_specific = ['threshold',  'block_number',  'staged']
-
-        ## JR remove from schema
-        ##this was removed as part of cleaning things up
-        #if len(self.get_attribute('request_parameters')) > 0:
-        #    changes = self.get_attribute('request_parameters')
-        #    for key in changes:
-        #        if key not in chain_specific:
-        #            req.set_attribute(key, changes[key])
-
-        # get the chain and inherit
-        #req.set_attribute("generators", self.get_attribute("generators"))
-        #req.set_attribute("total_events", self.get_attribute("total_events")) ## this was taken earlier, with staged number in consideration
-        req.set_attribute("dataset_name", self.get_attribute("dataset_name"))
-        req.set_attribute("pwg", self.get_attribute("pwg"))
-        #JR removed from schema req.set_attribute("priority", self.get_attribute("priority") )
-        #JR clear the fragment in flowing: always
-        req.set_attribute('name_of_fragment', '')
-        req.set_attribute('fragment_tag', '')
-        req.set_attribute('fragment', '')
-        req.set_attribute('history', [])
-        req.set_attribute('reqmgr_name', [])
-
-        #JR
-        #clean the mcdbid in the flown request
-        #if req.get_attribute('mcdbid')>=0:
-        #    req.set_attribute('mcdbid',0)
-
-        # get the new prepid and append it to the chain
-        prepid = RequestPrepId().generate_prepid(req.get_attribute("pwg"), req.get_attribute('member_of_campaign'))["prepid"]
-        chain = self.get_attribute("chain")
-        if not chain or chain is None:
-            chain = []
-        flag = False
-        for pid in chain:
-            #if req.get_attribute('member_of_campaign') in pid:
-            if pid.split('-')[1] == req.get_attribute('member_of_campaign'):
-                flag = True
-                break
-
-        if not flag:
-            chain.append(prepid)
-            self.set_attribute("chain", chain)
-            #self.logger.log('Adding %s to the chain %s'%(prepid,chain))
-        else:
-            raise self.CampaignAlreadyInChainException(req.get_attribute('member_of_campaign'))
-
-        req.set_attribute('_id', prepid)
-        req.set_attribute('prepid', prepid)
-        ## JR: add what the request is member of N.B: that breaks down if a digi-reco request has to be member of two chains (R1,R4)
-        req.set_attribute('member_of_chain', [self.get_attribute('_id')])
-
-        ## reset the status and approval chain
-        req.set_status(0)
-        req.approve(0)
-
-        ### mode the approval of the new request to the approval of the chained request
-        if not req.is_root:
-            self.logger.log('The newly created request %s is not root, the chained request has approval %s' % (
-                req.get_attribute('prepid'),
-                self.get_attribute('approval')
-            ))
-
-            #if self.get_attribute('approval') == 'approve':
-            #toggle the request approval to 'approved'?
-
-            if self.get_attribute('approval') == 'submit':
-                req.set_status(to_status='approved')
-                req.approve(to_approval='submit')
-
-
-        # update history
-        req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
-        self.update_history({'action': 'add request', 'step': req.get_attribute('_id')})
-        loc = locator()
-        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}\n\tRequest: {2}".format(req.get_attribute('prepid'),
-                                                                                                                                                         self.get_attribute('_id'),
-                                                                                                                                                         "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])), accumulate=True)
-
-        # set request approval status to new
-        #req.approve(0)
-        return req.json()
 
     def set_last_status(self, status=None):
         if not status:

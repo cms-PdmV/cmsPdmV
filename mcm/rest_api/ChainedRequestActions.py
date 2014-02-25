@@ -161,8 +161,8 @@ class DeleteChainedRequest(RESTResource):
                 mcm_r.notify("Request {0} left chain".format( mcm_r.get_attribute('prepid')),
                              "Request {0} has successfuly left chain {1}".format( mcm_r.get_attribute('prepid'), crid))
 
+        return {"results": crdb.delete(crid)}
 
-        return {"results":crdb.delete(crid)}
 
 class GetChainedRequest(RESTResource):
     def __init__(self):
@@ -183,68 +183,12 @@ class GetChainedRequest(RESTResource):
             rlist = data.rsplit(',')
             res = []
             for rid in rlist:
-                 tmp_data = db.get(prepid=rid)
-                 if len(tmp_data) > 0:
-                     res.append(tmp_data)
-            return {"results":res}
+                tmp_data = db.get(prepid=rid)
+                if len(tmp_data) > 0:
+                    res.append(tmp_data)
+            return {"results": res}
         else:
-            return {"results":db.get(prepid=data)}
-
-
-# REST method to add a new request to the chain
-class AddRequestToChain(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def PUT(self):
-        """
-        Add a request to a chained request from a provided json content
-        """
-        return dumps({"results" : "Not implemented"})
-
-        # return self.add_to_chain(cherrypy.request.body.read().strip())
-
-    def add_to_chain(self, data):
-        rdb = database('requests')
-        db = database('chained_requests')
-
-        self.logger.log('Adding a new request to chained_request')
-        try:
-            from json_layer.request import request
-        except ImportError as ex:
-            self.logger.error('Could not import request object class.', level='critical')
-            return {"results":False}
-        try:
-            req = request(json_input=loads(data))
-        except request.IllegalAttributeName as ex:
-            return {"results":str(ex)}
-
-        if not req.get_attribute("member_of_chain"):
-            self.logger.error('Attribute "member_of_chain" attribute was None')
-            return {"results":'Error: "member_of_chain" attribute was None.'}
-
-        if not req.get_attribute("member_of_campaign"):
-            self.logger.error('Attribute "member_of_campaign" attribute was None.')
-            return {"results":'Error: "member_of_campaign" attribute was None.'}
-
-        try:
-            creq = chained_request(json_input=db.get(req.get_attribute('member_of_chain')))
-        except chained_request.IllegalAttributeName as ex:
-            return {"results":str(ex)}
-
-        try:
-            new_req = creq.add_request(req.json())
-        except chained_request.CampaignAlreadyInChainException as ex:
-            return {"results":str(ex)}
-
-        if not new_req:
-            self.logger.error('Could not save newly created request to database')
-            return {"results":False}
-
-        # finalize and make persistent
-        db.update(creq.json())
-        rdb.save(new_req)
-        return {"results":True}
+            return {"results": db.get(prepid=data)}
 
 
 # REST method that makes the chained request flow to the next
