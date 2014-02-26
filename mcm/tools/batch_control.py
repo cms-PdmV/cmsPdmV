@@ -67,8 +67,12 @@ class batch_control:
         if not self.check_ssh_outputs(stdin, stdout, stderr, "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)): return False
         
         self.logger.log(stdout.read())
-        self.logger.log('SSH remote execution stderr stream: \n%s' % (stderr.read()))
-        
+        errors = stderr.read()
+        self.logger.log('SSH remote execution stderr stream: \n%s' % (errors))
+        if 'Job not submitted' in errors:
+            self.log_err = errors
+            return False
+
         return True
     
     def monitor_job_status(self):
