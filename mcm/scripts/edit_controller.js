@@ -486,7 +486,7 @@ testApp.directive("inlineEditable", function(){
        scope.update = function () {
          var object = null;
          try{
-           object = JSON.parse(scope.whatever_value);
+           object = JSON.parse(JSON.stringify(scope.whatever_value));
            console.log(object);
            console.log(angular.fromJson(object));
            ctrl.$setViewValue(angular.fromJson(object));
