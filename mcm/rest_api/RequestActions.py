@@ -96,7 +96,7 @@ class RequestRESTResource(RESTResource):
                 self.logger.log('Updating an action for %s' % (mcm_req.get_attribute('prepid')))
                 adb.save(a.json())
 
-    def import_request(self, data, db, label='created'):
+    def import_request(self, data, db, label='created', step=None):
 
         if '_rev' in data:
             return {"results": False, 'message': 'could not save object with a revision number in the object'}
@@ -164,7 +164,10 @@ class RequestRESTResource(RESTResource):
 
         # update history
         if self.with_trace:
-            mcm_req.update_history({'action': label})
+            if step:
+                mcm_req.update_history({'action': label, 'step' : step})
+            else:
+                mcm_req.update_history({'action': label})
 
         # save to database or update if existed
         if not existed:
@@ -224,7 +227,7 @@ class CloneRequest(RequestRESTResource):
             for w in to_wipe:
                 del new_json[w]
 
-            return self.import_request(new_json, db, label='clone')
+            return self.import_request(new_json, db, label='clone', step=pid)
         else:
             return {"results": False, "message": "cannot clone an inexisting id %s" % pid}
 
