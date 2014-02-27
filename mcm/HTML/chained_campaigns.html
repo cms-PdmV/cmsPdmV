@@ -110,7 +110,7 @@
         <!--     END OF MODAL                 -->
               </div>
 	      <div ng-switch-when="Alias">
-		<a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self"><i class="icon-align-right"></i></a>
+		<a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
 	      </div>
               <div ng-switch-when="Campaigns">
                 <ul>
