@@ -1,5 +1,6 @@
 #from web_apps.Page import Page
-from web_apps.Search import Search
+#from web_apps.Search import Search
+from rest_api.ControlActions import Search
 #from web_apps.Results import Results
 #from web_apps.Edit import Edit
 #from web_apps.Create import Create
