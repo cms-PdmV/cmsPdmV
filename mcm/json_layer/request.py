@@ -1324,6 +1324,8 @@ done
         return settings().get_value('test_target')
 
     def get_efficiency_error(self, relative=True):
+        if not self.get_attribute('generator_parameters'):
+            return 0.
         match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency_error'])
         filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency_error'])
         error = sqrt( match*match + filter_eff*filter_eff)
