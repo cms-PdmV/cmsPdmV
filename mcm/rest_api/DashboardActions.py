@@ -203,7 +203,7 @@ class GetStats(RESTResource):
         counts_e = defaultdict(lambda: defaultdict(int) )
         sums = defaultdict(int) 
 
-        statuses=['new', 'validation', 'approved' , 'submitted', 'done', 'upcoming']
+        statuses=['new', 'validation', 'defined', 'approved' , 'submitted', 'done', 'upcoming']
         data = []
         data.append( ['Step'] + statuses )
         data_g=[['Label','Value']]
