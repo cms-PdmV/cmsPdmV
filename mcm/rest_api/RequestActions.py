@@ -1446,7 +1446,7 @@ class StalledReminder(RESTResource):
         if len(args)>0:
             time_since=args[0]
         if len(args)>1:
-            time_remaining=arg[1]
+            time_remaining=args[1]
         rdb = database('requests')
         bdb = database('batches')
         rs = rdb.queries(['status==submitted'])
