@@ -341,9 +341,11 @@ class chained_request(json_base):
                 #most likely a rewind + resub
                 approach = 'patch'
             else:
-                raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                             'This should never happen. (%s) is next according to step (%s), but is not in new status (%s)' % (
-                                                                 next_id, next_step, next_request.get_attribute('status')))
+                ##this is always the case in chains reserved from existing things: so use the next request
+                approach = 'use'
+                #raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                #'This should never happen. (%s) is next according to step (%s), but is not in new status (%s)' % (
+                #next_id, next_step, next_request.get_attribute('status')))
         else:
             ## look in *other* chained campaigns whether you can suck in an existing request
             ## look up all chained requests that start from the same root request
