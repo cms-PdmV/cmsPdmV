@@ -110,6 +110,9 @@
                     <dd>{{value}}</dd>
                 </dl>
               </div>
+	      <div ng-switch-when="Notes">
+		<div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+	      </div>
                <div ng-switch-when="Request parameters">
                 <ul>
                   <li ng-repeat="(key, param) in data[value.db_name]">

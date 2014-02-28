@@ -222,6 +222,9 @@
               <div ng-switch-when="Approvals">
                 <div custom-approval ng-model="data[value.db_name]"></div>
               </div>
+	      <div ng-switch-when="Notes">
+		<div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+	      </div>
               <div ng-switch-when="Sequences">
                 <div sequence-display ng-model="data.prepid"></div>
               </div>
