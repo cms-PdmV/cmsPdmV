@@ -38,10 +38,15 @@ class CreateChainedRequest(RESTResource):
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return {"results":False}
-        cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
-        if not cr_id:
-            return {"results":False}
-        req = chained_request(db.get(cr_id))
+        if 'prepid' in json_input:
+            req = chained_request(json_input)
+            cr_id = req.get_attribute('prepid')
+        else:
+            cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
+            if not cr_id:
+                return {"results":False}
+            req = chained_request(db.get(cr_id))
+
         for key in json_input:
             if key not in ['prepid', '_id', '_rev', 'history']:
                 req.set_attribute(key, json_input[key])
@@ -59,12 +64,20 @@ class CreateChainedRequest(RESTResource):
         return self.save_request(db, req)
 
     def save_request(self, db, req):
-        if db.update(req.json()):
-            self.logger.log('new chained_request successfully saved.')
-            return {"results":True}
+        if not db.document_exists(req.get_attribute('_id')):
+            if db.save(req.json()):
+                self.logger.log('new chained_request successfully saved.')
+                return {"results":True}
+            else:
+                self.logger.error('Could not save new chained_request to database')
+                return {"results":False}
         else:
-            self.logger.error('Could not save new chained_request to database')
-            return {"results":False}
+            if db.update(req.json()):
+                self.logger.log('new chained_request successfully saved.')
+                return {"results":True}
+            else:
+                self.logger.error('Could not save new chained_request to database')
+                return {"results":False}
 
 class UpdateChainedRequest(RESTResource):
     def __init__(self):
