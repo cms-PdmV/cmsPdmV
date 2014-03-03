@@ -284,6 +284,8 @@ class request(json_base):
                 if mcm_cr['chain'].index( self.get_attribute('prepid') ) !=0:
                     if self.get_attribute('mcdb_id')>=0 and not self.get_attribute('input_dataset'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
+                if mcm_cr['chain'].index( self.get_attribute('prepid') ) != mcm_cr['step']:
+                    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','The request is not the current step of chain %s'%( mcm_cr['prepid']))
 
 
         ## check on chagnes in the sequences
