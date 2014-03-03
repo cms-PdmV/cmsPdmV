@@ -675,6 +675,9 @@ class request(json_base):
         ## get the fragment if need be
         infile += self.retrieve_fragment()
 
+        if self.get_attribute('input_dataset'):
+            infile += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n'
+
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
             infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n'%(l_type.baseurl(),self.get_attribute('prepid'),self.get_fragment())
