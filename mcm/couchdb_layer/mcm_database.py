@@ -2,7 +2,7 @@
 
 from tools.logger import logfactory
 #from json_layer.campaign import campaign
-from WMCore.Database.CMSCouch import Database,CouchError
+#from WMCore.Database.CMSCouch import Database,CouchError
 import json
 import time
 import os
@@ -10,6 +10,7 @@ import copy
 import ast
 from tools.locator import locator
 from collections import defaultdict
+from couchDB_interface import *
 
 class database:
     logger = logfactory
@@ -60,8 +61,8 @@ class database:
     cache_dictionary = defaultdict(lambda: None)
 
     def __init__(self,  db_name='',url=None, cache=False):
-        host = os.environ['HOSTNAME'] 
-        if url == None:
+        host = os.environ['HOSTNAME']
+        if url is None:
             url =locator().dbLocation()
         #self.logger.log('I chose the url %s'%(url))
         if not db_name:
@@ -141,7 +142,7 @@ class database:
                 return True
             self.logger.error('Document "%s" does not exist.' % (prepid))
             return False  
-        except CouchError as ex:
+        except Exception as ex:
             self.logger.error('Document "%s" was not found on CouchError Reason: %s trying a second time with a time out' % (prepid, ex))
             time.sleep(0.5)
             return self.__id_exists(prepid)
@@ -196,10 +197,12 @@ class database:
         try:
             limit, skip = self.__pagify(page_num, limit=limit)
             if limit >= 0 and skip >= 0:
-                result = self.db.loadView(self.db_name, "all", options={'limit':limit,'skip':skip, 'include_docs':True})['rows']
+                url = "_design/%s/_view/%s"%(self.db_name, "all")
+                result = self.db.loadView(url, options={'limit':limit,'skip':skip, 'include_docs':True})['rows']
                 res = map(lambda r : r['doc'], result)
                 return res
-            result = self.db.loadView(self.db_name, "all",options={'include_docs':True})['rows']
+            url = "_design/%s/_view/%s"%(self.db_name, "all")
+            result = self.db.loadView(url,options={'include_docs':True})['rows']
             res = map(lambda r : r['doc'], result)
             return res
         except Exception as ex:
@@ -301,15 +304,18 @@ class database:
                     view_opts['limit'] = limit
                     view_opts['skip'] = page*limit
                 view_opts['include_docs']=True
-                result = self.db.loadView(self.db_name, view_name, options=view_opts)['rows']
+                url = "_design/%s/_view/%s"%(self.db_name, view_name)
+                result = self.db.loadView(url, options=view_opts)['rows']
                 res = map(lambda r: r['doc'], result)
                 return res
             else:
                 return []
     
     def raw_query(self, view_name, options={}):
-        self.logger.error('Executing raw query to the database. Accessed view: %s' % (view_name), level='warning') 
-        return self.db.loadView(self.db_name, view_name, options)['rows']
+        #self.logger.error('Executing raw query to the database. Accessed view: %s' % (view_name), level='warning') 
+        #return self.db.loadView(self.db_name, view_name, options)['rows']
+        url = "_design/%s/_view/%s"%(self.db_name, view_name)
+        return self.db.loadView(url, options)['rows']
                 
     def __get_op(self, oper):
         if oper == '>':
@@ -470,11 +476,11 @@ class database:
             #self.logger.error(self.db.commitOne(doc))
             ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
             saved = self.db.commitOne(doc)
-            if 'error' in saved[0]:
-                self.logger.error('Commit One says : %s'%(saved))
-                return False
-            else:
-                return True
+#            if 'error' in saved[0]:  ##removed because fails on new DB class
+#                self.logger.error('Commit One says : %s'%(saved))
+#                return False
+#            else:
+            return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
@@ -484,7 +490,48 @@ class database:
             return len(self.db.allDocs()) 
         except Exception as ex:
             self.logger.error('Could not count documents in database. Reason: %s' % (ex))
-            return -1 
+            return -1
+
+    def construct_lucene_query(self, query):
+        constructed_query = ""
+        for param in query:
+            if constructed_query == "":
+                if query[param].find("-") != -1: ##because lucene query '-' is exclusion operand
+                    constructed_query += param+':"'+query[param]+'"'
+                else:
+                    constructed_query += param+':'+query[param]
+            else:
+                if query[param].find("-") != -1:
+                    constructed_query += '+AND+'+param+':"'+query[param]+'"'
+                else:
+                    constructed_query += '+AND+'+param+':'+query[param]
+        return constructed_query
+
+    def full_text_search(self, index_name, query, limit=20):
+        """
+        queries loadView method with lucene interface for full text search
+        """
+        url = "_fti/_design/lucene/%s?q=%s" % (index_name, query)
+        data = self.db.FtiSearch(url, options={'limit':limit, 'include_docs':True})['rows']
+        results = [ elem["doc"] for elem in data ]
+        return results
+
+    def raw_view_query(self, view_doc, view_name, options={}, cache=True):
+        cache_id = "_design/%s/_view/%s" % (view_doc, view_name)
+        if cache:
+            result = self.__get_from_cache(cache_id)
+            self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning') 
+            if result: return result
+        try:
+            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (view_doc, view_name), level='warning') 
+            url = "_design/%s/_view/%s" % (view_doc, view_name)
+            result = self.db.loadView(url, options)['rows']
+            if cache:
+                self.__save_to_cache( cache_id, result)
+            return result
+        except Exception as ex:
+            self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
+            return {}
 
 #db = database('requests')
 #f = open('up_prepdb_json/requests', 'r')

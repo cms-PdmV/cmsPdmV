@@ -468,6 +468,7 @@ function resultsCtrl($scope, $http, $location, $window){
       return;
     }
     $scope.pendingHTTP = true;
+
     var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/thread");
       promise.then(function(data){
         $scope.pendingHTTP = false;
@@ -1033,13 +1034,13 @@ testApp.directive("loadFields", function($http, $location){
     '      <label style="width:140px;">{{key}}</label>'+
     '      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     '      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10">'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" ng-click="search_change(key)" typeahead="state for state in value | filter: $viewValue | limitTo: 10">'+
     '      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(-1);" ng-disabled="is_prepid_in_url == undefined">Previous</button>,'+
     '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(1);" ng-disabled="is_prepid_in_url == undefined">Next</button> request'+
     '</div>'
@@ -1050,19 +1051,22 @@ testApp.directive("loadFields", function($http, $location){
       scope.showUrl = false;
       scope.showOption = {};
       scope.is_prepid_in_url = $location.search()["prepid"];
-      scope.getSearch = function(){
-        scope.listfields = {};
-        scope.showUrl = false;
-        var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
-        scope.loadingData = true;
-        promise.then(function(data){
-          scope.loadingData = false;
-          scope.searchable = data.data;
-        }, function(data){
-          scope.loadingData = false;
-          alert("Error getting searchable fields: "+data.status);
-        });
-      };
+      scope.test_values = [];
+      scope.test_data = "";
+
+      // scope.getSearch = function(){
+      //   scope.listfields = {};
+      //   scope.showUrl = false;
+      //   var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
+      //   scope.loadingData = true;
+      //   promise.then(function(data){
+      //     scope.loadingData = false;
+      //     scope.searchable = data.data;
+      //   }, function(data){
+      //     scope.loadingData = false;
+      //     alert("Error getting searchable fields: "+data.status);
+      //   });
+      // };
       scope.zeroPad = function(num, places){
         var zero = places - num.toString().length + 1;
         return Array(+(zero > 0 && zero)).join("0") + num;
@@ -1096,6 +1100,7 @@ testApp.directive("loadFields", function($http, $location){
         scope.getData();
       };
       scope.toggleSelectOption = function(option){
+        scope.search_change(option);
         if (scope.showOption[option])
         {
           scope.showOption[option] = false;
@@ -1104,12 +1109,30 @@ testApp.directive("loadFields", function($http, $location){
           scope.showOption[option] = true;
         }
       };
+      scope.search_change = function(field_name )
+      {
+        if (scope.searchable[field_name].length == 0)
+        {
+          var promise = $http.get("restapi/"+scope.dbName+"/unique_values/"+field_name);
+          scope.loadingData = true;
+          promise.then(function(data){
+              scope.loadingData = false;
+              _.each(data.data.results, function(elem)
+                {
+                  scope.searchable[field_name].push(elem);
+                });
+            }, function(data){
+              scope.loadingData = false;
+              alert("Error getting searchable fields: "+data.status);
+            });
+        }
+      };
       scope.$watch('tabsettings.navigation.active', function(){
         if (scope.tabsettings.navigation.active)
         {
           if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
           {
-            var promise = $http.get("restapi/"+scope.dbName+"/searchable");
+          var promise = $http.get("restapi/"+scope.dbName+"/searchable");
             scope.loadingData = true;
             promise.then(function(data){
               scope.loadingData = false;
@@ -1120,7 +1143,7 @@ testApp.directive("loadFields", function($http, $location){
             });
           }
         }
-      },true);
+      });
     }
   }
 });

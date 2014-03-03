@@ -925,16 +925,24 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        a = []
-        rdb = database('requests')
-        for i in args:
-            mcm_r = request(rdb.get(i))
-            old_prio = int(mcm_r.get_attribute('priority'))
-            a.append({i : mcm_r.change_priority(6500)})
-            mcm_r.change_priority(old_prio)
-        return dumps(a)
+        from tools.json import threaded_loads
+        import simplejson
 
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        req = urllib2.Request('http://cms-pdmv-mcmdev:5984/requests/_design/requests/_view/all?include_docs=true')
+        req.add_header('Content-Type', 'application/json')
+        final = opener.open(req).read()
 
+        return simplejson.dumps(threaded_loads(final)["rows"])
+
+        #a = []
+        #rdb = database('requests')
+        #for i in args:
+        #    mcm_r = request(rdb.get(i))
+        #    old_prio = int(mcm_r.get_attribute('priority'))
+        #    a.append({i : mcm_r.change_priority(6500)})
+        #    mcm_r.change_priority(old_prio)
+        #return dumps(a)
         #rdb = database('requests')
         #
         #mcm_r = request( rdb.get(args[0]))
@@ -1156,47 +1164,12 @@ class SearchableRequest(RESTResource):
         """
         Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
         """
-        rdb = database('requests')
-        if len(args) and args[0] == 'do':
-            all_requests = rdb.queries([])
-
-            searchable = {}
-
-            for request in all_requests:
-                for key in ['energy', 'dataset_name', 'status', 'approval', 'extension', 'generators',
-                            'member_of_chain', 'pwg', 'process_string', 'mcdb_id', 'prepid', 'flown_with',
-                            'member_of_campaign','tags']:
-                    if not key in searchable:
-                        searchable[key] = set([])
-                    if not key in request:
-                        ## that should make things break down, and due to schema evolution missed-migration
-                        continue
-                    if type(request[key]) == list:
-                        for item in request[key]:
-                            searchable[key].add(str(item))
-                    else:
-                        searchable[key].add(str(request[key]))
-
-            #unique it
-            for key in searchable:
-                searchable[key] = list(searchable[key])
-                searchable[key].sort()
-
-            #store that value
-            search = database('searchable')
-            if search.document_exists('searchable'):
-                search.delete('searchable')
-            searchable.update({'_id': 'searchable'})
-            search.save(searchable)
-            searchable.pop('_id')
-            return dumps(searchable)
-        else:
-            ## just retrieve that value
-            search = database('searchable')
-            searchable = search.get('searchable')
-            searchable.pop('_id')
-            searchable.pop('_rev')
-            return dumps(searchable)
+        searchable = {}
+        for key in ['energy', 'dataset_name', 'status', 'approval', 'extension', 'generators',
+                             'member_of_chain', 'pwg', 'process_string', 'mcdb_id', 'prepid', 'flown_with',
+                             'member_of_campaign','tags']:
+            searchable[key] = []
+        return dumps(searchable)
 
 
 class SearchRequest(RESTResource):
@@ -1216,50 +1189,13 @@ class SearchRequest(RESTResource):
 
         wild_search_dict = {}
         reg_queries = []
-        for (key, search) in search_dict.items():
-            if '*' in search or '+' in search:
-                wild_search_dict[str(key)] = str(search)
-            else:
-                reg_queries.append('%s==%s' % ( key, search))
-
-        if len(reg_queries) == 0 and len(wild_search_dict) == 0:
-            return dumps({"results": []})
-        if len(reg_queries) == 0:
-            return dumps({"results": []})
         rdb = database('requests')
-        ## do all the regular search the regular way
-        results = rdb.queries(reg_queries)
+        query = rdb.construct_lucene_query(search_dict)
+        self.logger.error("lucenese query: %s" % ( str(query) ))
+        results = rdb.full_text_search('search', query)
 
-        self.logger.error("Got %s results so far" % ( len(results)))
-
-        for (key, search) in wild_search_dict.items():
-            ## * is and
-            key_searchs = filter(lambda s: len(s), map(string.lower, search.split('*')))
-            self.logger.error("Wild search on %s %s %s" % (key, search, key_searchs ))
-            if len(results) == 0:
-                self.logger.error("no results anymore...")
-                break
-                #try:
-            #    x= results[0][key] 
-            #except:
-            #    self.logger.error("Request content %s"%( str( results[0])))
-
-            if type(results[0][key]) == list:
-                for key_search in key_searchs:
-                    #self.logger.error("Got %s results so far (list)"%( len( results)))
-                    results = filter(lambda doc: any(map(lambda item: key_search in item.lower(), doc[key])), results)
-                    #self.logger.error("Got %s results so far (list)"%( len( results)))
-            elif type(results[0][key]) == int:
-                for key_search in key_searchs:
-                    ##until something better comes up
-                    results = filter(lambda doc: str(key_search) in str(doc[key]).lower(), results)
-            else:
-                for key_search in key_searchs:
-                    #self.logger.error("Got %s results so far (else)"%( len( results)))
-                    results = filter(lambda doc: key_search in doc[key].lower(), results)
-                    #self.logger.error("Got %s results so far (else)"%( len( results)))
-        crdb = database('chained_requests')
         if output_object == 'chained_requests':
+            crdb = database('chained_requests')
             cr_ids = set()
             for r in results:
                 for cr in r['member_of_chain']:
@@ -1761,6 +1697,7 @@ class GetAllRevisions(RequestRESTResource):
         self.logger.log('Getting all revisions for: %s' % doc_id)
         return {"results": list_of_revs}
 
+
 class ListRequestPrepids(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
@@ -1790,3 +1727,36 @@ class ListRequestPrepids(RequestRESTResource):
         data = [key['value'] for key in result]
         return {"results": data}
 
+
+class GetUploadCommand(RESTResource):
+
+    def GET(self, *args):
+        """
+        Get command used to upload configurations for given request.
+        """
+        return dumps({"results": ""})
+
+
+class GetInjectCommand(RESTResource):
+
+    def GET(self, *args):
+        """
+        Get command used to inject given request.
+        """
+        return dumps({"results": ""})
+
+class GetUniqueValues(RESTResource):
+    def GET(self, *args):
+        """
+        Get unique values for navigation by field_name
+        """
+        if not args:
+            self.logger.error('GetUniqueValues: No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        return dumps(self.get_unique_values(args[0]))
+
+    def get_unique_values(self, field_name):
+        db = database('requests')
+        data = db.raw_view_query(view_doc="unique", view_name=field_name, options={"group":True})
+        unique_list = [str(elem["key"]) for elem in data]
+        return {"results": unique_list}

@@ -692,37 +692,37 @@ testApp.directive("loadRequestsFields", function($http, $location){
     '      <label style="width:140px;">{{key}}</label>'+
     //'      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     //'      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
+    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" ng-click="search_change(key)" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
     //'      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
-    '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
+    // '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
     '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '</div>',
     link: function (scope, element, attr) {
       scope.listfields = {};
       scope.showUrl = false;
       scope.showOption = {};
 
-      scope.getSearch = function () {
-        scope.listfields = {};
-        scope.showUrl = false;
-        var promise = $http.get("restapi/requests/searchable/do");
-        scope.loadingData = true;
-        promise.then(function(data){
-          scope.loadingData = false;
-          scope.searchable = data.data;
-          _.each(scope.searchable, function(element,key){
-            element.unshift("------"); //lets insert into begining of array an default value to not include in search
-            scope.listfields[key] = "------";
-          });
-        }, function(data){
-          scope.loadingData = false;
-          alert("Error getting searchable fields: "+data.status);
-        });
-      };
+      // scope.getSearch = function () {
+      //   scope.listfields = {};
+      //   scope.showUrl = false;
+      //   var promise = $http.get("restapi/requests/searchable/do");
+      //   scope.loadingData = true;
+      //   promise.then(function(data){
+      //     scope.loadingData = false;
+      //     scope.searchable = data.data;
+      //     _.each(scope.searchable, function(element,key){
+      //       element.unshift("------"); //lets insert into begining of array an default value to not include in search
+      //       scope.listfields[key] = "------";
+      //     });
+      //   }, function(data){
+      //     scope.loadingData = false;
+      //     alert("Error getting searchable fields: "+data.status);
+      //   });
+      // };
       scope.cleanSearchUrl = function () {
         _.each($location.search(),function(elem,key){
           $location.search(key,null);
@@ -748,6 +748,24 @@ testApp.directive("loadRequestsFields", function($http, $location){
         }else
         {
           scope.showOption[option] = true;
+        }
+      };
+      scope.search_change = function(field_name )
+      {
+        if (scope.searchable[field_name].length == 0)
+        {
+          var promise = $http.get("restapi/requests/unique_values/"+field_name);
+          scope.loadingData = true;
+          promise.then(function(data){
+              scope.loadingData = false;
+              _.each(data.data.results, function(elem)
+                {
+                  scope.searchable[field_name].push(elem);
+                });
+            }, function(data){
+              scope.loadingData = false;
+              alert("Error getting searchable fields: "+data.status);
+            });
         }
       };
       scope.$watch('tabsettings.navigation2.active', function(){
