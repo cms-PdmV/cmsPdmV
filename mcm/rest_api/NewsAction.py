@@ -5,6 +5,8 @@ import cherrypy
 from tools.user_management import user_pack, access_rights
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
+from tools.json import threaded_loads
+
 
 # generates the next valid prepid 
 class GetAllNews(RESTResourceIndex):
@@ -25,6 +27,7 @@ class GetAllNews(RESTResourceIndex):
             all_news = all_news[:n_last]
 
         return json.dumps(all_news)
+
 
 class GetSingleNew(RESTResourceIndex):
 
@@ -52,7 +55,7 @@ class CreateNews(RESTResourceIndex):
     def create_new(self, data):
         db = database('news')
         try:
-            new_news = json.loads(data)
+            new_news = threaded_loads(data)
         except Exception as ex:
             return {"results":False}
         user_p = user_pack()
@@ -82,7 +85,7 @@ class UpdateNew(RESTResourceIndex):
 
     def update_new(self, data):
         try:
-            news_data = json.loads(data)
+            news_data = threaded_loads(data)
         except Exception as ex:
             return {"results": False, 'message': str(ex)}
         db = database('news')
