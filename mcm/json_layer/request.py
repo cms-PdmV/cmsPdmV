@@ -382,6 +382,11 @@ class request(json_base):
             if self.get_attribute('status')!='new':
                 raise self.WrongApprovalSequence(self.get_attribute('status'),'approve')
 
+        crdb = database('chained_requests')
+        for cr in self.get_attribute('member_of_chain'):
+            mcm_cr = crdb.get(cr)
+            if mcm_cr['chain'].index( self.get_attribute('prepid') ) != mcm_cr['step']:
+                raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','The request is not the current step of chain %s'%( mcm_cr['prepid']))
         # maybe too early in the chain of approvals
         #if not len(self.get_attribute('member_of_chain')):
         #    raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','This request is not part of any chain yet')
