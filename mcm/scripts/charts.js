@@ -299,19 +299,19 @@ angular.module('mcm.charts', [])
         return {
             restrict: 'AE',
             scope: {
-                data: '=',
-                value: '=',
-                grouping: '=',
-                columns: '=coloring',
-                stacking: '=',
-                yScaleType: '=scale',
-                valueOperation: '=operation',
-                responsive: '=',
-                duration: '=',
-                legend: '=',
-                userWidth: '=width',
-                userHeight: '=height',
-                sort: '='
+                data: '=', // data to be used
+                value: '=', // which value to use for calculations
+                grouping: '=', // horizontal splitting
+                columns: '=coloring', // how to do and color last horizontal split
+                stacking: '=', // how to vertically divide each column
+                yScaleType: '=scale', // "linear" or "log"
+                valueOperation: '=operation', // "sum" or "count"
+                responsive: '=', // should the chart be responsive to the webpage size
+                duration: '=', // duration of animations
+                legend: '=', // should the color legend be shown
+                userWidth: '=width', // optional width of chart
+                userHeight: '=height', // optional height of chart
+                sort: '=' // should the values in columns be sorted
             },
             link: function(scope, element, attrs) {
                 var highlight_color = "#93cdff";

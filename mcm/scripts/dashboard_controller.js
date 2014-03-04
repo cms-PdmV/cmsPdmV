@@ -255,7 +255,7 @@ testApp.directive("multiplePieCharts", function($compile) {
             scope.piechart_data_full = {};
             scope.current_data = {};
             var nested = d3.nest();
-            var data_terms_full = {"new":0, "validation":1, "approved":2, "submitted":3, "done":4};
+            var data_terms_full = {"new":0, "validation":1, "defined":2, "approved":3, "submitted":4, "done":5};
             nested.key(function(d){return d.member_of_campaign;});
             nested.key(function(d){return d.status;});
             nested.rollup(function(leaves){return d3.sum(leaves, function(d){return d.total_events;})});
@@ -272,6 +272,7 @@ testApp.directive("multiplePieCharts", function($compile) {
                     var piechart_data_full = {terms: [
                         {term: "new", count: 0},
                         {term: 'validation', count: 0},
+                        {term: 'defined', count: 0},
                         {term: 'approved', count: 0},
                         {term: 'submitted', count: 0},
                         {term: 'done', count: 0}
@@ -310,11 +311,11 @@ testApp.directive("multiplePieCharts", function($compile) {
            };
 
            // domain for colors
-           scope.domain = ["new", "validation", "done" , "approved", "submitted", "nothing", "to do"];
+           scope.domain = ["new", "validation", "done" , "approved", "submitted", "nothing", "defined", "to do"];
 
            var innerHtml = '<mcm-donut-chart ng-repeat="(key, terms) in current_data" data="terms.data" outer-radius="100" inner-radius="40" inner-title="{{key}}" on-click-title="changeChart" domain="domain"></mcm-donut-chart>';
            innerHtml += '<table class="table table-bordered offset1 span10">';
-           innerHtml += '<thead><tr><th>Campaign</th><th>new</th><th>validation</th><th>approved</th><th>submitted</th><th>done</th></tr></thead>';
+           innerHtml += '<thead><tr><th>Campaign</th><th>new</th><th>validation</th><th>defined</th><th>approved</th><th>submitted</th><th>done</th></tr></thead>';
            innerHtml += '<tbody><tr ng-repeat="(key, terms) in piechart_data_full">';
            innerHtml += '<td>{{key}}</td> <td class="text-right" ng-repeat="element in terms.terms">{{element.count | number}}</td>';
            innerHtml += '</tr></tbody>';
