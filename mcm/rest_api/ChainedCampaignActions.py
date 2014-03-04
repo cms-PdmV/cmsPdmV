@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads,dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
@@ -9,6 +9,7 @@ from RestAPIMethod import RESTResource
 from json_layer.action import action
 from collections import defaultdict
 from tools.user_management import access_rights
+from tools.json import threaded_loads
 
 
 class CreateChainedCampaign(RESTResource):
@@ -22,13 +23,13 @@ class CreateChainedCampaign(RESTResource):
         return dumps(self.create_campaign(cherrypy.request.body.read().strip()))
 
     def create_campaign(self, jsdata):
-        data = loads(jsdata)
+        data = threaded_loads(jsdata)
         db = database('chained_campaigns')
         if '_rev' in data:
             return {"results":" cannot create from a json with _rev"}
 
         try:
-            ccamp = chained_campaign(json_input=loads(jsdata))
+            ccamp = chained_campaign(json_input=threaded_loads(jsdata))
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results":False, "message":str(ex)}
 
@@ -108,7 +109,7 @@ class UpdateChainedCampaign(RESTResource):
 
         def update_campaign(self, jsdata):
             db = database('chained_campaigns')
-            data = loads ( jsdata)
+            data = threaded_loads( jsdata)
             if '_rev' not in data:
                 return {"results":False}
             try:

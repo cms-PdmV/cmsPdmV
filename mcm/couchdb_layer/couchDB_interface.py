@@ -142,5 +142,6 @@ class Database():
         if "key" in options:
             options["key"] = '"'+str(options["key"])+'"'
         db_request = self.construct_request("%s/%s&%s" %(self.__dbname, viewname, urllib.urlencode(options)))
+        print "### %s" % (db_request.get_full_url())
         data = self.opener.open(db_request)
         return threaded_loads(data.read())

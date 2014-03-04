@@ -1,8 +1,10 @@
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
-from json import dumps, loads
+from json import dumps
 import cherrypy
 from tools.user_management import access_rights
+from tools.json import threaded_loads
+
 
 class GetTags(RESTResource):
     def __init__(self):
@@ -25,7 +27,7 @@ class AddTag(RESTResource):
         Add new tag to the list.
         """
         db = database('searchable')
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
         tag = data["tag"]
         doc = db.get("tags")
         if tag not in doc["list"]:
@@ -41,7 +43,7 @@ class RemoveTag(RESTResource):
         Remove tag from the list.
         """
         db = database('searchable')
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
         tag = data["tag"]
         doc = db.get("tags")
         if tag in doc["list"]:

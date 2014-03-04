@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads, dumps
+from json import dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings
@@ -9,6 +9,7 @@ from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.user import user
 from tools.user_management import user_pack, roles, access_rights
+from tools.json import threaded_loads
 
 
 class GetUserRole(RESTResource):
@@ -105,7 +106,7 @@ class SaveUser(RESTResource):
         Save the information about a given user
         """
         db = database(self.db_name)
-        return dumps({"results": db.save(loads(cherrypy.request.body.read().strip()))})
+        return dumps({"results": db.save(threaded_loads(cherrypy.request.body.read().strip()))})
 
 class AskRole(RESTResource):
     def __init__(self):
@@ -256,7 +257,7 @@ class NotifyPWG(RESTResource):
 
     def notify(self, body):
         db = database('users')
-        data = loads(body)
+        data = threaded_loads(body)
         list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
         com = communicator()
         com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())

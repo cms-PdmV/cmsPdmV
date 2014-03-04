@@ -1,5 +1,5 @@
 from rest_api.RestAPIMethod import RESTResource
-from json import dumps, loads
+from json import dumps
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from tools.locker import locker
@@ -7,6 +7,7 @@ from tools.locator import locator
 from tools.communicator import communicator
 from tools.settings import settings
 from tools.user_management import access_rights
+from tools.json import threaded_loads
 
 import cherrypy
 
@@ -46,7 +47,7 @@ class UpdateMccm(RESTResource):
             return dumps({'results': False, 'message': 'Failed to update an mccm from API'})
 
     def update(self, body):
-        data = loads(body)
+        data = threaded_loads(body)
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
             return {"results": False, 'message': 'could not locate revision number in the object'}
@@ -92,7 +93,7 @@ class CreateMccm(RESTResource):
         Create the mccm with the provided json content
         """
         try:
-            mccm_d = mccm(loads(cherrypy.request.body.read().strip()))
+            mccm_d = mccm(threaded_loads(cherrypy.request.body.read().strip()))
         except Exception as e:
             self.logger.error(mccm_d.json())
             self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(e))

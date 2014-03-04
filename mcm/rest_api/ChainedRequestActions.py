@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads,dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from ChainedRequestPrepId import ChainedRequestPrepId
@@ -9,6 +9,7 @@ from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.action import action
 from tools.user_management import access_rights
+from tools.json import threaded_loads
 
 """
 ## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
@@ -34,7 +35,7 @@ class CreateChainedRequest(RESTResource):
 
     def import_request(self, data):
         db = database(self.db_name)
-        json_input=loads(data)
+        json_input=threaded_loads(data)
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return {"results":False}
@@ -92,7 +93,7 @@ class UpdateChainedRequest(RESTResource):
 
     def update_request(self, data):
         try:
-            req = chained_request(json_input=loads(data))
+            req = chained_request(json_input=threaded_loads(data))
         except chained_request.IllegalAttributeName as ex:
             return {"results":False}
 
@@ -243,7 +244,7 @@ class FlowToNextStep(RESTResource):
 
     def flow2(self,  data):
         try:
-            vdata = loads(data)
+            vdata = threaded_loads(data)
         except ValueError as ex:
             self.logger.error('Could not start flowing to next step. Reason: %s' % (ex)) 
             return {"results":str(ex)}

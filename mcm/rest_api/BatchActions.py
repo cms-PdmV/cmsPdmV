@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads,dumps
+from json import dumps
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
@@ -10,6 +10,7 @@ from tools.locker import semaphore_events
 from tools.settings import settings
 from tools.locator import locator
 from tools.user_management import access_rights
+from tools.json import threaded_loads
 
 """
 class SetStatus(RESTResource):
@@ -55,7 +56,7 @@ class SaveBatch(RESTResource):
         Save the content of a batch given the json content
         """
         bdb = database('batches')
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
       
         data.pop('_rev')
 
@@ -72,7 +73,7 @@ class UpdateBatch(RESTResource):
         Update the content of a batch given the json content
         """
         bdb = database('batches')
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
       
         mcm_b = batch( data )
         
@@ -157,7 +158,7 @@ class AnnounceBatch(BatchAnnouncer):
         """
         Annouce a given batch id, with the provided notes in json content
         """
-        return dumps(self.announce(loads(cherrypy.request.body.read().strip())))
+        return dumps(self.announce(threaded_loads(cherrypy.request.body.read().strip())))
     
     def announce(self, data):
         if not 'prepid' in data or not 'notes' in data:
@@ -312,7 +313,7 @@ class NotifyBatch(RESTResource):
         self.bdb = database('batches')
 
     def PUT(self):
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
         if not 'prepid' in data or not 'notes' in data:
             raise ValueError('no prepid nor notes in batch announcement api')
         bid=data['prepid']

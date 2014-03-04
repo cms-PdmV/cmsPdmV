@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads,dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
-from json_layer.campaign import campaign
 from json_layer.request import request
 from RestAPIMethod import RESTResource
 from json_layer.action import action
-from tools.priority import priority
+from tools.json import threaded_loads
 from tools.user_management import access_rights
 
 class CreateAction(RESTResource):
@@ -25,7 +24,7 @@ class CreateAction(RESTResource):
     def import_request(self, data):
         adb = database(self.db_name)
         try:
-            mcm_a = action(json_input=loads(data))
+            mcm_a = action(json_input=threaded_loads(data))
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
@@ -52,7 +51,7 @@ class UpdateAction(RESTResource):
         """
         update the action with the provided json content
         """
-        res = self.import_action( loads(cherrypy.request.body.read().strip()) )
+        res = self.import_action( threaded_loads(cherrypy.request.body.read().strip()) )
         return dumps(res)
 
     def import_action(self, content):
@@ -98,7 +97,7 @@ class UpdateMultipleActions(UpdateAction):
         Update a multiple number of actions at the same time from the provided json content
         """
         self.logger.log('Updating multiple actions')
-        data = loads(cherrypy.request.body.read().strip())
+        data = threaded_loads(cherrypy.request.body.read().strip())
 
         results=[]
         for single_action in data:

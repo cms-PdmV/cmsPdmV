@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from json import dumps
-
 from json_layer.request import request
 from json_layer.campaign import campaign
 from couchdb_layer.mcm_database import database

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import cherrypy
-import re
-from json import loads, dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.user_management import access_rights
@@ -15,8 +13,8 @@ class ReadInjectionLog(RESTResource):
 
     def GET(self, *args):
         """
-		Retrieves the last injection log for a given request id
-		"""
+        Retrieves the last injection log for a given request id
+        """
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})

@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 
-import cherrypy
-import sys
-import traceback
-import string
-import time
 import itertools
-from math import sqrt
-from json import loads, dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.communicator import communicator

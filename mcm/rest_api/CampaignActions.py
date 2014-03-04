@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
-from json import loads,dumps
+from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
@@ -9,6 +9,7 @@ from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from tools.user_management import access_rights
+from tools.json import threaded_loads
 
 class CreateCampaign(RESTResource):
     def __init__(self):
@@ -23,7 +24,7 @@ class CreateCampaign(RESTResource):
     def create_campaign(self, data):
         db = database('campaigns')
         try:
-            camp_mcm = campaign(json_input=loads(data))
+            camp_mcm = campaign(json_input=threaded_loads(data))
         except campaign.IllegalAttributeName as ex:
             return {"results":False}
 
@@ -80,7 +81,7 @@ class UpdateCampaign(RESTResource):
         if not '_rev' in data:
             return {"results":False, 'message': 'There is no previous revision provided'}
         try:
-            camp_mcm = campaign(json_input=loads(data))
+            camp_mcm = campaign(json_input=threaded_loads(data))
         except campaign.IllegalAttributeName as ex:
             return {"results":False}
 

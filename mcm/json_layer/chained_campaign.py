@@ -2,10 +2,8 @@
 
 from chained_request import chained_request
 from json_base import json_base
-from request import request
 from couchdb_layer.mcm_database import database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
-from json import loads,  dumps
 
 class chained_campaign(json_base):
     class CampaignDoesNotExistException(Exception):
