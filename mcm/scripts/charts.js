@@ -917,15 +917,15 @@ angular.module('mcm.charts', [])
 
                         new_leg.append("title");
 
-                        legend.selectAll("rect")
+                        legend.select("rect")
                             .transition()
                             .duration(duration)
-                            .style("fill",function(d){ return colors_stacks[d](rows_color_domain.length/2); });
+                            .style("fill",function(d){return colors_stacks[d](rows_color_domain.length/2); });
 
-                        legend.selectAll("text")
+                        legend.select("text")
                             .text(function(d){return d;});
 
-                        legend.selectAll("title")
+                        legend.select("title")
                             .text(function(d){
                                     var string_to_show = "";
                                     if(valueOperation == "sum") {

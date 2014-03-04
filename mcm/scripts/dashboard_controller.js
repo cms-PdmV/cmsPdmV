@@ -57,11 +57,11 @@ function resultsCtrl($scope, $http, $location, $window){
         return output_array
     }
     
-    $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>"
-    $scope.get_stats = function(){
-//    $scope.stats_url = "/mcm/restapi/dashboard/get_stats/all"
-    var promise = $http.get("search/?db_name=requests&page=-1");
+    $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>";
+    $scope.get_stats = function(query){
+	var promise = $http.get("search/?db_name=requests&page=-1&"+query);
       promise.then(function(data){
+        data.data.results.push.apply(data.data.results, $scope.allRequestData);
         $scope.allRequestData = data.data.results;
       }, function(){
         alert("Error getting requests");

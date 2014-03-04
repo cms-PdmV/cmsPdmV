@@ -63,7 +63,12 @@
                     <pane heading="Stats" active="tabsettings.stats.active">
                       <!--<div class="row-fluid"><div class="offset4"><h2>Statistics</h2></div></div>-->
                       <div class="row"><h3 align="center">Statistics of campaigns</h3></div>
-                          <button align="center" type="button" class="btn btn-danger" ng-click="get_stats()" > Load statistics </button>
+			  <div class="input-append" align="center">
+			    <input type="text" class="input-small span2" maxlength="50" placeholder="Campaign Name" ng-model="dashboard_stats_campaign">
+			    <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign)"> Load {{dashboard_stats_campaign}} statistics </button>
+			    <button  type="button" class="btn btn-danger" ng-click="get_stats('')" > Load All statistics </button>
+              </div>
+
                         <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Requests chart" radio="requests.radio" settings="requests.settings" selections="requests.selections" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
                         <multiple-pie-charts data="allRequestData"></multiple-pie-charts>
                           <!--<object type="text/html" data="{{dashboard_stats}}" width="100%" height="900"></object>-->
