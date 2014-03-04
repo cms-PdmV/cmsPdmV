@@ -95,7 +95,7 @@ class Database():
         docid = id
         tmp_doc = self.document(docid, rev)
         tmp_doc["_deleted"] = True
-        retval = self.commit(tmp_doc)
+        retval = self.commitOne(tmp_doc)
         return retval
 
     def queue(self, doc):
@@ -110,7 +110,7 @@ class Database():
         """
         commit queue to DB. if wanted to commit single doc -> it is added to queue
         """
-        if doc is None:
+        if doc is not None:
             self.queue(doc)
         if len(self.__queue) == 0:
             return
