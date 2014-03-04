@@ -18,10 +18,11 @@ from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
 from tools import ssh_executor
 from tools.locator import locator
-from tools.batch_control import batch_control
+from tools.installer import installer
 from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
+from tools.ssh_executor import ssh_executor
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -1779,5 +1780,105 @@ done
             self.set_status(step=self._json_base__status.index('approved')
                             ,with_notification=True)
 
+    def prepare_upload_command(self, cfgs, test_string):
+        directory = installer.build_location(self.get_attribute('prepid'))
+        cmd = 'cd %s \n' % directory
+        cmd += self.get_setup_file(directory)
+        cmd += '\n'
+        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+        cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+        cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
+        return cmd
 
+    def prepare_and_upload_config(self, execute=True):
+        to_release = []
+        config_db = database("configs")
+        prepid = self.get_attribute('prepid')
+        try:
+            additional_config_ids = {}
+            cfgs_to_upload = {}
+            l_type = locator()
+            dev = ''
+            wmtest = ''
+            if l_type.isDev():
+                wmtest = '--wmtest'
+            command = "#no command"
+            if self.get_attribute('config_id'):  # we already have configuration ids saved in our request
+                return command
+            for i in range(len(self.get_attribute('sequences'))):
+                hash_id = self.configuration_identifier(i)
+                locker.acquire(hash_id)
+                if config_db.document_exists(hash_id):  # cached in db
+                    additional_config_ids[i] = config_db.get(hash_id)['docid']
+                    locker.release(hash_id)
+                else:  # has to be setup and uploaded to config cache
+                    to_release.append(hash_id)
+                    cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(prepid, dev, i + 1)
+            if cfgs_to_upload:
 
+                command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
+                if execute:
+                    with installer(prepid, care_on_existing=False):
+                        executor = ssh_executor(server='pdmvserv-test.cern.ch')
+                        _, stdout, stderr = executor.execute(command)
+                        if not stdout and not stderr:
+                            self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
+                            self.logger.inject('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                                               level='error', handler=prepid)
+                            self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                                              what='Configuration upload')
+                            return False
+                        output = stdout.read()
+                        error = stderr.read()
+                        if error and not output:  # money on the table that it will break
+                            self.logger.error('Error in wmupload: {0}'.format(error))
+                            self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
+                            return False
+                        cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
+
+                        if len(cfgs_to_upload) != len(cfgs_uploaded):
+                            self.logger.error(
+                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                    cfgs_to_upload, cfgs_uploaded, output, error))
+                            self.logger.inject(
+                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                    cfgs_to_upload, cfgs_uploaded, output, error), level='error', handler=prepid)
+                            self.test_failure(
+                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                    cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
+                            return False
+
+                        for i, line in zip(sorted(cfgs_to_upload),
+                                           cfgs_uploaded):  # filling the config ids for request and config database with uploaded configurations
+                            docid = line.split()[-1]
+                            additional_config_ids[i] = docid
+                            hash_id = self.configuration_identifier(i)
+                            saved = config_db.save({"_id": hash_id,
+                                                    "docid": docid,
+                                                    "prepid": prepid,
+                                                    "unique_string": self.unique_string(i)})
+                            to_release.remove(hash_id)
+                            locker.release(hash_id)
+                            if not saved:
+                                self.logger.inject(
+                                    'Could not save the configuration {0}'.format(self.configuration_identifier(i)),
+                                    level='warning', handler=prepid)
+
+                        self.logger.inject("Full upload result: {0}".format(output), handler=prepid)
+            if execute:
+                sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
+                self.logger.inject("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids),
+                                   handler=prepid)
+                self.set_attribute('config_id', sorted_additional_config_ids)
+                self.reload()
+            return command
+        finally:
+            for i in to_release:
+                locker.release(i)
+
+    def prepare_submit_command(self, batch_name):
+        from tools.request_to_wma import request_to_wmcontrol
+        batch_number = batch_name.split("-")[-1]
+        cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
+        return cmd

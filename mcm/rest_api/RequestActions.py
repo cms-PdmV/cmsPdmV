@@ -11,6 +11,7 @@ from collections import defaultdict
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
+from BatchPrepId import BatchPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
@@ -1628,6 +1629,7 @@ class RequestsReminder(RESTResource):
                 res = map (lambda i : {"results": True, "prepid": i}, all_ids)
         return dumps(res)
 
+
 class UpdateMany(RequestRESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -1659,6 +1661,7 @@ class UpdateMany(RequestRESTResource):
             return_info.append(self.updateSingle.update_request(dumps(document)))
         self.logger.log('updating requests: %s' % return_info)
         return {"results": return_info}
+
 
 class GetAllRevisions(RequestRESTResource):
     def __init__(self):
@@ -1730,20 +1733,48 @@ class ListRequestPrepids(RequestRESTResource):
 
 class GetUploadCommand(RESTResource):
 
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+
     def GET(self, *args):
         """
         Get command used to upload configurations for given request.
         """
-        return dumps({"results": ""})
+        if not len(args):
+            self.logger.error('GetUploadCommand: No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        db = database("requests")
+        if not db.document_exists(args[0]):
+            self.logger.error('GetUploadCommand: request with id {0} does not exist'.format(args[0]))
+            return dumps({"results": False, 'message': 'Error: request with id {0} does not exist'.format(args[0])})
+        req = request(db.get(args[0]))
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+
+        return req.prepare_and_upload_config(execute=False)
 
 
 class GetInjectCommand(RESTResource):
+
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
         Get command used to inject given request.
         """
-        return dumps({"results": ""})
+        if not len(args):
+            self.logger.error('GetInjectCommand: No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        db = database("requests")
+        if not db.document_exists(args[0]):
+            self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(args[0]))
+            return dumps({"results": False, 'message': 'Error: request with id {0} does not exist'.format(args[0])})
+        req = request(db.get(args[0]))
+        batch_name = BatchPrepId().next_id(req.json(), create_batch=False)
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+
+        return req.prepare_submit_command(batch_name)
+
 
 class GetUniqueValues(RESTResource):
     def GET(self, *args):

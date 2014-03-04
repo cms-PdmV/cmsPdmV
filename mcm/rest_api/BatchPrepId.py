@@ -12,7 +12,7 @@ class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
-    def next_id(self, for_request):
+    def next_id(self, for_request, create_batch=True):
         flown_with = for_request['flown_with']
         next_campaign = for_request['member_of_campaign']
         version = for_request['version']
@@ -55,7 +55,7 @@ class BatchPrepId():
                 batchNumber=max(res_new)
 
             batchName+='-%05d'%(batchNumber)
-            if not self.bdb.document_exists(batchName):
+            if not self.bdb.document_exists(batchName) and create_batch:
                 newBatch = batch({'_id':batchName,
                                   'prepid':batchName,
                                   'version' : version,

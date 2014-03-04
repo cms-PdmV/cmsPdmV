@@ -6,6 +6,7 @@ from tools.locator import locator
 
 from rest_api.BatchPrepId import BatchPrepId
 
+
 class installer:
     """ 
     that class is meant for initializing the request directory and care of removing it
@@ -16,12 +17,9 @@ class installer:
     def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True):
         
         self.cleanup = clean_on_exit
-        l_type=locator()
-        directory = l_type.workLocation()
-        self.directory = os.path.abspath(directory) + '/' + sub_directory + '/'
 
         self.careOfExistingDirectory = care_on_existing
-
+        self.directory = self.build_location(sub_directory)
         # check if directory is empty
         if not self.directory:
             self.logger.error('Data directory is not defined')
@@ -40,6 +38,12 @@ class installer:
 
             # recursively create any needed parents and the dir itself
             os.makedirs(self.directory)
+
+    @staticmethod
+    def build_location(sub_directory):
+        l_type = locator()
+        directory = l_type.workLocation()
+        return os.path.abspath(directory) + '/' + sub_directory + '/'
 
     def location(self):
         return self.directory
