@@ -494,11 +494,20 @@
         <div class="pagination pagination-right">
           <ul>
             <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)" ng-href="#">Prev</a>
+              <a ng-click="previous_page(list_page)" ng-href="#" ng-show="list_page>0">Prev</a>
+              <a ng-click="previous_page(list_page)" ng-href="#" ng-hide="list_page>0">All</a>
             </li>
-            <li ng-class="{ disabled: result.length == 0 }">
-              <a ng-click="next_page(list_page)" ng-href="#">Next</a>
+	    <li>
+	      <a ng-href="#" ng-show="list_page>=0" target="_blank">#{{list_page}}</a>
+	      <a ng-href="#" ng-show="list_page==-1" target="_blank">#All</a>
+	    </li>
+            <li ng-class="{ disabled: result.length < limit }">
+              <a ng-click="next_page(list_page)" ng-href="#" ng-show="list_page>=0">Next</a>
+              <a ng-click="next_page(list_page)" ng-href="#" ng-show="list_page==-1">Paginated</a>
             </li>
+	    <li>
+	      <select ng-model="limit" ng-options="elem for elem in limit_opts;" style="width: 60px;" ng-change="new_limit();"></select>
+	    </li>
           </ul>
         </div>
       </div>

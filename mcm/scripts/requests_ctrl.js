@@ -14,6 +14,8 @@ function resultsCtrl($scope, $http, $location, $window){
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
     $search_data = {};
 
+    $scope.limit = 20;
+    $scope.limit_opts = [20,50,100];
     $scope.filt = {}; //define an empty filter
     $scope.notify_text = "";
     $scope.update = {};
@@ -44,7 +46,14 @@ function resultsCtrl($scope, $http, $location, $window){
         active:false
       }
     };
-
+    if($location.search()["limit"] === undefined){
+	$scope.limit=20;
+    }else{
+	$scope.limit=parseInt($location.search()["limit"]);
+	if ($scope.limit_opts.indexOf($scope.limit)==-1){
+	    $scope.limit_opts.push($scope.limit);
+	}
+    }
     if($location.search()["page"] === undefined){
       page = 0;
       $location.search("page", 0);
@@ -355,6 +364,11 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selected_prepids = [];
   });
 
+  //  $scope.$watch('limit', function(){
+  //    $scope.getData();
+  //    $scope.selected_prepids = [];
+  //  });
+
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
     _.each($scope.requests_defaults, function(column){ //iterate all columns
@@ -373,7 +387,11 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.list_page = current_page-1;
     }
   };
-
+  $scope.new_limit = function(){
+      $location.search("limit",$scope.limit);
+      $scope.getData();
+      $scope.selected_prepids = [];
+  };
   $scope.next_page = function(current_page){
     if ($scope.result.length !=0){
       $location.search("page", current_page+1);
