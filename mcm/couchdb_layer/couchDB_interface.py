@@ -141,7 +141,18 @@ class Database():
         """
         if "key" in options:
             options["key"] = '"'+str(options["key"])+'"'
-        db_request = self.construct_request("%s/%s&%s" %(self.__dbname, viewname, urllib.urlencode(options)))
+        db_request = self.construct_request("%s/%s&%s" %(self.__dbname, viewname, self.to_json_query(options)))
         print "### %s" % (db_request.get_full_url())
         data = self.opener.open(db_request)
         return threaded_loads(data.read())
+
+    def UpdateSequence(self, options=None):
+        """
+        get database update sequence information
+        """
+        if options is None:
+            options = {}
+        options["_info"] = True
+        db_request = self.construct_request("%s?%s" %(self.__dbname, self.to_json_query(options)))
+        data = self.opener.open(db_request)
+        return threaded_loads(data.read())["update_seq"]

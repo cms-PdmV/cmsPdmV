@@ -517,21 +517,31 @@ class database:
         return results
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
+        sequence_id = "%s/%s" % (view_doc, view_name)
+        current_update_seq = self.update_sequence()
         cache_id = "_design/%s/_view/%s" % (view_doc, view_name)
         if cache:
-            result = self.__get_from_cache(cache_id)
-            self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning') 
-            if result: return result
+            cached_sequence = self.__get_from_cache(sequence_id)
+            if cached_sequence == current_update_seq:
+                result = self.__get_from_cache(cache_id)
+                self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning') 
+                if result: return result
+            else:
+                self.__save_to_cache(sequence_id, current_update_seq)
         try:
             self.logger.error('Raw query to the view. Accessed view: %s/%s' % (view_doc, view_name), level='warning') 
             url = "_design/%s/_view/%s" % (view_doc, view_name)
             result = self.db.loadView(url, options)['rows']
             if cache:
-                self.__save_to_cache( cache_id, result)
+                self.__save_to_cache(cache_id, result)
             return result
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
             return {}
+
+    def update_sequence(self, options={}):
+        result = self.db.UpdateSequence()
+        return result
 
 #db = database('requests')
 #f = open('up_prepdb_json/requests', 'r')
