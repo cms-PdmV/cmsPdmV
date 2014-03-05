@@ -155,6 +155,16 @@ var promise;
      return x;
    }
   };
+  
+  /* Support modal actions*/
+  $scope.supportModal = false;
+  $scope.openSupportModal = function (){
+    $scope.supportModal = true;
+  };
+  $scope.closeSupportModal = function () {
+    $scope.supportModal = false;
+  };
+
 }
 testApp.directive('slider', function () {
 return {

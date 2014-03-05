@@ -67,7 +67,7 @@
       </li>
       <li class="divider-vertical" ></li>
       <li> 
-        <a ng-href="https://github.com/cms-PdmV/cmsPdmV/issues/new" target="_blank">
+        <a ng-click="openSupportModal();" ng-href="#">
           Support <i class="icon-envelope"></i></a>
       </li>
       <li class="divider-vertical" ></li>
@@ -85,3 +85,18 @@
     </ul>
   </div>
 </div> <!--END of navbar-->
+
+<!--     Support MODAL -->
+<div modal="supportModal" close="closeSupportModal()" style="white-space: width:710px;"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Request for Support</h4>
+  </div>  <!--end of modal header-->
+  <div class="modal-body">
+    <h5>Please select between operation issues (Ask Support)<br> or feature/improvement/functionnality issues (Create Issue)</h5>
+  </div> <!--end of modal body-->
+  <div class="modal-footer">
+    <a class="btn btn-success" ng-href="https://github.com/cms-PdmV/cmsPdmV/issues/new" ng-click="closeSupportModal();" target="_blank">Create Issue</a>
+    <a class="btn btn-warning cancel" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20<Some problem occured>" ng-click="closeSupportModal();"  target="_blank">Ask Support</a>
+  </div> <!--end of modal footer-->
+</div>
+<!--     END OF MODAL  -->
