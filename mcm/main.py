@@ -148,6 +148,10 @@ def dashboard_html(*args, **kwargs):
 def graph_painter_html(*args, **kwargs):
     return open(os.path.join(file_location, 'HTML', 'graph_painter.html'))
 
+@cherrypy.expose
+def get_stats_html(*args, **kwargs):
+    return open(os.path.join(file_location, 'HTML', 'get_stats.html'))
+
 ### END OF UPDATED METHODS###
 # root
 #root = home
@@ -185,6 +189,7 @@ root.edit_many = edit_many_html
 root.mccms = mccms_html
 root.settings = settings_html
 root.graph = graph_painter_html
+root.get_stats = get_stats_html
 
 # REST API - RESTResourceIndex is the directory of available commands
 root.restapi = RESTResourceIndex()
@@ -365,6 +370,7 @@ root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
 root.restapi.dashboard.get_stats = GetStats()
+root.restapi.dashboard.get_stats_new = GetStats(with_data=True)
 root.restapi.dashboard.get_revision = GetRevision()
 root.restapi.dashboard.get_start_time = GetStartTime(start_time)
 root.restapi.dashboard.get_verbosities = GetVerbosities()

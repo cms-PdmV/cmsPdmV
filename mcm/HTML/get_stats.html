@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+    <head>
+        <title>Statistics Within Chains</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+        <!--<link href="scripts/css/slider.css" rel="stylesheet" type="text/css"/>-->
+        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
+
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
+        <!--<script type="text/javascript" src="scripts/jquery.cookie.js"></script>-->
+        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <!--<script type="text/javascript" src="scripts/jquery/bootstrap-slider.js"></script>-->
+        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/jquery/jquery-sortable.js"></script>
+        <script type="text/javascript" src="scripts/d3.v3.min.js"></script>
+        <script type="text/javascript" src="scripts/charts.js"></script>
+
+         <!--[IF IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui.bootstrap', 'mcm.charts']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+           </script>
+         <![endif]-->
+         <![if !IE]>
+           <script type="text/javascript">
+             var testApp = angular.module('testApp', ['ui.bootstrap', 'mcm.charts']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+           </script>
+         <![endif]>
+        <script src="scripts/main_controller.js"></script>
+        <script src="scripts/get_stats_controller.js"></script>
+    </head>
+    <body ng-controller="mainCtrl">
+        <span ng-controller="resultsCtrl">
+            <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Status" radio="requests.radio" selections="requests.selections" settings="requests.settings" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
+<!--	    <multiple-pie-charts data="allRequestData"></multiple-pie-charts>-->
+        </span>
+    </body>
+</html> 

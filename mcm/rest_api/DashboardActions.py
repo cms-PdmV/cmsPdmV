@@ -108,10 +108,29 @@ class GetLogs(RESTResource):
 
         return dumps({"results": files_dates})
 
-
 class GetStats(RESTResource):
-    def __init__(self):
+    def __init__(self,with_data=False):
         self.access_limit = access_rights.user
+        self.countDummy=0
+        self.ramunas = with_data
+
+    def fakeId(self):
+        self.countDummy+=1
+        return 'X'*(5-len("%d"%(self.countDummy)))+"%d"%(self.countDummy)
+    
+    def __createDummyRequest(self, req, memberOfCampaign, status="upcoming",total=None):
+        fake_r = {}
+        fake_r['status']= status
+        fake_r['member_of_campaign']=memberOfCampaign
+        for member in ['pwg','priority','total_events']:
+            fake_r[member]=req[member]
+        if total is not None:
+            fake_r['total_events'] =total
+        fake_r['prepid'] = '-'.join([req['pwg'], memberOfCampaign, self.fakeId()])
+        fake_r['cloned_from'] = req['prepid']
+        self.logger.error("Total events is %s for %s"%( fake_r['total_events'], req['prepid']))
+        return fake_r
+
 
     def GET(self, *args):
         """
@@ -353,10 +372,18 @@ class GetStats(RESTResource):
                 all_requests[r['prepid']] = r
 
         already_counted=set() ## avoid double counting
-        for cc in all_cr:
+        #the list of requests to be emitted to d3js
+        list_of_request_for_ramunas=[]
+
+        for cr in all_cr:
             upcoming=0
-            for (r_i,r) in enumerate(cc['chain']):
-                if r_i > cc['step']:
+            if len(cr['chain'])==0:
+                ## crap data
+                continue
+            #stop_at=cr['step']
+            stop_at=len(cr['chain'])-1
+            for (r_i,r) in enumerate(cr['chain']):
+                if r_i > stop_at:
                     ## this is a reserved request, will count as upcoming later
                     continue
 
@@ -377,12 +404,28 @@ class GetStats(RESTResource):
                     counts_e[str(mcm_r['member_of_campaign'])] ['submitted'] += max([0, mcm_r['total_events'] - mcm_r['completed_events']])
                 else:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
-            
-            for noyet in all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:]: 
-                #self.logger.log( '%s if saying %s'%( cc['prepid'], all_cc[cc['member_of_campaign']]['campaigns'][cc['step']+1:])) 
+                
+                ## manipulation of total_events => completed ?
+                ## splitting of the request into done=completed_events and submitted=max([0, mcm_r['total_events'] - mcm_r['completed_events']]) ?
+                ## add it to emit
+                for member in mcm_r.keys():
+                    if member not in ['prepid','pwg','priority','total_events','status','member_of_campaign']:
+                        mcm_r.pop(member)
+                list_of_request_for_ramunas.append( mcm_r )
+
+            for noyet in all_cc[cr['member_of_campaign']]['campaigns'][stop_at+1:]:
+                #self.logger.log( '%s if saying %s'%( cr['prepid'], all_cc[cr['member_of_campaign']]['campaigns'][cr['step']+1:])) 
                 counts_e[ noyet[0] ]['upcoming']+=upcoming
+                ## create a fake request with the proper member of campaign
+                processing_r = all_requests[ cr['chain'][ stop_at ] ]
+
+                fake_one = self.__createDummyRequest( processing_r, noyet[0] )
+                #fake_one = self.__createDummyRequest( processing_r, noyet[0], total=upcoming )
+                list_of_request_for_ramunas.append( fake_one )
+                
+
             #fill up the rest with upcoming
-            #for noyet in steps[ len(cc['chain']):]:
+            #for noyet in steps[ len(cr['chain']):]:
             #    counts_e[str(noyet)]['upcoming'] += upcoming
 
         for step in steps:
@@ -420,7 +463,10 @@ class GetStats(RESTResource):
         f+=f1
         d+=d1
         d+="<br>\n<br>\n" + table
-        return render( f,d)
+        if self.ramunas:
+            return dumps({"results":list_of_request_for_ramunas})
+        else:
+            return render( f,d)
 
         """
         all_r = rdb.get_all()
@@ -455,3 +501,4 @@ class GetStats(RESTResource):
         #
         # html+="</body></html>"
         # return html
+
