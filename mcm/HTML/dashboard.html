@@ -66,7 +66,7 @@
 			  <div class="input-append" align="center">
 			    <input type="text" class="input-small span2" maxlength="50" placeholder="Campaign Name" ng-model="dashboard_stats_campaign">
 			    <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign)"> Load {{dashboard_stats_campaign}} statistics </button>
-			    <button  type="button" class="btn btn-danger" ng-click="get_stats('')" > Load All statistics </button>
+			    <button  type="button" class="btn btn-danger" ng-click="get_stats('')" > Load <strong>all</strong> statistics </button>
               </div>
 
                         <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Requests chart" radio="requests.radio" settings="requests.settings" selections="requests.selections" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
