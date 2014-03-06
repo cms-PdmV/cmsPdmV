@@ -861,6 +861,10 @@ done
         else:
             yes_to_valid=False
 
+        bypass = settings().get_value('campaign_valid_bypass')
+        if self.get_attribute('member_of_campaign') in bypass:
+            yes_to_valid=False
+
         ##get the campaign enalbing/disabling
         #cdb = database('campaigns', cache=True)
         #mcm_c = cdb.get( self.get_attribute('member_of_campaign'))
