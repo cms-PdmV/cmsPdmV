@@ -387,15 +387,14 @@ class GetStats(RESTResource):
                     ## this is a reserved request, will count as upcoming later
                     continue
 
+                mcm_r = all_requests[r]
+                upcoming=mcm_r['total_events']
                 if r in already_counted:
                     continue
                 else:
                     already_counted.add(r)
 
-                #mcm_r = rdb.get(r)
-                mcm_r = all_requests[r]
                 counts[str(mcm_r['member_of_campaign'])] [mcm_r['status']] +=1
-                upcoming=mcm_r['total_events']
                 if mcm_r['status'] in ['done']:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['completed_events']
                 elif  mcm_r['status'] in ['submitted']:
