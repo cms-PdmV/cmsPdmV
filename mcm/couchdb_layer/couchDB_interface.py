@@ -38,14 +38,14 @@ class Database():
         """
         construct a query for a view from specified parameters object
         """
-        search_string = ""
-        for elem in params:
-            if params[elem].__class__ == "str".__class__: 
-                search_string += "%s=%s&" % (elem, params[elem].replace(" ", "+")) #should be done on lucene query only!!
-            else:
-                search_string += "%s=%s&" % (elem, params[elem])
-        search_string = search_string[:-1]
-        return search_string
+        tmp_query = ""
+        if params.find("-") != -1:
+            tmp_list = params[elem].split("-")
+            for value in tmp_list[:-1]:
+                tmp_query += "%s:%s+AND+" % (elem, value)
+            tmp_query += "%s:%s" % (elem, tmp_list[-1]) #we treat last element differently
+            params[elem] = tmp_query
+        return params
 
     def to_json_query(self, params):
         """

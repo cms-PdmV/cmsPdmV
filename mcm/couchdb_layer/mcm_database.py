@@ -497,21 +497,38 @@ class database:
         for param in query:
             if constructed_query == "":
                 if query[param].find("-") != -1: ##because lucene query '-' is exclusion operand
-                    constructed_query += param+':"'+query[param]+'"'
+                    tmp_list = filter(None, query[param].split("-"))
+                    for value in tmp_list[:-1]:
+                        constructed_query += "%s:%s+AND+" % (param, value)
+                    constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
+                elif query[param].count("*") >= 2:
+                    tmp_list = filter(None, query[param].split("*"))
+                    for value in tmp_list[:-1]:
+                        constructed_query += "%s:%s*+AND+" % (param, value)
+                    constructed_query += "%s:%s*" % (param, tmp_list[-1])
                 else:
                     constructed_query += param+':'+query[param]
             else:
                 if query[param].find("-") != -1:
-                    constructed_query += '+AND+'+param+':"'+query[param]+'"'
+                    tmp_list = filter(None, query[param].split("-"))
+                    for value in tmp_list[:-1]:
+                        constructed_query += "%s:%s+AND+" % (param, value)
+                    constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
+                elif query[param].count("*") >= 2:
+                    tmp_list = filter(None, query[param].split("*"))
+                    for value in tmp_list[:-1]:
+                        constructed_query += "%s:%s*+AND+" % (param, value)
+                    constructed_query += "%s:%s*" % (param, tmp_list[-1])
                 else:
                     constructed_query += '+AND+'+param+':'+query[param]
+            constructed_query.replace("*", "*+AND+"+param+":")
         return constructed_query
 
     def full_text_search(self, index_name, query, limit=20):
         """
         queries loadView method with lucene interface for full text search
         """
-        url = "_fti/_design/lucene/%s?q=%s" % (index_name, query)
+        url = "_fti/_design/lucene/%s?q=%s" % (index_name, self.db.lucene_query(query))
         data = self.db.FtiSearch(url, options={'limit':limit, 'include_docs':True})['rows']
         results = [ elem["doc"] for elem in data ]
         return results
