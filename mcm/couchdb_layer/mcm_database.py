@@ -524,12 +524,13 @@ class database:
             constructed_query.replace("*", "*+AND+"+param+":")
         return constructed_query
 
-    def full_text_search(self, index_name, query, limit=20):
+    def full_text_search(self, index_name, query, page=0):
         """
         queries loadView method with lucene interface for full text search
         """
+        limit, skip = self.__pagify(page)
         url = "_fti/_design/lucene/%s?q=%s" % (index_name, self.db.lucene_query(query))
-        data = self.db.FtiSearch(url, options={'limit':limit, 'include_docs':True})['rows']
+        data = self.db.FtiSearch(url, options={'limit':limit, 'include_docs':True, 'skip':skip})['rows']
         results = [ elem["doc"] for elem in data ]
         return results
 

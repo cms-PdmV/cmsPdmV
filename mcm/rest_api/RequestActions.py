@@ -1183,17 +1183,20 @@ class SearchRequest(RESTResource):
         """
         search_dict = threaded_loads(cherrypy.request.body.read().strip())
         self.logger.error("Got a wild search dictionary %s" % ( str(search_dict) ))
-
+        if "page" in search_dict:
+            curr_page = search_dict["page"]
+            del(search_dict["page"])
+        rdb = database('requests')
+      
         output_object = 'requests'
         if len(args):
             output_object = args[0]
 
         wild_search_dict = {}
         reg_queries = []
-        rdb = database('requests')
         query = rdb.construct_lucene_query(search_dict)
-        self.logger.error("lucenese query: %s" % ( str(query) ))
-        results = rdb.full_text_search('search', query)
+        self.logger.error("lucenese query: %s options: %s" % ( str(query), args))
+        results = rdb.full_text_search('search', query, curr_page)
 
         if output_object == 'chained_requests':
             crdb = database('chained_requests')

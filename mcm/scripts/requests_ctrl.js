@@ -776,7 +776,7 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.superSearch = function(){
     var search_data={};
     _.each($location.search(),function(elem,key){
-      if (key != "page" && key != "shown" )
+      if (key != "shown")
       {
         search_data[key] = elem;
       }
