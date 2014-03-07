@@ -393,7 +393,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.selected_prepids = [];
   };
   $scope.next_page = function(current_page){
-    if ($scope.result.length !=0 && $scope.result.length > $scope.limit){
+    if ($scope.result.length !=0 && $scope.result.length >= $scope.limit){
       $location.search("page", current_page+1);
       $scope.list_page = current_page+1;
     }
