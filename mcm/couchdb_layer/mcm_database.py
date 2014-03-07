@@ -509,6 +509,7 @@ class database:
                 else:
                     constructed_query += param+':'+query[param]
             else:
+                constructed_query += '+AND+'
                 if query[param].find("-") != -1:
                     tmp_list = filter(None, query[param].split("-"))
                     for value in tmp_list[:-1]:
@@ -520,7 +521,7 @@ class database:
                         constructed_query += "%s:%s*+AND+" % (param, value)
                     constructed_query += "%s:%s*" % (param, tmp_list[-1])
                 else:
-                    constructed_query += '+AND+'+param+':'+query[param]
+                    constructed_query += param+':'+query[param]
             constructed_query.replace("*", "*+AND+"+param+":")
         return constructed_query
 
