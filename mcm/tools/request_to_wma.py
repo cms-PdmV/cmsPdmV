@@ -34,6 +34,7 @@ class request_to_wmcontrol:
             command += ' --priority %s' % (mcm_r.get_attribute("priority"))
         command += ' --time-event %s' % (mcm_r.get_attribute('time_event'))
         command += ' --size-event %s' % (mcm_r.get_attribute('size_event'))
+        command += ' --memory %s' % (mcm_r.get_attribute('memory'))
         ##that type has disappeared
         if wmagent_type == 'LHEStepZero':
             command += ' --request-type MonteCarlo'
