@@ -98,9 +98,11 @@
                                 </div>
                                 <slider value="logs.lines" sliding="logs.sliding"></slider>
                                 <div class="btn-group">
-                                    <button type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-primary btn-mini disabled">Verbosity level:</button>
+                                    <a type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
                                         {{logs.verbosity}}
-                                    </button>
+                                        <span class="caret"></span>
+                                    </a>
                                       <ul class="dropdown-menu">
                                         <li ng-repeat="(level, string) in logs.verbosities">
                                           <a ng-click="verbositySelected(level)">{{string}}</a>

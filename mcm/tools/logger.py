@@ -180,7 +180,7 @@ class logger:
     def __init__(self, logger_name='mcm'):
         self.error_logger = logging.getLogger(logger_name + '_error')
         self.inject_logger = logging.getLogger(logger_name + '_inject')
-        self.verbosities = {0: "Basic logging", 1: "Error logging", 2: "Error and info logging", 3: "Full logging"}
+        self.verbosities = {0: "basic logging", 1: "error logging", 2: "error and info logging", 3: "full logging"}
         self.verbosity = 0
         self.error = None
         self.log = None
