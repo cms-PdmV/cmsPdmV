@@ -4,7 +4,7 @@
         <title>Statistics Within Chains</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
-        <!--<link href="scripts/css/slider.css" rel="stylesheet" type="text/css"/>-->
+        <link href="scripts/css/slider.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
@@ -33,7 +33,7 @@
     <body ng-controller="mainCtrl">
         <span ng-controller="resultsCtrl">
             <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Status" radio="requests.radio" selections="requests.selections" settings="requests.settings" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
-<!--	    <multiple-pie-charts data="allRequestData"></multiple-pie-charts>-->
+            <multiple-pie-charts color-domain="piecharts.domain" table-title="Campaigns" data="allRequestData" full-terms="piecharts.fullTerms" compact-terms="piecharts.compactTerms" sum-by="piecharts.sum" nest-by="piecharts.nestBy"></multiple-pie-charts>
         </span>
     </body>
 </html> 
