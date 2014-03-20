@@ -6,6 +6,7 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from ChainedRequestPrepId import ChainedRequestPrepId
 from json_layer.chained_request import chained_request
+from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
 from json_layer.action import action
 from tools.user_management import access_rights
@@ -501,3 +502,124 @@ class SearchableChainedRequest(RESTResource):
             searchable.pop('_id')
             searchable.pop('_rev')
             return dumps(searchable)
+
+class TestChainedRequest(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+        
+    def GET(self, *args):
+        """                       
+        Perform test for chained requests
+        """
+        from tools.handlers import ConfigMakerAndUploader
+        from tools.locker import locker
+        target=8*60*60 ## seconds
+        crn= args[0]
+        crdb = database('chained_requests')
+        ccdb = database('chained_campaigns')
+        rdb = database('requests')
+        mcm_cr = chained_request(crdb.get(crn))
+        mcm_cc = chained_campaign( ccdb.get( mcm_cr.get_attribute('member_of_campaign')))
+        ## assume all requests have config_id
+        command='wmcontrol.py '
+        from tools.locator import locator
+        l_type=locator()
+        wma={
+            "RequestType" : "TaskChain",
+            #"DbsUrl" : l_type.cmsweburl()+"dbs/prod/global/DBSReader",
+            #"CouchURL" : l_type.cmsweburl()+'couchdb',
+            #"ConfigCacheURL" : l_type.cmsweburl()+'couchdb',
+            "inputMode" : "couchDB",
+            "RequestString" : crn.replace(mcm_cc.get_attribute('prepid'), mcm_cc.get_attribute('alias')),
+            "Group" : "ppd",
+            "Requestor": "pdmvserv",
+            #"Campaign" : mcm_cc.get_attribute('alias'),
+            "Campaign" : mcm_cc.get_attribute('prepid'),
+            "OpenRunningTimeout" : 43200,
+            "TaskChain" : 0,
+            "ProcessingVersion": 1,
+            }
+        mcm_rs=[]
+        for rn in mcm_cr.get_attribute('chain'):
+            self.logger.log("uploading for"+rn)
+            uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
+            uploader.run()
+            mcm_rs.append( request( rdb.get( rn )))
+
+        step=1
+        last_io=None
+        for (i,r) in enumerate( mcm_rs ):
+
+            steps='step%d'%step
+            for (si, seq) in enumerate(r.get_attribute('sequences')):
+                command+='--%s-docID %s '%( steps, r.get_attribute('config_id')[si] )
+                command+='--%s-globaltag %s '%( steps, r.get_attribute('sequences')[si]['conditions'] )
+                command+='--%s-release %s '%( steps, r.get_attribute('cmssw_release') )
+                if step!=1:
+                    command+='--%s-input Task%d '%( steps, step-1 )
+                    command+='--%s-input-output %soutput '%( steps, last_io )
+                wma["RequestPriority"] = r.get_attribute('priority')
+                wma["Memory"] = r.get_attribute('memory')
+                wma['Task%d'%step] ={'TaskName' : 'Task%d'%step,
+                                     "ConfigCacheID" : r.get_attribute('config_id')[si],
+                                     "GlobalTag" : r.get_attribute('sequences')[si]['conditions'],
+                                     "CMSSWVersion" : r.get_attribute('cmssw_release'),
+                                     "ScramArch": r.get_scram_arch(),
+                                     "PrimaryDataset" : r.get_attribute('dataset_name'),
+                                     "KeepOutput" : r.get_attribute('keep_output')[si],
+                                     "AcquisitionEra" : r.get_attribute('member_of_campaign'),
+                                     "ProcessingString" : r.get_processing_string(si),
+                                     "ProcessingVersion" : r.get_attribute('version'),
+                                     "TimePerEvent" : r.get_attribute("time_event"),
+                                     "SizePerEvent" : r.get_attribute('size_event'),
+                      }
+                if r.get_attribute('pileup_dataset_name'):
+                    wma['Task%d'%step]["MCPileup"] = r.get_attribute('pileup_dataset_name')
+                for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag']:
+                    #wma[item] = wma['Task%d'%step].pop(item)
+                    wma[item] = wma['Task%d'%step][item]
+
+                if step==1:
+                    nepj = int(target / r.get_attribute('time_event'))
+                    if nepj==0:
+                        return dumps({"results" : False, "message" : "not possible to split %s for target %s with %s s/event" % ( r.get_attribute('prepid'), target, r.get_attribute('time_event'))})
+                    
+                    wma['Task%d'%step].update({"SplittingAlgo"  : "EventBased",
+                                               "EventsPerJob" : nepj,
+                                               "RequestNumEvents" : r.get_attribute('total_events'),
+                                               "Seeding" : "AutomaticSeeding", 
+                                               })
+                else:
+                    ##assuming that 100 events per lumi all the time
+                    nlpj = int(target / r.get_attribute('time_event') / 100.)
+                    if nlpj==0:
+                        return dumps({"results" : False, "message" : "not possible to split %s for target %s with %s s/event" % ( r.get_attribute('prepid'), target, r.get_attribute('time_event'))})
+
+
+                    wma['Task%d'%step].update({"SplittingAlgo"  : "LumiBased",
+                                               "LumisPerJob" : nlpj,
+                                               "InputFromOutputModule" : "%soutput"%last_io,
+                                               "InputTask" : "Task%d"%(step-1)
+                                               })
+                last_io=r.get_attribute('sequences')[si]['eventcontent'][0]
+                wma['TaskChain']+=1
+                step+=1
+        if len(args)>1:
+            if args[1]in ['inject','show']:
+                from tools.ssh_executor import ssh_executor
+                ssh = ssh_executor(server = 'pdmvserv-test.cern.ch')
+                cmd='cd /afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/\n'
+                cmd+=mcm_rs[0].make_release()
+                cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+                cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+                cmd+='wmcontrol.py --wmtest --url-dict https://cms-pdmv-dev.cern.ch/mcm/public/restapi/chained_requests/test/%s\n'%(crn)
+                if args[1]=='show':
+                    cherrypy.response.headers['Content-Type'] = 'text/plain'
+                    return cmd
+                else:
+                    _, stdout, stderr = ssh.execute(cmd)
+                    cherrypy.response.headers['Content-Type'] = 'text/plain'
+                    return stdout.read()+'\n\n-------------\n\n'+stderr.read()
+                    #return dumps({"out":stdout.read(),"err":stderr.read()})
+
+        return dumps(wma)
