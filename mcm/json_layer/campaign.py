@@ -82,10 +82,20 @@ class campaign(json_base):
         for (stepindex,step) in enumerate(self.get_attribute('sequences')):
              stepcd = {}
              for key in step:
-                 cdarg = sequence(step[key]).build_cmsDriver()
+                 seq=sequence(step[key])
+                 cdarg = seq.build_cmsDriver()
                  fragment='NameOfFragment'
                  if self.get_attribute('root')==1:
                      fragment='step%d'%(stepindex+1)
+                 if stepindex==0:
+                     if self.get_attribute('input_dataset'):
+                         cdarg+=" --filein dbs:%s"%self.get_attribute('input_dataset')
+                     else:
+                         cdarg+=" --filein file:step%s.root"%(stepindex-1)
+                 cdarg+=" --fileout file:step%s.root"%stepindex
+                 if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
+                     cdarg+=' --pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
+
                  cd='cmsDriver.py %s %s'%(fragment, cdarg)
                  if cd:
                      stepcd[key] = cd
