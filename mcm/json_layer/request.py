@@ -637,6 +637,12 @@ class request(json_base):
         gens.append(genInfo.json())
         self.set_attribute('generator_parameters',  gens)
 
+    def get_processing_string(self, i):
+        ingredients=[]
+        ingredients.append( self.get_attribute('process_string'))
+        ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All',''))
+        return "_".join(filter( lambda s : s, ingredients))
+
     def little_release(self):
         release_to_find=self.get_attribute('cmssw_release')
         return release_to_find.replace('CMSSW_','').replace('_','')
