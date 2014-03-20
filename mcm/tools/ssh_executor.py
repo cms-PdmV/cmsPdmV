@@ -6,13 +6,15 @@ import re
 import logging
 from tools.logger import logfactory, mcm_formatter
 from threading import BoundedSemaphore
-
+from tools.settings import settings
 
 class ssh_executor:
     logger = logfactory
     semaph = BoundedSemaphore(10)
-    def __init__(self, directory=None, prepid=None, server='lxplus.cern.ch'):
+    def __init__(self, directory=None, prepid=None, server=None):
         self.ssh_client = None
+        if not server:
+            server = settings().get_value("node_for_test")
         self.ssh_server = server
         self.ssh_server_port = 22
         self.ssh_credentials = '/afs/cern.ch/user/p/pdmvserv/private/credentials'
