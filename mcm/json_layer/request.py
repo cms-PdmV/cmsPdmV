@@ -520,14 +520,33 @@ class request(json_base):
             return '%s %s' % (command, cmsDriverOptions)
 
         ##JR
-        if self.get_attribute('input_dataset'):
-            if sequenceindex==0:
-                command +=' --filein "dbs:%s" '%(self.get_attribute('input_dataset'))
-            else:
-                command+='--filein file:step%d.root '%(sequenceindex)
+        input_from_ds=None
+        input_from_previous=None
+        input_from_lhe=None
+        if self.get_attribute('mcdb_id')>0:
+            input_from_lhe='lhe:%d '%(self.get_attribute('mcdb_id'))
+        if len(self.get_attribute('member_of_chain')):
+            crdb = database('chained_requests')
+            previouses=set()
+            for crn in self.get_attribute('member_of_chain'):
+                cr=crdb.get(crn)
+                here=cr['chain'].index(self.get_attribute('prepid'))
+                if here>0 and here>cr['step']: # there or not at root
+                    previouses.add(cr['chain'][here-1])
+            if len(previouses)==1:
+                input_from_previous="file:%s.root"% list(previouses)[0]
+        if self.get_attribute('input_dataset') and not input_from_previous:
+            input_from_ds='"dbs:%s"'%(self.get_attribute('input_dataset'))
 
-        elif self.get_attribute('mcdb_id')>0:
-            command +='--filein lhe:%d '%(self.get_attribute('mcdb_id'))
+        input_default='file:step%d.root'%(sequenceindex)
+        if sequenceindex==0:
+            if input_from_ds:
+                input_default=input_from_ds
+            elif input_from_previous:
+                input_default=input_from_previous
+            elif input_from_lhe:
+                input_default=input_from_lhe
+        command +='--filein %s '%input_default
 
         if sequenceindex == len(self.get_attribute('sequences'))-1:
           ## last one
