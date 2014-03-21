@@ -401,7 +401,6 @@ class chained_request(json_base):
             next_request = request(rdb.get(next_id))
             request.transfer( current_request, next_request)
             self.request_join(next_request)
-
         elif approach == 'use':
             ## there exists a request in another chained campaign that can be re-used here.
             # take this one. advance and go on
@@ -409,7 +408,7 @@ class chained_request(json_base):
             if not reserve:
                 self.set_attribute('step', next_step)
                 self.set_attribute('last_status', next_request.get_attribute('status'))
-                self.update_history({'action': 'flow', 'step': str(next_step)})
+                self.update_history({'action': 'flow', 'step': str(next_id)})
                 self.set_attribute('status', 'processing')
 
             if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
@@ -479,6 +478,8 @@ class chained_request(json_base):
             self.set_attribute('status', 'processing')
             # set to next step
             self.set_attribute('step', next_step)
+            self.update_history({'action': 'flow', 'step': next_request.get_attribute('prepid')})
+
         if not reserve:
             notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
             notification_text = 'The request %s has been flown within:\n \t %s \n into campaign:\n \t %s \n using:\n \t %s \n creating the new request:\n \t %s \n as part of:\n \t %s \n and from the produced dataset:\n %s \n\n%srequests?prepid=%s \n%srequests?prepid=%s \n' % (
