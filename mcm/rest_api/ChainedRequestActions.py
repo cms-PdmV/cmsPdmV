@@ -306,8 +306,11 @@ class RewindToPreviousStep(RESTResource):
         crids=args[0].split(",")
         for crid in crids:
             res.append( self.rewind_one( crid ) )
-        
-        return dumps(res)
+
+        if len(res)!=1:
+            return dumps(res)
+        else:
+            return dumps(res[0])
 
     def rewind_one(self, crid):
         crdb = database('chained_requests')
@@ -339,10 +342,12 @@ class RewindToPreviousStep(RESTResource):
         saved = rdb.update( mcm_r.json() )
         if not saved:
             {"results":False, "message":"could not save the last request of the chain","prepid" : crid}
+        ## the current chained request has very likely been updated : reload it as you have not changed anything to it yet
+        mcm_cr = chained_request( crdb.get( crid) )
+
         mcm_cr.set_attribute('step',current_step -1 )
         # set status, last status
         mcm_cr.set_last_status()
-        #mcm_cr.set_processing_status()
         mcm_cr.set_attribute('status','processing')
 
         saved = crdb.update( mcm_cr.json())
