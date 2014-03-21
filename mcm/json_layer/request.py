@@ -546,7 +546,10 @@ class request(json_base):
                 input_default=input_from_previous
             elif input_from_lhe:
                 input_default=input_from_lhe
-        command +='--filein %s '%input_default
+            else:
+                input_default=None
+        if input_default:
+            command +='--filein %s '%input_default
 
         if sequenceindex == len(self.get_attribute('sequences'))-1:
           ## last one
