@@ -281,6 +281,11 @@ class GenerateChains(RESTResource):
                 return {"prepid":mid,
                         "results" : False,
                         "message" : "A request (%s) is in the middle of a chain already."%(aid)}
+        
+        if not mcm_m.get_attribute('repetitions'):
+            return {"prepid":mid,
+                    "results" : False,
+                    "message" : "The number of repetitions (%s) is invalid"%( mcm_m.get_attribute('repetitions') )}
             
         res=[]
         for aid in aids:
