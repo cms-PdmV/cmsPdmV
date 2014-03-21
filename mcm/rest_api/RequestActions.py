@@ -926,68 +926,14 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        from tools.json import threaded_loads
-        import simplejson
+        
+        rdb = database('requests')
+        
+        mcm_r = request( rdb.get(args[0]))
+        
+        outs= mcm_r.get_outputs()
 
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
-        req = urllib2.Request('http://cms-pdmv-mcmdev:5984/requests/_design/requests/_view/all?include_docs=true')
-        req.add_header('Content-Type', 'application/json')
-        final = opener.open(req).read()
-
-        return simplejson.dumps(threaded_loads(final)["rows"])
-
-        #a = []
-        #rdb = database('requests')
-        #for i in args:
-        #    mcm_r = request(rdb.get(i))
-        #    old_prio = int(mcm_r.get_attribute('priority'))
-        #    a.append({i : mcm_r.change_priority(6500)})
-        #    mcm_r.change_priority(old_prio)
-        #return dumps(a)
-        #rdb = database('requests')
-        #
-        #mcm_r = request( rdb.get(args[0]))
-        #
-        #def get_procString( mcm_r ):
-        #    proc= ""
-        #    if mcm_r.get_attribute('process_string') :
-        #        proc="_%s"%mcm_r.get_attribute('process_string')
-        #    ext=""
-        #    if mcm_r.get_attribute('extension'):
-        #        ext="_ext%s"%mcm_r.get_attribute('extension')
-        #
-        #def get_outputs( mcm_r):
-        #    outs=[]
-        #    keeps = mcm_r.get_attribute('keep_output')
-        #    proc= ""
-        #    if mcm_r.get_attribute('process_string') :
-        #        proc="_%s"%mcm_r.get_attribute('process_string')
-        #    ext=""
-        #    if mcm_r.get_attribute('extension'):
-        #        ext="_ext%s"%mcm_r.get_attribute('extension')
-        #    camp = mcm_r.get_attribute('member_of_campaign')
-        #    dsn = mcm_r.get_attribute('dataset_name')
-        #    v = mcm_r.get_attribute('version')
-        #
-        #    for (i,s) in enumerate( mcm_r.get_attribute('sequences')):
-        #        if not keeps[i]: continue
-        #        gt = s['conditions'].replace('::All','')
-        #        tiers = s['datatier']
-        #        for t in tiers:
-        #            outs.append( '/%s/%s-%s%s%s-v%s/%s' % ( dsn,
-        #                                                    camp,
-        #                                                    gt,
-        #                                                    proc,
-        #                                                    ext,
-        #                                                    v,
-        #                                                    t))
-        #    return outs
-        #
-        #outs= get_outputs( mcm_r )
-        #
-        ##check for collisions
-        #
-        #return dumps(outs)
+        return dumps(outs)
 
 
 

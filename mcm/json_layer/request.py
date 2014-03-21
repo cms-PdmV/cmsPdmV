@@ -637,10 +637,35 @@ class request(json_base):
         gens.append(genInfo.json())
         self.set_attribute('generator_parameters',  gens)
 
+    def get_outputs(self):
+        outs=[]
+        keeps = self.get_attribute('keep_output')
+
+        camp = self.get_attribute('member_of_campaign')
+        dsn = self.get_attribute('dataset_name')
+        v = self.get_attribute('version')
+            
+        for (i,s) in enumerate( self.get_attribute('sequences')):
+            if not keeps[i]: continue
+            proc= self.get_processing_string(i)
+            tiers = s['datatier']
+            if isinstance(tiers,str):
+                ##only for non-migrated requests
+                tiers=tiers.split(',')
+            for t in tiers:
+                outs.append( '/%s/%s-%s-v%s/%s' % ( dsn,
+                                                    camp,
+                                                    proc,
+                                                    v,
+                                                    t))
+        return outs
+
     def get_processing_string(self, i):
         ingredients=[]
         ingredients.append( self.get_attribute('process_string'))
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All',''))
+        if self.get_attribute('extension'):
+            ingredients.append("ext%s"%mcm_r.get_attribute('extension'))
         return "_".join(filter( lambda s : s, ingredients))
 
     def little_release(self):
