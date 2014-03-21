@@ -128,7 +128,7 @@ class GetStats(RESTResource):
             fake_r['total_events'] =total
         fake_r['prepid'] = '-'.join([req['pwg'], memberOfCampaign, self.fakeId()])
         fake_r['cloned_from'] = req['prepid']
-        self.logger.error("Total events is %s for %s"%( fake_r['total_events'], req['prepid']))
+        #self.logger.error("Total events is %s for %s"%( fake_r['total_events'], req['prepid']))
         return fake_r
 
 
