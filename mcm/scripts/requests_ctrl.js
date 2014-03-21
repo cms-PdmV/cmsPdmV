@@ -14,8 +14,6 @@ function resultsCtrl($scope, $http, $location, $window){
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
     $search_data = {};
 
-    $scope.limit = 20;
-    $scope.limit_opts = [20,50,100];
     $scope.filt = {}; //define an empty filter
     $scope.notify_text = "";
     $scope.update = {};
@@ -46,22 +44,8 @@ function resultsCtrl($scope, $http, $location, $window){
         active:false
       }
     };
-    if($location.search()["limit"] === undefined){
-	$scope.limit=20;
-    }else{
-	$scope.limit=parseInt($location.search()["limit"]);
-	if ($scope.limit_opts.indexOf($scope.limit)==-1){
-	    $scope.limit_opts.push($scope.limit);
-	}
-    }
-    if($location.search()["page"] === undefined){
-      page = 0;
-      $location.search("page", 0);
-      $scope.list_page = 0;
-    }else{
-      page = $location.search()["page"];
-      $scope.list_page = parseInt(page);
-    }
+
+
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "requests";
     }else{
@@ -359,15 +343,15 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.$watch('list_page', function(){
-    $scope.getData();
-    $scope.selected_prepids = [];
-  });
+   $scope.$watch(function() {
+      var loc_dict = $location.search();
+      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+    },
+    function(){
+        $scope.getData();
+        $scope.selected_prepids = [];
+    });
 
-  //  $scope.$watch('limit', function(){
-  //    $scope.getData();
-  //    $scope.selected_prepids = [];
-  //  });
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
@@ -381,23 +365,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
   };
 
-  $scope.previous_page = function(current_page){
-    if (current_page >-1){
-      $location.search("page", current_page-1);
-      $scope.list_page = current_page-1;
-    }
-  };
-  $scope.new_limit = function(){
-      $location.search("limit",$scope.limit);
-      $scope.getData();
-      $scope.selected_prepids = [];
-  };
-  $scope.next_page = function(current_page){
-    if ($scope.result.length !=0 && $scope.result.length >= $scope.limit){
-      $location.search("page", current_page+1);
-      $scope.list_page = current_page+1;
-    }
-  };
   $scope.showapproval = false;
   $scope.showApprovals = function(){
     if ($scope.showapproval){

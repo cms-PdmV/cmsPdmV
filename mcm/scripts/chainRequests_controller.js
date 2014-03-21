@@ -41,15 +41,6 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  if($location.search()["page"] === undefined){
-    page = 0;
-    $location.search("page", 0);
-    $scope.list_page = 0;
-  }else{
-    page = $location.search()["page"];
-    $scope.list_page = parseInt(page);
-  }
-
   $scope.load_puce = function(prepid){
     for (i=0;i<$scope.result.length;i++){
 	    if ($scope.result[i].prepid == prepid ){
@@ -321,27 +312,30 @@ function resultsCtrl($scope, $http, $location, $window){
       });
     }
   };
-  $scope.$watch('list_page', function(){
-    if($location.search()["supersearch"])
-    {
-      
-      _.each($location.search(),function(elem,key){
-      if(key != "supersearch" || key != "page"){
-        _.each($scope.searchable_fields, function(el){
-          if (el["name"] == key)
-          {
-            el["value"] = elem;
-          }
+
+    $scope.$watch(function () {
+          var loc_dict = $location.search();
+          return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+        },
+        function () {
+            if ($location.search()["supersearch"]) {
+
+                _.each($location.search(), function (elem, key) {
+                    if (key != "supersearch" || key != "page") {
+                        _.each($scope.searchable_fields, function (el) {
+                            if (el["name"] == key) {
+                                el["value"] = elem;
+                            }
+                        });
+                    }
+                });
+                $scope.superSearch();
+            } else {
+                $scope.getData();
+            }
+            $scope.selected_prepids = [];
         });
-      }
-      });
-      $scope.superSearch();
-    }else
-    {
-      $scope.getData();
-    }
-    $scope.selected_prepids = [];
-  });
+
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
@@ -353,20 +347,6 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     });
     $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
-  
-  $scope.previous_page = function(current_page){
-    if (current_page >-1){
-      $location.search("page", current_page-1);
-      $scope.list_page = current_page-1;
-    }
-  };
-
-  $scope.next_page = function(current_page){
-    if ($scope.result.length !=0){
-      $location.search("page", current_page+1);
-      $scope.list_page = current_page+1;
-    }
   };
 
   $scope.flowChainedRequest = function(prepid, force){

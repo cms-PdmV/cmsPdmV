@@ -574,6 +574,67 @@ testApp.directive("reqmgrName", function($http){
     }
   }
 });
+
+testApp.directive("customFooter", function($location, $compile) {
+   return {
+       restrict: 'C',
+       link: function(scope, element) {
+
+            scope.custom_footer_limit_opts = [20,50,100];
+
+            var limit = $location.search()["limit"];
+            if(limit === undefined){
+                limit=20;
+            }
+            scope.custom_footer_limit=parseInt(limit);
+            if (scope.custom_footer_limit_opts.indexOf(scope.custom_footer_limit)==-1){
+                scope.custom_footer_limit_opts.push(scope.custom_footer_limit);
+            }
+
+            var page = $location.search()["page"];
+
+            if(page === undefined){
+                page = 0;
+                $location.search("page", 0);
+            }
+            scope.custom_footer_list_page = parseInt(page);
+
+            scope.custom_footer_previous_page = function(current_page){
+                if (current_page >-1){
+                    $location.search("page", current_page-1);
+                    scope.custom_footer_list_page = current_page-1;
+                }
+            };
+
+            scope.custom_footer_new_limit = function(){
+                scope.custom_footer_list_page = 0;
+                $location.search("limit",scope.custom_footer_limit);
+                $location.search("page", 0);
+            };
+
+            scope.custom_footer_next_page = function(current_page){
+                if (scope.result.length !=0 && scope.result.length >= scope.custom_footer_limit){
+                    $location.search("page", current_page+1);
+                    scope.custom_footer_list_page = current_page+1;
+                }
+            };
+           var innerHtml = '<div class="span2" style="margin-top:20px;">';
+           innerHtml += '<span ng-show="got_results"> Found {{ result.length}} results </span>';
+           innerHtml += '<img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>';
+           innerHtml += '<div ng-show="update[\'success\']"> Success. Status code:<font color="green">{{update[\'status_code\']}}</font> </div>';
+           innerHtml += '<div ng-show="update[\'fail\']"> Fail. Status code:<font color="red">{{update[\'status_code\']}}</font> </div>';
+           innerHtml += '</div>';
+           innerHtml += '<div class="span5 pagination pagination-right" > <ul>';
+           innerHtml += '<li ng-class="{ disabled: custom_footer_list_page <= -1 }"> <a ng-click="custom_footer_previous_page(custom_footer_list_page)" ng-href="#" ng-show="custom_footer_list_page>0">Prev</a> <a ng-click="custom_footer_previous_page(custom_footer_list_page)" ng-href="#" ng-hide="custom_footer_list_page>0">All</a> </li>';
+           innerHtml += '<li> <a ng-href="#" ng-show="custom_footer_list_page>=0" target="_blank">#{{custom_footer_list_page}}</a> <a ng-href="#" ng-show="custom_footer_list_page==-1" target="_blank">#All</a> </li>';
+           innerHtml += '<li ng-class="{ disabled: result.length < custom_footer_limit }"> <a ng-click="custom_footer_next_page(custom_footer_list_page)" ng-href="#" ng-show="custom_footer_list_page>=0">Next</a> <a ng-click="custom_footer_next_page(custom_footer_list_page)" ng-href="#" ng-show="custom_footer_list_page==-1">Paginated</a> </li>';
+           innerHtml += '<li> <select ng-model="custom_footer_limit" ng-options="elem for elem in custom_footer_limit_opts;" style="width: 60px;" ng-change="custom_footer_new_limit();" ng-show="custom_footer_list_page>=0"></select> </li>';
+           innerHtml += '</ul> </div>'
+           element.append($compile(innerHtml)(scope))
+       }
+   }
+});
+
 testApp.directive("growthGraph", function($http, $location){
   return {
     replace: true,

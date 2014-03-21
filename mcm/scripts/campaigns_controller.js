@@ -22,15 +22,6 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.dbName = $location.search()["db_name"];
     }
     $scope.new = {};
-
-    if($location.search()["page"] === undefined){
-        page = 0;
-        $location.search("page", 0);
-        $scope.list_page = 0;
-    }else{
-        page = $location.search()["page"];
-        $scope.list_page = parseInt(page);
-    }
     
     $scope.delete_object = function(db, value){
       $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -223,9 +214,14 @@ function resultsCtrl($scope, $http, $location, $window){
       });
     };
 
-    $scope.$watch('list_page', function(){
-      $scope.getData();
+   $scope.$watch(function() {
+      var loc_dict = $location.search();
+      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+    },
+    function(){
+        $scope.getData();
     });
+
 
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
@@ -239,18 +235,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
   };
 
-  $scope.previous_page = function(current_page){
-    if (current_page >-1){
-      $location.search("page", current_page-1);
-      $scope.list_page = current_page-1;
-    }
-  };
-  $scope.next_page = function(current_page){
-    if ($scope.result.length !=0){
-      $location.search("page", current_page+1);
-      $scope.list_page = current_page+1;
-    }
-  };
   $scope.saveCookie = function(){
     var cookie_name = $scope.dbName+"shown";
     if($location.search()["shown"]){

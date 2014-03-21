@@ -192,26 +192,6 @@
           </span>
         </span>
       </div>
-      <div class="span2" style="padding-top:20px;">
-        <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font> Result: {{update['result']}}
-        </div>
-        <div ng-show="update['fail']">
-          Fail. Status code:<font color="red">{{update['status_code']}}</font> Result: {{update['result']}}
-        </div>
-      </div>
-      <div class="span5">
-        <div class="pagination pagination-right">
-          <ul>
-            <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)" ng-href="#">Prev</a>
-            </li>
-            <li ng-class="{ disabled: result.length == 0 }">
-              <a ng-click="next_page(list_page)" ng-href="#">Next</a>
-            </li>
-          </ul>
-        </div>
-      </div>
     </div>
     </span>
   </body>

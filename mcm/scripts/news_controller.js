@@ -10,15 +10,6 @@ function resultsCtrl($scope, $http, $location, $window){
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
-  
-  if($location.search()["page"] === undefined){
-    page = 0;
-    $location.search("page", 0);
-    $scope.list_page = 0;
-  }else{
-    page = $location.search()["page"];
-    $scope.list_page = parseInt(page);
-  }
 
   $scope.select_all_well = function(){
     $scope.selectedCount = true;
@@ -139,9 +130,15 @@ function resultsCtrl($scope, $http, $location, $window){
        alert("Error getting information");
     });  
   };
-  $scope.$watch('list_page', function(){
-    $scope.getData();
-  });
+
+   $scope.$watch(function() {
+      var loc_dict = $location.search();
+      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+    },
+    function(){
+        $scope.getData();
+        $scope.selected_prepids = [];
+    });
   
   $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
     var bin_string = ""; //reconstruct from begining
@@ -155,19 +152,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
   };
 
-  $scope.previous_page = function(current_page){
-    if (current_page >-1){
-      $location.search("page", current_page-1);
-      $scope.list_page = current_page-1;
-    }
-  };
-
-  $scope.next_page = function(current_page){
-    if ($scope.result.length !=0){
-      $location.search("page", current_page+1);
-      $scope.list_page = current_page+1;
-    }
-  };
   $scope.saveCookie = function(){
     var cookie_name = $scope.dbName+"shown";
     if($location.search()["shown"]){

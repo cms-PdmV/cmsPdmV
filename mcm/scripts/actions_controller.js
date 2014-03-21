@@ -64,6 +64,9 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.rootCampaign = [];
       var promise = $http.get('search/?db_name=chained_campaigns'+query);
       promise.then(function(data){
+        $scope.update['success'] = true;
+        $scope.update['fail'] = false;
+        $scope.update['status_code'] = "Ok";
         $scope.chained_campaigns = data.data.results;
         //console.log("if selected not ------");
         $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'},
@@ -115,10 +118,16 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.getData("");
         }
         // 
+      }, function(status) {
+        $scope.update['success'] = false;
+        $scope.update['fail'] = true;
+        $scope.update['status_code'] = status;
+
       });
     };
 
     $scope.select_campaign = function(do_get_data){
+      $scope.got_results = false;
       //$scope.result = []; //clear results on selection
       //set the well to have only ChainedCampaigns which includes selectedOption
       if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
@@ -139,14 +148,6 @@ function resultsCtrl($scope, $http, $location, $window){
     };
 
     $scope.show_well = false;
-    if($location.search()["page"] === undefined){
-        $location.search("page", 0);
-        page = 0;
-        $scope.list_page = 0;
-    }else{
-        page = $location.search()["page"];
-        $scope.list_page = parseInt(page);
-    }
 
 
     promise = $http.get('restapi/campaigns/listall')
@@ -253,12 +254,16 @@ function resultsCtrl($scope, $http, $location, $window){
           query += "&"+key+"="+value;
         };
       });
+            $scope.got_results = false;
 	    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
 	    promise.then(function(data){
 		    _.each( data.data.results , function( item ){
-			    $scope.result.push( item ); 
+			    $scope.result.push( item );
 			  });
-      $scope.parseShown();
+            $scope.got_results = true;
+        $scope.parseShown();
+            $scope.update['success'] = false;
+            $scope.update['fail'] = false;
       //set selected columns?
 		  },function(){
 		    alert("Error getting data.");
@@ -272,23 +277,15 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.getData("");
   };
 
-  $scope.$watch('list_page', function(){
-    $scope.getData("");
-    $scope.multiple_selection = {};
-  });
-    
-  $scope.previous_page = function(current_page){
-      if (current_page >-1){
-        $location.search("page", current_page-1);
-        $scope.list_page = current_page-1;
-      }
-  };
-  $scope.next_page = function(current_page){
-      if ($scope.result.length !=0){
-        $location.search("page", current_page+1);
-        $scope.list_page = current_page+1;
-      }
-  };
+    $scope.$watch(function() {
+      var loc_dict = $location.search();
+      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+    },
+    function(){
+        $scope.getData("");
+        $scope.multiple_selection = {};
+    });
+
   $scope.sort = {
     column: 'prepid',
     descending: false

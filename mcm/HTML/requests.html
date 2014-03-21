@@ -484,39 +484,7 @@
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </span>
       </div>
-      <div class="span2" style="margin-top:20px;">
-        <span ng-show="got_results">
-          Found {{ result.length}} results
-        </span>
-        <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-        <div ng-show="update['success']">
-          Success. Status code:<font color="green">{{update['status_code']}}</font>
-        </div>
-        <div ng-show="update['fail']">
-          Fail. Status code:<font color="red">{{update['status_code']}}</font>
-        </div>
-      </div>
-      <div class="span5">
-        <div class="pagination pagination-right">
-          <ul>
-            <li ng-class="{ disabled: list_page <= -1 }">
-              <a ng-click="previous_page(list_page)" ng-href="#" ng-show="list_page>0">Prev</a>
-              <a ng-click="previous_page(list_page)" ng-href="#" ng-hide="list_page>0">All</a>
-            </li>
-	    <li>
-	      <a ng-href="#" ng-show="list_page>=0" target="_blank">#{{list_page}}</a>
-	      <a ng-href="#" ng-show="list_page==-1" target="_blank">#All</a>
-	    </li>
-            <li ng-class="{ disabled: result.length < limit }">
-              <a ng-click="next_page(list_page)" ng-href="#" ng-show="list_page>=0">Next</a>
-              <a ng-click="next_page(list_page)" ng-href="#" ng-show="list_page==-1">Paginated</a>
-            </li>
-	    <li>
-	      <select ng-model="limit" ng-options="elem for elem in limit_opts;" style="width: 60px;" ng-change="new_limit();"></select>
-	    </li>
-          </ul>
-        </div>
-      </div>
+
     </div>
     <a ng-href='/mcm' target='_self'><div class="navbar-fixed-bottom" id="news_banner"></div></a>
   </span>  
