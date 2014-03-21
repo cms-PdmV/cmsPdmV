@@ -106,7 +106,15 @@ class SaveUser(RESTResource):
         Save the information about a given user
         """
         db = database(self.db_name)
-        return dumps({"results": db.save(threaded_loads(cherrypy.request.body.read().strip()))})
+        data = threaded_loads(cherrypy.request.body.read().strip())
+        new_user = user(data)
+        if '_rev' in data:
+            new_user.update_history({'action': 'updated'})
+            return dumps({"results": db.update(new_user.json())})
+        else:
+            new_user.update_history({'action': 'created'})
+            return dumps({"results": db.save(new_user.json())})
+
 
 class AskRole(RESTResource):
     def __init__(self):
@@ -130,6 +138,7 @@ class AskRole(RESTResource):
         current = mcm_u.get_attribute('pwg')
         current = list(set(current+pwgs))
         mcm_u.set_attribute('pwg', current)
+        mcm_u.update_history({'action':'ask role','step' : args[0]})
         udb.update(mcm_u.json())
 
         ## get the production managers emails
@@ -145,6 +154,9 @@ class AskRole(RESTResource):
                                                                                                             l_type.baseurl(),
                                                                                                             mcm_u.get_attribute('username')
                                                                                                             ))
+
+        
+
         return dumps({"results" : True, "message" : "user %s in for %s" %( mcm_u.get_attribute('username'), current)})
 
 
@@ -165,9 +177,12 @@ class AddRole(RESTResource):
                          "fullname": user_p.get_fullname()})
 
         # save to db
-        if not db.save(mcm_user.json()):
+        if not mcm_user.reload():
             self.logger.error('Could not save object to database')
             return {"results": False}
+
+        mcm_user.update_history({'action':'created'})
+        mcm_user.reload()
         return {"results": True}
 
     def GET(self):
@@ -193,12 +208,14 @@ class ChangeRole(RESTResource):
             if current_role != self.all_roles[0]:
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) - 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                doc.update_history({'action': 'decrease' , 'step':doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
             return {"results": username + " already is user"} #else return that hes already a user
         if action == '1':
             if len(self.all_roles) != self.all_roles.index(current_role) + 1: #if current role is not the top one
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) + 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                doc.update_history({'action': 'increase' , 'step':doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
             return {"results": username + " already has top role"}
         return {"results": "Failed to update user: " + username + " role"}

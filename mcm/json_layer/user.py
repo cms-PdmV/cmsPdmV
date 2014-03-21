@@ -12,7 +12,9 @@ class user(json_base):
             'email': '',
             'role': '',
             'pwg': [],
-            'fullname': ''
+            'fullname': '',
+            'history' :[],
+            'notes' :''
         }
 
         # update self according to json_input

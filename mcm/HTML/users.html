@@ -149,6 +149,12 @@
                    </li>
                  </ul>
 	            </div>
+              <div ng-switch-when="History">
+                <div custom-history ng-model="user_info[data.db_name]"></div>
+              </div>
+	      <div ng-switch-when="Notes">
+		<div style="width:400px"><pre>{{user_info[data.db_name]}}</pre></div>
+	      </div>
       	      <div ng-switch-default>
     		        {{user_info[data.db_name]}}
       	      </div>
