@@ -1342,7 +1342,6 @@ class StalledReminder(RESTResource):
         bdb = database('batches')
         rs = rdb.queries(['status==submitted'])
         today = time.mktime( time.gmtime())
-        subject="Gentle reminder of requests that appear stalled"
         text="The following requests appear to be not progressing since %s days or will require more than %s days to complete:\n\n"%( time_since, time_remaining)
         reminded=0
         by_batch=defaultdict(list)
@@ -1384,6 +1383,9 @@ class StalledReminder(RESTResource):
 
         udb = database('users')
         production_managers = udb.queries(['role==production_manager'])
+
+        subject="Gentle reminder of %d requests that appear stalled"%(reminded)
+
         if reminded!=0:
             com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
                          subject, text)
