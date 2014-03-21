@@ -501,3 +501,54 @@ class GetStats(RESTResource):
         # html+="</body></html>"
         # return html
 
+class TestConnection(RESTResource):
+    ## a rest api to make a creation test of a request
+    def __init__(self):
+        self.counter = 0
+
+    def GET(self, *args):
+        """ 
+        this is test of connection through ssh to /node/iterations
+        """
+        sta=0
+        sto=0
+        spend=[]
+        server=args[0]
+        N=int(args[1])
+        from tools.ssh_executor import ssh_executor
+        from math import sqrt
+        success=0
+        fail=0
+        for i in range(N):
+            sta=time.time()
+            connect = ssh_executor(server=server)
+            try:
+                _, stdout, stderr = connect.execute('ls $HOME')
+                out = stdout.read()
+                err = stderr.read()
+                if ('private' in out and 'public' in out and 'LSFJOB_505830166' in out):
+                    success+=1
+                    self.logger.error("test: %s SUCCESS \n out:\n%s \n err:\n %s"%( i, out,err))
+                else:
+                    tail+=1
+                    self.logger.error("test: %s failed \n out:\n%s \n err:\n %s"%( i, out,err))
+            except:
+                fail+=1
+                self.logger.error("test: %s failed %s"%(i, traceback.format_exc()))
+            
+            sto=time.time()
+            spend.append( sto - sta )
+
+        mean= sum(spend) / len(spend)
+        rms= sqrt(sum( map( lambda v : (v-mean)*(v-mean), spend)) / len(spend))
+        return dumps({"server" : server,
+                      "trials" : N, 
+                      "time": spend,
+                      "mean": mean,
+                      "rms": rms,
+                      "success" : success,
+                      "fail" : fail, 
+                      "max" : max(spend),
+                      "min": min(spend),
+                      "total" : sum(spend)
+                      })
