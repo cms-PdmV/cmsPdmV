@@ -8,6 +8,8 @@ import time
 from couchdb_layer.mcm_database import database
 from collections import defaultdict
 from tools.user_management import access_rights
+import traceback
+from math import sqrt
 
 class GetBjobs(RESTResource):
     def __init__(self):
@@ -515,8 +517,6 @@ class TestConnection(RESTResource):
         spend=[]
         server=args[0]
         N=int(args[1])
-        from tools.ssh_executor import ssh_executor
-        from math import sqrt
         success=0
         fail=0
         for i in range(N):
