@@ -144,11 +144,17 @@
                 <a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionary" target="_self">
                   <i class="icon-download-alt"></i>
                 </a>
-                <a ng-href='public/restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get Setup" target="_self">
+                <a ng-href='public/restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self">
                   <i class="icon-download"></i>
                 </a>
-                <a ng-href='public/restapi/requests/get_test/{{data.prepid}}' rel="tooltip" title="Get Test" target="_self">
+                <a ng-href='public/restapi/requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
                   <i class="icon-ok-circle"></i>
+                </a>
+                <a ng-href='restapi/requests/get_upload/{{data.prepid}}' rel="tooltip" title="Get upload command" ng-hide="role(3);" target="_self">
+                  <i class="icon-upload"></i>
+                </a>
+                <a ng-href='restapi/requests/get_inject/{{data.prepid}}' rel="tooltip" title="Get injection command" ng-hide="role(3);" target="_self">
+                  <i class="icon-italic"></i>
                 </a>
                 <a ng-click="register(data.prepid)" rel="tooltip" title="Register to the request {{data.prepid}}" ng-href="#">
                   <i class="icon-map-marker"></i>
