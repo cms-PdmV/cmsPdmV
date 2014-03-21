@@ -552,3 +552,34 @@ class TestConnection(RESTResource):
                       "min": min(spend),
                       "total" : sum(spend)
                       })
+
+class ListReleases(RESTResource):
+    def __init__(self):
+        pass
+    def GET(self, *args):
+        """                       
+        Give out the list of releases that are being used through McM campaigns in optional status /status
+        """
+        status=None
+        if len(args):
+            status=args[0]
+        cdb = database('campaigns')
+
+        if status:
+            cs = cdb.queries(['status==%s'%status])
+        else:
+            cs = cdb.queries([])
+
+        releases_set=set()
+        releases=defaultdict(lambda : list())
+        for c in cs:
+            if c['cmssw_release'] and not c['cmssw_release'] in releases[c['status']]:
+                releases[c['status']].append(c['cmssw_release'])
+                releases_set.add(c['cmssw_release'])
+
+
+        ##extend to submitted requests, or chained requests that will get in the system ?
+
+        return dumps({"results" : releases, "set" : list(releases_set)})
+
+
