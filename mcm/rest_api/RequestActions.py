@@ -1340,6 +1340,7 @@ class StalledReminder(RESTResource):
             time_remaining=args[1]
         rdb = database('requests')
         bdb = database('batches')
+        statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
         rs = rdb.queries(['status==submitted'])
         today = time.mktime( time.gmtime())
         text="The following requests appear to be not progressing since %s days or will require more than %s days to complete:\n\n"%( time_since, time_remaining)
@@ -1363,12 +1364,19 @@ class StalledReminder(RESTResource):
                 in_batch = 'NoBatch'
                 if len (bs):
                     in_batch = bs[-1]['prepid']
+                wma_status = 'not-found'
+                if len(r['reqmgr_name']):
+                    wma_name = r['reqmgr_name'][-1]['name']
+                    if statsDB.document_exists(wma_name):
+                        stats = statsDB.get(wma_name)
+                        wma_status = stats['pdmv_status_from_reqmngr']
 
-                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, priority %s \n"%( r['prepid'],
+                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n"%( r['prepid'],
                                                                                                                           elapsed,
                                                                                                                           r['completed_events'],
                                                                                                                           r['completed_events']*100./r['total_events'],
                                                                                                                           remaining,
+                                                                                                                          wma_status,
                                                                                                                           r['priority'])
                 by_batch[in_batch].append(line)
         l_type = locator()
