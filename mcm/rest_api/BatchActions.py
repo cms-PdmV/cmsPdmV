@@ -313,6 +313,9 @@ class NotifyBatch(RESTResource):
         self.bdb = database('batches')
 
     def PUT(self):
+        """
+        This allows to send a message to data operation in the same thread of the announcement of a given batch
+        """
         data = threaded_loads(cherrypy.request.body.read().strip())
         if not 'prepid' in data or not 'notes' in data:
             raise ValueError('no prepid nor notes in batch announcement api')
