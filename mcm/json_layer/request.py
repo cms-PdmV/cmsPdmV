@@ -538,7 +538,7 @@ class request(json_base):
         if self.get_attribute('input_dataset') and not input_from_previous:
             input_from_ds='"dbs:%s"'%(self.get_attribute('input_dataset'))
 
-        input_default='file:step%d.root'%(sequenceindex)
+        input_default='file:%s_step%d.root'%(self.get_attribute('prepid'),sequenceindex)
         if sequenceindex==0:
             if input_from_ds:
                 input_default=input_from_ds
@@ -555,7 +555,7 @@ class request(json_base):
           ## last one
             command +='--fileout file:%s.root '%(self.get_attribute('prepid'))
         else:
-            command +='--fileout file:step%d.root '%(sequenceindex+1)
+            command +='--fileout file:%s_step%d.root '%(self.get_attribute('prepid'),sequenceindex+1)
 
 
         ##JR
