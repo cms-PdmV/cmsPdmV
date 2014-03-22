@@ -136,11 +136,12 @@
                           <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
                           <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
                         </div>
-                      <div ng-switch-default>
-                        <a>
-                          <i class="icon-arrow-right"></i>
-                        </a>
-                        {{element}}
+                        <div ng-switch-default>
+                          <a>
+                            <i class="icon-arrow-right"></i>
+                          </a>
+                          {{element}}
+                        </div>
                       </div>
                     </div>
                   </li>
