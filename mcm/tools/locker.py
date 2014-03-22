@@ -52,6 +52,10 @@ class SemaphoreEvents(object):
     event_dictionary = defaultdict(Event)
     count_dictionary = defaultdict(int)
 
+    def count(self, lock_id):
+        with locker.lock(lock_id):
+            return self.count_dictionary[lock_id]
+
     def increment(self, lock_id):
         with locker.lock(lock_id):
             self.count_dictionary[lock_id] += 1

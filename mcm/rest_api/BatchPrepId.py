@@ -4,7 +4,7 @@ from json import dumps
 
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
-from tools.locker import locker
+from tools.locker import locker,semaphore_events
 from tools.settings import settings
 
 # generates the next valid prepid 
@@ -38,7 +38,11 @@ class BatchPrepId():
 
             ## limit to a certain number of entry per batch : at name reservation time, so it does not work if one submitts more at a time
             max_in_batch = settings().get_value('max_in_batch')
-            res_new = filter(lambda x: len*x['requests'] <= max_in_batch, res_new)
+            # for existing batches
+            res_new = filter(lambda x: len(x['requests']) <= max_in_batch, res_new)
+            # for dynamic allocation from locks
+            res_new = filter(lambda x: semaphore_events.count(x['prepid']) <= max_in_batch, res_new)
+
 
             ##get only the serial number of those
             res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
