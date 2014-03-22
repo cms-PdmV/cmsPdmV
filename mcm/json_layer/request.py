@@ -16,13 +16,13 @@ from json_layer.flow import flow
 from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
-from tools import ssh_executor
+from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
 from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
-from tools.ssh_executor import ssh_executor
+
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -866,7 +866,7 @@ done
             self.logger.log('tryign to change priority to %s at %s'%( self.get_attribute('prepid'), new_priority))
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
-                ssh_exec = ssh_executor.ssh_executor(server='pdmvserv-test.cern.ch')
+                ssh_exec = ssh_executor(server='pdmvserv-test.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
