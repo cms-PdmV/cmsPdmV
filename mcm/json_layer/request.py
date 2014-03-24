@@ -1289,7 +1289,7 @@ done
             ## pick up the last request of type!='Resubmission'
             if len(ignore_for_status):
                 for wma in reversed(mcm_rr) :
-                    if 'pdmv_type' in wma and not (wma['pdmv_type'] in ignore_for_status):
+                    if 'content' in wma and 'pdmv_type' in wma['content'] and not (wma['content']['pdmv_type'] in ignore_for_status):
                         wma_r = wma
                         break
 
