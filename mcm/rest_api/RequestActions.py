@@ -426,7 +426,24 @@ class MigrateRequest(RequestRESTResource):
                     mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events') <= 0:
                 mcm_r.set_attribute('completed_events',
                                     mcm_r.get_attribute('reqmgr_name')[-1]['content']['pdmv_evts_in_DAS'])
+                collected=[]
+                for wma in reversed(mcm_r.get_attribute('reqmgr_name')):
+                    if not 'pdmv_dataset_list' in wma['content']: continue
+                    those = wma['content']['pdmv_dataset_list']
+                    goodone=True
+                    if len(collected):
+                        for ds in those:
+                            (_,dsn,proc,tier)=ds.split('/')
+                            for goodds in collected:
+                                (_,gdsn,gproc,gtier)=goodds.split('/')
+                                if dsn!=gdsn or gproc!=proc:
+                                    goodone=False
+                    if goodone:
+                        collected.extend(those)
+                collected = list(set(collected))
+                mcm_r.set_attribute('output_dataset', collected)
 
+            
             saved = db.save(mcm_r.json())
 
             ## force to add an action on those requests
