@@ -1283,12 +1283,15 @@ done
         changes_happen = self.get_stats()
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database( 'requests')
+        ignore_for_status=settings().get_value('ignore_for_status')
         if len(mcm_rr):
             wma_r = mcm_rr[-1] 
             ## pick up the last request of type!='Resubmission'
-            #for wma in  mcm_rr :
-            #    if 'pdmv_type' in wma and wma['pdmv_type']!='Resubmission':
-            #        wma_r = wma
+            if len(ignore_for_status):
+                for wma in reversed(mcm_rr) :
+                    if 'pdmv_type' in wma and not (wma['pdmv_type'] in ignore_for_status):
+                        wma_r = wma
+                        break
 
             wma_r_N = mcm_rr[-1] # so that we can decouple the two
             if ('pdmv_status_in_DAS' in wma_r['content'] and 'pdmv_status_from_reqmngr' in wma_r['content']):
