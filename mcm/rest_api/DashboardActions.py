@@ -526,7 +526,7 @@ class TestConnection(RESTResource):
                 _, stdout, stderr = connect.execute('ls $HOME')
                 out = stdout.read()
                 err = stderr.read()
-                if ('private' in out and 'public' in out and 'LSFJOB_505830166' in out):
+                if ('private' in out and 'public' in out and 'PdmV' in out):
                     success+=1
                     self.logger.error("test: %s SUCCESS \n out:\n%s \n err:\n %s"%( i, out,err))
                 else:
