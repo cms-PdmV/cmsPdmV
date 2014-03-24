@@ -315,7 +315,7 @@ class chained_request(json_base):
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
-                    current_request.notify('Flowing for %s: not enough statistics'%( current_request.get_attribute('prepid')),
+                    current_request.notify('Flowing %s with not enough statistics'%( current_request.get_attribute('prepid')),
                                            'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s'%( current_request.get_attribute('prepid'), 
                                                                                                                                                                                                         current_request.get_attribute('completed_events'),
                                                                                                                                                                                                       completed_events_to_pass,
