@@ -1347,20 +1347,24 @@ class StalledReminder(RESTResource):
 
     def GET(self, *args):
         """
-        Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder. 
+        Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
         """
         time_since=15
         time_remaining=15
+        below_completed=float(100.)
         if len(args)>0:
-            time_since=args[0]
+            time_since=int(args[0])
         if len(args)>1:
-            time_remaining=args[1]
+            time_remaining=int(args[1])
+        if len(args)>2:
+            below_completed=float(args[2])
+
         rdb = database('requests')
         bdb = database('batches')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
         rs = rdb.queries(['status==submitted'])
         today = time.mktime( time.gmtime())
-        text="The following requests appear to be not progressing since %s days or will require more than %s days to complete:\n\n"%( time_since, time_remaining)
+        text="The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n"%( time_since, time_remaining, below_completed)
         reminded=0
         by_batch=defaultdict(list)
         for r in rs:
@@ -1374,6 +1378,9 @@ class StalledReminder(RESTResource):
                 remaining = remaining_t /60./60./24.
                 if remaining<0: ## already over stats
                     remaining=0.
+            fraction = min(100.,r['completed_events']*100./r['total_events']) ## maxout to 100% completed
+            if fraction > below_completed: continue
+
             if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
                 reminded+=1
                 bs = bdb.queries(['contains==%s'%r['prepid'],'status==announced'])
@@ -1389,12 +1396,12 @@ class StalledReminder(RESTResource):
                         wma_status = stats['pdmv_status_from_reqmngr']
 
                 line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n"%( r['prepid'],
-                                                                                                                          elapsed,
-                                                                                                                          r['completed_events'],
-                                                                                                                          r['completed_events']*100./r['total_events'],
-                                                                                                                          remaining,
-                                                                                                                          wma_status,
-                                                                                                                          r['priority'])
+                                                                                                                                   elapsed,
+                                                                                                                                   r['completed_events'],
+                                                                                                                                   fraction,
+                                                                                                                                   remaining,
+                                                                                                                                   wma_status,
+                                                                                                                                   r['priority'])
                 by_batch[in_batch].append(line)
         l_type = locator()
         for (b,lines) in by_batch.items():
