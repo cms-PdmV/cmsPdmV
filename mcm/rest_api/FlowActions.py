@@ -68,8 +68,8 @@ class FlowRESTResource(RESTResource):
                 f.set_attribute('request_parameters', rp)
 
 
-    def __compare_json(self, old, new):
-        return self.update_derived_objects(old, new)
+    #def __compare_json(self, old, new):
+    #    return self.update_derived_objects(old, new)
 
     def update_derived_objects(self, old, new):
 
@@ -104,28 +104,30 @@ class FlowRESTResource(RESTResource):
         return {'results': True}
 
     def update_campaigns(self, next_c, allowed, cdb):
-        # check to see if next_c is legal
-        if not cdb.document_exists(next_c):
-            raise ValueError('Campaign ' + str(next_c) + ' does not exist.')
+        ##switch off and defered to when a chained campaign is actually created
+        return
+        ## check to see if next_c is legal
+        #if not cdb.document_exists(next_c):
+        #    raise ValueError('Campaign ' + str(next_c) + ' does not exist.')
 
-        if not next_c:
-            return
+        #if not next_c:
+        #    return
 
-        n = cdb.get(next_c)
-        if n['root'] == 0:
-            raise ValueError('Campaign ' + str(next_c) + ' is a root campaign.')
+        #n = cdb.get(next_c)
+        #if n['root'] == 0:
+        #    raise ValueError('Campaign ' + str(next_c) + ' is a root campaign.')
 
-        # iterate through all allowed campaigns and update the next_c field
-        for c in allowed:
-            camp = campaign(json_input=cdb.get(c))
-            try:
-                # append campaign
-                camp.add_next(next_c)
-            except campaign.CampaignExistsException:
-                pass
+        ## iterate through all allowed campaigns and update the next_c field
+        #for c in allowed:
+        #    camp = campaign(json_input=cdb.get(c))
+        #    try:
+        #        # append campaign
+        #        camp.add_next(next_c)
+        #    except campaign.CampaignExistsException:
+        #        pass
 
-            # save to database
-            cdb.update(camp.json())
+        #   # save to database
+        #    cdb.update(camp.json())
 
     def is_energy_consistent(self, next_c, allowed_c, cdb):
         """
@@ -312,24 +314,25 @@ class CreateFlow(FlowRESTResource):
             return {"results": True}
 
         # update all relevant campaigns with the "Next" parameter
-        try:
-            self.update_campaigns(f.get_attribute('next_campaign'), f.get_attribute('allowed_campaigns'), cdb)
-        except Exception as ex:
-            self.logger.error('Error: update_campaigns returned:' + str(ex))
-            return {"results": 'Error: update_campaigns returned:' + str(ex)}
+        return self.update_derived_objects(flow().json() ,f.json())
+        #try:
+        #    self.update_campaigns(f.get_attribute('next_campaign'), f.get_attribute('allowed_campaigns'), cdb)
+        #except Exception as ex:
+        #    self.logger.error('Error: update_campaigns returned:' + str(ex))
+        #    return {"results": 'Error: update_campaigns returned:' + str(ex)}
 
         # create all possible chained_campaigns from the next and allowed campaigns
-        try:
-            self.update_chained_campaigns(f.get_attribute('next_campaign'),
-                                          f.get_attribute('allowed_campaigns'))
-        except Exception as ex:
-            self.logger.error(
-                'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
-                    f.get_attribute('_id'), ex))
-            return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
+        #try:
+        #    self.update_chained_campaigns(f.get_attribute('next_campaign'),
+        #                                  f.get_attribute('allowed_campaigns'))
+        #except Exception as ex:
+        #    self.logger.error(
+        #        'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
+        #            f.get_attribute('_id'), ex))
+        #    return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
 
         # save to database
-        return {"results": True}
+        #return {"results": True}
 
 
 class UpdateFlow(FlowRESTResource):
