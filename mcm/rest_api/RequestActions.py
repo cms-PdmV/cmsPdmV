@@ -819,6 +819,9 @@ class ResetRequestApproval(ApproveRequest):
 class GetStatus(RESTResource):
 
     def GET(self, *args):
+        """
+        Get the status of the coma separated request id.
+        """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
 
