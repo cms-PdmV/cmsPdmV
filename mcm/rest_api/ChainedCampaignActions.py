@@ -203,16 +203,19 @@ class DeleteChainedCampaign(RESTResource):
         """
         if not args:
             return dumps({"results":False})
-        return dumps(self.delete_request(args[0]))
+        force=False
+        if len(args)>1:
+            force=(args[1]=='force')
+        return dumps(self.delete_request(args[0], force))
 
-    def delete_request(self, id):
-        if not self.delete_all_requests(id):
+    def delete_request(self, ccid, force=False):
+        if not self.delete_all_requests(ccid, force ):
             return {"results":False}
 
         # update all relevant actions
-        self.update_actions(id)
+        self.update_actions(ccid)
         db = database(self.db_name)
-        return {"results": db.delete(id)}
+        return {"results": db.delete(ccid)}
 
     def update_actions(self,  cid):
         # get all actions that contain cid in their chains
@@ -224,9 +227,11 @@ class DeleteChainedCampaign(RESTResource):
                 del a['chains'][cid]
                 adb.update(a)
 
-    def delete_all_requests(self, id):
+    def delete_all_requests(self, cid, force=False):
         rdb = database('chained_requests')
-        res = rdb.query('member_of_campaign=='+id, page_num=-1)
+        res = rdb.query('member_of_campaign=='+cid, page_num=-1)
+        if len(res) and not force:
+            return False
         try:
             for req in res:
                 rdb.delete(req['prepid'])
