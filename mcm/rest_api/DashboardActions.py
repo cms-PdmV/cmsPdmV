@@ -90,6 +90,9 @@ class GetStartTime(RESTResource):
         self.time = time
 
     def GET(self, *args):
+        """
+        Get the time at which the server was started.
+        """
         return dumps({"results": self.time})
 
 
