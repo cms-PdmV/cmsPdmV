@@ -34,7 +34,13 @@ class ssh_executor:
             # add handlers to main logger - good to go
             self.logger.add_inject_handler(name=self.hname, handler=fh)
         self.__build_ssh_client()
-    
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, value, traceback):
+        self.close_executor()
+
     def __build_ssh_client(self):
         self.ssh_client = paramiko.SSHClient()
         # paramiko.util.log_to_file(self.__ssh_logfile, 10)

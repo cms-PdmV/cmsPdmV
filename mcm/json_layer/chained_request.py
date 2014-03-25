@@ -620,7 +620,6 @@ class chained_request(json_base):
                 okay = False
         return okay
 
-
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
 
@@ -634,6 +633,11 @@ class chained_request(json_base):
     def inspect_done(self):
         return self.flow_trial()
         
-
-        
-        
+    def get_setup(self, directory='', events=None, run=False, validation=False):
+        req_ids = self.get_attribute('chain')
+        rdb = database('requests')
+        setup_file = ''
+        for req_id in req_ids:
+            req = request(rdb.get(req_id))
+            setup_file += req.get_setup_file(directory=directory, events=events, run=run, do_valid=validation)
+        return setup_file

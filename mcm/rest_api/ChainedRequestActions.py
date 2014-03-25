@@ -508,6 +508,7 @@ class SearchableChainedRequest(RESTResource):
             searchable.pop('_rev')
             return dumps(searchable)
 
+
 class TestChainedRequest(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
@@ -612,19 +613,54 @@ class TestChainedRequest(RESTResource):
         if len(args)>1:
             if args[1]in ['inject','show']:
                 from tools.ssh_executor import ssh_executor
-                ssh = ssh_executor(server = 'pdmvserv-test.cern.ch')
-                cmd='cd /afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/\n'
-                cmd+=mcm_rs[0].make_release()
-                cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
-                cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-                cmd+='wmcontrol.py --wmtest --url-dict https://cms-pdmv-dev.cern.ch/mcm/public/restapi/chained_requests/test/%s\n'%(crn)
-                if args[1]=='show':
-                    cherrypy.response.headers['Content-Type'] = 'text/plain'
-                    return cmd
-                else:
-                    _, stdout, stderr = ssh.execute(cmd)
-                    cherrypy.response.headers['Content-Type'] = 'text/plain'
-                    return stdout.read()+'\n\n-------------\n\n'+stderr.read()
-                    #return dumps({"out":stdout.read(),"err":stderr.read()})
+                with ssh_executor(server = 'pdmvserv-test.cern.ch') as ssh:
+                    cmd='cd /afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/\n'
+                    cmd+=mcm_rs[0].make_release()
+                    cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+                    cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+                    cmd+='wmcontrol.py --wmtest --url-dict https://cms-pdmv-dev.cern.ch/mcm/public/restapi/chained_requests/test/%s\n'%(crn)
+                    if args[1]=='show':
+                        cherrypy.response.headers['Content-Type'] = 'text/plain'
+                        return cmd
+                    else:
+                        _, stdout, stderr = ssh.execute(cmd)
+                        cherrypy.response.headers['Content-Type'] = 'text/plain'
+                        return stdout.read()+'\n\n-------------\n\n'+stderr.read()
+                        #return dumps({"out":stdout.read(),"err":stderr.read()})
 
         return dumps(wma)
+
+
+class GetSetupForChains(RESTResource):
+    def __init__(self, mode='setup'):
+        self.access_limit = access_rights.user
+        self.opt = mode
+        if self.opt not in ['setup','test','valid']:
+            raise Exception("Cannot create this resource with mode %s"% self.opt)
+        if self.opt=='valid':
+            self.access_limit = access_rights.administrator
+
+
+    def GET(self, *args, **kwargs):
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+        crdb = database('chained_requests')
+        if not crdb.document_exists(args[0]):
+            return dumps({"results": False, "message": "Chained request with prepid {0} does not exist".format(args[0])})
+        cr = chained_request(crdb.get(args[0]))
+        events = None
+        run = False
+        valid = False
+        directory = ''
+        if self.opt=='test' or self.opt=='valid':
+            run = True
+        if self.opt=='valid':
+            valid = True
+
+        if 'events' in kwargs:
+            events = int(kwargs['events'])
+        if 'directory' in kwargs:
+            directory = kwargs['directory']
+
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return cr.get_setup(directory=directory, run=run, events=events, validation=valid)

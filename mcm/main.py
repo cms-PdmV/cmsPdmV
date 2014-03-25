@@ -9,7 +9,7 @@ from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest,  InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, RequestsFromFile, SearchRequest, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest
+from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
@@ -223,7 +223,9 @@ root.public.restapi.requests.get_actors = GetActors()
 root.public.restapi.requests.produces = GetRequestByDataset()
 root.public.restapi.requests.output = GetRequestOutput()
 root.public.restapi.chained_requests = RESTResourceIndex()
-root.public.restapi.chained_requests.test = TestChainedRequest()
+root.public.restapi.chained_requests.get_setup = GetSetupForChains()
+root.public.restapi.chained_requests.get_test = GetSetupForChains(mode='test')
+root.public.restapi.chained_requests.get_valid = GetSetupForChains(mode='valid')
 
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]
