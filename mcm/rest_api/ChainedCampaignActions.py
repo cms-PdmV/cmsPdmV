@@ -366,7 +366,7 @@ class SelectNewChainedCampaigns(RESTResource):
 
     def GET(self, *args):
         """
-        just a testing restapi
+        Generate the list of chained campaigns documents that can be created from the content of flows and campaigns.
         """
         # get all the flows
         fdb = database('flows')
