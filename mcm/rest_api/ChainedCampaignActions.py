@@ -33,7 +33,7 @@ class CreateChainedCampaign(RESTResource):
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results":False, "message":str(ex)}
 
-        self.logger.log('Creating new chained_campaign %s...' % (ccamp.get_attribute('_id')))
+        self.logger.log('Creating new chained_campaign %s...' % (ccamp.get_attribute('prepid')))
 
         ccamp.set_attribute("_id", ccamp.get_attribute("prepid"))
         if not ccamp.get_attribute("_id") :#or self.db.document_exists(ccamp.get_attribute("_id")):
@@ -47,11 +47,27 @@ class CreateChainedCampaign(RESTResource):
         # update actions db
         self.update_actions(ccamp)
 
+        # update campaigns db
+        self.update_campaigns(ccamp)
+        
         if saved:
             return {"results":True, "prepid" : ccamp.get_attribute("prepid")}
         else:
             return {"results":False, "message":"could not save to DB"}
 
+    def update_campaigns(self, ccamp):
+        cdb = database('campaigns')
+        next=None
+        self.logger.log('Looking at campaigns %s' %( ccamp.get_attribute('campaigns') ))
+        for ( c, f ) in reversed(ccamp.get_attribute('campaigns')):
+            mcm_c = cdb.get(c)
+            if next:
+                if not next in mcm_c['next']:
+                    mcm_c['next'].append(next)
+                    mcm_c['next'].sort()
+                    cdb.update( mcm_c )
+            next = c
+                    
 
     # update the actions db to include the new chain
     def update_actions(self, ccamp):
