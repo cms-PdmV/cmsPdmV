@@ -659,12 +659,23 @@ testApp.directive("growthGraph", function($http, $location){
         // scope.chart_data = [];
       // };
 
+      var parseDate = function (date) {
+        var replaceAt = function (i, char, str) {
+          return str.substr(0, i) + char + str.substr(i + char.length);
+        };
+
+        date = replaceAt(10, " ", date);
+        date = replaceAt(13, ":", date);
+        return date;
+      }
+
       scope.parseHistory = function(input)
       {
         var previus_info = {};
         var tmp_data = _.filter(input, function(elem){
           if ( level_order.indexOf(elem.step) != -1 )
           {
+            //var tmp_info = {"step": elem.step, "date":elem.updater.submission_date};
             var tmp_info = {"step": elem.step, "date":elem.updater.submission_date};
             if ( !_.isEqual(previus_info, tmp_info) ) //we ignore dublicated statuses and same days -> so we wont get undefined error in nvd3 script
             {
@@ -673,23 +684,41 @@ testApp.directive("growthGraph", function($http, $location){
             }
           }
         });
-
         return tmp_data;
       };
+      
+      scope.getMinInterval = function(data){
+        var time_diff = [],
+            previous;
+        _.each(data, function(elem, key){
+          _.each(elem, function(el){
+            el.updater.submission_date = parseDate(el.updater.submission_date);
+              if(previous){
+                time_diff.push(el.updater.submission_date - previous.updater.submission_date);
+              }
+              previous = el;
+          });
+        });
+        return _.min(time_diff);
+      }
 
       scope.getHistoryData = function(ids){
         var promise = $http.get("restapi/"+scope.dbName+"/fullhistory/"+ids);
         promise.then( function( data ) {
+          //for each request
           _.each(data.data.results, function(elem, key)
           {
+            //for each request status
             _.each(elem, function(el){
+              //el.updater.submission_date = parseDate(el.updater.submission_date);
               if (possible_dates.indexOf(el.updater.submission_date) )
               {
-                possible_dates.push(el.updater.submission_date)
+                possible_dates.push(el.updater.submission_date);
               }
             });
             scope.chart_data.push({"values" : scope.parseHistory(elem), "key" : key, "color" : "#"+((1<<24)*Math.random()|0).toString(16)})
           });
+          //console.log(scope.chart_data);
           scope.displayChart();
         });
       };
@@ -703,12 +732,13 @@ testApp.directive("growthGraph", function($http, $location){
       }
       scope.getIDsFromURL();
       // EXO-chain_Summer12PLHE_flowLHE2FS53-00002
+
       scope.displayChart = function()
       {
         // Wrapping in nv.addGraph allows for '0 timeout render', stores rendered charts in nv.graphs, and may do more in the future... it's NOT required
           var chart;
-        
       
+          //possible_dates = ['2001-03-03 10:12', '2002-03-03 10:12']
           possible_dates = _.uniq(possible_dates);
           possible_dates.sort();
           var levels = {};
@@ -725,14 +755,14 @@ testApp.directive("growthGraph", function($http, $location){
               y: function (obj) { return levels[obj.step]; },
               showXAxis: true,
               showYAxis: true,
-              transitionDuration: 250
+              transitionDuration: 250,
             })
             // .width(600).height(400)
             .tooltipContent(function(key, x, y, entry, graph) {
               var e = entry.point;
-              return '<h5>' + key + '</h5>' +
+              return '<a href=""><h5>' + key + '</h5></a>' +
                      '<p>' + e.step + ' at ' + e.updater.submission_date + '</p>' +
-                     '<p>' + "by " + "<b>" + e.updater.author_username + "</b>" + '</p>';
+                     '<p>' + 'by ' + '<a href=""><b>' + e.updater.author_username + '</b></a>' + '</p>';
             });
       
           // chart sub-models (ie. xAxis, yAxis, etc) when accessed directly, return themselves, not the parent chart, so need to chain separately

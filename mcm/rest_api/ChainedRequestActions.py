@@ -456,6 +456,7 @@ class GetConcatenatedHistory(RESTResource):
                     tmp_data[0]["step"] = "new"
 
                 for step in tmp_data:
+                    step["request_id"] = request_data["prepid"]
                     tmp_history[elem].append(step)
         return {"results":tmp_history, "key": id_string}
 

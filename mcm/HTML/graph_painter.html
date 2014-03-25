@@ -1,53 +1,33 @@
-<!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<!doctype html>
+<html lang="en" ng-app="testApp" id="ng-app">
   <head>
-    <title>Growth artist</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="scripts/nv.d3.min.css" rel="stylesheet" type="text/css">
-    <style>
-      body {
-        overflow-y:scroll;
-      }
-      text {
-        font: 12px sans-serif;
-      }
-      svg {
-        display: block;
-      }
-      #chart svg {
-        height: 500px;
-        min-width: 200px;
-        min-height: 100px;
-      }
-      #chart {
-        margin-top: 200px;
-        margin-left: 100px;
-      }
-      #chart .nv-lineChart circle.nv-point
-      {
-          fill-opacity: 1;
-      }
-    </style>
-    <script type="text/javascript" src="scripts/underscore.js"></script>
-    <!-- <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-    <script type="text/javascript" src="scripts/jquery.cookie.js"></script>-->
-    <script type="text/javascript" src="scripts/angular.min.js"></script>
-    <script type="text/javascript" src="scripts/d3.v3.min.js"></script>
-    <script type="text/javascript" src="scripts/nv.d3.min.js"></script> 
-     <!--[IF IE]>
-      <script type="text/javascript">
+    <meta charset="utf-8">
+    <title>Life-Time Representation of Chained Requests</title>
+    <link rel="stylesheet" href="scripts/css/lineChart.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.0.min.js"></script>
+    <script src="scripts/underscore.js"></script>
+    <script src="scripts/angular.min.js"></script>
+    <script src="scripts/d3.v3.min.js"></script>
+    <!--[IF IE]>
+      <script>
         var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
       </script>
-     <![endif]-->
-     <![if !IE]>
-       <script type="text/javascript">
-         var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
-       </script>
-     <![endif]>
+    <![endif]-->
+    <![if !IE]>
+      <script>
+        var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      </script>
+    <![endif]>
+    <!--[if lt IE 9]>
+      <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
     <script src="scripts/main_controller.js"></script>
+
+    <script src="scripts/lineChart.js"></script>
+    <script src="scripts/lineChart_directive.js"></script>
   </head>
-  <body ng-controller="mainCtrl">
-  	<growth-graph ></growth-graph>
+  <body ng-controller="mainCtrl">  
+    <line-chart></line-chart>
   </body>
 </html>
