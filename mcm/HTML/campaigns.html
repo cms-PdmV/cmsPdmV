@@ -182,10 +182,10 @@
               <div custom-history ng-model="data[value.db_name]"></div>
             </div>
 	          <div ng-switch-when="Pileup dataset name">
-	            <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
+	            <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
 	          </div>
 	          <div ng-switch-when="Input dataset">
-	            <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
+	            <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
 	          </div>
 	          <div ng-switch-when="Root">
 	            <i class="icon-ok" ng-show="data[value.db_name]==0" rel="tooltip" title="Yes"></i>

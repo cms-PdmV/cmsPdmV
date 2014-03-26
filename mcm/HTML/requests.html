@@ -202,10 +202,10 @@
                 <a ng-href='{{getLocation()}}&status={{data[value.db_name]}}' rel="tooltip" title="Show all requests in status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Input dataset">
-                <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
+                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Pileup dataset name">
-                <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
+                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[value.db_name]}}' rel="tooltip" title="Link to DAS" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Dataset name">
                 <a ng-href='requests?dataset_name={{data[value.db_name]}}' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
@@ -264,7 +264,7 @@
               <div ng-switch-when="Output dataset">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="ds in data[value.db_name]">
-                    <a ng-href='https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{ds}}' rel="tooltip" title="Link to DAS" target="_self">{{ds}}</a>
+                    <a ng-href='https://cmsweb.cern.ch/das/request?input={{ds}}' rel="tooltip" title="Link to DAS" target="_self">{{ds}}</a>
                   </li>
                 </ul>
               </div>
