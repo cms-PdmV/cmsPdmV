@@ -831,7 +831,10 @@ class request(json_base):
             res += '-n ' + str(events) + ' || exit $? ; \n'
             if run:
 
-                runtest_xml_file = os.path.join(directory, "%s_rt.xml" % self.get_attribute('prepid'))
+                if previous :
+                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" %(self.get_attribute('prepid'), previous+1))
+                else:
+                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" %(self.get_attribute('prepid')))
                 res += 'cmsRun -e -j %s %s || exit $? ; \n' % (runtest_xml_file, configuration_names[-1])
                 res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
@@ -1044,7 +1047,7 @@ done
                 genvalid_python_file,
                 dump_python)
             if run:
-                genvalid_xml_file = os.path.join(directory, "%s_gv.xml" % self.get_attribute('prepid'))
+                genvalid_xml_file = os.path.join(directory, "%s_gv.xml" % (self.get_attribute('prepid')))
 
                 self.genvalid_driver += 'cmsRun -e -j %s %s || exit $? ; \n' % (genvalid_xml_file, genvalid_python_file)
                 self.genvalid_driver += 'echo %d events were ran \n' % ( n_to_valid )
@@ -1181,14 +1184,14 @@ done
         actors = list(set(actors))
         return actors
 
-    def test_failure(self, message, what='Submission', rewind=False):
+    def test_failure(self, message, what='Submission', rewind=False, with_notification=True):
         if rewind:
             self.set_status(0)
             self.approve(0)
         self.update_history({'action': 'failed'})
-        self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
-        rdb = database('requests')
-        rdb.update(self.json())
+        if with_notification:
+            self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
+        self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05):
         #existing rwma
@@ -1562,6 +1565,26 @@ done
         #create a hash value that supposedly uniquely defines the configuration
         hash_id = hashlib.sha224(uniqueString).hexdigest()
         return hash_id
+
+    def pickup_performance(self, directory):
+        (success,report) = self.pickup_performance(directory, 'perf')
+        if not success: return (success,report)
+        (success,report) = self.pickup_performance(directory, 'eff')
+        return (success,report)
+    def pickup_performance(self, directory, what):
+        whatToArgs={'eff' : 'gv',
+                    'perf' : 'rt'}
+        try:
+            xml = directory + '%s_%s.xml' %( self.get_attribute('prepid'), whatToArgs[what])
+            if os.path.exists(xml):
+                self.update_performance(open(xml).read(), what)
+            return (True,"")
+        except:
+            trace=traceback.format_exc()
+            self.logger.error('Failed to get %s reports for %s \n %s' %( what,
+                                                                         self.get_attribute('prepid'),
+                                                                         trace))
+            return (False, trace)
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test(self.target_for_test())

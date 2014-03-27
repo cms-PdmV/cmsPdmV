@@ -151,24 +151,7 @@ class RuntestGenvalid(Handler):
 
             if success:
                 self.logger.log("batch_test result is %s" % success)
-                try:
-                #suck in run-test if present
-                    rt_xml = location.location() + '%s_rt.xml' % self.rid
-                    if os.path.exists(rt_xml):
-                        mcm_r.update_performance(open(rt_xml).read(), 'perf')
-                except:
-                    batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get perf reports \n %s' % batch_test.log_err)
-                    success = False
-
-                try:
-                    gv_xml = location.location() + '%s_gv.xml' % self.rid
-                    if os.path.exists(gv_xml):
-                        mcm_r.update_performance(open(gv_xml).read(), 'eff')
-                except:
-                    batch_test.log_err = traceback.format_exc()
-                    self.logger.error('Failed to get gen valid reports \n %s' % batch_test.log_err)
-                    success = False
+                (success,batch_test.log_err) = mcm_r.pickup_performance(location.location())
 
             self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.rid ))
             if not success:
