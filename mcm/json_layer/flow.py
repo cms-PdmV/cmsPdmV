@@ -2,24 +2,28 @@
 
 from json_base import json_base
 
-class flow(json_base):
-    def __init__(self, json_input=None):
-        if not json_input: json_input = {}
-        self._json_base__approvalsteps = ['none','flow', 'submit']
 
-        self._json_base__schema = {
-            '_id':'',
-            'prepid':'', 
-            'next_campaign':'', 
-            'allowed_campaigns':[], 
-            'request_parameters':{}, 
-            #'description':'',
-            'notes':'',
-            'history':[],
-            #'label':'', ## something that one needs to add in the processing string ?
-            'approval':self.get_approval_steps()[0] 
-            }
-        
+class flow(json_base):
+
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'next_campaign': '',
+        'allowed_campaigns': [],
+        'request_parameters': {},
+        #'description': '',
+        'notes': '',
+        'history': [],
+        #'label': '', ## something that one needs to add in the processing string ?
+        'approval': ''
+    }
+
+    _json_base__approvalsteps = ['none', 'flow', 'submit']
+
+    def __init__(self, json_input=None):
+        json_input = json_input if json_input else {}
+
+        self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         ##JR. would that function ? self.__approvalsteps = [ 'flow' , 'inject' ]
         # update self according to json_input

@@ -25,21 +25,24 @@ class action(json_base):
             action.logger.error('chained_campaign %s does not exist in the database.' % (self.c))
         def __str__(self):
             return 'Error: Chained Campaign '+ self.c + ' does not exist'
-    
-    def __init__(self, json_input={}):
-        self._json_base__schema = {
-            '_id':'',
-            'prepid':'',
-            'history':[],
-            'member_of_campaign':'', 
-            'dataset_name':'',
-            'analysis_id':[],
-            'chains': {},  # a dictionary holding the settings for each chain
-            }
+
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'history': [],
+        'member_of_campaign': '',
+        'dataset_name': '',
+        'analysis_id': [],
+        'chains': {},  # a dictionary holding the settings for each chain
+    }
+
+    def __init__(self, json_input=None):
+        json_input = json_input if json_input else {}
+
         # update self according to json_input
         self.update(json_input)
         self.validate()
-	
+
     def update(self,  json_input):
         self._json_base__json = {}
         if not json_input:

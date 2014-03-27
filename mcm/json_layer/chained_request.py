@@ -57,34 +57,39 @@ class chained_request(json_base):
         def __str__(self):
             return 'Error: ' + self.name + ' is stopped.'
 
+    _json_base__approvalsteps = ['none', 'flow', 'submit']
+
+    _json_base__status = ['new', 'processing', 'done']
+
+    _json_base__schema = {
+        '_id': '',
+        'chain': [],
+        'approval': str(''),
+        'step': 0,
+        'analysis_id': [],
+        'pwg': '',
+        #'generators':'', #prune
+        #'priority':-1, #prune
+        'prepid': '',
+        #'alias':'', #prune
+        'dataset_name': '',
+        #'total_events': -1,
+        'history': [],
+        'member_of_campaign': '',
+        #'generator_parameters':[], #prune
+        #'request_parameters':{} # json with user prefs #prune
+        'last_status': 'new',
+        'status': ''
+    }
+
     def __init__(self, json_input=None):
 
-        if not json_input: json_input = {}
-        self._json_base__approvalsteps = ['none', 'flow', 'submit']
-        #self._json_base__status = ['new','started','done']
+        json_input = json_input if json_input else {}
 
-        self._json_base__status = ['new', 'processing', 'done']
+        # create all chained request in flow
+        self._json_base__schema['approval'] = self.get_approval_steps()[1]
+        self._json_base__schema['status'] = self.get_status_steps()[0]
 
-        self._json_base__schema = {
-            '_id': '',
-            'chain': [],
-            'approval': self.get_approval_steps()[1], ## create all chained request in flow
-            'step': 0,
-            'analysis_id': [],
-            'pwg': '',
-            #'generators':'', #prune
-            #'priority':-1, #prune
-            'prepid': '',
-            #'alias':'', #prune
-            'dataset_name': '',
-            #'total_events': -1,
-            'history': [],
-            'member_of_campaign': '',
-            #'generator_parameters':[], #prune
-            #'request_parameters':{} # json with user prefs #prune
-            'last_status': 'new',
-            'status': self.get_status_steps()[0]
-        }
         # update self according to json_input
         self.setup()
         self.update(json_input)

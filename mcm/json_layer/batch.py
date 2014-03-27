@@ -7,20 +7,25 @@ from tools.settings import settings
 
 
 class batch(json_base):
-    def __init__(self, json_input={}):
-        self._json_base__status = ['new','announced','done']
-        self._json_base__schema = {
-            '_id':'',
-            'prepid':'',
-            'history':[],
-            'notes':'',
-            'status':self.get_status_steps()[0],
-            'requests':[],
-            'extension':0,
-            'process_string':'',
-            'message_id':'',
-            'version':0
-            }
+
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'history': [],
+        'notes': '',
+        'status': '',
+        'requests': [],
+        'extension': 0,
+        'process_string': '',
+        'message_id': '',
+        'version': 0
+    }
+
+    _json_base__status = ['new', 'announced', 'done']
+
+    def __init__(self, json_input=None):
+        json_input = json_input if json_input else {}
+        self._json_base__schema['status'] = self.get_status_steps()[0]
         self.setup()
         self.update(json_input)
         self.validate()

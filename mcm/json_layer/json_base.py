@@ -12,6 +12,7 @@ class json_base:
     __json = {}
     __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
     __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
+    __schema = {}
     logger = logfactory
 
     class WrongApprovalSequence(Exception):
@@ -54,11 +55,10 @@ class json_base:
         def __str__(self):
             return 'Illegal Status: ' + self.__step
 
-
-    def __init__(self, json={}):
+    def __init__(self, json=None):
+        json = json if json else {}
         if json:
             self.__json = json
-        self.__schema = {}
 
     def setup(self):
         self.com = communicator()
@@ -76,7 +76,6 @@ class json_base:
                 #for key in self.__json:
                 #    if key not in self.__schema:
                 #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
-
 
     def reload(self):
         """
@@ -119,7 +118,6 @@ class json_base:
                     self._json_base__json[key] = self._json_base__schema[key]
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
-
 
     def update_history(self, history):
         hist = self.get_attribute('history')
@@ -289,6 +287,10 @@ class json_base:
 
     def schema(self):
         return self.__schema
+
+    @classmethod
+    def class_schema(cls):
+        return cls.__schema
 
     def print_self(self):
         try:

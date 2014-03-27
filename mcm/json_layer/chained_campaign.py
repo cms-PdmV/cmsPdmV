@@ -5,6 +5,7 @@ from json_base import json_base
 from couchdb_layer.mcm_database import database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
+
 class chained_campaign(json_base):
     class CampaignDoesNotExistException(Exception):
         def __init__(self,  campid):
@@ -21,22 +22,23 @@ class chained_campaign(json_base):
 
         def __str__(self):
             return 'Error: Flow ' + self.f + ' does not exist.'
-    
+
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'alias': '',
+        #'energy': 0,
+        'campaigns': [], # list of lists [camp_id, flow]
+        #'description': '',
+        'notes': '',
+        'action_parameters': {},
+        #'www': '',
+        'history': [],
+        'valid': True
+    }
+
     def __init__(self, json_input=None):
-        if not json_input: json_input = {}
-        self._json_base__schema = {
-            '_id':'',
-            'prepid':'',
-            'alias':'', 
-            #'energy':0,
-            'campaigns':[], # list of lists [camp_id, flow]
-            #'description':'',
-            'notes':'',
-            'action_parameters':{}, 
-            #'www':'',
-            'history':[],
-            'valid':True
-            }
+        json_input = json_input if json_input else {}
         
         # update self according to json_input
         self.update(json_input)

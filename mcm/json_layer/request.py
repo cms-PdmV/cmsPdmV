@@ -34,6 +34,58 @@ class request(json_base):
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
 
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'history': [],
+        'priority': 20000,
+        #'completion_date':'',
+        'cmssw_release': '',
+        'input_dataset': '',
+        'output_dataset': [],
+        'pwg': '',
+        'validation': {},
+        'dataset_name': '',
+        'pileup_dataset_name': '',
+        #'www':'',
+        'process_string': '',
+        'extension': 0,
+        #'input_block':'',
+        'block_black_list': [],
+        'block_white_list': [],
+        'fragment_tag': '',
+        #'pvt_flag':'',
+        #'pvt_comment':'',
+        'mcdb_id': -1,
+        'notes': '',
+        #'description':'',
+        #'remarks':'',
+        'completed_events': -1,
+        'total_events': -1,
+        'member_of_chain': [],
+        'member_of_campaign': '',
+        'flown_with': '',
+        'time_event': float(-1),
+        'size_event': -1,
+        'memory': 2300, ## the default until now
+        #'nameorfragment':'',
+        'name_of_fragment': '',
+        'fragment': '',
+        'config_id': [],
+        'version': 0,
+        'status': '',
+        'type': '',
+        'keep_output': [], ## list of booleans
+        'generators': [],
+        'sequences': [],
+        'generator_parameters': [],
+        'reqmgr_name': [], # list of tuples (req_name, valid)
+        'approval': '',
+        'analysis_id': [],
+        'energy': 0.0,
+        'tags': []
+    }
+
     def __init__(self, json_input=None):
 
         # detect approval steps
@@ -42,65 +94,20 @@ class request(json_base):
         cdb = database('campaigns')
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
             if cdb.document_exists(json_input['member_of_campaign']):
-                if cdb.get(json_input['member_of_campaign'])['root'] > 0:
+                if cdb.get(json_input['member_of_campaign'])['root'] > 0:  # when is not root
                     self._json_base__approvalsteps = ['none', 'approve', 'submit']
                     self._json_base__status = ['new', 'approved', 'submitted', 'done']
                 else:
                     self.is_root = True
+
             else:
                 raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
+        else:
+            raise Exception('Request is not a member of any campaign')
 
-        self._json_base__schema = {
-            '_id': '',
-            'prepid': '',
-            'history': [],
-            'priority': 20000,
-            #'completion_date':'',
-            'cmssw_release': '',
-            'input_dataset': '',
-            'output_dataset': [],
-            'pwg': '',
-            'validation': {},
-            'dataset_name': '',
-            'pileup_dataset_name': '',
-            #'www':'',
-            'process_string': '',
-            'extension': 0,
-            #'input_block':'',
-            'block_black_list': [],
-            'block_white_list': [],
-            'fragment_tag': '',
-            #'pvt_flag':'',
-            #'pvt_comment':'',
-            'mcdb_id': -1,
-            'notes': '',
-            #'description':'',
-            #'remarks':'',
-            'completed_events': -1,
-            'total_events': -1,
-            'member_of_chain': [],
-            'member_of_campaign': '',
-            'flown_with': '',
-            'time_event': float(-1),
-            'size_event': -1,
-            'memory': 2300, ## the default until now
-            #'nameorfragment':'',
-            'name_of_fragment': '',
-            'fragment': '',
-            'config_id': [],
-            'version': 0,
-            'status': self.get_status_steps()[0],
-            'type': '',
-            'keep_output': [], ## list of booleans
-            'generators': [],
-            'sequences': [],
-            'generator_parameters': [],
-            'reqmgr_name': [], # list of tuples (req_name, valid)
-            'approval': self.get_approval_steps()[0],
-            'analysis_id': [],
-            'energy': 0,
-            'tags': []
-        }
+        self._json_base__schema['status'] = self.get_status_steps()[0]
+        self._json_base__schema['status'] = self.get_approval_steps()[0]
+
         # update self according to json_input
         self.setup()
         self.update(json_input)

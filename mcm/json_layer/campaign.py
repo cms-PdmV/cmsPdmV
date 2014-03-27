@@ -22,42 +22,45 @@ class campaign(json_base):
         def __str__(self):
             return 'Error: Campaign '+  self.c +  ' already in "next" list.'
 
-    def __init__(self, json_input={}):
+    _json_base__schema = {
+         '_id': '',
+         'prepid': '',
+         #'start_date':'',
+         #'end_date':'',
+         'energy': -1.0,
+         'type': '',
+         'next': [],
+         #'production_type':'',
+         'cmssw_release': '',
+         'input_dataset': '',
+         #'description':'',
+         'notes' : '',
+         #'remarks':'',
+         #'notes':'',
+         'status': '',
+         'validation':'',
+         'pileup_dataset_name':'',
+         #'process_string':[],
+         'generators': [],
+         'www': '',
+         #'completed_events': -1,
+         #'total_events': -1,
+         'root': 1, # -1: possible root, 0: root, 1: non-root
+         'sequences': [], # list of jsons of jsons
+         'approval': '',
+         'history': []
+     }
 
-        # set campaign approval steps
-        self._json_base__approvalsteps = ['stop',  'start']
-        
-        # set campaign status
-        self._json_base__status = ['stopped','started']
+    _json_base__status = ['stopped', 'started']
 
-        self._json_base__schema = {
-                                 '_id': '',
-                                 'prepid': '',
-                                 #'start_date':'', 
-                                 #'end_date':'', 
-                                 'energy': -1.0,
-                                 'type': '',
-                                 'next': [],
-                                 #'production_type':'', 
-                                 'cmssw_release': '',
-                                 'input_dataset': '',
-                                 #'description':'', 
-                                 'notes' : '',
-                                 #'remarks':'', 
-                                 #'notes':'',
-                                 'status':self.get_status_steps()[0], 
-                                 'validation':'',
-                                 'pileup_dataset_name':'', 
-                                 #'process_string':[], 
-                                 'generators': [],
-                                 'www': '',
-                                 #'completed_events': -1,
-                                 #'total_events': -1,
-                                 'root': 1, # -1: possible root, 0: root, 1: non-root
-                                 'sequences': [], # list of jsons of jsons
-                                 'approval': self.get_approval_steps()[0],
-                                 'history': []
-                                 }
+    _json_base__approvalsteps = ['stop', 'start']
+
+    def __init__(self, json_input=None):
+        json_input = json_input if json_input else {}
+
+        # set campaign status and approval step
+        self._json_base__schema['status'] = self.get_status_steps()[0]
+        self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         # update self according to json_input
         self.update(json_input)

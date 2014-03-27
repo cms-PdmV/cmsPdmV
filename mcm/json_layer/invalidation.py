@@ -4,17 +4,21 @@ from tools.user_management import user_pack
 
 
 class invalidation(json_base):
-    def __init__(self, json_input={}):
-        # set invalidation status
-        self._json_base__status = ['new', 'announced']
 
-        self._json_base__schema = {
-            '_id': '',
-            'prepid': '',
-            'object': '',
-            'status': self._json_base__status[0],
-            'type': ''
-        }
+    _json_base__status = ['new', 'announced']
+
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'object': '',
+        'status': '',
+        'type': ''
+    }
+
+    def __init__(self, json_input=None):
+        json_input = json_input if json_input else {}
+        # set invalidation status
+        self._json_base__schema['status'] = self._json_base__status[0]
 
         # update self according to json_input
         self.update(json_input)

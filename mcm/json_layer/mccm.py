@@ -2,31 +2,34 @@
 
 from json_base import json_base
 
+
 class mccm(json_base):
 
+    _json_base__schema = {
+        '_id': '',
+        'prepid': '',
+        'approval': 'none',
+        'block': 0,
+        'staged': 0,
+        'threshold': 0.,
+        'meeting': '',
+        'deadline': '',
+        'history': [],
+        'message_id': '',
+        'notes': '',
+        'pwg': '',
+        'requests': [],
+        'chains': [],
+        'repetitions': 1,
+        'size': 0,
+        'status': 'new'
+    }
+
+    _json_base__approvalsteps = ['none', 'approved']
+    _json_base__status = ['new', 'done']
+
     def __init__(self, json_input=None):
-        if not json_input: json_input = {}
-        self._json_base__approvalsteps = ['none','approved']
-        self._json_base__status = ['new', 'done']
-        self._json_base__schema = {
-            '_id':'',
-            'prepid': '',
-            'approval': 'none',
-            'block': 0,
-            'staged':0,
-            'threshold':0.,
-            'meeting' : '',
-            'deadline': '',
-            'history': [],
-            'message_id': '',
-            'notes': '',
-            'pwg': '',
-            'requests': [],
-            'chains' :[],
-            'repetitions' : 1,
-            'size': 0,
-            'status': 'new'
-            }
+        json_input = json_input if json_input else {}
         # update self according to json_input
         self.update(json_input)
         self.validate()
