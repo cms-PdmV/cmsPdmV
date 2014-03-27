@@ -328,6 +328,7 @@ root.restapi.chained_requests.fullhistory = GetConcatenatedHistory()
 root.restapi.chained_requests.searchable = SearchableChainedRequest()
 root.restapi.chained_requests.inject = InjectChainedRequest(mode='inject')
 root.restapi.chained_requests.get_inject = InjectChainedRequest(mode='show')
+root.restapi.chained_requests.test = TestChainedRequest()
 
 # REST Actions
 root.restapi.actions.save = CreateAction()
