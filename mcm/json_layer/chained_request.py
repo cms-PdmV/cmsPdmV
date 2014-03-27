@@ -86,9 +86,15 @@ class chained_request(json_base):
             'status': self.get_status_steps()[0]
         }
         # update self according to json_input
+        self.setup()
         self.update(json_input)
         self.validate()
+        self.get_current_user_role_level()
 
+    def get_actors(self, N=-1, what='author_username', Nchild=-1):
+        rdb = database('requests')
+        last_r = request(rdb.get(self.get_attribute('chain')[-1]))
+        return last_r.get_actors(N,what,Nchild)
 
     def flow_trial(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False):
         if not block_black_list: block_black_list = []
