@@ -7,7 +7,7 @@ function resultsCtrl($scope, $http, $location, $window){
         //{text:'Status',select:true, db_name:'status'},
         //{text:'Type',select:true, db_name:'type'},
         //{text:'ProdType',select:true, db_name:'production_type'},
-        {text:'SW Release',select:true, db_name:'cmssw_release'},
+        {text:'CMSSW Release',select:true, db_name:'cmssw_release'},
         {text:'Energy',select:true, db_name:'energy'},
 	      {text:'Next',select:true, db_name:'next'},
 	      {text:'Notes',select:true, db_name:'notes'}

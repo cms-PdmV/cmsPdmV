@@ -175,6 +175,9 @@
 	          <div ng-switch-when="Type">
 	            <a ng-href='campaigns?type={{data[value.db_name]}}' rel="tooltip" title="View campaigns of type {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-book"></i></a>
 	          </div>
+		  <div ng-switch-when="CMSSW Release">
+		    <a ng-href='campaigns?cmssw_release={{data[value.db_name]}}' rel="tooltip" title="View campaigns using release {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+		  </div>
             <div ng-switch-when="Energy">
               <a ng-href='campaigns?energy={{data[value.db_name]}}' rel="tooltip" title="View campaigns of energy {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
             </div>
