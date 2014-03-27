@@ -151,7 +151,7 @@ class RuntestGenvalid(Handler):
 
             if success:
                 self.logger.log("batch_test result is %s" % success)
-                (success,batch_test.log_err) = mcm_r.pickup_performance(location.location())
+                (success,batch_test.log_err) = mcm_r.pickup_all_performance(location.location())
 
             self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.rid ))
             if not success:

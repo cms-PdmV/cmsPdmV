@@ -956,7 +956,6 @@ class TestRequest(RESTResource):
         return dumps(outs)
 
 
-
 class InjectRequest(RESTResource):
     
     def __init__(self):
@@ -1187,39 +1186,26 @@ class SearchRequest(RESTResource):
 
 class RequestPerformance(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.generator_contact
 
     def PUT(self, *args):
         """
         Upload performance report .xml : retrieve size_event and time_event
         """
-        self.logger.error("Got a performance file from uploading %s" % (str(args)))
-        if len(args) != 2:
-            return dumps({"results": False, "message": "not enough arguments"})
+        import xml.dom.minidom
+        xml_doc = cherrypy.request.body.read().strip()
+        xml_data = xml.dom.minidom.parseString(xml_doc)
+        pfn = xml_data.documentElement.getElementsByTagName("PFN")[-1].lastChild.data
+        what='perf'
+        if '_genvalid' in pfn:
+            what='eff'
+        rid=pfn.replace('file:','').replace('.root','').replace('_genvalid','')
         rdb = database('requests')
-        rid = args[0]
-        if not rdb.document_exists(rid):
-            return dumps({"results": False, "message": "%s does not exist" % rid})
+        mcm_r = request( rdb.get( rid ) )
+        update = mcm_r.update_performance( xml_doc, what)
 
-        what = args[1]
-        if not what in ["perf", "eff"]:
-            return dumps({"results": False, "message": "%s is not a valid option" % what})
-
-        xml_doc = cherrypy.request.body.read()
-
-        ## then get the request ID and update it's value
-        mcm_r = request(rdb.get(rid))
-        to_be_saved = mcm_r.update_performance(xml_doc, what)
-
-        if to_be_saved:
-            saved = rdb.update(mcm_r.json())
-            if saved:
-                return dumps({"results": True, "prepid": rid})
-            else:
-                return dumps({"results": False, "prepid": rid})
-        else:
-            return dumps({"results": False, "prepid": rid})
-
+        mcm_r.reload()
+        return str(update)
 
 class RequestLister():
     def __init__(self):

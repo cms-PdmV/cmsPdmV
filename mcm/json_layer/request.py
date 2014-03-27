@@ -7,6 +7,7 @@ import xml.dom.minidom
 from math import sqrt
 import hashlib
 import copy
+import traceback
 
 from couchdb_layer.mcm_database import database
 
@@ -1566,7 +1567,7 @@ done
         hash_id = hashlib.sha224(uniqueString).hexdigest()
         return hash_id
 
-    def pickup_performance(self, directory):
+    def pickup_all_performance(self, directory):
         (success,report) = self.pickup_performance(directory, 'perf')
         if not success: return (success,report)
         (success,report) = self.pickup_performance(directory, 'eff')
