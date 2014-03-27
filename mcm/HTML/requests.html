@@ -280,7 +280,8 @@
               <div ng-switch-when="Member of chain">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="chain in data[value.db_name] | orderBy: 'toString()'">
-                    <a ng-href='chained_requests?prepid={{chain}}' rel="tooltip" title="View details of the chain" target="_self">{{chain}} <i class="icon-indent-left"></i></a>
+                    <a ng-href='chained_requests?prepid={{chain}}' rel="tooltip" title="View details of the chain" target="_self">{{chain}}<i class="icon-indent-left"></i></a>
+                    <a ng-href='requests?member_of_chain={{chain}}' rel="tooltip" title="View request in chain {{chain}}" target="_self"><i class="icon-folder-open"></i></a>
                   </li>
                 </ul>
               </div>

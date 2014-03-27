@@ -138,6 +138,7 @@
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-when="Chain">
+		<a ng-href='requests?member_of_chain={{data.prepid}}' rel="tooltip" title"Show request in chain {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
                   <a ng-show="$index==0" ng-href='actions?prepid={{chain}}' rel="tooltip" title="Show action for {{chain}}" target="_self"><i class="icon-qrcode"></i></a>
                   <a ng-show="$index==0" ng-href='mccms?contains={{chain}}' rel="tooltip" title="Show mccms for {{chain}}" target="_self"><i class="icon-tasks"></i></a>
