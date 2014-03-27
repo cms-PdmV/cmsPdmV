@@ -1149,10 +1149,11 @@ class SearchRequest(RESTResource):
         """
         search_dict = threaded_loads(cherrypy.request.body.read().strip())
         self.logger.error("Got a wild search dictionary %s" % ( str(search_dict) ))
+        curr_page = 0
         if "page" in search_dict:
             curr_page = int(search_dict["page"])
             del(search_dict["page"])
-        limit=20
+        limit = 20
         if "limit" in search_dict:
             limit = int(search_dict["limit"])
             del(search_dict["limit"])
