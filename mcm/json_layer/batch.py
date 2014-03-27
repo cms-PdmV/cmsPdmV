@@ -88,8 +88,8 @@ class batch(json_base):
         message+="may you please consider the following batch number %d of %s requests for the campaign %s:\n\n"%(int(batchNumber),total_requests, campaign)
         for r in content:
             ##loose binding of the prepid to the request name, might change later on
-            if 'pdmv_prepid_id' in r['content']:
-                pid=r['content']['pdmv_prepid_id']
+            if 'pdmv_prep_id' in r['content']:
+                pid=r['content']['pdmv_prep_id']
             else:
                 pid=r['name'].split('_')[1]
             mcm_r = rdb.get(pid)
