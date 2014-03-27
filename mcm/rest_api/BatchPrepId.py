@@ -12,12 +12,22 @@ class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
+        
     def next_id(self, for_request, create_batch=True):
         flown_with = for_request['flown_with']
         next_campaign = for_request['member_of_campaign']
         version = for_request['version']
         extension = for_request['extension']
         process_string = for_request['process_string']
+
+        return self.next_batch_id(next_campaign,
+                     version,
+                     extension,
+                     process_string,
+                     flown_with,
+                     create_batch)
+
+    def next_batch_id(self, next_campaign, version=0, extension=0, process_string="",flown_with="", create_batch=True):
 
         with locker.lock('batch name clashing protection'):
             if flown_with:
@@ -70,9 +80,17 @@ class BatchPrepId():
                                   'process_string' : process_string})
                 notes=""
                 cdb = database('campaigns')
-                mcm_c = cdb.get( next_campaign )
-                if mcm_c['notes']:
-                    notes+="Notes about the campaign:\n"+mcm_c['notes']+"\n"
+                cs = []
+                if not cdb.document_exists( next_campaign ):
+                    ccdb = database('chained_campaigns')
+                    mcm_cc = ccdb.get( next_campaign )
+                    for (c,f) in mcm_cc['campaigns']:
+                        cs.append(c)
+                    else:
+                        cs = [cdb.get( next_campaign )]
+                for mcm_c in cs:
+                    if mcm_c['notes']:
+                        notes+="Notes about the campaign %s:\n"%mcmc_['prepid']+mcm_c['notes']+"\n"
                 if flown_with:
                     fdb = database('flows')
                     mcm_f = fdb.get(flown_with)
