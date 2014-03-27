@@ -193,23 +193,19 @@ class database:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False        
         
-    def get_all(self, page_num=-1, limit=20):
+    def get_all(self, page_num=-1, limit=20, get_raw=False):
         try:
             limit, skip = self.__pagify(page_num, limit=limit)
+            url = "_design/%s/_view/%s" % (self.db_name, "all")
             if limit >= 0 and skip >= 0:
-                url = "_design/%s/_view/%s"%(self.db_name, "all")
-                result = self.db.loadView(url, options={'limit':limit,'skip':skip, 'include_docs':True})['rows']
-                res = map(lambda r : r['doc'], result)
-                return res
-            url = "_design/%s/_view/%s"%(self.db_name, "all")
-            result = self.db.loadView(url,options={'include_docs':True})['rows']
-            res = map(lambda r : r['doc'], result)
-            return res
+                result = self.db.loadView(url, options={'limit': limit, 'skip': skip, 'include_docs': True}, get_raw=get_raw)
+            else:
+                result = self.db.loadView(url, options={'include_docs': True}, get_raw=get_raw)
+            return result if get_raw else map(lambda r: r['doc'], result['rows'])
         except Exception as ex:
             self.logger.error('Could not access view. Reason: %s' % (ex))
             return []
 
-    
     def query(self,  query='', page_num=0, limit=20):
         if not query:
             result = self.get_all(page_num, limit=limit)
@@ -495,45 +491,34 @@ class database:
     def construct_lucene_query(self, query):
         constructed_query = ""
         for param in query:
-            if constructed_query == "":
-                if query[param].find("-") != -1: ##because lucene query '-' is exclusion operand
-                    tmp_list = filter(None, query[param].split("-"))
-                    for value in tmp_list[:-1]:
-                        constructed_query += "%s:%s+AND+" % (param, value)
-                    constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
-                elif query[param].count("*") >= 2:
-                    tmp_list = filter(None, query[param].split("*"))
-                    for value in tmp_list[:-1]:
-                        constructed_query += "%s:%s*+AND+" % (param, value)
-                    constructed_query += "%s:%s*" % (param, tmp_list[-1])
-                else:
-                    constructed_query += param+':'+query[param]
-            else:
+            if query[param].startswith("[") and query[param].endswith("]"):
+                query[param] = query[param].replace(" TO ", "+TO+")
+            if constructed_query != "":
                 constructed_query += '+AND+'
-                if query[param].find("-") != -1:
-                    tmp_list = filter(None, query[param].split("-"))
-                    for value in tmp_list[:-1]:
-                        constructed_query += "%s:%s+AND+" % (param, value)
-                    constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
-                elif query[param].count("*") >= 2:
-                    tmp_list = filter(None, query[param].split("*"))
-                    for value in tmp_list[:-1]:
-                        constructed_query += "%s:%s*+AND+" % (param, value)
-                    constructed_query += "%s:%s*" % (param, tmp_list[-1])
-                else:
-                    constructed_query += param+':'+query[param]
+            if query[param].find("-") != -1: ##because lucene query '-' is exclusion operand
+                tmp_list = filter(None, query[param].split("-"))
+                for value in tmp_list[:-1]:
+                    constructed_query += "%s:%s+AND+" % (param, value)
+                constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
+            elif query[param].count("*") >= 2:
+                tmp_list = filter(None, query[param].split("*"))
+                for value in tmp_list[:-1]:
+                    constructed_query += "%s:%s*+AND+" % (param, value)
+                constructed_query += "%s:%s*" % (param, tmp_list[-1])
+            else:
+                constructed_query += param+':'+query[param]
+
             constructed_query.replace("*", "*+AND+"+param+":")
         return constructed_query
 
-    def full_text_search(self, index_name, query, page=0, limit=20):
+    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False):
         """
         queries loadView method with lucene interface for full text search
         """
         limit, skip = self.__pagify(page, limit=limit)
-        url = "_fti/_design/lucene/%s?q=%s" % (index_name, self.db.lucene_query(query))
-        data = self.db.FtiSearch(url, options={'limit':limit, 'include_docs':True, 'skip':skip})['rows']
-        results = [ elem["doc"] for elem in data ]
-        return results
+        url = "_fti/_design/lucene/%s?q=%s" % (index_name, query)
+        data = self.db.FtiSearch(url, options={'limit': limit, 'include_docs': True, 'skip': skip}, get_raw=get_raw)
+        return data if get_raw else [ elem["doc"] for elem in data['rows']]
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
         sequence_id = "%s/%s" % (view_doc, view_name)

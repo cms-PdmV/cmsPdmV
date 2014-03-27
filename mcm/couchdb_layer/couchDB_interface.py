@@ -34,19 +34,6 @@ class Database():
             request.add_header(key, headers[key])
         return request
 
-    def lucene_query(self, params):
-        """
-        construct a query for a view from specified parameters object
-        """
-        tmp_query = ""
-        if params.find("-") != -1:
-            tmp_list = params[elem].split("-")
-            for value in tmp_list[:-1]:
-                tmp_query += "%s:%s+AND+" % (elem, value)
-            tmp_query += "%s:%s" % (elem, tmp_list[-1]) #we treat last element differently
-            params[elem] = tmp_query
-        return params
-
     def to_json_query(self, params):
         """
         converts object to properly encoded JSON in utf-8
@@ -68,7 +55,7 @@ class Database():
         data = self.opener.open(db_request)
         return threaded_loads(data.read())
 
-    def loadView(self, viewname, options=None):
+    def loadView(self, viewname, options=None, get_raw=False):
         """
         query couchDB view with optional query parameters
         """
@@ -78,7 +65,7 @@ class Database():
             #db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, urllib.urlencode(options).replace('%27','%22')))
             db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
-        return threaded_loads(data.read())
+        return data.read() if get_raw else threaded_loads(data.read())
 
     def commitOne(self, doc):
         """
@@ -135,7 +122,7 @@ class Database():
         except Exception as ex:
             return False
 
-    def FtiSearch(self, viewname, options=None):
+    def FtiSearch(self, viewname, options=None, get_raw=False):
         """
         query couchDB view with optional query parameters
         """
@@ -143,7 +130,7 @@ class Database():
             options["key"] = '"'+str(options["key"])+'"'
         db_request = self.construct_request("%s/%s&%s" %(self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
-        return threaded_loads(data.read())
+        return data.read() if get_raw else threaded_loads(data.read())
 
     def UpdateSequence(self, options=None):
         """

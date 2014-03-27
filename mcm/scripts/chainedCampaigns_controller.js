@@ -122,17 +122,18 @@ function resultsCtrl($scope, $http, $location, $window){
 	  }
   });
   $scope.got_results = false; //to display/hide the 'found n results' while reloading
-  var promise;
+  var promise, get_raw;
   if (select){
       promise = $http.get("restapi/chained_campaigns/select");
   }
   else{
-      promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      get_raw = true
+      promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
   }
   //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
     promise.then(function(data){
       $scope.got_results = true;
-      $scope.result = data.data.results;
+      $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
       if ($scope.result === undefined ){
         alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
         return; //stop doing anything if results are undefined

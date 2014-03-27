@@ -84,10 +84,10 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     });
     $scope.got_results = false; //to display/hide the 'found n results' while reloading
-    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+    var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
     promise.then(function(data){
       $scope.got_results = true;
-      $scope.result = data.data.results; 
+      $scope.result = _.pluck(data.data.rows, 'doc');
       if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);
         rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown

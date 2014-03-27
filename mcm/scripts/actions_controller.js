@@ -62,12 +62,12 @@ function resultsCtrl($scope, $http, $location, $window){
     }
     $scope.get_chained_campaigns_info = function(do_get_data, query){
       $scope.rootCampaign = [];
-      var promise = $http.get('search/?db_name=chained_campaigns'+query);
+      var promise = $http.get('search?db_name=chained_campaigns'+query+"&get_raw");
       promise.then(function(data){
         $scope.update['success'] = true;
         $scope.update['fail'] = false;
         $scope.update['status_code'] = "Ok";
-        $scope.chained_campaigns = data.data.results;
+        $scope.chained_campaigns = _.pluck(data.data.rows, 'doc');
         //console.log("if selected not ------");
         $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'},
             {text:'History',select:true, db_name:'history'}];
@@ -242,22 +242,14 @@ function resultsCtrl($scope, $http, $location, $window){
     _.each($scope.rootCampaign, function(element){
       query = "&member_of_campaign="+element;
       _.each($location.search(), function(value,key){
-        if (key == 'select'){
-          //do nothing
-        } else if (key == 'starts'){
-          //do nothing
-        } else if (key == 'shown'){
-          //do nothing
-        } 
-        else
-        {
+        if (key != 'select' && key  != 'starts' && key != 'shown' ){
           query += "&"+key+"="+value;
         };
       });
             $scope.got_results = false;
-	    var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+	    var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
 	    promise.then(function(data){
-		    _.each( data.data.results , function( item ){
+		    _.each(_.pluck(data.data.rows, 'doc') , function( item ){
 			    $scope.result.push( item );
 			  });
             $scope.got_results = true;

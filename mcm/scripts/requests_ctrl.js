@@ -315,22 +315,24 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.superSearch();
     }else
     {
-      var query = ""
-      _.each($location.search(), function(value,key){
-        if (key!= 'shown' && key != 'fields'){
-          query += "&"+key+"="+value;
-        }
-      });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      var get_raw;
       if ($location.search()['allRevisions'])
       {
         $scope.requests_defaults.splice(1, 1, {text:'Revision', select:true, db_name:'_rev'});
         var promise = $http.get("restapi/"+$scope.dbName+"/all_revs/"+$location.search()['prepid']);
       }else{
-        var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+          var query = ""
+          _.each($location.search(), function(value,key){
+            if (key!= 'shown' && key != 'fields'){
+                query += "&"+key+"="+value;
+            }
+          });
+          var get_raw=true;
+          var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       }
       promise.then(function(data){
-        $scope.result = data.data.results;
+        $scope.result = !get_raw ? data.data.results : _.pluck(data.data.rows, 'doc');
         $scope.got_results = true;
         if ($scope.result === undefined ){
           alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));

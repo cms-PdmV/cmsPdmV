@@ -141,10 +141,10 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query)
+      var promise = $http.get("search?"+ "db_name="+$scope.dbName+query + "&get_raw")
       promise.then(function(data){
         $scope.got_results = true;
-        $scope.result = data.data.results;
+        $scope.result = _.pluck(data.data.rows, 'doc');
         if ($scope.result === undefined ){
           alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
           return; //stop doing anything if results are undefined

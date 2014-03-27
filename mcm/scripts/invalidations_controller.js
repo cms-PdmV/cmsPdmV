@@ -69,10 +69,10 @@ function resultsCtrl($scope, $http, $location, $window){
         query += "&"+key+"="+value;
       }
     });
-    var promise = $http.get("search/?db_name="+$scope.dbName+query);
+    var promise = $http.get("search?db_name="+$scope.dbName+query+"&get_raw");
     $scope.got_results = false; //to display/hide the 'found n results' while reloading
     promise.then(function(data){
-      $scope.result = data.data.results;
+      $scope.result = _.pluck(data.data.rows, 'doc');
       $scope.got_results = true;
       if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);

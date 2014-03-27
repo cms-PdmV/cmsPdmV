@@ -5,6 +5,7 @@ from tools.settings import settings
 from simplejson import dumps
 from tools.locker import locker
 from tools.communicator import communicator
+from collections import defaultdict
 import cherrypy
 import simplejson
 from couchdb_layer.mcm_database import database
@@ -111,12 +112,29 @@ class Communicate(RESTResource):
 
 class Search(RESTResource):
     """
-    Super-generic search through database
+    Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
     """
+
+    def __init__(self):
+        self.casting = defaultdict(lambda: defaultdict(lambda: ""))
+        import json_layer
+        for module in json_layer.__all__:
+            mod_obj = getattr(json_layer, module)
+            class_obj = getattr(mod_obj, module)
+            key_name = module if module.endswith("s") else module + "s"  # key name that can be resolved to database name
+            if module is 'batch':
+                key_name = 'batches'  # bleh, special case
+            schema = class_obj.class_schema()
+            if schema:
+                for schema_key in schema:
+                    if type(schema[schema_key]) in [int, float]:
+                        self.casting[key_name][schema_key] = "<" + type(schema[schema_key]).__name__ + ">"
+
     def GET(self, **args):
         db_name = 'requests'
         page = 0
         limit = 20
+        get_raw = False
         if 'db_name' in args:
             db_name = args['db_name']
             args.pop('db_name')
@@ -126,9 +144,21 @@ class Search(RESTResource):
         if 'limit' in args:
             limit = int(args['limit'])
             args.pop('limit')
+        if 'get_raw' in args:
+            get_raw = True
+            args.pop('get_raw')
         odb = database(db_name)
-        lucene_query = odb.construct_lucene_query(args)
-        if lucene_query:
-            return dumps({"results": odb.full_text_search("search", lucene_query, page=page, limit=limit)})
+
+        if args:
+            args = self.prepare_typed_args(args, db_name)
+            lucene_query = odb.construct_lucene_query(args)
+            self.logger.log("lucene url: %s" % (lucene_query) ) 
+            res = odb.full_text_search("search", lucene_query, page=page, limit=limit, get_raw=get_raw)
         else:
-            return dumps({"results": odb.get_all(page, limit)})
+            res = odb.get_all(page, limit, get_raw=get_raw)
+        return res if get_raw else dumps({"results": res})
+
+    def prepare_typed_args(self, args, db_name):
+        for arg in args:
+            args[arg + self.casting[db_name][arg]] = args.pop(arg)
+        return args

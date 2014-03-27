@@ -258,10 +258,10 @@ function resultsCtrl($scope, $http, $location, $window){
         }
       });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       promise.then(function(data){
         $scope.got_results = true;
-        $scope.result = data.data.results;
+        $scope.result = _.pluck(data.data.rows, 'doc');
         $scope.parseColumns();
       },function(){
          alert("Error getting information");
@@ -275,12 +275,12 @@ function resultsCtrl($scope, $http, $location, $window){
           query += "&"+key+"="+value;
         }
       });
-      var promise1 = $http.get("search/?db_name=requests"+query);
+      var promise1 = $http.get("search/?db_name=requests"+query+"&get_raw");
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       promise1.then(function(data){  //we get data from requests DB;
-        if (data.data.results.length != 0)
+        if (data.data.rows.length != 0)
         {
-          _.each(data.data.results, function(elem){
+          _.each(_.pluck(data.data.rows, 'doc'), function(elem){
             list_of_chain = _.union(list_of_chain, elem.member_of_chain); //parse it and make a list of unique chained requests
           });
           if (list_of_chain.length > 0)
