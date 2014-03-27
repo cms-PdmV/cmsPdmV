@@ -313,7 +313,7 @@ class RequestSubmitter(Handler):
                         return False
 
                     #and in the end update request in database
-                    req.update_history({'action': 'inject'})
+                    req.update_history({'action': 'inject', 'step' : batch_name})
                     req.set_status(with_notification=True)
                     saved = self.request_db.update(req.json())
                     if not saved:
