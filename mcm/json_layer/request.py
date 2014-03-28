@@ -438,12 +438,7 @@ class request(json_base):
             if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                                                  'The request is not the current step of chain %s' % (mcm_cr['prepid']))
-            # maybe too early in the chain of approvals
-        #if not len(self.get_attribute('member_of_chain')):
-        #    raise self.WrongApprovalSequence(self.get_attribute('status'),'approve','This request is not part of any chain yet')
-
-        ## from defined status, with generator convener approval (?should this be removed???)
-        # this one will probably stay hard-wired, unless we decide on something very specific, like resource estimation: a state machine would come along, check, raise alarms, or set to approved
+        ## start uploading the configs ?
         self.set_status()
 
     def ok_to_move_to_approval_submit(self):
