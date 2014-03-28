@@ -955,6 +955,22 @@ class TestRequest(RESTResource):
 
         return dumps(outs)
 
+class UploadConfig(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        
+    def GET(self, *args, **kwargs):
+        """
+        Upload the configuration
+        """
+        rn = args[0]
+        server = 'pdmvserv-test.cern.ch'
+        if "server" in kwargs:
+            server = kwargs["server"]
+        from tools.handlers import ConfigMakerAndUploader
+        from tools.locker import locker
+        load = ConfigMakerAndUploader( prepid = args[0] , server = server, lock = locker.lock( args[0] ))
+        load.start()
 
 class InjectRequest(RESTResource):
     
