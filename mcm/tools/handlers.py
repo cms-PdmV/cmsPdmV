@@ -209,7 +209,6 @@ class RequestSubmitter(Handler):
         self.prepid = kwargs["prepid"]
         self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
         self.request_db = database('requests')
-        self.ssh_executor = ssh_executor(server='pdmvserv-test.cern.ch')
 
     def injection_error(self, message, req):
         self.logger.inject(message, handler=self.prepid)
@@ -242,11 +241,12 @@ class RequestSubmitter(Handler):
                 if not okay: return False
                 batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
+                ssh_executor = ssh_executor(server='pdmvserv-test.cern.ch')
                 try:
                     cmd = req.prepare_submit_command(batch_name)
                     self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd),
                                        handler=self.prepid)
-                    _, stdout, stderr = self.ssh_executor.execute(cmd)
+                    _, stdout, stderr = ssh_executor.execute(cmd)
                     if not stdout and not stderr:
                         self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
                         return False
@@ -309,13 +309,14 @@ class RequestSubmitter(Handler):
                     return True
                 finally:
                     semaphore_events.decrement(batch_name)
+
             finally:
                 self.lock.release()
+                ssh_executor.close_executor()
+
         except Exception as e:
             self.injection_error(
                 'Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), req)
-        finally:
-            self.ssh_executor.close_executor()
 
 
 class RequestInjector(Handler):
