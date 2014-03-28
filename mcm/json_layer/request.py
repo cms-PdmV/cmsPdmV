@@ -844,7 +844,7 @@ class request(json_base):
                 else:
                     runtest_xml_file = os.path.join(directory, "%s_rt.xml" %(self.get_attribute('prepid')))
                 res += 'cmsRun -e -j %s %s || exit $? ; \n' % (runtest_xml_file, configuration_names[-1])
-                res += 'echo %d events were ran \n' % events
+                if events>=0 : res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
                 res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
                 res += 'grep "PeakValueRss" %s \n' % runtest_xml_file
@@ -1587,8 +1587,8 @@ done
             if os.path.exists(xml):
                 self.update_performance(open(xml).read(), what)
             return (True,"")
-        except:
-            trace=traceback.format_exc()
+        except Exception as e:
+            trace=str(e)
             self.logger.error('Failed to get %s reports for %s \n %s' %( what,
                                                                          self.get_attribute('prepid'),
                                                                          trace))
@@ -1605,6 +1605,14 @@ done
             total_event = 0
         else:
             total_event = int(float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data))
+
+        if len(xml_data.documentElement.getElementsByTagName("InputFile")):
+            for infile in xml_data.documentElement.getElementsByTagName("InputFile"):
+                if str(infile.getElementsByTagName("InputType")[0].lastChild.data) != 'primaryFiles': continue
+                events_read = int(float(infile.getElementsByTagName("EventsRead")[0].lastChild.data))
+                total_event_in = events_read
+                total_event_in_valid = events_read
+                break
 
         if what == 'eff':
             if total_event == 0 and total_event_in_valid != 0:
@@ -1743,7 +1751,7 @@ done
             if timing and timing > self.get_attribute('time_event'):
                 ## timing under-estimated
                 if timing * timing_fraction > self.get_attribute('time_event'):
-                    ## notify if more than 10% discrepancy found !
+                    ## notify if more than 20% discrepancy found !
                     self.notify('Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid')),
                                 'For the request %s, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).' % (
                                     self.get_attribute('prepid'),
@@ -1766,12 +1774,13 @@ done
                     self.set_attribute('time_event', timing)
                     to_be_saved = True
                 else:
-                    message = 'For the request %s, time/event=%s was given, %s was measured from %s events (ran %s).' % (
+                    message = 'For the request %s, time/event=%s was given, %s was measured from %s events (ran %s). Not within %d%%.' % (
                         self.get_attribute('prepid'),
                         self.get_attribute('time_event'),
                         timing,
                         total_event,
-                        total_event_in)
+                        total_event_in,
+                        timing_fraction*100)
                     ## we should fail these requests because of wrong timing by >10% !
                     raise Exception(message)
 
