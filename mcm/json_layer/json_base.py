@@ -345,7 +345,7 @@ class json_base:
             subject += '. And no destination was set'
 
         sender = sender if sender else self.current_user_email
-        self.logger.log('Notification %s from %s send to %s' % (subject, sender,', '.join(dest)))
+        self.logger.log('Notification %s from %s send to %s [acc:%s]' % (subject, sender,', '.join(dest),accumulate))
         return self.com.sendMail(dest,
                                  subject,
                                  message,
