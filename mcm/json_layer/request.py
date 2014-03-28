@@ -190,7 +190,7 @@ class request(json_base):
 
         return editable
 
-    def ok_to_move_to_approval_validation(self):
+    def ok_to_move_to_approval_validation(self, for_chain=False):
         if self.current_user_level == 0:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
@@ -307,8 +307,7 @@ class request(json_base):
                     ##only requests belonging to a root==0 campaign can have mcdbid without input before being in a chain
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                      'The request has an mcdbid, not input dataset, and not member of a root campaign.')
-            if self.get_attribute('mcdb_id') > 0 and self.get_attribute('input_dataset') and \
-                            self.get_attribute('history')[0]['action'] != 'migrated':
+            if self.get_attribute('mcdb_id') > 0 and self.get_attribute('input_dataset') and self.get_attribute('history')[0]['action'] != 'migrated':
                 ## not a migrated request, mcdb
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                  'The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
@@ -316,6 +315,7 @@ class request(json_base):
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
+                if for_chain : continue
                 mcm_cr = crdb.get(cr)
                 if mcm_cr['chain'].index(self.get_attribute('prepid')) != 0:
                     if self.get_attribute('mcdb_id') >= 0 and not self.get_attribute('input_dataset'):
@@ -383,6 +383,9 @@ class request(json_base):
                                                  'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
                                                      self.get_attribute('process_string')))
 
+
+        if for_chain:
+            return
 
         ## select to synchronize status and approval toggling, or run the validation/run test
         validation_disable = settings().get_value('validation_disable')
