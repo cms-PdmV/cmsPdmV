@@ -385,13 +385,15 @@ class request(json_base):
 
 
         ## select to synchronize status and approval toggling, or run the validation/run test
-        de_synchronized = True
+        validation_disable = settings().get_value('validation_disable')
+        do_runtest = not validation_disable
+
         by_pass = settings().get_value('validation_bypass')
-        if self.get_attribute('prepid') in by_pass:            de_synchronized = False
+        if self.get_attribute('prepid') in by_pass: 
+            do_runtest = False
 
-        if de_synchronized:
+        if do_runtest:
             from tools.handlers import RuntestGenvalid
-
             threaded_test = RuntestGenvalid(rid=str(self.get_attribute('prepid')))
             ## this will set the status on completion, or reset the request.
             threaded_test.start()
