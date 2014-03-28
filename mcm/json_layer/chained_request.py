@@ -648,7 +648,10 @@ class chained_request(json_base):
         req_ids = self.get_attribute('chain')
         rdb = database('requests')
         setup_file = ''
-        for req_id in req_ids:
+        for (index,req_id) in enumerate(req_ids):
             req = request(rdb.get(req_id))
-            setup_file += req.get_setup_file(directory=directory, events=events, run=run, do_valid=validation)
+            ev = events
+            if not ev and index!=0 and not req.is_root:
+                ev = -1
+            setup_file += req.get_setup_file(directory=directory, events=ev, run=run, do_valid=validation)
         return setup_file
