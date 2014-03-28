@@ -252,7 +252,7 @@ class GenerateChainedRequests(RESTResource):
                 inchains.sort()
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 if with_notify:
-                    req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfuly joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']), Nchild=0)
+                    req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfully joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']), Nchild=0, accumulate=True)
                 mcm_a.update_history({'action':'add','step' : new_cr['prepid']})
                 rdb.update(req.json())
 
