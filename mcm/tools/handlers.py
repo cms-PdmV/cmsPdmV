@@ -241,12 +241,12 @@ class RequestSubmitter(Handler):
                 if not okay: return False
                 batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
-                ssh_executor = ssh_executor(server='pdmvserv-test.cern.ch')
+                executor = ssh_executor(server='pdmvserv-test.cern.ch')
                 try:
                     cmd = req.prepare_submit_command(batch_name)
                     self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd),
                                        handler=self.prepid)
-                    _, stdout, stderr = ssh_executor.execute(cmd)
+                    _, stdout, stderr = executor.execute(cmd)
                     if not stdout and not stderr:
                         self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
                         return False
@@ -312,7 +312,7 @@ class RequestSubmitter(Handler):
 
             finally:
                 self.lock.release()
-                ssh_executor.close_executor()
+                executor.close_executor()
 
         except Exception as e:
             self.injection_error(
