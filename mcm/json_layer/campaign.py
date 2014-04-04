@@ -164,6 +164,8 @@ class campaign(json_base):
             for i in range(2 if len(my_release) > 2 else len(my_release)):
                 if int(my_release[i]) < int(other_release[i]):
                     return False
+                elif int(my_release[i]) > int(other_release[i]):
+                    return True
         except IndexError:
             return True
         return True
