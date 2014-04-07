@@ -1378,15 +1378,15 @@ done
                     wma_r = wma
                     break
 
-            wma_r_N = mcm_rr[-1] # so that we can decouple the two
             if ('pdmv_status_in_DAS' in wma_r['content'] and 'pdmv_status_from_reqmngr' in wma_r['content']):
                 if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content'][
                     'pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## how many events got completed for real: summing open and closed
-
-
-                    self.set_attribute('completed_events', wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content'][
-                        'pdmv_open_evts_in_DAS'])
+                    wma_r_N = mcm_rr[-1] # so that we can decouple the two
+                    counted = wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content']['pdmv_open_evts_in_DAS']
+                    if not counted:
+                        counted = wma_r['content']['pdmv_evts_in_DAS'] + wma_r['content']['pdmv_open_evts_in_DAS']
+                    self.set_attribute('completed_events', counted )
                     ## this is not enough to get all datasets
                     collected = []
                     for wma in reversed(self.get_attribute('reqmgr_name')):
