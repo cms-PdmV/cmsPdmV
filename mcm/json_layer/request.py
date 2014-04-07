@@ -1662,7 +1662,7 @@ done
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
-            geninfo = generator_parameters self.get_attribute('generator_parameters')[-1] ).json()
+            geninfo = generator_parameters( self.get_attribute('generator_parameters')[-1] ).json()
 
         to_be_saved = False
 
