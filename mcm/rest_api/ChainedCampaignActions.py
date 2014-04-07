@@ -312,6 +312,7 @@ class InspectChainedCampaignsRest(RESTResource):
             crlist = crdb.queries( ["member_of_campaign==%s"% ccid,
                                          "last_status==done",
                                          "status==processing"] )
+            self.logger.log('crlist %s in chained_camp %s ' % (crlist, ccid))
             for cr in crlist:
                 mcm_cr = chained_request( cr )
                 if mcm_cr:
