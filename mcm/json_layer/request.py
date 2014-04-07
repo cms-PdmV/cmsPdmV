@@ -106,7 +106,7 @@ class request(json_base):
             raise Exception('Request is not a member of any campaign')
 
         self._json_base__schema['status'] = self.get_status_steps()[0]
-        self._json_base__schema['status'] = self.get_approval_steps()[0]
+        self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         # update self according to json_input
         self.setup()
