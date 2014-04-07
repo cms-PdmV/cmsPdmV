@@ -92,7 +92,7 @@
                   <a ng-href="/mcm/get_stats?prepid={{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank" ng-hide="role(2);">
                     <i class="icon-picture"></i>
                   </a>
-                  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;"> 
+                  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
                     <i class="icon-screenshot"></i>
                   </a>
                   <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
