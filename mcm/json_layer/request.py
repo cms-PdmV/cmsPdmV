@@ -223,6 +223,8 @@ class request(json_base):
         if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                              'The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
+        gen_p[-1] = generator_parameters(gen_p[-1]).json()
+        self.set_attribute('generator_parameters', gen_p)
 
         if not len(self.get_attribute('generators')):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
@@ -1660,7 +1662,7 @@ done
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
-            geninfo = self.get_attribute('generator_parameters')[-1]
+            geninfo = generator_parameters self.get_attribute('generator_parameters')[-1] ).json()
 
         to_be_saved = False
 
