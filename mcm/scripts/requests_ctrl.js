@@ -68,26 +68,26 @@ function resultsCtrl($scope, $http, $location, $window){
 	  $scope.getData();
   };
     
-    $scope.parse_one = function( report ){
-      $scope.action_status[report['prepid']] = report['results'];
-      if ( report ['results'] == true)
-      {
-	      $scope.action_report[report['prepid']] = 'OK';
-	      return false;
-      }else
-      {
-	      $scope.action_report[report['prepid']] = report['message'];
-	      console.log( report )
-	      return true;
-      }
-    };
-    $scope.parse_one_report = function (report,status){
-	if (_.isArray(report)){
+  $scope.parse_one = function( report ){
+    $scope.action_status[report['prepid']] = report['results'];
+    if ( report ['results'] == true)
+    {
+	    $scope.action_report[report['prepid']] = 'OK';
+	    return false;
+    }else
+    {
+	    $scope.action_report[report['prepid']] = report['message'];
+	    console.log( report )
+	    return true;
+    }
+  };
+  $scope.parse_one_report = function (report,status){
+	  if (_.isArray(report)){
 	    return $scope.parse_one_only(report[0], status);
-	}else{
+	  }else{
 	    return $scope.parse_one_only(report, status);
-	}
-    };
+	  }
+  };
 
     $scope.parse_one_only = function (report,status){
       if ($scope.parse_one( report ))
@@ -232,7 +232,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.parseColumns = function(){
     if ($scope.result.length != 0){
-    columns = _.keys($scope.result[0]);
+    columns = _.keys($scope.result[0]).sort();
     rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
     $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
     _.each(rejected, function(v){
@@ -310,11 +310,7 @@ function resultsCtrl($scope, $http, $location, $window){
       });
       $scope.upload({contents: imaginary_file.join("\n")});
       $scope.file_was_uploaded = false
-    } else if ($location.url().indexOf("*")!=-1)
-    {
-      $scope.superSearch();
-    }else
-    {
+    } else {
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var get_raw;
       if ($location.search()['allRevisions'])
@@ -741,26 +737,6 @@ function resultsCtrl($scope, $http, $location, $window){
       return false;
     }
   };
-
-  $scope.superSearch = function(){
-    var search_data={};
-    _.each($location.search(),function(elem,key){
-      if (key != "shown")
-      {
-        search_data[key] = elem;
-      }
-    });
-      /*submit method*/
-    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/search', data: search_data}).success(function(data,status){
-      $scope.result = data.results;
-      $scope.got_results = true;
-      $scope.parseColumns();
-    }).error(function(status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    }); 
-   };
 
   $scope.upload = function(file){
     $scope.file_was_uploaded = true;

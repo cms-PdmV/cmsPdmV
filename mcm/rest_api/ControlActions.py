@@ -147,16 +147,19 @@ class Search(RESTResource):
         if 'get_raw' in args:
             get_raw = True
             args.pop('get_raw')
-        odb = database(db_name)
+        res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw)
+        return res if get_raw else dumps({"results": res})
 
+    def search(self, args, db_name, page=-1, limit=0, get_raw=False):
+        odb = database(db_name)
         if args:
             args = self.prepare_typed_args(args, db_name)
             lucene_query = odb.construct_lucene_query(args)
-            self.logger.log("lucene url: %s" % (lucene_query) ) 
+            self.logger.log("lucene url: %s" % (lucene_query) )
             res = odb.full_text_search("search", lucene_query, page=page, limit=limit, get_raw=get_raw)
         else:
             res = odb.get_all(page, limit, get_raw=get_raw)
-        return res if get_raw else dumps({"results": res})
+        return res
 
     def prepare_typed_args(self, args, db_name):
         for arg in args:

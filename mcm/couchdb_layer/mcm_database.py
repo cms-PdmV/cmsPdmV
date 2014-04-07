@@ -244,12 +244,17 @@ class database:
             for (i, query_item) in enumerate(query_list):
                 res = self.query(query_item, page_num=-1, limit=limit)
                 query_result = self.unique_res( res )
+
                 if i != 0:
                     ## get only the one already in the intersection
                     id_list = map(lambda doc : doc['_id'], results_list)
+                    ### self.logger.error('queries if. ids: %s' % (id_list))
                     results_list = filter(lambda doc : doc['_id'] in id_list, query_result)
+                    ### self.logger.error('queries if. results_list: %s' % (results_list))
                 else:
-                    results_list= query_result
+                    ### self.logger.error('queries else. query_result: %s' % (query_result))
+                    results_list = query_result
+            ### self.logger.error('queries res_list: %s' % (results_list))
             return results_list
         except Exception as ex:
             self.logger.error('Could not load view for queris: <%s> . Reason: %s' % ('<br>'.join(query_list), ex))
@@ -258,7 +263,7 @@ class database:
     def __extract_operators(self,  query=''):
 
         if not query:
-            self.logger.error('Empty query', level='warning')
+            ### self.logger.error('Empty query', level='warning')
             return ()
         clean = []
         tokens = []
@@ -280,8 +285,8 @@ class database:
         raise self.MapReduceSyntaxError(query)
     
     def __pagify(self, page_num=0, limit=20):
-        if page_num < 0:
-            return -1, 0
+        if page_num < 0:         ##couchdb-lucene dy default return limited resutlts
+            return 1000000000, 0 ## we set it to very high numer
         skip = limit * page_num
         return limit, skip      
     
@@ -489,27 +494,18 @@ class database:
             return -1
 
     def construct_lucene_query(self, query):
+        """
+        constructs key:value dictionary to couchDB lucene query
+        """
         constructed_query = ""
         for param in query:
             if query[param].startswith("[") and query[param].endswith("]"):
                 query[param] = query[param].replace(" TO ", "+TO+")
+
+            constructed_query += param+':'+query[param]
             if constructed_query != "":
                 constructed_query += '+AND+'
-            if query[param].find("-") != -1: ##because lucene query '-' is exclusion operand
-                tmp_list = filter(None, query[param].split("-"))
-                for value in tmp_list[:-1]:
-                    constructed_query += "%s:%s+AND+" % (param, value)
-                constructed_query += "%s:%s" % (param, tmp_list[-1]) #we treat last element differently
-            elif query[param].count("*") >= 2:
-                tmp_list = filter(None, query[param].split("*"))
-                for value in tmp_list[:-1]:
-                    constructed_query += "%s:%s*+AND+" % (param, value)
-                constructed_query += "%s:%s*" % (param, tmp_list[-1])
-            else:
-                constructed_query += param+':'+query[param]
-
-            constructed_query.replace("*", "*+AND+"+param+":")
-        return constructed_query
+        return constructed_query[:-5]
 
     def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False):
         """
@@ -528,12 +524,12 @@ class database:
             cached_sequence = self.__get_from_cache(sequence_id)
             if cached_sequence == current_update_seq:
                 result = self.__get_from_cache(cache_id)
-                self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning') 
+                self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning')
                 if result: return result
             else:
                 self.__save_to_cache(sequence_id, current_update_seq)
         try:
-            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (view_doc, view_name), level='warning') 
+            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (view_doc, view_name), level='warning')
             url = "_design/%s/_view/%s" % (view_doc, view_name)
             result = self.db.loadView(url, options)['rows']
             if cache:

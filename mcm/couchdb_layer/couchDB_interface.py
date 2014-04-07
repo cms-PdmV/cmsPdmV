@@ -8,7 +8,7 @@ from tools.locator import locator
 class Database():
     """
     CoucDB interface class
-    TO-DO: lucene query parser; custom view queries; Error parsing ???
+    TO-DO: custom view queries; Error parsing ???
     """
     def __init__(self, dbname = 'database', url = 'http://localhost:5984/', size = 1000):
         self.__dbname = dbname

@@ -15,7 +15,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.dbName = $location.search()["db_name"];
   }
   
-  $scope.searchable_fields = [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
   $search_data = {};
   $scope.new = {};
   $scope.selectedAll = false;
@@ -247,10 +246,10 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.getData = function(){
-    if ( $location.url().indexOf("*")!=-1 )
+    if ( $location.search()['searchByRequests'] )
     {
       $scope.superSearch();
-    }else if ( ! $location.search()['searchByRequests']){
+    }else {
       var query = ""
       _.each($location.search(), function(value,key){
         if (key!= 'shown' && key != 'fields'){
@@ -266,50 +265,6 @@ function resultsCtrl($scope, $http, $location, $window){
       },function(){
          alert("Error getting information");
       });
-    }else{
-      var list_of_chain = [];
-      //lets get requests data
-      var query = ""
-      _.each($location.search(), function(value, key){
-        if (key != 'shown' && key != 'fields' && key != 'searchByRequests'){
-          query += "&"+key+"="+value;
-        }
-      });
-      var promise1 = $http.get("search/?db_name=requests"+query+"&get_raw");
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      promise1.then(function(data){  //we get data from requests DB;
-        if (data.data.rows.length != 0)
-        {
-          _.each(_.pluck(data.data.rows, 'doc'), function(elem){
-            list_of_chain = _.union(list_of_chain, elem.member_of_chain); //parse it and make a list of unique chained requests
-          });
-          if (list_of_chain.length > 0)
-          {
-            var promise2 = $http.get("restapi/"+$scope.dbName+"/get/"+list_of_chain.join(",")); //we get chained requests as ussual
-            promise2.then(function(data){
-              $scope.got_results = true;
-              if (_.isArray(data.data.results)) {
-                $scope.result = data.data.results;
-              }else
-              {
-                console.log(data);
-                $scope.result = [data.data.results];
-                console.log($scope.result);
-              }
-              $scope.parseColumns();
-            },function(){
-               alert("Error getting information");
-            });
-          }else
-          {
-            $scope.result = [];
-            $scope.got_results = true;
-          }
-        }else{
-          $scope.result = [];
-          $scope.got_results = true;
-        }
-      });
     }
   };
 
@@ -318,21 +273,7 @@ function resultsCtrl($scope, $http, $location, $window){
           return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
         },
         function () {
-            if ($location.search()["supersearch"]) {
-
-                _.each($location.search(), function (elem, key) {
-                    if (key != "supersearch" || key != "page") {
-                        _.each($scope.searchable_fields, function (el) {
-                            if (el["name"] == key) {
-                                el["value"] = elem;
-                            }
-                        });
-                    }
-                });
-                $scope.superSearch();
-            } else {
-                $scope.getData();
-            }
+            $scope.getData();
             $scope.selected_prepids = [];
         });
 
