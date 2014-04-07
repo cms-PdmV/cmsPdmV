@@ -1590,7 +1590,8 @@ done
                 self.update_performance(open(xml).read(), what)
             return (True,"")
         except Exception as e:
-            trace=str(e)
+            #trace=str(e)
+            trace = traceback.format_exc()
             self.logger.error('Failed to get %s reports for %s \n %s' %( what,
                                                                          self.get_attribute('prepid'),
                                                                          trace))
@@ -1656,9 +1657,6 @@ done
 
         efficiency = float(total_event) / total_event_in_valid
         efficiency_error = efficiency * sqrt(1. / total_event + 1. / total_event_in_valid)
-
-        rough_efficiency = float(total_event) / total_event_in
-        rough_efficiency_error = rough_efficiency * sqrt(1. / total_event + 1. / total_event_in)
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
@@ -1729,6 +1727,9 @@ done
                     raise Exception(message)
 
         elif what == 'perf':
+
+            rough_efficiency = float(total_event) / total_event_in
+            rough_efficiency_error = rough_efficiency * sqrt(1. / total_event + 1. / total_event_in)
 
             ## do a rough efficiency measurements anyways if the request is not valid enable
             if geninfo and (
