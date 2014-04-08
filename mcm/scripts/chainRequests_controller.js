@@ -399,15 +399,32 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.superSearch = function(){
-    var search_data={};
+    var search_data={
+        searches: [
+            {
+                db_name: 'requests',
+                return_field: 'member_of_chain',
+                search: {}
+            },
+            {
+                db_name: $scope.dbName,
+                use_previous_as: 'prepid',
+                search: {}
+            }
+        ]
+    };
     _.each($location.search(),function(elem,key){
       if (key != "shown" && key != "searchByRequests")
       {
-        search_data[key] = elem;
+          if(key == 'page' || key == 'limit' || key == 'get_raw') {
+            search_data[key] = elem;
+          } else {
+              search_data.searches[0].search[key] = elem;
+          }
       }
     });
     /*submit method*/
-    $http({method:'PUT', url:'restapi/requests/search/'+$scope.dbName, data: search_data}).success(function(data,status){
+    $http({method:'POST', url:'multi_search', data: search_data}).success(function(data,status){
       $scope.result = data.results;
       $scope.got_results = true;
       $scope.parseColumns();
@@ -690,7 +707,6 @@ testApp.directive("loadRequestsFields", function($http, $location){
         }
       };
       scope.$watch('tabsettings.navigation2.active', function(){
-        $location.search("searchByRequests",null);//.remove(key);
         if (scope.tabsettings.navigation2.active)
         {
           if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane

@@ -3,6 +3,7 @@ from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 from tools.settings import settings
 from simplejson import dumps
+from tools.json import threaded_loads
 from tools.locker import locker
 from tools.communicator import communicator
 from collections import defaultdict
@@ -117,6 +118,7 @@ class Search(RESTResource):
 
     def __init__(self):
         self.casting = defaultdict(lambda: defaultdict(lambda: ""))
+        self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))
         import json_layer
         for module in json_layer.__all__:
             mod_obj = getattr(json_layer, module)
@@ -127,6 +129,7 @@ class Search(RESTResource):
             schema = class_obj.class_schema()
             if schema:
                 for schema_key in schema:
+                    self.type_dict[key_name][schema_key] = type(schema[schema_key])
                     if type(schema[schema_key]) in [int, float]:
                         self.casting[key_name][schema_key] = "<" + type(schema[schema_key]).__name__ + ">"
 
@@ -165,3 +168,94 @@ class Search(RESTResource):
         for arg in args:
             args[arg + self.casting[db_name][arg]] = args.pop(arg)
         return args
+
+
+class MultiSearch(Search):
+    """
+    Search getting all parameters from body of request and performing multiple searches
+    takes in json containing list of consecutive searches. Page, limit and get_raw is
+    taken into account only for last search:
+    {
+    page: PAGE,
+    limit: LIMIT,
+    searches: [
+        {
+            db_name: DBNAME1,
+            use_previous_as: INPUT_PLACE_NAME1,
+            return_field: OUTPUT_FIELD_NAME1,
+            search: {search_dictionary1}
+        },
+        {
+            db_name: DBNAME2,
+            use_previous_as: INPUT_PLACE_NAME2 (so it's OUTPUT_FIELD_NAME1),
+            return_field: OUTPUT_FIELD_NAME2,
+            search: {search_dictionary2}
+        }]
+    }
+
+    use_previous_as means how to use result of previous search query (on which field)
+    return_field means value of which field should be used
+
+    """
+
+    @staticmethod
+    def __add_previous_to_search(search, previous, iteration):
+        if iteration:
+            search['search'][search['use_previous_as']] = "(" + "+OR+".join(previous) + ")"
+            return
+        if 'use_previous_as' in search and search['use_previous_as']:
+            if search['use_previous_as'] in search['search']:
+                previous.append(search['search'][search['use_previous_as']])
+            search['search'][search['use_previous_as']] = "(" + "+OR+".join(previous) + ")"
+
+    def POST(self):
+        try:
+            search_dicts = threaded_loads(cherrypy.request.body.read().strip())
+        except TypeError:
+            return dumps({"results": False, "message": "Couldn't read body of request"})
+        limit = 20
+        page = 0
+        if 'limit' in search_dicts:
+            limit = int(search_dicts['limit'])
+        if 'page' in search_dicts:
+            page = int(search_dicts['page'])
+        if page == -1:
+            limit = 1000000000
+            skip = 0
+        else:
+            skip = limit * page
+        previous = []
+        for search in search_dicts['searches'][:-1]:
+            prev_len = len(previous)
+            prev_len = prev_len if prev_len else 1
+            new_previous = []
+            flatten = self.type_dict[search['db_name']][search['return_field']] == list
+            for i in range(0, prev_len, 100):
+                self.__add_previous_to_search(search, previous[i:i+100], i)
+                res = [x[search['return_field']] for x in self.search(search['search'], search['db_name'])]
+                new_previous.extend([i for x in res for i in x] if flatten else res)
+
+            previous = list(set(new_previous))
+
+        search = search_dicts['searches'][-1]
+        prev_len = len(previous)
+        res = []
+        current_len = 0
+        subskip = 0
+        start_adding = False
+        # pagination by hand (so the whole thing won't break because of super-long queries)
+        # MIGHT CAUSE DUPLICATIONS OF DOCUMENTS IN RESULTS!
+        for i in range(0, prev_len, 100):
+            self.__add_previous_to_search(search, previous[i:i+100], i)
+            partial_result = self.search(search['search'], search['db_name'])
+            current_len += len(partial_result)
+            if start_adding:
+                subskip += len(partial_result)
+                res.extend(partial_result)
+            if current_len >= skip and not start_adding:
+                subskip = current_len - skip
+                start_adding = True
+                res.extend(partial_result)
+            if current_len >= skip+limit:
+                break
+        return dumps({"results": res[-subskip:len(res)-subskip+limit] if page != -1 else res})

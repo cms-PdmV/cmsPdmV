@@ -511,7 +511,7 @@ class database:
         """
         queries loadView method with lucene interface for full text search
         """
-        limit, skip = self.__pagify(page, limit=limit)
+        limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_fti/_design/lucene/%s?q=%s" % (index_name, query)
         data = self.db.FtiSearch(url, options={'limit': limit, 'include_docs': True, 'skip': skip}, get_raw=get_raw)
         return data if get_raw else [ elem["doc"] for elem in data['rows']]

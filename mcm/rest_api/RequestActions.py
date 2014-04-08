@@ -1154,52 +1154,6 @@ class SearchableRequest(RESTResource):
         return dumps(searchable)
 
 
-class SearchRequest(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.user
-
-    def PUT(self, *args):
-        """
-        Search requests according to the search json provided for wild search
-        """
-        search_dict = threaded_loads(cherrypy.request.body.read().strip())
-        self.logger.error("Got a wild search dictionary %s" % ( str(search_dict) ))
-        curr_page = 0
-        if "page" in search_dict:
-            curr_page = int(search_dict["page"])
-            del(search_dict["page"])
-        limit = 20
-        if "limit" in search_dict:
-            limit = int(search_dict["limit"])
-            del(search_dict["limit"])
-
-        rdb = database('requests')
-      
-        output_object = 'requests'
-        if len(args):
-            output_object = args[0]
-
-        wild_search_dict = {}
-        reg_queries = []
-        query = rdb.construct_lucene_query(search_dict)
-        self.logger.error("lucenese query: %s options: %s" % ( str(query), args))
-        results = rdb.full_text_search('search', query, curr_page, limit)
-
-        if output_object == 'chained_requests':
-            crdb = database('chained_requests')
-            cr_ids = set()
-            for r in results:
-                for cr in r['member_of_chain']:
-                    if crdb.document_exists(cr):
-                        cr_ids.add(cr)
-            cr_results = []
-            for cr in sorted(cr_ids):
-                cr_results.append(crdb.get(cr))
-            return dumps({"results": cr_results})
-
-        return dumps({"results": results})
-
-
 class RequestPerformance(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
