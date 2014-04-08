@@ -294,13 +294,14 @@ class GenerateChains(RESTResource):
                     b=mcm_m.get_attribute('block')
                     s=None
                     t=None
+                    special=mcm_m.get_attribute('special')
                     if mcm_m.get_attribute('staged')!=0:
                         s= mcm_m.get_attribute('staged')
                     if mcm_m.get_attribute('threshold')!=0:
                         t=mcm_m.get_attribute('threshold')
-                    
+
                     res.append( {"prepid":mid,"results" : True,"message": "%s x %s in %s block %s s %s t %s"%( times, aid, cc, b, s ,t )})
-                    res.append(self.setter.set_action(aid, cc, b, staged=s, threshold=t, reserve=reserve))
+                    res.append(self.setter.set_action(aid, cc, b, staged=s, threshold=t, reserve=reserve, special=special))
 
         mcm_m.set_status()
         mdb.update( mcm_m.json())

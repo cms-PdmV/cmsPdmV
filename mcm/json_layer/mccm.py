@@ -22,7 +22,8 @@ class mccm(json_base):
         'chains': [],
         'repetitions': 1,
         'size': 0,
-        'status': 'new'
+        'status': 'new',
+        'special' : False
     }
 
     _json_base__approvalsteps = ['none', 'approved']

@@ -207,7 +207,7 @@ class GenerateChainedRequests(RESTResource):
         else:
             return dumps(res)
 
-    def generate_request(self, aid, reserve=False, with_notify=True):
+    def generate_request(self, aid, reserve=False, with_notify=True,special=False):
         adb = database('actions')
         ccdb = database('chained_campaigns')
         crdb = database('chained_requests')
@@ -240,6 +240,10 @@ class GenerateChainedRequests(RESTResource):
                 new_cr['last_status']= req.get_attribute('status')
                 if new_cr['last_status'] in ['submitted','done']:
                     new_cr['status']='processing'
+
+                if special:
+                    new_cr['approval'] = 'none'
+
                 if not crdb.update(new_cr):
                     return {'results':False,'message':'could not save %s'%( new_cr['prepid'])}
 
@@ -251,6 +255,7 @@ class GenerateChainedRequests(RESTResource):
                 inchains.append(new_cr['prepid'])
                 inchains.sort()
                 req.set_attribute('member_of_chain',list(set(inchains)))
+                req.update_history({'action': 'join chain', 'step': new_cr['prepid']})
                 if with_notify:
                     req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), "Request {0} has successfully joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']), Nchild=0, accumulate=True)
                 mcm_a.update_history({'action':'add','step' : new_cr['prepid']})
@@ -331,7 +336,7 @@ class SetAction(GenerateChainedRequests):
 
         return dumps(self.set_action( aid, cc, block, staged, threshold))
 
-    def set_action(self, aid, cc, block, staged=None, threshold=None,reserve=False):
+    def set_action(self, aid, cc, block, staged=None, threshold=None,reserve=False,special=False):
         adb = database('actions')
         ccdb = database('chained_campaigns')
 
@@ -367,7 +372,7 @@ class SetAction(GenerateChainedRequests):
         adb.save( mcm_a.json() )
 
         #and generate the chained requests
-        return self.generate_request(aid, reserve)
+        return self.generate_request(aid, reserve=reserve, special=special)
 
 
 class DetectChains(RESTResource):
