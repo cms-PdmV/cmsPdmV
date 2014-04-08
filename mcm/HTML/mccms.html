@@ -65,7 +65,7 @@
               <!-- END OF: SORTING lines -->
 	          </div>
 	          <div ng-switch-default>
-              {{column.text}}
+                    {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#mccms_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
                 <i class="icon-resize-vertical"></i>

@@ -51,7 +51,7 @@
       <thead>
         <tr>
           <th ng-repeat="column in chainedCampaigns_defaults" ng-show="column.select" style="white-space: nowrap;">
-            {{column.text}}
+            {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
           </th>
         </tr>
       </thead>
