@@ -108,6 +108,10 @@ function resultsCtrl($scope, $http, $location, $window){
     });
     };
 
+    $scope.openPage = function(address) {
+        $window.open(address);
+    };
+
     $scope.getBjobsData = function(){
         var bjobs_options_array = removeEmptyString($scope.bjobsOptions);
         var bjobs_options = bjobs_options_array.join("/");
