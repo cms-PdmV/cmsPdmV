@@ -655,6 +655,7 @@ class InjectChainedRequest(RESTResource):
         rdb = database('requests')
         mcm_rs=[]
         ## upload all config files to config cache, with "configuration economy" already implemented
+        from tools.locker import locker
         from tools.handlers import ConfigMakerAndUploader
         for rn in mcm_cr.get_attribute('chain'):
             mcm_rs.append( request( rdb.get( rn )))
