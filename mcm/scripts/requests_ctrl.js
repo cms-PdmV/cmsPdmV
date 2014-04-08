@@ -861,7 +861,8 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
-    '          <td style="padding: 0px;">{{elem.step}}</td>'+ //is it needed?
+    '          <td style="padding: 0px; white-space: normal; min-width: 150px;' +
+        '">{{elem.step}}</td>'+ //is it needed?
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
