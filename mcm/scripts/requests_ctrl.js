@@ -763,7 +763,20 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.findToken = function(tok){
       $window.location.href = "requests?&tags="+tok.value
-  }
+  };
+  $scope.get_list = function()
+  {
+    if ($scope.selected_prepids.length > 0)
+    {
+      var imaginary_file = [];
+      _.each($scope.selected_prepids, function(elem)
+      {
+        imaginary_file.push(elem);
+      });
+      $scope.upload({"contents": imaginary_file.join("\n")});
+      $scope.file_was_uploaded = false;
+    }
+  };
 }
 
 // NEW for directive

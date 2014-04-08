@@ -482,6 +482,9 @@
         <a ng-href="injection_status?prepid={{selected_prepids.join()}}" rel="tooltip" ng-hide="role(3);" title="See injection logs" target="_self">
           <i class="icon-facetime-video"></i>
         </a>
+        <a ng-click="get_list();" rel="tooltip" ng-hide="role(1);" title="View only selected prepids" ng-href="#">
+          <i class="icon-th-list"></i>
+        </a>
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </span>
       </div>
