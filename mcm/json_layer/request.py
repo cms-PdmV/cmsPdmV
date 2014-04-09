@@ -857,18 +857,20 @@ class request(json_base):
 
             #try create a flash runtest
             if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id') > 0:
-                affordable_nevents = 2000000 #at a time
-                max_tests = 1
+                affordable_nevents = settings().get_value('n_per_lhe_test')
+                max_tests = settings().get_value('max_lhe_test')
                 skip_some = ''
                 test_i = 0
-                while affordable_nevents * test_i < self.get_attribute('total_events') and test_i < max_tests:
-                    res += 'cmsDriver.py lhetest --filein lhe:%s --mc  --conditions auto:startup -n %s --python lhetest_%s.py --step NONE --no_exec --no_output %s\n' % (
-                        self.get_attribute('mcdb_id'), affordable_nevents, test_i, skip_some)
+                do_wait_for_me=False
+                while affordable_nevents * test_i < self.get_attribute('total_events') and (max_tests<0 or test_i < max_tests):
+                    res += 'cmsDriver.py lhetest --filein lhe:%s:%s --mc  --conditions auto:startup -n %s --python lhetest_%s.py --step NONE --no_exec --no_output\n' % (
+                        self.get_attribute('mcdb_id'), 
+                        affordable_nevents * test_i,
+                        affordable_nevents, test_i)
                     res += 'cmsRun lhetest_%s.py & \n' % ( test_i )
                     #prepare for next test job
                     test_i += 1
-                    skip_some = "--customise_command 'process.source.skipEvents=cms.untracked.uint32(%d)'" % (
-                        affordable_nevents * test_i )
+                    do_wait_for_me = True
                 """
                 res += 'cmsDriver.py lhetest --filein lhe:%s --mc --conditions auto:startup -n -1 --python lhetest_%s.py --step NONE --no_exec --no_output \n'%( self.get_attribute('mcdb_id'))
                 res += 'cmsRun lhetest.py || exit $? ; \n'
@@ -879,7 +881,8 @@ for job in `jobs -p` ; do
     wait $job || exit $? ;
 done
             '''
-                res += wait_for_me
+                if do_wait_for_me:
+                    res += wait_for_me
                 #infile += res
             cmsd_list += res + '\n'
 
