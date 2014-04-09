@@ -113,7 +113,12 @@ class json_base:
                         else:
                             self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
                     except:
-                        self._json_base__json[key] = json_input[key]
+                        ## do through a bad exception here !
+                        #self._json_base__json[key] = json_input[key]
+                        raise Exception("%s of type %s does not match the schema type %s" %( key, 
+                                                                                             type(json_input[key]),
+                                                                                             type(self._json_base__schema[key]))
+                                        )
                 else:
                     self._json_base__json[key] = self._json_base__schema[key]
             if '_rev' in json_input:

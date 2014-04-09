@@ -260,9 +260,11 @@ class UpdateRequest(RequestRESTResource):
         try:
             res = self.update_request(cherrypy.request.body.read().strip())
             return res
-        except:
-            self.logger.error('Failed to update a request from API \n%s'%( traceback.format_exc() ))
-            return {'results': False, 'message': 'Failed to update a request from API'}
+        except Exception as e:
+            #trace = traceback.format_exc() 
+            trace = str(e)
+            self.logger.error('Failed to update a request from API \n%s'%( trace ) )
+            return {'results': False, 'message': 'Failed to update a request from API %s'% trace}
 
     def update_request(self, data):
         data = threaded_loads(data)
@@ -1606,7 +1608,10 @@ class UpdateMany(RequestRESTResource):
                     document[value] = list(set(temp))
                 else:
                     document[value] = updated_values[value]
-            return_info.append(self.updateSingle.update_request(dumps(document)))
+            try:
+                return_info.append(self.updateSingle.update_request(dumps(document)))
+            except Exception as e:
+                return_info.append( {"results" : False, "message" : str(e)} )
         self.logger.log('updating requests: %s' % return_info)
         return {"results": return_info}
 
