@@ -513,7 +513,7 @@ class database:
         """
         limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_fti/_design/lucene/%s?q=%s" % (index_name, query)
-        data = self.db.FtiSearch(url, options={'limit': limit, 'include_docs': True, 'skip': skip}, get_raw=get_raw)
+        data = self.db.FtiSearch(url, options={'limit': limit, 'include_docs': True, 'skip': skip, 'sort': '_id'}, get_raw=get_raw) #we sort ascending by doc._id field
         return data if get_raw else [ elem["doc"] for elem in data['rows']]
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
