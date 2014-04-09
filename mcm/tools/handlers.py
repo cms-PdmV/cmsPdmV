@@ -134,6 +134,7 @@ class RuntestGenvalid(Handler):
         location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
         try:
             test_script = location.location() + 'validation_run_test.sh'
+            timeout=None
             with open(test_script, 'w') as there:
                 ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
@@ -142,7 +143,9 @@ class RuntestGenvalid(Handler):
                 #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 ## the following does change something on the request object, to be propagated in case of success
                 there.write(mcm_r.get_setup_file(location.location(), run=True, do_valid=True))
-            batch_test = batch_control(self.rid, test_script)
+                timeout = mcm_r.get_timeout()
+
+            batch_test = batch_control(self.rid, test_script, timeout=timeout)
             try:
                 success = batch_test.test()
             except:

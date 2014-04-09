@@ -958,6 +958,22 @@ done
                     return False
             return self.modify_priority(new_priority)
 
+    def get_valid_and_n(self):
+        val_attributes = self.get_attribute('validation')
+        n_to_valid = self.get_n_for_valid()
+        yes_to_valid = False
+        if n_to_valid:
+            yes_to_valid = True
+        if 'valid' in val_attributes:
+            yes_to_valid = val_attributes['valid']
+        else:
+            yes_to_valid = False
+
+        bypass = settings().get_value('campaign_valid_bypass')
+        if self.get_attribute('member_of_campaign') in bypass:
+            yes_to_valid = False
+
+        return (yes_to_valid,n_to_valid)
 
     def get_genvalid_setup(self, directory, run):
         cmsd_list = ""
@@ -968,30 +984,8 @@ done
         ## gen valid configs
         self.genvalid_driver = None
         valid_sequence = None
-        val_attributes = self.get_attribute('validation')
-        n_to_valid = self.get_n_for_valid()
-        yes_to_valid = False
-        if n_to_valid:
-            yes_to_valid = True
-
-        if 'valid' in val_attributes:
-            yes_to_valid = val_attributes['valid']
-        else:
-            yes_to_valid = False
-
-        bypass = settings().get_value('campaign_valid_bypass')
-        if self.get_attribute('member_of_campaign') in bypass:
-            yes_to_valid = False
-
-        ##get the campaign enalbing/disabling
-        #cdb = database('campaigns', cache=True)
-        #mcm_c = cdb.get( self.get_attribute('member_of_campaign'))
-        #c_val_attributes = mcm_c['validation']
-        ### then do something with that object, once it will be an object
-
+        (yes_to_valid,n_to_valid) = self.get_valid_and_n()
         l_type = locator()
-        #if self.little_release() < '530':# or (not l_type.isDev()):
-        #    yes_to_valid= False
 
         if not yes_to_valid:
             return ("", "")
@@ -1521,6 +1515,41 @@ done
                 target /= eff
         return int(target)
 
+    def get_timeout_for_runtest(self):
+        fraction = settings().get_value('test_timeout_fraction')
+        timeout = settings().get_value('batch_timeout') * 60. * fraction
+        ## if by default it is not possible to run a test => 0 events in
+        if self.get_n_for_test( self.target_for_test(), adjust=False)==0:
+            ## adjust the timeout for 10 events !
+            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_attribute('time_event')
+        return (fraction,timeout)
+
+    def get_timeout(self):
+        default = settings().get_value('batch_timeout') * 60.
+
+        ## to get the contribution from runtest
+        (fraction, estimate_rt) = self.get_timeout_for_runtest()
+        ## to get a contribution from validation is applicable
+        estimate_gv = 0.
+        (yes_to_valid,n) = self.get_valid_and_n()
+        if yes_to_valid:
+            time_per_test = settings().get_value('genvalid_time_event')
+            estimate_gv = time_per_test * n
+
+        ## to get a contribution from lhe test if applicable
+        estimate_lhe = 0.
+        if self.get_attribute('mcdb_id') > 0:
+            n_per_test = settings().get_value('n_per_lhe_test')
+            n_test = self.get_attribute('total_events') / n_per_test
+            max_n = settings().get_value('max_lhe_test')
+            time_per_test = settings().get_value('lhe_test_time_event')
+            if max_n >=0:                
+                n_test = min(n_test, max_n)
+            estimate_lhe = n_test * (time_per_test * n_per_test)
+            
+        return int(max((estimate_rt+estimate_gv+estimate_lhe) / fraction, default))
+        #return int((estimate_rt+estimate_gv+estimate_lhe) / fraction)
+
     def get_n_for_valid(self):
         n_to_valid = settings().get_value('min_n_to_valid')
         val_attributes = self.get_attribute('validation')
@@ -1530,14 +1559,18 @@ done
 
         return self.get_n_unfold_efficiency(n_to_valid)
 
-    def get_n_for_test(self, target=1.0):
+    def get_n_for_test(self, target=1.0, adjust=True):
         #=> correct for the matching and filter efficiencies
         events = self.get_n_unfold_efficiency(target)
 
         #=> estimate how long it will take
         total_test_time = float(self.get_attribute('time_event')) * events
-        fraction = settings().get_value('test_timeout_fraction')
-        timeout = settings().get_value('batch_timeout') * 60. * fraction # in seconds
+        if adjust:
+            fraction, timeout = self.get_timeout_for_runtest()
+        else:
+            fraction = settings().get_value('test_timeout_fraction')
+            timeout = settings().get_value('batch_timeout') * 60. * fraction
+            
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
         self.logger.log('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))

@@ -15,7 +15,7 @@ class batch_control:
     hname = '' # handler's name
     group = 'no-group'
 
-    def __init__(self, test_id, test_script):
+    def __init__(self, test_id, test_script, timeout=None):
         self.script_for_test = test_script
         self.test_id = test_id
         self.test_err = os.path.abspath( self.script_for_test + '.err')
@@ -32,6 +32,11 @@ class batch_control:
         self.log_err = 'Not available'
 
         self.timeout = settings().get_value('batch_timeout')
+        self.queue = '8nh'
+        if timeout:
+            self.timeout = timeout
+        if (self.timeout / 3600. ) > 8.:
+            self.queue = '1nd' ## fall back to the one day queue at worse
 
     def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
         if not stdin and not stdout and not stderr:
@@ -44,9 +49,8 @@ class batch_control:
             
         cmd = 'bsub -J ' + self.test_id
         cmd += ' -g ' + self.group
-        #cmd += ' -R "type=SLC5_64" ' # on slc5 nodes
-        #cmd += '-M 3000000 ' # 3G of mem
-        cmd += ' -q 8nh -cwd ' + self.directory_for_test
+        cmd += ' -q ' + self.queue
+        cmd += ' -cwd ' + self.directory_for_test
         if self.timeout:
             cmd += ' -W %s'%  self.timeout
         cmd += ' -eo ' + self.test_err
