@@ -141,7 +141,7 @@ function resultsCtrl($scope, $http, $location, $window){
           query+="&contains="+$scope.selectedOption['contains'];
         };
         if (($scope.selectedOption['starts'] != "------")){
-          query+="&root="+$scope.selectedOption['starts'];
+          query+="&root_campaign="+$scope.selectedOption['starts'];
         };
         $scope.get_chained_campaigns_info(do_get_data,query);
       }
