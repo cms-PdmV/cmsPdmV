@@ -110,6 +110,8 @@ class json_base:
                     try:
                         if type(self._json_base__schema[key]) is int:
                             self._json_base__json[key] = int(float(json_input[key]))
+                        elif self._json_base__schema[key] is None:
+                            self._json_base__json[key] = json_input[key]
                         else:
                             self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
                     except:
