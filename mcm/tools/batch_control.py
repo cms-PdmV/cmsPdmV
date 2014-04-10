@@ -31,10 +31,10 @@ class batch_control:
         self.log_out = 'Not available'
         self.log_err = 'Not available'
 
-        self.timeout = settings().get_value('batch_timeout')
+        self.timeout = int(settings().get_value('batch_timeout'))
         self.queue = '8nh'
         if timeout:
-            self.timeout = timeout
+            self.timeout = int(timeout / 60.)
         if (self.timeout / 3600. ) > 8.:
             self.queue = '1nd' ## fall back to the one day queue at worse
 
