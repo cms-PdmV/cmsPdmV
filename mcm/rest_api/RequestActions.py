@@ -1675,7 +1675,7 @@ class ListRequestPrepids(RequestRESTResource):
     def get_all_prepids(self, view, key=None):
         view_name = view
         if key:
-            result = self.db.raw_query(view_name, {'key': key})
+            result = self.db.raw_query(view_name, {'key': '"%s"'%key})
             self.logger.log('All list raw_query view:%s searching for: %s' %(view_name, key))
         else:
             result = self.db.raw_query(view_name)
