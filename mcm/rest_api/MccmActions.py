@@ -231,7 +231,7 @@ class GenerateChains(RESTResource):
             return {"prepid":mid,
                     "results" : False, 
                     "message" : "No requests selected"}
-            
+
         aids = []
         for r in mcm_m.get_attribute('requests'):
             if type(r)==list:
@@ -252,6 +252,11 @@ class GenerateChains(RESTResource):
                 aids.extend( map( lambda s : "%s-%s-%05d"%( pwg1, campaign1, s), range( serial1, serial2+1)))
             else:
                 aids.append( r )
+
+        if len(aids) != len(list(set( aids ))):
+            return {"prepid":mid,
+                    "results" : False,
+                    "message" : "There are duplicate actions in the ticket"}
 
         ccdb = database('chained_campaigns')
         ccs=[]
