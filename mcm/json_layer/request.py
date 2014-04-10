@@ -1315,7 +1315,7 @@ done
 
         self.set_attribute('reqmgr_name', mcm_rr)
         
-        if 'content' in mcm_rr[-1] and 'pdmv_present_priority' in mcm_rr[-1]['content'] and mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority'):
+        if len(mcm_rr) and 'content' in mcm_rr[-1] and 'pdmv_present_priority' in mcm_rr[-1]['content'] and mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority'):
             self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
             self.update_history({'action' : 'wm priority', 'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
             changes_happen=True
