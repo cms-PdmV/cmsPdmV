@@ -116,6 +116,10 @@
               <div ng-switch-when="Notes" style="width:500px;overflow:auto">
                 <pre>{{mccm_info[data.db_name]}}</pre>
               </div>
+	      <div ng-switch-when="Special" align="center">
+		<i class="icon-ok" ng-show="mccm_info[data.db_name]"></i>
+		<i class="icon-remove" ng-show="!mccm_info[data.db_name]"></i
+	      </div>
               <div ng-switch-when="Name">
                 {{mccm_info[data.db_name]}}
                 <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
