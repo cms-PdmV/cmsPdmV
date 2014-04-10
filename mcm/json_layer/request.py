@@ -655,6 +655,7 @@ class request(json_base):
                     freshSeq.append(fresh.json())
                 self.set_attribute('sequences', freshSeq)
             if can_save:
+                self.update_history({'action' : 'reset', 'step' : 'option'})
                 self.reload()
 
     def reset_options(self, can_save=True):
