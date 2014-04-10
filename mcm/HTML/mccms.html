@@ -129,6 +129,7 @@
                     <div ng-repeat="elem in mccm_info[data.db_name]">
                       <li ng-hide="isArray(elem);">
                         <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
+			<a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
                       </li>
                       <li ng-show="isArray(elem);">
                         <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
