@@ -1540,7 +1540,7 @@ done
         (yes_to_valid,n) = self.get_valid_and_n()
         if yes_to_valid:
             time_per_test = settings().get_value('genvalid_time_event')
-            estimate_gv = time_per_test * n
+            estimate_gv = time_per_test * n * self.get_efficiency()
 
         ## to get a contribution from lhe test if applicable
         estimate_lhe = 0.
