@@ -519,6 +519,10 @@ class OptionResetForRequest(RESTResource):
         res = {}
         for req_id in req_ids:
             req = request(rdb.get(req_id))
+            if req.get_attribute('status') == 'new' and req.get_attribute('approval') == 'validation':
+                ## to be replaced by a lock
+                res[req_id] = False
+                continue
             req.set_options()
             res[req_id] = True
         return dumps({"results": res})
