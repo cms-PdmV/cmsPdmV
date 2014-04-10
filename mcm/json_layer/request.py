@@ -1205,7 +1205,7 @@ done
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS',
                                                  'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
                                                  'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
-                                                 'pdmv_submission_time', 'pdmv_type']
+                                                 'pdmv_submission_time', 'pdmv_type','pdmv_present_priority']
         mcm_rr = self.get_attribute('reqmgr_name')
         statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
 
@@ -1314,6 +1314,12 @@ done
             self.set_attribute('completed_events', completed)
 
         self.set_attribute('reqmgr_name', mcm_rr)
+        
+        if 'content' in mcm_rr[-1] and 'pdmv_present_priority' in mcm_rr[-1]['content'] and mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority'):
+            self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
+            self.update_history({'action' : 'wm priority', 'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
+            changes_happen=True
+
         return changes_happen
 
     def inspect(self):
