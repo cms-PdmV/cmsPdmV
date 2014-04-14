@@ -699,6 +699,18 @@ class request(json_base):
         gens.append(genInfo.json())
         self.set_attribute('generator_parameters', gens)
 
+    def get_tiers(self):
+        r_tiers=[]
+        keeps = self.get_attribute('keep_output')
+        for (i, s) in enumerate(self.get_attribute('sequences')):
+            if not keeps[i]: continue
+            tiers = s['datatier']
+            if isinstance(tiers, str):
+                ##only for non-migrated requests
+                tiers = tiers.split(',')            
+                r_tiers.extend( tiers )
+        return r_tiers
+
     def get_outputs(self):
         outs = []
         keeps = self.get_attribute('keep_output')
@@ -1393,6 +1405,7 @@ done
                     self.set_attribute('completed_events', counted )
                     ## this is not enough to get all datasets
                     collected = []
+                    tiers_expected = self.get_tiers()
                     for wma in reversed(self.get_attribute('reqmgr_name')):
                         if not 'pdmv_dataset_list' in wma['content']: continue
                         those = wma['content']['pdmv_dataset_list']
@@ -1405,8 +1418,17 @@ done
                                     if dsn != gdsn or gproc != proc:
                                         goodone = False
                         if goodone:
+                            ## reduce to what was expected of it
+                            those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                             collected.extend(those)
                     collected = list(set(collected))
+                    ## make sure no expected tier was keft behind
+                    if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],collected)), tiers_expected)):
+                        not_good.update({
+                                'message' : 'One of the expected tiers %s has not been produced' %( tiers_expected )})
+                        saved = db.save(self.json())
+                        return not_good
+
                     self.set_attribute('output_dataset', collected)
                     if self.get_attribute('completed_events') <= 0:
                         not_good.update({
@@ -1414,10 +1436,11 @@ done
                                 wma_r['content']['pdmv_dataset_name'])})
                         saved = db.save(self.json())
                         return not_good
-                    tier_produced = wma_r['content']['pdmv_dataset_name'].split('/')[-1]
-                    if not tier_produced in self.get_attribute('sequences')[-1]['datatier']:
-                        not_good.update({'message': '%s completed but tier does no match any of %s' % (
-                            wma_r['content']['pdmv_dataset_name'], self.get_attribute('sequences')[-1]['datatier'])})
+                    
+                    if len(collected)==0: 
+                        ## there was no matching tier
+                        not_good.update({'message': '%s completed but no tiers match any of %s' % (
+                                    wma_r['content']['pdmv_dataset_name'], tiers_expected) })
                         saved = db.save(self.json())
                         return not_good
                         ## set next status: which can only be done at this stage
