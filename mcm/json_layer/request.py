@@ -1272,7 +1272,9 @@ done
 
         ####
         ## look for new ones
+        ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
         look_for_what = self.get_attribute('prepid')
+        
         if override_id:
             look_for_what = override_id
         stats_rr = statsDB.query(query='prepid==%s' % (look_for_what), page_num=-1)
@@ -1285,8 +1287,8 @@ done
 
         stats_rr.sort(cmp=sortRequest)
 
-        self.logger.error('got stats with date %s and time %s , %s existings and %s matching' % (
-            earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
+        #self.logger.error('got stats with date %s and time %s , %s existings and %s matching' % (
+        #    earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
 
         #self.logger.error('found %s'%(stats_rr))
 
