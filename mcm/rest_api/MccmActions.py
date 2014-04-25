@@ -202,9 +202,11 @@ class GenerateChains(RESTResource):
             reserve= (args[1]=='reserve')
 
         lock = locker.lock(mid)
-        if lock.acquire(blocking=False):       
-            res= self.generate(mid, reserve)
-            lock.release()
+        if lock.acquire(blocking=False):
+            try:
+                res= self.generate(mid, reserve)
+            finally:
+                lock.release()
             return dumps(res)
         else:
             return dumps({"results" : False, "message" : "%s is already being operated on"% mid} )
