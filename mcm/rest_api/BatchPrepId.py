@@ -90,7 +90,7 @@ class BatchPrepId():
                         cs = [cdb.get( next_campaign )]
                 for mcm_c in cs:
                     if mcm_c['notes']:
-                        notes+="Notes about the campaign %s:\n"%mcmc_['prepid']+mcm_c['notes']+"\n"
+                        notes+="Notes about the campaign %s:\n"%mcm_c['prepid']+mcm_c['notes']+"\n"
                 if flown_with:
                     fdb = database('flows')
                     mcm_f = fdb.get(flown_with)
