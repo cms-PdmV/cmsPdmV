@@ -14,11 +14,9 @@
          <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
          <script type="text/javascript" src="scripts/angular.min.js"></script>
          <script type="text/javascript" src="scripts/bindonce.js"></script>
-         <!--<script src="scripts/ui-bootstrap-custom-tpls-both-0.5.0.js"></script>-->
          <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
          <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
-         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.5.0.js"></script>
-         <!--<script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>-->
+         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
          
          <!--[IF IE]>
@@ -46,7 +44,7 @@
               <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
               <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
             </div>
-            <span ng-repeat="value in requests_defaults" style="width:160px;float:inline;">
+            <span ng-repeat="value in requests_defaults" style="width:160px;">
               <label class="checkbox inline">
                 <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
               </label>
@@ -81,7 +79,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in requests_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in requests_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
@@ -113,7 +111,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" style="white-space: nowrap;">
-          <td ng-repeat="value in requests_defaults" ng-show="value.select">
+          <td ng-repeat="value in requests_defaults" ng-if="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(3);" title="Delete request" ng-href="#">
@@ -159,7 +157,7 @@
                 <a ng-click="register(data.prepid)" rel="tooltip" title="Register to the request {{data.prepid}}" ng-href="#">
                   <i class="icon-map-marker"></i>
                 </a>
-                <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify" ng-href="#">
+                <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify" ng-href="#">
                   <i class="icon-envelope"></i>
                 </a>
                 <!--<a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status" ng-href="#">
@@ -372,41 +370,28 @@
       </tbody>
     </table>
   <!-- </div> -->
-    <!-- Are you Sure MODAL-->
-    <div modal="isSure_Modal" close="closeisSureModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
-      <div class="modal-header">
-        <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
-      </div>  <!--end oFda.f modal header-->
-      <div class="modal-footer" style="background-color:{{modal_color}}">
-        <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
-        <button class="btn btn-warning" ng-click="sureTotoggle()">Yes</button>
-        <button class="btn btn-success" ng-click="closeisSureModal()">No</button>
-      </div> <!--end of modal footer-->
-    </div>
-    <!-- END of Notify MODAL-->
     <!-- Notify MODAL-->
-    <div modal="notify_Modal" close="closeNotifyModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
+    <script type="text/ng-template" id="notifyModal.html"> <!--hidden modal template-->
       <div class="modal-header">
         <h4>Text to notify</h4>
       </div>  <!--end oFda.f modal header-->
       <div class="modal-body">
-        <textarea ng-model="notify_text" style="width: 664px;"></textarea>
+        <textarea ng-model="data.text" style="width:500px"></textarea>
       </div> <!--end of modal body-->
       <div class="modal-footer">
-        <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-        <button class="btn btn-success" ng-click="Notify()" ng-disabled="notify_text.length == 0" ng-hide="loadNotify">Notify</button>
-        <button class="btn btn-warning cancel" ng-click="closeNotifyModal()">Close</button>
+        <button class="btn btn-success" ng-click="notify()" ng-disabled="data.text.length == 0">Notify</button>
+        <button class="btn btn-warning cancel" ng-click="close()">Close</button>
       </div> <!--end of modal footer-->
-    </div>
+    </script>
     <!-- END of Notify MODAL-->
-    <!--     MODAL -->
-        <div modal="submissionModal" close="closeModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
+    <!--   Submission  MODAL -->
+        <script type="text/ng-template" id="submissionModal.html"> <!--hidden modal template-->
           <div class="modal-header">
             <h4>Submitted requests</h4>
           </div>  <!--end of modal header-->
           <div class="modal-body">
             <text>
-              <div ng-repeat="elem in injectModalData">
+              <div ng-repeat="elem in data.injectModalData">
                 <span>Prepid: {{elem["prepid"]}}</span>
                 <span>Message: {{elem["message"]}}</span>
                 <span ng-switch="elem['results']">
@@ -417,29 +402,29 @@
             </text>
           </div> <!--end of modal body-->
           <div class="modal-footer">
-            <button class="btn btn-success" ng-click="openInjectStatus()" ng-disabled="successfullSubmits.length == 0">See successful requests status</button>
-            <button class="btn btn-warning cancel" ng-click="closeModal()">Close</button>
+            <button class="btn btn-success" ng-click="openInjectStatus()" ng-disabled="!data.anySuccessful">See successful requests status</button>
+            <button class="btn btn-warning cancel" ng-click="close()">Close</button>
           </div> <!--end of modal footer-->
-        </div>
+        </script>
     <!--     END OF MODAL  -->
     <!--     Clone MODAL -->
-        <div modal="cloneModal" close="closeCloneModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
+        <script type="text/ng-template" id="cloneModal.html"> <!--hidden modal template-->
           <div class="modal-header">
-            <h4>Clone request: {{clonableID}}</h4>
+            <h4>Clone request: {{data.cloneId}}</h4>
           </div>  <!--end of modal header-->
           <div class="modal-body">
-            <select ng-model="clonePWG">
-              <option ng-repeat="elem in all_pwgs"  ng-selected="elem == clonePWG">{{elem}}</option>
+            <select ng-model="data.clonePWG">
+              <option ng-repeat="elem in allPWGs"  ng-selected="elem == data.clonePWG">{{elem}}</option>
             </select>
-            <select ng-model="cloneCampaign">
+            <select ng-model="data.cloneCampaign">
               <option ng-repeat="elem in allCampaigns">{{elem}}</option>
             </select>
           </div> <!--end of modal body-->
           <div class="modal-footer">
-            <button class="btn btn-success" ng-click="clonePrepid()" >Clone!</button>
-            <button class="btn btn-warning cancel" ng-click="closeCloneModal()">Close</button>
+            <button class="btn btn-success" ng-click="clone()" >Clone!</button>
+            <button class="btn btn-warning cancel" ng-click="close()">Close</button>
           </div> <!--end of modal footer-->
-        </div>
+        </script>
     <!--     END OF MODAL  -->
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
@@ -473,7 +458,7 @@
         <a ng-click="register_several()" rel="tooltip" title="Register to selected requests" ng-href="#">
           <i class="icon-map-marker"></i>
         </a>
-        <a ng-click="notifyUsers(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify selected prepids" ng-href="#">
+        <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Notify selected prepids" ng-href="#">
           <i class="icon-envelope"></i>
         </a>
         <a ng-click="loadStats()" rel="tooltip" title="Load statistics" ng-href="#">

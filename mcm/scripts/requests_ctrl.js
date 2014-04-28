@@ -1,4 +1,4 @@
-function resultsCtrl($scope, $http, $location, $window){
+function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.requests_defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
@@ -18,7 +18,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.notify_text = "";
     $scope.update = {};
     $scope.show_well = false;
-    $scope.notify_Modal = false;
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
     $scope.full_details = {};
@@ -455,11 +454,7 @@ function resultsCtrl($scope, $http, $location, $window){
     var promise = $http.get("restapi/"+$scope.dbName+"/inject/"+$scope.selected_prepids.join()+"/thread");
       promise.then(function(data){
         $scope.pendingHTTP = false;
-        $scope.injectModalData = data.data;
-        $scope.successfullSubmits = _.filter($scope.injectModalData, function(element){
-          return element["results"] == true;
-        });
-        $scope.openModal();
+        $scope.openSubmissionModal(data.data);
         // return data.data;
       },function(){
         $scope.pendingHTTP = false;
@@ -522,182 +517,167 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  /*Is Sure modal actions*/
-  $scope.stringToColour = function(str) {
-    //converts any string to hexadecimal color format
-    var hash = 0;
-    for (var i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    var colour = '#';
-    for (var i = 0; i < 3; i++) {
-        var value = (hash >> (i * 8)) & 0xFF;
-        colour += ('00' + value.toString(16)).substr(-2);
-    }
-    return colour;
-  }  
+
   $scope.open_isSureModal = function(action, prepid){
-    $scope.isSure_Modal = true;
-    $scope.toggle_prepid = prepid;
-    $scope.modal_action = action;
-    $scope.modal_color = $scope.stringToColour(action);
+      var isSure = $modal.open( {
+         templateUrl: 'isSureModal.html',
+          controller: ModalIsSureCtrl,
+          resolve: {
+              prepid: function() {
+                  return prepid;
+              },
+              action: function() {
+                  return action;
+              }
+          }
+      });
+
+
+      isSure.result.then(function () {
+        switch (action){
+          case "toggle":
+            $scope.next_status($scope.toggle_prepid);
+            break;
+          case "approve":
+            $scope.single_step('approve',$scope.toggle_prepid);
+            break;
+          case "reset":
+            $scope.single_step('reset',$scope.toggle_prepid);
+            break;
+          case "option_reset":
+            $scope.single_step('option_reset',$scope.toggle_prepid);
+            break;
+          case "soft_reset":
+            $scope.single_step('soft_reset',$scope.toggle_prepid);
+            break;
+          case "delete":
+            $scope.delete_object('requests', $scope.toggle_prepid);
+            break;
+          case "clone":
+            $scope.clone($scope.toggle_prepid);
+            break;
+          default:
+            // alert to announce that uknown action is asked???
+            break;
+        }
+      })
   };
 
-  $scope.closeisSureModal = function(){
-    $scope.isSure_Modal = false;
-  };
-
-  $scope.sureTotoggle = function(){
-    $scope.isSure_Modal = false;
-    switch ($scope.modal_action){
-      case "toggle":
-        $scope.next_status($scope.toggle_prepid);
-        break;
-      case "approve":
-        $scope.single_step('approve',$scope.toggle_prepid);
-        break;
-      case "reset":
-        $scope.single_step('reset',$scope.toggle_prepid);
-        break;
-      case "option_reset":
-        $scope.single_step('option_reset',$scope.toggle_prepid);
-        break;
-      case "soft_reset":
-        $scope.single_step('soft_reset',$scope.toggle_prepid);
-        break;
-      case "delete":
-        $scope.delete_object('requests', $scope.toggle_prepid);
-        break;
-      case "clone":
-        $scope.clone($scope.toggle_prepid);
-        break;
-      default:
-        // alert to announce that uknown action is asked???
-        break;
-    }
-  };
 
   /* Multiple selection modal actions*/
-    $scope.submissionModal = false;
-  $scope.openModal = function (){
-    $scope.submissionModal = true;
+  $scope.openSubmissionModal = function (injectModalData){
+
+      var submissionModal = $modal.open({
+          templateUrl: 'submissionModal.html',
+          controller: SubmissionModalInstance,
+          resolve: {
+              inject_data : function() {
+                return injectModalData;
+              }
+          }
+      });
+
+      submissionModal.result.then(function() {
+          $scope.selected_prepids = [];
+      });
   };
 
-  $scope.closeModal = function () {
-    $scope.submissionModal = false;
-  };
-
-  $scope.openInjectStatus = function(){
-    var prepids = [];
-    _.each($scope.successfullSubmits, function(element){
-      prepids.push(element["prepid"]);
-    });
-    $window.open("injection_status?prepid="+prepids.join());
-    $scope.submissionModal = false;
-  };
 
   /* Notify modal actions */
-  $scope.notifyUsers = function(prepid){
-    $scope.notify_Modal = true;
-    $scope.notify_prepid = prepid;
+  $scope.openNotifyModal = function(prepid){
+
+      if(!prepid) {
+          prepid = $scope.selected_prepids;
+      }
+
+      var notifyModal = $modal.open( {
+         templateUrl: 'notifyModal.html',
+          controller: NotifyModalInstance
+      });
+
+      notifyModal.result.then(function(text){
+        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: prepid, message: text})}).success(function(data,status){
+
+          $scope.update["success"] = true;
+          $scope.update["fail"] = false;
+          $scope.update["status_code"] = status;
+          $scope.update["message"] = data[0]["message"];
+          $scope.selected_prepids = [];
+
+        }).error(function(data,status){
+          $scope.set_fail(status);
+        });
+    })
   };
 
-  $scope.closeNotifyModal = function(){
-    $scope.notify_Modal = false;
-  };
 
-  $scope.Notify = function(){
-    if ($scope.selected_prepids.length != 0){
-      $scope.notify_prepid = $scope.selected_prepids;
-    }else{
-      $scope.notify_prepid = [$scope.notify_prepid];
-    }
-    $scope.loadNotify = true;
-    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/notify/', data:JSON.stringify({prepids: $scope.notify_prepid, message: $scope.notify_text})}).success(function(data,status){
-      $scope.loadNotify = false;
-
-      $scope.update["success"] = true;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $scope.update["message"] = data[0]["message"];
-
-      $scope.notify_prepid = "";
-      $scope.notify_Modal = false;
-      $scope.notify_text = "";
-      $scope.notify_prepid = [];
-    }).error(function(data,status){
-      $scope.loadNotify = false;
-      $scope.set_fail(status);
-    });
-  };
-
-  $scope.cloneModal = false;
-  $scope.closeCloneModal = function()
-  {
-    $scope.clonableID = "";
-    $scope.clonePWG = "";
-    $scope.cloneCampaign = "";
-    $scope.cloneModal = false;
-  }
   $scope.openCloneModal = function(id, pwg, campaign)
   {
-    if(!$scope.all_pwgs){
-      var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name)
-      promise.then(function(data){
-        $scope.all_pwgs = data.data.results;
-	if ($scope.all_pwgs.indexOf(pwg)==-1){
-	    $scope.all_pwgs.push( pwg );
-	}
-      });
-    }
-    if(!$scope.allCampaigns)
-    {
-      var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
-      promise.then(function(data){
-        $scope.allCampaigns = data.data.results;
-      });
-    }
-    $scope.clonePWG = pwg;
-    $scope.cloneCampaign = campaign;
-    $scope.clonableID = id;
-    $scope.cloneModal = true;
-  }
-  $scope.clonePrepid = function()
-  {
-    var tmpClone = {};
-    _.each($scope.result, function(elem)
-    {
-      if(elem.prepid == $scope.clonableID)
-      {
-        tmpClone = _.clone(elem);
-      }
-    });
-    tmpClone["member_of_campaign"] = $scope.cloneCampaign;
-    tmpClone["pwg"] = $scope.clonePWG;
-    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/clone/', data:tmpClone}).success(function(data,status){
-      $scope.cloneModal = false;
 
-      $scope.update["success"] = data["results"];
-      $scope.update["fail"] = !data["results"];
-      $scope.update["status_code"] = status;
-      if (data["message"])
-      {
-        $scope.update["status_code"] = data["message"];
-      }
-      if (data["prepid"])
-      {
-        $window.open("edit?db_name=requests&query="+data["prepid"]);
-      }
-      $scope.update["message"] = data;
-    }).error(function(data,status){
-      $scope.cloneModal = false;
 
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-      $scope.update["message"] = data;
-    });
-  }
+    var promise1 = $http.get("restapi/users/get_pwg/"+$scope.user.name);
+    promise1.then(function(data){
+        var all_pwgs = data.data.results;
+        if (all_pwgs.indexOf(pwg)==-1){
+            all_pwgs.push(pwg);
+        }
+
+
+         var cloneModal = $modal.open({
+              templateUrl: 'cloneModal.html',
+              controller: CloneModalInstance,
+              resolve: {
+                  cloneId : function() {
+                    return id;
+                  },
+                  clonePWG : function() {
+                      return pwg;
+                  },
+                  cloneCampaign : function() {
+                      return campaign;
+                  },
+                  allPWGs: function() {
+                      return all_pwgs;
+                  }
+              }
+          });
+
+          cloneModal.result.then(function(pwg, camp)
+          {
+            var tmpClone = _.clone(_.find($scope.result, function(element) {
+                return element.prepid == id;
+            }));
+            if(!tmpClone) {
+                tmpClone = {};
+            }
+            tmpClone["member_of_campaign"] = camp;
+            tmpClone["pwg"] = pwg;
+            $http({method:'PUT', url:'restapi/'+$scope.dbName+'/clone/', data:tmpClone}).success(function(data,status){
+
+              $scope.update["success"] = data["results"];
+              $scope.update["fail"] = !data["results"];
+              $scope.update["status_code"] = status;
+              if (data["message"])
+              {
+                $scope.update["status_code"] = data["message"];
+              }
+              if (data["prepid"])
+              {
+                $window.open("edit?db_name=requests&query="+data["prepid"]);
+              }
+              $scope.update["message"] = data;
+            }).error(function(data,status){
+
+              $scope.update["success"] = false;
+              $scope.update["fail"] = true;
+              $scope.update["status_code"] = status;
+              $scope.update["message"] = data;
+            });
+          });
+      });
+
+  };
+
   /* --Modals actions END--*/
 
   $scope.update_filtered = function(){
@@ -779,6 +759,67 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 }
 
+var NotifyModalInstance = function($scope, $modalInstance) {
+    $scope.data = {text: ""};
+
+    $scope.notify = function() {
+        $modalInstance.close($scope.data.text);
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+};
+
+var SubmissionModalInstance = function($scope, $modalInstance, $window, inject_data) {
+
+    $scope.data = {
+        injectModalData: inject_data,
+        anySuccessful: _.some(inject_data, function(elem) {
+            return elem["results"];
+        })
+    };
+
+    $scope.openInjectStatus = function() {
+        var prepids = [];
+        _.each($scope.data.injectModalData, function(element){
+            if(element["results"]) {
+                prepids.push(element["prepid"]);
+            }
+        });
+        $window.open("injection_status?prepid="+prepids.join());
+        $modalInstance.close();
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+};
+
+var CloneModalInstance = function($http, $scope, $modalInstance, cloneId, clonePWG, cloneCampaign, allPWGs) {
+    $scope.data = {
+        cloneId: cloneId,
+        clonePWG: clonePWG,
+        cloneCampaign: cloneCampaign
+    };
+
+    $scope.allPWGs = allPWGs;
+    $scope.allCampaigns = [];
+
+    var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+      promise.then(function(data){
+        $scope.allCampaigns = data.data.results;
+      });
+
+    $scope.clone = function() {
+        $modalInstance.close($scope.data.clonePWG, $scope.data.cloneCampaign);
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+};
+
 // NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customApproval", function(){
@@ -822,10 +863,8 @@ testApp.directive("customApproval", function(){
                     scope.display_table = false;
                 }else{
                   scope.display_table = true;
-                  console.log(ctrl.$viewValue);
                   scope.approval = ctrl.$viewValue;
                 }
-            console.log(scope.display_table);
             };
         }
     }

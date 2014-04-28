@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
            <script type="text/javascript">
@@ -51,7 +51,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select" ng-switch on="column.text">
+          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
 	          <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
@@ -81,7 +81,7 @@
       </thead>
       <tbody>
       	<tr ng-repeat="mccm_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
+      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
 		<a rel="tooltip" title="Delete ticket" ng-click="remove(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
@@ -160,19 +160,19 @@
         <div class="span5" style="margin-top:20px;">
           <div ng-controller="ModalDemoCtrl">
             <input type="button" class="btn" ng-click="open()" value="Create new MccM ticket" ng-hide="role(1);" align="left"/>
-            <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+            <script type="text/ng-template" id="createMccmModal.html"> <!--hidden modal template-->
               <div class="modal-header">
                 <h4>Create MccM ticket</h4>
               </div>
               <div class="modal-body">
-                Choose pwg for the ticket: <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
+                Choose pwg for the ticket: <select ng-options="value for value in mccms.pwgs" ng-model="mccms.selectedPwg" style="width: 90px; margin-bottom: 0px;">
                   </select>
               </div>
               <div class="modal-footer">
                 <button class="btn btn-success" ng-click="save()">Create</button>
                 <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
               </div>
-            </div>
+            </script>
           </div>
         </div>
     </div>

@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-both-0.5.0.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
          <!--[IF IE]>
           <script type="text/javascript">
@@ -56,7 +56,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select" style="white-space: nowrap;" ng-switch on="column.text">
+          <th ng-repeat="column in defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text">
   	        <div ng-switch-when="Actions" ng-hide="role(1);">
               {{'Actions'}}
               <!-- SORTING lines -->
@@ -88,7 +88,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
+          <td ng-repeat="value in defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">

@@ -9,7 +9,7 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.5.0.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
         <!--[IF IE]>
           <script type="text/javascript">
@@ -60,7 +60,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in actions_defaults" ng-show="column.select"  style="white-space: nowrap;">
+          <th ng-repeat="column in actions_defaults" ng-if="column.select"  style="white-space: nowrap;">
             <span ng-switch="column.text">
               <span ng-switch-when="Actions">
                 {{column.text}}
@@ -114,7 +114,7 @@
       <tbody>
         <!--<tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" ng-show="showingAction(data['member_of_campaign'])" >-->
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in actions_defaults" ng-show="value.select" style="white-space: nowrap;">
+          <td ng-repeat="value in actions_defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-href='actions?prepid={{data[value.db_name]}}&starts={{data["member_of_campaign"]}}&page=0' rel="tooltip" title="Show only action {{data[value.db_name]}}" target="_self">
@@ -147,8 +147,9 @@
             </div>
           </td>
           <tr>
-            <td ng-repeat="value in actions_defaults" ng-show="value.select">
-              <input type="checkbox" ng-disabled="role(3);" rel="tooltip" title="Select all column for multiple action" ng-hide="value.text == 'Actions'" ng-click="wholeColumnSelection(value)" ng-checked="false"/>
+            <td ng-repeat="value in actions_defaults" ng-if="value.select">
+              <input type="checkbox" ng-disabled="role(3);" rel="tooltip" title="Select all column for multiple action" ng-if="value.text != 'Actions'" ng-click="wholeColumnSelection(value)" ng-checked="false"/>
+              <div ng-if="value.text == 'Actions'" >Multi-selections</div>
             </td>
           </tr>
         </tr>

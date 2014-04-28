@@ -761,7 +761,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
           }
         },
         template:
-        '<div ng-switch="actionInfo === "undefined"">'+
+        '<div ng-switch="actionInfo === undefined">'+
         '  <div ng-switch-when="false">'+
         '    <input type="checkbox" ng-model="actionInfo.flag" ng-click="showInput()" ng-disabled="role(3);" rel="tooltip" title="Set the action for {{column}} on {{prepid}}"/>'+
         '    <a ng-click="open();" ng-hide="role(3);" title="Edit action parameters">'+

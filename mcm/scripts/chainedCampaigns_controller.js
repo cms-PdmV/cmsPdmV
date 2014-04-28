@@ -3,7 +3,7 @@ function resultsCtrl($scope, $http, $location, $window){
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:true, db_name:''},
       {text:'Alias',select:true, db_name:'alias'},
-      {text:'Campaigns',select:true, db_name:'campaigns'},
+      {text:'Campaigns',select:true, db_name:'campaigns'}
     ];
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "chained_campaigns";
@@ -226,35 +226,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
-}
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
-  $scope.selectedPwg= 'BPH';
-  $scope.open = function (id) {
-    $scope.shouldBeOpen = true;
-    $scope.prepId = id;
-  };
-
-  $scope.close = function () {
-    $scope.selectedPwg= 'BPH';
-    $scope.shouldBeOpen = false;
-  };
-
-  $scope.save = function () {
-    $scope.shouldBeOpen = false;
-    $http({method: 'PUT', url:'restapi/chained_requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, status){
-	    if (data.results){
-		$window.location.href ="edit?db_name=chained_requests&prepid="+data.prepid;
-	    }else{
-		alert("Error:"+ data.message + status);
-	    }
-	       
-      }).error(function(data,status){
-        alert("Error:"+ status);
-        console.log(data, status);
-      });
-    };
 
   $scope.create = function( cc_name ) {
       for (var i = 0; i< $scope.result.length; i++) {
@@ -275,25 +247,63 @@ var ModalDemoCtrl = function ($scope, $http, $window) {
 	     });
   };
 
-  $scope.createChainedCampaign = function(){
-      //get the data from $scope.results
-      
-    $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
-      $scope.update["success"] = data.results;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $scope.getData();
-//         $window.location.href ="edit?db_name=campaigns&query="+data.results;
-    }).error(function(data,status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
-    $scope.shouldBeOpen = false;
+}
+
+var ModalDemoCtrl = function ($scope, $http, $window, $modal) {
+  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
+  $scope.selectedPwg= 'BPH';
+  $scope.createChainedRequest = function (id) {
+    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
+    promise.then(function(data){
+	    var pwgs = data.data.results;
+        $modal.open( {
+          templateUrl: 'createChainedRequestModal.html',
+          controller: ChainedRequestCreationModal,
+          resolve: {
+              pwgs: function(){
+                  return pwgs;
+              },
+              selectedPwg: function(){
+                return pwgs[0];
+              },
+              prepid: function() {
+                  return id;
+              }
+          }
+        })
+	});
   };
 };
 
-// NEW for directive
+var ChainedRequestCreationModal = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
+
+    $scope.pwgs = pwgs;
+    $scope.prepid = prepid;
+    $scope.pwg = {
+        selected: selectedPwg
+    };
+
+    $scope.save=function () {
+        if ($scope.pwg.selected) {
+            $http({method: 'PUT', url: 'restapi/chained_requests/save/', data: {member_of_campaign: $scope.prepid, pwg: $scope.pwg.selected}}).success(function (data, status) {
+                if (data.results) {
+                    $window.location.href = "edit?db_name=chained_requests&prepid=" + data.prepid;
+                } else {
+                    alert("Error:" + data.message + status);
+                }
+            }).error(function (data, status) {
+                alert("Error:" + status);
+            });
+        } else {
+            alert("Error: No PWG defined!");
+        }
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
+};
+
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
   return {

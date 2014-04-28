@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -51,7 +51,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in flows_defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in flows_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
 	    <div ng-switch-when="Actions" ng-hide="role(1);">
 	      {{column.text}}
 	    </div>
@@ -63,7 +63,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result">
-          <td ng-repeat="value in flows_defaults" ng-show="value.select" style="white-space: nowrap;">
+          <td ng-repeat="value in flows_defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(3);">
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
@@ -154,21 +154,21 @@
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
     <!--     MODAL -->
-      <div ng-controller="ModalDemoCtrl">
-        <input type="button" class="btn" ng-click="open()" value="Create new flow" ng-hide="role(3);" align="left"/>
-        <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
-          <div class="modal-header">
-            <h4>Create a flow</h4>
-          </div>  <!--end of modal header-->
-          <div class="modal-body">
-            Flow name: <input type="text" ng-model="flowId"/>
-          </div> <!--end of modal body-->
-          <div class="modal-footer">
-            <button class="btn btn-success" ng-click="createFlow()">Create</button>
-            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-          </div> <!--end of modal footer-->
-        </div>
-      </div> <!--end of modalControler DIV-->
+          <div ng-controller="ModalDemoCtrl">
+            <input type="button" class="btn" ng-click="open()" value="Create new flow" ng-hide="role(3);" align="left"/>
+            <script type="text/ng-template" id="flowCreateModal.html">
+              <div class="modal-header">
+                <h4>Create a flow</h4>
+              </div>  <!--end of modal header-->
+              <div class="modal-body">
+                  Flow name: <input type="text" ng-model="flow.flowId"/>
+              </div> <!--end of modal body-->
+              <div class="modal-footer">
+                <button class="btn btn-success" ng-click="save()">Create</button>
+                <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+              </div> <!--end of modal footer-->
+            </script>
+          </div> <!--end of modalControler DIV-->
     <!--     END OF MODAL  -->
       </div>
     </div>

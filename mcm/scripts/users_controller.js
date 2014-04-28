@@ -218,15 +218,45 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
 
-  $scope.pwgModal = false;
-  $scope.closePwgModal = function()
-  {
-    $scope.newPWG = "------";
-    $scope.pwgModal = false;
+}
+
+var ModalDemoCtrl = function ($scope, $modal, $http) {
+  $scope.openPwgNotify = function (pwg) {
+      $modal.open( {
+            templateUrl: 'pwgNotifyModal.html',
+              controller: ModalPwgNotifyInstanceCtrl,
+              resolve: {
+                  pwg: function() {
+                      return pwg;
+                  }
+              }
+          }
+      );
   };
+
+  function createPwgModal() {
+      var pwgModalInst = $modal.open({
+          templateUrl: 'pwgModalSelect.html',
+          controller: ModalPwgSelectInstanceCtrl,
+          resolve: {
+              all_pwgs: function(){
+                  return $scope.all_pwgs;
+              },
+              newPWG: function(){
+                return $scope.newPWG;
+              }
+          }
+      });
+
+      pwgModalInst.result.then(function (newPWG) {
+          if(newPWG != "------") {
+            $scope.askrole(newPWG);
+          }
+      });
+  }
+
   $scope.openPwgModal = function(curr_pwgs)
   {
-    console.log(curr_pwgs);
     $scope.newPWG = "------";
     if ($scope.all_pwgs.length == 0)
     {
@@ -235,55 +265,55 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.all_pwgs = _.difference(data.data.results, curr_pwgs);
         $scope.all_pwgs.splice(0,0,"------");
         $scope.newPWG = $scope.all_pwgs[0];
-        $scope.pwgModal = true;
+          createPwgModal()
       });
     }
     else
     {
       $scope.newPWG = $scope.all_pwgs[0];
-      $scope.pwgModal = true;
+        createPwgModal();
     }
   };
-  $scope.selectPwg = function()
-  {
-    if ($scope.newPWG != "------")
-    {
-     $scope.askrole($scope.newPWG);
-    }
-    $scope.closePwgModal();
-  };
 
-}
+};
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.mailContent = "";
-  $scope.mailSubject = "";
-  $scope.openPWGNotify = function (pwg) {
-    $scope.notifyModal = true;
+var ModalPwgNotifyInstanceCtrl = function($scope, $modalInstance, $http, pwg) {
     $scope.pwg = pwg;
+    $scope.mail = {
+            mailContent: "",
+            mailSubject: ""
+        };
+    $scope.notify = function () {
+        if(!$scope.mail.mailContent.length && !$scope.mail.mailSubject.length) {
+            alert("Cannot send empty message with empty subject");
+            return;
+        }
+        $http({method: 'PUT', url:'restapi/users/notify_pwg', data:{pwg: $scope.pwg, subject:$scope.mailSubject, content: $scope.mailContent}})
+            .success(function(data, status){
+                alert("Notification sent");
+            }).error(function(data,status){
+                alert("Error:"+ status);
+            });
+        $modalInstance.close();
   };
 
-  $scope.closePWGNotify = function () {
-    $scope.notifyModal = false;
-    $scope.mailContent = "";
-    $scope.mailSubject = "";
-  };
-  $scope.pwgNotify = function () {
-    if(!$scope.mailContent.length && !$scope.mailSubject.length) {
-        alert("Cannot send empty message with empty subject");
-        return;
+    $scope.close = function() {
+        $modalInstance.dismiss();
     }
-    $scope.notifyModal = false;
-    $http({method: 'PUT', url:'restapi/users/notify_pwg', data:{pwg: $scope.pwg, subject:$scope.mailSubject, content: $scope.mailContent}})
-        .success(function(data, status){
-            console.log(data);
-            alert("Notification sent");
-        }).error(function(data,status){
-            alert("Error:"+ status);
-        });
-    $scope.mailContent = "";
-    $scope.mailSubject = "";
+};
+
+var ModalPwgSelectInstanceCtrl = function($scope, $modalInstance, $http, all_pwgs, newPWG) {
+    $scope.all_pwgs = all_pwgs;
+    $scope.selected = {newPWG: newPWG};
+
+
+    $scope.select = function () {
+        $modalInstance.close($scope.selected.newPWG);
   };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
 };
 
 testApp.directive("customHistory", function(){

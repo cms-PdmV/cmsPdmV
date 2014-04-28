@@ -17,18 +17,14 @@ function resultsCtrl($scope, $http, $location, $window){
     {text:'Actions',select:false, db_name:''},
     {text:'Status',select:true, db_name:'status'},
     {text:'Requests',select:true, db_name:'requests'},
-    {text:'Notes',select:true, db_name:'notes'},
+    {text:'Notes',select:true, db_name:'notes'}
 
   ];
 
   $scope.show_well = false;
 
   $scope.showing_well = function(){
-    if ($scope.show_well){
-      $scope.show_well = false;
-    }else{
-      $scope.show_well = true;
-     }
+      $scope.show_well = !$scope.show_well;
   };
 
   $scope.sort = {
@@ -52,7 +48,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.select_all_well = function(){
     $scope.selectedCount = true;
-    var selectedCount = 0
+    var selectedCount = 0;
     _.each($scope.batches_defaults, function(elem){
       if (elem.select){
         selectedCount +=1;
@@ -70,14 +66,11 @@ function resultsCtrl($scope, $http, $location, $window){
 
   //watch length of pending HTTP requests -> if there are display loading;
   $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
-    if (v == 0){  //if HTTP requests pending == 0
-      $scope.pendingHTTP = false;
-    }else{
-      $scope.pendingHTTP = true;
-    }
+    //if HTTP requests pending == 0
+     $scope.pendingHTTP = !(v==0);
   });
   $scope.getData = function(){
-    var query = ""
+    var query = "";
     _.each($location.search(), function(value,key){
       if (key!= 'shown' && key != 'fields'){
         query += "&"+key+"="+value;
@@ -118,12 +111,8 @@ function resultsCtrl($scope, $http, $location, $window){
               column_index = $scope.batches_defaults.indexOf(column);
               binary_bit = binary_shown.charAt(column_index);
               if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-                if (binary_bit == 1){
-                  column.select = true;
-                }else{
-                  column.select = false;
-                }
-              }else{ //if the binary index isnt available -> this means that column "by default" was not selected
+                column.select = (binary_bit == 1);
+              } else{ //if the binary index isnt available -> this means that column "by default" was not selected
                 column.select = false;
               }
             });
@@ -169,36 +158,9 @@ function resultsCtrl($scope, $http, $location, $window){
     $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
   };
 
-    $scope.delete_object = function(db, prepid){
-      alert("Not yet in RestAPI!" + db+": "+prepid);
-    };
-
     $scope.announce = function(prepid){
       alert("Batch to be announced:"+prepid);
     };
-  /*Is Sure modal actions*/
-  $scope.open_isSureModal = function(action, prepid){
-    $scope.isSure_Modal = true;
-    $scope.toggle_prepid = prepid;
-    $scope.modal_action = action;
-  };
-  $scope.closeisSureModal = function(){
-    $scope.isSure_Modal = false;
-  };
-  $scope.sureTotoggle = function(){
-    $scope.isSure_Modal = false;
-    switch ($scope.modal_action){
-      case "delete":
-        $scope.delete_object('batches', $scope.toggle_prepid);
-        break;
-      case "reset":
-        $scope.resetBatch($scope.toggle_prepid);
-        break;
-      default:
-        // alert to announce that uknown action is asked???
-        break;
-    }
-  };
 
   $scope.resetBatch = function(batch_id ){
       $http({method:'GET', url: 'restapi/batches/reset/'+batch_id}).success(function(data,status){
@@ -270,8 +232,7 @@ function resultsCtrl($scope, $http, $location, $window){
     if ( !_.has($scope.local_requests,chain) ){
       var promise = $http.get(url);
       promise.then( function(data){
-        var local_data = data.data.results.reqmgr_name;
-        $scope.local_requests[chain] = local_data;
+        $scope.local_requests[chain] = data.data.results.reqmgr_name;
         if (load_single != "")
         {
           _.each($scope.local_requests[chain], function (element) {
@@ -307,67 +268,119 @@ function resultsCtrl($scope, $http, $location, $window){
       return "";
     }
   };
-    /*Is Sure modal actions*/
-  $scope.openNotifyModal = function (prepid)
-  {
-    $scope.notifyModal = true;
-    $scope.notify_prepid = prepid;
-  };
-  $scope.closeNotifyModal = function ()
-  {
-    $scope.notifyModal = false;
-    $scope.notifyMailContent = "";
-  };
-  $scope.notifyBatch = function ()
-  {
-    $scope.shouldBeOpen = false;
-    $http({method: 'PUT', url:'restapi/batches/notify', data:{prepid: $scope.notify_prepid, notes: $scope.notifyMailContent}}).success(function(data, status){
-      $scope.update["success"] = true;
-      $scope.update["fail"] = false;
-      $scope.update["results"] = data.results;
-      $scope.update["status_code"] = status;
-      //$scope.getData();
-      //   $window.location.href ="edit?db_name=requests&query="+data.results;
-    }).error(function(data,status){
-      alert("Error:"+ status);
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
-    $scope.notifyModal = false;
-    $scope.mailContent = "";
-  };
-};
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.mailContent = "";
-  $scope.open = function (id) {
-    $scope.shouldBeOpen = true;
-    $scope.prepId = id;
+}
+
+var ModalDemoCtrl = function ($scope, $http, $modal) {
+  $scope.announceModal = function (id) {
+      var announceModal = $modal.open( {
+         templateUrl: 'announceModal.html',
+          controller: ModalAnnounceCtrl,
+          resolve: {
+              prepid: function() {
+                  return id;
+              },
+              type: function() {
+                  return "Announce";
+              }
+          }
+      });
+
+      announceModal.result.then(function (data) {
+        $http({method: 'PUT', url:'restapi/batches/announce', data:{prepid: data.prepid, notes: data.mail}}).success(function(data, status){
+          $scope.update["success"] = true;
+          $scope.update["fail"] = false;
+          $scope.update["results"] = data.results;
+          $scope.update["status_code"] = status;
+          $scope.getData();
+          //   $window.location.href ="edit?db_name=requests&query="+data.results;
+        }).error(function(data,status){
+          alert("Error:"+ status);
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+        });
+
+      })
   };
 
-  $scope.close = function () {
-    $scope.shouldBeOpen = false;
-    $scope.mailContent = "";
+  $scope.isSureModal = function(action, prepid) {
+      var isSure = $modal.open( {
+         templateUrl: 'isSureModal.html',
+          controller: ModalIsSureCtrl,
+          resolve: {
+              prepid: function() {
+                  return prepid;
+              },
+              action: function() {
+                  return action;
+              }
+          }
+      });
+
+      isSure.result.then(function () {
+        switch (action){
+          case "delete":
+            alert("Not yet in RestAPI!");
+            break;
+          case "reset":
+            $scope.resetBatch(prepid);
+            break;
+          default:
+            alert("Unknown action!");
+            break;
+        }
+      })
   };
-  $scope.save = function () {
-    $scope.shouldBeOpen = false;
-    $http({method: 'PUT', url:'restapi/batches/announce', data:{prepid: $scope.prepId, notes: $scope.mailContent}}).success(function(data, status){
-      $scope.update["success"] = true;
-      $scope.update["fail"] = false;
-      $scope.update["results"] = data.results;
-      $scope.update["status_code"] = status;
-      $scope.getData();
-      //   $window.location.href ="edit?db_name=requests&query="+data.results;
-    }).error(function(data,status){
-      alert("Error:"+ status);
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
-    $scope.mailContent = "";
+
+  $scope.openNotifyModal = function (id) {
+      var notifyModal = $modal.open( {
+         templateUrl: 'announceModal.html',
+          controller: ModalAnnounceCtrl,
+          resolve: {
+              prepid: function() {
+                  return id;
+              },
+              type: function() {
+                  return "Notify";
+              }
+          }
+      });
+
+      notifyModal.result.then(function (data) {
+        $http({method: 'PUT', url:'restapi/batches/notify', data:{prepid: data.prepid, notes: data.mail}}).success(function(data, status){
+          $scope.update["success"] = true;
+          $scope.update["fail"] = false;
+          $scope.update["results"] = data.results;
+          $scope.update["status_code"] = status;
+        }).error(function(data,status){
+          alert("Error:"+ status);
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+        });
+      })
   };
+
 };
+
+var ModalAnnounceCtrl = function($scope, $modalInstance, prepid, type) {
+    $scope.prepid = prepid;
+    $scope.type = type;
+    $scope.mail = {
+        mailContent: ""
+    };
+
+    $scope.send = function() {
+        $modalInstance.close({prepid: $scope.prepid, mail:$scope.mail.mailContent})
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
+};
+
+
 // var testApp = angular.module('testApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
   return {

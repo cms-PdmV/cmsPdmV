@@ -275,14 +275,14 @@ class CreateFlow(FlowRESTResource):
         try:
             f = flow(json_input=data)
         except flow.IllegalAttributeName as ex:
-            return {"results": str(ex)}
+            return {"results": False}
         except ValueError as ex:
             self.logger.error('Could not initialize flow object. Reason: %s' % ex)
-            return {"results": str(ex)}
+            return {"results": False}
 
         if not f.get_attribute('prepid'):
             self.logger.error('prepid is not defined.')
-            return {"results": 'Error: PrepId was not defined.'}
+            return {"results": False, 'message': 'Error: PrepId was not defined.'}
 
         f.set_attribute('_id', f.get_attribute('prepid'))
 

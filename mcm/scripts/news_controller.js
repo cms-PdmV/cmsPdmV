@@ -1,6 +1,6 @@
-function resultsCtrl($scope, $http, $location, $window){
+function resultsCtrl($scope, $http, $location, $window, $modal){
   $scope.defaults = [
-    {text:'Subject', select:true, db_name:'subject'},
+    {text:'Subject', select:true, db_name:'subject'}
   ];
   $scope.update = [];
 
@@ -159,54 +159,37 @@ function resultsCtrl($scope, $http, $location, $window){
     }
   };
   $scope.openModal = function () {
-    $scope.show_new_modal = true;
-    $scope.news_1 = {};
-  };
-};
+      var newNewsModal = $modal.open({
+          templateUrl: 'addNewsModal.html',
+          controller: function($scope, $modalInstance) {
+              $scope.modal = {
+                  news: {
+                      text: "",
+                      subject: ""
+                  }
+              };
+              $scope.save = function() {
+                  $modalInstance.close($scope.modal.news);
+              };
+              $scope.close = function() {
+                  $modalInstance.dismiss();
+              }
+          }
+      });
 
-// var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);}); 
-testApp.directive("addNew", function($http){
-  return {
-    replace: true,
-    restrict: 'EA',
-    template:
-        '<div modal="show_new_modal" close="close()">'+
-        '  <div class="modal-header">'+
-        '    <h4>Create a new New</h4>'+
-        '  </div>  <!--end of modal header-->'+
-        '  <div class="modal-body">'+
-        '    <div>'+
-        '      New\'s subject: <input type="text" ng-model="news_1.subject"></input>'+
-        '    </div>'+
-        '    <div>'+
-        '      New\'s text: <textarea ng-model="news_1.text" style="width: 510px; height: 187px;"></textarea>'+
-        '    </div>'+
-        '  </div> <!--end of modal body-->'+
-        '  <div class="modal-footer">'+
-        '    <button class="btn btn-success" ng-click="createNew()">Create</button>'+
-        '    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-        '  </div> <!--end of modal footer-->'+
-        '</div>'
-    ,
-    link: function(scope, element, attr){
-    	scope.close = function(){
-    		scope.show_new_modal = false;
-    	};
-        scope.createNew = function(){
-          console.log('lets create!', scope.news);
-          $http({method: 'PUT', url:'restapi/news/save/', data:scope.news_1}).success(function(data, status){
-            console.log(data, status);
-            scope.update["success"] = data.results;
-            scope.update["fail"] = false;
-            scope.update["status_code"] = status;
-            scope.getData();
+      newNewsModal.result.then(function(news) {
+          $http({method: 'PUT', url:'restapi/news/save/', data:news})
+              .success(function(data, status){
+            $scope.update["success"] = data.results;
+            $scope.update["fail"] = !data.results;
+            $scope.update["status_code"] = status;
+            $scope.getData();
           }).error(function(data,status){
-            scope.update["success"] = false;
-            scope.update["fail"] = true;
-            scope.update["status_code"] = status;
+            $scope.update["success"] = false;
+            $scope.update["fail"] = true;
+            $scope.update["status_code"] = status;
           });
-          scope.close();
-        };
-    }
-  }
-});
+      });
+  };
+}
+

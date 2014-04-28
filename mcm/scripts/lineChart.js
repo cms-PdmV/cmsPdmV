@@ -54,7 +54,7 @@ function LineChart(chartData, config) {
             infoboxView = config.infobox;
         }
         if (config.shapeInterval) {
-            shapeInterval = config.shapeInterval
+            shapeInterval = config.shapeInterval;
         }
     }
 
@@ -140,7 +140,7 @@ function LineChart(chartData, config) {
         .attr('dx', '-12px')
         .attr('dy', '2px')
         .attr("transform", function(d) {
-            return "rotate(-45)"
+            return "rotate(-45)";
         });
 
     //add y axis
@@ -156,7 +156,7 @@ function LineChart(chartData, config) {
             nextShapeId = 0;
         }
         return shapePoints[nextShapeId];
-    }
+    };
 
     var existingRequests = {};
     var tempRequestShapes = [];
@@ -302,8 +302,6 @@ function LineChart(chartData, config) {
                 });
                 showInfobox = true;
             });
-
-        console.log(tempRequestShapes);
     };
 
     //draw a legend
@@ -472,4 +470,4 @@ function LineChart(chartData, config) {
     }();
 
     var $polygons = $('#line-chart polygon');
-};
+}

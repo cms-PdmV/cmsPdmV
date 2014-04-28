@@ -1,4 +1,4 @@
-function resultsCtrl($scope, $http, $location, $window, $route){
+function resultsCtrl($scope, $http, $location, $window){
   $scope.defaults = [
     {text:'Prepid', select:true, db_name:'prepid'},
     {text:'Actions', select:true, db_name:''},
@@ -236,44 +236,57 @@ function resultsCtrl($scope, $http, $location, $window, $route){
   };
 }
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.open = function (id) {
+var ModalDemoCtrl = function ($scope, $http, $modal) {
+  $scope.open = function () {
 
     var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
     promise.then(function(data){
-	    $scope.pwgs = data.data.results;
-	    $scope.selectedPwg= $scope.pwgs[0];
-	    $scope.shouldBeOpen = true;
-	    $scope.prepId = id;
-	});
-
+	    var pwgs = data.data.results;
+        $modal.open({
+            templateUrl: "createMccmModal.html",
+            controller: CreateMccmModalInstance,
+            resolve: {
+                pwgs: function() {
+                    return pwgs;
+                }
+            }
+        });
+	}, function() {
+        alert("Error while getting PWGs for user")
+    });
   };
 
-    $scope.close = function () {
-        $scope.shouldBeOpen = false;
+
+};
+
+var CreateMccmModalInstance = function($scope, $modalInstance, $window, $http, pwgs) {
+
+    $scope.mccms = {
+        pwgs: pwgs,
+        selectedPwg: pwgs[0]
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
     };
 
     $scope.save = function () {
-        $scope.shouldBeOpen = false;
-        if ($scope.selectedPwg){
-          $http({method: 'PUT', url:'restapi/mccms/save/', data:{prepid: $scope.selectedPwg, pwg: $scope.selectedPwg}})
+        if ($scope.mccms.selectedPwg){
+          $http({method: 'PUT', url:'restapi/mccms/save/', data:{prepid: $scope.mccms.selectedPwg, pwg: $scope.mccms.selectedPwg}})
               .success(function(data, stauts){
-            console.log(data, status);
             if (data.results){
                 $window.location.href ="edit?db_name=mccms&prepid="+data.prepid;
             }else{
                 alert("Error:"+ data.message);
-                console.log(data, status);
             }
           }).error(function(data,status){
             alert("Error:"+ status);
-            console.log(data, status);
           });
         }else{
             alert("Error: no pwg defined!");
         }
+        $modalInstance.close();
     };
-
 };
 
 testApp.directive("customHistory", function(){

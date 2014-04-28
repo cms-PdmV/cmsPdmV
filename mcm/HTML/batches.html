@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <!--[IF IE]>
           <script type="text/javascript">
             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -50,7 +50,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in batches_defaults" ng-show="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in batches_defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions"  ng-hide="role(1);">
               {{column.text}}
               <!-- SORTING lines -->
@@ -82,33 +82,34 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result  | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in batches_defaults" ng-show="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
+          <td ng-repeat="value in batches_defaults" ng-if="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" ng-hide="role(1);">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='open_isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);" ng-href="#">
+                  <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);" ng-href="#">
                     <i class="icon-minus-sign"></i>
                   </a>
-                  <a ng-click='open(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
+                  <a ng-click='announceModal(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
                     <i class="icon-envelope"></i>
                   </a>
                   <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="role(1) || !data.message_id || data.status != 'announced'" ng-href="#">
                     <i class="icon-volume-up"></i>
                   </a>
-                  <div modal="shouldBeOpen" close="close()"> <!--hidden modal template-->
+                  <script type="text/ng-template" id="announceModal.html"> <!--hidden modal template-->
                     <div class="modal-header">
-                      <h4>Announce batch: {{data.prepid}}</h4>
+                      <h4>{{type}} batch: {{prepid}}</h4>
                     </div>  <!--end of modal header-->
                     <div class="modal-body">
-                      Aditional notes:
-                      <textarea ng-model="mailContent"></textarea>
+                      Additional notes:
+                      <textarea ng-model="mail.mailContent"></textarea>
                     </div> <!--end of modal body-->
                     <div class="modal-footer">
-                      <button class="btn btn-success" ng-click="save()">Announce</button>
+                      <button class="btn btn-success" ng-click="send()">{{type}}</button>
                       <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                     </div> <!--end of modal footer-->
-                  </div>
-                  <a ng-click="open_isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
+                  </script>
+        <!--     END OF MODAL                 -->
+                  <a ng-click="isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
                   <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
                   <a ng-click="broadcast_inspect(data.requests, data.prepid);" rel="tooltip" title="Load detailled view requests" ng-href="#">
                     <i class="icon-barcode"></i>
@@ -116,8 +117,7 @@
                   <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ng-href="#"><i class="icon-screenshot"></i></a>
                   <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold/unhold batch {{data.prepid}}"  ng-href="#"><i class="icon-pause" ng-hide="role(3) || data.status!='new';"></i><i class="icon-play" ng-hide="role(3) || data.status!='hold';"></i></a>
                   <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
-                </div> <!--end of modalControler DIV-->
-        <!--     END OF MODAL                 -->  
+                </div>
               </div>
               <div ng-switch-when="PrepId">
                 <a ng-href='{{getLocation()}}&prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
@@ -155,33 +155,6 @@
         </tr>
       </tbody>
     </table>
-    <!-- Are you Sure MODAL-->
-    <div modal="isSure_Modal" close="closeisSureModal()" style="white-space: nowrap; width:710px;"> <!--hidden modal template-->
-      <div class="modal-header">
-        <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
-      </div>  <!--end oFda.f modal header-->
-      <div class="modal-footer">
-        <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
-        <button class="btn btn-warning" ng-click="sureTotoggle()">Yes</button>
-        <button class="btn btn-success" ng-click="closeisSureModal()">No</button>
-      </div> <!--end of modal footer-->
-    </div>
-    <!-- END of isSure MODAL-->
-    <!-- Notify modal -->
-    <div modal="notifyModal" close="closeNotifyModal()"> <!--hidden modal template-->
-      <div class="modal-header">
-        <h4>Notify batch: {{notify_prepid}}</h4>
-      </div>  <!--end of modal header-->
-      <div class="modal-body">
-        Aditional notes:
-        <textarea ng-model="notifyMailContent"></textarea>
-      </div> <!--end of modal body-->
-      <div class="modal-footer">
-        <button class="btn btn-success" ng-click="notifyBatch()">Notify</button>
-        <button class="btn btn-warning cancel" ng-click="closeNotifyModal()">Cancel</button>
-      </div> <!--end of modal footer-->
-    </div>
-    <!--  END of notify MODAL -->
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
       </div>

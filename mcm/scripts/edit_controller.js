@@ -1,4 +1,4 @@
-function resultsCtrl($scope, $http, $location, $window){
+function resultCtrl($scope, $http, $location, $window){
 
     $scope.defaults = [];
     $scope.underscore = _;
@@ -190,9 +190,6 @@ function resultsCtrl($scope, $http, $location, $window){
         if ($scope.update["success"] == false){
           $scope.update["fail"] = true;
         }else{
-          if($scope.sequencesOriginal){
-            delete($scope.sequencesOriginal);
-          }
           $scope.getData();
         }
       }).error(function(data,status){
@@ -326,148 +323,187 @@ function resultsCtrl($scope, $http, $location, $window){
 //      $http({method:'PUT', url:'restapi/tags/remove/', data:JSON.stringify({tag:tok.value})})
   }
 }
-var ModalDemoCtrl = function ($scope) {
-  $scope.open = function (seq1, seq2, number) {
-    $scope.shouldBeOpen = true;
-    $scope.sequenceNum = number;
-    $scope.seqModalInfo = _.clone($scope.sequenceInfo[number]);
+var ModalDemoCtrl = function ($scope, $modal) {
+  $scope.openSequenceEdit = function (seq1, seq2, number) {
     $scope.sequenceToShow = [];
     $scope.sequenceHidden = [];
-    if($scope.dbName == "requests")
-    {
-      _.each($scope.result.sequences[number], function(value,key){
-        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value))
-        {
+    var sequences = {};
+    _.each($scope.dbName == "requests" ? $scope.result.sequences[number] : $scope.result.sequences[seq1][seq2], function(value,key){
+        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value)) {
           $scope.sequenceToShow.push(key);
-        }else
-        {
+        } else {
           $scope.sequenceHidden.push(key);
         }
-      });
-    }else
-    {
-      _.each($scope.result.sequences[seq1][seq2], function(value,key){
-        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value))
-        {
-          $scope.sequenceToShow.push(key);
-        }else
-        {
-          $scope.sequenceHidden.push(key);
-        }
-      });
-    }
+        sequences[key]=value;
+    });
     //sort both lists ???
     $scope.sequenceHidden.sort();
-    $scope.selected_hidden_sequence = $scope.sequenceHidden[0];
+      var sequenceEditModal = $modal.open({
+          templateUrl: 'sequenceEditModal.html',
+          controller: SequenceEditModalInstanceCtrl,
+          resolve: {
+              sequenceHidden: function() {
+                  return $scope.sequenceHidden;
+              },
+              sequenceToShow: function() {
+                  return $scope.sequenceToShow;
+              },
+              selectedHidden: function() {
+                  return $scope.sequenceHidden[0];
+              },
+              sequences: function() {
+                  return sequences;
+              }
+          }
+      });
+      sequenceEditModal.result.then(function(newSequence) {
+         if( $scope.dbName == "requests") {
+            $scope.result.sequences[number] = newSequence; // we should somehow change driver shown as well
+         } else {
+            $scope.result.sequences[seq1][seq2] = newSequence;
+         }
+      });
   };
 
-  $scope.close = function (number) {
-    $scope.shouldBeOpen = false;
-    $scope.seqModalInfo = _.clone($scope.sequenceInfo[number]);
-  };
-    $scope.save = function () {
-    $scope.result.sequences = $scope.sequenceInfo;
-    $scope.shouldBeOpen = false;
-  };
-  $scope.openNewSubSequence = function(){
-    $scope.shouldBeOpen = true;
-    $scope.newSequenceName = "";
-    $scope.newSequence = _.clone($scope.default_sequences);
-  };
-  $scope.saveNewSubform = function(index){
-    if ($scope.dbName !="requests"){
-      $scope.result.sequences[index][$scope.newSequenceName] = $scope.newSequence;
-      $scope.driver[index][$scope.newSequenceName] = $scope.newSequence;
-    }else{
-      $scope.result.sequences[index].push($scope.newSequence);
-    };
-    $scope.shouldBeOpen = false;
+  $scope.openNewSequence = function(define_name, index) {
+      var sequenceAddModal = $modal.open({
+          templateUrl: 'sequenceAddModal.html',
+          controller: SequenceAddModalInstanceCtrl,
+          resolve: {
+              define_name: function() {
+                  return define_name;
+              },
+              defaultSequence: function() {
+                  return _.clone($scope.default_sequences);
+              }
+          }
+        });
+      sequenceAddModal.result.then(function(data) {
+          if($scope.dbName == "requests") {
+              $scope.drivers.push(data.sequence);
+              $scope.result.sequences.push(data.sequence);
+          } else {
+              if(!define_name) {
+                $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
+                $scope.result.sequences[_.size($scope.result.sequences)] = {default: data.sequence};
+              } else {
+                $scope.drivers[index][data.name] = data.sequence;
+                $scope.result.sequences[index][data.name] = data.sequence;
+              }
+          }
+      })
   };
 
   $scope.isBoolean = function(value){
     return angular.isBoolean(value);
   };
 
-  $scope.saveNewSequence = function(){
-    var shift = 0;
-    if ($scope.dbName != "requests"){
-    //  if (_.size($scope.result.sequences) != 0){
-    //    shift =1; //in case we are ading a new sequence not from 0 we must increase array index of sequences
-    //  }
-      $scope.driver[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
-      $scope.result.sequences[_.size($scope.result.sequences)+shift] = {default: $scope.newSequence};
-    }else{
-      $scope.driver.push($scope.newSequence); //add a string to display in table
-      $scope.result.sequences.push($scope.newSequence); //add to original data -> to be commited
+
+};
+
+var SequenceAddModalInstanceCtrl = function($scope, $modalInstance, define_name, defaultSequence) {
+    $scope.define_name = define_name;
+    $scope.sequences = {
+        newSequenceName: "",
+        newSequence: defaultSequence
+    };
+
+    $scope.save = function() {
+        $modalInstance.close({name: $scope.sequences.newSequenceName, sequence: $scope.sequences.newSequence});
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
     }
-  };
-  $scope.showHiddenSequence = function()
-  {
-    $scope.sequenceToShow.push($scope.selected_hidden_sequence);
-    $scope.sequenceHidden.splice($scope.sequenceHidden.indexOf($scope.selected_hidden_sequence),1);
-    $scope.selected_hidden_sequence = $scope.sequenceHidden[0];
-  };
-}
-var genParamModalCtrl = function($scope, $http) {
-  $scope.openGenParam = function(index) {
-    $scope.modalOpen = true;
-    $scope.modal_data = _.clone($scope.genParam_data[index]);
+};
+
+var SequenceEditModalInstanceCtrl = function($scope, $modalInstance, sequences, selectedHidden, sequenceToShow, sequenceHidden) {
+    $scope.sequence = {
+        toShow: sequenceToShow,
+        hidden: sequenceHidden,
+        selectedHidden: selectedHidden,
+        sequences: sequences
+    };
+
+    $scope.showHiddenSequence = function() {
+        $scope.sequence.toShow.push($scope.sequence.selectedHidden);
+        $scope.sequence.hidden.splice($scope.sequence.hidden.indexOf($scope.sequence.selectedHidden), 1);
+        $scope.sequence.selectedHidden = $scope.sequence.hidden[0];
+    };
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+    $scope.save = function() {
+        $modalInstance.close($scope.sequence.sequences);
+    }
+};
+
+var genParamModalCtrl = function($scope, $http, $modal) {
+
+  $scope.showData = {
+      "Cross section": "cross_section",
+      "Filter efficiency": "filter_efficiency",
+      "Filter efficiency error": "filter_efficiency_error",
+      "Match efficiency": "match_efficiency",
+      "Match efficiency error": "match_efficiency_error"
   };
 
-  $scope.closeGenParam = function(index) {
-    $scope.modalOpen = false;
-  };
-  $scope.saveGenParam = function(index) {
-    $scope.modalOpen = false;
-    _.each($scope.modal_data, function(key,elem){
-      if (_.isString(key) && elem !="$$hashKey"){ //ignore: submission details object, angularjs $$hashKey
-        $scope.genParam_data[index][elem] = parseFloat(key);
+  $scope.openGenParam = function(action, index) {
+      var data = [];
+      if(action == "Edit") {
+          data = $scope.genParam_data[index];
+      } else {
+          data = $scope.defaultGenParams;
+      }
+    var genParamModal = $modal.open({
+      templateUrl: 'generatorParamsModal.html',
+      controller: GeneratorParamsInstandeModal,
+      resolve: {
+          data: function() {
+              return _.clone(data);
+          },
+          action: function() {
+              return action;
+          },
+          showData: function() {
+              return $scope.showData;
+          }
       }
     });
+    genParamModal.result.then(function(new_gen_params) {
+        _.each(new_gen_params, function(elem,key){
+          if (_.isString(elem) && key !="$$hashKey"){
+            new_gen_params[key] = parseFloat(elem);
+          }
+        });
+        if(action == "Edit") {
+            _.each(new_gen_params, function(elem,key){
+              if (!isNaN(elem)){
+                $scope.genParam_data[index][key] = elem;
+              }
+            });
+        } else { // Add
+            $scope.genParam_data.push(new_gen_params);
+        }
+    });
+
   };
 
-  $scope.openLastGenParam = function(index) {
-    $scope.modalLastOpen = true;
-    $scope.modal_data = _.clone($scope.genParam_data[index]);
-  };
-  $scope.closeLastGenParam = function(index) {
-    $scope.modalLastOpen = false;
-  };
-  $scope.saveLastGenParam = function(index) {
-    $scope.modalLastOpen = false;
-    _.each($scope.modal_data, function(key,elem){
-      if (_.isString(key) && elem !="$$hashKey"){ //ignore: submission details object, angularjs $$hashKey
-        $scope.genParam_data[index][elem] = parseFloat(key);
-      }
-    });
-  };
+};
 
+var GeneratorParamsInstandeModal = function($scope, $modalInstance, data, action, showData) {
+    $scope.action = action;
+    $scope.gen_params = {
+        data: data,
+        show: showData
+    };
+    $scope.closeGenParam = function() {
+        $modalInstance.dismiss();
+    };
 
-  //methods for adding a new Gen Param.
-  $scope.openAddParam = function(){
-    $scope.addParamLoad = true;
-    var promise = $http.get("restapi/"+ $scope.dbName+"/default_generator_params/"+$scope.result["prepid"]);
-    promise.then(function(data){
-      $scope.new_gen_params = data.data.results;
-      $scope.addParamLoad = false;
-      $scope.addParamModal = true;
-    }, function(){
-      $scope.addParamLoad = false;
-      alert("Error getting new generator parameters");
-    });
-  };
-  $scope.saveAddParam = function(){
-    $scope.addParamModal = false;
-    _.each($scope.new_gen_params, function(key,elem){
-      if (elem != "submission_details"){ //ignore: submission details object, angularjs $$hashKey
-        $scope.new_gen_params[elem] = parseFloat(key);
-      }
-    });
-    $scope.genParam_data.push($scope.new_gen_params);
-  };
-  $scope.closeAddParam = function(){
-    $scope.addParamModal = false;
-  };
+    $scope.saveGenParam = function() {
+        $modalInstance.close($scope.gen_params.data);
+    };
 };
 // NEW for directive
 //var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
@@ -482,13 +518,11 @@ testApp.directive("inlineEditable", function(){
        ctrl.$render = function () {
          scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
          scope.formColumn = scope.$eval(attr.column);
-       }
+       };
        scope.update = function () {
          var object = null;
          try{
            object = JSON.parse(JSON.stringify(scope.whatever_value));
-           console.log(object);
-           console.log(angular.fromJson(object));
            ctrl.$setViewValue(angular.fromJson(object));
            ctrl.$setValidity("bad_json", true);
          }catch (err){
@@ -503,6 +537,61 @@ testApp.directive("sequenceEdit", function($http){
     require: 'ngModel',
     template:
     '<div >'+
+    '  <script type="text/ng-template" id="sequenceEditModal.html">'+ // Edit sequence modal template
+    '     <div class="modal-header">'+
+    '       <h4>Edit sequence</h4>'+
+    '     </div>'+
+    '     <div class="modal-body">'+
+    '       <form class="form-horizontal" name="sequenceForm">'+
+    '         <div class="control-group" ng-repeat="key in sequence.toShow">'+
+    '          <div ng-if="key!=$$hashkey">'+
+    '           <label class="control-label">{{key}}</label>'+
+    '             <input type="text" ng-model="sequence.sequences[key]">'+
+    '          </div>' +
+    '         </div>'+
+    '       </form>'+
+    '     </div>'+
+    '     <div class="modal-footer">'+
+    '       <div class="span3 input-append" style="text-align:left;">'+
+    '         <select ng-model="sequence.selectedHidden" ng-show="sequence.hidden.length > 0">'+
+    '           <option ng-repeat="elem in sequence.hidden">{{elem}}</option>'+
+    '         </select>'+
+    '         <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequence.hidden.length > 0"><i class="icon-plus-sign"></i></a>'+
+    '       </div>'+
+    '       <div class="span2">'+
+    '         <button class="btn btn-success" ng-click="save()">Save</button>'+
+    '         <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '       </div>'+
+    '     </div>'+
+    '  </script>'+
+    '  <script type="text/ng-template" id="sequenceAddModal.html">'+ //Add sequence modal template
+    '    <div class="modal-header">'+
+    '      <h4>Add sequence</h4>'+
+    '    </div>'+ //end oF  modal header
+    '    <div class="modal-body">'+
+    '      <form class="form-horizontal" name="sequenceForm">'+
+    '        <div class="control-group" ng-if="define_name">'+
+    '          <label class="control-label">Name</label>'+
+    '          <div class="controls">'+
+    '            <input type="text" ng-model="sequences.newSequenceName" name="Name" required>'+
+    '            <span class="error" ng-show="sequenceForm.Name.$error.required">'+
+    '               Required!</span>'+
+    '          </div>'+
+    '        </div>'+
+    '        <div class="control-group" ng-repeat="(key, value) in sequences.newSequence">'+
+    '          <div ng-if="key!=$$hashKey">'+
+    '            <label class="control-label">{{key}}</label>'+
+    '            <div class="controls">'+
+    '              <input type="text" ng-model="sequences.newSequence[key]">'+
+    '            </div>'+
+    '          </div>'+
+    '      </form>'+
+    '    </div>'+ //end of modal body
+    '    <div class="modal-footer">'+
+    '      <button class="btn btn-success" ng-click="save()" ng-disabled="sequenceForm.Name.$error.required">Save</button>'+
+    '      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
+    '    </div>'+ //end of modal footer
+    '  </script>'+
     '  <ul ng-switch="dbName">'+
     '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-hide="showSequences" ng-href="#">'+
     '     <i class="icon-eye-open"></i>'+
@@ -511,267 +600,93 @@ testApp.directive("sequenceEdit", function($http){
     '     <i class="icon-eye-close"></i>'+
     '   </a>'+
     '  <div ng-switch-when="requests" ng-show="showSequences">'+
-    // '   <div ng-show="showSequences">'+
-    '    <li ng-repeat="(sequence_id, sequence) in driver">{{sequence}}'+
+    '    <li ng-repeat="(sequence_id, sequence) in drivers">{{sequence}}'+
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="open(\'\',\'\',sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
+    '        <a rel="tooltip" title="Edit sequence" ng-click="openSequenceEdit(\'\',\'\',sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
     '          <i class="icon-wrench"></i>'+
     '        </a>'+
-    '        <div modal="shouldBeOpen" close="close()">'+
-    '          <div class="modal-header">'+
-    '            <h4>Sequence edit modal</h4>'+
-    '          </div>'+
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in sequenceToShow">'+
-    '                <label class="control-label">{{key}}</label>'+
-    '                <div class="controls" ng-switch on="key">'+
-    '                  <input type="text" ng-model="result.sequences[sequence_id][key]" ng-switch-default>'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+
-    '          <div class="modal-footer">'+
-    '            <div class="span3 input-append" style="text-align:left;">'+
-    '              <select ng-model="selected_hidden_sequence" ng-show="sequenceHidden.length > 0">'+
-    '                <option ng-repeat="elem in sequenceHidden">{{elem}}</option>'+
-    '              </select>'+
-    '              <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequenceHidden.length > 0"><i class="icon-plus-sign"></i></a>'+
-    '            </div>'+
-    '            <div class="span2">'+
-    '              <button class="btn btn-success" ng-click="save()">Save</button>'+
-    '              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '            </div>'+
-    '          </div>'+
-    '       </div>'+
-    '      <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);" ng-href="#">'+
-    '        <i class="icon-remove-sign"></i>'+
-    '      </a>'+
+    '        <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);" ng-href="#">'+
+    '          <i class="icon-remove-sign"></i>'+
+    '        </a>'+
     '    </li>'+
-    // '   </div>'+
     '  </div>'+
     '  <div ng-switch-default ng-show="showSequences">'+
-    '    <li ng-repeat="(key,value) in driver">'+
+    '    <li ng-repeat="(key,value) in result.sequences">'+
     '      <ul>'+
     '        {{key}}'+
     '      </ul>'+
     '      <ul ng-repeat="(name,elem) in value">'+
-    ///MODAL
     '      <div ng-controller="ModalDemoCtrl">'+
-    '        <li>{{CMSdriver[key][name]}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="open(key,name,$index);" ng-hide="hideSequence(1);" ng-href="#">'+
+    '        <li>{{drivers[key][name]}}'+
+    '          <a rel="tooltip" title="Edit sequence" ng-click="openSequenceEdit(key,name,$index);" ng-hide="hideSequence(1);" ng-href="#">'+
     '            <i class="icon-wrench"></i>'+
     '          </a>'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
+    '          <a rel="tooltip" title="Remove subsequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
-    '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
-    '            <div class="modal-header">'+
-    '              <h4>Sequence edit modal</h4>'+
-    '            </div>'+
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group" ng-repeat="key in sequenceToShow">'+
-    '                <div ng-switch on="key">'+
-    '                  <div ng-switch-when="$$hashKey"></div>'+
-    '                  <div ng-switch-default>'+
-    '                    <label class="control-label">{{key}}</label>'+
-    '                    <div class="controls" ng-switch on="key">'+
-    '                      <input type="text" ng-model="elem[key]" ng-switch-default>'+
-    '                    </div>'+
-    '                  </div>'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <div class="span3 input-append" style="text-align:left;">'+
-    '              <select ng-model="selected_hidden_sequence" ng-show="sequenceHidden.length > 0">'+
-    '                <option ng-repeat="el in sequenceHidden">{{el}}</option>'+
-    '              </select>'+
-    '              <a class="btn" ng-click="showHiddenSequence();" ng-href="#"  ng-show="sequenceHidden.length > 0"><i class="icon-plus-sign"></i></a>'+
-    '            </div>'+
-    '            <div class="span2">'+
-    '              <button class="btn btn-success" ng-click="save()">Save</button>'+
-    '              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '            </div>'+
-    '          </div>'+ //end of modal footer
     '        </li>'+
     '      </div>'+ //end of modalControler DIV
-    ///END OF MODAL
     '      </ul>'+
-    '        <div ng-controller="ModalDemoCtrl">'+ //add new sub-sequence
-    '          <span ng-hide="showAddNewModal">'+
-    '          <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
-    '            <i class="icon-zoom-in"></i>'+
-    '          </a>'+
+    '        <div ng-controller="ModalDemoCtrl">'+
     '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
     '            <i class="icon-remove-sign"></i>'+
     '          </a>'+
-    '          </span>'+
-    '          <span ng-show="showAddNewModal">'+
-    '            <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
-    '              <i class="icon-plus"></i>'+
-    '            </a>'+
-    '          </span>'+
-    '          <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
-    '            <div class="modal-header">'+
-    '              <h4>Sequence add modal</h4>'+
-    '            </div>'+ //end oF  modal header
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal" name="sequenceForm">'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Name</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="newSequenceName" name="Name" required>'+
-    '                  <span class="error" ng-show="sequenceForm.Name.$error.required">'+
-    '                     Required!</span>'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
-    '                <div ng-switch on="key">'+
-    '                  <div ng-switch-when="$$hashKey"></div>'+
-    '                  <div ng-switch-default>'+
-    '                    <label class="control-label">{{key}}</label>'+
-    '                    <div class="controls" ng-switch on="key">'+
-    '                      <input type="text" ng-model="newSequence[key]" ng-switch-default>'+
-    '                    </div>'+
-    '                  </div>'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveNewSubform(key)" ng-disabled="sequenceForm.Name.$error.required">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '          </div>'+ //end of modal footer
+    '          <a rel="tooltip" title="Add new subsequence" ng-click="openNewSequence(true, $index);" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
+    '            <i class="icon-plus"></i>'+
+    '          </a>'+
     '        </div>'+
     '    </li>'+
     '  </div>'+
     '  </ul>'+
-    //ADD NEW SEQUENCE MODAL
     '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+ //add new sequence to sequence list
-    '  <span ng-hide="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="showAddSequencePlus();" ng-hide="hideSequence(1);" >'+ //button to get default sequences, and make plus-sign available
-    '      <i class="icon-zoom-in"></i>'+
-    '    </a>'+
-    '  </span>'+
-    '  <span ng-show="showAddNewModal">'+
-    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSubSequence();" ng-hide="hideSequence(1);" >'+ //add sequence
+    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSequence(false);" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
     '      <i class="icon-plus"></i>'+
     '    </a>'+
-    '  </span>'+
-    '  <div modal="shouldBeOpen" close="close()">'+ //hidden modal template
-    '    <div class="modal-header">'+
-    '      <h4>Sequence add modal</h4>'+
-    '    </div>'+ //end oF  modal header
-    '    <div class="modal-body">'+
-    '      <form class="form-horizontal" name="sequenceForm">'+
-    '        <div class="control-group" ng-repeat="key in underscore.keys(default_sequences)">'+
-    '          <div ng-switch on="key">'+
-    '            <div ng-switch-when="$$hashKey"></div>'+
-    '            <div ng-switch-default>'+
-    '              <label class="control-label">{{key}}</label>'+
-    '              <div class="controls" ng-switch on="key">'+
-    '                <input type="text" ng-model="newSequence[key]" ng-switch-default>'+
-    '              </div>'+
-    '            </div>'+
-    '          </div>'+
-    '        </div>'+
-    '      </form>'+
-    '    </div>'+ //end of modal body
-    '    <div class="modal-footer">'+
-    '      <button class="btn btn-success" ng-click="saveNewSequence();shouldBeOpen = false;">Save</button>'+
-    '      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '    </div>'+ //end of modal footer
     '  </div>'+
-    //end OF MODAL
     '</div>',
     link: function(scope, element, attr, ctrl){
-      ctrl.$render = function(){ 
+      ctrl.$render = function(){
         scope.showSequences = false;
         scope.showAddNewModal = false;
         scope.default_sequences = {};
         scope.sequenceToShow = [];
         scope.sequenceHidden = [];
+        scope.alreadyShown = false;
       };
       scope.removeSequence = function(elem){
-        scope.driver.splice(elem,1); //remove sequence from display
-        scope.result.sequences.splice(elem,1); //remove the value from original sequences
+        scope.result.sequences.splice(elem, 1); //remove the value from original sequences
+        scope.drivers.splice(elem, 1);
       };
       scope.removeSubSequence = function(key, name){
-        delete scope.driver[key][name];
         if (scope.result.sequences[key] != null){
           delete scope.result.sequences[key][name];
+          delete scope.drivers[key][name];
         }
-        if (_.keys(scope.driver[key]).length == 1){ //$$hashkey dosent count
-          scope.driver.splice(key,1);
+        if (_.keys(scope.result.sequences[key]).length == 1){ //$$hashkey dosent count
           scope.result.sequences.splice(key,1);
-        };
+          scope.drivers.splice(key, 1);
+        }
       };
       scope.displaySequences = function(){
         if (scope.showSequences){ //if shown then -> HIDE;
           scope.showSequences = false;
-        }else{
+        } else {
           scope.showSequences = true; //if hidden -> then display sequences, get the cmsDrivers;
-        if(scope.dbName == "requests"){
-          if (true || !scope.sequencesOriginal){ //if requests and sequences haven't been requested already
-            var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
-            promise.then(function(data){
-              scope.driver = data.data.results;
-	      // try to evolve the schema at this point ! yes or no ? helps with campaigns editing
-	      /*
-	      console.log('sequences', scope.result.sequences );
-	      var promise2 = $http.get("getDefaultSequences");
-	      promise2.then(function(data){
-		      console.log('data retreived', data );
-		      //and put any new entries of data in the sequence
-		      _.each( data.data, function(elem,key){
-			      console.log(key, scope.result.sequences[key]);
-			      if (scope.result.sequences[key] === undefined ){
-				  console.log(key,'adding',elem);
-				  scope.result.sequences[key] = elem;
-			      }
-			      else{
-				  console.log(key,'is there already',elem);
-			      }
-			  });
+          if(!scope.alreadyShown) {
+               var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
+                promise.then(function(data){
+                    scope.drivers = data.data.results;
 
-		      console.log( scope.sequencesOriginal );
-		  });
-	      */
-	      //copy in case one cancels
-              scope.sequencesOriginal = _.clone(scope.result.sequences);
-	      
-            }, function(data){ alert("Error: ", data.status); });
-          }
-        }else{  //just clone the original sequences -> in case user edited and didnt saved.
-          if (true || !scope.sequencesOriginal){ //if requests and sequences haven't been requested already
-            var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
-            promise.then(function(data){
-              scope.CMSdriver = data.data.results;
-              scope.sequencesOriginal = _.clone(scope.result.sequences);
-            }, function(data){ alert("Error: ", data.status); });
-          }
-          scope.sequencesOriginal = _.clone(scope.result.sequences);
-          scope.driver = scope.sequencesOriginal;
-        }
-        scope.sequenceInfo = ctrl.$viewValue;
-        scope.sequencesOriginal = _.clone(scope.result.sequences);
-        }
-      };
-      scope.showAddSequencePlus = function(){
-        if (scope.showAddNewModal){
-          scope.showAddNewModal = false;
-        }else{
-          scope.showAddNewModal = true;
-          if (_.keys(scope.default_sequences).length == 0){ //get default sequences list if it hasn't been already done
-            scope.gettingDefaultSequences = true;
-            var promise = $http.get("getDefaultSequences");
-            promise.then(function(data){
-              scope.default_sequences = data.data;
-              scope.gettingDefaultSequences = true;
-            }, function(){ alert("Error"); });
+                }, function(data){
+                    alert("Error: " + data.status);
+                });
+               var promise2 = $http.get("getDefaultSequences");
+              promise2.then(function(data) {
+                  scope.default_sequences = data.data;
+              }, function() {
+                  alert("Error getting default sequences");
+              });
+              scope.alreadyShown = true;
           }
         }
       };
@@ -867,170 +782,58 @@ testApp.directive("generatorParams", function($http){
     require: 'ngModel',
     template: 
     '<div ng-controller="genParamModalCtrl">'+
-    '  <ul ng-repeat="elem in genParam_data" ng-switch on="$index < genParam_data.length-1">'+
-    '    <li ng-switch-when="true">'+ //when not the last element display only wrentch
-    '      <a ng-click="openGenParam($index)"><i class="icon-wrench"></i></a>'+
         ///MODAL
-    '          <div modal="modalOpen" close="closeGenParam($index)">'+ //hidden modal template
-    '            <div class="modal-header">'+
-    '              <h4>Generator parameters editer</h4>'+
-    '            </div>'+ //end of modal header
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal">'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Cross section</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.cross_section">'+
-    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.filter_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.filter_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.match_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.match_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveGenParam($index)">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="closeGenParam($index)">Cancel</button>'+
-    '          </div>'+ //end of modal footer
-    ///END OF MODAL
-    '    </li>'+
-    '    <li ng-switch-when="false">'+ //when last gen param to be shown
-    '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
-    '        <dt>{{"cross section"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["cross_section"]}}'+
-    '          <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
+    '  <script  type="text/ng-template" id="generatorParamsModal.html">'+ //hidden modal template
+    '    <div class="modal-header">'+
+    '      <h4>{{action}} generator parameters</h4>'+
+    '    </div>'+ //end of modal header
+    '    <div class="modal-body">'+
+    '      <form class="form-horizontal">'+
+    '        <div ng-repeat="(key, value) in gen_params.show" class="control-group">'+
+    '          <label class="control-label">{{key}}</label>'+
+    '          <div class="controls">'+
+    '            <input type="text" ng-model="gen_params.data[value]">'+
+    '            <a ng-if="key==\'Cross section\'" class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
+    '          </div>'+
+    '        </div>'+
+    '      </form>'+
+    '    </div>'+ //end of modal body
+    '    <div class="modal-footer">'+
+    '      <button class="btn btn-success" ng-click="saveGenParam()">Save</button>'+
+    '      <button class="btn btn-warning cancel" ng-click="closeGenParam()">Cancel</button>'+
+    '    </div>'+ //end of modal footer
+    '  </script>'+///END OF MODAL
+    '  <ul ng-repeat="elem in genParam_data">'+
+    '    <li>'+ //when not the last element display only wrench
+    '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-if="$index==genParam_data.length-1">'+
+    '        <dt ng-repeat-start="(key, value) in showData">{{key.toLowerCase()}}</dt>'+
+    '        <dd ng-repeat-end class="clearfix">{{elem[value]}}'+
+    '          <a ng-if="key==\'Cross section\'" class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '        </dd>'+
-    '        <dt>{{"filter efficiency"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["filter_efficiency"]}}</dd>'+
-    '        <dt>{{"filter efficiency error"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["filter_efficiency_error"]}}</dd>'+
-    '        <dt>{{"match efficiency"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["match_efficiency"]}}</dd>'+
-    '        <dt>{{"match efficiency error"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["match_efficiency_error"]}}</dd>'+
-    '        <dt>{{"author username"}}</dt>'+
-    '        <dd class="clearfix">{{genParam_data[$index]["submission_details"]["author_username"]}}</dd>'+
+    '        <dt>author username</dt>'+
+    '        <dd class="clearfix">{{elem["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+
-    '      <a ng-click="openLastGenParam($index)"><i class="icon-wrench"></i></a>'+
-    '          <div modal="modalLastOpen" close="closeLastGenParam($index)">'+ //hidden modal template
-    '            <div class="modal-header">'+
-    '              <h4>Generator parameters editer</h4>'+
-    '            </div>'+ //end of modal header
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal">'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Cross section</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.cross_section">'+
-    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.filter_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.filter_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.match_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="modal_data.match_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveLastGenParam($index)">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="closeLastGenParam($index)">Cancel</button>'+
-    '          </div>'+ //end of modal footer
+    '      <a ng-click="openGenParam(\'Edit\', $index)" ng-hide="not_editable_list.indexOf(\'Generator parameters\')!=-1"><i class="icon-wrench"></i></a>'+
     '    </li>'+
     '  </ul>'+
-    '      <a ng-click="openAddParam()" ng-hide="addParamLoad"><i class="icon-plus"></i></a>'+
+    '      <a ng-click="openGenParam(\'Add\')" ng-hide="addParamLoad || not_editable_list.indexOf(\'Generator parameters\')!=-1"><i class="icon-plus"></i></a>'+
     '      <img ng-show="addParamLoad" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '      <div modal="addParamModal" close = "closeAddParam()">'+
-    '            <div class="modal-header">'+
-    '              <h4>Add Generator parameters</h4>'+
-    '            </div>'+ //end of modal header
-    '          <div class="modal-body">'+
-    '            <form class="form-horizontal">'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Cross section</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="new_gen_params.cross_section">'+
-    '                  <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="new_gen_params.filter_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Filter efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="new_gen_params.filter_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="new_gen_params.match_efficiency">'+
-    '                </div>'+
-    '              </div>'+
-    '              <div class="control-group">'+
-    '                <label class="control-label">Match efficiency error</label>'+
-    '                <div class="controls">'+
-    '                  <input type="text" ng-model="new_gen_params.match_efficiency_error">'+
-    '                </div>'+
-    '              </div>'+
-    '            </form>'+
-    '          </div>'+ //end of modal body
-    '          <div class="modal-footer">'+
-    '            <button class="btn btn-success" ng-click="saveAddParam()">Save</button>'+
-    '            <button class="btn btn-warning cancel" ng-click="closeAddParam()">Cancel</button>'+
-    '          </div>'+ //end of modal footer
-    ///END OF MODAL
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
         scope.genParam_data = ctrl.$viewValue;
+        scope.defaultGenParams = [];
       };
+
+        scope.addParamLoad = true;
+        var promise = $http.get("restapi/"+ scope.dbName+"/default_generator_params/"+scope.result["prepid"]);
+        promise.then(function(data){
+          scope.defaultGenParams = data.data.results;
+            scope.addParamLoad = false;
+        }, function(){
+          alert("Error getting default generator parameters");
+        });
     }
   }
 });
@@ -1045,11 +848,11 @@ testApp.directive("customValidationEdit", function(){
     '    <fieldset>'+
     '      <div class="control-group">'+
     '        Valid:'+
-    '        <input ng-disabled="disabled" type="checkbox" ng-model="validation_data.valid"></input>'+
+    '        <input ng-disabled="disabled" type="checkbox" ng-model="validation_data.valid">'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.valid">'+
     '        nEvents:'+
-    '        <input ng-disabled="disabled"  type="number" ng-model="validation_data.nEvents"></input>'+
+    '        <input ng-disabled="disabled"  type="number" ng-model="validation_data.nEvents">'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.dqm">'+
     '        DQM:'+
@@ -1062,7 +865,7 @@ testApp.directive("customValidationEdit", function(){
     '      </div>'+
     '    </fieldset>'+
     '  </form>'+
-    '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;"></input>'+
+    '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;">'+
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl){
@@ -1096,7 +899,7 @@ testApp.directive("customAnalysisId", function(){
     '       {{elem}}'+
     '     </span>'+
     '     <span ng-show="editable[$index]">'+
-    '       <input type="text" ng-model="new_id" class="input-xxlarge"></input>'+
+    '       <input type="text" ng-model="new_id" class="input-xxlarge">'+
     '       <a ng-click="save($index, new_id)">'+
     '         <i class="icon-plus-sign"></i>'+
     '       </a>'+
@@ -1105,16 +908,16 @@ testApp.directive("customAnalysisId", function(){
     '       </a>'+
     '     </span>'+
     '     <span ng-hide="editable[$index]">'+
-    '       <a ng-click="edit($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '       <a ng-click="edit($index)" ng-hide="not_editable_list.indexOf(formColumn)!=-1">'+
     '         <i class="icon-wrench"></i>'+
     '       </a>'+
-    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '       <a ng-click="remove($index)" ng-hide="not_editable_list.indexOf(formColumn)!=-1">'+
     '         <i class="icon-remove-sign"></i>'+
     '       </a>'+
     '     <span>'+
     '   </li>'+
     '  </ul>'+
-    '    <form class="form-inline" ng-hide="not_editable_list.indexOf({{formColumn}})!=-1">'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(formColumn)!=-1">'+
     '      <a ng-click="toggleAddNewAnalysisID()">'+
     '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
     '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
@@ -1186,7 +989,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Remove itself" ><i class="icon-minus"></i></a>'+
     '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
     '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
-    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in possible_sub_requests[$index] | filter: $viewValue | limitTo: 10"></input>'+
+    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in possible_sub_requests[$index] | filter: $viewValue | limitTo: 10">'+
     '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
     '          <font color="red" ng-show="bad_sub_request">Wrong request</font>'+
     '        </span>'+
@@ -1195,7 +998,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '  </ul>'+
     '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
     '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in possible_requests | filter: $viewValue | limitTo: 10"></input>'+
+    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in possible_requests | filter: $viewValue | limitTo: 10">'+
     '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
     '  <font color="red" ng-show="bad_request">Wrong request</font>'+
     '</div>'+

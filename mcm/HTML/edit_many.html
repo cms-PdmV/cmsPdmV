@@ -13,7 +13,7 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
          <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
          <!--[IF IE]>
@@ -109,7 +109,7 @@
         <tbody>
           <tr ng-repeat="column in defaults">
             <th>
-              <input type="checkbox" ng-model="edited_fields[column.db_name]" ng-click="toggleNotEditable(column.text)" ng-hide="non_multiple_editable.indexOf(column.text)!=-1"></input>
+              <input type="checkbox" ng-model="edited_fields[column.db_name]" ng-click="toggleNotEditable(column.text)" ng-hide="non_multiple_editable.indexOf(column.text)!=-1">
               {{column.text}}
               <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}">
                 <i class="icon-question-sign"></i>
@@ -146,10 +146,7 @@
                     </dl>
                   </div>
                   <div ng-switch-when="Generator parameters">
-                    <ng-form name="fieldForm">
-                      <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                      <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                    </ng-form>
+                    <div generator-params ng-model="result[column.db_name]"></div>
                   </div>
                   <div ng-switch-when="Block white list">
                     <ng-form name="fieldForm">
@@ -179,6 +176,7 @@
                     <ng-form name="fieldForm">
                       <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                       <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      <div generator-params ng-model="result[column.db_name]"></div>
                     </ng-form>
                   </div>
                   <div ng-switch-when="Reqmgr name">
@@ -186,9 +184,6 @@
                       <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                     </ng-form>
-                  </div>
-                  <div ng-switch-when="Generator parameters">
-                    <div generator-params ng-model="result[column.db_name]"></div>
                   </div>
                   <div ng-switch-when="Fragment">
                     <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">

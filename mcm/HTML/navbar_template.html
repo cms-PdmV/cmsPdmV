@@ -87,7 +87,7 @@
 </div> <!--END of navbar-->
 
 <!--     Support MODAL -->
-<div modal="supportModal" close="closeSupportModal()" style="white-space: width:710px;"> <!--hidden modal template-->
+<script type="text/ng-template" id="supportModal.html"> <!--hidden modal template-->
   <div class="modal-header">
     <h4>Request for Support</h4>
   </div>  <!--end of modal header-->
@@ -95,8 +95,22 @@
     <h5>Please select between operation issues (Ask Support)<br> or feature/improvement/functionnality issues (Create Issue)</h5>
   </div> <!--end of modal body-->
   <div class="modal-footer">
-    <a class="btn btn-success" ng-href="https://github.com/cms-PdmV/cmsPdmV/issues/new" ng-click="closeSupportModal();" target="_blank">Create Issue</a>
-    <a class="btn btn-warning cancel" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20<Some problem occured>" ng-click="closeSupportModal();"  target="_blank">Ask Support</a>
+    <a class="btn btn-success" ng-href="https://github.com/cms-PdmV/cmsPdmV/issues/new" ng-click="close();" target="_blank">Create Issue</a>
+    <a class="btn btn-info" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20<Some problem occured>" ng-click="close();"  target="_blank">Ask Support</a>
+    <a class="btn btn-warning cancel" ng-click="close();">Cancel</a>
   </div> <!--end of modal footer-->
-</div>
+</script>
 <!--     END OF MODAL  -->
+
+<!-- Are you Sure MODAL-->
+<script type="text/ng-template" id="isSureModal.html"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
+  </div>  <!--end of modal header-->
+  <div class="modal-footer" style="background-color:{{modal_color}}">
+    <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
+    <button class="btn btn-warning" ng-click="yes()">Yes</button>
+    <button class="btn btn-success" ng-click="no()">No</button>
+  </div> <!--end of modal footer-->
+</script>
+<!-- END of isSure MODAL-->

@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -50,14 +50,14 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in chainedCampaigns_defaults" ng-show="column.select" style="white-space: nowrap;">
+          <th ng-repeat="column in chainedCampaigns_defaults" ng-if="column.select" style="white-space: nowrap;">
             {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
           </th>
         </tr>
       </thead>
       <tbody>
         <tr ng-repeat="data in filterResults()">
-          <td ng-repeat="value in chainedCampaigns_defaults" ng-show="value.select" style="white-space: nowrap;">
+          <td ng-repeat="value in chainedCampaigns_defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="PrepId">
                 <a ng-href='chained_campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-align-right"></i></a>
@@ -71,9 +71,9 @@
 	            </div>
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
-		  <!--<a ng-click="open(data.prepid)" rel="tooltip" title="Create new request" target="_self" ng-hide="role(3);">
+		         <a ng-click="createChainedRequest(data.prepid)" rel="tooltip" title="Create new request" target="_self" ng-hide="role(3);">
                     <i class="icon-plus-sign"></i>
-                  </a>-->
+                  </a>
                   <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self" ng-hide="data.exists==false;">
                     <i class="icon-indent-left"></i>
                   </a>
@@ -95,20 +95,20 @@
                   <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
                     <i class="icon-screenshot"></i>
                   </a>
-                  <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+                <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
                     <div class="modal-header">
-                      <h4>Create a request</h4>
+                        <h4>Create a chained request</h4>
                     </div>  <!--end of modal header-->
                     <div class="modal-body">
-                      Create request for:{{prepId}} campaign
-                       <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
-                       </select>
+                      Create chained request for: {{prepid}} campaign
+                      <select ng-options="value for value in pwgs" ng-model="pwg.selected" style="width: 90px; margin-bottom: 0px;">
+                      </select>
                     </div> <!--end of modal body-->
                     <div class="modal-footer">
                       <button class="btn btn-success" ng-click="save()">Create</button>
                       <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                     </div> <!--end of modal footer-->
-                  </div>
+                </script>
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->
               </div>
@@ -164,21 +164,6 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
-        <!-- <div ng-controller="ModalDemoCtrl">
-          <input type="button" class="btn" ng-click="open()" value="Create new chained campaign" align="left"/>
-          <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;">
-            <div class="modal-header">
-              <h4>Create a campaign</h4>
-            </div>
-            <div class="modal-body">
-              Campaign name: <input type="text" ng-model="campaignId"/>
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-success" ng-click="createChainedCampaign()">Create</button>
-              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-            </div>
-          </div>
-        </div> -->
         <a ng-href="chained_campaigns?select=" class="btn btn-mini" ng-hide="role(3);" target="_self">Create Chained Campaigns</a>
       </div>
     </div>

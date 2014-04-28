@@ -4,7 +4,7 @@ function resultsCtrl($scope, $http, $location, $window){
     {text:'Actions',select:true, db_name:''},
     {text:'Approval',select:true, db_name:'approval'},
     {text:'Allowed Campaigns',select:true, db_name:'allowed_campaigns'},
-    {text:'Next Campaign',select:true, db_name:'next_campaign'},
+    {text:'Next Campaign',select:true, db_name:'next_campaign'}
   ];
   $scope.update = [];
   $scope.show_well = false;
@@ -224,32 +224,46 @@ function resultsCtrl($scope, $http, $location, $window){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
-};
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.open = function () {
-    $scope.shouldBeOpen = true;
-  };
+}
 
-  $scope.close = function () {
-    $scope.shouldBeOpen = false;
+var ModalDemoCtrl = function ($scope, $http, $modal) {
+  $scope.open = function () {
+    var flowCreationModal = $modal.open({
+        templateUrl: "flowCreateModal.html",
+        controller: CreateFlowModalInstance
+    });
+    flowCreationModal.result.then(function(flowId) {
+        console.log(flowId);
+        $http({method: 'PUT', url:'restapi/flows/save/', data:{prepid: flowId}})
+            .success(function(data, status){
+          $scope.update["success"] = data.results;
+          $scope.update["fail"] = !data.results;
+          $scope.update["status_code"] = status;
+          $scope.getData();
+            }).error(function(data,status){
+             $scope.update["success"] = false;
+             $scope.update["fail"] = true;
+             $scope.update["status_code"] = status;
+         });
+    })
   };
 
   $scope.createFlow = function(){
-    $http({method: 'PUT', url:'restapi/flows/save/', data:{prepid: $scope.flowId}}).success(function(data, status){
-      $scope.update["success"] = data.results;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $scope.getData();
-// //    $window.location.href ="edit?db_name=campaigns&query="+data.results;
-     }).error(function(data,status){
-         // console.log(data,status);
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
-     });
-    $scope.shouldBeOpen = false;
+
   };
 };
+
+var CreateFlowModalInstance = function($scope, $modalInstance) {
+    $scope.flow = {flowId: ""};
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+    $scope.save = function() {
+        $modalInstance.close($scope.flow.flowId);
+    }
+
+};
+
 // NEW for directive
 //var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){

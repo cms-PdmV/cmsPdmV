@@ -1,4 +1,4 @@
-function mainCtrl($scope, $http, $location, $window, $route){
+function mainCtrl($scope, $http, $location, $window, $modal){
   $scope.stats_cache = {};
   $scope.full_details = {};
   $scope.mcm_revision = "";
@@ -155,17 +155,23 @@ var promise;
      return x;
    }
   };
-  
+
+
   /* Support modal actions*/
-  $scope.supportModal = false;
+
   $scope.openSupportModal = function (){
-    $scope.supportModal = true;
-  };
-  $scope.closeSupportModal = function () {
-    $scope.supportModal = false;
+    $modal.open({
+        templateUrl:"supportModal.html",
+        controller: function($scope, $modalInstance) {
+            $scope.close = function() {
+                $modalInstance.close();
+            }
+        }
+    });
   };
 
 }
+
 testApp.directive('slider', function () {
 return {
     restrict: 'AE',
@@ -799,3 +805,32 @@ testApp.directive("growthGraph", function($http, $location){
     }
   }
 });
+
+var ModalIsSureCtrl = function($scope, $modalInstance, action, prepid) {
+    $scope.modal_action = action;
+    $scope.toggle_prepid = prepid;
+
+    var stringToColour = function(str) {
+        //converts any string to hexadecimal color format
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        var colour = '#';
+        for (i = 0; i < 3; i++) {
+            var value = (hash >> (i * 8)) & 0xFF;
+            colour += ('00' + value.toString(16)).substr(-2);
+        }
+        return colour;
+    };
+
+    $scope.modal_color = stringToColour(action);
+
+    $scope.yes = function() {
+        $modalInstance.close();
+    };
+
+    $scope.no = function() {
+        $modalInstance.dismiss();
+    };
+};

@@ -241,64 +241,99 @@ function resultsCtrl($scope, $http, $location, $window){
       $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
     }
   };
-};
+}
 
-var ModalDemoCtrl = function ($scope, $http, $window) {
-  $scope.open = function (id) {
-      
-    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name)
+var ModalDemoCtrl = function ($scope, $http, $modal) {
+  $scope.openRequestCreator = function (id) {
+    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
     promise.then(function(data){
-	    $scope.pwgs = data.data.results;
-	    //if ($scope.pwgs.length==0){
-	    //$scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP','TSG','SMP'];
-	    //}
-	    $scope.selectedPwg= $scope.pwgs[0];
-	    $scope.shouldBeOpen = true;
-	    $scope.prepId = id;
+	    var pwgs = data.data.results;
+        $modal.open( {
+          templateUrl: 'createRequestModal.html',
+          controller: ModalCreateRequest,
+          resolve: {
+              pwgs: function(){
+                  return pwgs;
+              },
+              selectedPwg: function(){
+                return pwgs[0];
+              },
+              prepid: function() {
+                  return id;
+              }
+          }
+        })
 	});
 
   };
 
-  $scope.close = function () {
 
-    $scope.shouldBeOpen = false;
-  };
-    $scope.save = function () {
-    console.log($scope.selectedPwg, $scope.prepId);
-    $scope.shouldBeOpen = false;
-    if ($scope.selectedPwg){
-      $http({method: 'PUT', url:'restapi/requests/save/', data:{member_of_campaign:$scope.prepId, pwg: $scope.selectedPwg}}).success(function(data, stauts){
-        console.log(data, status);
-	if (data.results){
-	    $window.location.href ="edit?db_name=requests&query="+data.prepid;
-	}else{
-	    alert("Error:"+ data.message);
-	}
-      }).error(function(data,status){
-        alert("Error:"+ status);
-        console.log(data, status);
+  $scope.openCampaignCreator = function () {
+        var campaignModal = $modal.open( {
+          templateUrl: 'createCampaignModal.html',
+          controller: ModalCreateCampaign
+
+            }
+        );
+      campaignModal.result.then(function(campaignId) {
+          $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: campaignId}}).success(function(data, status){
+            $scope.update["success"] = data.results;
+            $scope.update["fail"] = false;
+            $scope.update["status_code"] = status;
+            $scope.getData();
+          }).error(function(data,status){
+              $scope.update["success"] = false;
+              $scope.update["fail"] = true;
+              $scope.update["status_code"] = status;
       });
-    }else{
-	alert("Error: no pwg defined");
-    }
+
+      })
+  };
+
+var ModalCreateRequest = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
+    $scope.prepid = prepid;
+    $scope.pwgs = pwgs;
+    $scope.pwg = {
+        selected: selectedPwg
     };
-    
-    $scope.createCampaign = function(){
-      $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: $scope.campaignId}}).success(function(data, status){
-        console.log(data, status);
-        $scope.update["success"] = data.results;
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = status;
-        $scope.getData();
-//         $window.location.href ="edit?db_name=campaigns&query="+data.results;
-      }).error(function(data,status){
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
-          $scope.update["status_code"] = status;
-      });
-      $scope.shouldBeOpen = false;
-  };
+
+    $scope.save = function () {
+        if ($scope.pwg.selected) {
+            $http({method: 'PUT', url: 'restapi/requests/save/', data: {member_of_campaign: $scope.prepid, pwg: $scope.pwg.selected}}).success(function (data, stauts) {
+                if (data.results) {
+                    $window.location.href = "edit?db_name=requests&query=" + data.prepid;
+                } else {
+                    alert("Error:" + data.message);
+                }
+            }).error(function (data, status) {
+                alert("Error:" + status);
+            });
+        } else {
+            alert("Error: No PWG defined!");
+        }
+        $modalInstance.close();
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
 };
+
+var ModalCreateCampaign = function($scope, $modalInstance, $http) {
+    $scope.campaign = {
+        id: ""
+    };
+
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    };
+
+    $scope.save = function() {
+        $modalInstance.close($scope.campaign.id);
+    }
+}
+};
+
 // NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){

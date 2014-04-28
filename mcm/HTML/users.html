@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.5.0.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -50,7 +50,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-show="column.select" ng-switch on="column.text">
+          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
 	          <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
@@ -80,7 +80,7 @@
       </thead>
       <tbody>
       	<tr ng-repeat="user_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-show="data.select" style="white-space: nowrap;">
+      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
 	            <div ng-switch-when="UserName">
                 <a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
@@ -97,7 +97,7 @@
                 <!--<a rel="tooltip" title="Ask for role increase" ng-href="mailto:cms-pdmv-serv@cern.ch?Subject=[MCM]%20Support:%20Role increase&Body=Increase the role for:%0A{{user_info['username']}}" ng-show="(user_info['username'] == user.name) && role(1)">
                   <i class="icon-question-sign"></i>
                 </a>-->
-                <a rel="tooltip" title="Ask for role increase" ng-click="openPwgModal(user_info['pwg']);" ng-show="(user_info['username'] == user.name)" ng-href="#">
+                <a rel="tooltip" ng-controller="ModalDemoCtrl" title="Ask for role increase" ng-click="openPwgModal(user_info['pwg']);" ng-show="(user_info['username'] == user.name)" ng-href="#">
                   <i class="icon-question-sign"></i>
                 </a>
                 <a rel="tooltip" title="Edit user" ng-href="edit?db_name=users&prepid={{user_info['username']}}" ng-hide="role(2);" target="_self">
@@ -114,36 +114,37 @@
                 <a ng-href='users?role={{user_info[data.db_name]}}' rel="tooltip" title="View users with role {{user_info[data.db_name]}}" target="_self"> {{user_info[data.db_name]}}</a>
 	            </div>
 	            <div ng-switch-when="Pwg" ng-controller="ModalDemoCtrl">
-                <div modal="notifyModal" close="closePWGNotify()"> <!--hidden modal template-->
-                  <div class="modal-header">
-                    <h4>Notify {{pwg}}</h4>
-                  </div>  <!--end of modal header-->
-                  <div class="modal-body">
+                    <script type="text/ng-template" id="pwgNotifyModal.html"> <!--hidden modal template-->
+                            <!--close="closePWGNotify()"-->
+                      <div class="modal-header">
+                        <h4>Notify {{pwg}}</h4>
+                      </div>  <!--end of modal header-->
+                      <div class="modal-body">
 
-                      <form class="form-horizontal">
-                        <div class="control-group">
-                            <label class="control-label" style="width:auto">Subject</label>
-                                <div class="controls" style="margin-left:80px">
-                                    <input type="text" class="input-block-level" ng-model="mailSubject" placeholder="Subject">
-                                </div>
-                        </div>
-                        <div class="control-group">
-                            <label class="control-label" style="width:auto">Body</label>
-                                <div class="controls" style="margin-left:80px">
-                                    <textarea rows="7"  style="resize:none" class="input-block-level" ng-model="mailContent" placeholder="Content"></textarea>
-                                </div>
-                        </div>
-                      </form>
-                  </div> <!--end of modal body-->
-                  <div class="modal-footer">
-                    <button class="btn btn-success" ng-click="pwgNotify()">Notify</button>
-                    <button class="btn btn-warning cancel" ng-click="closePWGNotify()">Cancel</button>
-                  </div> <!--end of modal footer-->
-                </div>
+                          <form class="form-horizontal">
+                            <div class="control-group">
+                                <label class="control-label" style="width:auto">Subject</label>
+                                    <div class="controls" style="margin-left:80px">
+                                        <input type="text" class="input-block-level" ng-model="mail.mailSubject" placeholder="Subject">
+                                    </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" style="width:auto">Body</label>
+                                    <div class="controls" style="margin-left:80px">
+                                        <textarea rows="7"  style="resize:none" class="input-block-level" ng-model="mail.mailContent" placeholder="Content"></textarea>
+                                    </div>
+                            </div>
+                          </form>
+                      </div> <!--end of modal body-->
+                      <div class="modal-footer">
+                        <button class="btn btn-success" ng-click="notify()">Notify</button>
+                        <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                      </div> <!--end of modal footer-->
+                    </script>
                 <ul>
                   <li ng-repeat="p in user_info[data.db_name]"> 
                     <a ng-href='users?pwg={{p}}' rel="tooltip" title="View users for {{p}}"  target="_self"> {{p}}</a>
-                    <a rel="tooltip" title="Notify {{p}} generator contacts" ng-click="openPWGNotify(p)" ng-href="#">
+                    <a rel="tooltip" title="Notify {{p}} generator contacts" ng-click="openPwgNotify(p)" ng-href="#">
                       <i class="icon-envelope"></i>
                     </a>
                    </li>
@@ -169,20 +170,20 @@
       </div>
     </div>
     <!--     New PWG MODAL -->
-    <div modal="pwgModal" close="closePwgModal()"> <!--hidden modal template-->
-      <div class="modal-header">
-        <h4>Select one of many pwgs</h4>
-      </div>  <!--end of modal header-->
-      <div class="modal-body">
-        <select ng-model="newPWG">
-          <option ng-repeat="elem in all_pwgs"  ng-selected="elem == newPWG">{{elem}}</option>
-        </select>
-      </div> <!--end of modal body-->
-      <div class="modal-footer">
-        <button class="btn btn-success" ng-click="selectPwg();" ng-disabled="newPWG == '------'">Increase!</button>
-        <button class="btn btn-warning cancel" ng-click="closePwgModal();">Close</button>
-      </div> <!--end of modal footer-->
-    </div>
+        <script type="text/ng-template" id="pwgModalSelect.html"> <!--hidden modal template-->
+          <div class="modal-header">
+            <h4>Select one of many pwgs</h4>
+          </div>  <!--end of modal header-->
+          <div class="modal-body">
+            <select ng-model="selected.newPWG">
+              <option ng-repeat="elem in all_pwgs"  ng-selected="elem == selected.newPWG">{{elem}}</option>
+            </select>
+          </div> <!--end of modal body-->
+          <div class="modal-footer">
+            <button class="btn btn-success" ng-click="select();" ng-disabled="selected.newPWG == '------'">Increase!</button>
+            <button class="btn btn-warning cancel" ng-click="close();">Close</button>
+          </div> <!--end of modal footer-->
+        </script>
     <!--     END OF MODAL  -->
   </span>
   </body>

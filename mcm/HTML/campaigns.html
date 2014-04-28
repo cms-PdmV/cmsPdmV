@@ -10,7 +10,7 @@
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
-        <script src="scripts/ui-bootstrap-custom-tpls-0.1.0-SNAPSHOT.js"></script>
+        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -51,7 +51,7 @@
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
-        <th ng-repeat="column in defaults" ng-show="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+        <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
 	        <div ng-switch-when="Actions">
             {{column.text}} 
                 <!-- SORTING lines -->
@@ -81,7 +81,7 @@
     </thead>
     <tbody>
       <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
-        <td ng-repeat="value in defaults" ng-show="value.select" style="white-space: nowrap;">
+        <td ng-repeat="value in defaults" ng-if="value.select" style="white-space: nowrap;">
           <div ng-switch on="value.text">
 	          <div ng-switch-when="PrepId">
 	           <a ng-href='{{getLocation()}}&prepid={{data.prepid}}' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-book"></i></a>
@@ -90,7 +90,7 @@
             <div ng-switch-when="Actions">
        <!--     MODAL -->
               <div ng-controller="ModalDemoCtrl">
-                <a ng-click="open(data['prepid'])" rel="tooltip" title="Create new request"  target="_self" ng-show="!role(1) && (!role(3) || data['root']!=1);">
+                <a ng-click="openRequestCreator(data['prepid'])" rel="tooltip" title="Create new request"  target="_self" ng-show="!role(1) && (!role(3) || data['root']!=1);">
                   <i class="icon-plus-sign"></i>
                 </a>
                 <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
@@ -121,20 +121,20 @@
                 <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests">
                   <i class="icon-screenshot"></i>
                 </a>
-                <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
-                  <div class="modal-header">
-                      <h4>Create a request</h4>
-                  </div>  <!--end oFda.f modal header-->
-                <div class="modal-body">
-                  Create request for:{{prepId}} campaign
-                  <select ng-options="value for value in pwgs" ng-model="selectedPwg" style="width: 90px; margin-bottom: 0px;">
-                  </select>
-                </div> <!--end of modal body-->
-                <div class="modal-footer">
-                  <button class="btn btn-success" ng-click="save()">Create</button>
-                  <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                </div> <!--end of modal footer-->
-                </div>
+                <script type="text/ng-template" id="createRequestModal.html"> <!--hidden modal template-->
+                    <div class="modal-header">
+                        <h4>Create a request</h4>
+                    </div>  <!--end of modal header-->
+                    <div class="modal-body">
+                      Create request for: {{prepid}} campaign
+                      <select ng-options="value for value in pwgs" ng-model="pwg.selected" style="width: 90px; margin-bottom: 0px;">
+                      </select>
+                    </div> <!--end of modal body-->
+                    <div class="modal-footer">
+                      <button class="btn btn-success" ng-click="save()">Create</button>
+                      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                    </div> <!--end of modal footer-->
+                </script>
               </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->
             </div>
@@ -211,19 +211,19 @@
     <div class="span5" style="margin-top:20px;">
     <!--     MODAL -->
       <div ng-controller="ModalDemoCtrl">
-        <input type="button" class="btn" ng-click="open()" value="Create new campaign" ng-hide="role(3);" align="left"/>
-        <div modal="shouldBeOpen" close="close()" style="display: block; width: 400px;"> <!--hidden modal template-->
+        <input type="button" class="btn" ng-click="openCampaignCreator()" value="Create new campaign" ng-hide="role(3);" align="left"/>
+        <script type="text/ng-template" id="createCampaignModal.html"> <!--hidden modal template-->
           <div class="modal-header">
             <h4>Create a campaign</h4>
-          </div>  <!--end oFda.f modal header-->
+          </div>  <!--end of modal header-->
           <div class="modal-body">
-            Campaign name: <input type="text" ng-model="campaignId"/>
+            Campaign name: <input type="text" ng-model="campaign.id"/>
           </div> <!--end of modal body-->
           <div class="modal-footer">
-            <button class="btn btn-success" ng-click="createCampaign()">Create</button>
+            <button class="btn btn-success" ng-click="save()">Create</button>
             <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
           </div> <!--end of modal footer-->
-        </div>
+        </script>
       </div> <!--end of modalControler DIV-->
     <!--     END OF MODAL  -->
     </div>
