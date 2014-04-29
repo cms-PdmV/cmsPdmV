@@ -494,6 +494,7 @@ testApp.directive("reqmgrName", function($http){
     scope: true,
     template:
     '<span>'+
+    '<a ng-href="http://cms-pdmv.cern.ch/stats/?PI={{r_prepid}}" title="All stats for the request" rel="tooltip" target="_self" ng-hide="r_prepid.indexOf(\'-chain_\')>-1">All stats</a>'+
     '  <ul style="margin-bottom: 0px;">'+
     '    <li ng-repeat="rqmngr in rqmngr_data">'+
     '      <a ng-href="batches?contains={{rqmngr.name}}" rel="tooltip" title="View batches containing {{rqmngr.name}}" target="_self"><i class="icon-tags"></i></a>'+
