@@ -1086,8 +1086,14 @@ done
 
     def setup_harvesting(self, directory, run):
         genvalid_harvesting_python_file = os.path.join(directory, "{0}_genvalid_harvesting.py".format(self.get_attribute('prepid')))
-        self.harvesting_driver = 'cmsDriver.py step2 --filein file:%s_genvalid.root --conditions auto:startup --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %s --no_exec || exit $? ; \n' % (
+        get_a_GT = 'auto:startup'
+        for s in self.get_attribute('sequences'):
+            if 'conditions' in s:
+                get_a_GT = s['conditions']
+                break
+        self.harvesting_driver = 'cmsDriver.py step2 --filein file:%s_genvalid.root --conditions %s --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %s --no_exec || exit $? ; \n' % (
             self.get_attribute('prepid'),
+            get_a_GT,
             genvalid_harvesting_python_file)
         if run:
             self.harvesting_driver += 'cmsRun %s || exit $? ; \n' % genvalid_harvesting_python_file
