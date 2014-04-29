@@ -65,14 +65,17 @@ function resultsCtrl($scope, $http, $location, $window){
     
     $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>";
     $scope.get_stats = function(query, add){
+        $scope.loadingData = true;
 	var promise = $http.get("search/?db_name=requests&page=-1&"+query);
       promise.then(function(data){
           if(query!='' && add) {
             data.data.results.push.apply(data.data.results, $scope.allRequestData);
           }
+        $scope.loadingData = false;
         $scope.allRequestData = data.data.results;
       }, function(){
         alert("Error getting requests");
+        $scope.loadingData = false;
 
     });
 

@@ -47,3 +47,16 @@ ul.nav li.placeholder:before {
 .table th.text-right, .table td.text-right {
     text-align: right;
 }
+
+div.loading {
+	position: fixed;
+    width: 92px;
+    height: 92px;
+    margin: auto;
+    top: 40%;
+    left:-46px;
+    right:0;
+	z-index: 100;
+	background: url("loading.gif") no-repeat;
+}
+

@@ -30,9 +30,10 @@
         <script src="scripts/get_stats_controller.js"></script>
     </head>
     <body ng-controller="mainCtrl">
-        <span ng-controller="resultsCtrl">
+        <div ng-controller="resultsCtrl">
+            <div class="loading" ng-show="loadingData"></div>
             <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Status" radio="requests.radio" selections="requests.selections" settings="requests.settings" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
             <multiple-pie-charts color-domain="piecharts.domain" table-title="Campaigns" data="allRequestData" full-terms="piecharts.fullTerms" compact-terms="piecharts.compactTerms" sum-by="piecharts.sum" nest-by="piecharts.nestBy"></multiple-pie-charts>
-        </span>
+        </div>
     </body>
 </html> 

@@ -29,6 +29,7 @@ function resultsCtrl($scope, $http, $location, $window) {
 
     $scope.get_stats = function() {
         var promise;
+        $scope.loadingData = true;
         if (prepid != undefined) {
             promise = $http.get("restapi/dashboard/get_stats_new/" + prepid);
         } else {
@@ -36,10 +37,12 @@ function resultsCtrl($scope, $http, $location, $window) {
         }
 
         promise.then(function(data) {
+            $scope.loadingData = false;
             $scope.allRequestData = data.data.results;
         }, function() {
+            $scope.loadingData = false;
             alert("Error getting requests");
         });
     };
     $scope.get_stats();
-};
+}
