@@ -5,6 +5,7 @@ from tools.ssh_executor import ssh_executor
 from json import dumps
 import os
 import time
+import copy
 from couchdb_layer.mcm_database import database
 from collections import defaultdict
 from tools.user_management import access_rights
@@ -409,13 +410,23 @@ class GetStats(RESTResource):
                 else:
                     counts_e[str(mcm_r['member_of_campaign'])] [mcm_r['status']] += mcm_r['total_events']
                 
+
+                ## add it to emit
+                def pop( mcm_r ):
+                    for member in mcm_r.keys():
+                        if member not in ['prepid','pwg','priority','total_events','status','member_of_campaign']:
+                            mcm_r.pop(member)
+                    return mcm_r
                 ## manipulation of total_events => completed ?
                 ## splitting of the request into done=completed_events and submitted=max([0, mcm_r['total_events'] - mcm_r['completed_events']]) ?
-                ## add it to emit
-                for member in mcm_r.keys():
-                    if member not in ['prepid','pwg','priority','total_events','status','member_of_campaign']:
-                        mcm_r.pop(member)
-                list_of_request_for_ramunas.append( mcm_r )
+                if mcm_r['status'] == 'submitted':
+                    mcm_r_fake = copy.deepcopy( mcm_r )
+                    mcm_r_fake['status'] = 'done'
+                    mcm_r_fake['total_events'] = mcm_r['completed_events']
+                    mcm_r['total_events'] = max([0, mcm_r['total_events'] - mcm_r['completed_events']])
+                    list_of_request_for_ramunas.append( pop(mcm_fake_r) )
+
+                list_of_request_for_ramunas.append( pop(mcm_r) )
 
             for noyet in all_cc[cr['member_of_campaign']]['campaigns'][stop_at+1:]:
                 #self.logger.log( '%s if saying %s'%( cr['prepid'], all_cc[cr['member_of_campaign']]['campaigns'][cr['step']+1:])) 
@@ -423,8 +434,7 @@ class GetStats(RESTResource):
                 ## create a fake request with the proper member of campaign
                 processing_r = all_requests[ cr['chain'][ stop_at ] ]
 
-                fake_one = self.__createDummyRequest( processing_r, noyet[0] )
-                #fake_one = self.__createDummyRequest( processing_r, noyet[0], total=upcoming )
+                fake_one = self.__createDummyRequest( processing_r, noyet[0], total=upcoming )
                 list_of_request_for_ramunas.append( fake_one )
                 
 
