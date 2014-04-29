@@ -71,14 +71,14 @@ class CreateChainedRequest(RESTResource):
         if not db.document_exists(req.get_attribute('_id')):
             if db.save(req.json()):
                 self.logger.log('new chained_request successfully saved.')
-                return {"results":True}
+                return {"results":True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
                 return {"results":False}
         else:
             if db.update(req.json()):
                 self.logger.log('new chained_request successfully saved.')
-                return {"results":True}
+                return {"results":True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
                 return {"results":False}
