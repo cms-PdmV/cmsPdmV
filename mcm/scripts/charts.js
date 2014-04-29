@@ -1129,9 +1129,6 @@ angular.module('mcm.charts', [])
                colorDomain: "=" // order of colors (colors are taken as 10 basic colors from d3.js)
            },
            link: function(scope, element, attrs) {
-                scope.piechart_data = {};
-                scope.piechart_data_full = {};
-                scope.current_data = {};
                 var nested = d3.nest();
                 var nestBy = scope.nestBy || [];
                 var sumBy = scope.sumBy || [];
@@ -1173,6 +1170,9 @@ angular.module('mcm.charts', [])
                 })
                 nested.rollup(function(leaves){return d3.sum(leaves, function(d){return d[sumBy];})});
                 scope.$watch('data', function(dat) {
+                    scope.piechart_data = {};
+                    scope.piechart_data_full = {};
+                    scope.current_data = {};
                     dat = dat || []
                     var nested_data = nested.entries(dat);
                     for(var i=0; i<nested_data.length;i++) {
