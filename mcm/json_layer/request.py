@@ -1118,7 +1118,7 @@ done
 
         self.harverting_upload = ''
         self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' % ( dqm_file )
-        self.harverting_upload += 'curl -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload ;\n'
+        self.harverting_upload += 'curl -L -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload ;\n'
         self.harverting_upload += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert ;\n'
         self.harverting_upload += 'python visDQMUpload %s %s &> %s || exit $? ; \n' % (
             where, dqm_file, os.path.join(directory, "dqm_upload_%s.log" % self.get_attribute('prepid')))
