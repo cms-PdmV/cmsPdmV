@@ -243,7 +243,7 @@
               </div>
 	            <div ng-switch-when="Keep output" align="center">
                 <ul style="margin-bottom: 0px;">
-                  <li ng-repeat="keep in data[value.db_name]">
+                  <li ng-repeat="keep in data[value.db_name] track by $index">
                     <i class="icon-ok-sign" ng-show="keep"></i>
                     <i class="icon-remove-sign" ng-show="!keep"></i>
                   </li>
