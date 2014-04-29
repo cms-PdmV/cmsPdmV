@@ -671,13 +671,16 @@ class InjectChainedRequest(RESTResource):
         semaphore_events.increment(batch_name)
 
         from tools.ssh_executor import ssh_executor
+        from tools.locator import locator
+        l_type = locator()
         with ssh_executor(server = 'pdmvserv-test.cern.ch') as ssh:
             cmd='cd /afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/\n'
             cmd+=mcm_r.make_release()
             cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
             cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-            there='--wmtesturl cmsweb-testbed.cern.ch'
-            cmd+='wmcontrol.py --wmtest --url-dict https://cms-pdmv-dev.cern.ch/mcm/public/restapi/chained_requests/get_dict/%s %s \n'%(crn, there)
+            ## until we get into production
+            there='--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+            cmd+='wmcontrol.py --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), crn, there)
             if self.mode == 'show':
                 cherrypy.response.headers['Content-Type'] = 'text/plain'
                 return cmd
@@ -720,10 +723,14 @@ class InjectChainedRequest(RESTResource):
                     added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
                     mcm_r.set_attribute('reqmgr_name', added )
                     mcm_r.update_history({'action': 'inject','step' : batch_name})
+                    mcm_r.set_attribute('approval', 'submit')
                     mcm_r.set_status(with_notification=False) ## maybe change to false
                     mcm_r.reload()
                 
                 mcm_cr.update_history({'action' : 'inject','step': batch_name})
+                mcm_cr.set_attribute('step', len(mcm_rs)-1)
+                mcm_cr.set_attribute('status','processing')
+                mcm_cr.set_attribute('last_status', mcm_rs[-1].get_attribute('status'))
                 message=""
                 for mcm_r in mcm_rs:
                     message+=mcm_r.textified()
@@ -807,7 +814,8 @@ class TaskChainDict(RESTResource):
                                                "RequestNumEvents" : r.get_attribute('total_events'),
                                                "Seeding" : "AutomaticSeeding", 
                                                ### gets wiped out anyways  "SplittingArguments" : { "events_per_job" : 123, "events_per_lumi" : 78},
-                                               "EventsPerLumi" : 100 ## does not get seen in request manager, yet
+                                               "EventsPerLumi" : 100, ## does not get seen in request manager, yet
+                                               "LheInputFiles" : r.get_attribute('mcdb_id')>0
                                                })
                 else:
                     wma['Task%d'%step].update({"SplittingAlgo"  : "EventAwareLumiBased",
