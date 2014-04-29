@@ -420,13 +420,15 @@ class GetStats(RESTResource):
                 ## manipulation of total_events => completed ?
                 ## splitting of the request into done=completed_events and submitted=max([0, mcm_r['total_events'] - mcm_r['completed_events']]) ?
                 if mcm_r['status'] == 'submitted':
-                    mcm_r_fake = copy.deepcopy( mcm_r )
-                    mcm_r_fake['status'] = 'done'
-                    mcm_r_fake['total_events'] = mcm_r['completed_events']
-                    mcm_r['total_events'] = max([0, mcm_r['total_events'] - mcm_r['completed_events']])
-                    list_of_request_for_ramunas.append( pop(mcm_fake_r) )
-
-                list_of_request_for_ramunas.append( pop(mcm_r) )
+                    mcm_r_fake_done = copy.deepcopy( mcm_r )
+                    mcm_r_fake_done['status'] = 'done'
+                    mcm_r_fake_done['total_events'] = mcm_r['completed_events']
+                    mcm_r_fake_subm = copy.deepcopy( mcm_r )
+                    mcm_r_fake_subm['total_events'] = max([0, mcm_r['total_events'] - mcm_r['completed_events']])
+                    list_of_request_for_ramunas.append( pop(mcm_r_fake_subm) )
+                    list_of_request_for_ramunas.append( pop(mcm_r_fake_done) )
+                else:
+                    list_of_request_for_ramunas.append( pop(mcm_r) )
 
             for noyet in all_cc[cr['member_of_campaign']]['campaigns'][stop_at+1:]:
                 #self.logger.log( '%s if saying %s'%( cr['prepid'], all_cc[cr['member_of_campaign']]['campaigns'][cr['step']+1:])) 
