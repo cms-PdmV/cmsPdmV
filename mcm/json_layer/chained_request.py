@@ -327,11 +327,18 @@ class chained_request(json_base):
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
                     current_request.notify('Flowing %s with not enough statistics'%( current_request.get_attribute('prepid')),
-                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s'%( current_request.get_attribute('prepid'), 
-                                                                                                                                                                                                        current_request.get_attribute('completed_events'),
-                                                                                                                                                                                                      completed_events_to_pass,
-                                                                                                                                                                                                      l_type.baseurl(),
-                                                                                                                                                                                                      current_request.get_attribute('prepid')),
+                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s '%( 
+                            current_request.get_attribute('prepid'),
+                            current_request.get_attribute('completed_events'),
+                            completed_events_to_pass,
+                            self.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            current_request.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            current_request.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            self.get_attribute('prepid')
+                            ),
                                            accumulate=True)
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
