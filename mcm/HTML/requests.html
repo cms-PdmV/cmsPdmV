@@ -178,8 +178,11 @@
                 <a ng-href="injectAndLog?prepid={{data.prepid}}" rel="tooltip" title="Submit" ng-hide="role(3) || data.status!='approved';" target="_self">
                   <i class="icon-play-circle"></i>
                 </a>
-                <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of this request" ng-href="#">
+                <a ng-click="inspect(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of {{data.prepid}}" ng-href="#">
                   <i class="icon-screenshot"></i>
+                </a>
+                <a ng-click="single_step('update_stats',data.prepid)" rel="tooltip" ng-hide="role(4);" title="Update status of {{data.prepid}} in stats DB" ng-href="#">
+                  <i class="icon-refresh"></i>
                 </a>
                 <a ng-href="injection_status?prepid={{data.prepid}}" rel="tooltip" ng-hide="role(3) || ( data.status!='approved' || data.approval!='submit');" title="See injection log for {{data.prepid}}" target="_self">
                   <i class="icon-facetime-video"></i>
