@@ -499,9 +499,7 @@ class database:
         """
         constructed_query = ""
         for param in query:
-            if query[param].startswith("[") and query[param].endswith("]"):
-                query[param] = query[param].replace(" TO ", "+TO+")
-
+            query[param] = query[param].replace(" ", "+")
             constructed_query += param+':'+query[param]
             if constructed_query != "":
                 constructed_query += '+AND+'
