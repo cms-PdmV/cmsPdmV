@@ -1213,13 +1213,20 @@ done
             self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
         self.reload()
 
-    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05):
+    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05, refresh=False):
         #existing rwma
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS',
                                                  'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
                                                  'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
                                                  'pdmv_submission_time', 'pdmv_type','pdmv_present_priority']
         mcm_rr = self.get_attribute('reqmgr_name')
+
+        ### first trigger an update of the stats itself
+        if refresh:
+            from tools.stats_updater import stats_updater
+            updater = stats_updater()
+            out = updater.update( self.get_attribute('prepid') )
+
         statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
 
         changes_happen = False

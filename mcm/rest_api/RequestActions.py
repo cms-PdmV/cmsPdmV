@@ -900,7 +900,26 @@ class InspectStatus(RESTResource):
         else:
             return res[0]
 
-
+class UpdateStats(RESTResource):
+    def __init__(self):  
+        self.access_limit = access_rights.production_manager
+    def GET(self, *args): 
+        """
+        Triggers the forced update of the stats page for the given request id
+        """
+        if not len(args):
+            return dumps({"results" : False, "message" : "no argument was provided"})
+        rid = args[0]
+        rdb = database('requests')
+        if not rdb.document_exists(rid):
+            return dumps({"prepid" : rid, "results": False, "message" : '%s does not exist' % rid})
+        mcm_r = request( rdb.get( rid ) )
+        if mcm_r.get_stats(refresh=True):
+            mcm_r.reload()
+            return dumps({"prepid" : rid, "results": True})
+        else:
+            return dumps({"prepid" : rid, "results": False, "message" : "no apparent changes"})
+        
 class SetStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
