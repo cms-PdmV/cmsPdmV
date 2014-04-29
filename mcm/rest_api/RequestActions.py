@@ -902,7 +902,7 @@ class InspectStatus(RESTResource):
 
 class UpdateStats(RESTResource):
     def __init__(self):  
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.administrator
     def GET(self, *args): 
         """
         Triggers the forced update of the stats page for the given request id
