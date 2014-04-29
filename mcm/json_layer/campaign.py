@@ -66,7 +66,8 @@ class campaign(json_base):
         self.update(json_input)
         self.validate()
         
-    def add_sequence(self, seq_json={},  step=-1, name='default'):
+    def add_sequence(self, seq_json=None,  step=-1, name='default'):
+        seq_json = seq_json if seq_json else {}
         seq = sequence(json_input=seq_json)
         sequences = self.get_attribute('sequences')
         

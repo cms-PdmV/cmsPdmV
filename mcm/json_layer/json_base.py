@@ -7,6 +7,7 @@ from tools.communicator import communicator
 from tools.settings import settings
 from tools.locker import locker
 from couchdb_layer.mcm_database import database
+from copy import deepcopy
 
 class json_base:
     __json = {}
@@ -103,7 +104,7 @@ class json_base:
     def update(self, json_input):
         self._json_base__json = {}
         if not json_input:
-            self._json_base__json = self._json_base__schema
+            self._json_base__json = deepcopy(self._json_base__schema)
         else:
             for key in self._json_base__schema:
                 if key in json_input:
@@ -122,7 +123,7 @@ class json_base:
                                                                                              type(self._json_base__schema[key]))
                                         )
                 else:
-                    self._json_base__json[key] = self._json_base__schema[key]
+                    self._json_base__json[key] = deepcopy(self._json_base__schema[key])
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
 

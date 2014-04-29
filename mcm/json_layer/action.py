@@ -4,11 +4,15 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from json_layer.json_base import json_base
 from json_layer.chained_request import chained_request
+from copy import deepcopy
+
 
 class action(json_base):
+
     class PrepIdNotDefinedException(Exception):
         def __init__(self):
-	        action.logger.error('Prepid is not defined.')
+            action.logger.error('Prepid is not defined.')
+
         def __str__(self):
             return 'Error: PrepId is not defined.'
             
@@ -46,13 +50,13 @@ class action(json_base):
     def update(self,  json_input):
         self._json_base__json = {}
         if not json_input:
-            self._json_base__json = self._json_base__schema
+            self._json_base__json = deepcopy(self._json_base__schema)
         else:
             for key in self._json_base__schema:
                 if key in json_input:
                     self._json_base__json[key] = json_input[key]
                 else:
-                    self._json_base__json[key] = self._json_base__schema[key]
+                    self._json_base__json[key] = deepcopy(self._json_base__schema[key])
             if '_rev' in json_input:
                 self._json_base__json['_rev'] = json_input['_rev']
             

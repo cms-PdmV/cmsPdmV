@@ -2,6 +2,7 @@
 
 from tools.settings import settings
 from json_base import json_base
+from copy import deepcopy
 
 
 class sequence(json_base):
@@ -72,13 +73,13 @@ class sequence(json_base):
     def __update(self,  json_input):
         self._json_base__json = {}
         if not json_input:
-            self._json_base__json = self._json_base__schema
+            self._json_base__json = deepcopy(self._json_base__schema)
         else:
             for key in self._json_base__schema:
                 if key in json_input:
                     self._json_base__json[key] = json_input[key]
                 else:
-                    self._json_base__json[key] = self._json_base__schema[key]
+                    self._json_base__json[key] = deepcopy(self._json_base__schema[key])
 
     """  
     def build(self,  
