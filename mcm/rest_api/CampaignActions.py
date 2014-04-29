@@ -52,18 +52,16 @@ class CreateCampaign(RESTResource):
             return {"results":False}
 
         # create dedicated chained campaign
-        self.create_chained_campaign(camp_mcm.get_attribute('_id'), db, camp_mcm.get_attribute('energy'))
+        self.create_chained_campaign(camp_mcm.get_attribute('_id'), db)
 
         return {"results":True}
 
     # creates a chained campaign containing only the given campaign
-    def create_chained_campaign(self, cid, db, energy=-1):
+    def create_chained_campaign(self, cid, db):
         if db.get(cid)['root'] < 1:
             cdb = database('chained_campaigns')
-            dcc = chained_campaign()
-            dcc.set_attribute('prepid', 'chain_'+cid)
-            dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
-            #dcc.set_attribute('energy',  energy)
+            dcc = chained_campaign({'prepid':'chain_'+cid,
+                                    '_id':'chain_'+cid})
             dcc.add_campaign(cid) # flow_name = None
             cdb.save(dcc.json())
 
@@ -111,9 +109,8 @@ class UpdateCampaign(RESTResource):
     def create_chained_campaign(self,  cid,  root):
         if root < 1:
             cdb = database('chained_campaigns')
-            dcc = chained_campaign()
-            dcc.set_attribute('prepid', 'chain_'+cid)
-            dcc.set_attribute('_id',  dcc.get_attribute('prepid'))
+            dcc = chained_campaign({"prepid" :'chain_'+cid,
+                                    "_id" :'chain_'+cid})
             dcc.add_campaign(cid)
             if not cdb.document_exists(dcc.get_attribute('prepid')):
                 cdb.save(dcc.json())
