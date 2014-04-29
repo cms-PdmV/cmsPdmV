@@ -534,27 +534,30 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 
 
       isSure.result.then(function () {
+	      console.log(action);
+	      console.log(prepid);
+
         switch (action){
           case "toggle":
-            $scope.next_status($scope.toggle_prepid);
+            $scope.next_status(prepid);
             break;
           case "approve":
-            $scope.single_step('approve',$scope.toggle_prepid);
+            $scope.single_step('approve',prepid);
             break;
           case "reset":
-            $scope.single_step('reset',$scope.toggle_prepid);
+            $scope.single_step('reset',prepid);
             break;
           case "option_reset":
-            $scope.single_step('option_reset',$scope.toggle_prepid);
+            $scope.single_step('option_reset',prepid);
             break;
           case "soft_reset":
-            $scope.single_step('soft_reset',$scope.toggle_prepid);
+            $scope.single_step('soft_reset',prepid);
             break;
           case "delete":
-            $scope.delete_object('requests', $scope.toggle_prepid);
+            $scope.delete_object('requests', prepid);
             break;
           case "clone":
-            $scope.clone($scope.toggle_prepid);
+            $scope.clone(prepid);
             break;
           default:
             // alert to announce that uknown action is asked???
