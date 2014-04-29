@@ -37,6 +37,21 @@ ul.nav li.placeholder:before {
     stroke-width: 1;
     shape-rendering: crispEdges;
 }
+
+.grid .tick, .grid path {
+    fill: none;
+}
+
+.grid .tick {
+    stroke: grey;
+    opacity: 0.2;
+    stroke-width: 0.6;
+    stroke-dasharray: 2,2;
+}
+.grid path {
+      stroke-width: 0;
+}
+
 .custom-footer{
     background:white; 
     height:70px; 

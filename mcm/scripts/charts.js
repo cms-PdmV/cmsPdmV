@@ -347,6 +347,8 @@ angular.module('mcm.charts', [])
                         return "rotate(-90)"
                         });
 
+                svg.append("g")
+                    .attr("class", "grid horizontal");
 
                 function prepareArguments() {
                     data = scope.data|| [];
@@ -614,6 +616,17 @@ angular.module('mcm.charts', [])
                         yAxis.tickValues(prepareTicks(d3.min(sums), d3.max(y_scale.ticks()), t));
                         sums.push(t);
                     }
+
+                    svg.select(".grid.horizontal")
+                        .transition()
+                        .duration(duration)
+                        .call(d3.svg.axis().scale(y_scale)
+                            .orient("left")
+                            .tickSize(-width)
+                            .tickFormat("")
+                            .tickValues(yAxis.tickValues())
+                    );
+
                     svg.select(".y.axis")
                         .select("#ytitle")
                         .text(yScaleType);
