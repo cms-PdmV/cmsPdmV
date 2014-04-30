@@ -632,7 +632,7 @@ class DeleteRequest(RESTResource):
         mcm_r = request(db.get( pid))
 
         if mcm_r.get_attribute('status') != 'new':
-            return {"results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))}
+            return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))}
 
         in_chains = mcm_r.get_attribute('member_of_chain')
         for in_chain in in_chains:
@@ -640,16 +640,16 @@ class DeleteRequest(RESTResource):
             try:
                 action_item = mcm_cr.retrieve_original_action_item(adb)
                 ## this is a valid action item
-                return {"results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)}
+                return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)}
             except:
                 ## this is not a valid action item
                 # further check
                 if mcm_cr.get_attribute('chain')[-1]!= pid:
                     ## the pid is not the last of the chain
-                    return {"results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)}
+                    return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)}
                 if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index( pid ):
                     ## we are currently processing that request
-                    return {"results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)}
+                    return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)}
                 ## found a chain that deserves the request to be pop-ep out from the end
                 new_chain = mcm_cr.get_attribute('chain')
                 new_chain.remove( pid )
@@ -664,7 +664,7 @@ class DeleteRequest(RESTResource):
         # delete chained requests !
         #self.delete_chained_requests(self,pid):
 
-        return {"results": db.delete(pid)}
+        return {"prepid" : pid, "results": db.delete(pid)}
 
     def delete_action(self, pid):
         adb = database('actions')
