@@ -117,6 +117,7 @@ class Search(RESTResource):
     """
 
     def __init__(self):
+        self.access_limit = access_rights.user
         self.casting = defaultdict(lambda: defaultdict(lambda: ""))
         self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))
         import json_layer
