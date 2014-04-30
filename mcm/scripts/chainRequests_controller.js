@@ -414,7 +414,7 @@ function resultsCtrl($scope, $http, $location, $window){
         ]
     };
     _.each($location.search(),function(elem,key){
-      if (key != "shown" && key != "searchByRequests")
+      if (key != "shown" && key != "searchByRequests" && key != "fields")
       {
           if(key == 'page' || key == 'limit' || key == 'get_raw') {
             search_data[key] = elem;
