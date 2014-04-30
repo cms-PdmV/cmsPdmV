@@ -11,12 +11,12 @@
 
   <!--[IF IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
+      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
     </script>
   <![endif]-->
   <![if !IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
     </script>
   <![endif]>
         <script src="scripts/main_controller.js"></script>
@@ -70,6 +70,6 @@
     </div>-->
     <text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
     <text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
+    </span>
   </body>
-</span>
 </html>
