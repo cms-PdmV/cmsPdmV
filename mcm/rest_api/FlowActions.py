@@ -64,7 +64,8 @@ class FlowRESTResource(RESTResource):
             if not 'sequences' in rp or len(rp['sequences']) != len(camp['sequences']):
                 rp['sequences'] = []
                 for seq in camp['sequences']:
-                    rp['sequences'].append({})
+                    #rp['sequences'].append({})
+                    rp['sequences'].append({"default" : {}})
                 f.set_attribute('request_parameters', rp)
 
 
