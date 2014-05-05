@@ -8,7 +8,7 @@ kill -9 `ps -e -f | grep main | grep python | awk '{print $2}'`
 kill -9 `ps -e -f | grep mcm | grep -v $$ | awk '{print $2}'`
 
 # the current version
-revision=`git reflog | grep tags/ | head -1 | cut -d '/' -f2`
+revision=`git describe --abbrev=0`
 echo "running revision",$revision
 export MCM_REVISION=$revision
 
