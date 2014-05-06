@@ -39,13 +39,8 @@
         </div><!--End of campaing SELECT -->
         <tabs>
           <pane heading="Select Columns" active="tabsettings.view.active">
-            <div class="well" style="margin-top: 10px;"> <!--well for user to select table columns-->
-              <span ng-repeat="value in actions_defaults">
-                <label class="checkbox inline">
-                  <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
-                </label>
-              </span>
-            </div><!--end of well for table columns-->
+            <input ng-if="!selectionReady" value="No columns to show" class="btn disabled btn-warning" style="margin-bottom: 20px">
+            <select-well ng-if="selectionReady" database="{{dbName}}" selection="actions_defaults" always-show="true" use-cookie="false"></select-well>
           </pane>
           <pane heading="List from file" active="tabsettings.file.active">
             <div class="control-group">

@@ -68,7 +68,6 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update['fail'] = false;
         $scope.update['status_code'] = "Ok";
         $scope.chained_campaigns = _.pluck(data.data.rows, 'doc');
-        //console.log("if selected not ------");
         $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'},
             {text:'History',select:true, db_name:'history'}];
         var to_remove_list = [];
@@ -117,6 +116,7 @@ function resultsCtrl($scope, $http, $location, $window){
         if (do_get_data == true){
           $scope.getData("");
         }
+          $scope.selectionReady = true;
         // 
       }, function(status) {
         $scope.update['success'] = false;
@@ -134,6 +134,7 @@ function resultsCtrl($scope, $http, $location, $window){
         //console.log("selected to show all");
         var tmp = [];
         $scope.actions_defaults = tmp;
+        $scope.selectionReady = false;
       }
       else{
         var query = ""
@@ -146,9 +147,6 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.get_chained_campaigns_info(do_get_data,query);
       }
     };
-
-    $scope.show_well = false;
-
 
     promise = $http.get('restapi/campaigns/listall')
     promise.then(function(data){
@@ -175,52 +173,6 @@ function resultsCtrl($scope, $http, $location, $window){
 	    }
     });
 
-  $scope.showing_well = function(){
-    if ($scope.show_well){
-      $scope.show_well = false;
-    }else{
-      $scope.show_well = true;
-    }
-  };
-
-  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
-    var bin_string = ""; //reconstruct from begining
-    _.each($scope.actions_defaults, function(column){ //iterate all columns
-      if(column.select){
-        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
-      }else{
-        bin_string ="0"+bin_string;
-      }
-    });
-    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
-
-  $scope.parseShown = function(){
-    var shown = "";
-    //if ($.cookie($scope.dbName+"shown") !== undefined){
-    //  shown = $.cookie($scope.dbName+"shown");
-   // }
-    if ($location.search()["shown"] !== undefined){
-      shown = $location.search()["shown"];
-    }
-    if (shown != ""){
-      $location.search("shown", shown);
-      binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-      _.each($scope.actions_defaults, function(column){
-        column_index = $scope.actions_defaults.indexOf(column);
-        binary_bit = binary_shown.charAt(column_index);
-        if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-          if (binary_bit == 1){
-            column.select = true;
-          }else{
-            column.select = false;
-          }
-        }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-          column.select = false;
-        }
-      });
-    }
-  }
   $scope.getData = function(prepid){
   $scope.multiple_selection = {};
    if($scope.file_was_uploaded)
@@ -253,7 +205,6 @@ function resultsCtrl($scope, $http, $location, $window){
 			    $scope.result.push( item );
 			  });
             $scope.got_results = true;
-        $scope.parseShown();
             $scope.update['success'] = false;
             $scope.update['fail'] = false;
       //set selected columns?

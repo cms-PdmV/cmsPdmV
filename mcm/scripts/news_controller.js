@@ -4,31 +4,11 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   ];
   $scope.update = [];
 
-  $scope.show_well = false;
   if ($location.search()["db_name"] === undefined){
     $scope.dbName = "news";
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
-
-  $scope.select_all_well = function(){
-    $scope.selectedCount = true;
-    var selectedCount = 0
-    _.each($scope.defaults, function(elem){
-      if (elem.select){
-        selectedCount +=1;
-      }
-      elem.select = true;
-    });
-    if (selectedCount == _.size($scope.defaults)){
-      _.each($scope.defaults, function(elem){
-        elem.select = false;
-      });
-      $scope.defaults[0].select = true; //set prepid to be enabled by default
-      $scope.defaults[3].select = true; // set actions to be enabled
-      $scope.selectedCount = false;
-    }
-  };
 
   $scope.sort = {
     column: 'value.username',
@@ -46,14 +26,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     }else{
       sort.column = column;
       sort.descending = false;
-    }
-  };
-
-  $scope.showing_well = function(){
-    if ($scope.show_well){
-      $scope.show_well = false;
-    }else{
-      $scope.show_well = true;
     }
   };
 
@@ -84,34 +56,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
             $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
           }
         });
-        if ( _.keys($location.search()).indexOf('fields') == -1)
-        {
-          var shown = "";
-          if ($.cookie($scope.dbName+"shown") !== undefined){
-            shown = $.cookie($scope.dbName+"shown");
-          }
-          if ($location.search()["shown"] !== undefined){
-            shown = $location.search()["shown"]
-          }
-          if (shown != ""){
-            $location.search("shown", shown);
-            binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-            _.each($scope.defaults, function(column){
-              column_index = $scope.defaults.indexOf(column);
-              binary_bit = binary_shown.charAt(column_index);
-              if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-                if (binary_bit == 1){
-                  column.select = true;
-                }else{
-                  column.select = false;
-                }
-              }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-                column.select = false;
-              }
-            });
-          }
-        }
-        else
+        if ( _.keys($location.search()).indexOf('fields') != -1)
         {
           _.each($scope.defaults, function(elem){
             elem.select = false;
@@ -126,6 +71,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
           });
         }
       }
+        $scope.selectionReady = true;
     },function(){
        alert("Error getting information");
     });  
@@ -139,25 +85,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         $scope.getData();
         $scope.selected_prepids = [];
     });
-  
-  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
-    var bin_string = ""; //reconstruct from begining
-    _.each($scope.defaults, function(column){ //iterate all columns
-      if(column.select){
-        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
-      }else{
-        bin_string ="0"+bin_string;
-      }
-    });
-    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
 
-  $scope.saveCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    if($location.search()["shown"]){
-      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
-    }
-  };
   $scope.openModal = function () {
       var newNewsModal = $modal.open({
           templateUrl: 'addNewsModal.html',

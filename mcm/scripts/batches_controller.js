@@ -21,12 +21,6 @@ function resultsCtrl($scope, $http, $location, $window){
 
   ];
 
-  $scope.show_well = false;
-
-  $scope.showing_well = function(){
-      $scope.show_well = !$scope.show_well;
-  };
-
   $scope.sort = {
     column: 'prepid',
     descending: false
@@ -44,24 +38,6 @@ function resultsCtrl($scope, $http, $location, $window){
        sort.column = column;
        sort.descending = false;
      }
-  };
-
-  $scope.select_all_well = function(){
-    $scope.selectedCount = true;
-    var selectedCount = 0;
-    _.each($scope.batches_defaults, function(elem){
-      if (elem.select){
-        selectedCount +=1;
-      }
-      elem.select = true;
-    });
-    if (selectedCount == _.size($scope.batches_defaults)){
-    _.each($scope.batches_defaults, function(elem){
-      elem.select = false;
-    });
-    $scope.batches_defaults[0].select = true; //set prepid to be enabled by default
-    $scope.selectedCount = false;
-    }
   };
 
   //watch length of pending HTTP requests -> if there are display loading;
@@ -95,30 +71,7 @@ function resultsCtrl($scope, $http, $location, $window){
                 $scope.batches_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
             }
         });
-        if ( _.keys($location.search()).indexOf('fields') == -1)
-        {
-          var shown = "";
-          if ($.cookie($scope.dbName+"shown") !== undefined){
-            shown = $.cookie($scope.dbName+"shown");
-          }
-          if ($location.search()["shown"] !== undefined){
-            shown = $location.search()["shown"]
-          }
-          if (shown != ""){
-            $location.search("shown", shown);
-            binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-            _.each($scope.batches_defaults, function(column){
-              column_index = $scope.batches_defaults.indexOf(column);
-              binary_bit = binary_shown.charAt(column_index);
-              if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-                column.select = (binary_bit == 1);
-              } else{ //if the binary index isnt available -> this means that column "by default" was not selected
-                column.select = false;
-              }
-            });
-          }
-        }
-        else
+        if ( _.keys($location.search()).indexOf('fields') != -1)
         {
           _.each($scope.batches_defaults, function(elem){
             elem.select = false;
@@ -133,6 +86,7 @@ function resultsCtrl($scope, $http, $location, $window){
           });
         }
         }
+        $scope.selectionReady = true;
     }, function(){
        alert("Error getting main information");
       });
@@ -146,17 +100,6 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.getData();
     });
 
-  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
-    var bin_string = ""; //reconstruct from begining
-    _.each($scope.batches_defaults, function(column){ //iterate all columns
-      if(column.select){
-        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
-      }else{
-        bin_string ="0"+bin_string;
-      }
-    });
-    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
 
     $scope.announce = function(prepid){
       alert("Batch to be announced:"+prepid);
@@ -199,24 +142,6 @@ function resultsCtrl($scope, $http, $location, $window){
 	  }).error(function(status){
 		  alert('Cannot inspect '+batchid);
 	      });
-  };
-  $scope.saveCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    if($location.search()["shown"]){
-      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
-    }
-  };
-  $scope.useCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    var shown = $.cookie(cookie_name);
-    binary_shown = parseInt(shown).toString(2).split('').reverse().join('');
-    _.each($scope.batches_defaults, function(elem,index){
-      if (binary_shown.charAt(index) == 1){
-        elem.select = true;
-      }else{
-        elem.select = false;
-      }
-    });
   };
 
   $scope.hold = function(batchid) {

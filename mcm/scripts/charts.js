@@ -11,14 +11,14 @@ angular.module('mcm.charts', [])
         return {
             restrict: 'AE',
             scope: {
-                outerRadius: '=',
-                innerRadius: '=',
+                outerRadius: '=?',
+                innerRadius: '=?',
                 innerTitle: '@',
-                fontSize: '=',
-                domain: '=',
-                colorMap: '=',
-                onClick: '=',
-                onClickTitle: '=',
+                fontSize: '=?',
+                domain: '=?',
+                colorMap: '=?',
+                onClick: '=?',
+                onClickTitle: '=?',
                 data: '='
             },
 
@@ -300,18 +300,18 @@ angular.module('mcm.charts', [])
             restrict: 'AE',
             scope: {
                 data: '=', // data to be used
-                value: '=', // which value to use for calculations
-                grouping: '=', // horizontal splitting
-                columns: '=coloring', // how to do and color last horizontal split
-                stacking: '=', // how to vertically divide each column
-                yScaleType: '=scale', // "linear" or "log"
-                valueOperation: '=operation', // "sum" or "count"
-                responsive: '=', // should the chart be responsive to the webpage size
-                duration: '=', // duration of animations
-                legend: '=', // should the color legend be shown
-                userWidth: '=width', // optional width of chart
-                userHeight: '=height', // optional height of chart
-                sort: '=' // should the values in columns be sorted
+                value: '=?', // which value to use for calculations
+                grouping: '=?', // horizontal splitting
+                columns: '=?coloring', // how to do and color last horizontal split
+                stacking: '=?', // how to vertically divide each column
+                yScaleType: '=?scale', // "linear" or "log"
+                valueOperation: '=?operation', // "sum" or "count"
+                responsive: '=?', // should the chart be responsive to the webpage size
+                duration: '=?', // duration of animations
+                legend: '=?', // should the color legend be shown
+                userWidth: '=?width', // optional width of chart
+                userHeight: '=?height', // optional height of chart
+                sort: '=?' // should the values in columns be sorted
             },
             link: function(scope, element, attrs) {
                 var highlight_color = "#93cdff";
@@ -1004,10 +1004,10 @@ angular.module('mcm.charts', [])
                 chartType:'=', // html tag
                 chartData: '=', // data to transfer to chart (as data='chartData')
                 title: '@chartTitle', // title of customizable chart (above everything)
-                selections: '=', // what can you select from when it comes to single and multi values
-                options: '=', // dictionary with all the options for selections (value can be a string (single value) or list (multiple values possible))
-                radio: '=', // dictionary of radio-button based selections for finer tuning (value is a list, first element is the default one)
-                settings: '=' // dictionary of other settings for the chart (not customizable by UI)
+                selections: '=?', // what can you select from when it comes to single and multi values
+                options: '=?', // dictionary with all the options for selections (value can be a string (single value) or list (multiple values possible))
+                radio: '=?', // dictionary of radio-button based selections for finer tuning (value is a list, first element is the default one)
+                settings: '=?' // dictionary of other settings for the chart (not customizable by UI)
             },
             link: function(scope, element, attrs) {
                 scope.selections = scope.selections || [];
@@ -1133,13 +1133,13 @@ angular.module('mcm.charts', [])
            restrict : 'EA',
            scope: {
                data:"=",
-               compactTerms: "=", // term not existing in full-terms list will hold compacted sum
-               fullTerms: "=", // list of terms for full view of piechart
-               nestBy: "=", // how to divide data
-               sumBy: "=", // by what to sum data in leaves
-               showTable: "=", // should the table be shown below piecharts (by default true)
+               compactTerms: "=?", // term not existing in full-terms list will hold compacted sum
+               fullTerms: "=?", // list of terms for full view of piechart
+               nestBy: "=?", // how to divide data
+               sumBy: "=?", // by what to sum data in leaves
+               showTable: "=?", // should the table be shown below piecharts (by default true)
                tableTitle: "@", // title of the left column in table
-               colorDomain: "=" // order of colors (colors are taken as 10 basic colors from d3.js)
+               colorDomain: "=?" // order of colors (colors are taken as 10 basic colors from d3.js)
            },
            link: function(scope, element, attrs) {
                 var nested = d3.nest();

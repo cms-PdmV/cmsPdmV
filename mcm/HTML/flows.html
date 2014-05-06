@@ -28,26 +28,9 @@
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
-    <div class="container" >
-      <div class="span12" style="overflow: auto">
-        <div class="well"> <!--well for user to select table columns-->
-          <span style="float: left;">
-            <input type="button" value="Show" ng-click="showing_well()" ng-show="show_well == false">
-            <input type="button" value="Hide" ng-click="showing_well()" ng-show="show_well == true">
-            <span ng-show="show_well == true">
-              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
-              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-            </span>
-          </span>        
-          <span ng-repeat="value in flows_defaults" ng-show="show_well">
-            <label class="checkbox inline">
-              <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
-            </label>
-          </span>
-          <input type="button" value="saveCookie" ng-click="saveCookie()" ng-show="show_well">
-        </div><!--end of well for table columns-->
-      </div>
-    </div><!--End of container-->
+    <div style='margin-bottom: 5px' class="container">
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="flows_defaults"></select-well>
+    </div>
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>

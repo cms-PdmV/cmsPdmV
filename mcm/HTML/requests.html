@@ -39,19 +39,7 @@
     <!-- <div ng-controller="TabsDemoCtrl"> -->
       <tabs>
         <pane heading="Select View" active="tabsettings.view.active">
-          <div class="well">
-            <div>
-              <input type="button" value="SelectAll" ng-click="select_all_well()" ng-hide="selectedCount">
-              <input type="button" value="UnSelectAll" ng-click="select_all_well()" ng-show="selectedCount">
-            </div>
-            <span ng-repeat="value in requests_defaults" style="width:160px;">
-              <label class="checkbox inline">
-                <input type="checkbox" ng-model="value.select" ng-click="calculate_shown()"> {{value.text}}
-              </label>
-            </span>
-            <input type="button" value="saveCookie" ng-click="saveCookie()">
-            <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>
-          </div><!--end of well for table columns-->
+          <select-well ng-if="selectionReady" database="{{dbName}}" selection="requests_defaults" always-show="true"></select-well>
         </pane>
         <pane heading="List from file" active="tabsettings.file.active">
           <div class="control-group">

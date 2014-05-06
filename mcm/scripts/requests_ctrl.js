@@ -17,7 +17,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.filt = {}; //define an empty filter
     $scope.notify_text = "";
     $scope.update = {};
-    $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
     $scope.full_details = {};
@@ -171,32 +170,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
     };
 
-
-    $scope.select_all_well = function(){
-      $scope.selectedCount = true;
-      var selectedCount = 0
-      _.each($scope.requests_defaults, function(elem){
-        if (elem.select){
-          selectedCount +=1;
-        }
-        elem.select = true;
-      });
-      if (selectedCount == _.size($scope.requests_defaults)){
-      _.each($scope.requests_defaults, function(elem){
-        elem.select = false;
-      });
-      $scope.requests_defaults[0].select = true; //set prepid to be enabled by default
-      $scope.requests_defaults[1].select = true; // set actions to be enabled
-      $scope.requests_defaults[2].select = true; // set actions to be enabled
-      $scope.requests_defaults[3].select = true; // set actions to be enabled
-      $scope.requests_defaults[4].select = true; // set actions to be enabled
-      $scope.requests_defaults[5].select = true; // set actions to be enabled
-      $scope.requests_defaults[6].select = true; // set actions to be enabled
-      $scope.requests_defaults[7].select = true; // set actions to be enabled
-      $scope.selectedCount = false;
-      }
-    };
-
     $scope.delete_edit = function(id){
       $scope.delete_object($scope.dbName, id);
     };
@@ -220,74 +193,41 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
     };
 
-  $scope.showing_well = function(){
-    if ($scope.show_well){
-      $scope.show_well = false;
-    }
-    else{
-      $scope.show_well = true;
-    }
-   };
-
-  $scope.parseColumns = function(){
-    if ($scope.result.length != 0){
-    columns = _.keys($scope.result[0]).sort();
-    rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-    $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-    _.each(rejected, function(v){
-      add = true;
-      _.each($scope.requests_defaults, function(column){
-        if (column.db_name == v){
-          add = false;
-        }
-      });
-      if (add){
-        $scope.requests_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-      }
-    });
-    if ( _.keys($location.search()).indexOf('fields') == -1)
-    {
-      var shown = "";
-      if ($.cookie($scope.dbName+"shown") !== undefined){
-        shown = $.cookie($scope.dbName+"shown");
-      }
-      if ($location.search()["shown"] !== undefined){
-        shown = $location.search()["shown"];
-      }
-      if (shown != ""){
-        $location.search("shown", shown);
-        binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-        _.each($scope.requests_defaults, function(column){
-          column_index = $scope.requests_defaults.indexOf(column);
-          binary_bit = binary_shown.charAt(column_index);
-          if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-            if (binary_bit == 1){
-              column.select = true;
-            }else{
-              column.select = false;
+    $scope.parseColumns = function () {
+        if ($scope.result.length != 0) {
+            columns = _.keys($scope.result[0]).sort();
+            rejected = _.reject(columns, function (v) {
+                return v[0] == "_";
+            }); //check if charat[0] is _ which is couchDB value to not be shown
+            $scope.columns = _.sortBy(rejected, function (v) {
+                return v;
+            });  //sort array by ascending order
+            _.each(rejected, function (v) {
+                add = true;
+                _.each($scope.requests_defaults, function (column) {
+                    if (column.db_name == v) {
+                        add = false;
+                    }
+                });
+                if (add) {
+                    $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                }
+            });
+            if (_.keys($location.search()).indexOf('fields') != -1) {
+                _.each($scope.requests_defaults, function (elem) {
+                    elem.select = false;
+                });
+                _.each($location.search()['fields'].split(','), function (column) {
+                    _.each($scope.requests_defaults, function (elem) {
+                        if (elem.db_name == column) {
+                            elem.select = true;
+                        }
+                    });
+                });
             }
-          }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-            column.select = false;
-          }
-        });
-      }
-    }
-    else
-    {
-      _.each($scope.requests_defaults, function(elem){
-        elem.select = false;
-      });
-      _.each($location.search()['fields'].split(','), function(column){
-        _.each($scope.requests_defaults, function(elem){
-          if ( elem.db_name == column )
-          {
-            elem.select = true;
-          }
-        });
-      });
-    }
-  }
-  }
+        }
+    };
+
   $scope.getData = function(){
     if ($scope.file_was_uploaded)
     {
@@ -334,6 +274,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
           return; //stop doing anything if results are undefined
         }
         $scope.parseColumns();
+        $scope.selectionReady = true;
       },function(){
         alert("Error getting information");
       });
@@ -349,18 +290,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         $scope.selected_prepids = [];
     });
 
-
-  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
-    var bin_string = ""; //reconstruct from begining
-    _.each($scope.requests_defaults, function(column){ //iterate all columns
-      if(column.select){
-        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
-      }else{
-        bin_string ="0"+bin_string;
-      }
-    });
-    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
 
   $scope.showapproval = false;
   $scope.showApprovals = function(){
@@ -735,13 +664,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $scope.update["fail"] = true;
       $scope.update["status_code"] = status;
     });
-  };
-
-  $scope.saveCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    if($location.search()["shown"]){
-      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
-    }
   };
 
   $scope.findToken = function(tok){

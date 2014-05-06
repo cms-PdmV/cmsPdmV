@@ -132,11 +132,7 @@ var promise;
   };
 
   $scope.role = function(priority){
-    if(priority > $scope.user.roleIndex){ //if user.priority < button priority then hide=true
-      return true;
-    }else{
-      return false;
-    }
+    return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
   };
   //watch length of pending HTTP requests -> if there are display loading;
   $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
@@ -762,7 +758,7 @@ testApp.directive("growthGraph", function($http, $location){
               y: function (obj) { return levels[obj.step]; },
               showXAxis: true,
               showYAxis: true,
-              transitionDuration: 250,
+              transitionDuration: 250
             })
             // .width(600).height(400)
             .tooltipContent(function(key, x, y, entry, graph) {
@@ -805,6 +801,108 @@ testApp.directive("growthGraph", function($http, $location){
       }
     }
   }
+});
+
+testApp.directive('selectWell', function($location) {
+    return {
+        restrict: 'EA',
+        template:
+        '<input type="button" value="Show selection options" class="btn" ng-click="showWell=!showWell" ng-show="!showWell && !alwaysShow">' +
+        '<input type="button" value="Hide selection options" class="btn" ng-click="showWell=!showWell" ng-show="showWell && !alwaysShow">' +
+        '<div class="well" ng-show="showWell">' +
+          '<div>' +
+              '<input type="button" class="btn" value="Select all" ng-click="selectAll()" ng-hide="selectedCount==selection.length">' +
+              '<input type="button" class="btn" value="Deselect" ng-click="selectAll()" ng-show="selectedCount==selection.length">' +
+              '<input type="button" class="btn" value="Save selection" ng-click="saveCookie()" ng-if="useCookie">' +
+              '<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>' +
+          '</div>' +
+          '<span ng-repeat="value in selection">' +
+            '<label class="checkbox inline" style="padding-left:20px;">' +
+              '<input type="checkbox" ng-model="value.select" style="margin-left: -15px;">{{value.text}}' +
+            '</label>' +
+          '</span>' +
+        '</div>',
+        scope: {
+            selection: '=',
+            database: '@',
+            alwaysShow: "=?",
+            useCookie: "=?"
+        },
+        link: function($scope) {
+            $scope.selectedCount = 0;
+            $scope.alwaysShow = $scope.alwaysShow===undefined ? false : $scope.alwaysShow;
+            $scope.showWell = $scope.alwaysShow;
+            $scope.useCookie = $scope.useCookie===undefined ? true : $scope.useCookie;
+            var previousSelection = [];
+
+            if (!$scope.database) {
+                $scope.database = $location.search()["db_name"];
+            }
+
+            var shown = $location.search()["shown"] || ($scope.useCookie ? $.cookie($scope.database + "shown") : false);
+            if (shown) {
+                $location.search("shown", shown);
+                var binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
+                for (var column = 0; column < $scope.selection.length; column++) {
+                    var binary_bit = binary_shown.charAt(column);
+                    if (binary_bit != "") { //if not empty -> we have more columns than binary number length
+                        $scope.selection[column].select = binary_bit == 1;
+                    } else { //if the binary index isnt available -> this means that column "by default" was not selected
+                        $scope.selection[column].select = false;
+                    }
+                }
+            }
+            _.each($scope.selection, function (elem, index) {
+                if (elem.select) {
+                    previousSelection.push(index);
+                }
+            });
+
+            $scope.$watch('selection', function () { //on chage of column selection -> recalculate the shown number
+                var bin_string = ""; //reconstruct from begining
+                var count = 0;
+                _.each($scope.selection, function (column) { //iterate all columns
+                    if (column.select) {
+                        count += 1;
+                        bin_string = "1" + bin_string; //if selected add 1 to binary interpretation
+                    } else {
+                        bin_string = "0" + bin_string;
+                    }
+                });
+                $scope.selectedCount = count;
+                $location.search("shown", parseInt(bin_string, 2)); //put into url the interger of binary interpretation
+            }, true);
+
+            $scope.selectAll = function () {
+                var currentSelected = [];
+                _.each($scope.selection, function (elem, index) {
+                    if (elem.select) {
+                        currentSelected.push(index);
+                    }
+                    elem.select = true;
+                });
+                if ($scope.selectedCount == _.size($scope.selection)) {
+                    _.each($scope.selection, function (elem) {
+                        elem.select = false;
+                    });
+                    _.each(previousSelection, function (elem) {
+                        $scope.selection[elem].select = true;
+                    });
+                } else {
+                    previousSelection = currentSelected;
+                }
+            };
+
+
+            $scope.saveCookie = function () {
+                var cookie_name = $scope.database + "shown";
+                if ($location.search()["shown"]) {
+                    $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 });
+                }
+            };
+        }
+    }
+
 });
 
 var ModalIsSureCtrl = function($scope, $modalInstance, action, prepid) {

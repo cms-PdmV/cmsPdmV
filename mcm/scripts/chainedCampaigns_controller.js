@@ -12,31 +12,8 @@ function resultsCtrl($scope, $http, $location, $window){
     }
 
     $scope.update = [];
-    $scope.show_well = false;
     $scope.chained_campaigns = [];
     $scope._ = _; //enable underscorejs to be accessed from HTML template
-    $scope.selectedAll = false;
-
-    $scope.select_all_well = function(){
-      $scope.selectedCount = true;
-      var selectedCount = 0
-      _.each($scope.chainedCampaigns_defaults, function(elem){
-        if (elem.select){
-          selectedCount +=1;
-        }
-        elem.select = true;
-      });
-      if (selectedCount == _.size($scope.chainedCampaigns_defaults)){
-      _.each($scope.chainedCampaigns_defaults, function(elem){
-        elem.select = false;
-      });
-      $scope.chainedCampaigns_defaults[0].select = true; //set prepid to be enabled by default
-      $scope.chainedCampaigns_defaults[1].select = true; // set actions to be enabled
-      $scope.chainedCampaigns_defaults[2].select = true; // set actions to be enabled
-      $scope.chainedCampaigns_defaults[3].select = true; // set actions to be enabled
-      $scope.selectedCount = false;
-      }
-    };
 
     $scope.delete_object = function(db, value){
       $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
@@ -90,15 +67,6 @@ function resultsCtrl($scope, $http, $location, $window){
       sort.descending = false;
     }
   };
-
-  $scope.showing_well = function(){
-    if ($scope.show_well){
-      $scope.show_well = false;
-    }
-    else{
-      $scope.show_well = true;
-    }
-  };    
    
   $scope.filterResults = function(){
     var data =_.filter($scope.result, function(element){
@@ -110,93 +78,71 @@ function resultsCtrl($scope, $http, $location, $window){
       return $scope.result;
     }
   };
-  $scope.getData = function(){
-  var query = ""
-  var select=false;
-  _.each($location.search(), function(value,key){
-	  if (key != 'shown' && key != 'select' && key != 'fields'){
-	      query += "&"+key+"="+value;
-	  }
-	  if (key=='select'){
-	      select=true;
-	  }
-  });
-  $scope.got_results = false; //to display/hide the 'found n results' while reloading
-  var promise, get_raw;
-  if (select){
-      promise = $http.get("restapi/chained_campaigns/select");
-  }
-  else{
-      get_raw = true
-      promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
-  }
-  //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
-    promise.then(function(data){
-      $scope.got_results = true;
-      $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
-      if ($scope.result === undefined ){
-        alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
-        return; //stop doing anything if results are undefined
-      }
-      if ($scope.result.length != 0){
-        columns = _.keys($scope.result[0]);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-        $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-        _.each(rejected, function(v){
-          add = true;
-          _.each($scope.chainedCampaigns_defaults, function(column){
-            if (column.db_name == v){
-              add = false;
+    $scope.getData = function () {
+        var query = "";
+        var select = false;
+        _.each($location.search(), function (value, key) {
+            if (key != 'shown' && key != 'select' && key != 'fields') {
+                query += "&" + key + "=" + value;
             }
-          });
-          if (add){
-            $scope.chainedCampaigns_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-          }
+            if (key == 'select') {
+                select = true;
+            }
         });
-        if ( _.keys($location.search()).indexOf('fields') == -1)
-        {
-          var shown = "";
-          if ($.cookie($scope.dbName+"shown") !== undefined){
-            shown = $.cookie($scope.dbName+"shown");
-          }
-          if ($location.search()["shown"] !== undefined){
-            shown = $location.search()["shown"]
-          }
-          if (shown != ""){
-            $location.search("shown", shown);
-            binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-            _.each($scope.chainedCampaigns_defaults, function(column){
-              column_index = $scope.chainedCampaigns_defaults.indexOf(column);
-              binary_bit = binary_shown.charAt(column_index);
-              if (binary_bit!= ""){ //if not empty -> we have more columns than binary number length
-                if (binary_bit == 1){
-                  column.select = true;
-                }else{
-                  column.select = false;
+        $scope.got_results = false; //to display/hide the 'found n results' while reloading
+        var promise, get_raw;
+        if (select) {
+            promise = $http.get("restapi/chained_campaigns/select");
+        }
+        else {
+            get_raw = true;
+            promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw");
+        }
+        //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+        promise.then(function (data) {
+            $scope.got_results = true;
+            $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
+            if ($scope.result === undefined) {
+                alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
+                return; //stop doing anything if results are undefined
+            }
+            if ($scope.result.length != 0) {
+                columns = _.keys($scope.result[0]);
+                rejected = _.reject(columns, function (v) {
+                    return v[0] == "_";
+                }); //check if charat[0] is _ which is couchDB value to not be shown
+                $scope.columns = _.sortBy(rejected, function (v) {
+                    return v;
+                });  //sort array by ascending order
+                _.each(rejected, function (v) {
+                    add = true;
+                    _.each($scope.chainedCampaigns_defaults, function (column) {
+                        if (column.db_name == v) {
+                            add = false;
+                        }
+                    });
+                    if (add) {
+                        $scope.chainedCampaigns_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                    }
+                });
+                if (_.keys($location.search()).indexOf('fields') != -1) {
+                    _.each($scope.chainedCampaigns_defaults, function (elem) {
+                        elem.select = false;
+                    });
+                    _.each($location.search()['fields'].split(','), function (column) {
+                        _.each($scope.chainedCampaigns_defaults, function (elem) {
+                            if (elem.db_name == column) {
+                                elem.select = true;
+                            }
+                        });
+                    });
                 }
-              }else{ //if the binary index isnt available -> this means that column "by default" was not selected
-                column.select = false;
-              }
-            });
-          }
-        }
-        else
-        {
-          _.each($scope.chainedCampaigns_defaults, function(elem){
-            elem.select = false;
-          });
-          _.each($location.search()['fields'].split(','), function(column){
-            _.each($scope.chainedCampaigns_defaults, function(elem){
-              if ( elem.db_name == column )
-              {
-                elem.select = true;
-              }
-            });
-          });
-        }
-      }
-    }, function(){ alert("Error getting information"); });  
-  };
+            }
+            $scope.selectionReady = true;
+        }, function () {
+            alert("Error getting information");
+        });
+    };
 
    $scope.$watch(function() {
       var loc_dict = $location.search();
@@ -206,27 +152,6 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.getData();
         $scope.selected_prepids = [];
     });
-
-
-  $scope.calculate_shown = function(){ //on chage of column selection -> recalculate the shown number
-    var bin_string = ""; //reconstruct from begining
-    _.each($scope.chainedCampaigns_defaults, function(column){ //iterate all columns
-      if(column.select){
-        bin_string ="1"+bin_string; //if selected add 1 to binary interpretation
-      }else{
-        bin_string ="0"+bin_string;
-      }
-    });
-    $location.search("shown",parseInt(bin_string,2)); //put into url the interger of binary interpretation
-  };
-
-  $scope.saveCookie = function(){
-    var cookie_name = $scope.dbName+"shown";
-    if($location.search()["shown"]){
-      $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 })
-    }
-  };
-
 
   $scope.create = function( cc_name ) {
       for (var i = 0; i< $scope.result.length; i++) {
