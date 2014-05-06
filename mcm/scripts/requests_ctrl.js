@@ -12,10 +12,8 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         {text:'Tags',select:true, db_name:'tags'}
     ];
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
-    $search_data = {};
 
     $scope.filt = {}; //define an empty filter
-    $scope.notify_text = "";
     $scope.update = {};
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
@@ -53,13 +51,13 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 	//$location.search("query",'""');
     }
     
-  $scope.set_fail = function(status){
+  $scope.setFailure = function(status){
     $scope.update["success"] = false;
     $scope.update["fail"] = true; 
     $scope.update["status_code"] = status; 
   };
 
-  $scope.set_success = function(status){
+  $scope.setSuccess = function(status){
 	  $scope.update["success"] = true;
 	  $scope.update["fail"] = false; 
 	  $scope.update["status_code"] = status; 
@@ -90,17 +88,17 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.parse_one_only = function (report,status){
       if ($scope.parse_one( report ))
       {
-	      $scope.set_fail(status);
+	      $scope.setFailure(status);
       }else
       {
-	      $scope.set_success(status);
+	      $scope.setSuccess(status);
       }
     };
     $scope.delete_object = function(db, value){
         $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
 		$scope.parse_one_only(data,status);
         }).error(function(status){
-		$scope.set_fail(status);
+		$scope.setFailure(status);
         });
     };
     $scope.single_step = function(step, prepid){
@@ -139,7 +137,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
         $scope.parse_one_only(data,status);
       }).error(function(status){
-	      $scope.set_fail(status);
+	      $scope.setFailure(status);
       });
     };
 
@@ -147,7 +145,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 	    $http({method:'GET', url:'restapi/'+$scope.dbName+'/register/'+prepid}).success(function(data,status){
         $scope.parse_one_only(data,status);
 	    }).error(function(status){
-		    $scope.set_fail(status);
+		    $scope.setFailure(status);
 		  });
     };
 
@@ -155,7 +153,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+prepid}).success(function(data,status){
         $scope.parse_one_report(data,status);
 	    }).error(function(status){
-		    $scope.set_fail(status);
+		    $scope.setFailure(status);
 		  });
     };
 
@@ -318,9 +316,9 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
     }
     if (to_reload == true){
-      $scope.set_success(status);
+      $scope.setSuccess(status);
     }else{
-      $scope.set_fail(status);
+      $scope.setFailure(status);
     }
   };
 
@@ -328,7 +326,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+$scope.selected_prepids.join()}).success(function(data,status){
       $scope.parse_report(data,status);
     }).error(function(data,status){
-	    $scope.set_fail(status);
+	    $scope.setFailure(status);
     });
   };
 
@@ -336,7 +334,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/reset/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    $scope.parse_report(data,status);
     }).error(function(data,status){
-      $scope.set_fail(status);
+      $scope.setFailure(status);
     });
   };
 
@@ -344,7 +342,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/option_reset/'+$scope.selected_prepids.join()}).success(function(data,status){
 	    $scope.parse_report(data,status);
     }).error(function(data,status){
-      $scope.set_fail(status);
+      $scope.setFailure(status);
     });
   };
 
@@ -537,7 +535,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
           $scope.selected_prepids = [];
 
         }).error(function(data,status){
-          $scope.set_fail(status);
+          $scope.setFailure(status);
         });
     })
   };

@@ -7,8 +7,6 @@ function resultsCtrl($scope, $http, $location, $window){
     {text:'Next Campaign',select:true, db_name:'next_campaign'}
   ];
 
-  $scope.selectionReady = false;
-
   $scope.update = [];
   $scope.chained_campaigns = [];
   if ($location.search()["db_name"] === undefined){
@@ -18,8 +16,6 @@ function resultsCtrl($scope, $http, $location, $window){
   }
 
   $scope.underscore = _;
-  $scope.selectedAll = false;
-
 
   $scope.approvalIcon = function(value){
     icons = { 'none':'icon-off',
@@ -31,19 +27,27 @@ function resultsCtrl($scope, $http, $location, $window){
 	  }else{
 	    return  "icon-question-sign";
 	  }
-  };    
-    
+  };
+
+   $scope.setFailure = function(status){
+    $scope.update["success"] = false;
+    $scope.update["fail"] = true;
+    $scope.update["status_code"] = status;
+  };
+
+  $scope.setSuccess = function(status){
+	  $scope.update["success"] = true;
+	  $scope.update["fail"] = false;
+	  $scope.update["status_code"] = status;
+	  $scope.getData();
+  };
+
   $scope.delete_object = function(db, value){
     $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
       if (data["results"]){
-        $scope.update["success"] = data.results;
-        $scope.update["fail"] = false;
-        $scope.update["status_code"] = status;
-        $scope.getData();
+        $scope.setSuccess(status);
       }else{
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["status_code"] = status;
+        $scope.setFailure(status);
       }
     }).error(function(status){
       alert('Error no.' + status + '. Could not delete object.');
@@ -51,29 +55,21 @@ function resultsCtrl($scope, $http, $location, $window){
   };
 
   $scope.next_step = function(prepid){
-    $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid}).success(function(data,status){
-      $scope.update["success"] = data.results;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $scope.getData();
-    }).error(function(status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid})
+         .success(function(data, status){
+          $scope.setSuccess(status);
+            }).error(function(status){
+          $scope.setFailure(status);
+         });
   };
 
   $scope.reset_flow = function(prepid){
-    $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid+'/0'}).success(function(data,status){
-      $scope.update["success"] = data.results;
-      $scope.update["fail"] = false;
-      $scope.update["status_code"] = status;
-      $scope.getData();
-    }).error(function(status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/approve/'+prepid+'/0'})
+         .success(function(data, status){
+          $scope.setSuccess(status);
+            }).error(function(status){
+          $scope.setFailure(status);
+         });
   };
 
   $scope.sort = {
@@ -164,14 +160,9 @@ var ModalDemoCtrl = function ($scope, $http, $modal) {
         console.log(flowId);
         $http({method: 'PUT', url:'restapi/flows/save/', data:{prepid: flowId}})
             .success(function(data, status){
-          $scope.update["success"] = data.results;
-          $scope.update["fail"] = !data.results;
-          $scope.update["status_code"] = status;
-          $scope.getData();
+          $scope.setSuccess(status);
             }).error(function(data,status){
-             $scope.update["success"] = false;
-             $scope.update["fail"] = true;
-             $scope.update["status_code"] = status;
+          $scope.setFailure(status);
          });
     })
   };
@@ -179,6 +170,7 @@ var ModalDemoCtrl = function ($scope, $http, $modal) {
   $scope.createFlow = function(){
 
   };
+
 };
 
 var CreateFlowModalInstance = function($scope, $modalInstance) {

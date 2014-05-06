@@ -98,7 +98,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid+extra}).success(function(data,status){
       $scope.parse_report([data],status);
     }).error(function(status){
-      $scope.set_fail(status);
+      $scope.setFailure(status);
     });
   };
 
@@ -225,7 +225,7 @@ function resultsCtrl($scope, $http, $location, $window){
     promise.then(function(data){
       $scope.parse_report([data.data],status);
     }, function(data){
-      $scope.set_fail(data.status);
+      $scope.setFailure(data.status);
     });
   };
 
@@ -241,7 +241,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/'+step+'/'+$scope.selected_prepids.join()+extra}).success(function(data,status){
         $scope.parse_report(data,status);
       }).error(function(status){
-        $scope.set_fail(status);
+        $scope.setFailure(status);
       });
     }else{
       alert("No requests selected");
@@ -253,7 +253,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/flow/'+$scope.selected_prepids.join()+opt}).success(function(data,status){
         $scope.parse_report(data,status);
       }).error(function(status){
-        $scope.set_fail(status);
+        $scope.setFailure(status);
       });
     }else{
       alert("No requests selected");
@@ -292,21 +292,21 @@ function resultsCtrl($scope, $http, $location, $window){
       }      
       if (to_reload == true)
     {
-        $scope.set_success(status);
+        $scope.setSuccess(status);
     }
       else
     {
-        $scope.set_fail(status);
+        $scope.setFailure(status);
     }
   };
 
-  $scope.set_fail = function(status){
+  $scope.setFailure = function(status){
     $scope.update["success"] = false;
     $scope.update["fail"] = true; 
     $scope.update["status_code"] = status; 
   };
 
-  $scope.set_success = function(status){
+  $scope.setSuccess = function(status){
     $scope.update["success"] = true;
     $scope.update["fail"] = false; 
     $scope.update["status_code"] = status; 
