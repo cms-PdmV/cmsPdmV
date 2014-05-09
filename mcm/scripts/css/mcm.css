@@ -75,3 +75,44 @@ div.loading {
 	background: url("loading.gif") no-repeat;
 }
 
+/* graph CSS */
+.node {
+    cursor: pointer;
+}
+
+.node circle {
+    cursor: pointer;
+    stroke-width: 2px;
+}
+
+.node-text {
+    cursor: pointer;
+    fill: #000;
+    stroke: transparent;
+    font: bold 11px sans-serif;
+    text-shadow: 1px 1px #fff;
+    textLength: 20px;
+    display: none;
+}
+
+.node.expanded circle {
+    fill: #fff;
+}
+
+.node.expanded .node-text {
+    display: none;
+}
+
+#help {
+    position: fixed;
+    left: 10px;
+    top: 10px;
+    font: normal 11px sans-serif;
+    text-shadow: 1px 1px #fff;
+    line-height: 20px;
+}
+
+.not-supported-message {
+    margin: 20px;
+}
+/* end of graph CSS */
