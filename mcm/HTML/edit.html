@@ -27,6 +27,7 @@
            </script>
          <![endif]>
         <script src="scripts/main_controller.js"></script>
+        <script src="scripts/edit.js"></script>
         <script src="scripts/edit_controller.js"></script>
 
         <!-- // <script src="scripts/codemirror-3.11/lib/codemirror.js"></script> -->
@@ -113,20 +114,8 @@
             <td>
               <ng-form name="antantasForm">
                 <div ng-switch on="column.text">
-                    <div ng-switch-when="Approvals">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form> 
-                    </div>
                     <div ng-switch-when="Sequences">
                       <div sequence-edit ng-model="result[column.db_name]"></div>
-                    </div>
-                    <div ng-switch-when="Generators">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
                     </div>
                     <div ng-switch-when="Notes">
                       <textarea ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]" style="width: 390px; height: 152px;"></textarea>
@@ -138,10 +127,10 @@
                       </dl>
                     </div>
                     <div ng-switch-when="Block white list">
-                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
+                      <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
                     </div>
                     <div ng-switch-when="Block black list">
-                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
+                      <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
                     </div>
                     <div ng-switch-when="History">
                       <div custom-history ng-model="result[column.db_name]"></div>
@@ -150,7 +139,7 @@
                       <input type="checkbox" ng-model="result[column.db_name]">
                     </div>
                     <div ng-switch-when="Validation">
-                      <custom-validation-edit ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]"></custom-validation-edit>
+                      <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
                     </div>
 
                     <div ng-switch-when="Tags">
@@ -229,10 +218,10 @@
                       <textarea ng-model="result[column.db_name]" style="width: 639px; height: 236px;"></textarea>
                     </div>
                     <div ng-switch-when="Analysis id">
-                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
+                      <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
                     </div>
                     <div ng-switch-when="Generators">
-                      <custom-analysis-id ng-model="result[column.db_name]" column="column.text"></custom-analysis-id>
+                      <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
                     </div>
                     <div ng-switch-when="Type">
                       <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
