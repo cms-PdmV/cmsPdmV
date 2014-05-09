@@ -7,16 +7,17 @@
        
   <script type="text/javascript" src="scripts/underscore.js"></script>
   <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
 
   <!--[IF IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
+      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
     </script>
   <![endif]-->
   <![if !IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
     </script>
   <![endif]>
 
