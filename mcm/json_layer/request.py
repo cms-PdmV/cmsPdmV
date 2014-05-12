@@ -703,12 +703,12 @@ class request(json_base):
         r_tiers=[]
         keeps = self.get_attribute('keep_output')
         for (i, s) in enumerate(self.get_attribute('sequences')):
-            if not keeps[i]: continue
+            if i<len(keeps) and not keeps[i]: continue
             tiers = s['datatier']
             if isinstance(tiers, str):
                 ##only for non-migrated requests
                 tiers = tiers.split(',')            
-                r_tiers.extend( tiers )
+            r_tiers.extend( tiers )
         return r_tiers
 
     def get_outputs(self):
