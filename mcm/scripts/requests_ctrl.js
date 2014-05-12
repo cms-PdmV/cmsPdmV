@@ -560,7 +560,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
                   cloneId : function() {
                     return id;
                   },
-                  clonePWG : function() {
+                  clonePWG : function() { //modal's selected parameter
                       return pwg;
                   },
                   cloneCampaign : function() {
@@ -572,7 +572,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
               }
           });
 
-          cloneModal.result.then(function(pwg, camp)
+          cloneModal.result.then(function(input_dict)
           {
             var tmpClone = _.clone(_.find($scope.result, function(element) {
                 return element.prepid == id;
@@ -580,8 +580,8 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
             if(!tmpClone) {
                 tmpClone = {};
             }
-            tmpClone["member_of_campaign"] = camp;
-            tmpClone["pwg"] = pwg;
+            tmpClone["member_of_campaign"] = input_dict["campaign"];
+            tmpClone["pwg"] = input_dict["pwg"];
             $http({method:'PUT', url:'restapi/'+$scope.dbName+'/clone/', data:tmpClone}).success(function(data,status){
 
               $scope.update["success"] = data["results"];
@@ -725,7 +725,7 @@ var CloneModalInstance = function($http, $scope, $modalInstance, cloneId, cloneP
         clonePWG: clonePWG,
         cloneCampaign: cloneCampaign
     };
-
+    console.log("initiate instance", clonePWG, cloneCampaign);
     $scope.allPWGs = allPWGs;
     $scope.allCampaigns = [];
 
@@ -735,7 +735,7 @@ var CloneModalInstance = function($http, $scope, $modalInstance, cloneId, cloneP
       });
 
     $scope.clone = function() {
-        $modalInstance.close($scope.data.clonePWG, $scope.data.cloneCampaign);
+        $modalInstance.close({"pwg":$scope.data.clonePWG, "campaign":$scope.data.cloneCampaign});
     };
 
     $scope.close = function() {
