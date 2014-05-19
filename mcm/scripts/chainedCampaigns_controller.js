@@ -40,8 +40,16 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.update["status_code"] = status;
           $scope.getData();
         }else{
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
+          if ( _.isArray(data) )
+          {
+            $scope.update["success"] = true;
+            $scope.update["fail"] = false;
+          }
+          else
+          {
+            $scope.update["success"] = false;  
+            $scope.update["fail"] = true;
+          }
           $scope.update["status_code"] = status;
         }
         }).error(function(status){

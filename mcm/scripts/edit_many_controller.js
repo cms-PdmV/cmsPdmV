@@ -130,9 +130,9 @@ function resultsCtrl($scope, $http, $location, $window){
       });
       data_to_send["prepids"] = $scope.list_of_prepids;
       $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update_many',data:angular.toJson(data_to_send)}).success(function(data,status){
-        $scope.update["success"] = data["results"];
+        $scope.update["success"] = data["results"][0]["results"];
         $scope.update["fail"] = false;
-        $scope.update["message"] = data["message"];
+        $scope.update["message"] = data["results"][0]["message"];
         $scope.update["status_code"] = status;
         if ($scope.update["success"] == false){
           $scope.update["fail"] = true;
@@ -142,7 +142,7 @@ function resultsCtrl($scope, $http, $location, $window){
           }
           $scope.getData();
         }
-      }).error(function(data,status){
+      }).error(function(data, status){
         $scope.update["message"] = data;
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
