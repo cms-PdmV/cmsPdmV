@@ -117,7 +117,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["prepid"];
 		  }else{
 		      //$window.location.reload();
-		      console.log('I want to reload');
 		      $scope.getData();
 		  }
 	      }
@@ -246,7 +245,8 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         }
       });
       $scope.upload({contents: imaginary_file.join("\n")});
-      $scope.file_was_uploaded = false
+      $scope.file_was_uploaded = false;
+      $scope.selectionReady = true;
     } else {
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var get_raw;
@@ -665,7 +665,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   };
 
   $scope.findToken = function(tok){
-      $window.location.href = "requests?&tags="+tok.value
+    $window.location.href = "requests?&tags="+tok.value
   };
   $scope.get_list = function()
   {
@@ -725,7 +725,6 @@ var CloneModalInstance = function($http, $scope, $modalInstance, cloneId, cloneP
         clonePWG: clonePWG,
         cloneCampaign: cloneCampaign
     };
-    console.log("initiate instance", clonePWG, cloneCampaign);
     $scope.allPWGs = allPWGs;
     $scope.allCampaigns = [];
 
