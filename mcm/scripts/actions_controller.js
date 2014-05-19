@@ -66,7 +66,7 @@ function resultsCtrl($scope, $http, $location, $window){
       promise.then(function(data){
         $scope.update['success'] = true;
         $scope.update['fail'] = false;
-        $scope.update['status_code'] = "Ok";
+        $scope.update['status_code'] = data.status;
         $scope.chained_campaigns = _.pluck(data.data.rows, 'doc');
         $scope.actions_defaults = [{text:'Actions',select:true, db_name:'prepid'},
             {text:'History',select:true, db_name:'history'}];
@@ -178,6 +178,23 @@ function resultsCtrl($scope, $http, $location, $window){
    if($scope.file_was_uploaded)
    {
      $scope.upload($scope.uploaded_file);
+   }
+   else if ($location.search()['range']!=undefined)
+   {
+     var tmp = $location.search()['range'].split(";");
+     var imaginary_file = [];
+     _.each(tmp, function (elem) {
+       var ranges = elem.split(",");
+       if (ranges.length > 1 )
+       {
+         imaginary_file.push(ranges[0] + " -> " + ranges[1]);
+       }else
+       {
+         imaginary_file.push(ranges[0]);
+       }
+     });
+     $scope.upload({contents: imaginary_file.join("\n")});
+     $scope.file_was_uploaded = false
    }
    else
    {

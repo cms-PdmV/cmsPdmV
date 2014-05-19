@@ -75,6 +75,11 @@ div.loading {
 	background: url("loading.gif") no-repeat;
 }
 
+.navigation-form {
+    display: inline-block;
+    margin-bottom: 0px;
+    margin-right: 5px;
+}
 /* graph CSS */
 .node {
     cursor: pointer;

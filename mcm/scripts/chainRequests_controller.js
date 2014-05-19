@@ -458,7 +458,7 @@ testApp.directive("loadFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group navigation-form" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
     //'      <select ng-model="listfields[key]">'+
     //'        <option ng-repeat="elem in value">{{elem}}</option>'+
@@ -541,7 +541,7 @@ testApp.directive("loadRequestsFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group navigation-form" ng-repeat="(key,value) in searchable">'+
     '      <label style="width:140px;">{{key}}</label>'+
     //'      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
     //'      </select>'+
