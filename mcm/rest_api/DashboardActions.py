@@ -54,7 +54,7 @@ class GetLogFeed(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given'})
-        name = os.path.join('logs', args[0].split(os.pathsep)[-1])
+        name = os.path.join('logs', os.path.basename(args[0]))
         nlines = -1
         if len(args) > 1:
             nlines = int(args[1])

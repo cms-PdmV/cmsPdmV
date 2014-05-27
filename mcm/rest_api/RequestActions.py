@@ -218,12 +218,14 @@ class CloneRequest(RequestRESTResource):
                 return {"results": False, "message": "cannot clone a request that has been flown"}
 
         
-            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','generator_parameters','priority','analysis_id', 'extension','output_dataset']
+            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','priority','analysis_id', 'extension','output_dataset']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 ## this is a cloning accross campaign: a few other things need to be cleanedup
                 to_wipe.extend( ['cmssw_release','energy','sequences'] )
 
             new_json.update(data)
+            new_json['generator_parameters'] = new_json['generator_parameters'][-1:]
+            new_json['generator_parameters'][0]['version'] = 0
             ## remove some of the parameters to get then fresh from a new request.
             for w in to_wipe:
                 del new_json[w]
