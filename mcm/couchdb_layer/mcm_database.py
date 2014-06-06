@@ -493,6 +493,40 @@ class database:
             self.logger.error('Could not count documents in database. Reason: %s' % (ex))
             return -1
 
+    def escapedSeq(self, term):
+        """ Yield the next string based on the
+            next character (either this char
+            or escaped version """
+        escapeRules = {'+': r'\+',
+                       '-': r'\-',
+                       '&': r'\&',
+                       '|': r'\|',
+                       '!': r'\!',
+                       '(': r'\(',
+                       ')': r'\)',
+                       '{': r'\{',
+                       '}': r'\}',
+                       '[': r'\[',
+                       ']': r'\]',
+                       '^': r'\^',
+                       '~': r'\~',
+                       '*': r'\*',
+                       '?': r'\?',
+                       ':': r'\:',
+                       '"': r'\"',
+                       ';': r'\;',
+                       ' ': r'\ '}
+        for char in term:
+            if char in escapeRules.keys():
+                yield escapeRules[char]
+            else:
+                yield char
+    def escapeLuceneArg(self, term):
+        """ Apply escaping to the passed in query terms
+            escaping special characters like : , etc"""
+        term = term.replace('\\', r'\\')   # escape \ first
+        return "".join([nextStr for nextStr in self.escapedSeq(term)])
+
     def construct_lucene_query(self, query):
         """
         constructs key:value dictionary to couchDB lucene query
@@ -500,7 +534,7 @@ class database:
         constructed_query = ""
         for param in query:
             query[param] = query[param].replace(" ", "+")
-            constructed_query += param+':'+query[param]
+            constructed_query += param+':'+self.escapeLuceneArg(query[param])
             if constructed_query != "":
                 constructed_query += '+AND+'
         return constructed_query[:-5]
@@ -522,7 +556,7 @@ class database:
             cached_sequence = self.__get_from_cache(sequence_id)
             if cached_sequence == current_update_seq:
                 result = self.__get_from_cache(cache_id)
-                self.logger.error('Accessing cache for:%s. Result: %s' % (cache_id, result), level='warning')
+                self.logger.error('Accessing cache for:%s. Results : %s' % (cache_id, len(result)), level='warning')
                 if result: return result
             else:
                 self.__save_to_cache(sequence_id, current_update_seq)
