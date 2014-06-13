@@ -535,7 +535,8 @@ class request(json_base):
             name = name.replace('Configuration/GenProduction/python/', '')
             name = name.replace('Configuration/GenProduction/', '')
             # curl from git hub which has all history tags
-            get_me = 'curl -L -s https://raw.github.com/cms-sw/genproductions/%s/python/%s --retry %s ' % (
+            #get_me = 'curl -L -s https://raw.github.com/cms-sw/genproductions/%s/python/%s --retry %s ' % (
+            get_me = 'curl  -s https://raw.githubusercontent.com/cms-sw/genproductions/%s/python/%s --retry %s ' % (
                 self.get_attribute('fragment_tag'), name, fragment_retry_amount )
             # add the part to make it local
             if get:
