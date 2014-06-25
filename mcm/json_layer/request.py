@@ -2081,7 +2081,7 @@ done
         cmd = 'cd %s \n' % directory
         cmd += self.get_setup_file(directory)
         cmd += '\n'
-        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
@@ -2116,7 +2116,12 @@ done
                 command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
                     with installer(prepid, care_on_existing=False):
-                        executor = ssh_executor(server='pdmvserv-test.cern.ch')
+                        request_arch = self.get_scram_arch()
+                        if "slc6" in request_arch:
+                            machine_name = "cms-pdmv-op.cern.ch"
+                        else:
+                            machine_name = "pdmvserv-test.cern.ch"
+                        executor = ssh_executor(server=machine_name)
                         _, stdout, stderr = executor.execute(command)
                         if not stdout and not stderr:
                             self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))

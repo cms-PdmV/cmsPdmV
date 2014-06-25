@@ -21,19 +21,24 @@ class RenewCertificate(RESTResource):
         """
         Renew certificate on pdmvserv-test.cern.ch
         """
-        ssh_exec = ssh_executor(server='pdmvserv-test.cern.ch')
-        try:
-            self.logger.log("Renewing certificate")
-            stdin, stdout, stderr = ssh_exec.execute(self.create_command())
-            self.logger.log("Certificate renewed:\n{0}".format(stdout.read()))
-        finally:
-            ssh_exec.close_executor()
+        machines = ["pdmvserv-test.cern.ch", "cms-pdmv-op.cern.ch"]
+        for elem in machines:
+            ssh_exec = ssh_executor(server=elem)
+            try:
+                self.logger.log("Renewing certificate for: %s" % (elem))
+                stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
+                self.logger.log("Certificate renewed:\n{0}".format(stdout.read()))
+            finally:
+                ssh_exec.close_executor()
 
-    def create_command(self):
+    def create_command(self, machine):
             # crab setup
-            command = 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
+            if machine == "pdmvserv-test.cern.ch":
+                command = 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
+            else:
+                command = 'source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
             # certificate
-            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOST/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOST/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert 2> /dev/null \n'
+            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert 2> /dev/null \n'
             command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/personal/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/personal/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert 2> /dev/null \n'
             return command
 
