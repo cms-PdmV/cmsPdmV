@@ -55,7 +55,7 @@ var promise;
 
 // GET all news
   $scope.getNews = function(){ //we check for wich page to get news -> home page gets news all the time
-    var pages_not_to_get_news = ["chained_campaigns","flows","actions","chained_requests","batch","dashboard","users","edit"];
+    var pages_not_to_get_news = ["requests","campaigns","chained_campaigns","flows","actions","chained_requests","batch","dashboard","users","edit"];
     var return_info = true;
     _.each(pages_not_to_get_news, function(elem){
       if($location.path().indexOf(elem) != -1)
@@ -87,30 +87,12 @@ var promise;
       var promise = $http.get("restapi/news/getall/5");
       promise.then(function(data){
         $scope.news = data.data;
-        var new_marquee = document.createElement('marquee');
-        var news_banner = document.getElementById("news_banner");
-        if(news_banner){
-          new_marquee.setAttribute('direction','left');
-          new_marquee.setAttribute('behavior','scroll');
-          var sorted_news = _.sortBy($scope.news, function(elem){ //sort news array by date
-            return elem.date;
-          });
-          //changed in the rest api directly
-          sorted_news.reverse(); //lets reverse it so newest new is in beggining of array
-      //    sorted_news = sorted_news.splice(0,5); //take only 5 newest and best news
-          _.each(sorted_news, function(v){
-            new_new = "<span> <i class='icon-globe'></i><b>"+v.subject+"</b>  <i>"+v.date+" </i></span>";
-              new_marquee.innerHTML += new_new;
-          });
-          news_banner.appendChild(new_marquee);
-          news_banner.appendChild(new_marquee);
-        }
       },function(data){
         alert("Error getting news. Error: "+data.status);
       });
     }
   }
-// Endo of news!
+// End of news!
 
 
 
@@ -517,14 +499,14 @@ testApp.directive("reqmgrName", function($http){
     '        <ul style="margin-bottom: 0px;" ng-show="true;">'+
     '          <li ng-repeat="DS in stats_cache[rqmngr[\'name\']].pdmv_dataset_list">'+
     '            <span ng-switch on="stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS == \'VALID\'">'+
-    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>'+
-    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>'+
+    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>'+
+    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>'+
     '            </span>'+
     '          </li>'+
     '          <li ng-show="data[\'status\']==\'done\' && rqmngr_data.content.pdmv_dataset_name && !underscore.isObject(stats_cache[rqmngr[\'name\']])">'+
     '            <span ng-switch on="stats_cache[rqmngr[\'name\']].pdmv_status_in_DAS == \'VALID\'">'+
-    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr_data.content.pdmv_dataset_name}}</a>'+
-    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?instance=cms_dbs_prod_global&input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self"><del>{{ rqmngr_data.content.pdmv_dataset_name}}</del></a>'+
+    '              <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self">{{ rqmngr_data.content.pdmv_dataset_name}}</a>'+
+    '              <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?input={{rqmngr_data.content.pdmv_dataset_name }}" rel="tooltip" title="Link to {{rqmngr_data.content.pdmv_dataset_name}} in DAS" target="_self"><del>{{ rqmngr_data.content.pdmv_dataset_name}}</del></a>'+
     '            </span>'+
     '          </li>'+
     '        </ul>'+
@@ -840,6 +822,10 @@ testApp.directive('selectWell', function($location) {
             }
 
             var shown = $location.search()["shown"] || ($scope.useCookie ? $.cookie($scope.database + "shown") : false);
+            if ($location.search()["fields"]) //if fields in url don't force to calculate shown from cookie or shown number
+            {
+              shown=false;
+            }
             if (shown) {
                 $location.search("shown", shown);
                 var binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
