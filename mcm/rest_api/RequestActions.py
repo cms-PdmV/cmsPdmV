@@ -1210,10 +1210,19 @@ class RequestLister():
 
     def get_objects(self, all_ids, retrieve_db):
         all_objects = []
+        added_actions = []
         if len(all_ids) and retrieve_db:
             for oid in all_ids:
                 if retrieve_db.document_exists(oid):
                     all_objects.append(retrieve_db.get(oid))
+                else:
+                    if retrieve_db.db_name == 'actions': ##try retrieve action doc for root request
+                        crdb = database('chained_requests') #if the action ID doesn't exist
+                        for req in crdb.queries(['contains==' + oid]):
+                            if not req['chain'][0] in added_actions:
+                                if retrieve_db.document_exists(req['chain'][0]):
+                                    all_objects.append(retrieve_db.get(req['chain'][0])) ##we add a root request
+                                    added_actions.append(req['chain'][0])
 
         self.logger.error("Got %s ids identified" % ( len(all_objects)))
         return {"results": all_objects}
@@ -1299,6 +1308,16 @@ class RequestLister():
                         for serial in range(serial_start, serial_end):
                             all_ids.append('-'.join(id_start.split('-')[0:2] + ['%05d' % serial]))
 
+                ##if is actionDB and doesn't exist -> check for root request
+                if word != "->":  # and load its action for single requests in files
+                    added_actions = []
+                    if odb.db_name == 'actions' and an_id == None:
+                        crdb = database('chained_requests')
+                        for req in crdb.queries(['contains==' + word]):
+                            if not req['chain'][0] in added_actions:
+                                all_ids.append(req['chain'][0]) ##we add a root request
+                                added_actions.append(req['chain'][0])
+
         for (possible_campaign, possible_dsn) in all_dsn.items():
             #self.logger.error("Found those dsn to look for %s"%(possible_dsn))
             if not cdb.document_exists(possible_campaign):
@@ -1308,7 +1327,6 @@ class RequestLister():
             for request in all_requests:
                 if request['dataset_name'] in possible_dsn:
                     all_ids.append(request['prepid'])
-
         all_ids = list(set(all_ids))
         all_ids.sort()
         return all_ids
