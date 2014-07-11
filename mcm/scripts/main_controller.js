@@ -532,7 +532,11 @@ testApp.directive("reqmgrName", function($http){
         scope.getrqmnr_data(req_name, index);
       };
       scope.getrqmnr_data = function(req_name, index){
-        scope.links[req_name] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+req_name+".gif";
+        var __tmp = _.without(req_name.split("_"),"");
+        var __filename = _.rest(__tmp, __tmp.length-1)[0];
+        var __dirname = _.without(__tmp, __filename)
+        __url = __dirname.join("/") + "/" + __filename
+        scope.links[req_name] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+__url+".gif";
         getfrom='/stats/restapi/get_one/'+req_name;
         $http({method:'GET', url: getfrom}).success(function(data,status){
           scope.stats_cache[req_name] = data;
