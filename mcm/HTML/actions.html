@@ -150,6 +150,27 @@
         </tr>
       </tbody>
     </table>
+    <!-- loadFile attention MODAL-->
+    <script type="text/ng-template" id="attentionModal.html">
+      <div class="modal-header">
+        <h4>Attention</h4>
+      </div>
+      <div class="modal-body">
+        <p>Actions differ among the chained campaigns corresponding to the
+          requests loaded. Please select the appropriate campaign from the 
+          drop-down menu "starts with/contains" to display actions
+          for your requests.
+        </p>
+        <p>List of campaigns:</p>
+        <ul>
+          <li ng-repeat="elem in data.list_of_campaigns">{{elem}}</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-warning cancel" ng-click="close()">Close</button>
+      </div>
+    </script>
+    <!-- END loadFile attention MODAL-->
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
         <span ng-hide="role(1);">

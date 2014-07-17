@@ -12,7 +12,7 @@ class stats_updater:
             
     def update( self, arg ):
         com=''
-        com+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+        com+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         com+='cd /build/vlimant/CMSSW_5_3_14/ \n'
         com+='eval `scramv1 runtime -sh`'
         com+='cd /afs/cern.ch/cms/PPD/PdmV/tools/stats \n'

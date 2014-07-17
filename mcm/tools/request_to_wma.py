@@ -19,7 +19,7 @@ class request_to_wmcontrol:
         if to_execute:
             # set path to proxy certificate
             command += 'cd %s\n' % ( l_type.workLocation() )
-            command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+            command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
             command += mcm_r.make_release()
             #command += 'eval `scram runtime -sh`\n'
             command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'

@@ -1,4 +1,4 @@
-function resultsCtrl($scope, $http, $location, $window){
+function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.filt = {}; //define an empty filter a stupid update test for github
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
@@ -88,7 +88,6 @@ function resultsCtrl($scope, $http, $location, $window){
           }
         });
         $scope.rootCampaign = _.uniq($scope.rootCampaign);
-        // console.log($scope.rootCampaign)
         $scope.actions_defaults = _.filter($scope.actions_defaults, function(element){ //filter all actions from well
           if (element.text != 'Actions' && element.text !='History'){    //leave actions column
             return (_.indexOf(to_remove_list, element.text) == -1) //if column not in to_add_list -> remove it (a.k.a its in to_be_removed list)
@@ -131,7 +130,6 @@ function resultsCtrl($scope, $http, $location, $window){
       //$scope.result = []; //clear results on selection
       //set the well to have only ChainedCampaigns which includes selectedOption
       if (($scope.selectedOption['contains'] == "------") && ($scope.selectedOption['starts'] == "------")){ //if to show all chained campains -> push all to well values
-        //console.log("selected to show all");
         var tmp = [];
         $scope.actions_defaults = tmp;
         $scope.selectionReady = false;
@@ -551,6 +549,20 @@ function resultsCtrl($scope, $http, $location, $window){
       //query = "&contains="+ chained_campaign;
       //$scope.get_chained_campaigns_info(false,query);
       $scope.got_results = true;
+      
+      var list_of_campaigns = []; // we want a pop-up appear to inform user
+      _.each($scope.result, function(elem)
+      {
+        var campaign = elem.prepid.split("-")[1]; //parse campaign from prepid
+        if (list_of_campaigns.indexOf(campaign) == -1)
+        {
+          list_of_campaigns.push(campaign);
+        }
+      });
+      if (list_of_campaigns.length > 1)
+      {
+        $scope.openattentionModal(list_of_campaigns);
+      }
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
@@ -558,7 +570,6 @@ function resultsCtrl($scope, $http, $location, $window){
     });
   };
   $scope.commit = function(prepid){
-    console.log("commiting ", prepid)
     var place = 0;
     _.each($scope.result, function(element, index){
       if(element.prepid == prepid){
@@ -616,8 +627,34 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update['result'] = "No actions were selected for transfer";      
     };
   };
+  $scope.openattentionModal = function(list_of_camps)
+  {  
+    var attentionModal = $modal.open( {
+      templateUrl: 'attentionModal.html',
+      controller: attentionModalInstance,
+      resolve: {
+        list_of_camps: function() {
+          return list_of_camps;
+        }
+      }
+    });
+
+    //we don't need to-do anything on modal close
+    // attentionModal.result.then(function(list_of_campaigns){
+    //   console.log("information modal close", list_of_campaigns);
+    // })
+  };
 };
 
+  var attentionModalInstance = function($scope, $modalInstance, list_of_camps)
+  {
+    $scope.data = {
+      list_of_campaigns: list_of_camps
+    };
+    $scope.close = function(){
+      $modalInstance.dismiss();
+    };
+  };
 // var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customPrepId", function ($rootScope, $http) {
     return {
