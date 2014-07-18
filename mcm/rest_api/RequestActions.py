@@ -295,13 +295,20 @@ class UpdateRequest(RequestRESTResource):
         editable = previous_version.get_editable()
         for (key, right) in editable.items():
             # does not need to inspect the ones that can be edited
-            if right: continue
-            #self.logger.log('%s: %s vs %s : %s'%(key,previous_version.get_attribute(key),mcm_req.get_attribute(key),right))
+            if right: 
+                if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
+                    self.logger.log('##UPDATING [%s] field## %s: %s vs %s' % (
+                        mcm_req.get_attribute('prepid'), key,
+                        previous_version.get_attribute(key),
+                        mcm_req.get_attribute(key)
+                    ))
+                continue
+
             if key == 'sequences':
                 ## need a special treatment because it is a list of dicts
                 continue
             if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
-                self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
+                self.logger.error('Illegal change of parameter, %s: %s vs %s: %s' % (
                     key, previous_version.get_attribute(key), mcm_req.get_attribute(key), right))
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
                 #raise ValueError('Illegal change of parameter')
@@ -1420,11 +1427,13 @@ class StalledReminder(RESTResource):
 
         udb = database('users')
         production_managers = udb.queries(['role==production_manager'])
+        gen_conveners = udb.queries(['role==production_manager'])
+        people_list = production_managers + gen_conveners
 
         subject="Gentle reminder of %d requests that appear stalled"%(reminded)
 
         if reminded!=0:
-            com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
+            com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
                          subject, text)
         
 
