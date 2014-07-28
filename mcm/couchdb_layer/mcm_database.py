@@ -497,13 +497,10 @@ class database:
         """ Yield the next string based on the
             next character (either this char
             or escaped version """
-        escapeRules = {'+': r'\+',
-                       '-': r'\-',
+        escapeRules = {'-': r'\-',
                        '&': r'\&',
                        '|': r'\|',
                        '!': r'\!',
-                       '(': r'\(',
-                       ')': r'\)',
                        '{': r'\{',
                        '}': r'\}',
                        '[': r'\[',
