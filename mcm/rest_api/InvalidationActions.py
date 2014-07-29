@@ -243,7 +243,7 @@ class AnnounceInvalidations(RESTResource):
                 __r_list.append(tmp)
             else:
                 self.logger.error("Tried to ANNOUNCE non new invaldation: %s" % 
-                    (tmp["Object"]))
+                    (tmp["object"]))
         announcer = Announcer()
         announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
         return dumps({"results":True, "ds_to_invalidate": __ds_list,
@@ -276,7 +276,7 @@ class ClearInvalidations(RESTResource):
                 __r_list.append(tmp)
             else:
                 self.logger.error("Tried to CLEAN non new invaldation: %s" % 
-                    (tmp["Object"]))
+                    (tmp["object"]))
         __clearer = Clearer()
         __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
         return dumps({"results":True, "ds_to_invalidate": __ds_list,
