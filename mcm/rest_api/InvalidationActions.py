@@ -9,7 +9,8 @@ from tools.locator import locator
 from json_layer.invalidation import invalidation
 from tools.settings import settings
 from tools.user_management import access_rights
-
+from tools.json import threaded_loads
+from cherrypy import request
 class Invalidate(RESTResource):
 
     def __init__(self):
@@ -114,19 +115,42 @@ class InspectInvalidation(RESTResource):
 
         html += '</html></body>\n'
 
-        if announce and (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
+        if announce:
+            announcer = Announcer()
+            announcer.announce(ds_to_be_invalidated, r_to_be_rejected)
+
+        if clear:
+            __clearer = Clearer()
+            __clearer.clean()
+
+        return html
+
+class Announcer():
+
+    def __init__(self):
+        self.db_name = "invalidations"
+        self.com = communicator()
+        self.l_type = locator()
+
+    def print_invalidations(self, invalids):
+        a_text=''
+        for invalid in invalids:
+            a_text += ' %s\n' % (invalid.get_attribute('object'))
+        return a_text
+
+    def announce(self, ds_to_be_invalidated, r_to_be_rejected):
+        if (len(ds_to_be_invalidated) != 0 or len(r_to_be_rejected) != 0):
             text = 'Dear Data Operation Team,\n\n'
             if len(r_to_be_rejected)!=0:
                 text += 'please reject or abort the following requests:\n'
-                text += print_invalidations(r_to_be_rejected)
+                text += self.print_invalidations(r_to_be_rejected)
             if len(ds_to_be_invalidated)!=0:
                 text += '\nPlease invalidate the following datasets:\n'
-                text += print_invalidations(ds_to_be_invalidated)
+                text += self.print_invalidations(ds_to_be_invalidated)
             text += '\nas a consequence of requests being reset.\n'
-            com = communicator()
 
             to_who = [settings().get_value('service_account')]
-            if l_type.isDev():
+            if self.l_type.isDev():
                 to_who.append( settings().get_value('hypernews_test'))
             else:
                 to_who.append( settings().get_value('dataops_announce' ))
@@ -137,22 +161,25 @@ class InspectInvalidation(RESTResource):
             except IndexError:
                 sender = None
 
-            com.sendMail(to_who,
+            self.com.sendMail(to_who,
                          'Request and Datasets to be Invalidated',
                          text,
                          sender)
-
             for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
                 to_announce.set_announced()
+                idb = database(self.db_name)
                 idb.update(to_announce.json())
 
-        if clear and (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
+class Clearer():
+    def __init__(self):
+        self.db_name = "invalidations"
+
+    def clear(self, ds_to_be_invalidated, r_to_be_rejected):
+        if (len(ds_to_be_invalidated)!=0 or len(r_to_be_rejected)!=0):
             for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
                 to_announce.set_announced()
+                idb = database(self.db_name)
                 idb.update(to_announce.json())
-
-        return html
-
 
 class GetInvalidation(RESTResource):
 
@@ -171,3 +198,86 @@ class GetInvalidation(RESTResource):
     def get_request(self, object_name):
         db = database('invalidations')
         return {"results": db.get(object_name)}
+
+class DeleteInvalidation(RESTResource):
+    def __init__(self):
+        self.db_name = 'invalidations'
+        self.access_limit = access_rights.administrator
+
+    def DELETE(self, *args):
+        """
+        Delete selected invalidation from DB.
+        """
+        if not args:
+            self.logger.error('Delete invalidations: no arguments were given')
+            return dumps({"results": False})
+        db = database("invalidations")
+        self.logger.log('Deleting invalidation: %s' % (args[0]))
+        return dumps({"results": db.delete(args[0])})
+
+class AnnounceInvalidations(RESTResource):
+    def __init__(self):
+        self.db_name = 'invalidations'
+        self.access_limit = access_rights.production_manager
+
+    def PUT(self):
+        """
+        Announce selected invalidations to Data OPS
+        """
+        input_data = threaded_loads(request.body.read().strip())
+        self.logger.error("invaldations input: %s" % (input_data))
+        if len(input_data) > 0:
+            return self.announce(input_data)
+        else:
+            return dumps({"results":False, "message": "No elements selected"})
+
+    def announce(self, data):
+        db = database(self.db_name)
+        __ds_list = []
+        __r_list = []
+        for doc_id in data: #for each _id we get object from db
+            tmp = db.get(doc_id)
+            if tmp["type"] == "dataset" and tmp["status"] == "new":
+                __ds_list.append(tmp)
+            elif tmp["type"] == "request" and tmp["status"] == "new":
+                __r_list.append(tmp)
+            else:
+                self.logger.error("Tried to ANNOUNCE non new invaldation: %s" % 
+                    (tmp["Object"]))
+        announcer = Announcer()
+        announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
+        return dumps({"results":True, "ds_to_invalidate": __ds_list,
+            "requests_to_invalidate": __r_list})
+
+class ClearInvalidations(RESTResource):
+    def __init__(self):
+        self.db_name = "invalidations"
+        self.access_limit = access_rights.production_manager
+
+    def PUT(self):
+        """
+        Clear selected invalidations without announcing
+        """
+        input_data = threaded_loads(request.body.read().strip())
+        if len(input_data) > 0:
+            return self.clear(input_data)
+        else:
+            return dumps({"results":False, "message": "No elements selected"})
+
+    def clear(self, data):
+        db = database(self.db_name)
+        __ds_list = []
+        __r_list = []
+        for doc_id in data:
+            tmp = db.get(doc_id) #we don't want to set clear announced objects
+            if tmp["type"] == "dataset" and tmp["status"] == "new":
+                __ds_list.append(tmp)
+            elif tmp["type"] == "request" and tmp["status"] == "new":
+                __r_list.append(tmp)
+            else:
+                self.logger.error("Tried to CLEAN non new invaldation: %s" % 
+                    (tmp["Object"]))
+        __clearer = Clearer()
+        __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
+        return dumps({"results":True, "ds_to_invalidate": __ds_list,
+            "requests_to_invalidate": __r_list})

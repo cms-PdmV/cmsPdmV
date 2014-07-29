@@ -74,9 +74,19 @@
                 <a ng-href="admin/_utils/document.html?invalidations/{{objectToId(invalidations_info[data.db_name])}}" rel="tooltip" title="Admin view of {{invalidations_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
 	            </div>
                 <div ng-switch-when="Actions">
+                  <a rel="tooltip" title="Remove invalidation" ng-click="delete(invalidations_info['_id']);" ng-hide="role(4);" ng-href="#">
+                    <i class="icon-minus-sign"></i>
+                  </a>
                   <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
                     <i class="icon-wrench"></i>
                   </a>
+                  <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');" ng-hide="role(3);" target="_self" ng-href="#">
+                    <i class="icon-fire"></i>
+                  </a>
+                  <a rel="tooltip" title="Announce invalidation" ng-click="do_action(invalidations_info['_id'], 'announce');" ng-hide="role(3);" target="_self" ng-href="#">
+                    <i class="icon-bullhorn"></i>
+                  </a>
+                  <input type="checkbox" ng-click="add_to_selected_list(invalidations_info['_id'])" ng-checked="selected_objects.indexOf(invalidations_info['_id']) != -1">
                 </div>
                 <div ng-switch-when="Type">
                   <a ng-href='invalidations?type={{invalidations_info[data.db_name]}}' rel="tooltip" title="View invalidations with type {{invalidations_info[data.db_name]}}" target="_self"> {{invalidations_info[data.db_name]}}</a>
@@ -97,6 +107,16 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
+        <span>
+          Multiple selection buttons
+          <a ng-click="do_action(selected_objects, 'clear');" rel="tooltip" ng-hide="role(3);" title="Announce selected invalidations" ng-href="#">
+            <i class="icon-fire"></i>
+          </a>
+          <a ng-click="do_action(selected_objects, 'announce');" rel="tooltip" ng-hide="role(3);" title="Announce selected invalidations" ng-href="#">
+            <i class="icon-bullhorn"></i>
+          </a>
+          <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_objects.length">
+        </span>
       </div>
     </div>
   </span>

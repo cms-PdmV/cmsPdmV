@@ -230,8 +230,8 @@
                     </div>
                     <div ng-switch-when="Root">
                       <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                        <option value="-1" ng-selected="result[column.db_name] == -1">Yes</option>
-                        <option value="0" ng-selected="result[column.db_name] == 0">Possible</option>
+                        <option value="0" ng-selected="result[column.db_name] == 0">Yes</option>
+                        <option value="-1" ng-selected="result[column.db_name] == -1">Possible</option>
                         <option value="1" ng-selected="result[column.db_name] == 1">No</option>
                       </select>
                     </div>
