@@ -97,7 +97,11 @@ class campaign(json_base):
                      else:
                          cdarg+=" --filein file:step%s.root"%(stepindex-1)
                  cdarg+=" --fileout file:step%s.root"%stepindex
+                 # the classic mixing identified by the presence of --pileup ; this is untouched
                  if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['','NoPileUp']):
+                     cdarg+=' --pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
+                 # the mixing using premixed events: absesence of --pileup and presence of datamix
+                 elif self.get_attribute('pileup_dataset_name') and (seq.get_attribute('pileup') in ['']) and (seq.get_attribute('datamix') in ['PreMix']):
                      cdarg+=' --pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
 
                  cd='cmsDriver.py %s %s'%(fragment, cdarg)
