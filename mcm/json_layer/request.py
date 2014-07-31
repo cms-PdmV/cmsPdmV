@@ -620,7 +620,8 @@ class request(json_base):
         ##JR
         if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['', 'NoPileUp']):
             command += '--pileup_input "dbs:%s" ' % (self.get_attribute('pileup_dataset_name'))
-
+        elif self.get_attribute('pileup_dataset_name') and (seq.get_attribute('pileup') in ['']) and (seq.get_attribute('datamix') in ['PreMix']):
+            command +=' --pileup_input "dbs:%s" '%(self.get_attribute('pileup_dataset_name'))
         return '%s%s' % (command, cmsDriverOptions)
 
     def transfer_from(self, camp):
