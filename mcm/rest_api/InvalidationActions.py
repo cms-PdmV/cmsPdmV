@@ -121,7 +121,7 @@ class InspectInvalidation(RESTResource):
 
         if clear:
             __clearer = Clearer()
-            __clearer.clean()
+            __clearer.clear()
 
         return html
 
