@@ -2185,3 +2185,13 @@ done
         batch_number = batch_name.split("-")[-1]
         cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
         return cmd
+
+    def is_lhe_gensim_one(self):
+        sequences = self.get_attribute("sequences")[-1]
+        if len(sequences["step"]) == 3:
+            if sequences["step"] == ["LHE","GEN","SIM"]:
+                return True
+            else:
+                return False
+        else:
+            return False

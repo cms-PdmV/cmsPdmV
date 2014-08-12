@@ -157,6 +157,9 @@ class request_to_wmcontrol:
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
 
+        if mcm_r.is_lhe_gensim_one():
+            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
+
         if processString:
             command += ' --process-string ' + processString
 
