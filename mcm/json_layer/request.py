@@ -1289,10 +1289,11 @@ done
         ## look for new ones
         ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
         look_for_what = self.get_attribute('prepid')
-        
+
         if override_id:
             look_for_what = override_id
         stats_rr = statsDB.query(query='prepid==%s' % (look_for_what), page_num=-1)
+
         ### order them from [0] earliest to [n] latest
         def sortRequest(r1, r2):
             if r1['pdmv_submission_date'] == r2['pdmv_submission_date']:
@@ -1762,6 +1763,13 @@ done
                 if (geninfo[to_be_changed + '_error'] / geninfo[to_be_changed] ) > (efficiency_error / efficiency):
                     ## better error reached with the runtest => set the value
                     do_update = True
+                if self.is_lhe_gensim_one():
+                    _eff_ratio = sqrt(
+                        (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
+                        (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2) / \
+                        (geninfo['filter_efficiency'] * geninfo['match_efficiency'])
+                    if _eff_ratio > (efficiency_error / efficiency):
+                        do_update = True
 
             if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
@@ -1773,6 +1781,10 @@ done
 
             efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
+                if self.is_lhe_gensim_one():
+                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
+                else:
+                    __eff_check = abs(geninfo[to_be_changed] - efficiency) / efficiency
                 if do_update:
                     self.notify('Runtest for %s: %s has improved.' % ( self.get_attribute('prepid'), to_be_changed),
                                 'For the request %s, %s=%s +/- %s was given, %s +/- %s was measured from %s events (ran %s). The new value was set to the request.' % (
@@ -1796,7 +1808,7 @@ done
                     self.notify('Runtest for %s: %s seems very wrong.' % ( self.get_attribute('prepid'), to_be_changed),
                                 message, accumulate=True)
                     #raise Exception(message)
-                elif abs(geninfo[to_be_changed] - efficiency) / efficiency > efficiency_fraction:
+                elif __eff_check > efficiency_fraction:
                     ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
                     message = 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
                         self.get_attribute('prepid'),
@@ -1818,7 +1830,11 @@ done
             if geninfo and (
                     not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
                 efficiency_fraction = settings().get_value('efficiency_fraction')
-                if abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency > efficiency_fraction:
+                if self.is_lhe_gensim_one():
+                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
+                else:
+                    __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency
+                if __eff_check > efficiency_fraction:
                     self.notify('Runtest for %s: %s seems incorrect from rough estimate.' % (
                         self.get_attribute('prepid'), to_be_changed),
                                 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
