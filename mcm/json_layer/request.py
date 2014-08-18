@@ -1748,81 +1748,85 @@ done
 
         to_be_saved = False
 
-        to_be_changed = 'filter_efficiency'
-        if self.get_attribute('input_dataset'):
-            to_be_changed = 'match_efficiency'
-
         self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % (
             efficiency, efficiency_error, timing, file_size ))
 
         if what == 'eff':
             do_update = False
+            do_inform = False
             if not geninfo:
                 do_update = True
-            if geninfo and geninfo[to_be_changed] and efficiency:
-                if (geninfo[to_be_changed + '_error'] / geninfo[to_be_changed] ) > (efficiency_error / efficiency):
-                    ## better error reached with the runtest => set the value
-                    do_update = True
-                if self.is_lhe_gensim_one():
-                    _eff_ratio = sqrt(
-                        (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
-                        (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2) / \
-                        (geninfo['filter_efficiency'] * geninfo['match_efficiency'])
-                    if _eff_ratio > (efficiency_error / efficiency):
-                        do_update = True
+            if geninfo and geninfo['filter_efficiency'] and geninfo['match_efficiency'] and efficiency:
+                _eff_ratio_error = sqrt(
+                    (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
+                    (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2)
+                if _eff_ratio_error > (efficiency_error / efficiency):
+                    do_infom = True  ##Inform user to update the efficiencies by himself
 
             if do_update:
-                ## we have a better error on the efficiency: combine or replace: replace for now
                 self.update_generator_parameters()
-                added_geninfo = self.get_attribute('generator_parameters')[-1]
-                added_geninfo[to_be_changed] = efficiency
-                added_geninfo[to_be_changed + '_error'] = efficiency_error
                 to_be_saved = True
 
             efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
-                if self.is_lhe_gensim_one():
-                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
-                else:
-                    __eff_check = abs(geninfo[to_be_changed] - efficiency) / efficiency
-                if do_update:
-                    self.notify('Runtest for %s: %s has improved.' % ( self.get_attribute('prepid'), to_be_changed),
-                                'For the request %s, %s=%s +/- %s was given, %s +/- %s was measured from %s events (ran %s). The new value was set to the request.' % (
-                                    self.get_attribute('prepid'),
-                                    to_be_changed,
-                                    geninfo[to_be_changed],
-                                    geninfo[to_be_changed + '_error'],
-                                    efficiency,
-                                    efficiency_error,
-                                    total_event,
-                                    total_event_in_valid), accumulate=True)
+                __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
+                if do_inform:
+                    message = ('For the request %s\n%s=%s +/- %s\n%s=%s +/- %s was given, %s +/- %s'
+                        ' was measured from %s trial events, of which %s passed the'
+                        ' filter/matching efficiencies. Please set news values'
+                        ' to the request.') % (
+                            self.get_attribute('prepid'),
+                            'filter_efficiency',
+                            geninfo['filter_efficiency'],
+                            geninfo['filter_efficiency_error'],
+                            'match_efficiency',
+                            geninfo['match_efficiency'],
+                            geninfo['match_efficiency_error'],
+                            efficiency,
+                            efficiency_error,
+                            total_event_in_valid,
+                            total_event)
+                    self.notify(
+                        'Runtest for %s: efficiencies has improved.' % (
+                            self.get_attribute('prepid')), message, accumulate=True)
                 elif efficiency == 0.:
-                    ## the efficiency, although we have ran events is exactly zero ! should have failed a few lines above anyways
-                    message = 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
-                        self.get_attribute('prepid'),
-                        to_be_changed,
-                        geninfo[to_be_changed],
-                        efficiency,
-                        total_event,
-                        total_event_in_valid)
-                    self.notify('Runtest for %s: %s seems very wrong.' % ( self.get_attribute('prepid'), to_be_changed),
+                    ## the efficiency, although we have ran events is exactly zero ! 
+                    ## should have failed a few lines above anyways
+                    message = ('For the request %s, %s*%s=%s was given, %s was measured'
+                        ' from %s trial events, of which %s passed the filter/matching'
+                        ' efficiencies. Please check efficiencies and reset the request'
+                        ' if necessary.') % (
+                            self.get_attribute('prepid'),
+                            'filter_efficiency',
+                            'match_efficiency',
+                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            efficiency,
+                            total_event_in_valid,
+                            total_event)
+                    self.notify('Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid')),
                                 message, accumulate=True)
                     #raise Exception(message)
                 elif __eff_check > efficiency_fraction:
-                    ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
-                    message = 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
-                        self.get_attribute('prepid'),
-                        to_be_changed,
-                        geninfo[to_be_changed],
-                        efficiency,
-                        total_event,
-                        total_event_in_valid)
-                    self.notify('Runtest for %s: %s seems incorrect.' % ( self.get_attribute('prepid'), to_be_changed),
+                    ## efficiency is wrong by more than 0.05=efficiency_fraction : notify.
+                    ## The indicated efficiency error is most likely too small or zero
+                    message = ('For the request %s, %s*%s=%s was given, %s was measured'
+                        ' from %s trial events, of which %s passed the filter/matching'
+                        ' efficiencies. Efficiencies product differs by more than %s'
+                        ' fraction. Please check efficiencies and reset the request'
+                        ' if necessary.') % (
+                            self.get_attribute('prepid'),
+                            'filter_efficiency',
+                            'match_efficiency',
+                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            efficiency,
+                            total_event_in_valid,
+                            total_event,
+                            efficiency_fraction)
+                    self.notify('Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid')),
                                 message, accumulate=True)
                     raise Exception(message)
 
         elif what == 'perf':
-
             rough_efficiency = float(total_event) / total_event_in
             rough_efficiency_error = rough_efficiency * sqrt(1. / total_event + 1. / total_event_in)
 
@@ -1830,21 +1834,21 @@ done
             if geninfo and (
                     not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
                 efficiency_fraction = settings().get_value('efficiency_fraction')
-                if self.is_lhe_gensim_one():
-                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
-                else:
-                    __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency
+                __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
                 if __eff_check > efficiency_fraction:
-                    self.notify('Runtest for %s: %s seems incorrect from rough estimate.' % (
-                        self.get_attribute('prepid'), to_be_changed),
-                                'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
-                                    self.get_attribute('prepid'),
-                                    to_be_changed,
-                                    geninfo[to_be_changed],
-                                    rough_efficiency,
-                                    total_event,
-                                    total_event_in), accumulate=True)
-
+                    self.notify('Runtest for %s: efficiency seems incorrect from rough estimate.' % (
+                        self.get_attribute('prepid')),
+                        ('For the request %s, %s*%s=%s was given, %s was measured'
+                        ' from %s trial events, of which %s passed the filter/matching'
+                        ' efficiencies. Please check and reset the request if necessary.') % (
+                            self.get_attribute('prepid'),
+                            'filter_efficiency',
+                            'match_efficiency',
+                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            rough_efficiency,
+                            total_event_in,
+                            total_event),
+                    accumulate=True)
 
             ## timing checks
             timing_fraction = settings().get_value('timing_fraction')
@@ -1854,12 +1858,16 @@ done
                 ## timing under-estimated
                 if timing * timing_fraction > self.get_attribute('time_event'):
                     ## notify if more than 20% discrepancy found !
-                    self.notify('Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid')),
-                                'For the request %s, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).' % (
-                                    self.get_attribute('prepid'),
-                                    self.get_attribute('time_event'),
-                                    timing, total_event,
-                                    total_event_in), accumulate=True)
+                    self.notify(
+                        'Runtest for %s: time per event under-estimate.' % (
+                            self.get_attribute('prepid')),
+                        ('For the request %s, time/event=%s was given, %s was measured'
+                        ' and set to the request from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            self.get_attribute('time_event'),
+                            timing, total_event,
+                            total_event_in),
+                        accumulate=True)
                 self.set_attribute('time_event', timing)
                 to_be_saved = True
             if timing and timing < (timing_fraction * self.get_attribute('time_event')):
@@ -1867,22 +1875,24 @@ done
                 ## warn if over-estimated by more than 10%
                 subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
                 if total_event > timing_n_limit or timing < timing_threshold:
-                    message = 'For the request %s, time/event=%s was given, %s was measured and set to the request from %s events (ran %s).' % (
-                        self.get_attribute('prepid'),
-                        self.get_attribute('time_event'),
-                        timing,
-                        total_event,
-                        total_event_in)
+                    message = ('For the request %s, time/event=%s was given, %s was'
+                        ' measured and set to the request from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            self.get_attribute('time_event'),
+                            timing,
+                            total_event,
+                            total_event_in)
                     self.set_attribute('time_event', timing)
                     to_be_saved = True
                 else:
-                    message = 'For the request %s, time/event=%s was given, %s was measured from %s events (ran %s). Not within %d%%.' % (
-                        self.get_attribute('prepid'),
-                        self.get_attribute('time_event'),
-                        timing,
-                        total_event,
-                        total_event_in,
-                        timing_fraction*100)
+                    message = ('For the request %s, time/event=%s was given, %s was'
+                        ' measured from %s events (ran %s). Not within %d%%.') % (
+                            self.get_attribute('prepid'),
+                            self.get_attribute('time_event'),
+                            timing,
+                            total_event,
+                            total_event_in,
+                            timing_fraction*100)
                     ## we should fail these requests because of wrong timing by >10% !
                     raise Exception(message)
 
@@ -1894,25 +1904,33 @@ done
                 ## size under-estimated
                 if file_size * 0.90 > self.get_attribute('size_event'):
                     ## notify if more than 10% discrepancy found !
-                    self.notify('Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid')),
-                                'For the request %s, size/event=%s was given, %s was measured from %s events (ran %s).' % (
-                                    self.get_attribute('prepid'),
-                                    self.get_attribute('size_event'),
-                                    file_size,
-                                    total_event,
-                                    total_event_in), accumulate=True)
+                    self.notify(
+                        'Runtest for %s: size per event under-estimate.' % (
+                            self.get_attribute('prepid')),
+                        ('For the request %s, size/event=%s was given, %s was'
+                        ' measured from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            self.get_attribute('size_event'),
+                            file_size,
+                            total_event,
+                            total_event_in),
+                        accumulate=True)
                 self.set_attribute('size_event', file_size)
                 to_be_saved = True
             if file_size and file_size < int(0.90 * self.get_attribute('size_event')):
                 ## size over-estimated
                 ## warn if over-estimated by more than 10% 
-                self.notify('Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid')),
-                            'For the request %s, size/event=%s was given, %s was measured from %s events (ran %s).' % (
-                                self.get_attribute('prepid'),
-                                self.get_attribute('size_event'),
-                                file_size,
-                                total_event,
-                                total_event_in), accumulate=True)
+                self.notify(
+                    'Runtest for %s: size per event over-estimate.' % (
+                        self.get_attribute('prepid')),
+                    ('For the request %s, size/event=%s was given, %s was'
+                    ' measured from %s events (ran %s).') % (
+                        self.get_attribute('prepid'),
+                        self.get_attribute('size_event'),
+                        file_size,
+                        total_event,
+                        total_event_in),
+                    accumulate=True)
                 ## correct the value from the runtest.
                 self.set_attribute('size_event', file_size)
                 to_be_saved = True
@@ -1923,12 +1941,17 @@ done
                 if memory > 4000:
                     self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
                         self.get_attribute('prepid'), safe_margin, memory))
-                    self.notify('Runtest for %s: memory over-usage' % ( self.get_attribute('prepid')),
-                                'For the request %s, the memory usage is found to be large. Requiring %s MB measured from %s events (ran %s). Setting to high memory queue' % (
-                                    self.get_attribute('prepid'),
-                                    memory,
-                                    total_event,
-                                    total_event_in ), accumulate=True)
+                    self.notify(
+                        'Runtest for %s: memory over-usage' % (
+                            self.get_attribute('prepid')),
+                        ('For the request %s, the memory usage is found to be large.'
+                        ' Requiring %s MB measured from %s events (ran %s). Setting'
+                        ' to high memory queue') % (
+                            self.get_attribute('prepid'),
+                            memory,
+                            total_event,
+                            total_event_in),
+                    accumulate=True)
                     #truncate to 4G, or catch it in ->define step ?
                 self.set_attribute('memory', memory)
                 to_be_saved = True
@@ -2201,13 +2224,3 @@ done
         batch_number = batch_name.split("-")[-1]
         cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
         return cmd
-
-    def is_lhe_gensim_one(self):
-        sequences = self.get_attribute("sequences")[-1]
-        if len(sequences["step"]) == 3:
-            if sequences["step"] == ["LHE","GEN","SIM"]:
-                return True
-            else:
-                return False
-        else:
-            return False

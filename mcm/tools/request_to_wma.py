@@ -99,6 +99,7 @@ class request_to_wmcontrol:
 
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
+            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
 
             if mcm_r.get_attribute('mcdb_id') <= 0:
                 numberOfEventsPerJob = mcm_r.numberOfEventsPerJob()
@@ -156,9 +157,7 @@ class request_to_wmcontrol:
                 command += ' --blocks "' + ','.join(mcm_r.get_attribute('block_white_list')) + '"'
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
-
-        if mcm_r.is_lhe_gensim_one():
-            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
+            
 
         if processString:
             command += ' --process-string ' + processString
