@@ -1756,6 +1756,11 @@ done
             do_inform = False
             if not geninfo:
                 do_update = True
+
+            if do_update:
+                self.update_generator_parameters()
+                to_be_saved = True
+
             if geninfo and geninfo['filter_efficiency'] and geninfo['match_efficiency'] and efficiency:
                 _eff_ratio_error = sqrt(
                     (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
@@ -1763,18 +1768,16 @@ done
                 if _eff_ratio_error > (efficiency_error / efficiency):
                     do_infom = True  ##Inform user to update the efficiencies by himself
 
-            if do_update:
-                self.update_generator_parameters()
-                to_be_saved = True
-
-            efficiency_fraction = settings().get_value('efficiency_fraction')
+            #efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
                 __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
+                __eff_relative_error = 2*sqrt((efficiency_error/efficiency)**2 + _eff_ratio_error**2)
                 if do_inform:
-                    message = ('For the request %s\n%s=%s +/- %s\n%s=%s +/- %s was given, %s +/- %s'
-                        ' was measured from %s trial events, of which %s passed the'
-                        ' filter/matching efficiencies. Please set news values'
-                        ' to the request.') % (
+                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                        ' the mcm validation test measured %.4f +/- %.4f\n'
+                        '(there were %s trial events, of which %s passed the filter/matching),\n'
+                        ' which has a smaller relative error. Please set new values in the'
+                        ' request for efficiencies and errors.') % (
                             self.get_attribute('prepid'),
                             'filter_efficiency',
                             geninfo['filter_efficiency'],
@@ -1792,36 +1795,41 @@ done
                 elif efficiency == 0.:
                     ## the efficiency, although we have ran events is exactly zero ! 
                     ## should have failed a few lines above anyways
-                    message = ('For the request %s, %s*%s=%s was given, %s was measured'
-                        ' from %s trial events, of which %s passed the filter/matching'
-                        ' efficiencies. Please check efficiencies and reset the request'
-                        ' if necessary.') % (
+                    message = ('For the request %s,\n%s=%s\n%s=%s were given;\n'
+                        '%.4f was measured from %s trial events, of which %s'
+                        ' passed the filter/matching.\nPlease check efficiencies'
+                        ' and reset the request if necessary.') % (
                             self.get_attribute('prepid'),
                             'filter_efficiency',
+                            geninfo['filter_efficiency'],
                             'match_efficiency',
-                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            geninfo['match_efficiency'],
                             efficiency,
                             total_event_in_valid,
                             total_event)
                     self.notify('Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid')),
                                 message, accumulate=True)
                     #raise Exception(message)
-                elif __eff_check > efficiency_fraction:
+                #elif __eff_check > efficiency_fraction:
+                elif __eff_check > __eff_relative_error:
                     ## efficiency is wrong by more than 0.05=efficiency_fraction : notify.
                     ## The indicated efficiency error is most likely too small or zero
-                    message = ('For the request %s, %s*%s=%s was given, %s was measured'
-                        ' from %s trial events, of which %s passed the filter/matching'
-                        ' efficiencies. Efficiencies product differs by more than %s'
-                        ' fraction. Please check efficiencies and reset the request'
+                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s'
+                        ' were given; %.4f  +/- %.4f was measured'
+                        ' from %s trial events, of which %s passed the filter/matching.\n'
+                        ' Please check efficiencies and reset the request'
                         ' if necessary.') % (
                             self.get_attribute('prepid'),
                             'filter_efficiency',
+                            geninfo['filter_efficiency'],
+                            geninfo['filter_efficiency_error'],
                             'match_efficiency',
-                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            geninfo['match_efficiency'],
+                            geninfo['match_efficiency_error'],
                             efficiency,
+                            efficiency_error,
                             total_event_in_valid,
-                            total_event,
-                            efficiency_fraction)
+                            total_event)
                     self.notify('Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid')),
                                 message, accumulate=True)
                     raise Exception(message)
@@ -1833,19 +1841,29 @@ done
             ## do a rough efficiency measurements anyways if the request is not valid enable
             if geninfo and (
                     not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
-                efficiency_fraction = settings().get_value('efficiency_fraction')
+                #efficiency_fraction = settings().get_value('efficiency_fraction')
                 __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
-                if __eff_check > efficiency_fraction:
+                _eff_ratio_error = sqrt(
+                    (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
+                    (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2)
+                __eff_error = 2*sqrt((rough_efficiency_error/rough_efficiency)**2 + _eff_ratio_error**2)
+                if __eff_check > __eff_error:
                     self.notify('Runtest for %s: efficiency seems incorrect from rough estimate.' % (
                         self.get_attribute('prepid')),
-                        ('For the request %s, %s*%s=%s was given, %s was measured'
-                        ' from %s trial events, of which %s passed the filter/matching'
-                        ' efficiencies. Please check and reset the request if necessary.') % (
+                        ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                        ' the mcm validation test measured %.4f +/- %.4f\n'
+                        '(there were %s trial events, of which %s passed the filter/matching),'
+                        ' which has a smaller relative error.\n'
+                        'Please check and reset the request if necessary.') % (
                             self.get_attribute('prepid'),
                             'filter_efficiency',
+                            geninfo['filter_efficiency'],
+                            geninfo['filter_efficiency_error'],
                             'match_efficiency',
-                            geninfo['filter_efficiency']*geninfo['match_efficiency'],
+                            geninfo['match_efficiency'],
+                            geninfo['match_efficiency_error'],
                             rough_efficiency,
+                            rough_efficiency_error,
                             total_event_in,
                             total_event),
                     accumulate=True)
