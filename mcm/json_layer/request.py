@@ -1223,7 +1223,7 @@ done
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05, refresh=False):
         #existing rwma
-        if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS',
+        if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
                                                  'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
                                                  'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
                                                  'pdmv_submission_time', 'pdmv_type','pdmv_present_priority']
@@ -1288,7 +1288,8 @@ done
         ####
         ## look for new ones
         ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
-        look_for_what = self.get_attribute('prepid')
+        #look_for_what = self.get_attribute('prepid')
+        look_for_what = mcm_rr[0]['content']['prepid'] ## which should be adapted on the other end to match
 
         if override_id:
             look_for_what = override_id
@@ -1417,11 +1418,8 @@ done
                     'pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## how many events got completed for real: summing open and closed
                     wma_r_N = mcm_rr[-1] # so that we can decouple the two
-                    counted = wma_r_N['content']['pdmv_evts_in_DAS'] + wma_r_N['content']['pdmv_open_evts_in_DAS']
-                    if not counted:
-                        counted = wma_r['content']['pdmv_evts_in_DAS'] + wma_r['content']['pdmv_open_evts_in_DAS']
-                    self.set_attribute('completed_events', counted )
-                    ## this is not enough to get all datasets
+
+                    ## this is enough to get all datasets
                     collected = []
                     tiers_expected = self.get_tiers()
                     for wma in reversed(self.get_attribute('reqmgr_name')):
@@ -1438,9 +1436,28 @@ done
                         if goodone:
                             ## reduce to what was expected of it
                             those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
-                            collected.extend(those)
-                    collected = list(set(collected))
-                    ## make sure no expected tier was keft behind
+                            ## only add those that are not already there
+                            collected.exend(filter(lambda dn: not dn in collected))
+
+                    ## collected as the correct order : in first place, there is what needs to be considered for accounting
+                    if not len(collected):
+                        not_good.update({
+                                'message' : 'No output dataset have been recognized'})
+                        saved = db.save(self.json())
+                        return not_good
+                    ds_for_accounting = collected[0]
+                    if not 'pdmv_dataset_statuses' in wma_r_N['content'] or not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']:
+                        counted = wma_r_N['content']['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_open_evts_in_DAS']
+                        if not counted:
+                            counted = wma_r['content']['pdmv_evts_in_DAS']+ wma_r['content']['pdmv_open_evts_in_DAS']
+                    else:
+                        ## pick up the completed statistics from the corresponding line
+                        counted = wma_r_N['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS']
+                        if not counted:
+                            counted = wma_r['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS']+ wma_r['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS']
+
+                    self.set_attribute('completed_events', counted )
+                    ## make sure no expected tier was left behind
                     if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],collected)), tiers_expected)):
                         not_good.update({
                                 'message' : 'One of the expected tiers %s has not been produced' %( tiers_expected )})
@@ -1763,13 +1780,6 @@ done
                 if (geninfo[to_be_changed + '_error'] / geninfo[to_be_changed] ) > (efficiency_error / efficiency):
                     ## better error reached with the runtest => set the value
                     do_update = True
-                if self.is_lhe_gensim_one():
-                    _eff_ratio = sqrt(
-                        (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
-                        (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2) / \
-                        (geninfo['filter_efficiency'] * geninfo['match_efficiency'])
-                    if _eff_ratio > (efficiency_error / efficiency):
-                        do_update = True
 
             if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
@@ -1781,10 +1791,6 @@ done
 
             efficiency_fraction = settings().get_value('efficiency_fraction')
             if geninfo:
-                if self.is_lhe_gensim_one():
-                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
-                else:
-                    __eff_check = abs(geninfo[to_be_changed] - efficiency) / efficiency
                 if do_update:
                     self.notify('Runtest for %s: %s has improved.' % ( self.get_attribute('prepid'), to_be_changed),
                                 'For the request %s, %s=%s +/- %s was given, %s +/- %s was measured from %s events (ran %s). The new value was set to the request.' % (
@@ -1808,7 +1814,7 @@ done
                     self.notify('Runtest for %s: %s seems very wrong.' % ( self.get_attribute('prepid'), to_be_changed),
                                 message, accumulate=True)
                     #raise Exception(message)
-                elif __eff_check > efficiency_fraction:
+                elif abs(geninfo[to_be_changed] - efficiency) / efficiency > efficiency_fraction:
                     ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
                     message = 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
                         self.get_attribute('prepid'),
@@ -1831,9 +1837,12 @@ done
                     not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
                 efficiency_fraction = settings().get_value('efficiency_fraction')
                 if self.is_lhe_gensim_one():
-                    __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
+                    __eff_check = abs(geninfo["filter_efficiency"] *
+                        geninfo["match_efficiency"] - rough_efficiency) / \
+                        rough_efficiency
                 else:
-                    __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency
+                    __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / \
+                        rough_efficiency
                 if __eff_check > efficiency_fraction:
                     self.notify('Runtest for %s: %s seems incorrect from rough estimate.' % (
                         self.get_attribute('prepid'), to_be_changed),
