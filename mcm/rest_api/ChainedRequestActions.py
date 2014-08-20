@@ -644,8 +644,6 @@ class InjectChainedRequest(RESTResource):
         self.mode = mode
         if self.mode not in ['inject','show']:
             raise Exception("%s not allowed"%( self.mode))
-    def object_name( arg0 ):
-        ## figure out from the input whether this is a request of a chained request
         
     def GET(self, *args):
         """                       
