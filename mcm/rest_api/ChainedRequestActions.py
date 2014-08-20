@@ -758,6 +758,124 @@ class TaskChainDict(RESTResource):
         crdb = database('chained_requests')
         ccdb = database('chained_campaigns')
         rdb = database('requests')
+        def request_to_tasks( r , base, depend):
+            ts=[]
+            for si in range(len(r.get_attribute('sequences'))):
+                task_dict={"TaskName": "%s_%d"%( r.get_attribute('prepid'), si),
+                           "KeepOutput" : True,
+                           "ConfigCacheID" : None,
+                           "GlobalTag" : r.get_attribute('sequences')[si]['conditions'],
+                           "CMSSWVersion" : r.get_attribute('cmssw_release'),
+                           "ScramArch": r.get_scram_arch(),
+                           "PrimaryDataset" : r.get_attribute('dataset_name'),
+                           "AcquisitionEra" : r.get_attribute('member_of_campaign'),
+                           "ProcessingString" : r.get_processing_string(si),
+                           "ProcessingVersion" : r.get_attribute('version'),
+                           "TimePerEvent" : r.get_attribute("time_event"),
+                           "SizePerEvent" : r.get_attribute('size_event'),
+                           "Memory" : r.get_attribute('memory'),
+                           "FilterEfficiency" : r.get_efficiency()
+                           }
+                if len(r.get_attribute('config_id'))>si:
+                    task_dict["ConfigCacheID"] = r.get_attribute('config_id')[si]
+
+                if len(r.get_attribute('keep_output'))>si:
+                    task_dict["KeepOutput"] = r.get_attribute('keep_output')[si]
+
+                if r.get_attribute('pileup_dataset_name'):
+                    task_dict["MCPileup"] = r.get_attribute('pileup_dataset_name')
+                    
+                if si==0:
+                    if base:
+                        task_dict.update({"SplittingAlgo"  : "EventBased",
+                                          "RequestNumEvents" : r.get_attribute('total_events'),
+                                          "Seeding" : "AutomaticSeeding",
+                                          "EventsPerLumi" : 100,
+                                          "LheInputFiles" : r.get_attribute('mcdb_id')>0
+                                          })
+                    else:
+                        if depend:
+                            task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                              "InputFromOutputModule" : None,
+                                              "InputTask" : None})
+                        else:
+                            task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                              "InputDataset" : r.get_attribute('input_dataset')})
+                else:
+                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                      "InputFromOutputModule" : ts[-1]['output_'],
+                                      "InputTask" : ts[-1]['TaskName']})
+                task_dict['output_'] = "%soutput"%(r.get_attribute('sequences')[si]['eventcontent'][0])
+                task_dict['priority_'] = r.get_attribute('priority')
+                ts.append(task_dict)    
+            return ts
+
+        if not crdb.document_exists(crn):
+            ## it's a request actually
+            mcm_r = rdb.get( crn )
+            mcm_crs = crdb.query(query="root_request==%s"% crn)
+            if len(mcm_crs)==0:  return dumps({})
+
+            tasktree = {}
+            inambiguous_id = None
+            specific_campaign = None
+            if len(mcm_crs) == 1:
+                mcm_cc = ccdb.get( mcm_crs[0]['member_of_campaign'] )
+                specific_campaign = mcm_cc['prepid']
+                inambiguous_id = mcm_crs[0]['prepid'].replace( mcm_cc['prepid'], mcm_cc['alias'] )
+
+            for mcm_cr in mcm_crs:
+                starting_point=mcm_cr['step']
+                for (ir,r) in enumerate(mcm_cr['chain']):
+                    if (ir<starting_point) : continue ## ad no task for things before what is already done
+                    if not r in tasktree:
+                        tasktree[r] = { 'next' : [],
+                                        'dict' : [],
+                                        'rank' : ir}
+                    base=(ir==0) ## there is only one that needs to start from scratch
+                    depend=(ir>starting_point) ## all the ones later than the starting point depend on a previous task
+                    if ir<(len(mcm_cr['chain'])-1):
+                        tasktree[r]['next'].append( mcm_cr['chain'][ir+1])
+
+                    tasktree[r]['dict'] = request_to_tasks( request(rdb.get( r )), base, depend)
+
+            for (r,item) in tasktree.items():
+                for n in item['next']:
+                    tasktree[n]['dict'][0].update({"InputFromOutputModule" : item['dict'][-1]['output_'],
+                                                       "InputTask" : item['dict'][-1]['TaskName']})
+        
+
+            wma={
+                "RequestType" : "TaskChain",
+                "inputMode" : "couchDB",
+                "Group" : "ppd",
+                "Requestor": "pdmvserv",
+                "OpenRunningTimeout" : 43200,
+                "TaskChain" : 0,
+                "ProcessingVersion": 1,
+                "RequestPriority" : 0,
+                }
+
+            task=1
+            for (r,item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
+                for d in item['dict']:
+                    if d['priority_'] > wma['RequestPriority']:  wma['RequestPriority'] = d['priority_']
+                    for k in d.keys():
+                        if k.endswith('_'):
+                            d.pop(k)
+                    wma['Task%d'%task] = d
+                    task+=1
+            wma['TaskChain'] = task-1
+
+            for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
+                wma[item] = wma['Task%d'% wma['TaskChain']][item]
+
+            wma['Campaign' ] = wma['Task1']['AcquisitionEra']
+            wma['PrepID' ] = 'task_'+wma['Task1']['TaskName'].split('_')[0]
+            wma['RequestString' ] = wma['PrepID']
+            return dumps(wma)
+            
+
         mcm_cr = chained_request(crdb.get(crn))
         mcm_cc = chained_campaign( ccdb.get( mcm_cr.get_attribute('member_of_campaign')))
         from tools.locator import locator
@@ -775,26 +893,27 @@ class TaskChainDict(RESTResource):
             "RequestPriority" : 0,
             "PrepID" : crn
             }
+        #need to do something much more fancy for prepid to be able to trace it back
+
         mcm_rs=[]
         for rn in mcm_cr.get_attribute('chain'):
             mcm_rs.append( request( rdb.get( rn )))
 
+
         step=1
         last_io=None
         for (i,r) in enumerate( mcm_rs ):
-
+            
             steps='step%d'%step
             for (si, seq) in enumerate(r.get_attribute('sequences')):
                 if r.get_attribute('priority') > wma["RequestPriority"]:
                     wma["RequestPriority"] = r.get_attribute('priority')
 
-                wma['Task%d'%step] ={'TaskName' : 'Task%d'%step,
-                                     "ConfigCacheID" : r.get_attribute('config_id')[si],
+                wma['Task%d'%step] ={'TaskName' : r.get_attribute('prepid'),#'Task%d'%step,
                                      "GlobalTag" : r.get_attribute('sequences')[si]['conditions'],
                                      "CMSSWVersion" : r.get_attribute('cmssw_release'),
                                      "ScramArch": r.get_scram_arch(),
                                      "PrimaryDataset" : r.get_attribute('dataset_name'),
-                                     "KeepOutput" : r.get_attribute('keep_output')[si],
                                      "AcquisitionEra" : r.get_attribute('member_of_campaign'),
                                      "ProcessingString" : r.get_processing_string(si),
                                      "ProcessingVersion" : r.get_attribute('version'),
@@ -802,6 +921,16 @@ class TaskChainDict(RESTResource):
                                      "SizePerEvent" : r.get_attribute('size_event'),
                                      "Memory" : r.get_attribute('memory')
                       }
+                if len(r.get_attribute('config_id'))>si:
+                    wma['Task%d'%step]["ConfigCacheID"] = r.get_attribute('config_id')[si]
+                else:
+                    ## this should throw an exception
+                    wma['Task%d'%step]["ConfigCacheID"] = None
+                if len(r.get_attribute('keep_output'))>si:
+                    wma['Task%d'%step]["KeepOutput"] = r.get_attribute('keep_output')[si]
+                else:
+                    wma['Task%d'%step]["KeepOutput"] = True
+
                 if r.get_attribute('pileup_dataset_name'):
                     wma['Task%d'%step]["MCPileup"] = r.get_attribute('pileup_dataset_name')
                 for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
@@ -813,15 +942,14 @@ class TaskChainDict(RESTResource):
                     wma['Task%d'%step].update({"SplittingAlgo"  : "EventBased",
                                                "RequestNumEvents" : r.get_attribute('total_events'),
                                                "Seeding" : "AutomaticSeeding", 
-                                               ### gets wiped out anyways  "SplittingArguments" : { "events_per_job" : 123, "events_per_lumi" : 78},
-                                               "EventsPerLumi" : 100, ## does not get seen in request manager, yet
-                                               "LheInputFiles" : r.get_attribute('mcdb_id')>0
+                                               "EventsPerLumi" : 100, 
+                                               "LheInputFiles" : r.get_attribute('mcdb_id')>0,
+                                               "FilterEfficiency" : r.get_efficiency()
                                                })
                 else:
                     wma['Task%d'%step].update({"SplittingAlgo"  : "EventAwareLumiBased",
                                                "InputFromOutputModule" : "%soutput"%last_io,
                                                "InputTask" : "Task%d"%(step-1),
-                                               ### gets wiped out anyways "SplittingArguments" :{}
                                                })
                 last_io=r.get_attribute('sequences')[si]['eventcontent'][0]
                 wma['TaskChain']+=1
