@@ -835,7 +835,10 @@ class request(json_base):
                     ## this works for back-ward compatiblity
                     infile += self.retrieve_fragment(name=cname)
                     ## force inline the customisation fragment in that case.
-                    inline_c = '--inline_custom 1 '
+                    ## if user sets inlinde_custom to 0 we dont set it
+                    if self.get_attribute("sequences")[-1]["inline_custom"] != 0:
+                        inline_c = '--inline_custom 1 '
+
 
             # tweak a bit more finalize cmsDriver command
             res = cmsd
