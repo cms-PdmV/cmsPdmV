@@ -1780,13 +1780,13 @@ done
                 if (geninfo[to_be_changed + '_error'] / geninfo[to_be_changed] ) > (efficiency_error / efficiency):
                     ## better error reached with the runtest => set the value
                     do_update = True
-            if self.is_lhe_gensim_one():
-                _eff_ratio = sqrt(
-                    (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
-                    (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2) / \
-                    (geninfo['filter_efficiency'] * geninfo['match_efficiency'])
-                if _eff_ratio > (efficiency_error / efficiency):
-                    do_update = True
+                if self.is_lhe_gensim_one():
+                    _eff_ratio = sqrt(
+                        (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
+                        (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2) / \
+                        (geninfo['filter_efficiency'] * geninfo['match_efficiency'])
+                    if _eff_ratio > (efficiency_error / efficiency):
+                        do_update = True
 
             if do_update:
                 ## we have a better error on the efficiency: combine or replace: replace for now
@@ -1825,7 +1825,7 @@ done
                     self.notify('Runtest for %s: %s seems very wrong.' % ( self.get_attribute('prepid'), to_be_changed),
                                 message, accumulate=True)
                     #raise Exception(message)
-                elif __eff_check > efficiency_fraction
+                elif __eff_check > efficiency_fraction:
                     ## efficiency is wrong by more than 0.05=efficiency_fraction : notify. The indicated efficiency error is most likely too small or zero
                     message = 'For the request %s, %s=%s was given, %s was measured from %s events (ran %s). Please check and reset the request if necessary.' % (
                         self.get_attribute('prepid'),
@@ -1850,7 +1850,7 @@ done
                 if self.is_lhe_gensim_one():
                     __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
                 else:
-                    - __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency
+                    __eff_check = abs(geninfo[to_be_changed] - rough_efficiency) / rough_efficiency
                 if __eff_check > efficiency_fraction:
                     self.notify('Runtest for %s: %s seems incorrect from rough estimate.' % (
                         self.get_attribute('prepid'), to_be_changed),
