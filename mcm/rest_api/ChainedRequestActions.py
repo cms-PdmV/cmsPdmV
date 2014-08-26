@@ -769,7 +769,7 @@ class TaskChainDict(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
         
-    def GET(self, *args):
+    def GET(self, *args, **argv):
         """                       
         Provide the taskchain dictionnary for uploading to request manager
         """
@@ -845,9 +845,10 @@ class TaskChainDict(RESTResource):
             
         tasktree = {}
         ignore_status=False
+        
         if 'scratch' in argv:
             ignore_status = True
-            veto_point=None
+        veto_point=None
         if 'upto' in argv:
             veto_point=int(argv['upto'])
 
