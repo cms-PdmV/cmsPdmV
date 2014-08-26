@@ -437,12 +437,20 @@ class request(json_base):
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve')
 
         crdb = database('chained_requests')
+        rdb = database('requests')
         for cr in self.get_attribute('member_of_chain'):
             if for_chain: continue
             mcm_cr = crdb.get(cr)
             if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
-                raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
-                                                 'The request is not the current step of chain %s' % (mcm_cr['prepid']))
+                all_good=True
+                chain=mcm_cr['chain'][mcm_cr['step']:]
+                for r in chain:
+                    if r == self.get_attribute('prepid'): continue # don't self check
+                    mcm_r = request( rdb.get(r) )
+                    all_good &= (mcm_r.get_attribute('status') in ['defined','validation','approved'])
+                if not all_good:
+                    raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
+                                                     'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
         ## start uploading the configs ?
         self.set_status()
 
