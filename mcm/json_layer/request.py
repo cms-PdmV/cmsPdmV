@@ -421,8 +421,10 @@ class request(json_base):
         # then toggle the status
         self.set_status()
 
-    def ok_to_move_to_approval_approve(self):
-        if self.current_user_level <= 1:
+    def ok_to_move_to_approval_approve(self, for_chain=False):
+        max_user_level=1
+        if for_chain:   max_user_level=0
+        if self.current_user_level <= max_user_level:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                                              'bad user admin level %s' % (self.current_user_level))
@@ -436,6 +438,7 @@ class request(json_base):
 
         crdb = database('chained_requests')
         for cr in self.get_attribute('member_of_chain'):
+            if for_chain: continue
             mcm_cr = crdb.get(cr)
             if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
