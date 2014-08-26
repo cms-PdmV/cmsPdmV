@@ -517,6 +517,14 @@ class request(json_base):
         else:
             #### not settting any status forward
             ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
+
+            ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
+            if not moveon_with_single_submit and is_the_current_one:
+                from tools.handlers import ChainRequestInjector
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                                                           lock = locker.lock(self.get_attribute('prepid'))
+                                                           )
+                threaded_submission.start()
             pass
 
     def is_action_root(self):
