@@ -548,7 +548,7 @@ class TestChainedRequest(RESTResource):
                 return dumps({"results" : False, "message" : str(e)})
                 
         runtest.start()
-        return dumps({"results" : True: "message" : "run test started"})
+        return dumps({"results" : True, "message" : "run test started"})
         
 
 class InjectChainedRequest(RESTResource):
