@@ -651,8 +651,11 @@ class chained_request(json_base):
     def inspect_done(self):
         return self.flow_trial()
         
-    def get_setup(self, directory='', events=None, run=False, validation=False):
-        req_ids = self.get_attribute('chain')
+    def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
+        if scratch:
+            req_ids = self.get_attribute('chain')
+        else:
+            req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
         rdb = database('requests')
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):

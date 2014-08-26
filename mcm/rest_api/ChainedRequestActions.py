@@ -513,95 +513,17 @@ class SearchableChainedRequest(RESTResource):
 
 class TestChainedRequest(RESTResource):  
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args): 
         """
         Perform test for chained requests    
         """
-        
-        from tools.handlers import Handler
-        class RunChainValid(Handler):
-            """
-            Operate the full testing of a chained request
-            """
-            def __init__(self, **kwargs):
-                Handler.__init__(self, **kwargs)
-                self.crid = kwargs['crid']
 
-            def reset_all(self, message, what = 'Chained validation run test', notify_one=None):
-                crdb = database('chained_requests')
-                rdb = database('requests')
-                mcm_cr = chained_request(crdb.get(self.crid))
-                for rid in mcm_cr.get_attribute('chain'):
-                    mcm_r = request( rdb.get( rid ) )
-                    notify = True
-                    if notify_one and notify_one != rid:
-                        notify = False
-                    mcm_r.test_failure( message, 
-                                        what = what,
-                                        rewind=True,
-                                        with_notification=notify)
+        if not len(args):
+            return dumps({"results" : False, "message" : "no argument provided"})
 
-            def internal_run(self):
-                from tools.installer import installer
-                from tools.batch_control import batch_control 
-                location = installer( self.crid, care_on_existing=False, clean_on_exit=True)
-                try:
-                    crdb = database('chained_requests')
-                    rdb = database('requests')
-                    mcm_cr = chained_request(crdb.get(self.crid))
-                    mcm_rs = []
-                    for rid in mcm_cr.get_attribute('chain'):
-                        mcm_rs.append( request( rdb.get( rid ) ))
-
-                    test_script = location.location() + 'validation_run_test.sh'
-                    with open(test_script, 'w') as there:
-                        there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True))
-                        
-                    batch_test = batch_control( self.crid, test_script )
-                    
-                    try:
-                        success = batch_test.test()
-                    except:
-                        self.reset_all( traceback.format_exc() )
-                        return
-                    if not success:
-                        self.reset_all( '\t .out \n%s\n\t .err \n%s\n ' % ( batch_test.log_out, batch_test.log_err) )
-                        return
-
-                    last_fail=mcm_rs[0]
-                    trace=""
-                    for mcm_r in mcm_rs:
-                        ### if not mcm_r.is_root: continue ##disable for dr request
-                        (success,trace) = mcm_r.pickup_all_performance(location.location())
-                        if not success: 
-                            last_fail = mcm_r
-                            break
-                    
-                    self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.crid ))
-                    if success:
-                        for mcm_r in mcm_rs:
-                            if mcm_r.is_root:
-                                mcm_current = request( rdb.get(mcm_r.get_attribute('prepid')))
-                                if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
-                                    mcm_r.set_status(with_notification=True)
-                                    if not mcm_r.reload():
-                                        self.reset_all( 'The request %s could not be saved after the runtest procedure' % (mcm_r.get_attribute('prepid')))
-                                        return
-                                else:
-                                    self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
-                                    return
-                    else:
-                        self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
-                        return
-                except:
-                    mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
-                        self.crid, traceback.format_exc())
-                    self.logger.error(mess)
-                finally:
-                    location.close()
-
+        from tools.handlers import RunChainValid
         ## now in the core of the api
         from tools.locker import locker
         runtest = RunChainValid( crid= args[0] )
@@ -612,12 +534,13 @@ class TestChainedRequest(RESTResource):
         mcm_rs = []
         for rid in mcm_cr.get_attribute('chain'):
             mcm_r = request( rdb.get( rid ) )
-            if not mcm_r.is_root: continue
+            next='validation'
+            if mcm_r.is_root:  next='approve'
             try:
-                mcm_r.ok_to_move_to_approval_validation(for_chain=True)
-                mcm_r.update_history({'action': 'approve', 'step':'validation'})
-                mcm_r.set_attribute('approval','validation')
-                mcm_r.notify('Approval validation in chain for request %s'%(mcm_r.get_attribute('prepid')),
+                get_attr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
+                mcm_r.update_history({'action': 'approve', 'step':next})
+                mcm_r.set_attribute('approval',next)
+                mcm_r.notify('Approval %s in chain for request %s'%(next,mcm_r.get_attribute('prepid')),
                              mcm_r.textified(), accumulate=True)
                 mcm_r.reload()
             except Exception as e:
@@ -625,18 +548,8 @@ class TestChainedRequest(RESTResource):
                 return dumps({"results" : False, "message" : str(e)})
                 
         runtest.start()
-        return "run test started"
+        return dumps({"results" : True: "message" : "run test started"})
         
-"""
-        rdb = database('requests')
-        mcm_rs=[]
-        for rn in mcm_cr.get_attribute('chain'):
-            mcm_rs.append( request( rdb.get( rn )))
-        
-        for mcm_r in mcm_rs:
-            mcm_r.set_attribute('status', 'approved')
-            mcm_r.reload()
-"""
 
 class InjectChainedRequest(RESTResource):
     def __init__(self, mode='show'):
