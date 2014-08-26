@@ -513,7 +513,7 @@ class SearchableChainedRequest(RESTResource):
 
 class TestChainedRequest(RESTResource):  
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args): 
         """
@@ -534,12 +534,13 @@ class TestChainedRequest(RESTResource):
         mcm_rs = []
         for rid in mcm_cr.get_attribute('chain'):
             mcm_r = request( rdb.get( rid ) )
-            if not mcm_r.is_root: continue
+            next='validation'
+            if mcm_r.is_root:  next='approve'
             try:
-                mcm_r.ok_to_move_to_approval_validation(for_chain=True)
-                mcm_r.update_history({'action': 'approve', 'step':'validation'})
-                mcm_r.set_attribute('approval','validation')
-                mcm_r.notify('Approval validation in chain for request %s'%(mcm_r.get_attribute('prepid')),
+                get_attr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
+                mcm_r.update_history({'action': 'approve', 'step':next})
+                mcm_r.set_attribute('approval',next)
+                mcm_r.notify('Approval %s in chain for request %s'%(next,mcm_r.get_attribute('prepid')),
                              mcm_r.textified(), accumulate=True)
                 mcm_r.reload()
             except Exception as e:
