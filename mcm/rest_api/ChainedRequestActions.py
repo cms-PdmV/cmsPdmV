@@ -513,95 +513,17 @@ class SearchableChainedRequest(RESTResource):
 
 class TestChainedRequest(RESTResource):  
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.generator_contact
 
     def GET(self, *args): 
         """
         Perform test for chained requests    
         """
-        
-        from tools.handlers import Handler
-        class RunChainValid(Handler):
-            """
-            Operate the full testing of a chained request
-            """
-            def __init__(self, **kwargs):
-                Handler.__init__(self, **kwargs)
-                self.crid = kwargs['crid']
 
-            def reset_all(self, message, what = 'Chained validation run test', notify_one=None):
-                crdb = database('chained_requests')
-                rdb = database('requests')
-                mcm_cr = chained_request(crdb.get(self.crid))
-                for rid in mcm_cr.get_attribute('chain'):
-                    mcm_r = request( rdb.get( rid ) )
-                    notify = True
-                    if notify_one and notify_one != rid:
-                        notify = False
-                    mcm_r.test_failure( message, 
-                                        what = what,
-                                        rewind=True,
-                                        with_notification=notify)
+        if not len(args):
+            return dumps({"results" : False, "message" : "no argument provided"})
 
-            def internal_run(self):
-                from tools.installer import installer
-                from tools.batch_control import batch_control 
-                location = installer( self.crid, care_on_existing=False, clean_on_exit=True)
-                try:
-                    crdb = database('chained_requests')
-                    rdb = database('requests')
-                    mcm_cr = chained_request(crdb.get(self.crid))
-                    mcm_rs = []
-                    for rid in mcm_cr.get_attribute('chain'):
-                        mcm_rs.append( request( rdb.get( rid ) ))
-
-                    test_script = location.location() + 'validation_run_test.sh'
-                    with open(test_script, 'w') as there:
-                        there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True))
-                        
-                    batch_test = batch_control( self.crid, test_script )
-                    
-                    try:
-                        success = batch_test.test()
-                    except:
-                        self.reset_all( traceback.format_exc() )
-                        return
-                    if not success:
-                        self.reset_all( '\t .out \n%s\n\t .err \n%s\n ' % ( batch_test.log_out, batch_test.log_err) )
-                        return
-
-                    last_fail=mcm_rs[0]
-                    trace=""
-                    for mcm_r in mcm_rs:
-                        ### if not mcm_r.is_root: continue ##disable for dr request
-                        (success,trace) = mcm_r.pickup_all_performance(location.location())
-                        if not success: 
-                            last_fail = mcm_r
-                            break
-                    
-                    self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.crid ))
-                    if success:
-                        for mcm_r in mcm_rs:
-                            if mcm_r.is_root:
-                                mcm_current = request( rdb.get(mcm_r.get_attribute('prepid')))
-                                if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
-                                    mcm_r.set_status(with_notification=True)
-                                    if not mcm_r.reload():
-                                        self.reset_all( 'The request %s could not be saved after the runtest procedure' % (mcm_r.get_attribute('prepid')))
-                                        return
-                                else:
-                                    self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
-                                    return
-                    else:
-                        self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
-                        return
-                except:
-                    mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
-                        self.crid, traceback.format_exc())
-                    self.logger.error(mess)
-                finally:
-                    location.close()
-
+        from tools.handlers import RunChainValid
         ## now in the core of the api
         from tools.locker import locker
         runtest = RunChainValid( crid= args[0] )
@@ -612,12 +534,13 @@ class TestChainedRequest(RESTResource):
         mcm_rs = []
         for rid in mcm_cr.get_attribute('chain'):
             mcm_r = request( rdb.get( rid ) )
-            if not mcm_r.is_root: continue
+            next='validation'
+            if mcm_r.is_root:  next='approve'
             try:
-                mcm_r.ok_to_move_to_approval_validation(for_chain=True)
-                mcm_r.update_history({'action': 'approve', 'step':'validation'})
-                mcm_r.set_attribute('approval','validation')
-                mcm_r.notify('Approval validation in chain for request %s'%(mcm_r.get_attribute('prepid')),
+                get_attr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
+                mcm_r.update_history({'action': 'approve', 'step':next})
+                mcm_r.set_attribute('approval',next)
+                mcm_r.notify('Approval %s in chain for request %s'%(next,mcm_r.get_attribute('prepid')),
                              mcm_r.textified(), accumulate=True)
                 mcm_r.reload()
             except Exception as e:
@@ -625,18 +548,8 @@ class TestChainedRequest(RESTResource):
                 return dumps({"results" : False, "message" : str(e)})
                 
         runtest.start()
-        return "run test started"
+        return dumps({"results" : True: "message" : "run test started"})
         
-"""
-        rdb = database('requests')
-        mcm_rs=[]
-        for rn in mcm_cr.get_attribute('chain'):
-            mcm_rs.append( request( rdb.get( rn )))
-        
-        for mcm_r in mcm_rs:
-            mcm_r.set_attribute('status', 'approved')
-            mcm_r.reload()
-"""
 
 class InjectChainedRequest(RESTResource):
     def __init__(self, mode='show'):
@@ -652,118 +565,16 @@ class InjectChainedRequest(RESTResource):
         if not len(args):
             return dumps({"results" : False, "message" : "no argument was passe"})
 
-        arg0 = args[0] 
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        if not crdb.document_exists( arg0 ):
-            ## it's a request actually, pick up all chains containing it
-            mcm_r = rdb.get( arg0 )
-            #mcm_crs = crdb.query(query="root_request==%s"% arg0) ## not only when its the root of
-            mcm_crs = crdb.query(query="contains==%s"% arg0)
-            task_name = 'task_'+arg0
-            batch_type = 'Task_'+mcm_r['member_of_campaign']
+        from tools.handlers import ChainRequestInjector
+        thread = ChainRequestInjector(prepid = args[0],
+                                      lock = locker.lock(args[0]))
+        if self.mode == 'show':
+            cherrypy.response.headers['Content-Type'] = 'text/plain'
+            return thread.make_command()
         else:
-            mcm_crs = [crdb.get( arg0 )]
-            task_name = arg0
-            batch_type = mcm_crs[-1]['member_of_campaign']
-
-        if len(mcm_crs)==0:
-            return dumps({"results": False, "message" : "no chains found"})
- 
-        mcm_rs=[]
-        ## upload all config files to config cache, with "configuration economy" already implemented
-        from tools.locker import locker
-        from tools.handlers import ConfigMakerAndUploader
-        for cr in mcm_crs:
-            mcm_cr = chained_request(cr)
-            for rn in mcm_cr.get_attribute('chain'):
-                mcm_rs.append( request( rdb.get( rn )))
-                if self.mode=='inject' and mcm_rs[-1].get_attribute('status') != 'approved':
-                    return dumps({"results" : False, "message" : 'requests %s in in "%s" status, requires "approved"'%( rn, mcm_rs[-1].get_attribute('status'))})
-                uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
-                uploader.run()
-
-        mcm_r = mcm_rs[-1]
-        from rest_api.BatchPrepId import BatchPrepId
-        batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=self.mode=='inject')
-        from tools.locker import semaphore_events, locker
-        semaphore_events.increment(batch_name)
-
-        from tools.ssh_executor import ssh_executor
-        from tools.locator import locator
-        l_type = locator()
-        with ssh_executor(server = 'pdmvserv-test.cern.ch') as ssh:
-            cmd='cd %s \n' % ( l_type.workLocation())
-            cmd+=mcm_r.make_release()
-            cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
-            cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-            there=''
-            if l_type.isDev():
-                there='--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-            cmd+='wmcontrol.py --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), arg0, there)
-            if self.mode == 'show':
-                cherrypy.response.headers['Content-Type'] = 'text/plain'
-                return cmd
-            else:
-                _, stdout, stderr = ssh.execute(cmd)
-                cherrypy.response.headers['Content-Type'] = 'text/plain'
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.log(output)
-                self.logger.log(error)
-
-                injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Injected workflow:')]
-                approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Approved workflow:')]
-                if injected_requests and not approved_requests:
-                    return dumps({"results" : False, "message" : "Request %s was injected but could not be approved" % ( injected_requests )})
-
-                objects_to_invalidate = [
-                    {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
-                    for inv_req in injected_requests if inv_req not in approved_requests]
-                if objects_to_invalidate:
-                    return dumps({"results" : False, "message" : "Some requests %s need to be invalidated"})
-                
-                added_requests = []
-                for mcm_r in mcm_rs:
-                    added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
-                    added_requests.extend( added )
-                
-                with locker.lock(batch_name):
-                    bdb = database('batches') 
-                    bat = batch(bdb.get(batch_name))      
-                    bat.add_requests(added_requests)
-                    bat.update_history({'action': 'updated', 'step': task_name })
-                    bat.reload()
-                    for mcm_r in mcm_rs:
-                        mcm_r.set_attribute('reqmgr_name',  added_requests)
-
-                for mcm_r in mcm_rs:
-                    added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
-                    mcm_r.set_attribute('reqmgr_name', added )
-                    mcm_r.update_history({'action': 'inject','step' : batch_name})
-                    mcm_r.set_attribute('approval', 'submit')
-                    mcm_r.set_status(with_notification=False) ## maybe change to false
-                    mcm_r.reload()
-                
-                mcm_cr.update_history({'action' : 'inject','step': batch_name})
-                mcm_cr.set_attribute('step', len(mcm_rs)-1)
-                mcm_cr.set_attribute('status','processing')
-                mcm_cr.set_attribute('last_status', mcm_rs[-1].get_attribute('status'))
-                message=""
-                for mcm_r in mcm_rs:
-                    message+=mcm_r.textified()
-                    message+="\n\n"
-                mcm_cr.notify('Injection succeeded for %s'% task_name,
-                              message)
-
-                mcm_cr.reload()
-                
-                return dumps({"results" : True, "message" : "request send to batch %s"% batch_name})
-                #return output+'\n\n-------------\n\n'+error
-
-
+            thread.start()
+            return dumps({"results" : True, "message" : "chain submission for %s on-going"%args[0]})
+        
 
 class TaskChainDict(RESTResource):
     def __init__(self):
