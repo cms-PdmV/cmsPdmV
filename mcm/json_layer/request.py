@@ -429,7 +429,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                                              'bad user admin level %s' % (self.current_user_level))
 
-        if 'defined' in self._json_base__status:
+        if self.is_root:
             if self.get_attribute('status') != 'defined':
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve')
         else:
