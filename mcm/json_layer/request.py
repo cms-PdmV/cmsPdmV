@@ -479,11 +479,27 @@ class request(json_base):
                                                  self.get_attribute('time_event'), self.get_attribute('size_event')))
 
 
+        moveon_with_single_submit=True ## for the case of chain request submission
+        is_the_current_one=False
         #check on position in chains
         crdb = database('chained_requests')
+        rdb = database('requests')
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
-            if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
+            chain = mcm_cr['chain'][mcm_cr['step']:]
+
+            ## check everything that comes after for something !=new to block automatic submission.
+            for r in chain:
+                if r == self.get_attribute('prepid'): continue # no self checking
+                mcm_r = request( rdb.get(r) )
+                ## we can move on to submit if everything coming next in the chain is new
+                moveon_with_single_submit &=(mcm_r.get_attribute('status') == 'new')
+
+        for c in self.get_attribute('member_of_chain'):
+            mcm_cr = crdb.get(c)
+            is_the_current_one = (mcm_cr['chain'].index(self.get_attribute('prepid')) == mcm_cr['step'])
+            if not is_the_current_one and moveon_with_single_submit:
+                ## check that something else in the chain it belongs to is indicating that
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                                                  'The request (%s)is not the current step (%s) of its chain (%s)' % (
                                                      self.get_attribute('prepid'),
@@ -491,7 +507,7 @@ class request(json_base):
                                                      c))
 
         sync_submission = True
-        if sync_submission:
+        if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
             from tools.handlers import RequestInjector
 
