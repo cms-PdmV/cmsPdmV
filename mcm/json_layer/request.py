@@ -1071,9 +1071,17 @@ done
                 wlhe_valid = settings().get_value('wlhe_valid')
                 if not wlhe_valid:
                     return ("", "")
-                valid_sequence.set_attribute('step', [firstStep,
-                                                      'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator',
-                                                      'GEN', 'VALIDATION:genvalid_all'])
+                if len(firstSequence['step']) > 1:
+                    secondStep = firstSequence['step'][1]
+                else:
+                    secondStep = None
+                if secondStep == "GEN": ##when LHE,GENSIM request we don't need
+                    valid_sequence.set_attribute('step', [firstStep, #USER attribute
+                        'GEN', 'VALIDATION:genvalid_all'])
+                else:
+                    valid_sequence.set_attribute('step', [firstStep,
+                        'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator',
+                        'GEN', 'VALIDATION:genvalid_all'])
             else:
                 lhe_valid = settings().get_value('lhe_valid')
                 if not lhe_valid:
