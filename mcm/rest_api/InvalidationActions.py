@@ -121,7 +121,7 @@ class InspectInvalidation(RESTResource):
 
         if clear:
             __clearer = Clearer()
-            __clearer.clear()
+            __clearer.clear(ds_to_be_invalidated, r_to_be_rejected)
 
         return html
 
