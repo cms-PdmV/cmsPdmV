@@ -1427,7 +1427,7 @@ class StalledReminder(RESTResource):
 
         udb = database('users')
         production_managers = udb.queries(['role==production_manager'])
-        gen_conveners = udb.queries(['role==production_manager'])
+        gen_conveners = udb.queries(['role==generator_convener'])
         people_list = production_managers + gen_conveners
 
         subject="Gentle reminder of %d requests that appear stalled"%(reminded)

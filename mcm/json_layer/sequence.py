@@ -166,6 +166,9 @@ class sequence(json_base):
       command = '--mc '
 
       for key in self.json():
+          if key == "inline_custom":
+              if int(self.get_attribute(key)) == 0: #if inline_custom is 0
+                  continue ## means that cmssw might not have inline_custom support
           addone = self.to_command_line(key)
           ##prevent from having over spaces
           if addone:
