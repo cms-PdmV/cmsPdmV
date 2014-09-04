@@ -535,9 +535,9 @@ class TestChainedRequest(RESTResource):
         for rid in mcm_cr.get_attribute('chain'):
             mcm_r = request( rdb.get( rid ) )
             next='validation'
-            if mcm_r.is_root:  next='approve'
+            if not mcm_r.is_root:  next='approve'
             try:
-                get_attr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
+                getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
                 mcm_r.update_history({'action': 'approve', 'step':next})
                 mcm_r.set_attribute('approval',next)
                 mcm_r.notify('Approval %s in chain for request %s'%(next,mcm_r.get_attribute('prepid')),

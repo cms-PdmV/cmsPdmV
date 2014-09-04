@@ -13,6 +13,7 @@ from tools.locker import locker, semaphore_events
 from tools.settings import settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
+from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
 from itertools import izip
@@ -254,13 +255,14 @@ class RunChainValid(Handler):
 
             test_script = location.location() + 'validation_run_test.sh'
             with open(test_script, 'w') as there:
-                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=scratch))
+                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch))
 
             batch_test = batch_control( self.crid, test_script )
             
             try:
                 success = batch_test.test()
             except:
+                self.logger.error('exception in chain batch_control.test()\n'+ traceback.format_exc() )
                 self.reset_all( traceback.format_exc() )
                 return
 
@@ -290,9 +292,10 @@ class RunChainValid(Handler):
                     else:
                         self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
                         return        
-                else:
-                    self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
-                    return
+            else:
+                self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
+                return
+
         except:
             mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
                 self.crid, traceback.format_exc())
