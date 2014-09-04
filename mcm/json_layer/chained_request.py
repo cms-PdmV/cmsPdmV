@@ -650,7 +650,24 @@ class chained_request(json_base):
 
     def inspect_done(self):
         return self.flow_trial()
-        
+
+    def get_timeout(self, scratch=False):
+        if scratch:
+            req_ids = self.get_attribute('chain')
+        else:
+            req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
+        rdb = database('requests')
+        t=0
+        for (index,req_id) in enumerate(req_ids):
+            mcm_r = request(rdb.get(req_id))
+            if not mcm_r.is_root: continue
+            onet = mcm_r.get_timeout()
+            if onet>t:
+                t=onet
+        #get the max and apply to all as a conservative estimation
+        #this should probably be a bit more subtle
+        return t*len(req_ids)
+            
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')

@@ -254,10 +254,11 @@ class RunChainValid(Handler):
                 mcm_rs.append( request( rdb.get( rid ) ))
 
             test_script = location.location() + 'validation_run_test.sh'
+            timeout=None
             with open(test_script, 'w') as there:
                 there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch))
-
-            batch_test = batch_control( self.crid, test_script )
+                timeout = mcm_cr.get_timeout(scratch=self.scratch)
+            batch_test = batch_control( self.crid, test_script, timeout=timeout)
             
             try:
                 success = batch_test.test()
