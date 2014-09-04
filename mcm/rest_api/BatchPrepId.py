@@ -83,11 +83,12 @@ class BatchPrepId():
                 cs = []
                 if not cdb.document_exists( next_campaign ):
                     ccdb = database('chained_campaigns')
-                    mcm_cc = ccdb.get( next_campaign )
-                    for (c,f) in mcm_cc['campaigns']:
-                        cs.append(c)
-                    else:
-                        cs = [cdb.get( next_campaign )]
+                    if ccdb.document_exists( next_campaign ):  
+                        mcm_cc = ccdb.get( next_campaign )
+                        for (c,f) in mcm_cc['campaigns']:
+                            cs.append(c)
+                else:
+                    cs = [cdb.get( next_campaign )]
                 for mcm_c in cs:
                     if mcm_c['notes']:
                         notes+="Notes about the campaign %s:\n"%mcm_c['prepid']+mcm_c['notes']+"\n"
