@@ -1273,7 +1273,7 @@ done
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
                                                  'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
                                                  'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
-                                                 'pdmv_submission_time', 'pdmv_type','pdmv_present_priority']
+                                                 'pdmv_submission_time', 'pdmv_type','pdmv_present_priority','pdmv_prep_id']
         mcm_rr = self.get_attribute('reqmgr_name')
 
         ### first trigger an update of the stats itself
@@ -1335,10 +1335,10 @@ done
         ####
         ## look for new ones
         ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
-        #look_for_what = self.get_attribute('prepid')
-        look_for_what = None
+        look_for_what = self.get_attribute('prepid')
         if len(mcm_rr):
-            look_for_what = mcm_rr[0]['content']['prepid'] ## which should be adapted on the other end to match
+            if 'pdmv_prep_id' in mcm_rr[0]['content']:
+                look_for_what = mcm_rr[0]['content']['pdmv_prep_id'] ## which should be adapted on the other end to match
 
         if override_id:
             look_for_what = override_id
