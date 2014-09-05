@@ -51,8 +51,19 @@ class batch(json_base):
         self.set_attribute('notes',b_notes)
 
     def get_subject(self, added=""):
+        
         (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
-        subject="New %s production, batch %d"%(campaign,int(batchNumber))
+        if self.get_attribute('prepid').split('_')[0] == 'Task': ## convention for taskchain
+            rdb = database('requests')
+            campaigns=set()
+            for r in self.get_attribute('requests'):
+                pid=r['content']['pdmv_prep_id']
+                mcm_r = rdb.get(pid)
+                campaigns.add( mcm_r['member_of_campaign'] )
+            
+            subject="New %s production, batch %d"%(','.join(campaigns),int(batchNumber))
+        else:
+            subject="New %s production, batch %d"%(campaign,int(batchNumber))
 
         if self.get_attribute('version'):
             subject+=', Resubmission'
@@ -88,9 +99,8 @@ class batch(json_base):
 
         subject=self.get_subject()
 
-        message=""
-        message+="Dear Data Operation Team,\n\n"
-        message+="may you please consider the following batch number %d of %s requests for the campaign %s:\n\n"%(int(batchNumber),total_requests, campaign)
+        request_messages={}
+
         for r in content:
             ##loose binding of the prepid to the request name, might change later on
             if 'pdmv_prep_id' in r['content']:
@@ -99,8 +109,22 @@ class batch(json_base):
                 pid=r['name'].split('_')[1]
             mcm_r = rdb.get(pid)
             total_events+=mcm_r['total_events']
-            message+=" * %s (%s) -> %s\n"%(pid, mcm_r['dataset_name'], r['name'])
-        message+="\n"
+            c = mcm_r['member_of_campaign']
+            if not c in request_messages: request_messages[c]=""
+            request_messages[c]+=" * %s (%s) -> %s\n"%(pid, mcm_r['dataset_name'], r['name'])
+
+        campaigns = sorted(request_messages.keys())
+
+
+        message=""
+        message+="Dear Data Operation Team,\n\n"
+        message+="may you please consider the following batch number %d of %s requests for the campaign%s %s:\n\n"%(
+            int(batchNumber),total_requests,
+            "s" if len(campaigns)>1 else "",
+            ','.join(campaigns))
+        for c in campaigns:
+            message+=request_messages[c]
+            message+="\n"
         message+="For a total of %s events\n\n"%( re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % total_events ))
         if self.get_attribute('extension'):
             message += "This batch is for an extension : {0}\n".format(self.get_attribute('extension'))
