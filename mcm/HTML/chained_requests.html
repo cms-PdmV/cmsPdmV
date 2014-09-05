@@ -91,6 +91,9 @@
                 <a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
                   <i class="icon-repeat"></i>
                 </a>
+		<a ng-click="single_step('test',data.prepid, '')" rel="tooltip" title="Validate the chain" ng-hide="role(1);">
+		  <i class="icon-star-empty"></i>
+		</a>
                 <a ng-click="single_step('approve',data.prepid, '')" rel="tooltip" title="Next step" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>

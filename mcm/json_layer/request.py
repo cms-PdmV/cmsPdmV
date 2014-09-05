@@ -452,7 +452,8 @@ class request(json_base):
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                                                      'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
         ## start uploading the configs ?
-        self.set_status()
+        if not for_chain:
+            self.set_status()
 
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level < 3:
@@ -521,7 +522,7 @@ class request(json_base):
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
                 from tools.handlers import ChainRequestInjector
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
                                                            lock = locker.lock(self.get_attribute('prepid'))
                                                            )
                 threaded_submission.start()
@@ -1335,11 +1336,16 @@ done
         ## look for new ones
         ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
         #look_for_what = self.get_attribute('prepid')
-        look_for_what = mcm_rr[0]['content']['prepid'] ## which should be adapted on the other end to match
+        look_for_what = None
+        if len(mcm_rr):
+            look_for_what = mcm_rr[0]['content']['prepid'] ## which should be adapted on the other end to match
 
         if override_id:
             look_for_what = override_id
-        stats_rr = statsDB.query(query='prepid==%s' % (look_for_what), page_num=-1)
+        if look_for_what:
+            stats_rr = statsDB.query(query='prepid==%s' % (look_for_what), page_num=-1)
+        else:
+            stats_rr = []
 
         ### order them from [0] earliest to [n] latest
         def sortRequest(r1, r2):
@@ -1368,6 +1374,8 @@ done
             if not 'pdmv_submission_date' in stats_r:
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
+                continue
+            if int(earliest_date) == 0 and int(earliest_time) == 0:
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) == int(earliest_date):
                 if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(

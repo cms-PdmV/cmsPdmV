@@ -21,6 +21,13 @@ class locator:
             return False
         return True
 
+    def isInt(self):
+        host = os.environ['HOSTNAME']
+        if host in ['cms-pdmv-mcmint']:
+            return True
+        else:
+            return False
+
     def dbLocation(self):
         if self.isDev():
             return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
@@ -34,9 +41,12 @@ class locator:
             ## legacy directory return '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'
         else:
             return '/afs/cern.ch/cms/PPD/PdmV/work/McM/submit/'
+
     def baseurl(self):
         if self.isDev():
             return 'https://cms-pdmv-dev.cern.ch/mcm/'
+        elif self.isInt():
+            return 'https://cms-pdmv-int.cern.ch/mcm/'
         else:
             return 'https://cms-pdmv.cern.ch/mcm/'
         

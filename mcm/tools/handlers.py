@@ -13,6 +13,7 @@ from tools.locker import locker, semaphore_events
 from tools.settings import settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
+from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
 from itertools import izip
@@ -253,14 +254,16 @@ class RunChainValid(Handler):
                 mcm_rs.append( request( rdb.get( rid ) ))
 
             test_script = location.location() + 'validation_run_test.sh'
+            timeout=None
             with open(test_script, 'w') as there:
-                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=scratch))
-
-            batch_test = batch_control( self.crid, test_script )
+                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch))
+                timeout = mcm_cr.get_timeout(scratch=self.scratch)
+            batch_test = batch_control( self.crid, test_script, timeout=timeout)
             
             try:
                 success = batch_test.test()
             except:
+                self.logger.error('exception in chain batch_control.test()\n'+ traceback.format_exc() )
                 self.reset_all( traceback.format_exc() )
                 return
 
@@ -290,9 +293,10 @@ class RunChainValid(Handler):
                     else:
                         self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
                         return        
-                else:
-                    self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
-                    return
+            else:
+                self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
+                return
+
         except:
             mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
                 self.crid, traceback.format_exc())
@@ -448,11 +452,14 @@ class ChainRequestInjector(Handler):
         Handler.__init__(self, **kwargs)
         self.lock = kwargs["lock"]
         self.prepid = kwargs["prepid"] 
+        self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
 
-    def make_command(self):
+
+    def make_command(self,mcm_r=None):
         l_type = locator()
         cmd='cd %s \n' % ( l_type.workLocation())
-        cmd+=mcm_r.make_release()
+        if mcm_r:
+            cmd+=mcm_r.make_release()
         cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
         cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         there=''
@@ -486,15 +493,21 @@ class ChainRequestInjector(Handler):
             chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
             for rn in chain:
                 mcm_rs.append( request( rdb.get( rn )))
-                if mcm_rs[-1].get_attribute('status') != 'approved' and mcm_rs[-1].get_attribute('approval')!='submit':
+                
+                if self.check_approval and mcm_rs[-1].get_attribute('approval')!='submit':
+                    self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                            rn,
+                            mcm_rs[-1].get_attribute('status'),
+                            mcm_rs[-1].get_attribute('approval'),
+                            ))
+                    return False
+                if mcm_rs[-1].get_attribute('status') != 'approved':
                     ## change the return format to percolate the error message
                     self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
                             rn,
                             mcm_rs[-1].get_attribute('status'),
                             mcm_rs[-1].get_attribute('approval'),
                             ))
-                    #return dumps({"results" : False, 
-                    #              "message" : 'requests %s in in "%s" status, requires "approved"'%( rn, mcm_rs[-1].get_attribute('status'))})
                     return False
                 uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
                 uploader.run()
@@ -503,8 +516,10 @@ class ChainRequestInjector(Handler):
         batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
         semaphore_events.increment(batch_name)
 
-        with ssh_executor(server = 'pdmvserv-test.cern.ch') as ssh:
-            cms = self.make_command()
+        self.logger.error('found batch %s'% batch_name)
+        with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
+            cmd = self.make_command(mcm_r)
+            self.logger.error('prepared command %s'%cmd)
             ## modify here to have the command to be executed
             _, stdout, stderr = ssh.execute(cmd)
             output = stdout.read()
@@ -516,6 +531,11 @@ class ChainRequestInjector(Handler):
                                  l.startswith('Injected workflow:')]
             approved_requests = [l.split()[-1] for l in output.split('\n') if
                                  l.startswith('Approved workflow:')]
+
+            if not injected_requests:
+                self.logger.error("no request was injected ")
+                return False
+
             if injected_requests and not approved_requests:
                 self.logger.error("Request %s was injected but could not be approved" % ( injected_requests ))
                 return False
@@ -545,12 +565,20 @@ class ChainRequestInjector(Handler):
                 ## must be wrong for mcm_r in mcm_rs:
                 ## must be wrong   mcm_r.set_attribute('reqmgr_name',  added_requests) ## this must be a mistake !!!
 
+            mcm_rs=[]
+            ## reload the content of all requests as they might have changed already
+            for cr in mcm_crs:
+                mcm_cr = chained_request(cr)
+                chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+                for rn in chain:
+                    mcm_rs.append( request( rdb.get( rn )))
             ## edit each request with the request name and toggle status
             for mcm_r in mcm_rs:
                 added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
                 mcm_r.set_attribute('reqmgr_name', added )
                 mcm_r.update_history({'action': 'inject','step' : batch_name})
-                #mcm_r.set_attribute('approval', 'submit') ## was required already as a pre-requisite to injection of the chain : all in submit approval
+                if not self.check_approval:
+                    mcm_r.set_attribute('approval', 'submit') 
                 mcm_r.set_status(with_notification=False)
                 mcm_r.reload()
 
