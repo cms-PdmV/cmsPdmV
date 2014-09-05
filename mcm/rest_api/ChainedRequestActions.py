@@ -606,8 +606,7 @@ class TaskChainDict(RESTResource):
                            "TimePerEvent" : r.get_attribute("time_event"),
                            "SizePerEvent" : r.get_attribute('size_event'),
                            "Memory" : r.get_attribute('memory'),
-                           "FilterEfficiency" : r.get_efficiency(),
-                           "SubRequestType" : "MC" 
+                           "FilterEfficiency" : r.get_efficiency()
                            }
                 if len(r.get_attribute('config_id'))>si:
                     task_dict["ConfigCacheID"] = r.get_attribute('config_id')[si]
@@ -704,6 +703,7 @@ class TaskChainDict(RESTResource):
             "TaskChain" : 0,
             "ProcessingVersion": 1,
             "RequestPriority" : 0,
+            "SubRequestType" : "MC" 
             }
 
         task=1
