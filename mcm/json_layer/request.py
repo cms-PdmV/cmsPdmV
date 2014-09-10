@@ -83,7 +83,8 @@ class request(json_base):
         'approval': '',
         'analysis_id': [],
         'energy': 0.0,
-        'tags': []
+        'tags': [],
+        'private' : False
     }
 
     def __init__(self, json_input=None):
@@ -1493,17 +1494,24 @@ done
                                     if dsn != gdsn or gproc != proc:
                                         goodone = False
                         if goodone:
-                            ## reduce to what was expected of it
-                            those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
+                            if self.get_attribute('private'):
+                                ## unde the convention that the output datasets are of the form
+                                # <campaign>-<tier>-<some strings>
+                                those = filter(lamdda dn : dn.split('/')[-2].split('-')[1] in tiers_expected, those)
+                            else:
+                                ## reduce to what was expected of it
+                                those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                             ## only add those that are not already there
                             collected.extend(filter(lambda dn: not dn in collected, those))
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
-                    if not len(collected):
-                        not_good.update({
-                                'message' : 'No output dataset have been recognized'})
+                    if len(collected)==0: 
+                        ## there was no matching tier
+                        not_good.update({'message': '%s completed but no tiers match any of %s' % (
+                                    wma_r['content']['pdmv_dataset_name'], tiers_expected) })
                         saved = db.save(self.json())
                         return not_good
+
                     ds_for_accounting = collected[0]
                     if not 'pdmv_dataset_statuses' in wma_r_N['content'] or not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']:
                         counted = wma_r_N['content']['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_open_evts_in_DAS']
@@ -1517,7 +1525,7 @@ done
 
                     self.set_attribute('completed_events', counted )
                     ## make sure no expected tier was left behind
-                    if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],collected)), tiers_expected)):
+                    if not self.get_attribute('private') and not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],collected)), tiers_expected)):
                         not_good.update({
                                 'message' : 'One of the expected tiers %s has not been produced' %( tiers_expected )})
                         saved = db.save(self.json())
@@ -1531,12 +1539,6 @@ done
                         saved = db.save(self.json())
                         return not_good
                     
-                    if len(collected)==0: 
-                        ## there was no matching tier
-                        not_good.update({'message': '%s completed but no tiers match any of %s' % (
-                                    wma_r['content']['pdmv_dataset_name'], tiers_expected) })
-                        saved = db.save(self.json())
-                        return not_good
                         ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
                     ## save the request back to db
