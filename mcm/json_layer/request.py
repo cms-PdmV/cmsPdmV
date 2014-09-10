@@ -451,9 +451,14 @@ class request(json_base):
                 if not all_good:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                                                      'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
-        ## start uploading the configs ?
         if not for_chain:
             self.set_status()
+        ## start uploading the configs : yes, so that one can use it right away
+        from tools.handlers import ConfigMakerAndUploader
+        load = ConfigMakerAndUploader( prepid = self.get_attribute('prepid'), 
+                                       lock = locker.lock( self.get_attribute('prepid') ))
+        load.start()
+
 
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level < 3:
