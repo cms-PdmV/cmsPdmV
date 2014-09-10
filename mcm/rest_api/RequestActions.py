@@ -352,6 +352,79 @@ class ManageRequest(UpdateRequest):
         """
         return dumps(self.update())
 
+class RegisterRequestTask(RESTResource):
+    def __init__(self):
+        self.access_limit = generator_contact
+        
+
+    def GET(self, *args):
+        """
+        Register a crab task to the specified request /prepid/taskname
+        """
+        if len(args)!=2:
+            return dumps({"results": False,"message":"not enough argument provided"})
+        rid = args[0]
+        task_name = args[1]
+        rdb = database('requests')        
+        ret= [self.register_one( rid, task_name, rdb )]
+        return dumps(ret)
+
+    def PUT(self):
+        rdb = database('requests')
+        data = threaded_loads(cherrypy.request.body.read().strip())
+        ret=[]
+        for (rid,task_name) in data.items():
+            ret.append(self.register_one( rid, task_name ,rdb))
+        return dumps(ret)
+
+    def register_one(self, rid, task_name ,rdb )
+        mcm_r = request( rdb.get( rid ))
+
+        ## is this request labeled as private ?
+        if not mcm_r.get_attribute('private'):
+            return {"prepid" : rid, "results": False,"message":"%s is not set to private"%rid}
+
+        ## is the request in the proper status ?
+        if not mcm_r.get_attribute('status') in ['approved','submitted']:
+            return {"prepid" : rid, "results": False,"message":"%s is %s, not approved"%(rid,mcm_r.get_attribute('status'))}
+        
+        ## is the user already in the list of people register to the request ?
+        if not mcm_r.current_user  in mcm_r.get_actors():
+            return {"prepid" : rid, "results": False,"message":"you (%s) are not allowed to register task for %s. Only %s"%(
+                    mcm_r.current_user,
+                    rid,
+                    ','.join(mcm_r.get_actors())
+                    )}
+
+        ## the new information of the workflow
+        newitems=[{"name" : task_name,
+                   "content" : { "pdmv_prep_id" : rid }}]
+        items=mcm_r.get_attribute('reqmgr_name')
+        ## decide whether to replace the existing, or append
+        # append : only if more than one sequences and the status appears ok in the last content
+        if len(mcm_r.get_attribute('sequences'))>1:
+            last_content=items[-1]['content']
+            if 'pdmv_status_in_DAS' in last_content and 'pdmv_status_from_reqmngr' in last_content:
+                if last_content['pdmv_status_in_DAS'],last_content['pdmv_status_from_reqmngr'] == 'VALID','announced':
+                    ## the last looks completed, but the request obviously did not toggle yet to done
+                    # append only in this case
+                    newitems=items+newitems
+                    
+        mcm_r.set_attribute('reqmgr_name', newitems)
+        
+        ## toggle approval
+        mcm_r.set_attribute('approval','submit')
+
+        ## toggle status if not already in submit
+        if mcm_r.get_attribute('status') != 'submitted':
+            mcm_r.set_status(with_notification=True)
+
+        saved = mcm_r.reload()
+        if saved:
+            return {"prepid" : rid, "results": True,"message":"task %s register to request %s"%(task_name, rid)}
+        else:
+            return {"prepid" : rid, "results": False,"message":"the request %s could not be saved"%(rid)}
+        
 
 class MigratePage(RequestRESTResource):
     def __init__(self):
@@ -865,10 +938,13 @@ class GetStatus(RESTResource):
 
         return {rid: mcm_r['status']}
 
-
 class InspectStatus(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.production_manager
+    def __init__(self, for_task=False):
+        self.for_task=for_task
+        if self.for_task:
+            self.access_rights.generator_contact
+        else:
+            self.access_limit = access_rights.production_manager
 
     def GET(self, *args):
         """
@@ -889,6 +965,9 @@ class InspectStatus(RESTResource):
                 continue
             mcm_r = request(db.get(r))
             if mcm_r:
+                if self.for_task and not mcm_r.get_attribute('private'):
+                    res.append( {"prepid": r, "results":False, 'message' : 'cannot inspect %s under role %s'% (r,
+                                                                                                               mcm_r.current_user_role )})
                 answer = mcm_r.inspect()
                 res.append(answer)
                 ### trigger chained request inspection on "true" results from inspection
