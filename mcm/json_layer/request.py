@@ -1491,7 +1491,7 @@ done
                             ## reduce to what was expected of it
                             those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                             ## only add those that are not already there
-                            collected.exend(filter(lambda dn: not dn in collected))
+                            collected.extend(filter(lambda dn: not dn in collected, those))
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
                     if not len(collected):
