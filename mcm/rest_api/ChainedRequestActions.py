@@ -532,7 +532,13 @@ class TestChainedRequest(RESTResource):
         rdb = database('requests')
         mcm_cr = chained_request(crdb.get(args[0]))
         mcm_rs = []
-        for rid in mcm_cr.get_attribute('chain'):
+
+        for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
+            mcm_r = request( rdb.get( rid ) )
+            if mcm_r.get_attribute('status') in ['approved','submitted','done']:
+                return dumps({"results" : False, "message" : "request %s is in status %s"%( rid, mcm_r.get_attribute('status'))})
+
+        for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )
             next='validation'
             if not mcm_r.is_root:  next='approve'
