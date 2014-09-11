@@ -331,6 +331,11 @@ class RequestSubmitter(Handler):
                 "The request is in approval {0}, while submit is required".format(req.get_attribute('approval')), req)
             return False, None
 
+        if req.get_attribute('private'):
+            self.injection_error(
+                "The request {0} is in labeled as private".format(self.prepid), None)
+            return False, None
+
         if req.get_attribute('status') != 'approved':
             self.injection_error(
                 "The request is in status {0}, while approved is required".format(req.get_attribute('status')), req)
