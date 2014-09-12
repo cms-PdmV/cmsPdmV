@@ -68,6 +68,7 @@ class request_to_wmcontrol:
         command += ' --batch %s' % batchNumber
 
         processString = mcm_r.get_attribute('process_string')
+        processingString = mcm_r.get_processing_string(0)
 
         def efficiency(mcm_r):
             feff = mcm_r.get_attribute('generator_parameters')[-1]['filter_efficiency']
@@ -137,6 +138,7 @@ class request_to_wmcontrol:
                     command += ' --keep-step' + str(i + 1) + ' True'
 
                 if i > 0:
+                    processingString = mcm_r.get_processing_string(i)
                     if len(mcm_r.get_attribute('config_id')):
                         command += ' --step%d-docID %s' % (i + 1, mcm_r.get_attribute('config_id')[i])
                     else:
@@ -162,6 +164,7 @@ class request_to_wmcontrol:
         if processString:
             command += ' --process-string ' + processString
 
+        command += ' --processing-string ' + processingString
         command += '|| exit $? ;'
         command += '\n'
 
