@@ -479,7 +479,22 @@ class request(json_base):
                                              'The time (%s) or size per event (%s) is inappropriate' % (
                                                  self.get_attribute('time_event'), self.get_attribute('size_event')))
 
-
+        
+        ## do a dataset collision check : remind that it requires the flows to have process_string properly set
+        rdb = database('requests')
+        similar_ds = rdb.queries(['dataset_name==%s'%(self.get_attribute('dataset_name'))])
+        my_ps_and_t = self.get_processing_strings_and_tiers()
+        for similar in similar_ds:
+            if similar['prepid']==self.get_attribute('prepid'): continue # no self check
+            similar_r = request(similar)
+            similar_ps_and_t = similar_r.get_processing_strings_and_tiers()
+            ## check for collision
+            collisions = filter( lambda ps : ps in my_ps_and_t, similar_ps_and_t)
+            if len(collisions)!=0:
+                text=str(collisions)
+                raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                                                 'There is an expected output dataset naming collision with %s' % ( text ))
+            
         moveon_with_single_submit=True ## for the case of chain request submission
         is_the_current_one=False
         #check on position in chains
