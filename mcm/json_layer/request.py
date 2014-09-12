@@ -737,16 +737,19 @@ class request(json_base):
         gens.append(genInfo.json())
         self.set_attribute('generator_parameters', gens)
 
+    def get_tier(self,i):
+        s = self.get_attribute('sequences')[i]
+        tiers = s['datatier']
+        if isinstance(tiers, str):
+            tiers = tiers.split(',')
+        return tiers
+
     def get_tiers(self):
         r_tiers=[]
         keeps = self.get_attribute('keep_output')
         for (i, s) in enumerate(self.get_attribute('sequences')):
             if i<len(keeps) and not keeps[i]: continue
-            tiers = s['datatier']
-            if isinstance(tiers, str):
-                ##only for non-migrated requests
-                tiers = tiers.split(',')            
-            r_tiers.extend( tiers )
+            r_tiers.extend( self.get_tier(i) )
         return r_tiers
 
     def get_outputs(self):
@@ -758,7 +761,7 @@ class request(json_base):
         v = self.get_attribute('version')
 
         for (i, s) in enumerate(self.get_attribute('sequences')):
-            if not keeps[i]: continue
+            if i<len(keeps) and not keeps[i]: continue
             proc = self.get_processing_string(i)
             tiers = s['datatier']
             if isinstance(tiers, str):
@@ -779,6 +782,22 @@ class request(json_base):
         if self.get_attribute('extension'):
             ingredients.append("ext%s" % self.get_attribute('extension'))
         return "_".join(filter(lambda s: s, ingredients))
+
+    def get_processing_strings(self):
+        keeps = self.get_attribute('keep_output')
+        ps = []
+        for i in range(len(self.get_attribute('sequences'))):
+            if i<len(keeps) and not keeps[i]: continue
+            ps.append( self.get_processing_string(i) )
+        return ps
+
+    def get_processing_strings_and_tiers():
+        keeps = self.get_attribute('keep_output')
+        p_and_t = []
+        for i in range(len(self.get_attribute('sequences'))):
+            if i<len(keeps) and not keeps[i]: continue
+            p_and_t.extend([(self.get_process_string(i), tier) for tier in self.get_tier(i)])
+        return p_and_t
 
     def little_release(self):
         release_to_find = self.get_attribute('cmssw_release')
