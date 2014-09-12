@@ -774,6 +774,11 @@ class request(json_base):
 
     def get_processing_string(self, i):
         ingredients = []
+        if self.get_attribute('flown_with'):
+            fdb = database('flows')
+            f = fdb.get(self.get_attribute('flown_with'))
+            if 'process_tring' in f['request_parameters']:
+                ingredients.append(f['request_parameters']['process_tring'])
         ingredients.append(self.get_attribute('process_string'))
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
         if self.get_attribute('extension'):
@@ -2089,13 +2094,7 @@ done
             if key == 'sequences':
                 continue
             elif key == 'process_string':
-                ##concatenate to existing
-                if new_req.get_attribute(key):
-                    to_add = fl.get_attribute('request_parameters')[key]
-                    if not new_req.get_attribute(key).endswith(to_add):
-                        new_req.set_attribute(key, new_req.get_attribute(key) + '_' + to_add)
-                else:
-                    new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
+                pass
             else:
                 if key in new_req.json():
                     new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
