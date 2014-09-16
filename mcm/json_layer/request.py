@@ -777,8 +777,8 @@ class request(json_base):
         if self.get_attribute('flown_with'):
             fdb = database('flows')
             f = fdb.get(self.get_attribute('flown_with'))
-            if 'process_tring' in f['request_parameters']:
-                ingredients.append(f['request_parameters']['process_tring'])
+            if 'process_string' in f['request_parameters']:
+                ingredients.append(f['request_parameters']['process_string'])
         ingredients.append(self.get_attribute('process_string'))
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
         if self.get_attribute('extension'):
