@@ -1375,7 +1375,7 @@ done
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
                 continue
-            if int(earliest_date) == 0 and int(earliest_time) == 0:
+            if not override_id and int(earliest_date) == 0 and int(earliest_time) == 0:
                 continue
             if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) == int(earliest_date):
                 if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(

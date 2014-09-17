@@ -1396,6 +1396,7 @@ class StalledReminder(RESTResource):
             if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
                 reminded+=1
                 bs = bdb.queries(['contains==%s'%r['prepid'],'status==announced'])
+                bs.extend(bdb.queries(['contains==%s'%r['prepid'],'status==hold']))
                 ## take the last one ?
                 in_batch = 'NoBatch'
                 if len (bs):
@@ -1652,7 +1653,7 @@ class UpdateMany(RequestRESTResource):
         for elem in list_of_prepids:
             document = db.get(elem)
             for value in updated_values:
-                if value in ['generator_parameters','sequences']:
+                if value in ['generator_parameters', 'sequences', 'keep_output']:
                     document[value] = updated_values[value]
                 elif isinstance(updated_values[value],list):
                     temp = updated_values[value]
