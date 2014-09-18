@@ -614,6 +614,7 @@ class TaskChainDict(RESTResource):
                            "Memory" : r.get_attribute('memory'),
                            "FilterEfficiency" : r.get_efficiency()
                            }
+                
                 if len(r.get_attribute('config_id'))>si:
                     task_dict["ConfigCacheID"] = r.get_attribute('config_id')[si]
 
@@ -631,6 +632,12 @@ class TaskChainDict(RESTResource):
                                           "EventsPerLumi" : 100,
                                           "LheInputFiles" : r.get_attribute('mcdb_id')>0
                                           })
+                        ## temporary work-around for request manager not creating enough jobs
+                        ## https://github.com/dmwm/WMCore/issues/5336
+                        ## inflate requestnumevents by the efficiency to create enough output
+                        task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"]
+                        task_dict"RequestNumEvents"] /= task_dict["FilterEfficiency"]
+
                     else:
                         if depend:
                             task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
