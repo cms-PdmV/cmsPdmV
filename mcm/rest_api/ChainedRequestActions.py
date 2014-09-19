@@ -652,6 +652,7 @@ class TaskChainDict(RESTResource):
                                       "InputTask" : ts[-1]['TaskName']})
                 task_dict['output_'] = "%soutput"%(r.get_attribute('sequences')[si]['eventcontent'][0])
                 task_dict['priority_'] = r.get_attribute('priority')
+                task_dict['request_type_'] = r.get_wmagent_type()
                 ts.append(task_dict)    
             return ts
         
@@ -723,6 +724,7 @@ class TaskChainDict(RESTResource):
         for (r,item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:  wma['RequestPriority'] = d['priority_']
+                if d['request_type_'] in ['ReDigi']:  wma['SubRequestType'] = 'ReDigi'
                 for k in d.keys():
                     if k.endswith('_'):
                         d.pop(k)
