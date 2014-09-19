@@ -636,7 +636,7 @@ class TaskChainDict(RESTResource):
                         ## https://github.com/dmwm/WMCore/issues/5336
                         ## inflate requestnumevents by the efficiency to create enough output
                         task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"]
-                        task_dict"RequestNumEvents"] /= task_dict["FilterEfficiency"]
+                        task_dict["RequestNumEvents"] /= task_dict["FilterEfficiency"]
 
                     else:
                         if depend:
