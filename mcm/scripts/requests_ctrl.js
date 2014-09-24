@@ -516,10 +516,12 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   /* Notify modal actions */
   $scope.openNotifyModal = function(prepid){
 
-      if(!prepid) {
-          prepid = $scope.selected_prepids;
+      if (!prepid) {
+        prepid = $scope.selected_prepids;
       }
-
+      if (_.isString(prepid)) {
+        prepid = [prepid]
+      }
       var notifyModal = $modal.open( {
          templateUrl: 'notifyModal.html',
           controller: NotifyModalInstance

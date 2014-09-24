@@ -67,6 +67,16 @@ class communicator:
         msg = MIMEMultipart()
         #it could happen that message are send after forking, threading and there's no current user anymore
         msg['From'] = sender if sender else 'pdmvserv@cern.ch'
+
+        ## add a mark on the subjcet automatically
+        if locator().isDev():
+            msg['Subject'] = '[McM-dev] ' + subject
+            destination = ["pdmvserv@cern.ch"] # if -dev send only to service account and sender
+            if sender:
+                destination.append(sender)
+        else:
+            msg['Subject'] = '[McM] ' + subject
+
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
         new_msg_ID = make_msgid()
@@ -75,12 +85,6 @@ class communicator:
         if reply_msg_ID is not None:
             msg['In-Reply-To'] = reply_msg_ID
             msg['References'] = reply_msg_ID
-
-        ## add a mark on the subjcet automatically
-        if locator().isDev():
-            msg['Subject'] = '[McM-dev] ' + subject
-        else:
-            msg['Subject'] = '[McM] ' + subject
 
         ### accumulate messages prior to sending emails
         com__accumulate=settings().get_value('com_accumulate')

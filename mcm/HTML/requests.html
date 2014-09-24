@@ -175,9 +175,6 @@
                 <a ng-href="injection_status?prepid={{data.prepid}}" rel="tooltip" ng-hide="role(3) || ( data.status!='approved' || data.approval!='submit');" title="See injection log for {{data.prepid}}" target="_self">
                   <i class="icon-facetime-video"></i>
                 </a>
-                <a ng-click="syncNumEvents(data.prepid);" rel="tooltip" title="Force sync number of events with DAS" ng-hide="role(2);" target="_self" ng-href="#">
-                  <i class="icon-retweet"></i>
-                </a>
                 <a ng-href="requests?prepid={{data.prepid}}&allRevisions" rel="tooltip" title="See all revisions for {{data.prepid}}" ng-hide="role(2);" target="_self">
                   <i class="icon-list-alt"></i>
                 </a>
@@ -368,7 +365,7 @@
     <script type="text/ng-template" id="notifyModal.html"> <!--hidden modal template-->
       <div class="modal-header">
         <h4>Text to notify</h4>
-      </div>  <!--end oFda.f modal header-->
+      </div>  <!--end of modal header-->
       <div class="modal-body">
         <textarea ng-model="data.text" style="width:500px"></textarea>
       </div> <!--end of modal body-->

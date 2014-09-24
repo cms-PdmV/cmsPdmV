@@ -811,12 +811,12 @@ class request(json_base):
             ps.append( self.get_processing_string(i) )
         return ps
 
-    def get_processing_strings_and_tiers():
+    def get_processing_strings_and_tiers(self):
         keeps = self.get_attribute('keep_output')
         p_and_t = []
         for i in range(len(self.get_attribute('sequences'))):
             if i<len(keeps) and not keeps[i]: continue
-            p_and_t.extend([(self.get_process_string(i), tier) for tier in self.get_tier(i)])
+            p_and_t.extend([(self.get_processing_string(i), tier) for tier in self.get_tier(i)])
         return p_and_t
 
     def little_release(self):
