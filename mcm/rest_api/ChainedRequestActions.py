@@ -650,7 +650,17 @@ class TaskChainDict(RESTResource):
                     task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
                                       "InputFromOutputModule" : ts[-1]['output_'],
                                       "InputTask" : ts[-1]['TaskName']})
+                    
                 task_dict['output_'] = "%soutput"%(r.get_attribute('sequences')[si]['eventcontent'][0])
+                task_dict['datatiers_'] = r.get_attribute('sequences')[si]['datatier']
+                task_dict['outputs_'] = ["%soutput"%(ec) for ec in r.get_attribute('sequences')[si]['eventcontent']]
+                task_dict['use_datatier_']=None
+                if r.get_attribute('flown_with'):
+                    fdb = database('flows')
+                    f = fdb.get( r.get_attribute('flown_with') )
+                    if "use_datatier" in f["request_parameters"]:
+                        task_dict['use_datatier_']=f["request_parameters"]["use_datatier"]
+
                 task_dict['priority_'] = r.get_attribute('priority')
                 task_dict['request_type_'] = r.get_wmagent_type()
                 ts.append(task_dict)    
@@ -704,9 +714,14 @@ class TaskChainDict(RESTResource):
 
         for (r,item) in tasktree.items():
             for n in item['next']:
+                ## do the connecting of tasks outputs
                 tasktree[n]['dict'][0].update({"InputFromOutputModule" : item['dict'][-1]['output_'],
-                                                       "InputTask" : item['dict'][-1]['TaskName']})
-        
+                                               "InputTask" : item['dict'][-1]['TaskName']})
+                ## do a special treatment if the flow was requested to use a specific datatier
+                if tasktree[n]['dict'][0]['use_datatier_']:
+                    use_datatier=tasktree[n]['dict'][0]['use_datatier_']
+                    index_datatier=item['dict'][-1]['datatiers_'].index(use_datatier)
+                    tasktree[n]['dict'][0]["InputFromOutputModule"] = item['dict'][-1]['outputs_'[index_datatier]
 
         wma={
             "RequestType" : "TaskChain",
