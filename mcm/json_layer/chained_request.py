@@ -452,6 +452,21 @@ class chained_request(json_base):
         ##determine whether we have an input dataset for the next request
         if len(current_request.get_attribute('output_dataset')):
             input_dataset = current_request.get_attribute('output_dataset')[-1]
+            
+            if "use_datatier" in mcm_f.get_attribute('request_parameters'):
+                ## N.B. this does not function for TaskChain handling without further development
+                use_datatier=mcm_f.get_attribute('request_parameters')["use_datatier"]
+                outputs=current_request.get_attribute('output_dataset')
+                possible = filter(lambda ds : ds.split('/')[-1] == use_datatier, outputs)
+                if len(possible)!=0:
+                    raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                                 "There isn't a possible corresponding output datatiers (%s) for the requested datatier (%s)" %( map(lambda ds : ds.split('/')[-1], outputs),
+                                                                                                                                                                 use_datatier,
+                                                                                                                                                                 ))
+                
+                else:
+                    input_dataset = possible[0]
+
         elif len(current_request.get_attribute('reqmgr_name')):
             ## the later check pre-dates the inclusion of output_dataset as a member of request object
             last_wma = current_request.get_attribute('reqmgr_name')[-1]
