@@ -219,6 +219,12 @@ class request(json_base):
                                              'The dataset name is invalid: either null string or containing %s' % (
                                                  ','.join(bad_characters)))
 
+        other_bad_characters = [' ','-']
+        if self.get_attribute('process_string') and any(
+            map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                                             'The process string (%s) contains a bad character %s' %( self.get_attribute('process_string'),
+                                                                                                      ','.join( other_bad_characters )))            
         gen_p = self.get_attribute('generator_parameters')
         if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
@@ -479,7 +485,13 @@ class request(json_base):
                                              'The time (%s) or size per event (%s) is inappropriate' % (
                                                  self.get_attribute('time_event'), self.get_attribute('size_event')))
 
-        
+        other_bad_characters = [' ','-']
+        if self.get_attribute('process_string') and any(
+            map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                                             'The process string (%s) contains a bad character %s' %( self.get_attribute('process_string'),
+                                                                                                      ','.join( other_bad_characters )))
+
         ## do a dataset collision check : remind that it requires the flows to have process_string properly set
         rdb = database('requests')
         similar_ds = rdb.queries(['dataset_name==%s'%(self.get_attribute('dataset_name'))])
