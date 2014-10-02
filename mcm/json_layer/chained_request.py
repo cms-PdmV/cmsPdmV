@@ -233,6 +233,12 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The flow %s does not contain sequences information.' % (
                                                              flow_name))
+        other_bad_characters = [' ','-']
+        if "process_string" in mcm_f.get_attribute('request_parameters') and mcm_f.get_attribute("request_parameters")["process_string"] and any(map(lambda char: char in mcm_f.get_attribute("request_parameters")["process_string"], other_bad_characters)):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+                                                         'The flow process string (%s) contains a bad character %s'%(
+                    mcm_f.get_attribute("request_parameters")["process_string"],
+                    ','.join( other_bad_characters )))
 
         if not cdb.document_exists(next_campaign_id):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
