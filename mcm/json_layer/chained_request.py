@@ -450,7 +450,10 @@ class chained_request(json_base):
         #current_campaign -> next_campaign
 
         ##determine whether we have an input dataset for the next request
-        if len(current_request.get_attribute('reqmgr_name')):
+        if len(current_request.get_attribute('output_dataset')):
+            input_dataset = current_request.get_attribute('output_dataset')[-1]
+        elif len(current_request.get_attribute('reqmgr_name')):
+            ## the later check pre-dates the inclusion of output_dataset as a member of request object
             last_wma = current_request.get_attribute('reqmgr_name')[-1]
             if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
                 input_dataset = last_wma['content']['pdmv_dataset_name']
