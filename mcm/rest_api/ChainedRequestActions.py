@@ -13,6 +13,7 @@ from json_layer.batch import batch
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 import traceback
+from tools.locker import locker
 
 """
 ## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
@@ -525,8 +526,7 @@ class TestChainedRequest(RESTResource):
 
         from tools.handlers import RunChainValid
         ## now in the core of the api
-        from tools.locker import locker
-        runtest = RunChainValid( crid= args[0] )
+        runtest = RunChainValid( crid= args[0] , lock=locker.lock( args[0] ) )
 
         crdb = database('chained_requests')
         rdb = database('requests')

@@ -236,6 +236,8 @@ class RunChainValid(Handler):
 
 
     def internal_run(self):
+        if not self.lock.acquire(blocking=False):
+            return False
         from tools.installer import installer
         from tools.batch_control import batch_control 
         location = installer( self.crid, care_on_existing=False, clean_on_exit=True)
@@ -302,6 +304,7 @@ class RunChainValid(Handler):
                 self.crid, traceback.format_exc())
             self.logger.error(mess)    
         finally:
+            self.lock.release()
             location.close() 
 
 
@@ -469,132 +472,137 @@ class ChainRequestInjector(Handler):
         return cmd
 
     def internal_run(self):
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        if not crdb.document_exists( self.prepid ):
-            ## it's a request actually, pick up all chains containing it
-            mcm_r = rdb.get( self.prepid )
-            #mcm_crs = crdb.query(query="root_request==%s"% self.prepid) ## not only when its the root of
-            mcm_crs = crdb.query(query="contains==%s"% self.prepid)
-            task_name = 'task_'+self.prepid
-            batch_type = 'Task_'+mcm_r['member_of_campaign']
-        else:
-            mcm_crs = [crdb.get( self.prepid )]
-            task_name = self.prepid
-            batch_type = mcm_crs[-1]['member_of_campaign']
-
-        if len(mcm_crs)==0:
+        if not self.lock.acquire(blocking=False):
             return False
-        
-        mcm_rs=[]
-        ## upload all config files to config cache, with "configuration economy" already implemented
-        for cr in mcm_crs:
-            mcm_cr = chained_request(cr)
-            chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
-            for rn in chain:
-                mcm_rs.append( request( rdb.get( rn )))
-                
-                if self.check_approval and mcm_rs[-1].get_attribute('approval')!='submit':
-                    self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
-                            rn,
-                            mcm_rs[-1].get_attribute('status'),
-                            mcm_rs[-1].get_attribute('approval'),
-                            ))
-                    return False
-                if mcm_rs[-1].get_attribute('status') != 'approved':
-                    ## change the return format to percolate the error message
-                    self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
-                            rn,
-                            mcm_rs[-1].get_attribute('status'),
-                            mcm_rs[-1].get_attribute('approval'),
-                            ))
-                    return False
-                uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
-                uploader.run()
+        try:
+            crdb = database('chained_requests')
+            rdb = database('requests')
+            if not crdb.document_exists( self.prepid ):
+                ## it's a request actually, pick up all chains containing it
+                mcm_r = rdb.get( self.prepid )
+                #mcm_crs = crdb.query(query="root_request==%s"% self.prepid) ## not only when its the root of
+                mcm_crs = crdb.query(query="contains==%s"% self.prepid)
+                task_name = 'task_'+self.prepid
+                batch_type = 'Task_'+mcm_r['member_of_campaign']
+            else:
+                mcm_crs = [crdb.get( self.prepid )]
+                task_name = self.prepid
+                batch_type = mcm_crs[-1]['member_of_campaign']
 
-        mcm_r = mcm_rs[-1]
-        batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
-        semaphore_events.increment(batch_name)
-
-        self.logger.error('found batch %s'% batch_name)
-        with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
-            cmd = self.make_command(mcm_r)
-            self.logger.error('prepared command %s'%cmd)
-            ## modify here to have the command to be executed
-            _, stdout, stderr = ssh.execute(cmd)
-            output = stdout.read()
-            error = stderr.read()
-            self.logger.log(output)
-            self.logger.log(error)
-
-            injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                 l.startswith('Injected workflow:')]
-            approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                 l.startswith('Approved workflow:')]
-
-            if not injected_requests:
-                self.logger.error("no request was injected ")
+            if len(mcm_crs)==0:
                 return False
-
-            if injected_requests and not approved_requests:
-                self.logger.error("Request %s was injected but could not be approved" % ( injected_requests ))
-                return False
-                #return dumps({"results" : False, "message" : "Request %s was injected but could not be approved" % ( injected_requests )})
-
-            objects_to_invalidate = [
-                {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
-                for inv_req in injected_requests if inv_req not in approved_requests]
-            if objects_to_invalidate:
-                self.logger.error("Some requests %s need to be invalidated" % objects_to_invalidate)
-                return False
-                #return dumps({"results" : False, "message" : "Some requests %s need to be invalidated"})
-                
-            # what gets printed into the batch object
-            added_requests = []
-            for mcm_r in mcm_rs:
-                added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
-                added_requests.extend( added )
-
-            ##edit the batch object
-            with locker.lock(batch_name):
-                bdb = database('batches') 
-                bat = batch(bdb.get(batch_name))      
-                bat.add_requests(added_requests)
-                bat.update_history({'action': 'updated', 'step': task_name })
-                bat.reload()
-                ## must be wrong for mcm_r in mcm_rs:
-                ## must be wrong   mcm_r.set_attribute('reqmgr_name',  added_requests) ## this must be a mistake !!!
 
             mcm_rs=[]
-            ## reload the content of all requests as they might have changed already
+            ## upload all config files to config cache, with "configuration economy" already implemented
             for cr in mcm_crs:
                 mcm_cr = chained_request(cr)
                 chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
                 for rn in chain:
                     mcm_rs.append( request( rdb.get( rn )))
-            ## edit each request with the request name and toggle status
-            for mcm_r in mcm_rs:
-                added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
-                mcm_r.set_attribute('reqmgr_name', added )
-                mcm_r.update_history({'action': 'inject','step' : batch_name})
-                if not self.check_approval:
-                    mcm_r.set_attribute('approval', 'submit') 
-                mcm_r.set_status(with_notification=False)
-                mcm_r.reload()
+                
+                    if self.check_approval and mcm_rs[-1].get_attribute('approval')!='submit':
+                        self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                                rn,
+                                mcm_rs[-1].get_attribute('status'),
+                                mcm_rs[-1].get_attribute('approval'),
+                                ))
+                        return False
+                    if mcm_rs[-1].get_attribute('status') != 'approved':
+                        ## change the return format to percolate the error message
+                        self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                                rn,
+                                mcm_rs[-1].get_attribute('status'),
+                                mcm_rs[-1].get_attribute('approval'),
+                                ))
+                        return False
+                    uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
+                    uploader.run()
+            
+            mcm_r = mcm_rs[-1]
+            batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
+            semaphore_events.increment(batch_name)
 
-            #now modify the chain request to move it all along
-            mcm_cr.update_history({'action' : 'inject','step': batch_name})
-            mcm_cr.set_attribute('step', len(mcm_rs)-1)
-            mcm_cr.set_attribute('status','processing')
-            mcm_cr.set_attribute('last_status', mcm_rs[-1].get_attribute('status'))
+            self.logger.error('found batch %s'% batch_name)
+            with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
+                cmd = self.make_command(mcm_r)
+                self.logger.error('prepared command %s'%cmd)
+                ## modify here to have the command to be executed
+                _, stdout, stderr = ssh.execute(cmd)
+                output = stdout.read()
+                error = stderr.read()
+                self.logger.log(output)
+                self.logger.log(error)
 
-            message=""
-            for mcm_r in mcm_rs:
-                message+=mcm_r.textified()
-                message+="\n\n"
-            mcm_cr.notify('Injection succeeded for %s'% task_name,
-                          message)
+                injected_requests = [l.split()[-1] for l in output.split('\n') if
+                                     l.startswith('Injected workflow:')]
+                approved_requests = [l.split()[-1] for l in output.split('\n') if
+                                     l.startswith('Approved workflow:')]
 
-            mcm_cr.reload()
+                if not injected_requests:
+                    self.logger.error("no request was injected ")
+                    return False
 
-            return True
+                if injected_requests and not approved_requests:
+                    self.logger.error("Request %s was injected but could not be approved" % ( injected_requests ))
+                    return False
+                    #return dumps({"results" : False, "message" : "Request %s was injected but could not be approved" % ( injected_requests )})
+
+                objects_to_invalidate = [
+                    {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
+                    for inv_req in injected_requests if inv_req not in approved_requests]
+                if objects_to_invalidate:
+                    self.logger.error("Some requests %s need to be invalidated" % objects_to_invalidate)
+                    return False
+
+                
+                # what gets printed into the batch object
+                added_requests = []
+                for mcm_r in mcm_rs:
+                    added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
+                    added_requests.extend( added )
+
+                ##edit the batch object
+                with locker.lock(batch_name):
+                    bdb = database('batches') 
+                    bat = batch(bdb.get(batch_name))      
+                    bat.add_requests(added_requests)
+                    bat.update_history({'action': 'updated', 'step': task_name })
+                    bat.reload()
+                    ## must be wrong for mcm_r in mcm_rs:
+                    ## must be wrong   mcm_r.set_attribute('reqmgr_name',  added_requests) ## this must be a mistake !!!
+
+                mcm_rs=[]
+                ## reload the content of all requests as they might have changed already
+                for cr in mcm_crs:
+                    mcm_cr = chained_request(cr)
+                    chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+                    for rn in chain:
+                        mcm_rs.append( request( rdb.get( rn )))
+                ## edit each request with the request name and toggle status
+                for mcm_r in mcm_rs:
+                    added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
+                    mcm_r.set_attribute('reqmgr_name', added )
+                    mcm_r.update_history({'action': 'inject','step' : batch_name})
+                    if not self.check_approval:
+                        mcm_r.set_attribute('approval', 'submit') 
+                    mcm_r.set_status(with_notification=False)
+                    mcm_r.reload()
+
+                #now modify the chain request to move it all along
+                mcm_cr.update_history({'action' : 'inject','step': batch_name})
+                mcm_cr.set_attribute('step', len(mcm_rs)-1)
+                mcm_cr.set_attribute('status','processing')
+                mcm_cr.set_attribute('last_status', mcm_rs[-1].get_attribute('status'))
+
+                message=""
+                for mcm_r in mcm_rs:
+                    message+=mcm_r.textified()
+                    message+="\n\n"
+                mcm_cr.notify('Injection succeeded for %s'% task_name,
+                              message)
+
+                mcm_cr.reload()
+                
+                return True
+        finally:
+            self.lock.release()
