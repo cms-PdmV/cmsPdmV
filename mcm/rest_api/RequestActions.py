@@ -809,7 +809,9 @@ class ApproveRequest(RESTResource):
         except request.IllegalApprovalStep as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except:
-            return {'prepid': rid, 'results': False, 'message': traceback.format_exc()}
+            trace=traceback.format_exc()
+            self.logger.error("Exception caught in approval\n%s"%(trace))
+            return {'prepid': rid, 'results': False, 'message': trace}
         if saved:
             return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
         else:
