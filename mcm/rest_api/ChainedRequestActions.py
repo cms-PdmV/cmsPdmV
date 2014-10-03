@@ -543,11 +543,18 @@ class TestChainedRequest(RESTResource):
             next='validation'
             if not mcm_r.is_root:  next='approve'
             try:
-                getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
-                mcm_r.update_history({'action': 'approve', 'step':next})
-                mcm_r.set_attribute('approval',next)
-                mcm_r.notify('Approval %s in chain for request %s'%(next,mcm_r.get_attribute('prepid')),
-                             mcm_r.textified(), accumulate=True)
+                if mcm_r.get_attribute('approval') in mcm_r.json_base__approvalsteps[json_base__approvalsteps.index(next):]:
+                    ## no need to try and move it along if already further than that
+                    getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
+                    mcm_r.update_history({'action': 'approve', 'step':next})
+                    mcm_r.set_attribute('approval',next)
+
+                text+='Within chain %s \n'% mcm_cr.get_attribute('prepid')
+                text+=mcm_r.textified()
+                mcm_r.notify('Approval %s in chain %s for request %s'%(next,
+                                                                       mcm_cr.get_attribute('prepid'),
+                                                                       mcm_r.get_attribute('prepid')),
+                             text, accumulate=True)
                 mcm_r.reload()
             except Exception as e:
                 runtest.reset_all( str(e) , notify_one = rid )

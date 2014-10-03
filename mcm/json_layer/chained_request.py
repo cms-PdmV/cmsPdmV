@@ -673,10 +673,12 @@ class chained_request(json_base):
             req_ids = self.get_attribute('chain')
         else:
             req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
+
         rdb = database('requests')
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):
             req = request(rdb.get(req_id))
+            if req.get_attribute('status') in ['submitted','done']: continue
             ev = events
             if not ev and index!=0 and not req.is_root:
                 ev = -1
