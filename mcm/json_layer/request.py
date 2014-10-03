@@ -190,7 +190,7 @@ class request(json_base):
 
         return editable
 
-    def check_with_previous(self, previous_id, rdb, what, for_chain):
+    def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = request( rdb.get( previous_id ) )
         total_events_should_be = previous_one.get_attribute('completed_events') * self.get_efficiency()
         if self.get_attribute('total_events') >= total_events_should_be *1.2: ## safety factor of 20%
@@ -200,7 +200,7 @@ class request(json_base):
                                                                                                                                                                    previous_one.get_attribute('completed_events'),
                                                                                                                                                                    self.get_efficiency())
                                              )
-        if for_chain:
+        if and_set:
             # round to the next 1K                                                                                                                                                                                        
             rounding_unit=1000.
             self.set_attribute('total_events', int(1+total_events_should_be / float(rounding_unit))*int(rounding_unit))
@@ -341,7 +341,10 @@ class request(json_base):
             for cr in self.get_attribute('member_of_chain'):
                 request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
                 if request_is_at != 0:
-                    self.check_with_previous( mcm_cr['chain'][request_is_at-1], rdb, 'validation' , for_chain)
+                    ## just remove and_set=for_chain to have the value set automatically
+                    # https://github.com/cms-PdmV/cmsPdmV/issues/623
+                    self.check_with_previous( mcm_cr['chain'][request_is_at-1], rdb, 'validation' , and_set=for_chain) 
+
                 if for_chain:
                     continue
                 mcm_cr = crdb.get(cr)
@@ -468,7 +471,7 @@ class request(json_base):
             mcm_cr = crdb.get(cr)
             request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
             if request_is_at != 0:
-                self.check_with_previous( mcm_cr['chain'][request_is_at-1],rdb, 'approve', for_chain)
+                self.check_with_previous( mcm_cr['chain'][request_is_at-1],rdb, 'approve', and_set=for_chain)
             if for_chain: 
                 continue
             
