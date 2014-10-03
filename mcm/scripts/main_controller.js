@@ -97,7 +97,7 @@ var promise;
 
 
   $scope.isDevMachine = function(){
-    is_dev = $location.absUrl().indexOf("dev") != -1;
+    is_dev = $location.host().indexOf("dev") != -1;
     if (is_dev){
       body = document.getElementsByTagName("body");
      _.each(body, function(v){
