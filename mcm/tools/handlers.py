@@ -226,6 +226,11 @@ class RunChainValid(Handler):
 
         for rid in chain:
             mcm_r = request( rdb.get( rid ) )
+
+            ## do not reset anything that does not look ok already
+            # this might leave things half-way inconsistent in terms of status
+            if mcm_r.get_attribute('status') != 'new': continue
+
             notify = True
             if notify_one and notify_one != rid:
                 notify = False
@@ -275,6 +280,7 @@ class RunChainValid(Handler):
             trace=""
             for mcm_r in mcm_rs:
                 ### if not mcm_r.is_root: continue ##disable for dr request
+                if mcm_r.get_attribute('status') != 'new': continue ## should not change things to request already in validation status, or more
                 (success,trace) = mcm_r.pickup_all_performance(location.location())
                 if not success: 
                     last_fail = mcm_r
@@ -283,9 +289,10 @@ class RunChainValid(Handler):
             self.logger.error('I came all the way to here and %s (request %s)' % ( success, self.crid ))
 
             if success:
-                for mcm_r in mcm_rs:
+                for (i_r,mcm_r) in enumerate(mcm_rs):
                     mcm_current = request( rdb.get(mcm_r.get_attribute('prepid')))
                     if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
+                        if mcm_current.get_attribute('status') != 'new': continue ## should not toggle to the next status for things that are not 'new'
                         mcm_r.set_status(with_notification=True)
                         if not mcm_r.reload():
                             self.reset_all( 'The request %s could not be saved after the runtest procedure' % (mcm_r.get_attribute('prepid')))
