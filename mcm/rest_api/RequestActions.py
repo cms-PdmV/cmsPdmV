@@ -982,7 +982,10 @@ class TestRequest(RESTResource):
         """ 
         this is test for admins only
         """
-        
+
+        if not args:
+            return dumps({"results": 'Error: No arguments were given'})
+
         rdb = database('requests')
         
         mcm_r = request( rdb.get(args[0]))
