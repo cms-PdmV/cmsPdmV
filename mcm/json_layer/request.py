@@ -190,6 +190,21 @@ class request(json_base):
 
         return editable
 
+    def check_with_previous(self, previous_id, rdb, what, and_set=False):
+        previous_one = request( rdb.get( previous_id ) )
+        total_events_should_be = previous_one.get_attribute('completed_events') * self.get_efficiency()
+        if self.get_attribute('total_events') >= total_events_should_be *1.2: ## safety factor of 20%
+            raise self.WrongApprovalSequence(self.get_attribute('status'),what,
+                                             'The requested number of events (%d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request'%(self.get_attribute('total_events'),
+                                                                                                                                                                   total_events_should_be,
+                                                                                                                                                                   previous_one.get_attribute('completed_events'),
+                                                                                                                                                                   self.get_efficiency())
+                                             )
+        if and_set:
+            # round to the next 1K                                                                                                                                                                                        
+            rounding_unit=1000.
+            self.set_attribute('total_events', int(1+total_events_should_be / float(rounding_unit))*int(rounding_unit))
+
     def ok_to_move_to_approval_validation(self, for_chain=False):
         if self.current_user_level == 0:
             ##not allowed to do so
@@ -265,6 +280,7 @@ class request(json_base):
         if self.get_attribute('total_events') < 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                              'The number of requested event is invalid: Negative')
+            
 
         if self.get_wmagent_type() == 'LHEStepZero':
             if self.get_attribute('mcdb_id') == 0:
@@ -323,13 +339,20 @@ class request(json_base):
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
-                if for_chain : continue
+                request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
+                if request_is_at != 0:
+                    ## just remove and_set=for_chain to have the value set automatically
+                    # https://github.com/cms-PdmV/cmsPdmV/issues/623
+                    self.check_with_previous( mcm_cr['chain'][request_is_at-1], rdb, 'validation' , and_set=for_chain) 
+
+                if for_chain:
+                    continue
                 mcm_cr = crdb.get(cr)
-                if mcm_cr['chain'].index(self.get_attribute('prepid')) != 0:
+                if request_is_at != 0:
                     if self.get_attribute('mcdb_id') >= 0 and not self.get_attribute('input_dataset'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                          'The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
-                if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
+                if request_is_at != mcm_cr['step']:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                      'The request is not the current step of chain %s' % (
                                                          mcm_cr['prepid']))
@@ -445,9 +468,14 @@ class request(json_base):
         crdb = database('chained_requests')
         rdb = database('requests')
         for cr in self.get_attribute('member_of_chain'):
-            if for_chain: continue
             mcm_cr = crdb.get(cr)
-            if mcm_cr['chain'].index(self.get_attribute('prepid')) != mcm_cr['step']:
+            request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
+            if request_is_at != 0:
+                self.check_with_previous( mcm_cr['chain'][request_is_at-1],rdb, 'approve', and_set=for_chain)
+            if for_chain: 
+                continue
+            
+            if request_is_at != mcm_cr['step']:
                 all_good=True
                 chain=mcm_cr['chain'][mcm_cr['step']:]
                 for r in chain:
