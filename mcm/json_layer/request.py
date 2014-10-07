@@ -495,6 +495,10 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                                              'bad user admin level %s' % (self.current_user_level))
 
+        if self.current_user_level == 4 and self.get_attribute('process_string'):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                                             'Admin should not be approving submit of requests with a process string specified')
+
         if self.get_attribute('status') != 'approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit')
 
