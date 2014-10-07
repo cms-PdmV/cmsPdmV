@@ -492,7 +492,7 @@ class request(json_base):
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level < 3:
             ##not allowed to do so
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                                              'bad user admin level %s' % (self.current_user_level))
 
         if self.get_attribute('status') != 'approved':
