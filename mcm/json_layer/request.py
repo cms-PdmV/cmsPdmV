@@ -339,11 +339,11 @@ class request(json_base):
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
-                request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
+                request_is_at = cr['chain'].index(self.get_attribute('prepid'))
                 if request_is_at != 0:
                     ## just remove and_set=for_chain to have the value set automatically
                     # https://github.com/cms-PdmV/cmsPdmV/issues/623
-                    self.check_with_previous( mcm_cr['chain'][request_is_at-1], rdb, 'validation' , and_set=for_chain) 
+                    self.check_with_previous( cr['chain'][request_is_at-1], rdb, 'validation' , and_set=for_chain) 
 
                 if for_chain:
                     continue
