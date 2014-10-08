@@ -543,7 +543,7 @@ class TestChainedRequest(RESTResource):
             next='validation'
             if not mcm_r.is_root:  next='approve'
             try:
-                if mcm_r.get_attribute('approval') in mcm_r.json_base__approvalsteps[json_base__approvalsteps.index(next):]:
+                if mcm_r.get_attribute('approval') in mcm_r.json_base__approvalsteps[mcm_r.json_base__approvalsteps.index(next):]:
                     ## no need to try and move it along if already further than that
                     getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
                     mcm_r.update_history({'action': 'approve', 'step':next})
