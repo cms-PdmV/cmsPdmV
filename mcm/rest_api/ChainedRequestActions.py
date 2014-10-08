@@ -538,6 +538,7 @@ class TestChainedRequest(RESTResource):
             if mcm_r.get_attribute('status') in ['approved','submitted','done']:
                 return dumps({"results" : False, "message" : "request %s is in status %s"%( rid, mcm_r.get_attribute('status'))})
 
+        text = ""
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )
             next='validation'
@@ -549,8 +550,8 @@ class TestChainedRequest(RESTResource):
                     mcm_r.update_history({'action': 'approve', 'step':next})
                     mcm_r.set_attribute('approval',next)
 
-                text+='Within chain %s \n'% mcm_cr.get_attribute('prepid')
-                text+=mcm_r.textified()
+                text += 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
+                text += mcm_r.textified()
                 mcm_r.notify('Approval %s in chain %s for request %s'%(next,
                                                                        mcm_cr.get_attribute('prepid'),
                                                                        mcm_r.get_attribute('prepid')),
