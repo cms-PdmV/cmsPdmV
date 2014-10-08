@@ -339,7 +339,8 @@ class request(json_base):
         else:
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
-                request_is_at = cr['chain'].index(self.get_attribute('prepid'))
+                mcm_cr = crdb.get(cr)
+                request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
                 if request_is_at != 0:
                     ## just remove and_set=for_chain to have the value set automatically
                     # https://github.com/cms-PdmV/cmsPdmV/issues/623
@@ -347,7 +348,7 @@ class request(json_base):
 
                 if for_chain:
                     continue
-                mcm_cr = crdb.get(cr)
+
                 if request_is_at != 0:
                     if self.get_attribute('mcdb_id') >= 0 and not self.get_attribute('input_dataset'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
