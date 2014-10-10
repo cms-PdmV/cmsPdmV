@@ -55,7 +55,7 @@
         <pane heading="Output Dataset" active="tabsettings.output.active">
           <form class="form-inline">
             <input type="text" class="input-xxlarge" maxlength="200" placeholder="dataset name as shown in DAS" ng-model="dataset_name_in_das">
-            <a class="btn btn-mini" ng-href='requests?produce="{{dataset_name_in_das}}"' target="_self">Search</a>
+            <a class="btn btn-mini" ng-href='requests?produce={{dataset_name_in_das}}' target="_self">Search</a>
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Search_by_Dataset" rel="tooltip" title="Help for search by output dataset"> <i class='icon-question-sign'></i></a>
           </form>
         </pane>
