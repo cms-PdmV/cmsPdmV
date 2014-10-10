@@ -465,6 +465,11 @@ class ChainRequestInjector(Handler):
         self.prepid = kwargs["prepid"] 
         self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
 
+    def injection_error(self, message, rs):
+        self.logger.error(message)
+        for r in rs:
+            r.test_failure(message, what='Request injection in chain')
+            pass
 
     def make_command(self,mcm_r=None):
         l_type = locator()
@@ -547,19 +552,22 @@ class ChainRequestInjector(Handler):
                                      l.startswith('Approved workflow:')]
 
                 if not injected_requests:
-                    self.logger.error("no request was injected ")
+                    self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
+                            output, error), mcm_rs)
                     return False
 
                 if injected_requests and not approved_requests:
-                    self.logger.error("Request %s was injected but could not be approved" % ( injected_requests ))
-                    return False
-                    #return dumps({"results" : False, "message" : "Request %s was injected but could not be approved" % ( injected_requests )})
+                    self.injection_error("Request %s was injected but could not be approved" % ( injected_requests ), mcm_rs)
 
                 objects_to_invalidate = [
                     {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
                     for inv_req in injected_requests if inv_req not in approved_requests]
                 if objects_to_invalidate:
                     self.logger.error("Some requests %s need to be invalidated" % objects_to_invalidate)
+                    invalidation = database('invalidation')
+                    saved = invalidation.save_all(objects_to_invalidate)
+                    if not saved:
+                        self.logger.error('Could not save the invalidations {0}'.format(objects_to_invalidate))
                     return False
 
                 
@@ -576,41 +584,39 @@ class ChainRequestInjector(Handler):
                     bat.add_requests(added_requests)
                     bat.update_history({'action': 'updated', 'step': task_name })
                     bat.reload()
-                    ## must be wrong for mcm_r in mcm_rs:
-                    ## must be wrong   mcm_r.set_attribute('reqmgr_name',  added_requests) ## this must be a mistake !!!
 
-                mcm_rs=[]
                 ## reload the content of all requests as they might have changed already
+                added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
+                seen=set()
                 for cr in mcm_crs:
                     mcm_cr = chained_request(cr)
                     chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+                    message=""
                     for rn in chain:
-                        mcm_rs.append( request( rdb.get( rn )))
-                ## edit each request with the request name and toggle status
-                for mcm_r in mcm_rs:
-                    added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
-                    mcm_r.set_attribute('reqmgr_name', added )
-                    mcm_r.update_history({'action': 'inject','step' : batch_name})
-                    if not self.check_approval:
-                        mcm_r.set_attribute('approval', 'submit') 
-                    mcm_r.set_status(with_notification=False)
-                    mcm_r.reload()
-
-                #now modify the chain request to move it all along
-                mcm_cr.update_history({'action' : 'inject','step': batch_name})
-                mcm_cr.set_attribute('step', len(mcm_rs)-1)
-                mcm_cr.set_attribute('status','processing')
-                mcm_cr.set_attribute('last_status', mcm_rs[-1].get_attribute('status'))
-
-                message=""
-                for mcm_r in mcm_rs:
-                    message+=mcm_r.textified()
-                    message+="\n\n"
-                mcm_cr.notify('Injection succeeded for %s'% task_name,
-                              message)
-
-                mcm_cr.reload()
+                        if rn in seen: continue # don't do it twice
+                        seen.add(rn)
+                        mcm_r = request( rdb.get( rn ) )
+                        message+=mcm_r.textified()  
+                        message+="\n\n"
+                        mcm_r.set_attribute('reqmgr_name', added )
+                        mcm_r.update_history({'action': 'inject','step' : batch_name}) 
+                        if not self.check_approval: 
+                            mcm_r.set_attribute('approval', 'submit')        
+                        mcm_r.set_status(with_notification=False)           
+                        mcm_r.reload()
+                        mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
+                    #take care of changes to the chain
+                    mcm_cr.update_history({'action' : 'inject','step': batch_name}) 
+                    mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain'))-1)
+                    mcm_cr.set_attribute('status','processing')
+                    mcm_cr.notify('Injection succeeded for %s'% mcm_cr.get_attribute('prepid'),
+                                  message)
+                    mcm_cr.reload()
                 
                 return True
+        except Exception as e: 
+            self.injection_error("Error with injecting chains for %s :\n %s"%( self.prepid, traceback.format_exc()),[])
+
         finally:
+            semaphore_events.decrement(batch_name)
             self.lock.release()
