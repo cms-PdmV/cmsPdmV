@@ -538,19 +538,18 @@ class TestChainedRequest(RESTResource):
             if mcm_r.get_attribute('status') in ['approved','submitted','done']:
                 return dumps({"results" : False, "message" : "request %s is in status %s"%( rid, mcm_r.get_attribute('status'))})
 
-        text = ""
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )
             next='validation'
             if not mcm_r.is_root:  next='approve'
             try:
-                if mcm_r.get_attribute('approval') in mcm_r._json_base__approvalsteps[mcm_r._json_base__approvalsteps.index(next):]:
+                if mcm_r.get_attribute('approval')  == 'none':
                     ## no need to try and move it along if already further than that
                     getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
                     mcm_r.update_history({'action': 'approve', 'step':next})
                     mcm_r.set_attribute('approval',next)
 
-                text += 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
+                text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
                 mcm_r.notify('Approval %s in chain %s for request %s'%(next,
                                                                        mcm_cr.get_attribute('prepid'),
