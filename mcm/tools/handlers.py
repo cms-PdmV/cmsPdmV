@@ -392,6 +392,7 @@ class RequestSubmitter(Handler):
                         if not saved:
                             self.injection_error('Could not save the invalidations {0}'.format(objects_to_invalidate),
                                                  req)
+                        return False
 
                     added_requests = [{'name': app_req, 'content': {'pdmv_prep_id': self.prepid}} for app_req in
                                       approved_requests]
@@ -432,7 +433,7 @@ class RequestSubmitter(Handler):
 
         except Exception as e:
             self.injection_error(
-                'Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), req)
+                'Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), None)
 
 
 class RequestInjector(Handler):
