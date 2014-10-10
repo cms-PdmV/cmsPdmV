@@ -192,17 +192,26 @@ class request(json_base):
 
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = request( rdb.get( previous_id ) )
-        total_events_should_be = previous_one.get_attribute('completed_events') * self.get_efficiency()
-        if self.get_attribute('total_events') >= total_events_should_be *1.2: ## safety factor of 20%
+        previous_events = previous_one.get_attribute('total_events')
+        if previous_one.get_attribute('completed_events')>0:
+            previous_events = previous_one.get_attribute('completed_events')
+        total_events_should_be = previous_events * self.get_efficiency()
+        margin = int(total_events_should_be *1.2)
+        if self.get_attribute('total_events') > margin: ## safety factor of 20%
             raise self.WrongApprovalSequence(self.get_attribute('status'),what,
-                                             'The requested number of events (%d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request'%(self.get_attribute('total_events'),
-                                                                                                                                                                   total_events_should_be,
-                                                                                                                                                                   previous_one.get_attribute('completed_events'),
-                                                                                                                                                                   self.get_efficiency())
+                                             'The requested number of events (%d > %d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request'%(self.get_attribute('total_events'),
+                                                                                                                                                                        margin,
+                                                                                                                                                                        total_events_should_be,
+                                                                                                                                                                        previous_events,
+                                                                                                                                                                        self.get_efficiency())
                                              )
         if and_set:
-            # round to the next 1K                                                                                                                                                                                        
-            rounding_unit=1000.
+            if self.get_attribute('total_events')>0:
+                ## do not overwrite the number for no reason
+                return
+            from math import log10
+            # round to a next 1% unit = 10^(-2) == -2 below
+            rounding_unit = 10**int( max(log10(total_events_should_be)-2,0))
             self.set_attribute('total_events', int(1+total_events_should_be / float(rounding_unit))*int(rounding_unit))
 
     def ok_to_move_to_approval_validation(self, for_chain=False):
