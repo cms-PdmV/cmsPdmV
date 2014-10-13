@@ -132,8 +132,9 @@ class RuntestGenvalid(Handler):
         self.db = database('requests')
 
     def internal_run(self):
-        location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
+        location = None
         try:
+            location = installer(self.rid, care_on_existing=False, clean_on_exit=True)
             test_script = location.location() + 'validation_run_test.sh'
             timeout=None
             with open(test_script, 'w') as there:
@@ -147,6 +148,7 @@ class RuntestGenvalid(Handler):
                 timeout = mcm_r.get_timeout()
 
             batch_test = batch_control(self.rid, test_script, timeout=timeout)
+                
             try:
                 success = batch_test.test()
             except:
@@ -200,7 +202,8 @@ class RuntestGenvalid(Handler):
             mcm_r = request(self.db.get(self.rid))
             mcm_r.test_failure(message=mess, what='Validation run test', rewind=True)
         finally:
-            location.close()
+            if location:
+                location.close()
 
 
 
@@ -227,9 +230,17 @@ class RunChainValid(Handler):
         for rid in chain:
             mcm_r = request( rdb.get( rid ) )
 
+            s_label = 'chainvalid-%s'% rid
+            semaphore_events.decrement( s_label )
+            if not semaphore_events.is_set( s_label ):
+                ##someone else is still validating that chain, so no reset !
+                continue
+                
             ## do not reset anything that does not look ok already
             # this might leave things half-way inconsistent in terms of status
-            if mcm_r.get_attribute('status') != 'new': continue
+            if mcm_r.get_attribute('status') != 'new':
+                continue
+            
 
             notify = True
             if notify_one and notify_one != rid:
@@ -245,20 +256,27 @@ class RunChainValid(Handler):
             return False
         from tools.installer import installer
         from tools.batch_control import batch_control 
-        location = installer( self.crid, care_on_existing=False, clean_on_exit=True)
+        self.requests_ids = []
+        location = None
         try:
+            location = installer( self.crid, care_on_existing=False, clean_on_exit=True)
 
             crdb = database('chained_requests')
             rdb = database('requests')
             mcm_cr = chained_request(crdb.get(self.crid))
             mcm_rs = []
             if self.scratch:
-                chain=mcm_cr.get_attribute('chain')
+                chain = mcm_cr.get_attribute('chain')
             else:
-                chain=mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
-                
+                chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+        
             for rid in chain:
+                self.requests_ids.append( rid )
                 mcm_rs.append( request( rdb.get( rid ) ))
+                s_label = 'chainvalid-%s'% rid
+                ## say you are working on it
+                semaphore_events.increment( s_label ) 
+
 
             test_script = location.location() + 'validation_run_test.sh'
             timeout=None
@@ -306,13 +324,24 @@ class RunChainValid(Handler):
                 self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
                 return
 
+
+            ## all good. remove semaphore stickers. done implicitely in reset_all
+            for rid in chain:
+                s_label = 'chainvalid-%s'% rid
+                semaphore_events.decrement( s_label )
+
         except:
+            for rid in self.requests_ids:
+                s_label = 'chainvalid-%s'% rid
+                semaphore_events.decrement( s_label )
             mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
                 self.crid, traceback.format_exc())
             self.logger.error(mess)    
+
         finally:
             self.lock.release()
-            location.close() 
+            if location:
+                location.close() 
 
 
 class RequestSubmitter(Handler):
@@ -573,7 +602,10 @@ class ChainRequestInjector(Handler):
                 
                 # what gets printed into the batch object
                 added_requests = []
+                once=set()
                 for mcm_r in mcm_rs:
+                    if mcm_r.get_attribute('prepid') in once: continue
+                    once.add( mcm_r.get_attribute('prepid') )
                     added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
                     added_requests.extend( added )
 
@@ -605,6 +637,8 @@ class ChainRequestInjector(Handler):
                         mcm_r.set_status(with_notification=False)           
                         mcm_r.reload()
                         mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
+                    ## re-get the object
+                    mcm_cr = chained_request( crdb.get(cr['prepid']))
                     #take care of changes to the chain
                     mcm_cr.update_history({'action' : 'inject','step': batch_name}) 
                     mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain'))-1)
