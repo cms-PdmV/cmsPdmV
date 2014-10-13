@@ -42,7 +42,7 @@ class batch(json_base):
         b_requests=self.get_attribute('requests')
         b_requests.extend(a_list)
         ## sort them
-        b_requests = sorted(b_requests, key=lambda d : d['name'])
+        b_requests = sorted(b_requests, key=lambda d : d['content']['pdmv_prep_id'])
         self.set_attribute('requests', b_requests ) 
 
     def add_notes(self,notes):
