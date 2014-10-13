@@ -577,6 +577,9 @@ class SoftResetChainedRequest(RESTResource):
         """
         Does a soft reset to all relevant request in the chain
         """
+        if not len(args):
+            return dumps({"results" : False, "message" : "no argument provided"})
+        
         arg0 = args[0]
         crdb = database('chained_requests')
         rdb = database('requests')
