@@ -286,7 +286,7 @@ class request(json_base):
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                      'The configuration fragment does not exist in cvs')
 
-        if self.get_attribute('total_events') < 0:
+        if self.get_attribute('total_events') < 0 and not for_chain:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                              'The number of requested event is invalid: Negative')
             
