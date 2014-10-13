@@ -2217,13 +2217,20 @@ done
         from json_layer.chained_request import chained_request
 
         crdb = database('chained_requests')
+        rdb = database('requests')
         for chain in chains:
             cr = chained_request(crdb.get(chain))
             if cr.get_attribute('chain').index(self.get_attribute('prepid')) < cr.get_attribute('step'):
-                ## cannot reset a request that is part of a further on-going chain
-                raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                                    'The request is part of a chain (%s) that is currently processing another request (%s)' % (
-                                                        chain, cr.get_attribute('chain')[cr.get_attribute('step')]))
+                ## inspect the ones that would be further ahead
+                for rid in cr.get_attribute('chain')[cr.get_attribute('chain').index(self.get_attribute('prepid')):]:
+                    if rid == self.get_attribute('prepid'): continue
+                    mcm_r = request(rdb.get( rid ))
+                    if mcm_r.get_attribute('status') in ['submitted','done']:
+                    ## cannot reset a request that is part of a further on-going chain
+                        raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
+                                                            'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (chain,
+                                                                                                                                                                                     mcm_r.get_attribute('prepid'),
+                                                                                                                                                                                     mcm_r.get_attribute('status')))
 
         if hard:
             self.approve(0)
