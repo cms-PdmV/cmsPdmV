@@ -26,10 +26,13 @@ class batch_control:
         else:
             self.group = '/prod'
         self.directory_for_test = os.path.dirname(self.script_for_test)
-        self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
-
         self.log_out = 'Not available'
         self.log_err = 'Not available'
+        try:
+            self.ssh_exec = ssh_executor(self.directory_for_test, self.test_id)
+        except Exception as e:
+            self.ssh_exec = None
+            self.log_err = str(e)
 
         self.timeout = int(settings().get_value('batch_timeout'))
         self.queue = '8nh'
@@ -175,6 +178,8 @@ class batch_control:
 
     """
     def test(self):
+        if not self.ssh_exec:
+            return False
         try:
             ## send the test in batch
             if not self.batch_submit():
@@ -206,4 +211,5 @@ class batch_control:
             ## and we are done
             return True
         finally:
-            self.ssh_exec.close_executor()
+            if self.ssh_exec:
+                self.ssh_exec.close_executor()
