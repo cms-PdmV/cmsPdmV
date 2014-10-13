@@ -2394,8 +2394,7 @@ done
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.logger.inject("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids),
                                    handler=prepid)
-                self.set_attribute('config_id', sorted_additional_config_ids)
-                self.reload()
+                self.overwrite( {'config_id' : sorted_additional_config_ids} )
             return command
         finally:
             for i in to_release:
