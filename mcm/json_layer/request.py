@@ -1541,12 +1541,16 @@ done
                 return not_good
 
         elif self.get_attribute('approval') == 'submit':
-            from tools.handlers import RequestInjector
-
-            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                  lock=locker.lock(self.get_attribute('prepid')))
-            threaded_submission.start()
-            return {"prepid": self.get_attribute('prepid'), "results": True}
+            ### this is for automated retries of submissions of requests in approval/status submit/approved
+            # this is a remnant of when submission was not done automatically on toggle submit approval
+            # in the current paradigm, this automated is probably not necessary, as the failure might be genuine
+            # and also, it interferes severly with chain submission
+            ##from tools.handlers import RequestInjector
+            ##threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
+            ##                                      lock=locker.lock(self.get_attribute('prepid')))
+            ##threaded_submission.start()
+            ##return {"prepid": self.get_attribute('prepid'), "results": True}
+            return {"prepid": self.get_attribute('prepid'), "results": False}
         else:
             not_good.update({'message': 'Not implemented yet to inspect a request in %s status and approval %s' % (
                 self.get_attribute('status'), self.get_attribute('approval'))})
