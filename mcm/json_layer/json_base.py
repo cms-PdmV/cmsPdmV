@@ -101,6 +101,32 @@ class json_base:
             self.__init__(db.get(self.get_attribute('_id')))
             return True
 
+    def overwrite(self, json_input):
+        """
+        Update the document with the input, regardless of revision clash.
+        This has to be used to much care
+        """
+        try:
+            if self.__class__.__name__ =="batch":
+                db = database(self.__class__.__name__ + "es")
+            else:
+                db = database(self.__class__.__name__ + "s")
+        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
+            self.logger.error("Problem with database creation:\n{0}".format(ex))
+            return False
+        with locker.lock(self.get_attribute('_id')):
+            if not db.document_exists(self.get_attribute('_id')):
+                return False
+            ## reload the doc with db
+            self.__init__(db.get(self.get_attribute('_id')))
+            ## add what was provided on top
+            self._json_base__json.update( json_input )
+            ## save back
+            saved = db.update(self.json())
+            if not saved:
+                return False
+            return True
+
     def update(self, json_input):
         self._json_base__json = {}
         if not json_input:

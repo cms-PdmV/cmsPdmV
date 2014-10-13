@@ -536,7 +536,7 @@ class TestChainedRequest(RESTResource):
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )
             if mcm_r.get_attribute('status') in ['approved','submitted','done']:
-                return dumps({"results" : False, "message" : "request %s is in status %s"%( rid, mcm_r.get_attribute('status'))})
+                return dumps({"results" : False, "prepid" : args[0], "message" : "request %s is in status %s"%( rid, mcm_r.get_attribute('status'))})
 
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )
@@ -548,6 +548,12 @@ class TestChainedRequest(RESTResource):
                     getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
                     mcm_r.update_history({'action': 'approve', 'step':next})
                     mcm_r.set_attribute('approval',next)
+                else:
+                    pass
+                    ## fail this for the moment. there is no way to handle this yet
+                    #text="It is not supported for the moment to test a chain of requests which are partially not new. Please contact an administrator"
+                    #runtest.reset_all( text  , notify_one = rid )
+                    #return dumps({"results" : False, "message" : text, "prepid" : args[0]})
 
                 text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
@@ -558,11 +564,41 @@ class TestChainedRequest(RESTResource):
                 mcm_r.reload()
             except Exception as e:
                 runtest.reset_all( str(e) , notify_one = rid )
-                return dumps({"results" : False, "message" : str(e)})
+                return dumps({"results" : False, "message" : str(e),"prepid" : args[0]})
                 
         runtest.start()
-        return dumps({"results" : True, "message" : "run test started"})
+        return dumps({"results" : True, "message" : "run test started","prepid" : args[0]})
         
+class SoftResetChainedRequest(RESTResource):
+    def __init__(self, mode='show'):
+        self.access_limit = access_rights.production_manager
+
+    def GET(self, *args):
+        """
+        Does a soft reset to all relevant request in the chain
+        """
+        if not len(args):
+            return dumps({"results" : False, "message" : "no argument provided"})
+        
+        arg0 = args[0]
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        
+        mcm_cr = chained_request(crdb.get( arg0 ))
+        for rid in reversed( mcm_cr.get_attribute('chain')[:mcm_cr.get_attribute('step')+1] ):
+            ## from the current one to the first one REVERSED
+            mcm_r = request( rdb.get( rid ))
+            try:
+                mcm_r.reset(hard=False)
+            except Exception as e:
+                return dumps({'prepid' : arg0, 'results':False, 'message' : str(e)})
+
+            mcm_r.reload()
+            mcm_cr = chained_request(crdb.get( arg0 ))
+            mcm_cr.set_attribute('step', max(0,mcm_cr.get_attribute('chain').index( rid )-1))
+            mcm_cr.reload()
+        return dumps({'prepid' : arg0, 'results':True})
+
 
 class InjectChainedRequest(RESTResource):
     def __init__(self, mode='show'):

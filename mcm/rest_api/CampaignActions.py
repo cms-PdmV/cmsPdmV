@@ -391,4 +391,4 @@ class InspectCampaigns(CampaignsRESTResource):
         c_list = self.listAll()
         from random import shuffle
         shuffle( c_list )
-        return dumps(self.multiple_inspect( ','.join(self.listAll()) ))
+        return dumps(self.multiple_inspect( ','.join( c_list ) ))

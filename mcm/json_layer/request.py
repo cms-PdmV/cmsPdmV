@@ -286,7 +286,7 @@ class request(json_base):
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                                      'The configuration fragment does not exist in cvs')
 
-        if self.get_attribute('total_events') < 0:
+        if self.get_attribute('total_events') < 0 and not for_chain:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                                              'The number of requested event is invalid: Negative')
             
@@ -540,9 +540,9 @@ class request(json_base):
         my_ps_and_t = self.get_processing_strings_and_tiers()
         for (my_ps,my_t) in my_ps_and_t:
             check_ingredients = map(lambda s : s.lower() , my_ps.split('_'))
-            if any(map(lambda ing1: map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients), check_ingredients)) and self.current_user_level == 4:
+            if any(map(lambda ing1: any(map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients)), check_ingredients)) and self.current_user_level == 4:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset" % ( my_ps ))
+                                                 "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
         for similar in similar_ds:
             if similar['prepid']==self.get_attribute('prepid'): continue # no self check
             similar_r = request(similar)
@@ -1541,12 +1541,16 @@ done
                 return not_good
 
         elif self.get_attribute('approval') == 'submit':
-            from tools.handlers import RequestInjector
-
-            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                  lock=locker.lock(self.get_attribute('prepid')))
-            threaded_submission.start()
-            return {"prepid": self.get_attribute('prepid'), "results": True}
+            ### this is for automated retries of submissions of requests in approval/status submit/approved
+            # this is a remnant of when submission was not done automatically on toggle submit approval
+            # in the current paradigm, this automated is probably not necessary, as the failure might be genuine
+            # and also, it interferes severly with chain submission
+            ##from tools.handlers import RequestInjector
+            ##threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
+            ##                                      lock=locker.lock(self.get_attribute('prepid')))
+            ##threaded_submission.start()
+            ##return {"prepid": self.get_attribute('prepid'), "results": True}
+            return {"prepid": self.get_attribute('prepid'), "results": False}
         else:
             not_good.update({'message': 'Not implemented yet to inspect a request in %s status and approval %s' % (
                 self.get_attribute('status'), self.get_attribute('approval'))})
@@ -2217,13 +2221,20 @@ done
         from json_layer.chained_request import chained_request
 
         crdb = database('chained_requests')
+        rdb = database('requests')
         for chain in chains:
             cr = chained_request(crdb.get(chain))
             if cr.get_attribute('chain').index(self.get_attribute('prepid')) < cr.get_attribute('step'):
-                ## cannot reset a request that is part of a further on-going chain
-                raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                                    'The request is part of a chain (%s) that is currently processing another request (%s)' % (
-                                                        chain, cr.get_attribute('chain')[cr.get_attribute('step')]))
+                ## inspect the ones that would be further ahead
+                for rid in cr.get_attribute('chain')[cr.get_attribute('chain').index(self.get_attribute('prepid')):]:
+                    if rid == self.get_attribute('prepid'): continue
+                    mcm_r = request(rdb.get( rid ))
+                    if mcm_r.get_attribute('status') in ['submitted','done']:
+                    ## cannot reset a request that is part of a further on-going chain
+                        raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
+                                                            'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (chain,
+                                                                                                                                                                                     mcm_r.get_attribute('prepid'),
+                                                                                                                                                                                     mcm_r.get_attribute('status')))
 
         if hard:
             self.approve(0)
@@ -2394,8 +2405,7 @@ done
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.logger.inject("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids),
                                    handler=prepid)
-                self.set_attribute('config_id', sorted_additional_config_ids)
-                self.reload()
+                self.overwrite( {'config_id' : sorted_additional_config_ids} )
             return command
         finally:
             for i in to_release:
