@@ -103,6 +103,9 @@
                 <a ng-href='public/restapi/chained_requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
                   <i class="icon-ok-circle"></i>
                 </a>
+		<a ng-click="single_step('soft_reset',data.prepid, '')" rel="tooltip" title="Soft reset the flow" ng-hide="role(3);">
+		  <i class="icon-step-backward"></i>
+		</a>
                 <a ng-click="single_step('rewind',data.prepid, '')" rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
                   <i class="icon-backward"></i>
                 </a>

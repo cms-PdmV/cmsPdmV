@@ -569,6 +569,33 @@ class TestChainedRequest(RESTResource):
         runtest.start()
         return dumps({"results" : True, "message" : "run test started","prepid" : args[0]})
         
+class SoftResetChainedRequest(RESTResource):
+    def __init__(self, mode='show'):
+        self.access_limit = access_rights.production_manager
+
+    def GET(self, *args):
+        """
+        Does a soft reset to all relevant request in the chain
+        """
+        arg0 = args[0]
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        
+        mcm_cr = chained_request(crdb.get( arg0 ))
+        for rid in reversed( mcm_cr.get_attribute('chain')[:mcm_cr.get_attribute('step')+1] ):
+            ## from the current one to the first one REVERSED
+            mcm_r = request( rdb.get( rid ))
+            try:
+                mcm_r.reset(hard=False)
+            except Exception as e:
+                return dumps({'prepid' : arg0, 'results':False, 'message' : str(e)})
+
+            mcm_r.reload()
+            mcm_cr = chained_request(crdb.get( arg0 ))
+            mcm_cr.set_attribute('step', max(0,mcm_cr.get_attribute('chain').index( rid )-1))
+            mcm_cr.reload()
+        return dumps({'prepid' : arg0, 'results':True})
+
 
 class InjectChainedRequest(RESTResource):
     def __init__(self, mode='show'):
