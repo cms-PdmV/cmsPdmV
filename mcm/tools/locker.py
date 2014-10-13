@@ -64,7 +64,7 @@ class SemaphoreEvents(object):
 
     def decrement(self, lock_id):
         with locker.lock(lock_id):
-            self.count_dictionary[lock_id] -= 1
+            self.count_dictionary[lock_id] = max(0, self.count_dictionary[lock_id]-1) ## floor to 0
             self.logger.log("Semaphore {0} decremented".format(lock_id))
             if self.count_dictionary[lock_id] == 0:
                 self.event_dictionary[lock_id].set()
