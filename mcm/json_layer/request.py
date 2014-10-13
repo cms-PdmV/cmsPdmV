@@ -540,9 +540,9 @@ class request(json_base):
         my_ps_and_t = self.get_processing_strings_and_tiers()
         for (my_ps,my_t) in my_ps_and_t:
             check_ingredients = map(lambda s : s.lower() , my_ps.split('_'))
-            if any(map(lambda ing1: map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients), check_ingredients)) and self.current_user_level == 4:
+            if any(map(lambda ing1: any(map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients)), check_ingredients)) and self.current_user_level == 4:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset" % ( my_ps ))
+                                                 "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
         for similar in similar_ds:
             if similar['prepid']==self.get_attribute('prepid'): continue # no self check
             similar_r = request(similar)
