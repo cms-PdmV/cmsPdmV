@@ -120,4 +120,8 @@ div.loading {
 .not-supported-message {
     margin: 20px;
 }
+
+img.led {
+ vertical-align: top;
+}
 /* end of graph CSS */
