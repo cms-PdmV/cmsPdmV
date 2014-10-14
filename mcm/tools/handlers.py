@@ -313,15 +313,16 @@ class RunChainValid(Handler):
             if success:
                 for (i_r,mcm_r) in enumerate(mcm_rs):
                     mcm_current = request( rdb.get(mcm_r.get_attribute('prepid')))
-                    if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
-                        if mcm_current.get_attribute('status') != 'new': continue ## should not toggle to the next status for things that are not 'new'
-                        mcm_r.set_status(with_notification=True)
-                        if not mcm_r.reload():
-                            self.reset_all( 'The request %s could not be saved after the runtest procedure' % (mcm_r.get_attribute('prepid')))
-                            return
-                    else:
-                        self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
-                        return        
+                    #if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
+                    if mcm_current.get_attribute('status') != 'new': 
+                        continue ## should not toggle to the next status for things that are not 'new'
+                    mcm_current.set_status(with_notification=True)
+                    if not mcm_current.reload():
+                        self.reset_all( 'The request %s could not be saved after the runtest procedure' % (mcm_current.get_attribute('prepid')))
+                        return
+                    #else:
+                    #    self.reset_all( 'The request %s has changed during the run test procedure'%(mcm_r.get_attribute('prepid')), notify_one = mcm_r.get_attribute('prepid'))
+                    #    return        
             else:
                 self.reset_all( trace , notify_one = last_fail.get_attribute('prepid') )
                 return
