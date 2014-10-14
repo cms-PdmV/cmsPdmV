@@ -259,6 +259,9 @@ class TransfertRequest(RequestRESTResource):
             return dumps({"results": 'Error: No arguments were given.'})
         
         l_type = locator()
+        if not l_type.isDev():
+            return dumps({"results": 'cannot transfer request into prod'})
+
         from_rdb = database('requests',url = l_type.dbLocation(inverted=False))
         to_rdb = database('requests')
         rids = args[0].split(',')
