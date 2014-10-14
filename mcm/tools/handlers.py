@@ -234,11 +234,13 @@ class RunChainValid(Handler):
             semaphore_events.decrement( s_label )
             if not semaphore_events.is_set( s_label ):
                 ##someone else is still validating that chain, so no reset !
+                mcm_r.notify('%s failed for request %s' % (what, mcm_r.get_attribute('prepid')), message)
                 continue
                 
             ## do not reset anything that does not look ok already
             # this might leave things half-way inconsistent in terms of status
             if mcm_r.get_attribute('status') != 'new':
+                mcm_r.notify('%s failed for request %s' % (what, mcm_r.get_attribute('prepid')), message)
                 continue
             
 
