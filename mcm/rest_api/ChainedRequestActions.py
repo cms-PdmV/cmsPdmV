@@ -548,6 +548,7 @@ class TestChainedRequest(RESTResource):
                     getattr(mcm_r,'ok_to_move_to_approval_%s'% next)(for_chain=True)
                     mcm_r.update_history({'action': 'approve', 'step':next})
                     mcm_r.set_attribute('approval',next)
+                    mcm_r.reload()
                 else:
                     pass
                     ## fail this for the moment. there is no way to handle this yet
@@ -561,7 +562,7 @@ class TestChainedRequest(RESTResource):
                                                                        mcm_cr.get_attribute('prepid'),
                                                                        mcm_r.get_attribute('prepid')),
                              text, accumulate=True)
-                mcm_r.reload()
+
             except Exception as e:
                 runtest.reset_all( str(e) , notify_one = rid )
                 return dumps({"results" : False, "message" : str(e),"prepid" : args[0]})
