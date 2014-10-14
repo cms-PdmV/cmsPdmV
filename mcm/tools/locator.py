@@ -28,8 +28,11 @@ class locator:
         else:
             return False
 
-    def dbLocation(self):
-        if self.isDev():
+    def dbLocation(self,inverted=False):
+        dev = self.isDev()
+        if inverted:
+            dev = not dev
+        if dev:
             return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
             #return 'http://188.184.20.242:5984/'
         else:
