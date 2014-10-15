@@ -124,4 +124,12 @@ div.loading {
 img.led {
  vertical-align: top;
 }
+
+.text-uppercase {
+    text-transform:uppercase;
+}
+
+.margin-r {
+    margin-right: 5px;
+}
 /* end of graph CSS */
