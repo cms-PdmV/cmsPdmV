@@ -234,6 +234,9 @@ class FlowToNextStep(RESTResource):
             check_stats=(args[1]!='force')
             self.logger.log(args)
             reserve = args[1]=='reserve'
+            if len(args>2):
+                reserve = int(args[2])
+
         return dumps(self.multiple_flow(args[0], check_stats, reserve))
 
     def multiple_flow(self, rid, check_stats=True, reserve=False):
@@ -274,7 +277,8 @@ class FlowToNextStep(RESTResource):
         if 'force' in vdata:
             check_stats = vdata['force']!='force'
         if 'reserve' in vdata and vdata["reserve"]:
-            return creq.reserve()
+            reserve = vdata["reserve"]
+            return creq.reserve(limit = reserve)
         return creq.flow_trial( inputds,  inblack,  inwhite, check_stats)
 
     def flow(self, chainid, check_stats=True, reserve = False):
@@ -289,7 +293,7 @@ class FlowToNextStep(RESTResource):
         # if the chained_request can flow, do it
         if reserve:
             self.logger.log('Attempting to reserve to next step for chained_request %s' %  (creq.get_attribute('_id')))
-            return creq.reserve()
+            return creq.reserve( limit = reserve )
         self.logger.log('Attempting to flow to next step for chained_request %s' %  (creq.get_attribute('_id')))
         return creq.flow_trial(check_stats=check_stats)
 

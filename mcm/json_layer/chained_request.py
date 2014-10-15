@@ -139,8 +139,12 @@ class chained_request(json_base):
             self.set_attribute("chain", chain)
             self.update_history({'action': 'add request', 'step': req.get_attribute('prepid')})
 
-    def reserve(self):
+    def reserve(self,limit=None):
+        steps=0
         while True:
+            if limit and steps+1>limit:
+                ### stop here
+                break
             try:
                 if not self.flow_to_next_step(check_stats=False, reserve=True):
                     break
