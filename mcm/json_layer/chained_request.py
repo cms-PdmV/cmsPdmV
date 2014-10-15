@@ -144,7 +144,10 @@ class chained_request(json_base):
         count_limit = None
         campaign_limit = None
         if limit:
-            if limit.isdigit():
+            if limit == True:
+                ## just protect for unexpected input
+                self.logger.error('limit=True was passed on to reservation. No limit set')
+            elif limit.isdigit():
                 count_limit = int(limit)
             else:
                 campaign_limit = limit
