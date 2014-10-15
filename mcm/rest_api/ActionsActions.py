@@ -274,7 +274,7 @@ class GenerateChainedRequests(RESTResource):
         if reserve:
             for cr in new_chains:
                 mcm_cr = chained_request(crdb.get( cr ))
-                res.append(mcm_cr.reserve())
+                res.append(mcm_cr.reserve( limit = reserve))
                 crdb.update( mcm_cr.json())
 
         if priority_set:
