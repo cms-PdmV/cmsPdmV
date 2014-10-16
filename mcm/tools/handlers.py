@@ -313,7 +313,13 @@ class RunChainValid(Handler):
             if success:
                 for (i_r,mcm_r) in enumerate(mcm_rs):
                     mcm_current = request( rdb.get(mcm_r.get_attribute('prepid')))
-                    #if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
+                    if mcm_current.json()['_rev'] == mcm_r.json()['_rev']:
+                        mcm_current = mcm_r
+                    else:
+                        ## revision clash, let's take the last verion, but with goodies of the one we have in hand
+                        transfer_anyways = ['time_event','size_event','generator_parameters']
+                        for item in transfer_anyways:
+                            mcm_current.set_attribute(item, mcm_r.get_attribute(item))
                     if mcm_current.get_attribute('status') != 'new': 
                         continue ## should not toggle to the next status for things that are not 'new'
                     mcm_current.set_status(with_notification=True)
