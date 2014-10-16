@@ -60,7 +60,7 @@ class BatchPrepId():
             ##find out the next one
             if not res_new:
                 ##no open batch of this kind
-                res_next = filter(lambda x: x['prepid'].split('-')[0].split('_')[-1] == next_campaign , res)
+                res_next = filter(lambda x: x['prepid'].split('-')[0].split('_')[-1] == next_campaign.split('_')[-1] , res)
                 if not res_next:
                     ## not even a document with *_<campaign>-* existing: ---> creating a new family
                     batchNumber=1
