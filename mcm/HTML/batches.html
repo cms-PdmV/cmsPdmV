@@ -34,7 +34,7 @@
       <thead>
         <tr>
           <th ng-repeat="column in batches_defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
-            <div ng-switch-when="Actions"  ng-hide="role(1);">
+            <div ng-switch-when="Actions" > <!-- ng-hide="role(1);"> -->
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -67,7 +67,7 @@
         <tr ng-repeat="data in result  | orderBy:sort.column: sort.descending | filter: filt">
           <td ng-repeat="value in batches_defaults" ng-if="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions" ng-hide="role(1);">
+              <div ng-switch-when="Actions" > <!--ng-hide="role(1);">-->
                 <div ng-controller="ModalDemoCtrl">
                   <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);" ng-href="#">
                     <i class="icon-minus-sign"></i>
@@ -93,7 +93,7 @@
                   </script>
         <!--     END OF MODAL                 -->
                   <a ng-click="isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
-                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
+                  <a ng-click="loadStats(data.requests);preloadRequests(data.requests)" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
                   <a ng-click="broadcast_inspect(data.requests, data.prepid);" rel="tooltip" title="Load detailled view requests" ng-href="#">
                     <i class="icon-barcode"></i>
                   </a>
@@ -117,19 +117,12 @@
               </div>
               <div ng-switch-when="Requests">
               	<ul class="media-list">
-              	  <li class="well-small" ng-init="loadStats(data.requests)" ng-repeat="elem in data[value.db_name]">
+              	  <li class="well-small" ng-repeat="elem in data[value.db_name]" >
+                    <img  class="led" ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
 		    <small>
-                      <!-- <b>Details in RM</b>: <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="DetaNils in request manager" target="_self">{{elem.name}}</a><br/> -->
-		      <img class="led" ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
                       <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="View request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
-                      <span ng-show="addStats[elem.content.pdmv_prep_id]">
-			<a ng-click="preloadRequest(elem.content.pdmv_prep_id,'');" ng-hide="underscore.has(local_requests,elem.content.pdmv_prep_id)" ng-href="#"><i class="icon-eye-open"></i></a>
-			<span ng-show="underscore.has(local_requests,elem.content.pdmv_prep_id)">
-                          <br/><reqmgr-Name ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
-			</span>
-                      </span>
-
 		    </small>
+                    <reqmgr-Name ng-show="puce[elem.content.pdmv_prep_id]" ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
                   </li>
               	</ul>
               </div>

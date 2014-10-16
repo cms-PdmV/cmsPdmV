@@ -181,6 +181,12 @@ function resultsCtrl($scope, $http, $location, $window){
     }  
   };
 
+  $scope.preloadRequests = function (requests) {
+      for (var r in requests) {
+          $scope.preloadRequest(requests[r].content.pdmv_prep_id, '');
+      }
+  };
+
   $scope.broadcast_inspect = function (requests_data, column_id) {
     _.each(requests_data, function (element, index){
       if ($scope.r_status[element.content.pdmv_prep_id] == "submitted")
