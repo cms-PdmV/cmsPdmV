@@ -134,8 +134,9 @@ class request_to_wmcontrol:
                 raise ValueError('Is not set to save the output of last task')
 
             for (i, content) in enumerate(eventcontentlist):
-                if keeps[i]:
-                    command += ' --keep-step' + str(i + 1) + ' True'
+                if i < 2: #trick to NOT add for step3 and more:
+                    if keeps[i]:
+                        command += ' --keep-step' + str(i + 1) + ' True'
 
                 if i > 0:
                     processingString = mcm_r.get_processing_string(i)

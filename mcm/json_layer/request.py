@@ -527,6 +527,10 @@ class request(json_base):
                                              'The time (%s) or size per event (%s) is inappropriate' % (
                                                  self.get_attribute('time_event'), self.get_attribute('size_event')))
 
+        if self.get_scram_arch() == None:
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                                             'The architecture is invalid, probably has the release %s being deprecated' % (
+                                             self.get_attribute('cmssw_release')))
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
@@ -2351,6 +2355,10 @@ done
                 if execute:
                     with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
+                        if not request_arch:
+                            self.logger.error('the release %s architecture is invalid'% self.get_attribute('member_of_campaign'))
+                            self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid'%self.get_attribute('member_of_campaign'), what='Configuration upload')
+                            return False
                         if "slc6" in request_arch:
                             machine_name = "cms-pdmv-op.cern.ch"
                         else:
