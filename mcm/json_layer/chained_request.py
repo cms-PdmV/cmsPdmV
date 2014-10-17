@@ -283,8 +283,8 @@ class chained_request(json_base):
                                                             self.get_attribute('_id'),
                                                             self.get_attribute('approval')))
         """
-        if not reserve and not mcm_f.get_attribute('approval') in allowed_flow_approvals:
-            if not self.get_attribute('approval') in allowed_flow_approvals:
+        if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
+            if reserve or not self.get_attribute('approval') in allowed_flow_approvals:
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
                                                                mcm_f.get_attribute('approval'),
