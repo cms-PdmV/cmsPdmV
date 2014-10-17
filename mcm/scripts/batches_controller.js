@@ -5,9 +5,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.dbName = $location.search()["db_name"];
   }
 
-  // Mappings between requests and booleans for ng-show
-  $scope.addStats = {}
-
   $scope.puce = {};
   $scope.r_status = {};
   $scope.update = [];
@@ -135,12 +132,6 @@ function resultsCtrl($scope, $http, $location, $window){
 		      }else{
 			  $scope.puce[ r_prepid ] = 'icon-question-sign';
 		      }
-		      
-		      // Only reason to show stats if request done or submitted
-		      $scope.addStats[r_prepid] = false;
-		      if (r_status == 'submitted' || r_status == 'done') {
-			  $scope.addStats[r_prepid] = true;
-		      }
 
 		  }).error(function(status){
 			  alert('cannot get status for '+elem.content.pdmv_prep_id);
@@ -179,12 +170,6 @@ function resultsCtrl($scope, $http, $location, $window){
         alert("error " + data.results);
       });
     }  
-  };
-
-  $scope.preloadRequests = function (requests) {
-      for (var r in requests) {
-          $scope.preloadRequest(requests[r].content.pdmv_prep_id, '');
-      }
   };
 
   $scope.broadcast_inspect = function (requests_data, column_id) {
