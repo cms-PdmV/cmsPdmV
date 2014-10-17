@@ -93,7 +93,7 @@
                   </script>
         <!--     END OF MODAL                 -->
                   <a ng-click="isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
-                  <a ng-click="loadStats(data.requests);preloadRequests(data.requests)" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
+                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
                   <a ng-click="broadcast_inspect(data.requests, data.prepid);" rel="tooltip" title="Load detailled view requests" ng-href="#">
                     <i class="icon-barcode"></i>
                   </a>
@@ -116,13 +116,18 @@
                 <a ng-href='batches?status={{data[value.db_name]}}' target="_self" rel="tooltip" title="View batches in status {{data[value.db_name]}}">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Requests">
-              	<ul class="media-list">
-              	  <li class="well-small" ng-repeat="elem in data[value.db_name]" >
-                    <img  class="led" ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
-		    <small>
-                      <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="View request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
-		    </small>
-                    <reqmgr-Name ng-show="puce[elem.content.pdmv_prep_id]" ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
+                <ul>
+                  <li ng-repeat="elem in data[value.db_name]">
+                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
+                    <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
+                    ,
+                    <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
+                    <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
+                    <span ng-show="r_status[elem.content.pdmv_prep_id] == 'submitted'">
+                      <a ng-click="preloadRequest(elem.content.pdmv_prep_id,'');" ng-hide="underscore.has(local_requests,elem.content.pdmv_prep_id)" ng-href="#"><i class="icon-eye-open"></i></a>
+                      <span ng-show="underscore.has(local_requests,elem.content.pdmv_prep_id)">
+                        <reqmgr-Name ng-model="local_requests[''+elem.content.pdmv_prep_id+'']" prepid="data.prepid"></reqmgr-Name>
+                      </span>
                   </li>
               	</ul>
               </div>
