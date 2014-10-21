@@ -79,54 +79,56 @@
           <td ng-repeat="value in defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-click='delete_object("chained_requests", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
-                  <i class="icon-minus-sign"></i>
-                </a>
-                <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
-                  <i class="icon-wrench"></i>
-                </a>
-                <a ng-click="load_puce(data.prepid)" rel="tooltip" title="Load short view">
-                  <i class="icon-eye-open"></i>
-                </a>
-                <a ng-click="single_step('approve',data.prepid,'/0')" rel="tooltip" title="Reset" ng-hide="role(3);">
-                  <i class="icon-repeat"></i>
-                </a>
-		<a ng-click="single_step('test',data.prepid, '')" rel="tooltip" title="Validate the chain" ng-hide="role(1);">
-		  <i class="icon-star-empty"></i>
-		</a>
-                <a ng-click="single_step('approve',data.prepid, '')" rel="tooltip" title="Next step" ng-hide="role(3);">
-                  <i class="icon-chevron-right"></i>
-                </a>
-                <a ng-href='public/restapi/chained_requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self">
-                  <i class="icon-download"></i>
-                </a>
-                <a ng-href='public/restapi/chained_requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
-                  <i class="icon-ok-circle"></i>
-                </a>
-		<a ng-click="single_step('soft_reset',data.prepid, '')" rel="tooltip" title="Soft reset the flow" ng-hide="role(3);">
-		  <i class="icon-step-backward"></i>
-		</a>
-                <a ng-click="single_step('rewind',data.prepid, '')" rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
-                  <i class="icon-backward"></i>
-                </a>
-                <a ng-click='flowChainedRequest(data.prepid,"")' rel="tooltip" title="Flow" target="_self" ng-hide="role(3);">
-                  <i class="icon-forward"></i>
-                </a>
-                <a ng-click='flowChainedRequest(data.prepid,"/force")' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);">
-                  <i class="icon-fast-forward"></i>
-                </a>
-                <a ng-click='flowChainedRequest(data.prepid,"/reserve")' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);">
-                  <i class="icon-indent-right"></i>
-                </a>
-                <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
-                  <i class="icon-screenshot"></i>
-                </a>
-                <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
-                  <i class="icon-picture"></i>
-                </a>
-                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
-                <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
-                <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
+                <div ng-controller="ModalDemoCtrl">
+                  <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
+                    <i class="icon-minus-sign"></i>
+                  </a>
+                  <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
+                    <i class="icon-wrench"></i>
+                  </a>
+                  <a ng-click="load_puce(data.prepid)" rel="tooltip" title="Load short view">
+                    <i class="icon-eye-open"></i>
+                  </a>
+                  <a ng-click='isSureModal("reset", data.prepid)' rel="tooltip" title="Reset" ng-hide="role(3);">
+                    <i class="icon-repeat"></i>
+                  </a>
+		  <a ng-click='isSureModal("validate", data.prepid)' rel="tooltip" title="Validate the chain" ng-hide="role(1);">
+		    <i class="icon-star-empty"></i>
+		  </a>
+                  <a ng-click='isSureModal("next step", data.prepid)' rel="tooltip" title="Next step" ng-hide="role(3);">
+                    <i class="icon-chevron-right"></i>
+                  </a>
+                  <a ng-href='public/restapi/chained_requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self">
+                    <i class="icon-download"></i>
+                  </a>
+                  <a ng-href='public/restapi/chained_requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
+                    <i class="icon-ok-circle"></i>
+                  </a>                  
+		  <a ng-click='isSureModal("soft reset", data.prepid)' rel="tooltip" title="Soft reset the flow" ng-hide="role(3);">
+		    <i class="icon-step-backward"></i>
+		  </a>
+                  <a ng-click='isSureModal("rewind", data.prepid)' rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
+                    <i class="icon-backward"></i>
+                  </a>
+                  <a ng-click='isSureModal("flow", data.prepid)' rel="tooltip" title="Flow" ng-hide="role(3);">
+                    <i class="icon-forward"></i>
+                  </a>
+                  <a ng-click='isSureModal("force flow", data.prepid)' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);">
+                    <i class="icon-fast-forward"></i>
+                  </a>
+                  <a ng-click='isSureModal("reserve", data.prepid)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);">
+                    <i class="icon-indent-right"></i>
+                  </a>
+                  <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
+                    <i class="icon-screenshot"></i>
+                  </a>
+                  <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
+                    <i class="icon-picture"></i>
+                  </a>
+                  <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
+                  <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
+                  <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
+                </div>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>

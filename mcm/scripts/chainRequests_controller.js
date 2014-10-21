@@ -91,7 +91,7 @@ function resultsCtrl($scope, $http, $location, $window){
       }
     }).error(function(status){
       alert('Error no.' + status + '. Could not delete object.');
-    });
+      });
   };
 
   $scope.single_step = function(step, prepid, extra){
@@ -641,3 +641,55 @@ testApp.directive("loadRequestsFields", function($http, $location){
     }
   }
 });
+
+
+var ModalDemoCtrl = function ($scope, $http, $modal) {
+    $scope.isSureModal = function (action, prepid) {
+        var isSure = $modal.open({
+                templateUrl: 'isSureModal.html',
+                controller: ModalIsSureCtrl,
+                resolve: {
+                    prepid: function () {
+                        return prepid;
+                    },
+                    action: function () {
+                        return action;
+                    }
+                }
+            });
+        isSure.result.then(function () {
+            switch (action) {
+            case "delete":
+                $scope.delete_object('chained_requests', prepid);
+                break;
+            case "reset":
+                $scope.single_step('approve', prepid, '/0');
+                break;
+            case "validate":
+                $scope.single_step('test', prepid, '');
+                break;
+            case "next step":
+                $scope.single_step('approve', prepid, '');
+                break;
+            case "soft reset":
+                $scope.single_step('soft_reset', prepid, '');
+                break;
+            case "rewind":
+                $scope.single_step('rewind', prepid, '');
+                break;
+            case "flow":
+                $scope.flowChainedRequest(prepid, '');
+                break;
+            case "force flow":
+                $scope.flowChainedRequest(prepid, '/force');
+                break;
+            case "reserve":
+                $scope.flowChainedRequest(prepid, '/reserve');
+                break;
+            default:
+                alert('Unknown action!');
+                break;
+            }
+        });
+    };
+};
