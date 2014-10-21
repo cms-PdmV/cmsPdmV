@@ -246,6 +246,7 @@ class InspectBatches(BatchAnnouncer):
         return dumps(res)
 
 class ResetBatch(BatchAnnouncer):
+
     def __init__(self):
         self.access_limit = access_rights.production_manager
 
@@ -253,28 +254,30 @@ class ResetBatch(BatchAnnouncer):
         """
         Reset all requests in a batch (or list of) and set the status to reset
         """
-        res=[]
+        res = []
         bdb = database('batches')
         rdb = database('requests')
         bids = args[0]
         for bid in bids.split(','):
             mcm_b = bdb.get(bid)
             for r in mcm_b['requests']:
-                if not 'pdmv_prep_id' in r['content']: 
+                if not 'pdmv_prep_id' in r['content']:
                     continue
                 rid = r['content']['pdmv_prep_id']
-                if not rdb.document_exists( rid ):
+                if not rdb.document_exists(rid):
                     continue
-                mcm_r = request( rdb.get( rid ) )
+                mcm_r = request(rdb.get(rid))
                 try:
                     mcm_r.reset()
-                    rdb.update( mcm_r.json() )
+                    rdb.update(mcm_r.json())
                 except Exception as ex:
                     continue
-
-            mcm_b['status'] = 'reset'
-            bdb.update( mcm_b )
-            res.append({'prepid':bid, 'results': True})
+            batch_to_update = batch(mcm_b)
+            batch_to_update.set_attribute('status', 'reset')
+            batch_to_update.update_history({'action': 'set status',
+                                            'step': 'reset'})
+            bdb.update(batch_to_update.json())
+            res.append({'prepid': bid, 'results': True})
         return dumps(res)
 
 

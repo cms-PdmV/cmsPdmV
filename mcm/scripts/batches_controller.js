@@ -105,14 +105,15 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("Batch to be announced:"+prepid);
     };
 
-  $scope.resetBatch = function(batch_id ){
-      $http({method:'GET', url: 'restapi/batches/reset/'+batch_id}).success(function(data,status){
-	      $scope.getData();
-	      alert('successfully resetted the batch');
-	  }).error(function(status){
-		  alert('failed');
-	      });
-  };
+    $scope.resetBatch = function (batch_id) {
+        $http({method: 'GET', url: 'restapi/batches/reset/' + batch_id}).success(function (data, status) {
+            $scope.getData();
+            alert('Successfully resetted the batch');
+        }).error(function (status) {
+            console.log(status);
+            alert('Failed while updating the batch');
+        });
+    };
 
   $scope.loadStats = function(batch_requests){
       _.each( batch_requests, function(elem,index){
