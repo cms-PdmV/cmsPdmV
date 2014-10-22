@@ -155,18 +155,15 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 		    $scope.setFailure(status);
 		  });
     };
-
-    $scope.loadStats = function(){	
-      for (i=0;i<$scope.result.length;i++){
-        if ($scope.selected_prepids.indexOf( $scope.result[i].prepid) != -1){
-          for (i_r=0;i_r!=$scope.result[i].reqmgr_name.length;i_r++){
-            $scope.$broadcast('loadDataSet', [$scope.result[i].reqmgr_name[i_r].name, i_r,$scope.result[i].prepid]);
-	          //$scope.load_dataset_list($scope.result[i].reqmgr_name[i_r].name, i_r);
+    $scope.loadStats = function () {
+      for (var a in $scope.result) {
+        if (-1 != $scope.selected_prepids.indexOf($scope.result[a].prepid)) {
+          for (var b in $scope.result[a].reqmgr_name) {
+            this.$broadcast("loadDataSet", [$scope.result[a].reqmgr_name[b].name, b, $scope.result[a].prepid]);
           }
         }
       }
     };
-
     $scope.delete_edit = function(id){
       $scope.delete_object($scope.dbName, id);
     };

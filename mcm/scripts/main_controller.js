@@ -114,7 +114,7 @@ var promise;
   };
 
   $scope.role = function(priority){
-    return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
+      return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
   };
   //watch length of pending HTTP requests -> if there are display loading;
   $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){
@@ -465,7 +465,7 @@ testApp.directive('dropdownToggle', ['$document', '$location', function ($docume
   };
 }]);
 
-testApp.directive("reqmgrName", function($http, $modal){
+testApp.directive("reqmgrName", function($http){
   return {
     require: 'ngModel',	
     restrict: 'E',
@@ -480,7 +480,6 @@ testApp.directive("reqmgrName", function($http, $modal){
         scope.rqmngr_data = ctrl.$viewValue;
         scope.r_prepid = scope.$eval(attrs.prepid);
       };
-      
       scope.load_dataset_list = function (req_name, index){
         scope.getrqmnr_data(req_name, index);
       };              
@@ -497,18 +496,13 @@ testApp.directive("reqmgrName", function($http, $modal){
           scope.stats_cache[req_name] = "Not found";
         });
       };
-                    
-      scope.$on('loadDataSet', function(event, values){
-        if(scope.dbName == "requests")
-        {
-          if (values[2]== scope.r_prepid)
-          {
+      scope.$on('loadDataSet', function (events, values) {
+        if (scope.dbName == "requests") {
+          if (scope.data._id == values[2]) {
             scope.load_dataset_list(values[0], values[1]);
           }
-        }else
-        {
-          if (values[2] == scope.r_prepid)
-          {
+        } else {
+          if (scope.r_prepid == values[2]) {
             scope.load_dataset_list(values[0], values[1]);
           }
         }
