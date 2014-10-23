@@ -14,6 +14,7 @@ from tools.user_management import access_rights
 from tools.json import threaded_loads
 import traceback
 from tools.locker import locker
+from tools.settings import settings
 
 """
 ## import the rest api for wilde request search and dereference to chained_requests using member_of_chain
@@ -641,6 +642,7 @@ class TaskChainDict(RESTResource):
         crdb = database('chained_requests')
         rdb = database('requests')
         def request_to_tasks( r , base, depend):
+            events_per_lumi = settings().get_value('events_per_lumi')
             ts=[]
             for si in range(len(r.get_attribute('sequences'))):
                 task_dict={"TaskName": "%s_%d"%( r.get_attribute('prepid'), si),
@@ -673,14 +675,16 @@ class TaskChainDict(RESTResource):
                         task_dict.update({"SplittingAlgo"  : "EventBased",
                                           "RequestNumEvents" : r.get_attribute('total_events'),
                                           "Seeding" : "AutomaticSeeding",
-                                          "EventsPerLumi" : 100,
+                                          "EventsPerLumi" : events_per_lumi,
                                           "LheInputFiles" : r.get_attribute('mcdb_id')>0
                                           })
                         ## temporary work-around for request manager not creating enough jobs
                         ## https://github.com/dmwm/WMCore/issues/5336
                         ## inflate requestnumevents by the efficiency to create enough output
-                        task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"]
-                        task_dict["RequestNumEvents"] /= task_dict["FilterEfficiency"]
+                        max_forward_eff = r.get_forward_efficiency()
+                        task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"] #should stay nevertheless as it's in wmcontrol for now
+                        task_dict["EventsPerLumi"] /= max_forward_eff #this does not take its own efficiency
+                        task_dict["RequestNumEvents"] /= task_dict["FilterEfficiency"] #should disappear with the above getting resolved
 
                     else:
                         if depend:
