@@ -1750,7 +1750,9 @@ done
             for r in chain:
                 if r==myid: continue
                 mcm_r = request(rdb.get( r ))
-                forward_eff *= mcm_r.get_efficiency()
+                an_eff = mcm_r.get_efficiency()
+                if an_eff >0:
+                    forward_eff *= an_eff
             if forward_eff > max_forward_eff:
                 max_forward_eff = forward_eff
         return max_forward_eff
