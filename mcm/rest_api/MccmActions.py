@@ -200,6 +200,8 @@ class GenerateChains(RESTResource):
         reserve=False
         if len(args)>1:
             reserve= (args[1]=='reserve')
+            if len(args)>2:
+                reserve = args[2]
 
         lock = locker.lock(mid)
         if lock.acquire(blocking=False):

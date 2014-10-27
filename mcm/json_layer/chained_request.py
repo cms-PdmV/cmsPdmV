@@ -139,10 +139,26 @@ class chained_request(json_base):
             self.set_attribute("chain", chain)
             self.update_history({'action': 'add request', 'step': req.get_attribute('prepid')})
 
-    def reserve(self):
+    def reserve(self,limit=None):
+        steps=0
+        count_limit = None
+        campaign_limit = None
+        if limit:
+            if limit == True:
+                ## just protect for unexpected input
+                self.logger.error('limit=True was passed on to reservation. No limit set')
+            elif limit.isdigit():
+                count_limit = int(limit)
+            else:
+                campaign_limit = limit
+
         while True:
+            steps+=1
+            if count_limit and steps>count_limit:
+                ### stop here
+                break
             try:
-                if not self.flow_to_next_step(check_stats=False, reserve=True):
+                if not self.flow_to_next_step(check_stats=False, reserve=True, stop_at_campaign = campaign_limit):
                     break
                 saved = self.reload()
                 if not saved: return {"prepid": self.get_attribute("prepid"), "results": False, "message": "Failed to save chained request to database"}
@@ -157,7 +173,7 @@ class chained_request(json_base):
         return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)
         #return self.flow_to_next_step_clean(input_dataset,  block_black_list,  block_white_list)
 
-    def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False):
+    def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, stop_at_campaign=None):
         if not block_white_list: block_white_list = []
         if not block_black_list: block_black_list = []
         self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
@@ -198,6 +214,13 @@ class chained_request(json_base):
                                                          'the chain request %s is member of %s that does not exist' % (
                                                              self.get_attribute('_id'),
                                                              self.get_attribute('member_of_campaign')))
+
+        if reserve and stop_at_campaign and stop_at_campaign == current_campaign:
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id')
+                                                         'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
+                                                                                                              stop_at_campaign))
+                    
+
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
         if next_step >= len(mcm_cc['campaigns']):
             if reserve: return False
