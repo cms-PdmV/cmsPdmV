@@ -1,7 +1,8 @@
 from tools.locator import locator
 from tools.ssh_executor import ssh_executor
 from couchdb_layer.mcm_database import database
-
+from json_layer.request import request
+from tools.settings import settings 
 
 class request_to_wmcontrol:
     """
@@ -70,20 +71,20 @@ class request_to_wmcontrol:
         processString = mcm_r.get_attribute('process_string')
         processingString = mcm_r.get_processing_string(0)
 
-        def efficiency(mcm_r):
-            feff = mcm_r.get_attribute('generator_parameters')[-1]['filter_efficiency']
-            meff = mcm_r.get_attribute('generator_parameters')[-1]['match_efficiency']
-            return float(feff) * float(meff)
 
+        max_forward_eff = mcm_r.get_forward_efficiency()
+        events_per_lumi = settings().get_value('events_per_lumi')
+        
         if wmagent_type == 'MonteCarlo':
-            # calculate eff dev
-            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
 
+            # calculate eff dev
+            command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
+            command += ' --events-per-lumi %s' % ( events_per_lumi / max_forward_eff )
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
         elif wmagent_type == 'MonteCarloFromGEN':
             # calculate eff dev                
-            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
+            command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
 
             command += ' --input-ds %s' % (mcm_r.get_attribute('input_dataset'))
 
@@ -95,12 +96,15 @@ class request_to_wmcontrol:
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
 
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
+            command += ' --events-per-lumi 100'
 
         elif wmagent_type == 'LHEStepZero':
 
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
+            command += ' --events-per-lumi %s' % ( events_per_lumi / max_forward_eff )
+
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
-            command += ' --filter-eff %s' % ( efficiency(mcm_r) )
+            command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
 
             if mcm_r.get_attribute('mcdb_id') <= 0:
                 numberOfEventsPerJob = mcm_r.numberOfEventsPerJob()

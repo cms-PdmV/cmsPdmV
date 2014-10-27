@@ -1735,6 +1735,28 @@ done
             return match * filter_eff
         return 1.
 
+    def get_forward_efficiency(self, achain=None):
+        chains = self.get_attribute('member_of_chain')
+        myid = self.get_attribute('prepid')
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        max_forward_eff = 1.
+        for cr in chains:
+            if achain and cr!=achain: continue
+            forward_eff = 1.
+            mcm_cr = crdb.get( cr )
+            chain = mcm_cr['chain']
+            chain = chain[ chain.index( myid):]
+            for r in chain:
+                if r==myid: continue
+                mcm_r = request(rdb.get( r ))
+                an_eff = mcm_r.get_efficiency()
+                if an_eff >0:
+                    forward_eff *= an_eff
+            if forward_eff > max_forward_eff:
+                max_forward_eff = forward_eff
+        return max_forward_eff
+
     def get_n_unfold_efficiency(self, target):
         if self.get_attribute('generator_parameters'):
             eff = self.get_efficiency()
