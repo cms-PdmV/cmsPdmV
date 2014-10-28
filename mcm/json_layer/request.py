@@ -1740,10 +1740,10 @@ done
         myid = self.get_attribute('prepid')
         crdb = database('chained_requests')
         rdb = database('requests')
-        max_forward_eff = 1.
+        max_forward_eff = 0.
         for cr in chains:
             if achain and cr!=achain: continue
-            forward_eff = 1.
+            forward_eff = None
             mcm_cr = crdb.get( cr )
             chain = mcm_cr['chain']
             chain = chain[ chain.index( myid):]
@@ -1752,8 +1752,11 @@ done
                 mcm_r = request(rdb.get( r ))
                 an_eff = mcm_r.get_efficiency()
                 if an_eff >0:
-                    forward_eff *= an_eff
-            if forward_eff > max_forward_eff:
+                    if forward_eff:
+                        forward_eff *= an_eff
+                    else:
+                        forward_eff = an_eff
+            if forward_eff and forward_eff > max_forward_eff:
                 max_forward_eff = forward_eff
         return max_forward_eff
 
