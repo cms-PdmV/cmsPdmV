@@ -215,8 +215,8 @@ class chained_request(json_base):
                                                              self.get_attribute('_id'),
                                                              self.get_attribute('member_of_campaign')))
 
-        if reserve and stop_at_campaign and stop_at_campaign == current_campaign:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id')
+        if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
+            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
                                                                                                               stop_at_campaign))
                     

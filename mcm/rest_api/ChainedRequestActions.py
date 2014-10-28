@@ -235,7 +235,7 @@ class FlowToNextStep(RESTResource):
             check_stats=(args[1]!='force')
             self.logger.log(args)
             reserve = args[1]=='reserve'
-            if len(args>2):
+            if len(args)>2:
                 reserve = args[2]
 
         return dumps(self.multiple_flow(args[0], check_stats, reserve))
