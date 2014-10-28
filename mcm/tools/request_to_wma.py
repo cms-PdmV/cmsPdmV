@@ -96,7 +96,6 @@ class request_to_wmcontrol:
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
 
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
-            command += ' --events-per-lumi 100'
 
         elif wmagent_type == 'LHEStepZero':
 
