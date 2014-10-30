@@ -58,13 +58,3 @@ class cmsweb_interface:
             print traceback.format_exc()
         return None
 
-if __name__ == "__main__":
-    ### some testing queries
-    cmsweb = cmsweb_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
-    blocks = cmsweb.generic_call('https://cmsweb.cern.ch/dbs/prod/global/DBSReader/blocks?dataset=/Pyquen_Unquenched_AllQCDPhoton30_PhotonFilter35GeV_eta3_TuneZ2_reversepPb_5020GeV_v1/pAWinter13-STARTHI53_V27_mixing-v1/GEN-SIM')
-    print blocks
-    summary = cmsweb.generic_call('https://cmsweb.cern.ch/dbs/prod/global/DBSReader/blocksummaries?dataset=/Pyquen_Unquenched_AllQCDPhoton30_PhotonFilter35GeV_eta3_TuneZ2_reversepPb_5020GeV_v1/pAWinter13-STARTHI53_V27_mixing-v1/GEN-SIM')
-    print summary
-    summary = cmsweb.generic_call('https://cmsweb.cern.ch/dbs/prod/global/DBSReader/blocksummaries?block_name=/Pyquen_Unquenched_AllQCDPhoton30_PhotonFilter35GeV_eta3_TuneZ2_reversepPb_5020GeV_v1/pAWinter13-STARTHI53_V27_mixing-v1/GEN-SIM#7aa8299a-48ae-11e4-a7f4-003048f0e38c')
-    print summary
-

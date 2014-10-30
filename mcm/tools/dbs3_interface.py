@@ -2,9 +2,9 @@ from tools.cmsweb_interface import cmsweb_interface
 import itertools
 
 class dbs3_interface:
-    def __init__( self , dbs = 'global'):
+    def __init__( self , dbs = 'global', proxy = '/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert'):
         self.url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader/'%dbs
-        self.cmsweb = cmsweb_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
+        self.cmsweb = cmsweb_interface(proxy)
 
     def list_blocks(self, datasetname ):
         blocks = self.cmsweb.generic_call( self.url+"blocksummaries?dataset=%s&detail=true"%(datasetname))
@@ -37,11 +37,3 @@ class dbs3_interface:
             return map(lambda b : b['block_name'], selected_blocks), sum(map(lambda b : b['num_evernt'], selected_blocks))
         
 
-if __name__ == "__main__":
-    ### some testing queries
-    dbs3 = dbs3_interface()
-    blocks = dbs3.list_blocks( '/Pyquen_Unquenched_AllQCDPhoton30_PhotonFilter35GeV_eta3_TuneZ2_reversepPb_5020GeV_v1/pAWinter13-STARTHI53_V27_mixing-v1/GEN-SIM')
-    print blocks
-    (less_blocks, stats) = dbs3.match_stats('/Pyquen_Unquenched_AllQCDPhoton30_PhotonFilter35GeV_eta3_TuneZ2_reversepPb_5020GeV_v1/pAWinter13-STARTHI53_V27_mixing-v1/GEN-SIM' , 208240)
-    print less_blocks
-    print stats
