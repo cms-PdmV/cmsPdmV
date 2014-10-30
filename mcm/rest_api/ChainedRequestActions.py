@@ -688,7 +688,6 @@ class TaskChainDict(RESTResource):
                         max_forward_eff = r.get_forward_efficiency()
                         task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"] #should stay nevertheless as it's in wmcontrol for now
                         task_dict["EventsPerLumi"] /= max_forward_eff #this does not take its own efficiency
-                        task_dict["RequestNumEvents"] /= task_dict["FilterEfficiency"] #should disappear with the above getting resolved
 
                     else:
                         if depend:
