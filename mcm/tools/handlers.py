@@ -563,22 +563,15 @@ class ChainRequestInjector(Handler):
             mcm_r = mcm_rs[-1]
             batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
             semaphore_events.increment(batch_name)
-
+            reqmgr = reqmgr_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
             self.logger.error('found batch %s'% batch_name)
-            with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
-                cmd = self.make_command(mcm_r)
-                self.logger.error('prepared command %s'%cmd)
-                ## modify here to have the command to be executed
-                _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.log(output)
-                self.logger.log(error)
-
-                injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Injected workflow:')]
-                approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Approved workflow:')]
+            try:
+                output = error = 'N/A'
+                injected_requests = reqmgr.inject( request_to_wmcontrol().get_chain_dict( self.prepid ) )
+                approved_requests=[] 
+                for workflow in injected_requests:
+                    if reqmgr.assignmentapproved( workflow ):
+                        approved_requests.append( workflow )
 
                 if not injected_requests:
                     self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
