@@ -1,5 +1,6 @@
 from tools.locator import locator
 from tools.ssh_executor import ssh_executor
+from tools.dbs3_interface import dbs3_interface
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from tools.settings import settings 
@@ -78,6 +79,14 @@ class request_to_wmcontrol:
         for (t,schema) in schemas.items():
             schema.update( common )
 
+
+        ## figure out the block white list if need be
+        if mcm_r.get_attribute('input_dataset'):
+            dbs3 = dbs_interface()
+            blocks = dbs3.match_stats( mcm_r.get_attribute('input_dataset'), 
+                                       mcm_r.get_attribute('total_events'),
+                                       0.05)#match within 5%
+            mcm_r.set_attribute('block_white_list', blocks)
 
         ## then figure it out
         wmagent_type = mcm_r.get_wmagent_type()
