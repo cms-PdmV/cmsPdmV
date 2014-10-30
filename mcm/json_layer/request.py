@@ -2421,6 +2421,11 @@ done
             for i in to_release:
                 locker.release(i)
 
+    def reqmgr_dict( self ):
+        from tools.request_to_wma import request_to_wmcontrol
+        workload = request_to_wmcontrol.get_dict( self )
+        return workload
+
     def prepare_submit_command(self, batch_name):
         from tools.request_to_wma import request_to_wmcontrol
 
