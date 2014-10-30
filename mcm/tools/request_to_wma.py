@@ -12,6 +12,113 @@ class request_to_wmcontrol:
     def __init__(self):
         pass
 
+    def get_dict(self, mcm_r):
+        ## the batch number does not matter anymore
+        request_dict = {}
+        ## get the schema from where it belongs ?
+
+        static_schemas={
+            'MonteCarlo' : {
+                'FirstEvent' : 1,
+                'FirstLumi' : 1,
+                'EventsPerLumi' : 
+                },
+            'MonteCarloFromGEN' : {
+                'BlockBlacklist' : [],
+                'RunBlacklist' : []
+                },
+            'ReDigi' : {
+                }
+            }
+        schemas = { 
+            'MonteCarlo' : { 
+                'FilterEfficiency' : 'get_efficiency',
+                'LheInputFiles' : 'get_lhe_input',
+                'RequestNumEvents' : 'total_events',
+                'FilterEfficiency' : 'get_efficiency',
+                },
+            'MonteCarloFromGEN' : {
+                'BlockWhitelist' : 'block_white_list',
+                'FilterEfficiency' : 'get_efficiency',
+                'InputDataset' : 'input_dataset',
+                },
+            'ReDigi': {
+                'MCPileup' : 'pileup_dataset',
+                }
+            }
+        ## dependencies
+        schemas['ReDigi'].update( schema['MonteCarloFromGEN'] )
+        
+        static_block ={
+            'DbsUrl' : '',
+            'CouchURL' : '',
+            'ConfigCacheURL' : '',
+            'inputMode' : 'couchDB',
+            'RequestString' : '',
+            'Requestor' : 'pdmvserv',
+            'Group' : 'ppd',
+            'OpenRunningTimeout' : 43200,
+            'TotalTime' : 28800,
+            }
+
+        common = { 
+            'ScramArch' : 'get_scram_arch',
+            'CMSSWVersion' : 'cmssw_release',
+            'Version' : 'version',
+            'TimePerEvent' : 'time_event',
+            'SizePerEvent' : 'size_event',
+            'Memory' : 'memory',
+            'PrimaryDataset' : 'dataset_name',
+            'PrepID' : 'prepid',
+            'Campaign' : 'member_of_campaign',
+            'RequestPriority' : 'priority',
+            'AcquisitionEra' : 'member_of_campaign',
+            }
+
+        for (t,schema) in schemas.items():
+            schema.update( common )
+
+
+        ## then figure it out
+        wmagent_type = mcm_r.get_wmagent_type()
+        schema = schemas[wmagent_type]
+        for (k,spec) in schema.items():
+            
+            if hasattr( mcm_r, spec):
+                ## this is something that can be called from the request object
+                schema[k] = getattr(mcm_r, spec)()
+            else:
+                schema[k] = mcm_r.get_attribute( spec )
+
+        # add things schema dependent but not request dependent
+        schema.update( static_block )
+        scheme.update( static_schemas[wmagent_type] )
+
+        ## then the last few modifications
+        schema['RequestString'] = 'something funny'
+        if 'LheInputFiles' in schema and schema['LheInputFiles']:
+            schema['EventsPerJob'] = 500000
+        if 'EventsPerLumi' in schema:
+            events_per_lumi = settings().get_value('events_per_lumi')
+            ## forward looking into the chain to adjust that number
+            max_forward_eff = mcm_r.get_forward_efficiency() # will be one if nothing forward. gets the max efficiency if any
+            schema['EventsPerLumi'] = events_per_lumi / max_forward_eff
+
+        schema['GlobalTag'] = mcm_r.get_attribute('sequences')[0]['conditions']
+        schema['ProcessingString'] = mcm_r.get_processing_string(0)
+        step_words=['Zero','One','Two','Three', 'Four','Five','Six','Seven','Eight','Nine']
+        docids = mcm_r.get_attribute('config_id')
+        keeps = mcm_r.get_attribute('keep_output')
+        eventcontentlist = mcm_r.get_first_output()
+        for (istep,sname) in enumerate(step_words):
+            if istep == 0:
+                schema['ConfigCacheID'] = docids[istep]
+            else:
+                schema['Step%sConfigCacheID'%sname] = docids[istep]
+                schema['KeepStep%sOutput'%sname] = keeps[istep]
+                schema['Step%sOutputModuleName'%sname] = eventcontentlist[istep]
+        return schema
+                
     def get_command(self, mcm_r, batchNumber, to_execute=False):
         command = ''
 
