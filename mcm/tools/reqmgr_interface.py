@@ -1,4 +1,4 @@
-from cmsweb_interface import cmsweb_interface
+from tools.cmsweb_interface import tools.cmsweb_interface
 from tools.locator import locator
 
 class reqmgr_interface:
