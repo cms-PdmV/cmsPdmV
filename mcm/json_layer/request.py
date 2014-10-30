@@ -23,7 +23,7 @@ from tools.installer import installer
 from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
-
+from tools.reqmgr_interface import reqmgr_interface
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -1086,33 +1086,13 @@ done
             return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
+            reqmgr = reqmgr_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
             self.logger.log('tryign to change priority to %s at %s' % ( self.get_attribute('prepid'), new_priority))
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='pdmvserv-test.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
-                cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-                test = ""
-                if loc.isDev():
-                    test = '-u cmsweb-testbed.cern.ch'
-                for req_name in reqmgr_names:
-                    cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
-                _, stdout, stderr = ssh_exec.execute(cmd)
-                self.logger.log(cmd)
-                if not stdout and not stderr:
-                    self.logger.error('SSH error while changing priority of {0}'.format(self.get_attribute('prepid')))
-                    return False
-                output_text = stdout.read()
-                self.logger.error('wmpriority output:\n{0}'.format(output_text))
-                changed = False
-                for line in output_text.split("\n"):
-                    if 'Unable to change priority of workflow' in line:
-                        self.logger.error("Request {0}. {1}".format(self.get_attribute('prepid'), line))
-                        changed = False
-                    if 'Changed priority for' in line:
-                        changed = True
+                changed=reqmgr.change_priority(req_name, new_priority):
                 if not changed:
-                    self.logger.error("Could not change priority because %s" % output_text)
+                    self.logger.error("Could not change priority")
                     return False
             return self.modify_priority(new_priority)
 
@@ -2451,6 +2431,11 @@ done
         finally:
             for i in to_release:
                 locker.release(i)
+
+    def reqmgr_dict( self ):
+        from tools.request_to_wma import request_to_wmcontrol
+        workload = request_to_wmcontrol.get_dict( self )
+        return workload
 
     def prepare_submit_command(self, batch_name):
         from tools.request_to_wma import request_to_wmcontrol

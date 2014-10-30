@@ -17,7 +17,7 @@ from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
 from itertools import izip
-
+from tools.reqmgr_interface import reqmgr_interface
 
 class PoolOfHandlers(Thread):
     """
@@ -395,24 +395,15 @@ class RequestSubmitter(Handler):
                 if not okay: return False
                 batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
-                executor = ssh_executor(server='pdmvserv-test.cern.ch')
+                reqmgr = reqmgr_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
                 try:
-                    cmd = req.prepare_submit_command(batch_name)
-                    self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd),
-                                       handler=self.prepid)
-                    _, stdout, stderr = executor.execute(cmd)
-                    if not stdout and not stderr:
-                        self.injection_error('ssh error for request {0} injection'.format(self.prepid), req)
-                        return False
-                    output = stdout.read()
-                    error = stderr.read()
-                    if error and not output: # money on the table that it will break as well?
-                        self.injection_error('Error in wmcontrol: {0}'.format(error), req)
-                        return False
-                    injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                         l.startswith('Injected workflow:')]
-                    approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                         l.startswith('Approved workflow:')]
+                    injected_requests = reqmgr.inject( req.reqmgr_dict() )
+                    output = error = 'N/A'
+                    approved_requests=[]
+                    for workflow in injected_requests:
+                        if reqmgr.assignmentapproved( workflow ):
+                            approved_requests.append( workflow )
+
                     if not approved_requests:
                         self.injection_error(
                             'Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n{0}\n\nError: \n{1}'.format(
@@ -572,22 +563,15 @@ class ChainRequestInjector(Handler):
             mcm_r = mcm_rs[-1]
             batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
             semaphore_events.increment(batch_name)
-
+            reqmgr = reqmgr_interface('/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert')
             self.logger.error('found batch %s'% batch_name)
-            with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
-                cmd = self.make_command(mcm_r)
-                self.logger.error('prepared command %s'%cmd)
-                ## modify here to have the command to be executed
-                _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.log(output)
-                self.logger.log(error)
-
-                injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Injected workflow:')]
-                approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Approved workflow:')]
+            try:
+                output = error = 'N/A'
+                injected_requests = reqmgr.inject( request_to_wmcontrol().get_chain_dict( self.prepid ) )
+                approved_requests=[] 
+                for workflow in injected_requests:
+                    if reqmgr.assignmentapproved( workflow ):
+                        approved_requests.append( workflow )
 
                 if not injected_requests:
                     self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
