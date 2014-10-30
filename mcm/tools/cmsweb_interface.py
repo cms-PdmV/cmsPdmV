@@ -1,6 +1,9 @@
 #from tools.logger import logfactory
 import httplib,urllib2
-import json 
+import urllib
+from simplejson import dumps
+from tools.json import threaded_loads
+
 
 class cmsweb_interface:
     #logger = logfactory
@@ -22,9 +25,23 @@ class cmsweb_interface:
         url = url.replace('#','%23')
         datareq = urllib2.Request(url)
         if data:
-            datareq.add_data( data )
+            if type(data) == dict:
+                preencoded = {}
+                for (k,v) in data.items():
+                    if type(v) == dict:
+                        preencoded[k] = dumps(v)
+                    else:
+                        preencoded[k] = v
+                encoded = urllib.urlencode( preencoded, False )
+            else:
+                encoded = data
+            print encoded 
+            datareq.add_data( encoded )
+            #datareq.get_method = lambda: 'PUT'
+
         if delete:
             datareq.get_method = lambda: 'DELETE'
+
         if header:
             for (k,v) in header.items():
                 datareq.add_header(k,v)
@@ -32,7 +49,7 @@ class cmsweb_interface:
         try:
             requests_list_str=opener.open(datareq).read()
             if load:
-                return json.threaded_loads(requests_list_str)
+                return threaded_loads(requests_list_str)
             else:
                 return requests_list_str
         except:
