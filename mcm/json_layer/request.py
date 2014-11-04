@@ -1433,9 +1433,20 @@ done
                 mcm_content = transfer(stats_r, keys_to_import)
                 mcm_rr[rwma_i]['content'] = mcm_content
 
-        ## take out the one which were not found !
+        ## take out the one which were not found ! 
+        # the original one ([0]) is never removed
         mcm_rr = filter(lambda wmr: not wmr['name'] in failed_to_find, mcm_rr)
 
+        if not earliest_date or not earliest_time and len(mcm_rr):
+            ## this is a problem. probably the inital workflow was rejected even before stats could pick it up
+            #work is meant to be <something>_<date>_<time>_<a number>
+            # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
+            (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
+            (d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
+            earliest_date = d
+            earliest_time = t
+
+        
         ####
         ## look for new ones
         ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
