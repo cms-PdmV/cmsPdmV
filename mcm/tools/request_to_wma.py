@@ -237,10 +237,17 @@ class request_to_wmcontrol:
         ## figure out the block white list if need be
         if mcm_r.get_attribute('input_dataset'):
             dbs3 = dbs_interface()
-            blocks = dbs3.match_stats( mcm_r.get_attribute('input_dataset'), 
-                                       mcm_r.get_attribute('total_events'),
-                                       0.05)#match within 5%
-            mcm_r.set_attribute('block_white_list', blocks)
+            match_by_lumi = True
+            if match_by_lumi:
+                (lumimask,stat) = dbs3.match_stats_by_lumi( mcm_r.get_attribute('input_dataset'), 
+                                                            mcm_r.get_attribute('total_events'),
+                                                            0.05)#match within 5%
+                schema['LumiList'] = lumimask
+            else:
+                blocks = dbs3.match_stats_by_block( mcm_r.get_attribute('input_dataset'), 
+                                                    mcm_r.get_attribute('total_events'),
+                                                    0.05)#match within 5%
+                mcm_r.set_attribute('block_white_list', blocks)
 
         ## then figure it out
         wmagent_type = mcm_r.get_wmagent_type()

@@ -9,13 +9,93 @@ class dbs3_interface:
     def list_blocks(self, datasetname ):
         blocks = self.cmsweb.generic_call( self.url+"blocksummaries?dataset=%s&detail=true"%(datasetname))
         return blocks
-    def match_stats(self, datasetname, total_stats, f_margin=0.05):
+
+    def match_stats_by_lumi(self, datasetname, total_stats, f_margin=0.05):
+        import time
+        files = self.cmsweb.generic_call( self.url+"filesummaries?dataset=%s"%(datasetname))
+        n_lumi=0
+        all_stats=0
+        for f in files:
+            print f
+            n_lumi+=f['num_lumi']
+            all_stats+=f['num_event']
+        events_per_lumi = all_stats / float(n_lumi)
+        if total_stats > all_stats:
+            print "More stats required than available"
+            return {}, all_stats
+        elif total_stats > all_stats*(1-f_margin):
+            print "Requiring almost the same as the available stats, not selecting"
+            return {}, all_stats
+        else:
+            ## get the list of files of the ds
+            files = self.cmsweb.generic_call(self.url+"files?dataset=%s&detail=true"%(datasetname))
+            ## get a list of lumi-section per run#
+            l_per_r={}
+            for f in files:
+                print f['logical_file_name']
+                time.sleep(0.5)
+                for info in self.cmsweb.generic_call( self.url+"filelumis?logical_file_name=%s"%f['logical_file_name']):
+                    if info['run_num'] in l_per_r:
+                        l_per_r[info['run_num']].extend(info['lumi_section_num'])
+                    else:
+                        l_per_r[info['run_num']] = info['lumi_section_num']
+
+                        
+            ## get the stats of runs in that dataset
+            s_per_r={}
+            if len(l_per_r)==1:
+                s_per_r[l_per_r.keys()[0]] = all_stats
+            else:
+                for r in l_per_r:
+                    print "summary for run",r
+                    ## get the statistics per run
+                    ## this query times-out : 502 https://hypernews.cern.ch/HyperNews/CMS/get/dmDevelopment/1721.html
+                    s_per_r[r]=sum(map(lambda rs : rs['num_event'], self.cmsweb.generic_call( self.url+"filesummaries?dataset=%s&run_num=%s"%(datasetname, r))))
+
+                    print "got it"
+            
+            ##create a lumi-mask per run#                
+            final_mask={}
+            import random
+
+
+            for (r,lumis) in l_per_r.items():
+                random.shuffle( lumis )
+                n_to_pick = int(len(lumis) * s_per_r[r] * (1+f_margin)/ float(total_stats))
+                lumis_to_use = lumis[:n_to_pick]
+                lumis_to_use.sort()
+                lmask =[]
+                start_l=None
+                end_l =None
+                ## improved to create explicit ranges
+                for (ilumi,lumi) in enumerate(lumis_to_use):
+                    if not start_l:
+                        start_l = lumi
+                    inextlumi = ilumi+1
+                    if inextlumi < len(lumis_to_use):
+                        next_lumi=lumis_to_use[inextlumi]
+                        if lumi+1 == next_lumi:
+                            pass
+                        else:
+                            end_l = lumi
+                    else:
+                        end_l = lumi
+                    if end_l:
+                        lmask.append( [ start_l, end_l] )
+                        start_l=None
+                        end_l =None
+
+                final_mask[str(r)] = lmask
+            return final_mask, total_stats
+        
+
+    def match_stats_by_block(self, datasetname, total_stats, f_margin=0.05):
         all_blocks = self.list_blocks(datasetname)
         all_stats = sum(map(lambda i :  i['num_evernt'], all_blocks)) ## WTF !!!
         if total_stats > all_stats:
             print "More stats required than available"
             return [], all_stats
-        elif total_stats > all_stats*0.95:
+        elif total_stats > all_stats*(1-f_margin):
             print "Requiring almost the same as the available stats, not selecting"
             return [], all_stats
         else:
