@@ -488,33 +488,73 @@ testApp.directive("generatorParams", function($http){
   }
 });
 
-testApp.directive("inlineEditable", function(){
-  return{
-      require: 'ngModel',
-      template:
-      '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;" ng-disabled="not_editable_list.indexOf(formColumn)!=-1">'+
-      '</textarea>',
-      link: function(scope, element, attr, ctrl){
-
-       ctrl.$render = function () {
-         scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
-         scope.formColumn = scope.$eval(attr.column);
-       };
-
-        scope.update = function () {
-         var object = null;
-         try{
-           object = JSON.parse(scope.whatever_value);
-           ctrl.$setViewValue(object);
-           ctrl.$setValidity("bad_json", true);
-         }catch (err){
-           ctrl.$setValidity("bad_json", false);
-         }
-       }
-     }
-  }
+testApp.directive("inlineEditable", function ($modal) {
+    return {
+        require: 'ngModel',
+        template: '<textarea style="width:95%; height:150px" ng-model="whatever_value" ng-change="update()" ng-disabled="not_editable_list.indexOf(formColumn)!=-1"></textarea>',
+        link: function (scope, element, attr, ctrl) {
+            ctrl.$render = function () {
+                scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
+                scope.formColumn = scope.$eval(attr.column);
+            };
+            scope.update = function () {
+                var object = null;
+                try {
+                    object = JSON.parse(scope.whatever_value);
+                    ctrl.$setViewValue(object);
+                    ctrl.$setValidity("bad_json", true);
+                } catch (err) {
+                    ctrl.$setValidity("bad_json", false);
+                }
+            };
+            scope.openRequestParametersModal = function () {
+                $modal.open({
+                    templateUrl: "HTML/templates/edit.request.parameters.html",
+                    controller: EditRequestParametersCtrl,
+                    resolve: {
+                        initRequestParams: function () {
+                            return JSON.parse(scope.whatever_value);
+                        },
+                        getCtrl: function () {
+                            return ctrl;
+                        },
+                        getScope: function () {
+                            return scope;
+                        }
+                    }
+                });
+            };
+        }
+    };
 });
 
+var EditRequestParametersCtrl = function ($scope, $modalInstance, initRequestParams, getCtrl, getScope) {
+    $scope.data = [{name: "Time Event", value: initRequestParams.time_event, id: "time_event", type: "int"}, {name: "Size Event", value: initRequestParams.size_event, id: "size_event", type: "int"}, {name: "Process String", value: initRequestParams.process_string, id: "process_string"}, {name: "Sequences", value: initRequestParams.sequences, id: "sequences"}];
+    $scope.done = function () {
+        var newJSON = {};
+        for (var i in $scope.data) {
+            if ($scope.data[i].value) {
+                if ($scope.data[i].type=='int') {
+                    newJSON[$scope.data[i].id] = parseInt($scope.data[i].value, 10);
+                } else {
+                    newJSON[$scope.data[i].id] = $scope.data[i].value;
+                }
+            }
+        }
+        try {
+            getScope.whatever_value = JSON.stringify(newJSON, undefined, 4);
+            getCtrl.$setViewValue(newJSON);
+            getCtrl.$setValidity("bad_json", true);
+        } catch (err){
+            getCtrl.$setValidity("bad_json", false);
+        }
+        $modalInstance.dismiss();
+    };
+    
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
+};
 
 testApp.directive("customValidationEdit", function(){
   return {

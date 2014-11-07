@@ -1,0 +1,27 @@
+<div class="modal-header">
+  <h4>Edit Request Parameters</h4>
+</div>
+<div class="modal-body">
+  <form class="form-horizontal" name="requestParametersForm">
+    <div class="row">
+      <div class="span3">
+        <div class="control-group" ng-repeat="params in data" ng-if="params.id != 'sequences'">
+          <label>{{params.name}}</label>
+          <input type="text" ng-model="params.value"></input>
+        </div>
+      </div>
+      <div class="span2">
+        <label>Sequences</label>
+        <div ng-if="param.id == 'sequences'" ng-repeat="param in data">
+          <div ng-repeat="seq in param.value track by $index">
+            <input class="control-group" data-ng-model="seq.default.pileup" type="text"></input>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-success" ng-click="done()" ng-disabled="sequenceForm.Name.$error.required">Save</button>
+  <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+</div>
