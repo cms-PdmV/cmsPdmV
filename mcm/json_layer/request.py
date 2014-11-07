@@ -8,6 +8,7 @@ from math import sqrt
 import hashlib
 import copy
 import traceback
+import time
 
 from couchdb_layer.mcm_database import database
 
