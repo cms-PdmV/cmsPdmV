@@ -1443,7 +1443,6 @@ done
             #work is meant to be <something>_<date>_<time>_<a number>
             # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
 
-            self.logger.error('mcm_rr: %s' % (mcm_rr))
             (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
             #(d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
             (d,t) = time.strftime("%y%m%d$%H%M%S", time.gmtime( time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")))).split('$')
