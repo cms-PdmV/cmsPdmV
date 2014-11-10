@@ -65,6 +65,9 @@
                       <!--<div class="row-fluid"><div class="offset4"><h2>Statistics</h2></div></div>-->
                       <div class="row"><h3 align="center">Statistics of campaigns</h3></div>
                           <div class="input-append" align="center">
+                            <input type="text" class="input-small span2" maxlength="50" placeholder="db query" ng-model="dashboard_stats_query">
+                            <button align="center" type="button" class="btn btn-warning" ng-click="get_stats(dashboard_stats_query, false)"> See {{dashboard_stats_query}} statistics </button>
+                            <button align="center" type="button" class="btn btn-warning" ng-click="get_stats(dashboard_stats_query, true)"> Add {{dashboard_stats_query}} statistics </button><br>
                             <input type="text" class="input-small span2" maxlength="50" placeholder="Campaign Name" ng-model="dashboard_stats_campaign">
                             <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign, false)"> See {{dashboard_stats_campaign}} statistics </button>
                             <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign, true)"> Add {{dashboard_stats_campaign}} statistics </button>

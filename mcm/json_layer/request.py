@@ -8,6 +8,7 @@ from math import sqrt
 import hashlib
 import copy
 import traceback
+import time
 
 from couchdb_layer.mcm_database import database
 
@@ -1442,7 +1443,8 @@ done
             #work is meant to be <something>_<date>_<time>_<a number>
             # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
             (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
-            (d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
+            #(d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
+            (d,t) = time.strftime("%y%m%d$%H%M%S", time.gmtime( time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")))).split('$')
             earliest_date = d
             earliest_time = t
 
