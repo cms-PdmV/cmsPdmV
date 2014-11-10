@@ -763,6 +763,7 @@ class request(json_base):
             self.transfer_from(camp)
             ## putting things together from the campaign+flow
             freshSeq = []
+            freshKeep = []
             if flownWith:
             #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
             #                                                                       camp.get_attribute('prepid'),
@@ -772,7 +773,10 @@ class request(json_base):
                 for i in range(len(camp.get_attribute('sequences'))):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
+                    freshKeep.append(False) #dimension keep output to the sequences
+                freshKeep[-1] = True #last output must be kept
                 self.set_attribute('sequences', freshSeq)
+                self.set_attribute('keep_output', freshKeep)
             if can_save:
                 self.update_history({'action' : 'reset', 'step' : 'option'})
                 self.reload()
