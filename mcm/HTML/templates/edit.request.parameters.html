@@ -1,25 +1,39 @@
 <div class="modal-header">
-  <h4>Edit Request Parameters</h4>
+  <h4>Edit Basic Request Parameters</h4>
 </div>
 <div class="modal-body">
-  <form class="form-horizontal" name="requestParametersForm">
-    <div class="row">
-      <div class="span3">
-        <div class="control-group" ng-repeat="params in data" ng-if="params.id != 'sequences'">
-          <label>{{params.name}}</label>
+  <div class="row">
+    <div class="span2">
+      <div ng-repeat="params in data">
+        <div class="control-group" ng-if="params.id != 'sequences' && params.id != 'more'">
+          <label><small>{{params.name}}</small></label>
           <input type="text" ng-model="params.value"></input>
         </div>
+        <div ng-if="params.id == 'more'">
+          <div class="control-group" ng-repeat="more in params.value track by $index">
+            <div class="text-uppercase btn btn-small" ng-click="addrem(false, $index)"><i class="icon-minus"></i> Remove</div>
+            <input type="text" class="text-bold" ng-model="more.field" placeholder="name"></input>
+            <input type="text" ng-model="more.value" placeholder="value"></input>
+          </div>   
+        </div>
       </div>
-      <div class="span2">
-        <label>Sequences</label>
-        <div ng-if="param.id == 'sequences'" ng-repeat="param in data">
-          <div ng-repeat="seq in param.value track by $index">
-            <input class="control-group" data-ng-model="seq.default.pileup" type="text"></input>
+      <div class="control-group text-uppercase btn btn-small" ng-click="addrem(false, -1)"><i class="icon-plus"></i> Add field</div>
+    </div>
+    <div class="span3 pull-right">
+      <label>Sequences</label>
+      <div ng-if="param.id == 'sequences'" ng-repeat="param in data">
+        <div ng-repeat="seq in param.value track by $index">
+          <div class="well">
+            <div class="text-uppercase btn btn-mini" ng-click="addrem(true, $index)">Remove</div><br/>
+            <small>Pileup</small><input data-ng-model="seq.default.pileup" type="text"></input><br/>            
+            <small>Customise</small><input data-ng-model="seq.default.customise" type="text"></input><br/>            
+            <small>Conditions</small><input data-ng-model="seq.default.conditions" type="text"></input><br/>            
           </div>
         </div>
       </div>
+      <div class="control-group text-uppercase btn btn-small" ng-click="addrem(true, -1)">Add sequence</div>
     </div>
-  </form>
+  </div>
 </div>
 <div class="modal-footer">
   <button class="btn btn-success" ng-click="done()" ng-disabled="sequenceForm.Name.$error.required">Save</button>
