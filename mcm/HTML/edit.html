@@ -6,6 +6,7 @@
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
         
         <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
         <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
@@ -141,14 +142,18 @@
                     <div ng-switch-when="Validation">
                       <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
                     </div>
-
                     <div ng-switch-when="Tags">
                       <tokenfield  show-autocomplete-on-focus="true" tokens="result[column.db_name]" allow-duplicates="false" before-create="addToken" on-remove="removeToken" type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}"/>
                     </div>
                     <div ng-switch-when="Request parameters">
                       <ng-form name="fieldForm">
+                        <a class="btn btn-small" target="_self" href="#" ng-click="update();">
+                          <i class="icon-refresh"></i>
+                        </a>
+                        <a class="btn btn-small btn-info text-uppercase" target="_self" ng-click="openRequestParametersModal()" href="#">Edit</a>
+                        <span class="badge badge-important" ng-show="fieldForm.$invalid">Bad JSON formatting</span>
+                        <span class="badge badge-success" ng-show="!fieldForm.$invalid">Valid JSON formatting</span>
                         <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
                     <div ng-switch-when="Reqmgr name">

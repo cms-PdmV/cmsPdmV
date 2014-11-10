@@ -129,6 +129,10 @@ img.led {
     text-transform:uppercase;
 }
 
+.text-bold {
+    font-weight: bold;
+}
+
 .margin-r {
     margin-right: 5px;
 }

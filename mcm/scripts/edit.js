@@ -1,4 +1,3 @@
-
 var ModalDemoCtrl = function ($scope, $modal) {
   $scope.openSequenceEdit = function (seq1, seq2, number) {
     $scope.sequenceToShow = [];
@@ -488,33 +487,97 @@ testApp.directive("generatorParams", function($http){
   }
 });
 
-testApp.directive("inlineEditable", function(){
-  return{
-      require: 'ngModel',
-      template:
-      '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;" ng-disabled="not_editable_list.indexOf(formColumn)!=-1">'+
-      '</textarea>',
-      link: function(scope, element, attr, ctrl){
-
-       ctrl.$render = function () {
-         scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
-         scope.formColumn = scope.$eval(attr.column);
-       };
-
-        scope.update = function () {
-         var object = null;
-         try{
-           object = JSON.parse(scope.whatever_value);
-           ctrl.$setViewValue(object);
-           ctrl.$setValidity("bad_json", true);
-         }catch (err){
-           ctrl.$setValidity("bad_json", false);
-         }
-       }
-     }
-  }
+testApp.directive("inlineEditable", function ($modal) {
+    return {
+        require: 'ngModel',
+        templateUrl: "HTML/templates/edit.request.parameters.textarea.html",
+        link: function (scope, element, attr, ctrl) {
+            ctrl.$render = function () {
+                scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
+                scope.formColumn = scope.$eval(attr.column);
+            };
+            scope.update = function () {
+                var object = null;
+                try {
+                    object = JSON.parse(scope.whatever_value);
+                    ctrl.$setViewValue(object);
+                    ctrl.$setValidity("bad_json", true);
+                } catch (err) {
+                    ctrl.$setValidity("bad_json", false);
+                }
+            };
+            scope.openRequestParametersModal = function () {
+                $modal.open({
+                    templateUrl: "HTML/templates/edit.request.parameters.html",
+                    controller: EditRequestParametersCtrl,
+                    resolve: {
+                        initRequestParams: function () {
+                            return JSON.parse(scope.whatever_value);
+                        },
+                        parseRequestParams: function () {
+                            var copy = JSON.parse(scope.whatever_value);
+                            var remove_array = ["time_event", "sequences", "size_event", "process_string"];
+                            for (var i in remove_array) {
+                                delete copy[remove_array[i]];
+                            }
+                            var rt = []
+                            for (var i in copy) {
+                                rt.push({field: i, value: copy[i]});
+                            }
+                            return rt;
+                        },
+                        getCtrl: function () {
+                            return ctrl;
+                        },
+                        getScope: function () {
+                            return scope;
+                        }
+                    }
+                });
+            };
+        }
+    };
 });
 
+var EditRequestParametersCtrl = function ($scope, $modalInstance, initRequestParams, parseRequestParams, getCtrl, getScope) {
+    $scope.data = [{name: "Time Event", value: initRequestParams.time_event, id: "time_event", type: "int"}, {name: "Size Event", value: initRequestParams.size_event, id: "size_event", type: "int"}, {name: "Process String", value: initRequestParams.process_string, id: "process_string"}, {name: "Sequences", value: initRequestParams.sequences, id: "sequences"}, {name: "More", value: parseRequestParams, id:"more"}];
+    $scope.addrem = function (seq, x) {
+        for (var i in $scope.data) {
+            if (!seq && $scope.data[i].name == "More") {
+                x < 0 ? $scope.data[i].value.push({field: '', value: ''}) : $scope.data[i].value.splice(x, 1);
+            } else if (seq && $scope.data[i].id == "sequences") {
+                x < 0 ? $scope.data[i].value.push({default:{pileup: '', customise: '', conditions: ''}}) : $scope.data[i].value.splice(x, 1);
+            }
+        }
+    };
+    $scope.done = function () {
+        var newJSON = {};
+        for (var i in $scope.data) {
+            if ($scope.data[i].value && $scope.data[i].id != 'more') {
+                if ($scope.data[i].type == 'int') {
+                    newJSON[$scope.data[i].id] = parseInt($scope.data[i].value, 10);
+                } else {
+                    newJSON[$scope.data[i].id] = $scope.data[i].value;
+                }
+            } else if($scope.data[i].id == 'more') {
+                for (var j in $scope.data[i].value) {
+                    newJSON[$scope.data[i].value[j].field] = $scope.data[i].value[j].value;
+                }
+            }
+        }
+        try {
+            getScope.whatever_value = JSON.stringify(newJSON, undefined, 4);
+            getCtrl.$setViewValue(newJSON);
+            getCtrl.$setValidity("bad_json", true);
+        } catch (err){
+            getCtrl.$setValidity("bad_json", false);
+        }
+        $modalInstance.dismiss();
+    };
+    $scope.close = function() {
+        $modalInstance.dismiss();
+    }
+};
 
 testApp.directive("customValidationEdit", function(){
   return {
