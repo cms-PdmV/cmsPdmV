@@ -658,11 +658,11 @@ class request(json_base):
             # add the part to make it local
             if get:
                 get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % ( name )
+                ##lets check if downloaded file actually exists and has more than 0 bytes
+                get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' %(name)
 
         if get:
             get_me += '\n'
-        ##lets check if downloaded file actually exists and has more than 0 bytes
-        get_me += '[ -s Configuration/GenProduction/python/%s ] || exit $?;' %(name)
         return get_me
 
     def get_fragment(self):
@@ -955,6 +955,8 @@ class request(json_base):
         if self.get_attribute('fragment'):
             infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n' % (
                 l_type.baseurl(), self.get_attribute('prepid'), self.get_fragment())
+            ##lets check if downloaded file actually exists and has more than 0 bytes
+            infile += '[ -s %s ] || exit $?;\n' %(self.get_fragment())
 
         # previous counter
         previous = 0
