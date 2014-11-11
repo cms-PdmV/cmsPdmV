@@ -661,6 +661,8 @@ class request(json_base):
 
         if get:
             get_me += '\n'
+        ##lets check if downloaded file actually exists and has more than 0 bytes
+        get_me += '[ -s Configuration/GenProduction/python/%s ] || exit $?;' %(name)
         return get_me
 
     def get_fragment(self):
