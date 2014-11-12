@@ -35,7 +35,7 @@
       <thead>
         <tr>
           <th ng-repeat="column in flows_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
-	    <div ng-switch-when="Actions" ng-hide="role(1);">
+	    <div ng-switch-when="Actions">
 	      {{column.text}}
 	    </div>
 	    <div ng-switch-default>
@@ -48,26 +48,30 @@
         <tr ng-repeat="data in result">
           <td ng-repeat="value in flows_defaults" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
-              <div ng-switch-when="Actions" ng-hide="role(3);">
+              <div ng-switch-when="Actions">
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
-                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
-                <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self">
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" ng-hide="role(1);" target="_self">
+                  <i class="icon-align-right"></i>
+                </a>
+                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" ng-hide="role(3);" target="_self">
+                  <i class="icon-folder-open"></i>
+                </a>
+                <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
                 <a ng-href="/mcm/restapi/dashboard/get_stats/{{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank" ng-hide="role(2);">
                   <i class="icon-picture"></i>
                 </a>
-                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_self">
+                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_self" ng-hide="role(3);">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" target="_self">
+                <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" target="_self" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
               </div>
-	            <div ng-switch-when="PrepId">
+	      <div ng-switch-when="PrepId">
                 <a ng-href='flows?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
 		            <a ng-href="admin/_utils/document.html?flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
