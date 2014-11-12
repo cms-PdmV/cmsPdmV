@@ -504,11 +504,11 @@ class request(json_base):
         if self.current_user_level < 3:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
 
         if self.current_user_level == 4 and self.get_attribute('process_string'):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'Admin should not be approving submit of requests with a process string specified')
+                    'Admin should not be approving submit of requests with a process string specified')
 
         if self.get_attribute('status') != 'approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit')
@@ -516,48 +516,49 @@ class request(json_base):
         #if not self.is_action_root():
         if not len(self.get_attribute('member_of_chain')):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'This request is not part of any chain yet')
+                    'This request is not part of any chain yet')
 
         at_least_an_action = self.has_at_least_an_action()
         if not at_least_an_action:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'This request does not spawn from any valid action')
+                    'This request does not spawn from any valid action')
 
         if self.get_attribute('size_event') <= 0 or self.get_attribute('time_event') <= 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'The time (%s) or size per event (%s) is inappropriate' % (
-                                                 self.get_attribute('time_event'), self.get_attribute('size_event')))
+                    'The time (%s) or size per event (%s) is inappropriate' % (
+                    self.get_attribute('time_event'), self.get_attribute('size_event')))
 
         if self.get_scram_arch() == None:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'The architecture is invalid, probably has the release %s being deprecated' % (
-                                             self.get_attribute('cmssw_release')))
+                    'The architecture is invalid, probably has the release %s being deprecated' % (
+                        self.get_attribute('cmssw_release')))
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                             'The process string (%s) contains a bad character %s' %( self.get_attribute('process_string'),
-                                                                                                      ','.join( other_bad_characters )))
+                    'The process string (%s) contains a bad character %s' %(
+                        self.get_attribute('process_string'),
+                        ','.join( other_bad_characters )))
 
         ## do a dataset collision check : remind that it requires the flows to have process_string properly set
         rdb = database('requests')
         similar_ds = rdb.queries(['dataset_name==%s'%(self.get_attribute('dataset_name'))])
-        my_ps_and_t = self.get_processing_strings_and_tiers()
-        for (my_ps,my_t) in my_ps_and_t:
+        my_ps_and_t = self.get_camp_plus_ps_and_tiers()
+        for (camp, my_ps, my_t) in my_ps_and_t:
             check_ingredients = map(lambda s : s.lower() , my_ps.split('_'))
             if any(map(lambda ing1: any(map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients)), check_ingredients)) and self.current_user_level == 4:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
+                        "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
         for similar in similar_ds:
-            if similar['prepid']==self.get_attribute('prepid'): continue # no self check
+            if similar['prepid'] == self.get_attribute('prepid'): continue # no self check
             similar_r = request(similar)
-            similar_ps_and_t = similar_r.get_processing_strings_and_tiers()
+            similar_ps_and_t = similar_r.get_camp_plus_ps_and_tiers()
             ## check for collision
             collisions = filter( lambda ps : ps in my_ps_and_t, similar_ps_and_t)
             if len(collisions)!=0:
                 text=str(collisions)
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 'There is an expected output dataset naming collision with %s' % ( text ))
+                        'There is an expected output dataset naming collision with %s'% ( text ))
             
 
 
@@ -883,12 +884,15 @@ class request(json_base):
             ps.append( self.get_processing_string(i) )
         return ps
 
-    def get_processing_strings_and_tiers(self):
+    def get_camp_plus_ps_and_tiers(self):
         keeps = self.get_attribute('keep_output')
+        #we should compare whole Campaign-Processstring_tag
+        campaign = self.get_attribute("member_of_campaign")
         p_and_t = []
         for i in range(len(self.get_attribute('sequences'))):
             if i<len(keeps) and not keeps[i]: continue
-            p_and_t.extend([(self.get_processing_string(i), tier) for tier in self.get_tier(i)])
+            p_and_t.extend([(campaign, self.get_processing_string(i), tier)
+                    for tier in self.get_tier(i)])
         return p_and_t
 
     def little_release(self):
