@@ -658,6 +658,8 @@ class request(json_base):
             # add the part to make it local
             if get:
                 get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % ( name )
+                ##lets check if downloaded file actually exists and has more than 0 bytes
+                get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' %(name)
 
         if get:
             get_me += '\n'
@@ -763,6 +765,7 @@ class request(json_base):
             self.transfer_from(camp)
             ## putting things together from the campaign+flow
             freshSeq = []
+            freshKeep = []
             if flownWith:
             #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
             #                                                                       camp.get_attribute('prepid'),
@@ -772,7 +775,10 @@ class request(json_base):
                 for i in range(len(camp.get_attribute('sequences'))):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
+                    freshKeep.append(False) #dimension keep output to the sequences
+                freshKeep[-1] = True #last output must be kept
                 self.set_attribute('sequences', freshSeq)
+                self.set_attribute('keep_output', freshKeep)
             if can_save:
                 self.update_history({'action' : 'reset', 'step' : 'option'})
                 self.reload()
@@ -949,6 +955,8 @@ class request(json_base):
         if self.get_attribute('fragment'):
             infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n' % (
                 l_type.baseurl(), self.get_attribute('prepid'), self.get_fragment())
+            ##lets check if downloaded file actually exists and has more than 0 bytes
+            infile += '[ -s %s ] || exit $?;\n' %(self.get_fragment())
 
         # previous counter
         previous = 0
@@ -1438,10 +1446,11 @@ done
         # the original one ([0]) is never removed
         mcm_rr = filter(lambda wmr: not wmr['name'] in failed_to_find, mcm_rr)
 
-        if not earliest_date or not earliest_time and len(mcm_rr):
+        if (not earliest_date or not earliest_time) and len(mcm_rr):
             ## this is a problem. probably the inital workflow was rejected even before stats could pick it up
             #work is meant to be <something>_<date>_<time>_<a number>
             # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
+
             (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
             #(d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
             (d,t) = time.strftime("%y%m%d$%H%M%S", time.gmtime( time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")))).split('$')
