@@ -1784,7 +1784,10 @@ done
                         forward_eff = an_eff
             if forward_eff and forward_eff > max_forward_eff:
                 max_forward_eff = forward_eff
-        return max_forward_eff
+        if bool(max_forward_eff): #to check if its not 0. as it might trigger
+            return max_forward_eff # division by 0 in request_to_wma
+        else:
+            return 1
 
     def get_n_unfold_efficiency(self, target):
         if self.get_attribute('generator_parameters'):
