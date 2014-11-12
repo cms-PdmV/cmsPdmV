@@ -52,10 +52,10 @@
                 <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" ng-hide="role(1);" target="_self">
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
                   <i class="icon-align-right"></i>
                 </a>
-                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" ng-hide="role(3);" target="_self">
+                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
