@@ -219,6 +219,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 		    _.each(_.pluck(data.data.rows, 'doc') , function( item ){
 			    $scope.result.push( item );
 			  });
+            $scope.result_status = data.status;
             $scope.got_results = true;
             $scope.update['success'] = false;
             $scope.update['fail'] = false;
@@ -549,6 +550,8 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       //query = "&contains="+ chained_campaign;
       //$scope.get_chained_campaigns_info(false,query);
       $scope.got_results = true;
+      $scope.result_status = data.status;
+
       
       var list_of_campaigns = []; // we want a pop-up appear to inform user
       _.each($scope.result, function(elem)

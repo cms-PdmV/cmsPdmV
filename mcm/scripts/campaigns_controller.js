@@ -102,6 +102,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.update["status_code"] = status;
       });
     };
+
     $scope.getData = function(){
       var query = ""
       _.each($location.search(), function(value,key){
@@ -112,6 +113,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var promise = $http.get("search?"+ "db_name="+$scope.dbName+query + "&get_raw")
       promise.then(function(data){
+        $scope.result_status = data.status;
         $scope.got_results = true;
         $scope.result = _.pluck(data.data.rows, 'doc');
         if ($scope.result === undefined ){

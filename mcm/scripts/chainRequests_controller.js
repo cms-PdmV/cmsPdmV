@@ -202,6 +202,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       promise.then(function(data){
+        $scope.result_status = data.status;
         $scope.got_results = true;
         $scope.result = _.pluck(data.data.rows, 'doc');
         $scope.parseColumns();
@@ -341,6 +342,7 @@ function resultsCtrl($scope, $http, $location, $window){
     /*submit method*/
     $http({method:'POST', url:'multi_search', data: search_data}).success(function(data,status){
       $scope.result = data.results;
+      $scope.result_status = data.status;
       $scope.got_results = true;
       $scope.parseColumns();
     }).error(function(status){
@@ -354,6 +356,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.got_results = false;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
       $scope.result = data.results;
+      $scope.result_status = data.status;
       $scope.got_results = true;
     }).error(function(status){
       $scope.update["success"] = false;

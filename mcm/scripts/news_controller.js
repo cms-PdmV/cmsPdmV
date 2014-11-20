@@ -40,6 +40,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.got_results = false; //to display/hide the 'found n results' while reloading
     promise.then(function(data){
       $scope.result = _.pluck(data.data.rows, 'doc');
+      $scope.result_status = data.status;
       $scope.got_results = true;
       if ($scope.result.length != 0){
         columns = _.keys($scope.result[0]);

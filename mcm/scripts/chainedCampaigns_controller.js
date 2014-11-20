@@ -108,6 +108,7 @@ function resultsCtrl($scope, $http, $location, $window){
         }
         //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
         promise.then(function (data) {
+            $scope.result_status = data.status;
             $scope.got_results = true;
             $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
             if ($scope.result === undefined) {

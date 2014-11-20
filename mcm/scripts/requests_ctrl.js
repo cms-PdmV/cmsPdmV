@@ -263,6 +263,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
       promise.then(function(data){
         $scope.result = !get_raw ? data.data.results : _.pluck(data.data.rows, 'doc');
+        $scope.result_status = data.status;
         $scope.got_results = true;
         if ($scope.result === undefined ){
           alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
@@ -654,6 +655,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.got_results = false;
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
       $scope.result = data.results;
+      $scope.result_status = data.status;
       $scope.got_results = true;
       $scope.parseColumns();
     }).error(function(status){
