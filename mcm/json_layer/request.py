@@ -954,11 +954,10 @@ class request(json_base):
 
         if self.get_attribute('input_dataset'):
             infile += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n'
-
+        fragment_retry_amount = 2
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --create-dirs -o %s \n' % (
-                l_type.baseurl(), self.get_attribute('prepid'), self.get_fragment())
+            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --retry %s --create-dirs -o %s \n' % (l_type.baseurl(), self.get_attribute('prepid'), fragment_retry_amount, self.get_fragment())
             ##lets check if downloaded file actually exists and has more than 0 bytes
             infile += '[ -s %s ] || exit $?;\n' %(self.get_fragment())
 
