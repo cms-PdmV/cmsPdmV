@@ -431,13 +431,13 @@
           <i class="icon-wrench"></i>
         </a>
         <![endif]>
-        <a ng-click="previous_approval()" rel="tooltip" ng-hide="role(1);" title="Reset selected requests" ng-href="#">
+        <a ng-click="open_isSureModal('reset', 'selected requests')" rel="tooltip" ng-hide="role(1);" title="Reset selected requests" ng-href="#">
          <i class="icon-repeat"></i>
         </a>
-        <a ng-click="optionreset_several()" rel="tooltip" ng-hide="role(1);" title="Option Reset selected requests" ng-href="#">
+        <a ng-click="open_isSureModal('option reset', 'selected requests')" rel="tooltip" ng-hide="role(1);" title="Option Reset selected requests" ng-href="#">
          <i class="icon-share"></i>
         </a>
-        <a ng-click="next_approval()" rel="tooltip" title="Next step for selected requests" ng-hide="role(1);" ng-href="#">
+        <a ng-click="open_isSureModal('approve', 'selected requests')" rel="tooltip" title="Next step for selected requests" ng-hide="role(1);" ng-href="#">
          <i class="icon-chevron-right"></i>
         </a>
         <a ng-click="status_toggle()" rel="tooltip" ng-hide="role(3);" title="Toggle status for selected requests" ng-href="#">

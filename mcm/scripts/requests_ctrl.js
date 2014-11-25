@@ -456,39 +456,49 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
               }
           }
       });
-
-
-      isSure.result.then(function () {
-	      console.log(action);
-	      console.log(prepid);
-
-        switch (action){
-          case "toggle":
-            $scope.next_status(prepid);
-            break;
-          case "approve":
-            $scope.single_step('approve',prepid);
-            break;
-          case "reset":
-            $scope.single_step('reset',prepid);
-            break;
-          case "option_reset":
-            $scope.single_step('option_reset',prepid);
-            break;
-          case "soft_reset":
-            $scope.single_step('soft_reset',prepid);
-            break;
-          case "delete":
-            $scope.delete_object('requests', prepid);
-            break;
-          case "clone":
-            $scope.clone(prepid);
-            break;
-          default:
-            // alert to announce that uknown action is asked???
-            break;
-        }
-      })
+      isSure.result.then(function() {
+          if (prepid == 'selected requests') {
+              switch (action) {
+                  case 'reset':
+                      $scope.previous_approval();
+                      break;
+                  case 'option reset':
+                      $scope.optionreset_several();
+                      break;
+                  case 'approve':
+                      $scope.next_approval();
+                      break;
+                  default:
+                      break;
+              }
+          } else {
+              switch (action) {
+                  case "toggle":
+                      $scope.next_status(prepid);
+                      break;
+                  case "approve":
+                      $scope.single_step('approve', prepid);
+                      break;
+                  case "reset":
+                      $scope.single_step('reset', prepid);
+                      break;
+                  case "option_reset":
+                      $scope.single_step('option_reset', prepid);
+                      break;
+                  case "soft_reset":
+                      $scope.single_step('soft_reset', prepid);
+                      break;
+                  case "delete":
+                      $scope.delete_object('requests', prepid);
+                      break;
+                  case "clone":
+                      $scope.clone(prepid);
+                      break;
+                  default:
+                      break;
+              }
+          }
+      });
   };
 
 
