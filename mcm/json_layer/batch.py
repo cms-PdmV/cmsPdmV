@@ -135,9 +135,6 @@ class batch(json_base):
         message+='%s/batches?prepid=%s \n\n'%(l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
             message+="Additional comments for this batch:\n"+current_notes+'\n'
-        
-        if self.get_attribute('process_string'):
-            message+='Please use "%s" in the dataset name.\n' % self.get_attribute('process_string')
 
         self.logger.log('Message send for batch %s'%(self.get_attribute('prepid')))
         
