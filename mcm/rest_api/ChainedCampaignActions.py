@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
 import cherrypy
+import multiprocessing
+
 from json import dumps
+from collections import defaultdict
+
+from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
-from RestAPIMethod import RESTResource
 from json_layer.action import action
-from collections import defaultdict
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 
@@ -302,23 +305,28 @@ class InspectChainedCampaignsRest(RESTResource):
     def listAll(self):
         ccdb = database('chained_campaigns')
         all_cc = ccdb.raw_query("prepid")
-        prepids_list = map(lambda x:x['id'], all_cc)
+        prepids_list = map(lambda x : x['id'], all_cc)
         return prepids_list
 
     def multiple_inspect(self, ccids):
         crdb = database('chained_requests')
-        res=[]
+        res = []
         for ccid in ccids.split(','):
-            crlist = crdb.queries( ["member_of_campaign==%s"% ccid,
-                                         "last_status==done",
-                                         "status==processing"] )
+            crlist = crdb.queries(["member_of_campaign==%s"% ccid,
+                    "last_status==done",
+                    "status==processing"])
+
             self.logger.log('crlist %s in chained_camp %s ' % (crlist, ccid))
             for cr in crlist:
                 mcm_cr = chained_request( cr )
                 if mcm_cr:
-                    res.append( mcm_cr.inspect() )
+                    __inspect_ret = mcm_cr.inspect()
                 else:
-                    res.append( {"prepid":cr, "results":False, 'message' : '%s does not exist' % cr})
+                    __inspect_ret = {"prepid":cr, "results":False,
+                            'message' : '%s does not exist' % cr}
+
+                logger.log("Inspection for: %s returned: %s" %(cr, __inspect_ret))
+                res.append(__inspect_ret)
 
         if len(res)>1:
             return res
@@ -350,14 +358,30 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         Inspect the chained requests of all chained campaigns, requires /all
         """
         if not args:
-            return dumps({"results":'Error: No arguments were given'})
+            return dumps({"results" : 'Error: No arguments were given'})
         if args[0] != 'all':
-            return dumps({"results":'Error: Incorrect argument provided'})
+            return dumps({"results" : 'Error: Incorrect argument provided'})
 
-        ccid_list = self.listAll()
-        from random import shuffle
-        shuffle(ccid_list)
-        return dumps(self.multiple_inspect( ','.join( ccid_list )))
+        if len(multiprocessing.active_children()) < 1:  ##see if already running
+            ccid_list = self.listAll()                  ##we run only 1 inspection
+            from random import shuffle                  ## in background
+            shuffle(ccid_list)
+            try:
+                p  = multiprocessing.Process(target = self.multiple_inspect,
+                        args = (','.join( ccid_list ),))
+
+                p.start()
+                return dumps({"results" : True, "message":
+                        "Successfully forked inspection to background. PID: %s"
+                        % p.pid})
+
+            except Exception as e:
+                self.logger.error('Error while forking an inspection: %s', e)
+                return dumps({"results" : False,
+                        message : "Failed in forking the process"})
+        else:
+            return dumps({"results" : True,
+                    "message" : "Already running inspection in background"})
 
 
 class SelectNewChainedCampaigns(RESTResource):
