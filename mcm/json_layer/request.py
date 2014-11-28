@@ -200,12 +200,10 @@ class request(json_base):
         margin = int(total_events_should_be *1.2)
         if self.get_attribute('total_events') > margin: ## safety factor of 20%
             raise self.WrongApprovalSequence(self.get_attribute('status'),what,
-                                             'The requested number of events (%d > %d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request'%(self.get_attribute('total_events'),
-                                                                                                                                                                        margin,
-                                                                                                                                                                        total_events_should_be,
-                                                                                                                                                                        previous_events,
-                                                                                                                                                                        self.get_efficiency())
-                                             )
+                    'The requested number of events (%d > %d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request' %(
+                        self.get_attribute('total_events'), margin,
+                        total_events_should_be, previous_events,
+                        self.get_efficiency()))
         if and_set:
             if self.get_attribute('total_events')>0:
                 ## do not overwrite the number for no reason
@@ -219,7 +217,7 @@ class request(json_base):
         if self.current_user_level == 0:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
 
         if not self.correct_types():
             raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(
@@ -230,40 +228,43 @@ class request(json_base):
 
         if not self.get_attribute('cmssw_release') or self.get_attribute('cmssw_release') == 'None':
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The release version is undefined')
+                    'The release version is undefined')
 
         if self.get_scram_arch() == None:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The architecture is invalid, probably has the release %s being deprecated' % (
-                                                 self.get_attribute('cmssw_release')))
+                    'The architecture is invalid, probably has the release %s being deprecated' % (
+                            self.get_attribute('cmssw_release')))
 
         bad_characters = [' ', '?', '/', '.']
         if not self.get_attribute('dataset_name') or any(
                 map(lambda char: char in self.get_attribute('dataset_name'), bad_characters)):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The dataset name is invalid: either null string or containing %s' % (
-                                                 ','.join(bad_characters)))
+                    'The dataset name is invalid: either null string or containing %s' % (
+                            ','.join(bad_characters)))
 
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The process string (%s) contains a bad character %s' %( self.get_attribute('process_string'),
-                                                                                                      ','.join( other_bad_characters )))            
+                    'The process string (%s) contains a bad character %s' %(
+                            self.get_attribute('process_string'),
+                            ','.join( other_bad_characters )))
+
         gen_p = self.get_attribute('generator_parameters')
         if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
+                    'The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
+
         gen_p[-1] = generator_parameters(gen_p[-1]).json()
         self.set_attribute('generator_parameters', gen_p)
 
         if not len(self.get_attribute('generators')):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'There should be at least one generator mentioned in the request')
+                    'There should be at least one generator mentioned in the request')
 
         if self.get_attribute('time_event') <= 0 or self.get_attribute('size_event') <= 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The time per event or size per event are invalid: negative or null')
+                    'The time per event or size per event are invalid: negative or null')
 
         if not self.get_attribute('fragment') and (
             not ( self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'))):
@@ -272,38 +273,41 @@ class request(json_base):
                 pass
             else:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The configuration fragment is not available. Neither fragment or name_of_fragment are available')
+                        'The configuration fragment is not available. Neither fragment or name_of_fragment are available')
 
         if self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
             if re.match('^[\w/.-]+$', self.get_attribute('name_of_fragment')) is None:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The configuration fragment {0} name contains illegal characters'.format(
-                                                     self.get_attribute('name_of_fragment')))
+                        'The configuration fragment {0} name contains illegal characters'.format(
+                                self.get_attribute('name_of_fragment')))
+
             for line in self.parse_fragment():
                 if 'This is not the web page you are looking for' in line:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The configuration fragment does not exist in git')
+                            'The configuration fragment does not exist in git')
+
                 if 'Exception Has Occurred' in line:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The configuration fragment does not exist in cvs')
+                            'The configuration fragment does not exist in cvs')
 
         if self.get_attribute('total_events') < 0 and not for_chain:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The number of requested event is invalid: Negative')
-            
+                    'The number of requested event is invalid: Negative')
 
         if self.get_wmagent_type() == 'LHEStepZero':
             if self.get_attribute('mcdb_id') == 0:
                 nevents_per_job = self.numberOfEventsPerJob()
                 if not nevents_per_job:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The number of events per job cannot be retrieved for lhe production')
+                            'The number of events per job cannot be retrieved for lhe production')
+
                 elif nevents_per_job >= self.get_attribute('total_events'):
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The number of events per job is greater or equal to the number of events requested')
+                            'The number of events per job is greater or equal to the number of events requested')
+
             if self.get_attribute('mcdb_id') < 0:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The request should have a positive of null mcdb id')
+                        'The request should have a positive of null mcdb id')
 
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
@@ -311,7 +315,8 @@ class request(json_base):
 
         ## same thing but using db query => faster
         find_similar = ['dataset_name==%s' % (self.get_attribute('dataset_name')),
-                        'member_of_campaign==%s' % ( self.get_attribute('member_of_campaign'))]
+                'member_of_campaign==%s' % ( self.get_attribute('member_of_campaign'))]
+
         if self.get_attribute('process_string'):
             find_similar.append('process_string==%s' % ( self.get_attribute('process_string')))
         similar_ds = rdb.queries(find_similar)
@@ -327,8 +332,8 @@ class request(json_base):
                 if similar['prepid'] == my_id: continue
                 if int(similar['extension']) == int(my_extension):
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'Two requests with the same dataset name, same process string and they are the same extension mumber (%s)' % (
-                                                         my_extension))
+                            'Two requests with the same dataset name, same process string and they are the same extension mumber (%s)' % (
+                            my_extension))
             # check whether there are similar requests (same mcdb_id, campaign and number of events) if the campaign is a root campaign
         #if mcm_c['root'] == 0 and self.get_attribute('mcdb_id') > 0:
         #    rdb.raw_query('mcdb_check', {'key': [mcm_c['prepid'], self.get_attribute('mcdb_id'), self.get_attribute('total_events')], 'group': True})
@@ -340,11 +345,12 @@ class request(json_base):
                 if mcm_c['root'] in [-1, 1]:
                     ##only requests belonging to a root==0 campaign can have mcdbid without input before being in a chain
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The request has an mcdbid, not input dataset, and not member of a root campaign.')
+                            'The request has an mcdbid, not input dataset, and not member of a root campaign.')
+
             if self.get_attribute('mcdb_id') > 0 and self.get_attribute('input_dataset') and self.get_attribute('history')[0]['action'] != 'migrated':
                 ## not a migrated request, mcdb
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
+                        'The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
 
         else:
             crdb = database('chained_requests')
@@ -362,18 +368,17 @@ class request(json_base):
                 if request_is_at != 0:
                     if self.get_attribute('mcdb_id') >= 0 and not self.get_attribute('input_dataset'):
                         raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                         'The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
+                                'The request has an mcdbid, not input dataset, and not considered to be a request at the root of its chains.')
+
                 if request_is_at != mcm_cr['step']:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                     'The request is not the current step of chain %s' % (
-                                                         mcm_cr['prepid']))
-
+                            'The request is not the current step of chain %s' % (
+                                    mcm_cr['prepid']))
 
         ## check on chagnes in the sequences
         if len(self.get_attribute('sequences')) != len(mcm_c['sequences']):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                             'The request has a different number of steps than the campaigns it belong to')
-
+                    'The request has a different number of steps than the campaigns it belong to')
 
         def in_there(seq1, seq2):
             items_that_do_not_matter = ['conditions', 'datatier', 'eventcontent']
@@ -418,13 +423,13 @@ class request(json_base):
             # try setting the process string ? or just raise an exception ?
             if not self.get_attribute('process_string'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
+                        'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
+
         else:
             if self.get_attribute('process_string'):
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                                                 'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
-                                                     self.get_attribute('process_string')))
-
+                        'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
+                                self.get_attribute('process_string')))
 
         if for_chain:
             return
@@ -943,8 +948,6 @@ class request(json_base):
         ##create a release directory "at the root" if not already existing
 
         if directory:
-            ##create a release directory "in the request" directory if not already existing
-            ##infile += 'cd ' + os.path.abspath(directory) + '\n'
             infile += self.make_release()
         else:
             infile += self.make_release()
@@ -957,7 +960,10 @@ class request(json_base):
         fragment_retry_amount = 2
         ##copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
-            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --retry %s --create-dirs -o %s \n' % (l_type.baseurl(), self.get_attribute('prepid'), fragment_retry_amount, self.get_fragment())
+            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --retry %s --create-dirs -o %s \n' % (
+                    l_type.baseurl(), self.get_attribute('prepid'),
+                    fragment_retry_amount, self.get_fragment())
+
             ##lets check if downloaded file actually exists and has more than 0 bytes
             infile += '[ -s %s ] || exit $?;\n' %(self.get_fragment())
 
@@ -994,7 +1000,9 @@ class request(json_base):
 
             # tweak a bit more finalize cmsDriver command
             res = cmsd
-            configuration_names.append(os.path.join(directory, self.get_attribute('prepid') + "_" + str(previous + 1) + '_cfg.py'))
+            configuration_names.append(os.path.join(directory,
+                    self.get_attribute('prepid') + "_" + str(previous + 1) + '_cfg.py'))
+
             res += '--python_filename %s --no_exec ' % ( configuration_names[-1] )
 
             ## add monitoring at all times...
@@ -1003,7 +1011,6 @@ class request(json_base):
                 new_cust = old_cust
                 new_cust += ',Configuration/DataProcessing/Utils.addMonitoring'
                 res = res.replace('--customise %s' % (old_cust), '--customise %s' % (new_cust))
-                #res +='--customise %s'%( cust )
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
             res += inline_c
@@ -1031,12 +1038,13 @@ class request(json_base):
                 max_tests = settings().get_value('max_lhe_test')
                 skip_some = ''
                 test_i = 0
-                do_wait_for_me=False
+                do_wait_for_me = False
+                __cond = self.get_attribute("sequences")[0]['conditions']
                 while affordable_nevents * test_i < self.get_attribute('total_events') and (max_tests<0 or test_i < max_tests):
-                    res += 'cmsDriver.py lhetest --filein lhe:%s:%s --mc  --conditions auto:startup -n %s --python lhetest_%s.py --step NONE --no_exec --no_output\n' % (
-                        self.get_attribute('mcdb_id'), 
-                        affordable_nevents * test_i,
-                        affordable_nevents, test_i)
+                    res += 'cmsDriver.py lhetest --filein lhe:%s:%s --mc  --conditions %s -n %s --python lhetest_%s.py --step NONE --no_exec --no_output\n' % (
+                            self.get_attribute('mcdb_id'), affordable_nevents * test_i,
+                            __cond, affordable_nevents, test_i)
+
                     res += 'cmsRun lhetest_%s.py & \n' % ( test_i )
                     #prepare for next test job
                     test_i += 1
