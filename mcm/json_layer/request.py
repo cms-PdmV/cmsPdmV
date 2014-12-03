@@ -2313,13 +2313,15 @@ done
         self.get_stats()
         # increase the revision only if there was a request in req mng, or a dataset already on the table
         increase_revision = False
+        __ps_values = self.get_camp_plus_ps_and_tiers()
 
         # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
             ## save the reqname to invalidate
             req_to_invalidate.append(wma['name'])
-            new_invalidation = {"object": wma['name'], "type": "request", "status": "new",
-                                "prepid": self.get_attribute('prepid')}
+            new_invalidation = {"object": wma['name'], "type": "request",
+                    "status": "new", "prepid": self.get_attribute('prepid')}
+
             new_invalidation['_id'] = new_invalidation['object']
             invalidation.save(new_invalidation)
 
@@ -2332,11 +2334,18 @@ done
             increase_revision = True
 
         for ds in ds_to_invalidate:
-            new_invalidation = {"object": ds, "type": "dataset", "status": "new",
-                                "prepid": self.get_attribute('prepid')}
-            new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
-            invalidation.save(new_invalidation)
-            increase_revision = True
+            __to_invalidate = True
+            ##lets check whether the rqmngr ds matches all ouput ds params.
+            for ps in __ps_values:
+                __to_invalidate = all(ps in list(set(test))[0] for ps in p)
+
+            if __to_invalidate:
+                new_invalidation = {"object": ds, "type": "dataset", "status": "new",
+                        "prepid": self.get_attribute('prepid')}
+
+                new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
+                invalidation.save(new_invalidation)
+                increase_revision = True
 
 
         ##do not increase version if not in an announced batch
