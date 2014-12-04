@@ -835,9 +835,10 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
-        return tiers
+        return reversed(tiers)
 
     def get_tiers(self):
+        ## the output is an ordered list of tiers, the last item being the main produced tiers
         r_tiers=[]
         keeps = self.get_attribute('keep_output')
         for (i, s) in enumerate(self.get_attribute('sequences')):
@@ -1640,7 +1641,14 @@ done
                                 'message' : 'No output dataset have been recognized'})
                         saved = db.save(self.json())
                         return not_good
-                    ds_for_accounting = collected[0]
+                    ## order according the expected tiers : the last is the more important
+                    ## does not function if two output of the same tier are expected
+                    recollected=[]
+                    for tier in tiers_expected:
+                        recollected.extend( filter( lambda dn : dn.split('/')[-1]==tier, collected) )
+                    collected=recollected
+
+                    ds_for_accounting = collected[-1] ## the last one if the one of importance
                     if not 'pdmv_dataset_statuses' in wma_r_N['content'] or not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']:
                         counted = wma_r_N['content']['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_open_evts_in_DAS']
                         if not counted:
