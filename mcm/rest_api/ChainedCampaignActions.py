@@ -5,6 +5,7 @@ import multiprocessing
 
 from json import dumps
 from collections import defaultdict
+from random import shuffle
 
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
@@ -13,6 +14,7 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.action import action
 from tools.user_management import access_rights
 from tools.json import threaded_loads
+from rest_api.ActionsActions import GenerateChainedRequests
 
 
 class CreateChainedCampaign(RESTResource):
@@ -290,7 +292,6 @@ class GenerateChainedRequests(RESTResource):
         ## get all actions belonging to that root campaign
         root_actions = adb.queries(['member_of_campaign==%s'%(root_campaign)])
         res=[]
-        from rest_api.ActionsActions import GenerateChainedRequests
         generator = GenerateChainedRequests()
         for a in root_actions:
             res.append(generator.generate_request(a['prepid']))
@@ -325,14 +326,17 @@ class InspectChainedCampaignsRest(RESTResource):
                     __inspect_ret = {"prepid":cr, "results":False,
                             'message' : '%s does not exist' % cr}
 
-                logger.log("Inspection for: %s returned: %s" %(cr, __inspect_ret))
+                self.logger.log("Inspection for: %s returned: %s" %(cr, __inspect_ret))
                 res.append(__inspect_ret)
 
         if len(res)>1:
+            self.logger.log("Inspection finished. Returned: %s" %(res))
             return res
         elif len(res):
+            self.logger.log("Inspection finished. Returned: %s" %(res[0]))
             return res[0]
         else:
+            self.logger.log("Inspection finished. Returned: %s" %([]))
             return []
 
 
@@ -364,7 +368,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
 
         if len(multiprocessing.active_children()) < 1:  ##see if already running
             ccid_list = self.listAll()                  ##we run only 1 inspection
-            from random import shuffle                  ## in background
+                              ## in background
             shuffle(ccid_list)
             try:
                 p  = multiprocessing.Process(target = self.multiple_inspect,
@@ -376,12 +380,14 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
                         % p.pid})
 
             except Exception as e:
-                self.logger.error('Error while forking an inspection: %s', e)
+                self.logger.error('Error while forking an inspection')
+                self.logger.exception(e)
                 return dumps({"results" : False,
                         message : "Failed in forking the process"})
         else:
             return dumps({"results" : True,
-                    "message" : "Already running inspection in background"})
+                    "message" : "Already running inspection in background. PID: %s"
+                            %multiprocessing.active_children()[0].pid})
 
 
 class SelectNewChainedCampaigns(RESTResource):
