@@ -2336,16 +2336,15 @@ done
         for ds in ds_to_invalidate:
             __to_invalidate = True
             ##lets check whether the rqmngr ds matches all ouput ds params.
-            for ps in __ps_values:
-                __to_invalidate = all(ps in list(set(test))[0] for ps in p)
+            for p in __ps_values:
+                __to_invalidate = all(ps in ds for ps in p)
 
-            if __to_invalidate:
-                new_invalidation = {"object": ds, "type": "dataset", "status": "new",
-                        "prepid": self.get_attribute('prepid')}
-
-                new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
-                invalidation.save(new_invalidation)
-                increase_revision = True
+                if __to_invalidate:
+                    new_invalidation = {"object": ds, "type": "dataset", "status": "new", "prepid": self.get_attribute('prepid')}
+                    new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
+                    invalidation.save(new_invalidation)
+                    increase_revision = True
+                    break
 
 
         ##do not increase version if not in an announced batch
