@@ -467,7 +467,10 @@ class RequestSubmitter(Handler):
 
             finally:
                 self.lock.release()
-                executor.close_executor()
+                try:
+                    executor.close_executor()
+                except UnboundLocalError:
+                    pass
 
         except Exception as e:
             self.injection_error(
