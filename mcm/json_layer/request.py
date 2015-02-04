@@ -1708,7 +1708,6 @@ done
                     self.set_status(with_notification=True)
                     ## save the request back to db
                     saved = db.save(self.json())
-                    print saved
                     if saved:
                         return {"prepid": self.get_attribute('prepid'), "results": True}
                     else:
