@@ -75,7 +75,7 @@
                   <a ng-click='announceModal(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
                     <i class="icon-envelope"></i>
                   </a>
-                  <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="role(1) || !data.message_id || data.status != 'announced'" ng-href="#">
+                  <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="!data.message_id || data.status != 'announced'" ng-href="#">
                     <i class="icon-volume-up"></i>
                   </a>
                   <script type="text/ng-template" id="announceModal.html"> <!--hidden modal template-->

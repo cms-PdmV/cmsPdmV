@@ -312,7 +312,7 @@ class HoldBatch(RESTResource):
 
 class NotifyBatch(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
+        self.access_limit = access_rights.user
         self.bdb = database('batches')
 
     def PUT(self):
