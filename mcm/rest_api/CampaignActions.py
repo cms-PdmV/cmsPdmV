@@ -326,24 +326,27 @@ class CampaignsRESTResource(RESTResource):
         return prepids_list
 
     def multiple_inspect(self, cid, in_statuses=['submitted','approved']):
-        clist=list(set(cid.rsplit(',')))
+        clist = list(set(cid.rsplit(',')))
         res = []
         rdb = database('requests')
         for c in clist:
 
-            ## this query needs to be modified if we want to also inspect the request for submit !
-            rlist=[]
+            ## this query needs to be modified if we want to
+            ## also inspect the request for submit !
+            rlist = []
             for in_status in in_statuses:
-                rlist.extend(rdb.queries( ["member_of_campaign==%s"%( c ),
-                                                "status==%s"%( in_status )] ))
+                rlist.extend(rdb.queries(["member_of_campaign==%s" % (c),
+                        "status==%s" % (in_status)]))
 
             for r in rlist:
-                mcm_r = request( r )
+                mcm_r = request(r)
                 if mcm_r:
-                    res.append( mcm_r.inspect() )
+                    res.append(mcm_r.inspect())
                 else:
-                    res.append( {"prepid": r, "results":False, 'message' : '%s does not exist'%(r)})
-        if len(res)>1:
+                    res.append({"prepid": r, "results":False,
+                            'message' : '%s does not exist' % (r)})
+
+        if len(res) > 1:
             return res
         elif len(res):
             return res[0]
@@ -390,5 +393,5 @@ class InspectCampaigns(CampaignsRESTResource):
 
         c_list = self.listAll()
         from random import shuffle
-        shuffle( c_list )
-        return dumps(self.multiple_inspect( ','.join( c_list ) ))
+        shuffle(c_list)
+        return dumps(self.multiple_inspect(','.join(c_list)))

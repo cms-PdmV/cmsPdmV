@@ -1546,7 +1546,8 @@ done
         return changes_happen
 
     def inspect(self):
-        ### this will look for corresponding wm requests, add them, check on the last one in date and check the status of the output DS for ->done
+        ### this will look for corresponding wm requests, add them,
+        ### check on the last one in date and check the status of the output DS for -> done
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
 
         # only if you are in submitted status
@@ -1556,7 +1557,9 @@ done
         elif self.get_attribute('status') == 'approved':
             return self.inspect_approved()
 
-        not_good.update({'message': 'cannot inspect a request in %s status' % (self.get_attribute('status'))})
+        not_good.update({'message': 'cannot inspect a request in %s status'
+                % (self.get_attribute('status'))})
+
         return not_good
 
     def inspect_approved(self):
@@ -1604,15 +1607,27 @@ done
             wma_r = mcm_rr[-1]
             ## pick up the last request of type!='Resubmission'
             for wma in reversed(mcm_rr):
-                if 'content' in wma and 'pdmv_type' in wma['content'] and not (wma['content']['pdmv_type'] in ignore_for_status):
+                if ('content' in wma and 'pdmv_type' in wma['content'] and
+                        not (wma['content']['pdmv_type'] in ignore_for_status)):
+
                     wma_r = wma
                     break
 
-            if ('pdmv_status_in_DAS' in wma_r['content'] and 'pdmv_status_from_reqmngr' in wma_r['content']):
+            if ('pdmv_status_in_DAS' in wma_r['content'] and
+                    'pdmv_status_from_reqmngr' in wma_r['content']):
+
                 if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content'][
                     'pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## how many events got completed for real: summing open and closed
-                    wma_r_N = mcm_rr[-1] # so that we can decouple the two
+                    for wma in reversed(mcm_rr):
+                        # if request has only DQMIO DS we should take  other request
+                        # because DQMIO will always have 0 evts and request never go completed
+                        if len(wma['content']['pdmv_dataset_list']) == 1:
+                            if wma['content']['pdmv_dataset_name'].find('DQM') != -1:
+                                continue
+                        else:
+                            wma_r_N = wma # so that we can decouple the two
+                            break
 
                     ## this is enough to get all datasets
                     collected = []
@@ -1641,21 +1656,36 @@ done
                         saved = db.save(self.json())
                         return not_good
                     ds_for_accounting = collected[0]
-                    if not 'pdmv_dataset_statuses' in wma_r_N['content'] or not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']:
-                        counted = wma_r_N['content']['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_open_evts_in_DAS']
+                    if (not 'pdmv_dataset_statuses' in wma_r_N['content'] or
+                            not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']):
+
+                        counted = wma_r_N['content']['pdmv_evts_in_DAS'] +\
+                                wma_r_N['content']['pdmv_open_evts_in_DAS']
+
                         if not counted:
-                            counted = wma_r['content']['pdmv_evts_in_DAS']+ wma_r['content']['pdmv_open_evts_in_DAS']
+                            counted = wma_r['content']['pdmv_evts_in_DAS'] +\
+                                    wma_r['content']['pdmv_open_evts_in_DAS']
                     else:
                         ## pick up the completed statistics from the corresponding line
-                        counted = wma_r_N['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS']+ wma_r_N['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS']
+                        counted = wma_r_N['content']['pdmv_dataset_statuses'][
+                                ds_for_accounting]['pdmv_evts_in_DAS'] +\
+                                wma_r_N['content']['pdmv_dataset_statuses'][
+                                ds_for_accounting]['pdmv_open_evts_in_DAS']
+
                         if not counted:
-                            counted = wma_r['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS']+ wma_r['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS']
+                            counted = wma_r['content']['pdmv_dataset_statuses'][
+                                    ds_for_accounting]['pdmv_evts_in_DAS'] +\
+                                    wma_r['content']['pdmv_dataset_statuses'][
+                                    ds_for_accounting]['pdmv_open_evts_in_DAS']
 
                     self.set_attribute('completed_events', counted )
                     ## make sure no expected tier was left behind
-                    if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],collected)), tiers_expected)):
-                        not_good.update({
-                                'message' : 'One of the expected tiers %s has not been produced' %( tiers_expected )})
+                    if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],
+                            collected)), tiers_expected)):
+
+                        not_good.update({'message' : 'One of the expected tiers %s has not been produced'
+                                % ( tiers_expected )})
+
                         saved = db.save(self.json())
                         return not_good
 
@@ -1667,34 +1697,41 @@ done
                         saved = db.save(self.json())
                         return not_good
                     
-                    if len(collected)==0: 
+                    if len(collected) == 0:
                         ## there was no matching tier
                         not_good.update({'message': '%s completed but no tiers match any of %s' % (
-                                    wma_r['content']['pdmv_dataset_name'], tiers_expected) })
+                                wma_r['content']['pdmv_dataset_name'], tiers_expected) })
+
                         saved = db.save(self.json())
                         return not_good
                         ## set next status: which can only be done at this stage
                     self.set_status(with_notification=True)
                     ## save the request back to db
                     saved = db.save(self.json())
+                    print saved
                     if saved:
                         return {"prepid": self.get_attribute('prepid'), "results": True}
                     else:
                         not_good.update(
-                            {'message': "Set status to %s could not be saved in DB" % (self.get_attribute('status'))})
+                            {'message': "Set status to %s could not be saved in DB" % (
+                                self.get_attribute('status'))})
+
                         return not_good
                 else:
                     if changes_happen: db.save(self.json())
                     not_good.update({'message': "last request %s is not ready" % (wma_r['name'])})
                     return not_good
             else:
-                if changes_happen: db.save(self.json())
+                if changes_happen : db.save(self.json())
                 not_good.update({'message': "last request %s is malformed %s" % (wma_r['name'],
-                                                                                 wma_r['content'])})
+                        wma_r['content'])})
+
                 return not_good
         else:
             ## add a reset acion here, in case in prod instance ?
-            not_good.update({'message': " there are no requests in request manager. Please invsetigate!"})
+            not_good.update({'message': " there are no requests in request manager.\
+                    Please invsetigate!"})
+
             return not_good
 
     def parse_fragment(self):
@@ -1960,6 +1997,7 @@ done
         memory = None
         timing = None
         timing_method = settings().get_value('timing_method')
+# Here be dragons
 
         file_size = None
         for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
