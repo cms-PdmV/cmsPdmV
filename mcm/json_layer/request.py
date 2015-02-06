@@ -1641,8 +1641,11 @@ done
                                 (_, dsn, proc, tier) = ds.split('/')
                                 for goodds in collected:
                                     (_, gdsn, gproc, gtier) = goodds.split('/')
-                                    if dsn != gdsn or gproc != proc:
-                                        goodone = False
+                                    if dsn != gdsn or not set(
+                                        gproc.split("-")).issubset(proc.split("-")):
+
+                                        goodone = False #due to #724 we check if expected
+                                                        #process_string is subset of generated ones
                         if goodone:
                             ## reduce to what was expected of it
                             those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
@@ -1728,8 +1731,7 @@ done
                 return not_good
         else:
             ## add a reset acion here, in case in prod instance ?
-            not_good.update({'message': " there are no requests in request manager.\
-                    Please invsetigate!"})
+            not_good.update({'message': " there are no requests in request manager. Please invsetigate!"})
 
             return not_good
 
