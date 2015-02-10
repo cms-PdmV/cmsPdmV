@@ -18,7 +18,9 @@ class user_pack:
                 ## the user name could be not provided in case of public/ apis
                 udb = database('users')
                 u = udb.get( self.get_username())
-                self.user_dict['email'] = u['email']
+                if "email" in u: #we take email from DB if user is registered, else we use ADFS
+                    self.user_dict['email'] = u['email']
+
 
     @staticmethod
     def get_request_header_dictionary():
