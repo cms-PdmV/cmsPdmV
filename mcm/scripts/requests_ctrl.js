@@ -103,35 +103,33 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     };
     $scope.single_step = function(step, prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/'+step+'/'+prepid}).success(function(data,status){
-
 	      $scope.action_status[prepid] = data['results'];
 	      if (data['results']){
-		  $scope.update["success"] = data["results"];
-		  $scope.update["fail"] = false;
-		  $scope.update["status_code"] = data["results"];
-		  $scope.action_report[prepid] = 'OK';
-		  if (step=='clone'){
-		      // not used anymore
-		      $scope.action_report[prepid]= 'OK';
-		      $scope.action_status[prepid]
-		      $scope.update["status_code"] = 'edit?db_name=requests&query='+data["prepid"];
-		  }else{
-		      //$window.location.reload();
-		      $scope.getData();
-		  }
-	      }
-	      else{
-		  $scope.update["fail"] = true;
-		  $scope.update["status_code"] = data['message'];
-		  $scope.action_report[data['prepid']] = data['message'];
-	      }
-
+		      $scope.update["success"] = data["results"];
+		      $scope.update["fail"] = false;
+		      $scope.update["status_code"] = data["results"];
+		      $scope.action_report[prepid] = 'OK';
+		      if (step=='clone'){
+		        // not used anymore
+		        $scope.action_report[prepid]= 'OK';
+		        $scope.action_status[prepid]
+		        $scope.update["status_code"] = 'edit?db_name=requests&query='+data["prepid"];
+		      } else{
+		        //$window.location.reload();
+		        $scope.getData();
+		      }
+	      } else{
+		        $scope.update["fail"] = true;
+		        $scope.update["status_code"] = data['message'];
+		        $scope.action_report[data['prepid']] = data['message'];
+        }
       }).error(function(status){
-         $scope.update["success"] = false;
-         $scope.update["fail"] = true;
-         $scope.update["status_code"] = status;
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
       });
     };
+
     $scope.next_status = function(prepid){
       $http({method:'GET', url: 'restapi/'+$scope.dbName+'/status/'+prepid}).success(function(data,status){
         $scope.parse_one_only(data,status);
@@ -368,6 +366,14 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     });
   };
 
+  $scope.softreset_many = function(){
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/soft_reset/'+$scope.selected_prepids.join()}).success(function(data,status){
+      $scope.parse_report(data,status);
+    }).error(function(data,status){
+      alert("Error while processing request. Code: "+status);
+    });
+  };
+
   $scope.submit_many = function(){
     /* submit many requests. On successfully submited ones open a status watching page*/
     if($scope.selected_prepids.length == 0 ){
@@ -467,6 +473,9 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
                       break;
                   case 'approve':
                       $scope.next_approval();
+                      break;
+                  case 'soft reset':
+                      $scope.softreset_many();
                       break;
                   default:
                       break;
