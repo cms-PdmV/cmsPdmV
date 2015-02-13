@@ -1622,9 +1622,9 @@ done
                     for wma in reversed(mcm_rr):
                         # if request has only DQMIO DS we should take  other request
                         # because DQMIO will always have 0 evts and request never go completed
-                        if len(wma['content']['pdmv_dataset_list']) == 1:
-                            if wma['content']['pdmv_dataset_name'].find('DQMIO') != -1:
-                                continue
+                        if (len(wma['content']['pdmv_dataset_list']) == 1 and
+                            wma['content']['pdmv_dataset_name'].find('DQMIO') != -1):
+                            continue
                         else:
                             wma_r_N = wma # so that we can decouple the two
                             break
