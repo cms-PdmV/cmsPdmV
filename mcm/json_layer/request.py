@@ -1109,7 +1109,7 @@ done
             self.logger.log('tryign to change priority to %s at %s' % ( self.get_attribute('prepid'), new_priority))
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='pdmvserv-test.cern.ch')
+                ssh_exec = ssh_executor(server='cms-pdmv-op.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
@@ -2467,10 +2467,7 @@ done
                             self.logger.error('the release %s architecture is invalid'% self.get_attribute('member_of_campaign'))
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid'%self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
-                        if "slc6" in request_arch:
-                            machine_name = "cms-pdmv-op.cern.ch"
-                        else:
-                            machine_name = "pdmvserv-test.cern.ch"
+                        machine_name = "cms-pdmv-op.cern.ch"
                         executor = ssh_executor(server=machine_name)
                         _, stdout, stderr = executor.execute(command)
                         if not stdout and not stderr:

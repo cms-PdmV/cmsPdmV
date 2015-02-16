@@ -1003,7 +1003,7 @@ class UploadConfig(RESTResource):
         Upload the configuration
         """
         rn = args[0]
-        server = 'pdmvserv-test.cern.ch'
+        server = 'cms-pdmv-op.cern.ch'
         if "server" in kwargs:
             server = kwargs["server"]
         from tools.handlers import ConfigMakerAndUploader

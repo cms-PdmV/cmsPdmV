@@ -395,7 +395,7 @@ class RequestSubmitter(Handler):
                 if not okay: return False
                 batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
-                executor = ssh_executor(server='pdmvserv-test.cern.ch')
+                executor = ssh_executor(server='cms-pdmv-op.cern.ch')
                 try:
                     cmd = req.prepare_submit_command(batch_name)
                     self.logger.inject("Command being used for injecting request {0}: {1}".format(self.prepid, cmd),

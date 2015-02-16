@@ -19,9 +19,10 @@ class RenewCertificate(RESTResource):
 
     def GET(self, *args):
         """
-        Renew certificate on pdmvserv-test.cern.ch
+        Renew certificates on our request upload/injection machines
         """
-        machines = ["pdmvserv-test.cern.ch", "cms-pdmv-op.cern.ch"]
+        #machines = ["pdmvserv-test.cern.ch", "cms-pdmv-op.cern.ch"]
+        machines = ["cms-pdmv-op.cern.ch"]
         for elem in machines:
             ssh_exec = ssh_executor(server=elem)
             try:
@@ -33,7 +34,7 @@ class RenewCertificate(RESTResource):
 
     def create_command(self, machine):
             # crab setup
-            if machine == "pdmvserv-test.cern.ch":
+            if machine == "pdmvserv-test.cern.ch": ##for SLC5 we need to source LCG script - from 2015 FEB. BROKEN
                 command = 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
             else:
                 command = 'source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
