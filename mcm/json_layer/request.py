@@ -1110,7 +1110,7 @@ done
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
                 ssh_exec = ssh_executor(server='cms-pdmv-op.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():

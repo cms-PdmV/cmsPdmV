@@ -517,7 +517,7 @@ class ChainRequestInjector(Handler):
         cmd='cd %s \n' % ( l_type.workLocation())
         if mcm_r:
             cmd+=mcm_r.make_release()
-        cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOST/voms_proxy.cert\n'
+        cmd+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd+='export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         there=''
         if l_type.isDev():
