@@ -13,18 +13,15 @@
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script type="text/javascript" src="scripts/jquery/bootstrap-slider.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
-        <script type="text/javascript" src="scripts/jquery/jquery-sortable.js"></script>
-        <script type="text/javascript" src="scripts/d3.v3.min.js"></script>
-        <script type="text/javascript" src="scripts/charts.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
            <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap', 'mcm.charts']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
            </script>
          <![endif]-->
          <![if !IE]>
            <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap', 'mcm.charts']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
            </script>
          <![endif]>
         <script src="scripts/main_controller.js"></script>
@@ -59,40 +56,6 @@
                         <div class="row-fluid">
                                 <pre><div class="well"><span id="preBatch" class="fontPre">{{results}}</span></div></pre>
                         </div>
-                    </pane>
-                    <pane heading="Stats" active="tabsettings.stats.active">
-                        <div class="loading" ng-show="loadingData"></div>
-                      <!--<div class="row-fluid"><div class="offset4"><h2>Statistics</h2></div></div>-->
-                      <div class="row"><h3 align="center">Statistics of campaigns</h3></div>
-
-                      <div class="row" align="center">
-                        <form class="form-search">
-                          <div class="input-append">
-                            <input class="input-xxlarge span8 search-query" type="text" placeholder="db query" ng-model="dashboard_stats_query">
-                            <div class="btn-group">
-                              <button class="btn dropdown-toggle" data-toggle="dropdown">
-                                <span class="caret"></span>
-                              </button>
-                              <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu">
-                                <li ng-click="get_stats(dashboard_stats_query, false)"><a>See statistics {{dashboard_stats_query | limitTo : 10}}...</a></li>
-                                <li ng-click="get_stats(dashboard_stats_query, true)"><a>Add statistics {{dashboard_stats_query | limitTo: 10}}...</a></li>
-                              </ul>
-                            </div>
-                          </div>
-                        </form>
-                      </div>
-                      <div class="input-append" align="center">
-                            <input type="text" class="input-small span2" maxlength="50" placeholder="Campaign Name" ng-model="dashboard_stats_campaign">
-                            <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign, false)"> See {{dashboard_stats_campaign}} statistics </button>
-                            <button align="center" type="button" class="btn btn-danger" ng-click="get_stats('member_of_campaign='+dashboard_stats_campaign, true)"> Add {{dashboard_stats_campaign}} statistics </button>
-                            <button  type="button" class="btn btn-danger" ng-click="get_stats('')" > Load <strong>all</strong> statistics </button>
-                          </div>
-                        <mcm-customizable-chart chart-type="'mcm-column-chart'" chart-title="Requests chart" radio="requests.radio" settings="requests.settings" selections="requests.selections" options="requests.options" chart-data="allRequestData"></mcm-customizable-chart>
-                        <multiple-pie-charts color-domain="piecharts.domain" table-title="Campaigns" data="allRequestData" full-terms="piecharts.fullTerms" compact-terms="piecharts.compactTerms" sum-by="piecharts.sum" nest-by="piecharts.nestBy"></multiple-pie-charts>
-                          <!--<object type="text/html" data="{{dashboard_stats}}" width="100%" height="900"></object>-->
-			              <!--<object type="text/html" data="{{stats_url}}" width="100%" height="900"></object>-->
-			  <!--<text ng-bind-html-unsafe="dashboard_stats" width="100%" height="900"></text>-->
-                      <!--</div>-->
                     </pane>
                     <pane heading="Logs" active="tabsettings.logs.active">
                         <div class="row-fluid"><h2>Feed from logs</h2></div>

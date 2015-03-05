@@ -5,56 +5,9 @@ body {
     padding-bottom: 70px;
 }
 
-body.dragging, body.dragging * {
-    cursor: move !important;
-}
-
-.dragged {
-    position: absolute;
-    opacity: 0.5;
-    z-index: 2000;
-}
-
-ul.nav li.placeholder {
-    position: relative;
-}
-
-ul.nav li.placeholder:before {
-    content: "";
-    position: absolute;
-    width: 0;
-    height: 0;
-    border: 5px solid transparent;
-    border-top-color: black;
-    top: -2px;
-    margin-left: -5px;
-    border-bottom: none;
-}
-
-.axis path, .axis line {
-    fill: none;
-    stroke: black;
-    stroke-width: 1;
-    shape-rendering: crispEdges;
-}
-
-.grid .tick, .grid path {
-    fill: none;
-}
-
-.grid .tick {
-    stroke: grey;
-    opacity: 0.2;
-    stroke-width: 0.6;
-    stroke-dasharray: 2,2;
-}
-.grid path {
-      stroke-width: 0;
-}
-
 .custom-footer{
-    background:white; 
-    height:70px; 
+    background: white; 
+    height: 70px; 
     position: fixed; 
     bottom: 0;
 }
@@ -63,49 +16,10 @@ ul.nav li.placeholder:before {
     text-align: right;
 }
 
-div.loading {
-	position: fixed;
-    width: 92px;
-    height: 92px;
-    margin: auto;
-    top: 40%;
-    left:-46px;
-    right:0;
-	z-index: 100;
-	background: url("loading.gif") no-repeat;
-}
-
 .navigation-form {
     display: inline-block;
     margin-bottom: 0px;
     margin-right: 5px;
-}
-/* graph CSS */
-.node {
-    cursor: pointer;
-}
-
-.node circle {
-    cursor: pointer;
-    stroke-width: 2px;
-}
-
-.node-text {
-    cursor: pointer;
-    fill: #000;
-    stroke: transparent;
-    font: bold 11px sans-serif;
-    text-shadow: 1px 1px #fff;
-    textLength: 20px;
-    display: none;
-}
-
-.node.expanded circle {
-    fill: #fff;
-}
-
-.node.expanded .node-text {
-    display: none;
 }
 
 #help {
@@ -122,11 +36,11 @@ div.loading {
 }
 
 img.led {
- vertical-align: top;
+    vertical-align: top;
 }
 
 .text-uppercase {
-    text-transform:uppercase;
+    text-transform: uppercase;
 }
 
 .text-bold {
@@ -136,4 +50,3 @@ img.led {
 .margin-r {
     margin-right: 5px;
 }
-/* end of graph CSS */
