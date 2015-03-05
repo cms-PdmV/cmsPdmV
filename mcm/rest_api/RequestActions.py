@@ -247,6 +247,44 @@ class ImportRequest(RequestRESTResource):
         db = database(self.db_name)
         return dumps(self.import_request(threaded_loads(cherrypy.request.body.read().strip()), db))
 
+class TransfertRequest(RequestRESTResource):
+    def __init__(self):
+        RequestRESTResource.__init__(self)
+        
+    def GET(self, *args):
+        """
+        fetch a given coma separated list of request from the other instance (dev<->prod)
+        """
+        if not len(args):
+            return dumps({"results": 'Error: No arguments were given.'})
+        
+        l_type = locator()
+        if not l_type.isDev():
+            return dumps({"results": 'cannot transfer request into prod'})
+
+        from_rdb = database('requests',url = l_type.dbLocation(inverted=False))
+        to_rdb = database('requests')
+        rids = args[0].split(',')
+        res = []
+        for rid in rids:
+            if not from_rdb.document_exists( rid ):
+                res.append({'results' : False, 'prepid' : rid, 'message' : 'does not exist'})
+                continue
+            mcm_origin = from_rdb.get( rid )
+            if to_rdb.document_exists( rid ):
+                res.append({'results' : False, 'prepid' : rid, 'message' : 'cannot overwrite in destination'})
+
+            new_doc = copy.deepcopy( mcm_origin )
+            new_doc.pop('_rev')
+            new_doc.pop('history')
+            new_doc.pop('flown_with')
+            new_doc.pop('member_of_chain')
+            
+            res.append(self.import_request( new_doc, to_rdb, label='transferred'))
+
+        return dumps(res)
+
+
 
 class UpdateRequest(RequestRESTResource):
     def __init__(self):
