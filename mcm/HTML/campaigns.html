@@ -86,11 +86,13 @@
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-href="/mcm/restapi/dashboard/get_stats/{{data.prepid}}" rel="tooltip" title="View old statistics for {{data.prepid}}" target="_blank" ng-hide="role(4);">
+                <a ng-href="/pmp/campaign?r={{data.prepid}}" rel="tooltip"
+                   title="View statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
-                <a ng-href="/mcm/get_stats?prepid={{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank" ng-hide="role(2);">
-                  <i class="icon-picture"></i>
+                <a ng-href="/pmp/campaign?m=true&r={{data.prepid}}" rel="tooltip"
+                   title="View statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-film"></i>
                 </a>
                 <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
                   <i class="icon-repeat"></i>
