@@ -1641,11 +1641,13 @@ done
                                 (_, dsn, proc, tier) = ds.split('/')
                                 for goodds in collected:
                                     (_, gdsn, gproc, gtier) = goodds.split('/')
-                                    if dsn != gdsn or not set(
-                                        gproc.split("-")).issubset(proc.split("-")):
-
+                                    if dsn != gdsn:
+                                        goodone = False
+                                    if  not set(gproc.split("-")[1:]).issubset(proc.split("-")[1:]) :
                                         goodone = False #due to #724 we check if expected
                                                         #process_string is subset of generated ones
+                                    if set(gproc.split("-")[0])!=set(proc.split("-")[0]):
+                                        goodone = False #when the campaign name has been suffled for acq era
                         if goodone:
                             ## reduce to what was expected of it
                             those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
