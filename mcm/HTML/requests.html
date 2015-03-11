@@ -178,6 +178,10 @@
                 <a ng-href="requests?prepid={{data.prepid}}&allRevisions" rel="tooltip" title="See all revisions for {{data.prepid}}" ng-hide="role(2);" target="_self">
                   <i class="icon-list-alt"></i>
                 </a>
+                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip"
+                   title="View historical statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-facetime-video"></i>
+                </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>

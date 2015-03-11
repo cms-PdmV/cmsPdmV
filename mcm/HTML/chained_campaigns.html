@@ -69,8 +69,8 @@
                   <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
                     <i class="icon-refresh"></i>
                   </a>
-                  <a ng-href="/pmp/chain?r={{data.prepid}}" rel="tooltip"
-                     title="View statistics for {{data.prepid}}" target="_blank">
+                  <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip"
+                     title="View growing statistics for {{data.prepid}}" target="_blank">
                     <i class="icon-film"></i>
                   </a>
                   <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 

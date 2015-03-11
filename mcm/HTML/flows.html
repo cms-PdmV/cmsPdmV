@@ -61,8 +61,8 @@
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-href="/pmp/chain?r={{data.prepid}}" rel="tooltip"
-                   title="View statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip"
+                   title="View growing statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-film"></i>
                 </a>
                 <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_self" ng-hide="role(3);">

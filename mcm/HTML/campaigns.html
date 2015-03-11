@@ -86,13 +86,17 @@
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-href="/pmp/campaign?r={{data.prepid}}" rel="tooltip"
-                   title="View statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip"
+                   title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
-                <a ng-href="/pmp/campaign?m=true&r={{data.prepid}}" rel="tooltip"
-                   title="View statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip"
+                   title="View growing statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-film"></i>
+                </a>
+                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip"
+                   title="View historical statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-facetime-video"></i>
                 </a>
                 <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
                   <i class="icon-repeat"></i>
