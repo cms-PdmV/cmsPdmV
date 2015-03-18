@@ -1644,6 +1644,7 @@ done
                     tiers_expected = self.get_tiers()
                     for wma in reversed(self.get_attribute('reqmgr_name')):
                         if not 'pdmv_dataset_list' in wma['content']: continue
+                        if 'DQMIO' in wma['content']['pdmv_dataset_name']: continue ## do not collect from this workflow
                         those = wma['content']['pdmv_dataset_list']
                         goodone = True
                         if len(collected):
@@ -1668,6 +1669,7 @@ done
                                 'message' : 'No output dataset have been recognized'})
                         saved = db.save(self.json())
                         return not_good
+
                     ds_for_accounting = collected[0]
                     if (not 'pdmv_dataset_statuses' in wma_r_N['content'] or
                             not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']):
