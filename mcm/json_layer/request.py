@@ -409,7 +409,9 @@ class request(json_base):
                     self.logger.log('identical sequences %s' % label)
                     this_matching.add(label)
                 else:
-                    self.logger.log('different sequences %s \n %s \n %s' % (label, seq.json(), self_sequence.json()))
+                    self.logger.log('different sequences %s \n %s \n %s' % (label,
+                            seq.json(), self_sequence.json()))
+
             if len(matching_labels) == 0:
                 matching_labels = this_matching
                 self.logger.log('Matching labels %s' % matching_labels)
@@ -418,15 +420,23 @@ class request(json_base):
                 matching_labels = matching_labels - (matching_labels - this_matching)
                 self.logger.log('Matching labels after changes %s' % matching_labels)
 
+        ## Here we get flow process_string to check
+        __flow_ps = ""
+        if self.get_attribute('flown_with'):
+            fdb = database('flows')
+            f = fdb.get(self.get_attribute('flown_with'))
+            if 'process_string' in f['request_parameters']:
+                __flow_ps = f['request_parameters']['process_string']
+
         if len(matching_labels) == 0:
             self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
             # try setting the process string ? or just raise an exception ?
-            if not self.get_attribute('process_string'):
+            if not self.get_attribute('process_string') and not __flow_ps: ## if they both are empty
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
 
         else:
-            if self.get_attribute('process_string'):
+            if self.get_attribute('process_string') and __flow_ps: ## if both are not empty string
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                         'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
                                 self.get_attribute('process_string')))
@@ -454,7 +464,7 @@ class request(json_base):
         if self.current_user_level == 0:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'define',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
             ## we could restrict certain step to certain role level
         #if self.current_user_role != 'generator_contact':
         #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user role %s'%(self.current_user_role))
