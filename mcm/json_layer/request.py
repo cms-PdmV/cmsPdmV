@@ -1281,15 +1281,16 @@ done
         if run:
             self.harvesting_driver += 'cmsRun %s || exit $? ; \n' % genvalid_harvesting_python_file
 
-        dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
-                                                            self.get_attribute('cmssw_release'),
-                                                            self.get_attribute('sequences')[0]['conditions'].replace(
-                                                                '::All', ''),
-                                                            self.get_attribute('version')
+        dqm_dataset = '/RelVal%s/%s-%s_%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
+                                                               self.get_attribute('cmssw_release'),
+                                                               self.get_attribute('member_of_campaign'),
+                                                               self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
+                                                               self.get_attribute('version')
         )
-        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s-genvalid-v%s__DQM.root' % (
+        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s_%s-%s-genvalid-v%s__DQM.root' % (
             self.get_attribute('dataset_name'),
             self.get_attribute('cmssw_release'),
+            self.get_attribute('member_of_campaign'),
             self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
             self.get_attribute('version')
         )
