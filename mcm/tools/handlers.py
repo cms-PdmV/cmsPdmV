@@ -272,6 +272,8 @@ class RunChainValid(Handler):
             else:
                 chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
         
+            chain_setup_script = mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch)
+
             for rid in chain:
                 self.requests_ids.append( rid )
                 mcm_rs.append( request( rdb.get( rid ) ))
@@ -283,7 +285,7 @@ class RunChainValid(Handler):
             test_script = location.location() + 'validation_run_test.sh'
             timeout=None
             with open(test_script, 'w') as there:
-                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch))
+                there.write(chain_setup_script)
                 timeout = mcm_cr.get_timeout(scratch=self.scratch)
             batch_test = batch_control( self.crid, test_script, timeout=timeout)
             

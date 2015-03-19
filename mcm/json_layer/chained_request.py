@@ -712,4 +712,6 @@ class chained_request(json_base):
             if not ev and index!=0 and not req.is_root:
                 ev = -1
             setup_file += req.get_setup_file(directory=directory, events=ev, run=run, do_valid=validation)
+            if run and validation:
+                req.reload()
         return setup_file
