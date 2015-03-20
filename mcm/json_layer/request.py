@@ -1614,37 +1614,23 @@ done
         db = database('requests')
         ignore_for_status = settings().get_value('ignore_for_status')
         if len(mcm_rr):
-            wma_r = mcm_rr[-1]
-            ## pick up the last request of type!='Resubmission'
+            wma_r = mcm_rr[-1] ## the one used to check the status
+            # pick up the last request of type!='Resubmission'
             for wma in reversed(mcm_rr):
                 if ('content' in wma and 'pdmv_type' in wma['content'] and
                         not (wma['content']['pdmv_type'] in ignore_for_status)):
-
-                    wma_r = wma
+                    wma_r = wma #the one to check the number of events in output
                     break
 
             if ('pdmv_status_in_DAS' in wma_r['content'] and
                     'pdmv_status_from_reqmngr' in wma_r['content']):
 
-                if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content'][
-                    'pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
-                    ## how many events got completed for real: summing open and closed
-                    for wma in reversed(mcm_rr):
-                        # if request has only DQMIO DS we should take  other request
-                        # because DQMIO will always have 0 evts and request never go completed
-                        if (len(wma['content']['pdmv_dataset_list']) == 1 and
-                            wma['content']['pdmv_dataset_name'].find('DQMIO') != -1):
-                            continue
-                        else:
-                            wma_r_N = wma # so that we can decouple the two
-                            break
-
+                if wma_r['content']['pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## this is enough to get all datasets
                     collected = []
                     tiers_expected = self.get_tiers()
-                    for wma in reversed(self.get_attribute('reqmgr_name')):
+                    for wma in reversed(mcm_rr):
                         if not 'pdmv_dataset_list' in wma['content']: continue
-                        if 'DQMIO' in wma['content']['pdmv_dataset_name']: continue ## do not collect from this workflow
                         those = wma['content']['pdmv_dataset_list']
                         goodone = True
                         if len(collected):
@@ -1670,30 +1656,32 @@ done
                         saved = db.save(self.json())
                         return not_good
 
+                    ## order the collected dataset in order of expected tiers
+                    ds_for_accounting = sorted( ds_for_accounting, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+                    ## then pick up the first expected
                     ds_for_accounting = collected[0]
-                    if (not 'pdmv_dataset_statuses' in wma_r_N['content'] or
-                            not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']):
+                    ## find its statistics
+                    counted=0
+                    valid=True
+                    for wma in mcm_rr:
+                        if not 'pdmv_dataset_statuses' in wma['content']:
+                            if wma['content']['pdmv_dataset_name'] == ds_for_accounting:
+                                counted = max(counted, wma['content']['pdmv_evts_in_DAS'] + wma['content']['pdmv_open_evts_in_DAS'])
+                                valid *= (wma['content']['pdmv_status_in_DAS']=='VALID')
+                            else:
+                                continue
+                        if ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
+                            counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
+                            valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
 
-                        counted = wma_r_N['content']['pdmv_evts_in_DAS'] +\
-                                wma_r_N['content']['pdmv_open_evts_in_DAS']
-
-                        if not counted:
-                            counted = wma_r['content']['pdmv_evts_in_DAS'] +\
-                                    wma_r['content']['pdmv_open_evts_in_DAS']
-                    else:
-                        ## pick up the completed statistics from the corresponding line
-                        counted = wma_r_N['content']['pdmv_dataset_statuses'][
-                                ds_for_accounting]['pdmv_evts_in_DAS'] +\
-                                wma_r_N['content']['pdmv_dataset_statuses'][
-                                ds_for_accounting]['pdmv_open_evts_in_DAS']
-
-                        if not counted:
-                            counted = wma_r['content']['pdmv_dataset_statuses'][
-                                    ds_for_accounting]['pdmv_evts_in_DAS'] +\
-                                    wma_r['content']['pdmv_dataset_statuses'][
-                                    ds_for_accounting]['pdmv_open_evts_in_DAS']
-
+                    self.set_attribute('output_dataset', collected)
                     self.set_attribute('completed_events', counted )
+                    
+                    if not valid:
+                        not_good.update({'message' : 'Not all outputs are valid'})
+                        saved = db.save(self.json())
+                        return not_good
+
                     ## make sure no expected tier was left behind
                     if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],
                             collected)), tiers_expected)):
@@ -1704,7 +1692,7 @@ done
                         saved = db.save(self.json())
                         return not_good
 
-                    self.set_attribute('output_dataset', collected)
+
                     if self.get_attribute('completed_events') <= 0:
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
@@ -1720,6 +1708,9 @@ done
                         saved = db.save(self.json())
                         return not_good
                         ## set next status: which can only be done at this stage
+
+
+                        
                     self.set_status(with_notification=True)
                     ## save the request back to db
                     saved = db.save(self.json())
