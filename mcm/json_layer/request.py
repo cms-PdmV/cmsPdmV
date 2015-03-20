@@ -436,10 +436,10 @@ class request(json_base):
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
 
         else:
-            if self.get_attribute('process_string') and __flow_ps: ## if both are not empty string
+            if self.get_attribute('process_string') or __flow_ps: ## if both are not empty string
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                        'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
-                                self.get_attribute('process_string')))
+                        'The sequences is the same as one of the campaign, but a request process string %s  or flow process string %s has been provided' % (
+                                self.get_attribute('process_string'), __flow_ps))
 
         if for_chain:
             return
