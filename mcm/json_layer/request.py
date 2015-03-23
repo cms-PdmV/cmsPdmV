@@ -1403,19 +1403,23 @@ done
             self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
         self.reload()
 
-    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05, refresh=False):
+    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
+            refresh=False):
+
         #existing rwma
-        if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
-                                                 'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
-                                                 'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
-                                                 'pdmv_submission_time', 'pdmv_type','pdmv_present_priority','pdmv_prep_id']
+        if not keys_to_import: keys_to_import = ['pdmv_dataset_name',
+                'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
+                'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS', 'pdmv_open_evts_in_DAS',
+                'pdmv_submission_date', 'pdmv_submission_time', 'pdmv_type',
+                'pdmv_present_priority','pdmv_prep_id']
+
         mcm_rr = self.get_attribute('reqmgr_name')
 
         ### first trigger an update of the stats itself
         if refresh:
             from tools.stats_updater import stats_updater
             updater = stats_updater()
-            out = updater.update( self.get_attribute('prepid') )
+            out = updater.update(self.get_attribute('prepid'))
 
         statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
 
@@ -1443,7 +1447,8 @@ done
         for (rwma_i, rwma) in enumerate(mcm_rr):
             if not statsDB.document_exists(rwma['name']):
                 self.logger.error('the request %s is linked in McM already, but is not in stats DB' % (rwma['name']))
-                ## very likely, this request was aborted, rejected, or failed : connection check was done just above
+                ## very likely, this request was aborted, rejected, or failed
+                ## connection check was done just above
                 if rwma_i != 0:
                     ## always keep the original request
                     changes_happen = True
@@ -1453,14 +1458,15 @@ done
                 stats_r = statsDB.get(rwma['name'])
 
             if ('pdmv_submission_date' in stats_r and earliest_date == 0) or (
-                        'pdmv_submission_date' in stats_r and int(earliest_date) > int(stats_r['pdmv_submission_date'])):
+                    'pdmv_submission_date' in stats_r and int(earliest_date) > int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             if ('pdmv_submission_time' in stats_r and earliest_time == 0) or (
-                        'pdmv_submission_time' in stats_r and int(earliest_time) > int(stats_r['pdmv_submission_time'])):
+                    'pdmv_submission_time' in stats_r and int(earliest_time) > int(stats_r['pdmv_submission_time'])):
                 earliest_time = stats_r['pdmv_submission_time']
 
-            if not len(failed_to_find) or rwma['name'] != failed_to_find[
-                -1]: ## no need to copy over if it has just been noticed that it is not taken from stats but the mcm document itself
+            ## no need to copy over if it has just been noticed
+            ## that it is not taken from stats but the mcm document itself
+            if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
                 mcm_content = transfer(stats_r, keys_to_import)
                 mcm_rr[rwma_i]['content'] = mcm_content
 
@@ -1474,15 +1480,20 @@ done
             # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
 
             (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
-            #(d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
-            (d,t) = time.strftime("%y%m%d$%H%M%S", time.gmtime( time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")))).split('$')
+            (d,t) = time.strftime("%y%m%d$%H%M%S",
+                    time.gmtime(time.mktime(time.strptime(
+                            d+t,"%y%m%d%H%M%S")))).split('$')
+
             earliest_date = d
             earliest_time = t
 
         
         ####
         ## look for new ones
-        ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
+        ## we could have to de-sync the following with
+        ## look_for_what = mcm_rr[0]['content']['prepid']
+        ## to pick up chained requests taskchain clones
+        ####
         look_for_what = self.get_attribute('prepid')
         if len(mcm_rr):
             if 'pdmv_prep_id' in mcm_rr[0]['content']:
@@ -1504,19 +1515,10 @@ done
 
         stats_rr.sort(cmp=sortRequest)
 
-        #self.logger.error('got stats with date %s and time %s , %s existings and %s matching' % (
-        #    earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
-
-        #self.logger.error('found %s'%(stats_rr))
-
         for stats_r in stats_rr:
             ## only add it if not present yet
             if stats_r['pdmv_request_name'] in map(lambda d: d['name'], mcm_rr):
                 continue
-
-            ## we should not be blindly adding anything, if we could not determine the time of the submission.
-            #if not earliest_date:
-            #    continue
 
             ## only add if the date is later than the earliest_date
             if not 'pdmv_submission_date' in stats_r:
@@ -1525,14 +1527,19 @@ done
                 continue
             if not override_id and int(earliest_date) == 0 and int(earliest_time) == 0:
                 continue
-            if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) == int(earliest_date):
-                if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(
-                        stats_r['pdmv_submission_time']) < int(earliest_time):
+            if (stats_r['pdmv_submission_date'] and
+                    int(stats_r['pdmv_submission_date']) == int(earliest_date)):
+
+                if (earliest_time and 'pdmv_submission_time' in stats_r and
+                        stats_r['pdmv_submission_time'] and
+                        int(stats_r['pdmv_submission_time']) < int(earliest_time)):
+
                     continue
 
             mcm_content = transfer(stats_r, keys_to_import)
             mcm_rr.append({'content': mcm_content,
-                           'name': stats_r['pdmv_request_name']})
+                    'name': stats_r['pdmv_request_name']})
+
             changes_happen = True
 
         if len(mcm_rr):
@@ -1542,16 +1549,21 @@ done
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
                 # above how much change do we update : 5%
-            #self.logger.error('completed %s and there already %s' %( completed, self.get_attribute('completed_events')))
+
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
                 changes_happen = True
             self.set_attribute('completed_events', completed)
 
         self.set_attribute('reqmgr_name', mcm_rr)
         
-        if len(mcm_rr) and 'content' in mcm_rr[-1] and 'pdmv_present_priority' in mcm_rr[-1]['content'] and mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority'):
+        if (len(mcm_rr) and 'content' in mcm_rr[-1] and
+                'pdmv_present_priority' in mcm_rr[-1]['content'] and
+                mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
+
             self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
-            self.update_history({'action' : 'wm priority', 'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
+            self.update_history({'action' : 'wm priority',
+                    'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
+
             changes_happen=True
 
         return changes_happen
