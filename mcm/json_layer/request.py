@@ -482,7 +482,7 @@ class request(json_base):
         if self.current_user_level <= max_user_level:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
 
         if self.is_root:
             if self.get_attribute('status') != 'defined':
@@ -510,7 +510,7 @@ class request(json_base):
                     all_good &= (mcm_r.get_attribute('status') in ['defined','validation','approved'])
                 if not all_good:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
-                                                     'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
+                            'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
         ## start uploading the configs ?
         if not for_chain:
             self.set_status()
@@ -573,7 +573,8 @@ class request(json_base):
             if len(collisions)!=0:
                 text=str(collisions)
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                        'There is an expected output dataset naming collision with %s'% ( text ))
+                        'There is an expected output dataset naming collision with %s' % (
+                                text))
             
 
 
@@ -599,18 +600,20 @@ class request(json_base):
             if not is_the_current_one and moveon_with_single_submit:
                 ## check that something else in the chain it belongs to is indicating that
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 'The request (%s)is not the current step (%s) of its chain (%s)' % (
-                                                     self.get_attribute('prepid'),
-                                                     mcm_cr['step'],
-                                                     c))
+                        'The request (%s)is not the current step (%s) of its chain (%s)' % (
+                            self.get_attribute('prepid'),
+                            mcm_cr['step'],
+                            c)
+                        )
 
         sync_submission = True
         if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
             from tools.handlers import RequestInjector
 
-            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                  lock=locker.lock(self.get_attribute('prepid')))
+            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'),
+                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+
             threaded_submission.start()
         else:
             #### not settting any status forward
@@ -619,9 +622,9 @@ class request(json_base):
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
                 from tools.handlers import ChainRequestInjector
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                           lock = locker.lock(self.get_attribute('prepid'))
-                                                           )
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+
                 threaded_submission.start()
             pass
 
@@ -1418,6 +1421,8 @@ done
         ### first trigger an update of the stats itself
         if refresh:
             from tools.stats_updater import stats_updater
+            ## stats driveUpdate with search option for prepid
+            ## on cmsdev04 machine
             updater = stats_updater()
             out = updater.update(self.get_attribute('prepid'))
 

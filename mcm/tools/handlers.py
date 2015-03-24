@@ -391,6 +391,7 @@ class RequestSubmitter(Handler):
     def internal_run(self):
         try:
             if not self.lock.acquire(blocking=False):
+                self.injection_error('Couldnt acquire lock', None)
                 return False
             try:
                 okay, req = self.check_request()
@@ -488,7 +489,9 @@ class RequestInjector(Handler):
         self.submitter = RequestSubmitter(**kwargs)
 
     def internal_run(self):
-        self.logger.inject('## Logger instance retrieved', level='info', handler=self.prepid)
+        self.logger.inject('## Logger instance retrieved in RequestInjector',
+                level='info',handler=self.prepid)
+
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
             if not self.lock.acquire(blocking=False):
                 return {"prepid": self.prepid, "results": False,
@@ -497,7 +500,10 @@ class RequestInjector(Handler):
                 if not self.uploader.internal_run():
                     return {"prepid": self.prepid, "results": False,
                             "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
-                self.submitter.internal_run()
+                __ret = self.submitter.internal_run()
+                self.logger.inject('Request submitter returned: %s' % (__ret),
+                        level='info',handler=self.prepid)
+
             finally:
                 self.lock.release()
 
