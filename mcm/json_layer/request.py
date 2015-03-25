@@ -1658,7 +1658,7 @@ done
                         return not_good
 
                     ## order the collected dataset in order of expected tiers
-                    ds_for_accounting = sorted( ds_for_accounting, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+                    collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
@@ -1666,12 +1666,12 @@ done
                     valid=True
                     for wma in mcm_rr:
                         if not 'pdmv_dataset_statuses' in wma['content']:
-                            if wma['content']['pdmv_dataset_name'] == ds_for_accounting:
+                            if 'pdmv_dataset_name' in wma['content'] and wma['content']['pdmv_dataset_name'] == ds_for_accounting:
                                 counted = max(counted, wma['content']['pdmv_evts_in_DAS'] + wma['content']['pdmv_open_evts_in_DAS'])
                                 valid *= (wma['content']['pdmv_status_in_DAS']=='VALID')
                             else:
                                 continue
-                        if ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
+                        elif ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
                             counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
                             valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
 
@@ -2409,6 +2409,7 @@ done
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name', [])
         self.set_attribute('config_id', [])
+        self.set_attribute('output_dataset', [])
         if increase_revision:
             self.set_attribute('version', self.get_attribute('version') + 1)
 
