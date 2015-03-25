@@ -25,7 +25,7 @@
            <a ng-href="{{links[rqmngr.name]}}"><img width={{image_width}} ng-src="{{links[rqmngr.name]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>
            <ul style="margin-bottom: 0px;" ng-show="true;">
              <li ng-repeat="DS in stats_cache[rqmngr['name']].pdmv_dataset_list">
-               <span ng-switch on="stats_cache[rqmngr['name']].pdmv_status_in_DAS == 'VALID'">
+               <span ng-switch on="stats_cache[rqmngr['name']].pdmv_dataset_statuses[DS].pdmv_status_in_DAS == 'VALID'">
                  <a ng-switch-when="true" ng-href="https://cmsweb.cern.ch/das/request?input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self">{{DS}}</a>
                  <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?input={{DS}}" rel="tooltip" title="Link to {{DS}} in DAS" target="_self"><del>{{DS}}</del></a>
                </span>
