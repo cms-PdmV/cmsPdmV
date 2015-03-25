@@ -1536,9 +1536,12 @@ done
             changes_happen = True
 
         if len(mcm_rr):
-            try:
-                completed = mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS']
-            except:
+            tiers_expected = self.get_tiers() 
+            collected = self.collect_outputs( mcm_rr , tiers_expected )
+            completed = 0
+            if len(collected):
+                (valid,completed) = self.collect_status_and_completed_events( mcm_rr, collected[0])
+            else:
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
                 # above how much change do we update : 5%
