@@ -845,7 +845,8 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
-        return tiers
+        ## the first tier is the main output : reverse it
+        return list(reversed(tiers))
 
     def get_tiers(self):
         r_tiers=[]
@@ -853,7 +854,8 @@ class request(json_base):
         for (i, s) in enumerate(self.get_attribute('sequences')):
             if i<len(keeps) and not keeps[i]: continue
             r_tiers.extend( self.get_tier(i) )
-        return r_tiers
+        ## the last tier is the main output : reverse it
+        return list(reversed(r_tiers))
 
     def get_outputs(self):
         outs = []
