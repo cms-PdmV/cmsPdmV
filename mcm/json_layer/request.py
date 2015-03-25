@@ -1549,6 +1549,7 @@ done
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
                 changes_happen = True
             self.set_attribute('completed_events', completed)
+            self.set_attribute('output_dataset', collected)
 
         self.set_attribute('reqmgr_name', mcm_rr)
         
