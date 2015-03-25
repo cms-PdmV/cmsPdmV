@@ -1613,6 +1613,7 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
     def collect_outputs(self, mcm_rr , tiers_expected ):
+        procstrings_expected = self.get_processing_strings()
         collected = []
         for wma in reversed(mcm_rr):
             if not 'pdmv_dataset_list' in wma['content']: continue
@@ -1631,9 +1632,11 @@ done
             if goodone:
                 ## reduce to what was expected of it
                 those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
+                ## reduce to what processing string were expected
+                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
                 ## only add those that are not already there
                 collected.extend(filter(lambda dn: not dn in collected, those))
-
+                
         ## order the collected dataset in order of expected tiers
         collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
         return collected
