@@ -4,7 +4,7 @@ from tools.user_management import authenticator
 from tools.locator import locator
 import re
 from tools.settings import settings
-
+from tools.request_to_wma import request_to_wmcontrol
 
 class batch(json_base):
 
@@ -100,6 +100,13 @@ class batch(json_base):
         subject=self.get_subject()
 
         request_messages={}
+
+        wmcontrol = request_to_wmcontrol()
+        wfs=[r['name'] for r in content]
+        ## push all requests to assignment-approved
+        if not wmcontrol.announce_workflow( wfs ):
+            self.logger.log('Could not set the proper status for workflows')
+            return False
 
         for r in content:
             ##loose binding of the prepid to the request name, might change later on
