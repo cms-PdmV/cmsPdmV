@@ -848,7 +848,8 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
-        return tiers
+        ## the first tier is the main output : reverse it
+        return list(reversed(tiers))
 
     def get_tiers(self):
         r_tiers=[]
@@ -856,7 +857,8 @@ class request(json_base):
         for (i, s) in enumerate(self.get_attribute('sequences')):
             if i<len(keeps) and not keeps[i]: continue
             r_tiers.extend( self.get_tier(i) )
-        return r_tiers
+        ## the last tier is the main output : reverse it
+        return list(reversed(r_tiers))
 
     def get_outputs(self):
         outs = []
@@ -1548,9 +1550,12 @@ done
             changes_happen = True
 
         if len(mcm_rr):
-            try:
-                completed = mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS']
-            except:
+            tiers_expected = self.get_tiers() 
+            collected = self.collect_outputs( mcm_rr , tiers_expected )
+            completed = 0
+            if len(collected):
+                (valid,completed) = self.collect_status_and_completed_events( mcm_rr, collected[0])
+            else:
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
                 # above how much change do we update : 5%
@@ -1558,6 +1563,7 @@ done
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
                 changes_happen = True
             self.set_attribute('completed_events', completed)
+            self.set_attribute('output_dataset', collected)
 
         self.set_attribute('reqmgr_name', mcm_rr)
         
@@ -1623,6 +1629,49 @@ done
             not_good.update({'message': 'Not implemented yet to inspect a request in %s status and approval %s' % (
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
+    def collect_outputs(self, mcm_rr , tiers_expected ):
+        procstrings_expected = self.get_processing_strings()
+        collected = []
+        for wma in reversed(mcm_rr):
+            if not 'pdmv_dataset_list' in wma['content']: continue
+            those = wma['content']['pdmv_dataset_list']
+            goodone = True
+            if len(collected):
+                for ds in those:
+                    (_, dsn, proc, tier) = ds.split('/')
+                    for goodds in collected:
+                        (_, gdsn, gproc, gtier) = goodds.split('/')
+                        if dsn != gdsn or not set(
+                            gproc.split("-")).issubset(proc.split("-")):
+                            
+                            goodone = False #due to #724 we check if expected
+                                                        #process_string is subset of generated ones
+            if goodone:
+                ## reduce to what was expected of it
+                those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
+                ## reduce to what processing string were expected
+                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
+                ## only add those that are not already there
+                collected.extend(filter(lambda dn: not dn in collected, those))
+                
+        ## order the collected dataset in order of expected tiers
+        collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        return collected
+
+    def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
+        counted = 0
+        valid = True
+        for wma in mcm_rr:
+            if not 'pdmv_dataset_statuses' in wma['content']:
+                if 'pdmv_dataset_name' in wma['content'] and wma['content']['pdmv_dataset_name'] == ds_for_accounting:
+                    counted = max(counted, wma['content']['pdmv_evts_in_DAS'] + wma['content']['pdmv_open_evts_in_DAS'])
+                    valid *= (wma['content']['pdmv_status_in_DAS']=='VALID')
+                else:
+                    continue
+            elif ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
+                counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
+                valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
+        return (valid,counted)
 
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1645,27 +1694,8 @@ done
 
                 if wma_r['content']['pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## this is enough to get all datasets
-                    collected = []
                     tiers_expected = self.get_tiers()
-                    for wma in reversed(mcm_rr):
-                        if not 'pdmv_dataset_list' in wma['content']: continue
-                        those = wma['content']['pdmv_dataset_list']
-                        goodone = True
-                        if len(collected):
-                            for ds in those:
-                                (_, dsn, proc, tier) = ds.split('/')
-                                for goodds in collected:
-                                    (_, gdsn, gproc, gtier) = goodds.split('/')
-                                    if dsn != gdsn or not set(
-                                        gproc.split("-")).issubset(proc.split("-")):
-
-                                        goodone = False #due to #724 we check if expected
-                                                        #process_string is subset of generated ones
-                        if goodone:
-                            ## reduce to what was expected of it
-                            those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
-                            ## only add those that are not already there
-                            collected.extend(filter(lambda dn: not dn in collected, those))
+                    collected = self.collect_outputs( mcm_rr , tiers_expected )
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
                     if not len(collected):
@@ -1674,23 +1704,10 @@ done
                         saved = db.save(self.json())
                         return not_good
 
-                    ## order the collected dataset in order of expected tiers
-                    ds_for_accounting = sorted( ds_for_accounting, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
-                    counted=0
-                    valid=True
-                    for wma in mcm_rr:
-                        if not 'pdmv_dataset_statuses' in wma['content']:
-                            if wma['content']['pdmv_dataset_name'] == ds_for_accounting:
-                                counted = max(counted, wma['content']['pdmv_evts_in_DAS'] + wma['content']['pdmv_open_evts_in_DAS'])
-                                valid *= (wma['content']['pdmv_status_in_DAS']=='VALID')
-                            else:
-                                continue
-                        if ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
-                            counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
-                            valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
+                    valid,counted= self.collect_status_and_completed_events( mcm_rr, ds_for_accounting )
 
                     self.set_attribute('output_dataset', collected)
                     self.set_attribute('completed_events', counted )
@@ -2426,6 +2443,7 @@ done
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name', [])
         self.set_attribute('config_id', [])
+        self.set_attribute('output_dataset', [])
         if increase_revision:
             self.set_attribute('version', self.get_attribute('version') + 1)
 
