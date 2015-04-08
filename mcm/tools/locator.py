@@ -15,7 +15,7 @@ class locator:
         #for (l_type,spec) in self.locations.items():
         #    if host in spec['servers']:
         #        return 
-        if host in ['cms-pdmv-mcmdev']:
+        if host in ['cms-pdmv-mcmdev', 'vocms085.cern.ch']:
             return True
         elif host in ['cms-pdmv-mcm', 'cms-pdmv-mcmint']:
             return False
@@ -30,7 +30,12 @@ class locator:
 
     def dbLocation(self):
         if self.isDev():
-            return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
+            host = os.environ['HOSTNAME']
+            ## needed while migration to openstack is going
+            if host == 'vocms085.cern.ch':
+                return 'http://vocms085.cern.ch:5984/'
+            else:
+                return 'http://cms-pdmv-mcmdev.cern.ch:5984/'
             #return 'http://188.184.20.242:5984/'
         else:
             return 'http://cms-pdmv-mcm-db:5984/'
