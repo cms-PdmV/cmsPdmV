@@ -921,11 +921,18 @@ class UpdateStats(RESTResource):
         if not len(args):
             return dumps({"results" : False, "message" : "no argument was provided"})
         rid = args[0]
+        refresh_stats = True
+        if len(args) == 2:
+            if args[1] == "no_refresh":
+		refresh_stats = False
+            else:
+                return dumps({"results" : False, "message" : "2nd argument is unknown"})
+
         rdb = database('requests')
         if not rdb.document_exists(rid):
             return dumps({"prepid" : rid, "results": False, "message" : '%s does not exist' % rid})
-        mcm_r = request( rdb.get( rid ) )
-        if mcm_r.get_stats(refresh=True):
+        mcm_r = request(rdb.get(rid ))
+        if mcm_r.get_stats(limit_to_set=0.0,refresh=refresh_stats):
             mcm_r.reload()
             return dumps({"prepid" : rid, "results": True})
         else:

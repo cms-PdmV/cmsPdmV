@@ -409,7 +409,9 @@ class request(json_base):
                     self.logger.log('identical sequences %s' % label)
                     this_matching.add(label)
                 else:
-                    self.logger.log('different sequences %s \n %s \n %s' % (label, seq.json(), self_sequence.json()))
+                    self.logger.log('different sequences %s \n %s \n %s' % (label,
+                            seq.json(), self_sequence.json()))
+
             if len(matching_labels) == 0:
                 matching_labels = this_matching
                 self.logger.log('Matching labels %s' % matching_labels)
@@ -418,18 +420,26 @@ class request(json_base):
                 matching_labels = matching_labels - (matching_labels - this_matching)
                 self.logger.log('Matching labels after changes %s' % matching_labels)
 
+        ## Here we get flow process_string to check
+        __flow_ps = ""
+        if self.get_attribute('flown_with'):
+            fdb = database('flows')
+            f = fdb.get(self.get_attribute('flown_with'))
+            if 'process_string' in f['request_parameters']:
+                __flow_ps = f['request_parameters']['process_string']
+
         if len(matching_labels) == 0:
             self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
             # try setting the process string ? or just raise an exception ?
-            if not self.get_attribute('process_string'):
+            if not self.get_attribute('process_string') and not __flow_ps: ## if they both are empty
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
 
         else:
-            if self.get_attribute('process_string'):
+            if self.get_attribute('process_string') or __flow_ps: ## if both are not empty string
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                        'The sequences is the same as one of the campaign, but a process string %s has been provided' % (
-                                self.get_attribute('process_string')))
+                        'The sequences is the same as one of the campaign, but a request process string %s  or flow process string %s has been provided' % (
+                                self.get_attribute('process_string'), __flow_ps))
 
         if for_chain:
             return
@@ -454,7 +464,7 @@ class request(json_base):
         if self.current_user_level == 0:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'define',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
             ## we could restrict certain step to certain role level
         #if self.current_user_role != 'generator_contact':
         #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user role %s'%(self.current_user_role))
@@ -472,7 +482,7 @@ class request(json_base):
         if self.current_user_level <= max_user_level:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
-                                             'bad user admin level %s' % (self.current_user_level))
+                    'bad user admin level %s' % (self.current_user_level))
 
         if self.is_root:
             if self.get_attribute('status') != 'defined':
@@ -500,7 +510,7 @@ class request(json_base):
                     all_good &= (mcm_r.get_attribute('status') in ['defined','validation','approved'])
                 if not all_good:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
-                                                     'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
+                            'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
         ## start uploading the configs ?
         if not for_chain:
             self.set_status()
@@ -510,10 +520,6 @@ class request(json_base):
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'bad user admin level %s' % (self.current_user_level))
-
-        if self.current_user_level == 4 and self.get_attribute('process_string'):
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                    'Admin should not be approving submit of requests with a process string specified')
 
         if self.get_attribute('status') != 'approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit')
@@ -563,7 +569,8 @@ class request(json_base):
             if len(collisions)!=0:
                 text=str(collisions)
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                        'There is an expected output dataset naming collision with %s'% ( text ))
+                        'There is an expected output dataset naming collision with %s' % (
+                                text))
             
 
 
@@ -589,18 +596,20 @@ class request(json_base):
             if not is_the_current_one and moveon_with_single_submit:
                 ## check that something else in the chain it belongs to is indicating that
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                                                 'The request (%s)is not the current step (%s) of its chain (%s)' % (
-                                                     self.get_attribute('prepid'),
-                                                     mcm_cr['step'],
-                                                     c))
+                        'The request (%s)is not the current step (%s) of its chain (%s)' % (
+                            self.get_attribute('prepid'),
+                            mcm_cr['step'],
+                            c)
+                        )
 
         sync_submission = True
         if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
             from tools.handlers import RequestInjector
 
-            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                  lock=locker.lock(self.get_attribute('prepid')))
+            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'),
+                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+
             threaded_submission.start()
         else:
             #### not settting any status forward
@@ -609,9 +618,9 @@ class request(json_base):
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
                 from tools.handlers import ChainRequestInjector
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'), check_approval=False,
-                                                           lock = locker.lock(self.get_attribute('prepid'))
-                                                           )
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+
                 threaded_submission.start()
             pass
 
@@ -835,7 +844,8 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
-        return tiers
+        ## the first tier is the main output : reverse it
+        return list(reversed(tiers))
 
     def get_tiers(self):
         r_tiers=[]
@@ -843,7 +853,8 @@ class request(json_base):
         for (i, s) in enumerate(self.get_attribute('sequences')):
             if i<len(keeps) and not keeps[i]: continue
             r_tiers.extend( self.get_tier(i) )
-        return r_tiers
+        ## the last tier is the main output : reverse it
+        return list(reversed(r_tiers))
 
     def get_outputs(self):
         outs = []
@@ -1271,15 +1282,16 @@ done
         if run:
             self.harvesting_driver += 'cmsRun %s || exit $? ; \n' % genvalid_harvesting_python_file
 
-        dqm_dataset = '/RelVal%s/%s-%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
-                                                            self.get_attribute('cmssw_release'),
-                                                            self.get_attribute('sequences')[0]['conditions'].replace(
-                                                                '::All', ''),
-                                                            self.get_attribute('version')
+        dqm_dataset = '/RelVal%s/%s-%s_%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
+                                                               self.get_attribute('cmssw_release'),
+                                                               self.get_attribute('member_of_campaign'),
+                                                               self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
+                                                               self.get_attribute('version')
         )
-        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s-genvalid-v%s__DQM.root' % (
+        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s_%s-%s-genvalid-v%s__DQM.root' % (
             self.get_attribute('dataset_name'),
             self.get_attribute('cmssw_release'),
+            self.get_attribute('member_of_campaign'),
             self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
             self.get_attribute('version')
         )
@@ -1392,19 +1404,25 @@ done
             self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
         self.reload()
 
-    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05, refresh=False):
+    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
+            refresh=False):
+
         #existing rwma
-        if not keys_to_import: keys_to_import = ['pdmv_dataset_name', 'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
-                                                 'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS',
-                                                 'pdmv_open_evts_in_DAS', 'pdmv_submission_date',
-                                                 'pdmv_submission_time', 'pdmv_type','pdmv_present_priority','pdmv_prep_id']
+        if not keys_to_import: keys_to_import = ['pdmv_dataset_name',
+                'pdmv_dataset_list', 'pdmv_status_in_DAS','pdmv_dataset_statuses',
+                'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS', 'pdmv_open_evts_in_DAS',
+                'pdmv_submission_date', 'pdmv_submission_time', 'pdmv_type',
+                'pdmv_present_priority','pdmv_prep_id']
+
         mcm_rr = self.get_attribute('reqmgr_name')
 
         ### first trigger an update of the stats itself
         if refresh:
             from tools.stats_updater import stats_updater
+            ## stats driveUpdate with search option for prepid
+            ## on cmsdev04 machine
             updater = stats_updater()
-            out = updater.update( self.get_attribute('prepid') )
+            out = updater.update(self.get_attribute('prepid'))
 
         statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
 
@@ -1432,7 +1450,8 @@ done
         for (rwma_i, rwma) in enumerate(mcm_rr):
             if not statsDB.document_exists(rwma['name']):
                 self.logger.error('the request %s is linked in McM already, but is not in stats DB' % (rwma['name']))
-                ## very likely, this request was aborted, rejected, or failed : connection check was done just above
+                ## very likely, this request was aborted, rejected, or failed
+                ## connection check was done just above
                 if rwma_i != 0:
                     ## always keep the original request
                     changes_happen = True
@@ -1442,14 +1461,15 @@ done
                 stats_r = statsDB.get(rwma['name'])
 
             if ('pdmv_submission_date' in stats_r and earliest_date == 0) or (
-                        'pdmv_submission_date' in stats_r and int(earliest_date) > int(stats_r['pdmv_submission_date'])):
+                    'pdmv_submission_date' in stats_r and int(earliest_date) > int(stats_r['pdmv_submission_date'])):
                 earliest_date = stats_r['pdmv_submission_date'] #yymmdd
             if ('pdmv_submission_time' in stats_r and earliest_time == 0) or (
-                        'pdmv_submission_time' in stats_r and int(earliest_time) > int(stats_r['pdmv_submission_time'])):
+                    'pdmv_submission_time' in stats_r and int(earliest_time) > int(stats_r['pdmv_submission_time'])):
                 earliest_time = stats_r['pdmv_submission_time']
 
-            if not len(failed_to_find) or rwma['name'] != failed_to_find[
-                -1]: ## no need to copy over if it has just been noticed that it is not taken from stats but the mcm document itself
+            ## no need to copy over if it has just been noticed
+            ## that it is not taken from stats but the mcm document itself
+            if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
                 mcm_content = transfer(stats_r, keys_to_import)
                 mcm_rr[rwma_i]['content'] = mcm_content
 
@@ -1463,15 +1483,20 @@ done
             # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
 
             (d,t) = mcm_rr[0]['name'].split('_')[-3:-1]
-            #(d,t) = time.strftime("%y%m%d$%H%M%S",time.localtime(time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")) - (2*60*60))).split('$')
-            (d,t) = time.strftime("%y%m%d$%H%M%S", time.gmtime( time.mktime(time.strptime( d+t, "%y%m%d%H%M%S")))).split('$')
+            (d,t) = time.strftime("%y%m%d$%H%M%S",
+                    time.gmtime(time.mktime(time.strptime(
+                            d+t,"%y%m%d%H%M%S")))).split('$')
+
             earliest_date = d
             earliest_time = t
 
         
         ####
         ## look for new ones
-        ## we could have to de-sync the following with look_for_what = mcm_rr[0]['content']['prepid'] to pick up chained requests taskchain clones
+        ## we could have to de-sync the following with
+        ## look_for_what = mcm_rr[0]['content']['prepid']
+        ## to pick up chained requests taskchain clones
+        ####
         look_for_what = self.get_attribute('prepid')
         if len(mcm_rr):
             if 'pdmv_prep_id' in mcm_rr[0]['content']:
@@ -1493,19 +1518,10 @@ done
 
         stats_rr.sort(cmp=sortRequest)
 
-        #self.logger.error('got stats with date %s and time %s , %s existings and %s matching' % (
-        #    earliest_date, earliest_time, len(mcm_rr), len(stats_rr) ))
-
-        #self.logger.error('found %s'%(stats_rr))
-
         for stats_r in stats_rr:
             ## only add it if not present yet
             if stats_r['pdmv_request_name'] in map(lambda d: d['name'], mcm_rr):
                 continue
-
-            ## we should not be blindly adding anything, if we could not determine the time of the submission.
-            #if not earliest_date:
-            #    continue
 
             ## only add if the date is later than the earliest_date
             if not 'pdmv_submission_date' in stats_r:
@@ -1514,33 +1530,47 @@ done
                 continue
             if not override_id and int(earliest_date) == 0 and int(earliest_time) == 0:
                 continue
-            if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) == int(earliest_date):
-                if earliest_time and 'pdmv_submission_time' in stats_r and stats_r['pdmv_submission_time'] and int(
-                        stats_r['pdmv_submission_time']) < int(earliest_time):
+            if (stats_r['pdmv_submission_date'] and
+                    int(stats_r['pdmv_submission_date']) == int(earliest_date)):
+
+                if (earliest_time and 'pdmv_submission_time' in stats_r and
+                        stats_r['pdmv_submission_time'] and
+                        int(stats_r['pdmv_submission_time']) < int(earliest_time)):
+
                     continue
 
             mcm_content = transfer(stats_r, keys_to_import)
             mcm_rr.append({'content': mcm_content,
-                           'name': stats_r['pdmv_request_name']})
+                    'name': stats_r['pdmv_request_name']})
+
             changes_happen = True
 
         if len(mcm_rr):
-            try:
-                completed = mcm_rr[-1]['content']['pdmv_evts_in_DAS'] + mcm_rr[-1]['content']['pdmv_open_evts_in_DAS']
-            except:
+            tiers_expected = self.get_tiers() 
+            collected = self.collect_outputs( mcm_rr , tiers_expected )
+            completed = 0
+            if len(collected):
+                (valid,completed) = self.collect_status_and_completed_events( mcm_rr, collected[0])
+            else:
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
                 # above how much change do we update : 5%
-            #self.logger.error('completed %s and there already %s' %( completed, self.get_attribute('completed_events')))
+
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
                 changes_happen = True
             self.set_attribute('completed_events', completed)
+            self.set_attribute('output_dataset', collected)
 
         self.set_attribute('reqmgr_name', mcm_rr)
         
-        if len(mcm_rr) and 'content' in mcm_rr[-1] and 'pdmv_present_priority' in mcm_rr[-1]['content'] and mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority'):
+        if (len(mcm_rr) and 'content' in mcm_rr[-1] and
+                'pdmv_present_priority' in mcm_rr[-1]['content'] and
+                mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
+
             self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
-            self.update_history({'action' : 'wm priority', 'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
+            self.update_history({'action' : 'wm priority',
+                    'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
+
             changes_happen=True
 
         return changes_happen
@@ -1595,6 +1625,49 @@ done
             not_good.update({'message': 'Not implemented yet to inspect a request in %s status and approval %s' % (
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
+    def collect_outputs(self, mcm_rr , tiers_expected ):
+        procstrings_expected = self.get_processing_strings()
+        collected = []
+        for wma in reversed(mcm_rr):
+            if not 'pdmv_dataset_list' in wma['content']: continue
+            those = wma['content']['pdmv_dataset_list']
+            goodone = True
+            if len(collected):
+                for ds in those:
+                    (_, dsn, proc, tier) = ds.split('/')
+                    for goodds in collected:
+                        (_, gdsn, gproc, gtier) = goodds.split('/')
+                        if dsn != gdsn or not set(
+                            gproc.split("-")).issubset(proc.split("-")):
+                            
+                            goodone = False #due to #724 we check if expected
+                                                        #process_string is subset of generated ones
+            if goodone:
+                ## reduce to what was expected of it
+                those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
+                ## reduce to what processing string were expected
+                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
+                ## only add those that are not already there
+                collected.extend(filter(lambda dn: not dn in collected, those))
+                
+        ## order the collected dataset in order of expected tiers
+        collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        return collected
+
+    def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
+        counted = 0
+        valid = True
+        for wma in mcm_rr:
+            if not 'pdmv_dataset_statuses' in wma['content']:
+                if 'pdmv_dataset_name' in wma['content'] and wma['content']['pdmv_dataset_name'] == ds_for_accounting:
+                    counted = max(counted, wma['content']['pdmv_evts_in_DAS'] + wma['content']['pdmv_open_evts_in_DAS'])
+                    valid *= (wma['content']['pdmv_status_in_DAS']=='VALID')
+                else:
+                    continue
+            elif ds_for_accounting in wma['content']['pdmv_dataset_statuses']:
+                counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
+                valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
+        return (valid,counted)
 
     def inspect_submitted(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1604,53 +1677,21 @@ done
         db = database('requests')
         ignore_for_status = settings().get_value('ignore_for_status')
         if len(mcm_rr):
-            wma_r = mcm_rr[-1]
-            ## pick up the last request of type!='Resubmission'
+            wma_r = mcm_rr[-1] ## the one used to check the status
+            # pick up the last request of type!='Resubmission'
             for wma in reversed(mcm_rr):
                 if ('content' in wma and 'pdmv_type' in wma['content'] and
                         not (wma['content']['pdmv_type'] in ignore_for_status)):
-
-                    wma_r = wma
+                    wma_r = wma #the one to check the number of events in output
                     break
 
             if ('pdmv_status_in_DAS' in wma_r['content'] and
                     'pdmv_status_from_reqmngr' in wma_r['content']):
 
-                if wma_r['content']['pdmv_status_in_DAS'] == 'VALID' and wma_r['content'][
-                    'pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
-                    ## how many events got completed for real: summing open and closed
-                    for wma in reversed(mcm_rr):
-                        # if request has only DQMIO DS we should take  other request
-                        # because DQMIO will always have 0 evts and request never go completed
-                        if (len(wma['content']['pdmv_dataset_list']) == 1 and
-                            wma['content']['pdmv_dataset_name'].find('DQMIO') != -1):
-                            continue
-                        else:
-                            wma_r_N = wma # so that we can decouple the two
-                            break
-
+                if wma_r['content']['pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## this is enough to get all datasets
-                    collected = []
                     tiers_expected = self.get_tiers()
-                    for wma in reversed(self.get_attribute('reqmgr_name')):
-                        if not 'pdmv_dataset_list' in wma['content']: continue
-                        those = wma['content']['pdmv_dataset_list']
-                        goodone = True
-                        if len(collected):
-                            for ds in those:
-                                (_, dsn, proc, tier) = ds.split('/')
-                                for goodds in collected:
-                                    (_, gdsn, gproc, gtier) = goodds.split('/')
-                                    if dsn != gdsn or not set(
-                                        gproc.split("-")).issubset(proc.split("-")):
-
-                                        goodone = False #due to #724 we check if expected
-                                                        #process_string is subset of generated ones
-                        if goodone:
-                            ## reduce to what was expected of it
-                            those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
-                            ## only add those that are not already there
-                            collected.extend(filter(lambda dn: not dn in collected, those))
+                    collected = self.collect_outputs( mcm_rr , tiers_expected )
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
                     if not len(collected):
@@ -1658,30 +1699,20 @@ done
                                 'message' : 'No output dataset have been recognized'})
                         saved = db.save(self.json())
                         return not_good
+
+                    ## then pick up the first expected
                     ds_for_accounting = collected[0]
-                    if (not 'pdmv_dataset_statuses' in wma_r_N['content'] or
-                            not ds_for_accounting in wma_r_N['content']['pdmv_dataset_statuses']):
+                    ## find its statistics
+                    valid,counted= self.collect_status_and_completed_events( mcm_rr, ds_for_accounting )
 
-                        counted = wma_r_N['content']['pdmv_evts_in_DAS'] +\
-                                wma_r_N['content']['pdmv_open_evts_in_DAS']
-
-                        if not counted:
-                            counted = wma_r['content']['pdmv_evts_in_DAS'] +\
-                                    wma_r['content']['pdmv_open_evts_in_DAS']
-                    else:
-                        ## pick up the completed statistics from the corresponding line
-                        counted = wma_r_N['content']['pdmv_dataset_statuses'][
-                                ds_for_accounting]['pdmv_evts_in_DAS'] +\
-                                wma_r_N['content']['pdmv_dataset_statuses'][
-                                ds_for_accounting]['pdmv_open_evts_in_DAS']
-
-                        if not counted:
-                            counted = wma_r['content']['pdmv_dataset_statuses'][
-                                    ds_for_accounting]['pdmv_evts_in_DAS'] +\
-                                    wma_r['content']['pdmv_dataset_statuses'][
-                                    ds_for_accounting]['pdmv_open_evts_in_DAS']
-
+                    self.set_attribute('output_dataset', collected)
                     self.set_attribute('completed_events', counted )
+                    
+                    if not valid:
+                        not_good.update({'message' : 'Not all outputs are valid'})
+                        saved = db.save(self.json())
+                        return not_good
+
                     ## make sure no expected tier was left behind
                     if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],
                             collected)), tiers_expected)):
@@ -1692,7 +1723,7 @@ done
                         saved = db.save(self.json())
                         return not_good
 
-                    self.set_attribute('output_dataset', collected)
+
                     if self.get_attribute('completed_events') <= 0:
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
@@ -1708,6 +1739,9 @@ done
                         saved = db.save(self.json())
                         return not_good
                         ## set next status: which can only be done at this stage
+
+
+                        
                     self.set_status(with_notification=True)
                     ## save the request back to db
                     saved = db.save(self.json())
@@ -2405,6 +2439,7 @@ done
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name', [])
         self.set_attribute('config_id', [])
+        self.set_attribute('output_dataset', [])
         if increase_revision:
             self.set_attribute('version', self.get_attribute('version') + 1)
 

@@ -272,6 +272,8 @@ class RunChainValid(Handler):
             else:
                 chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
         
+            chain_setup_script = mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch)
+
             for rid in chain:
                 self.requests_ids.append( rid )
                 mcm_rs.append( request( rdb.get( rid ) ))
@@ -283,7 +285,7 @@ class RunChainValid(Handler):
             test_script = location.location() + 'validation_run_test.sh'
             timeout=None
             with open(test_script, 'w') as there:
-                there.write(mcm_cr.get_setup(directory=location.location(), run=True, validation=True,scratch=self.scratch))
+                there.write(chain_setup_script)
                 timeout = mcm_cr.get_timeout(scratch=self.scratch)
             batch_test = batch_control( self.crid, test_script, timeout=timeout)
             
@@ -389,6 +391,7 @@ class RequestSubmitter(Handler):
     def internal_run(self):
         try:
             if not self.lock.acquire(blocking=False):
+                self.injection_error('Couldnt acquire lock', None)
                 return False
             try:
                 okay, req = self.check_request()
@@ -486,7 +489,9 @@ class RequestInjector(Handler):
         self.submitter = RequestSubmitter(**kwargs)
 
     def internal_run(self):
-        self.logger.inject('## Logger instance retrieved', level='info', handler=self.prepid)
+        self.logger.inject('## Logger instance retrieved in RequestInjector',
+                level='info',handler=self.prepid)
+
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
             if not self.lock.acquire(blocking=False):
                 return {"prepid": self.prepid, "results": False,
@@ -495,7 +500,10 @@ class RequestInjector(Handler):
                 if not self.uploader.internal_run():
                     return {"prepid": self.prepid, "results": False,
                             "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
-                self.submitter.internal_run()
+                __ret = self.submitter.internal_run()
+                self.logger.inject('Request submitter returned: %s' % (__ret),
+                        level='info',handler=self.prepid)
+
             finally:
                 self.lock.release()
 

@@ -479,7 +479,9 @@ class chained_request(json_base):
         #current_campaign -> next_campaign
 
         ##determine whether we have an input dataset for the next request
-        if len(current_request.get_attribute('reqmgr_name')):
+        if len(current_request.get_attribute('output_dataset')):
+            input_dataset = current_request.get_attribute('output_dataset')[0]
+        elif len(current_request.get_attribute('reqmgr_name')):
             last_wma = current_request.get_attribute('reqmgr_name')[-1]
             if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
                 input_dataset = last_wma['content']['pdmv_dataset_name']
@@ -488,9 +490,9 @@ class chained_request(json_base):
                 if statsDB.document_exists(last_wma['name']):
                     latestStatus = statsDB.get(last_wma['name'])
                     input_dataset = latestStatus['pdmv_dataset_name']
+
         if input_dataset:
             next_request.set_attribute('input_dataset', input_dataset)
-
 
 
         ## set blocks restriction if any
@@ -712,4 +714,6 @@ class chained_request(json_base):
             if not ev and index!=0 and not req.is_root:
                 ev = -1
             setup_file += req.get_setup_file(directory=directory, events=ev, run=run, do_valid=validation)
+            if run and validation:
+                req.reload()
         return setup_file

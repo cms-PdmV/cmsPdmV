@@ -119,6 +119,3 @@ class communicator:
             return new_msg_ID
         except Exception as e:
             print "Error: unable to send email", e.__class__
-
-
-    
