@@ -9,14 +9,14 @@ class locator:
 
         if host in ['vocms085.cern.ch']: ## openstack -dev machine
             return True
-        elif host in ['cms-pdmv-mcm', 'cms-pdmv-mcmint', 'vocms087.cern.ch']:
+        elif host in ['vocms093', 'vocms087.cern.ch']:
             return False ## cms-pdmv-mcmint has to be removed after migration
         return True
 
     def isInt(self):
         host = os.environ['HOSTNAME']
 
-        if host in ['cms-pdmv-mcmint', 'vocms087.cern.ch']:
+        if host in ['vocms087.cern.ch']:
             return True
         else:
             return False
@@ -27,7 +27,7 @@ class locator:
             ## needed while migration to openstack is going
             return 'http://vocms085.cern.ch:5984/'
         else:
-            return 'http://cms-pdmv-mcm-db:5984/'
+            return 'http://vocms090:5984/'
             #return 'http://188.184.23.164:5984/'
     def workLocation(self):
         if self.isDev():
