@@ -489,8 +489,8 @@ class RequestInjector(Handler):
         self.submitter = RequestSubmitter(**kwargs)
 
     def internal_run(self):
-        self.logger.inject('## Logger instance retrieved in RequestInjector',
-                level='info',handler=self.prepid)
+        self.logger.inject('## Logger instance retrieved', level='info',
+                handler=self.prepid)
 
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
             if not self.lock.acquire(blocking=False):
