@@ -7,7 +7,6 @@ import copy
 import ast
 from tools.locator import locator
 from tools.logger import logfactory
-from tools.locker import locker
 from collections import defaultdict
 from couchDB_interface import *
 
@@ -103,10 +102,12 @@ class database:
             return {}
 
     def __save_to_cache(self, key, value):
+        from tools.locker import locker
         with locker.lock(key):
             self.cache_dictionary[key]=value
 
     def __get_from_cache(self, key):
+        from tools.locker import locker
         with locker.lock(key):
             return self.cache_dictionary[key]
 
