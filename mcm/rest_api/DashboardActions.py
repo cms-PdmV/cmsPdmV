@@ -172,7 +172,7 @@ class ListReleases(RESTResource):
     def __init__(self):
         pass
     def GET(self, *args):
-        """                       
+        """
         Give out the list of releases that are being used through McM campaigns in optional status /status
         """
         status=None
@@ -198,3 +198,12 @@ class ListReleases(RESTResource):
         return dumps({"results" : releases, "set" : list(releases_set)})
 
 
+class GetLocksInfo(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+        pass
+    def GET(self, *args):
+        from tools.locker import locker, semaphore_thread_number
+        data = locker.lock_dictionary
+        return dumps({"locks_len": len(data), "locks_data": str(data),
+                "bounded_semaphore" : semaphore_thread_number._current})

@@ -1,3 +1,7 @@
+import cherrypy
+import simplejson
+from collections import defaultdict
+
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
@@ -6,9 +10,6 @@ from simplejson import dumps
 from tools.json import threaded_loads
 from tools.locker import locker
 from tools.communicator import communicator
-from collections import defaultdict
-import cherrypy
-import simplejson
 from couchdb_layer.mcm_database import database
 from tools.locator import locator
 

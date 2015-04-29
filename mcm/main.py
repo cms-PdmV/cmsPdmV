@@ -13,77 +13,40 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
 
-#to get campaign sequences
-from json_layer.sequence import sequence
-import json
+from json_layer.sequence import sequence #to get campaign sequences
+from tools.settings import settings
+from tools.communicator import communicator
+from tools.logger import rest_formatter, mcm_formatter, logfactory
 
 import logging
 import logging.handlers
-from tools.logger import rest_formatter, mcm_formatter, logfactory
-from tools.settings import settings
-from tools.communicator import communicator
-import cherrypy #to expose cherrypy methods serving the HTML files
+import json
+import cherrypy
 import os
 import shelve
 import subprocess
 import imp
-
-# Initialize Web UI Page Objects
-
-# home (root)
-#home = Page(title='Prep 2.0.1 - Alpha version', result='<div class="list" id="result_list"></div>', signature='PREP v.2.0.1 - CherryPy v.3.2.2')
-#home.render_template('main.tmpl')
-
-# campaigns
-#campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#campaigns.render_template('campaigns.tmpl')
-
-# requests
-#requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#requests.render_template('requests.tmpl')
-
-# chained campaigns
-#chained_campaigns = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#chained_campaigns.render_template('chained_campaigns.tmpl')
-
-# chained requests
-#chained_requests = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#chained_requests.render_template('chained_requests.tmpl')
-
-# flows
-#flows = Page(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#flows.render_template('flows.tmpl')
-
-# Web apps - Results, Edit, Create
-#results = Results(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#edit = Edit(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#create = Create(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#actions = Actions(title='Prep 2.0.1 - Alpha version', signature='PREP v.2.0    .1 - CherryPy v.3.2.2')
-#actions.render_template('actions.tmpl')
+import datetime
 
 file_location = os.path.dirname(__file__)
-import datetime
 start_time = datetime.datetime.now().strftime("%c")
 
 ###UPDATED METHODS##
 @cherrypy.expose
 def campaigns_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','campaigns.html'))
-
 @cherrypy.expose
 def requests_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','requests.html'))
-
 @cherrypy.expose
 def edit_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','edit.html'))
-    
 @cherrypy.expose
 def flows_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','flows.html'))
@@ -151,30 +114,19 @@ def graph_representation_html(*args, **kwargs):
     return open(os.path.join(file_location, 'HTML', 'graph.html'))
 
 ### END OF UPDATED METHODS###
-# root
-#root = home
 root = index
 
 # web apps (relevant to interface)
 root.search = Search()
 root.multi_search = MultiSearch()
-#root.campaigns = campaigns
-root.campaigns = campaigns_html
-#root.chained_campaigns = chained_campaigns
-root.chained_campaigns = chained_campaigns_html
 
-#root.chained_requests = chained_requests
+root.campaigns = campaigns_html
+root.chained_campaigns = chained_campaigns_html
 root.chained_requests = chained_requests_html
-#root.requests = requests
 root.requests = requests_html
-#root.flows = flows
 root.flows = flows_html
-#root.results = results
-#root.edit = edit
 root.edit = edit_html
-#root.create = create
 root.create = create_html
-#root.actions = actions
 root.actions = actions_html
 root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
@@ -258,9 +210,6 @@ root.restapi.requests.delete = DeleteRequest()
 root.restapi.requests.clone = CloneRequest()
 root.restapi.requests.get = GetRequest()
 root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
-#root.restapi.requests.get_fragment = GetFragmentForRequest()
-#root.restapi.requests.get_setup = GetSetupForRequest()
-#root.restapi.requests.request_prepid = RequestPrepId()
 root.restapi.requests.approve = ApproveRequest()
 root.restapi.requests.reset = ResetRequestApproval()
 root.restapi.requests.soft_reset = ResetRequestApproval(hard=False)
@@ -294,7 +243,6 @@ root.restapi.campaigns.save = CreateCampaign()
 root.restapi.campaigns.update = UpdateCampaign()
 root.restapi.campaigns.delete = DeleteCampaign()
 root.restapi.campaigns.get = GetCampaign()
-#root.restapi.campaigns.toggle = ToggleCampaign() # start/stop campaign
 root.restapi.campaigns.approve = ApproveCampaign()
 root.restapi.campaigns.get_all = GetAllCampaigns()
 root.restapi.campaigns.status = ToggleCampaignStatus()
@@ -378,7 +326,6 @@ root.restapi.news.save = CreateNews()
 root.restapi.news.update = UpdateNew()
 
 # REST dashboard Actions
-
 root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
@@ -387,8 +334,8 @@ root.restapi.dashboard.get_start_time = GetStartTime(start_time)
 root.restapi.dashboard.get_verbosities = GetVerbosities()
 root.restapi.dashboard.get_connection = TestConnection()
 root.restapi.dashboard.get_releases = ListReleases()
+root.restapi.dashboard.lock_info = GetLocksInfo()
 # REST mccms Actions
-
 root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()
 root.restapi.mccms.save = CreateMccm()
@@ -399,28 +346,22 @@ root.restapi.mccms.generate = GenerateChains()
 root.restapi.mccms.reminder = MccMReminder()
 
 # REST settings Actions
-
 root.restapi.settings.get = GetSetting()
 root.restapi.settings.update = UpdateSetting()
 root.restapi.settings.save = SaveSetting()
 
 # REST tags Actions
-
 root.restapi.tags.get_all = GetTags()
 root.restapi.tags.add = AddTag()
 root.restapi.tags.remove = RemoveTag()
 
 # REST control Actions
-
 root.restapi.control.renew_cert = RenewCertificate()
 root.restapi.control.set_verbosity = ChangeVerbosity()
 root.restapi.control.turn_off = TurnOffServer()
 root.restapi.control.reset_rest_counter = ResetRESTCounters()
 root.restapi.control.communicate = Communicate()
 
-#cherrypy.root = root
-#cherrypy.config.update(file = '/home/prep2/configuration/cherrypy.conf')
-#cherrypy.server.start()
 
 log = cherrypy.log
 log.error_file = None
@@ -433,18 +374,9 @@ fname = getattr(log, "rot_error_file", "logs/error.log")
 logger = logging.getLogger()
 logger.setLevel(0)
 
-# Make a new RotatingFileHandler for the error log.
-#h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-##h.setLevel(logging.DEBUG)
-#h.setFormatter(rest_formatter())
-#
-## set up custom ReST logger
-#logger = logging.getLogger("rest_error")
-#logger.addHandler(h)
 
 # set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-#ha.setLevel(logging.DEBUG)
 ha.setFormatter(mcm_formatter())
 log.error_log.addHandler(ha)
 logger = logging.getLogger("mcm_error")
@@ -454,7 +386,7 @@ logger.addHandler(ha)
 logger = logging.getLogger("mcm_inject")
 hi = logging.FileHandler('logs/inject.log', 'a')
 hi.setFormatter(mcm_formatter())
- 
+
 logger.addHandler(hi)
 
 # Make a new RotatingFileHandler for the access log.
@@ -465,11 +397,9 @@ h.setFormatter(rest_formatter())
 log.access_log.addHandler(h)
 logfactory.set_verbosity(int(settings().get_value("log_verbosity")))
 
-
 def start():
     logfactory.log(".mcm_rest_counter persistence opening")
     RESTResource.counter = shelve.open('.mcm_rest_counter')
-
 
 def stop():
     logfactory.log(".mcm_rest_counter persistence closing")
@@ -477,7 +407,6 @@ def stop():
     logfactory.log("Flushing communications")
     com = communicator()
     com.flush(0)
-
 
 def maintain():
     if not cherrypy.engine.execv:
@@ -490,5 +419,4 @@ cherrypy.engine.subscribe('exit', maintain)
 cherrypy.engine.signal_handler.handlers['SIGINT'] = cherrypy.engine.exit
 
 #START the engine
-
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')

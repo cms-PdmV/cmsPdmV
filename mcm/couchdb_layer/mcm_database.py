@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-from tools.logger import logfactory
-#from json_layer.campaign import campaign
-#from WMCore.Database.CMSCouch import Database,CouchError
 import json
 import time
 import os
 import copy
 import ast
 from tools.locator import locator
+from tools.logger import logfactory
 from collections import defaultdict
 from couchDB_interface import *
 
@@ -18,7 +16,8 @@ class database:
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-            database.logger.error('Database "%s" was not found.' % (self.db), level='critical')
+            database.logger.error('Database "%s" was not found.' % (self.db),
+                    level='critical')
 
         def __str__(self):
             return 'Error: Database ',  self.db,  ' was not found.'
@@ -26,7 +25,8 @@ class database:
     class DatabaseAccessError(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-            database.logger.error('Could not access database "%s".' % (self.db), level='critical')
+            database.logger.error('Could not access database "%s".' % (self.db),
+                    level='critical')
 
         def __str__(self):
             return 'Error: Could not access database ',  self.db
@@ -52,6 +52,7 @@ class database:
             self.op = str(op)
         def __str__(self):
             return 'Error: Operator "' + self.op + '" is invalid.'
+
     class InvalidParameterError(Exception):
         def __init__(self,  param=''):
             self.param = str(param)
@@ -63,8 +64,7 @@ class database:
     def __init__(self,  db_name='',url=None, cache=False):
         host = os.environ['HOSTNAME']
         if url is None:
-            url =locator().dbLocation()
-        #self.logger.log('I chose the url %s'%(url))
+            url = locator().dbLocation()
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
@@ -72,14 +72,11 @@ class database:
         if self.db_name in ['campaigns','chained_campaigns']:
             ## force cache for those.
             self.cache=True
-
-        try:    
+        try:
             self.db = Database(db_name, url=url)
-            #            self.db = Database(db_name, url='http://preptest.cern.ch:5984/')
-            #            self.db = Database(db_name) # for using private DB @localhost:5984
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
-            
+
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
 
     def __is_number(self, s):
@@ -88,7 +85,7 @@ class database:
             return True
         except ValueError:
             return False
-       
+
     def get(self,  prepid=''):
         if self.cache:
             result = self.__get_from_cache(prepid)
@@ -121,27 +118,35 @@ class database:
         id = ''
         if 'prepid' not in doc:
             if '_id' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.', level='critical')
+                self.logger.error('Document does not have an "_id" parameter.',
+                        level='critical')
+
                 return False
             id = doc['_id']
         elif '_id' not in doc:
             if 'prepid' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.', level='critical')
+                self.logger.error('Document does not have an "_id" parameter.',
+                        level='critical')
+
                 return False
             id = doc['prepid']
         id = doc['_id']
         return self.__id_exists(prepid=id)
 
     def document_exists(self, prepid=''):
-	self.logger.log('Checking existence of document "%s" in "%s"...' % (prepid,self.db_name))
-        return self.__id_exists(prepid) 
-    
+    	self.logger.log('Checking existence of document "%s" in "%s"...' % (
+                prepid,self.db_name))
+
+        return self.__id_exists(prepid)
+
     def __id_exists(self,  prepid=''):
         try:
-            if self.cache and self.__get_from_cache(prepid) or self.db.documentExists(id=prepid):
+            if self.cache and self.__get_from_cache(prepid) or self.db.documentExists(
+                    id=prepid):
+
                 return True
             self.logger.error('Document "%s" does not exist.' % (prepid))
-            return False  
+            return False
         except Exception as ex:
             self.logger.error('Document "%s" was not found on CouchError Reason: %s trying a second time with a time out' % (prepid, ex))
             time.sleep(0.5)
@@ -149,7 +154,7 @@ class database:
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return False
-    
+
     def delete(self, prepid=''):
         if not prepid:
             return False
@@ -165,24 +170,24 @@ class database:
             return True
         except Exception as ex:
             self.logger.error('Could not delete document: %s . Reason: %s ' % (prepid, ex))
-            return False            
+            return False
 
     def update(self,  doc={}):
         if '_id' in doc:
-            self.logger.log('Updating document "%s" in "%s"' % (doc['_id'],self.db_name))
+            self.logger.log('Updating document "%s" in "%s"' % (doc['_id'], self.db_name))
         if self.__document_exists(doc):
             if self.cache:
                 ##JR the revision in the cache is not the one in the DB at this point
                 # will be retaken at next get
                 self.__save_to_cache(doc['_id'], None)
             return self.save(doc)
-        self.logger.error('Failed to update document: %s' % (json.dumps(doc)))         
+        self.logger.error('Failed to update document: %s' % (json.dumps(doc)))
         return False
-        
+
     def update_all(self,  docs=[]):
         if not docs:
             return False
-            
+
         for doc in docs:
             if self.__document_exists(doc):
                 self.db.queue(doc)
@@ -191,16 +196,20 @@ class database:
             return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
-            return False        
-        
+            return False
+
     def get_all(self, page_num=-1, limit=20, get_raw=False):
         try:
             limit, skip = self.__pagify(page_num, limit=limit)
             url = "_design/%s/_view/%s" % (self.db_name, "all")
             if limit >= 0 and skip >= 0:
-                result = self.db.loadView(url, options={'limit': limit, 'skip': skip, 'include_docs': True}, get_raw=get_raw)
+                result = self.db.loadView(url, options={'limit': limit,
+                        'skip': skip, 'include_docs': True}, get_raw=get_raw)
+
             else:
-                result = self.db.loadView(url, options={'include_docs': True}, get_raw=get_raw)
+                result = self.db.loadView(url, options={'include_docs': True},
+                        get_raw=get_raw)
+
             return result if get_raw else map(lambda r: r['doc'], result['rows'])
         except Exception as ex:
             self.logger.error('Could not access view. Reason: %s' % (ex))
@@ -209,14 +218,14 @@ class database:
     def query(self,  query='', page_num=0, limit=20):
         if not query:
             result = self.get_all(page_num, limit=limit)
-            #res =  map(lambda r : r['doc'], result)
             return result
         try:
             result = self.__query(query, page=page_num, limit=limit)
-            #res =  map(lambda r : r['doc'], result)
             return result
         except Exception as ex:
-            self.logger.error('Could not load view for query: <%s> . Reason: %s' % (query, ex))
+            self.logger.error('Could not load view for query: <%s> . Reason: %s' % (
+                        query, ex))
+
             return []
 
     def unique_res(self,query_result):
@@ -224,46 +233,40 @@ class database:
         docids_s = list(set(docids))
         if len(docids) != len(docids_s):
             docids_s = []
-            return_dict= copy.deepcopy( query_result )
+            return_dict = copy.deepcopy( query_result )
             for doc in query_result:
                 if not doc['_id'] in docids_s:
                     docids_s.append(doc['_id'])
                 else:
-                    return_dict.remove(doc)		
+                    return_dict.remove(doc)
             return return_dict
         return query_result
 
     def queries( self, query_list, limit=20):
-        ##page_nume does not matter 
+        ##page_nume does not matter
         if not len(query_list):
             return self.get_all(page_num=-1, limit=limit)
         try:
-
             results_list=[]
             ##make each query separately and retrieve only the doc with counting == len(query_list)
             for (i, query_item) in enumerate(query_list):
                 res = self.query(query_item, page_num=-1, limit=limit)
-                query_result = self.unique_res( res )
-
+                query_result = self.unique_res(res)
                 if i != 0:
                     ## get only the one already in the intersection
                     id_list = map(lambda doc : doc['_id'], results_list)
-                    ### self.logger.error('queries if. ids: %s' % (id_list))
                     results_list = filter(lambda doc : doc['_id'] in id_list, query_result)
-                    ### self.logger.error('queries if. results_list: %s' % (results_list))
                 else:
-                    ### self.logger.error('queries else. query_result: %s' % (query_result))
                     results_list = query_result
-            ### self.logger.error('queries res_list: %s' % (results_list))
             return results_list
         except Exception as ex:
-            self.logger.error('Could not load view for queris: <%s> . Reason: %s' % ('<br>'.join(query_list), ex))
+            self.logger.error('Could not load view for queris: <%s> . Reason: %s' % (
+                    '<br>'.join(query_list), ex))
+
             return []
 
     def __extract_operators(self,  query=''):
-
         if not query:
-            ### self.logger.error('Empty query', level='warning')
             return ()
         clean = []
         tokens = []
@@ -279,17 +282,15 @@ class database:
                 clean.append(tok.strip().strip('"'))
             if len(clean) != 3:
                 raise self.MapReduceSyntaxError(query)
-            #if clean[0] not in self.request and clean[1] not in self.campaign:
-            #    raise self.IllegalParameterError(clean[0])
             return clean
         raise self.MapReduceSyntaxError(query)
-    
+
     def __pagify(self, page_num=0, limit=20):
         if page_num < 0:         ##couchdb-lucene dy default return limited resutlts
             return 1000000000, 0 ## we set it to very high numer
         skip = limit * page_num
-        return limit, skip      
-    
+        return limit, skip
+
     def __execute_query(self, tokenized_query='', page=-1, limit=20):
             tokens = []
             try:
@@ -311,13 +312,11 @@ class database:
                 return res
             else:
                 return []
-    
+
     def raw_query(self, view_name, options={}):
-        #self.logger.error('Executing raw query to the database. Accessed view: %s' % (view_name), level='warning') 
-        #return self.db.loadView(self.db_name, view_name, options)['rows']
         url = "_design/%s/_view/%s"%(self.db_name, view_name)
         return self.db.loadView(url, options)['rows']
-                
+
     def __get_op(self, oper):
         if oper == '>':
             return lambda x,y: x > y
@@ -328,10 +327,10 @@ class database:
         elif oper == '<=':
             return lambda x,y: x <= y
         elif oper == '==':
-            return lambda x,y: x == y       
+            return lambda x,y: x == y
         else:
-            return None     
-        
+            return None
+
     def __filter(self, tokenized_query=[], view_results=[]):
         if len(tokenized_query) != 3:
             return view_results
@@ -342,70 +341,62 @@ class database:
         else:
             val = tokenized_query[2]
         f = self.__get_op(op)
-        return filter(lambda x: f(x[prn],val), view_results)    
+        return filter(lambda x: f(x[prn], val), view_results)
 
     def __query(self, query='', page=0, limit=20):
         t_par = []
         results = []
-        #what is that , split for ???
-        #if ',' in query:
-        #     t_par = query.rsplit(',')
         if not t_par:
              t_par = [query]
-        if len(t_par) == 1:          
-            return self.__execute_query(t_par[0], page, limit)#[page*limit:page*limit+limit]
+        if len(t_par) == 1:
+            return self.__execute_query(t_par[0], page, limit)
         elif len(t_par) == 0:
             return []
-
-        #temp = self.__execute_query(t_par[0])#[page*limit:page*limit+limit]
         res = self.__execute_query(t_par[0])
-        #res = map(lambda x: x['value'], temp) 
         if len(res) == 0:
             return []
         for i in range(1,len(t_par)):
             tq = self.__extract_operators(t_par[i])
             res = self.__filter(tq, res)
-        #return map(lambda x: {'value':x},res[page*limit:page*limit+20])
         return res[page*limit:page*limit+20]
-                    
-    def __build_query(self,tokens=[]):
+
+    def __build_query(self, tokens=[]):
         if not tokens:
-            return None,None
+            return None, None
         if len(tokens) != 3:
             raise self.MapReduceSyntaxError(tokens)
         param = tokens[0]
-        op = tokens[1]     
+        op = tokens[1]
         kval = tokens[2]
         try:
             view_opts = self.__build_options(op, kval)
         except Exception as ex:
-            self.logger.error('Value types are not compatible with operator %s value %s Error: %s' % (op, kval, str(ex))) 
-            return None,None
+            self.logger.error('Value types are not compatible with operator %s value %s Error: %s' % (
+                    op, kval, str(ex)))
+
+            return None, None
         return param, view_opts
-    
-    def __build_options(self,op, val):
+
+    def __build_options(self, op, val):
+        # options dictionary
+        opts = {}
+
         def is_number(s):
             try:
                 float(s)
                 return True
             except ValueError:
                 return False
-        
-        # options dictionary
-        opts = {} 
-        
-        # default the composite key search
-        #if '[' in val and ']' in val:
+
         if val.startswith('[') and val.endswith(']'):
             if op == '==':
-                try:                    
-                    e=ast.literal_eval(val)
+                try:
+                    e = ast.literal_eval(val)
                     opts['key'] = e
                 except:
                     opts['key'] = val
             return opts
-        
-        # handle alphanumeric key ranges
+
         num_flag = False
         if is_number(val):
             num_flag = True
@@ -414,39 +405,38 @@ class database:
             kval = val.decode('ascii')
         if '>' in op:
             if '=' in op:
-                opts['startkey']=kval
+                opts['startkey'] = kval
             else:
                 if num_flag:
-                    opts['startkey']=kval+1
+                    opts['startkey'] = kval + 1
                 else:
-                    opts['startkey']=kval
+                    opts['startkey'] = kval
             if num_flag:
-                opts['endkey']=99999999 # assume its numeric
+                opts['endkey'] = 99999999 # assume its numeric
             else:
-                opts['endkey']=kval+u'\u9999'
+                opts['endkey'] = kval + u'\u9999'
         elif '<' in op:
             if '=' in op:
-                opts['endkey']=kval
+                opts['endkey'] = kval
             else:
                 if num_flag:
-                    opts['endkey']=kval-1
+                    opts['endkey'] = kval - 1
                 else:
-                    opts['endkey']=kval
+                    opts['endkey'] = kval
             if num_flag:
-                opts['startkey']=-99999999
+                opts['startkey'] = -99999999
             else:
-                opts['startkey']=''
-                
+                opts['startkey'] = ''
+
         elif '==' == op:
-            opts['key']=kval
+            opts['key'] = kval
         elif '~=' == op:
             if kval[-1] == '*':
-                opts['startkey']=kval[:len(kval)-1]
-                opts['endkey']=kval[:len(kval)-1]+u'\u9999'#'99999999'#'\u9999'
+                opts['startkey'] = kval[:len(kval)-1]
+                opts['endkey'] = kval[:len(kval)-1]+u'\u9999'
         return opts
-            
-  
-    def save_all(self,  docs=[]):
+
+    def save_all(self, docs=[]):
         if not docs:
             return False
         for doc in docs:
@@ -455,32 +445,15 @@ class database:
             self.db.commit()
             return True
         except Exception as ex:
-            self.logger.error('Could not commit changes to database. Reason: %s' % (ex)) 
+            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
 
     def save(self, doc={}):
         if not doc:
             self.logger.error('Tried to save empty document.', level='warning')
             return False
-
-
-	# TODO: Check if an object exists in the database and fail.
-
-        #if '_id' in doc:
-        #    self.logger.log('Using user-defined id: %s' % (doc['_id']))
-        #if self.__document_exists(doc):
-        #    self.logger.error('Failed to update document: %s' % (json.dumps(doc)))
-        #    return False
-
         try:
-            #self.logger.error('Document is %s %s'%(doc['_id'],doc))
-            #self.logger.error(self.db.commitOne(doc))
-            ## this is a change I just made (23/05/2013 13:31) because of the return value of update should be True/False
             saved = self.db.commitOne(doc)
-#            if 'error' in saved[0]:  ##removed because fails on new DB class
-#                self.logger.error('Commit One says : %s'%(saved))
-#                return False
-#            else:
             return True
         except Exception as ex:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
@@ -488,7 +461,7 @@ class database:
 
     def count(self):
         try:
-            return len(self.db.allDocs()) 
+            return len(self.db.allDocs())
         except Exception as ex:
             self.logger.error('Could not count documents in database. Reason: %s' % (ex))
             return -1
@@ -511,12 +484,14 @@ class database:
                        ':': r'\:',
                        '"': r'\"',
                        ';': r'\;',
-                       ' ': r'\ '}
+                       ' ': r'\ ',
+                       '/': r'\/'}
         for char in term:
             if char in escapeRules.keys():
                 yield escapeRules[char]
             else:
                 yield char
+
     def escapeLuceneArg(self, term):
         """ Apply escaping to the passed in query terms
             escaping special characters like : , etc"""
@@ -530,7 +505,7 @@ class database:
         constructed_query = ""
         for param in query:
             query[param] = query[param].replace(" ", "+")
-            constructed_query += param+':'+self.escapeLuceneArg(query[param])
+            constructed_query += param + ':' + self.escapeLuceneArg(query[param])
             if constructed_query != "":
                 constructed_query += '+AND+'
         return constructed_query[:-5]
@@ -541,7 +516,9 @@ class database:
         """
         limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_design/lucene/%s?q=%s" % (index_name, query)
-        data = self.db.FtiSearch(url, options={'limit': limit, 'include_docs': True, 'skip': skip, 'sort': '_id'}, get_raw=get_raw) #we sort ascending by doc._id field
+        data = self.db.FtiSearch(url, options={'limit': limit,
+                'include_docs': True, 'skip': skip, 'sort': '_id'}, get_raw=get_raw) #we sort ascending by doc._id field
+
         return data if get_raw else [ elem["doc"] for elem in data['rows']]
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
@@ -552,12 +529,16 @@ class database:
             cached_sequence = self.__get_from_cache(sequence_id)
             if cached_sequence == current_update_seq:
                 result = self.__get_from_cache(cache_id)
-                self.logger.error('Accessing cache for:%s. Results : %s' % (cache_id, len(result)), level='warning')
+                self.logger.error('Accessing cache for:%s. Results : %s' % (
+                        cache_id, len(result)), level='warning')
+
                 if result: return result
             else:
                 self.__save_to_cache(sequence_id, current_update_seq)
         try:
-            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (view_doc, view_name), level='warning')
+            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (
+                    view_doc, view_name), level='warning')
+
             url = "_design/%s/_view/%s" % (view_doc, view_name)
             result = self.db.loadView(url, options)['rows']
             if cache:
@@ -570,32 +551,3 @@ class database:
     def update_sequence(self, options={}):
         result = self.db.UpdateSequence()
         return result
-
-#db = database('requests')
-#f = open('up_prepdb_json/requests', 'r')
-#lines = f.readlines()
-#f.close()
-#obs = []
-#for line in lines:
-#    if len(line) < 2:
-#        continue
-#    ob = json.loads(line)
-#    ob['_id'] = ob['prepid']
-#    ob['member_of_campaign'] = ob['prepid'].rsplit('-')[1]
-#   obs.append(ob)
-#print 'requests:', db.save_all(obs)
-
-#db = database('campaigns', cache=True)
-#f = open('up_prepdb_json/campaigns', 'r')
-#lines = f.readlines()
-#f.close()
-#obs = []
-#for line in lines:
-#    if len(line) < 2:
-#        continue
-#    ob = json.loads(line)
-#    ob['_id'] = ob['prepid']
-#    obs.append(ob)
-#print 'campaigns:',db.save_all(obs)
-
-

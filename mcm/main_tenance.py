@@ -64,21 +64,13 @@ h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter())
 log.access_log.addHandler(h)
 
-
 def start():
     RESTResource.counter = shelve.open('.mcm_rest_counter')
-
 
 def stop():
     RESTResource.counter.close()
 
-
-def maintain():
-    if not cherrypy.engine.execv:
-        subprocess.call("python2.6 main.py &", shell=True)
-
 cherrypy.engine.subscribe('start', start)
 cherrypy.engine.subscribe('stop', stop)
-cherrypy.engine.subscribe('exit', maintain)
 
 cherrypy.quickstart(root, config='configuration/cherrypy.conf')
