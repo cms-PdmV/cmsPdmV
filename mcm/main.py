@@ -13,7 +13,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision, GetStartTime, TestConnection, ListReleases
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
@@ -336,7 +336,7 @@ root.restapi.dashboard.get_start_time = GetStartTime(start_time)
 root.restapi.dashboard.get_verbosities = GetVerbosities()
 root.restapi.dashboard.get_connection = TestConnection()
 root.restapi.dashboard.get_releases = ListReleases()
-
+root.restapi.dashboard.lock_info = GetLocksInfo()
 # REST mccms Actions
 root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()
