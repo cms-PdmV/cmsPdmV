@@ -11,6 +11,7 @@ from tools.settings import settings
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 from cherrypy import request
+
 class Invalidate(RESTResource):
 
     def __init__(self):
@@ -281,3 +282,27 @@ class ClearInvalidations(RESTResource):
         __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
         return dumps({"results":True, "ds_to_invalidate": __ds_list,
             "requests_to_invalidate": __r_list})
+
+class AcknowledgeInvalidation(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+        ## to be made a setting for editing on the fly ?
+        self.access_user = ['vlimant','mcremone']
+        self.__doc__ = "Acknowledge the invalidation of a given object. Restricted to %s"%( ','.join(self.acces_user))
+
+    def GET(self, *args):
+        idb = database('invalidations')
+        if not len(args):
+            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+        doc = idb.get(args[0])
+        if not doc:
+            return dumps({"results": False, "message": 'Error: %s is not a doc id'%( args[0])})
+        doc["status"] = "acknowledged"
+        saved = idb.save( doc )
+        if saved:
+            return dumps({"results": True, "message": "Invalidation doc %s is acknowledged"% args[0]})
+        else:
+            return dumps({"results": False, "message" : "Could not save the change in %s"%args[0]})
+        
+        
+        

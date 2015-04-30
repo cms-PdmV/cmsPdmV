@@ -13,6 +13,7 @@ class RESTResource(object):
     #logger = cherrypy.log
     logger = logfactory
     access_limit = None
+    access_user = None
 
     limit_per_method = {
         'GET': access_rights.user,
@@ -50,8 +51,11 @@ class RESTResource(object):
                 self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
         else:
             if not self.authenticator.can_access(user_p.get_username()):
-                raise cherrypy.HTTPError(403, 'You cannot access this page, the limit for the page is {0} ({1})'.format(roles[self.authenticator.get_limit()],
-                                                                                                                        self.authenticator.get_limit()))
+                if self.access_user and user_p.get_username() in self.access_user:
+                    self.logger.error('User %s allowed to get through'% user_p.get_username())
+                else:
+                    raise cherrypy.HTTPError(403, 'You cannot access this page, the limit for the page is {0} ({1})'.format(roles[self.authenticator.get_limit()],
+                                                                                                                            self.authenticator.get_limit()))
         # counter for calls
         with locker.lock("rest-call-counter"):
             key = method.im_class.__name__ + method.__name__
