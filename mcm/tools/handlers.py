@@ -414,16 +414,10 @@ class RequestSubmitter(Handler):
                         return False
                     injected_requests = [l.split()[-1] for l in output.split('\n') if
                                          l.startswith('Injected workflow:')]
-                    approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                         l.startswith('Approved workflow:')]
-                    if not approved_requests:
-                        self.injection_error(
-                            'Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n{0}\n\nError: \n{1}'.format(
-                                output, error), req)
-                        return False
+
                     objects_to_invalidate = [
                         {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
-                        for inv_req in injected_requests if inv_req not in approved_requests]
+                        for inv_req in injected_requests if inv_req not in inject_requests]
                     if objects_to_invalidate:
                         self.logger.inject(
                             "Some of the workflows had to be invalidated: {0}".format(objects_to_invalidate),
@@ -436,7 +430,7 @@ class RequestSubmitter(Handler):
                         return False
 
                     added_requests = [{'name': app_req, 'content': {'pdmv_prep_id': self.prepid}} for app_req in
-                                      approved_requests]
+                                      injected_requests]
                     requests = req.get_attribute('reqmgr_name')
                     requests.extend(added_requests)
                     req.set_attribute('reqmgr_name', requests)
@@ -597,20 +591,15 @@ class ChainRequestInjector(Handler):
 
                 injected_requests = [l.split()[-1] for l in output.split('\n') if
                                      l.startswith('Injected workflow:')]
-                approved_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Approved workflow:')]
 
                 if not injected_requests:
                     self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
                             output, error), mcm_rs)
                     return False
 
-                if injected_requests and not approved_requests:
-                    self.injection_error("Request %s was injected but could not be approved" % ( injected_requests ), mcm_rs)
-
                 objects_to_invalidate = [
                     {"_id": inv_req, "object": inv_req, "type": "request", "status": "new", "prepid": self.prepid}
-                    for inv_req in injected_requests if inv_req not in approved_requests]
+                    for inv_req in injected_requests if inv_req not in injected_requests]
                 if objects_to_invalidate:
                     self.logger.error("Some requests %s need to be invalidated" % objects_to_invalidate)
                     invalidation = database('invalidation')
@@ -626,7 +615,7 @@ class ChainRequestInjector(Handler):
                 for mcm_r in mcm_rs:
                     if mcm_r.get_attribute('prepid') in once: continue
                     once.add( mcm_r.get_attribute('prepid') )
-                    added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in approved_requests]
+                    added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in injected_requests]
                     added_requests.extend( added )
 
                 ##edit the batch object
@@ -638,7 +627,7 @@ class ChainRequestInjector(Handler):
                     bat.reload()
 
                 ## reload the content of all requests as they might have changed already
-                added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in approved_requests]
+                added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name }} for app_req in injected_requests]
                 seen=set()
                 for cr in mcm_crs:
                     mcm_cr = chained_request(cr)

@@ -12,6 +12,22 @@ class request_to_wmcontrol:
     def __init__(self):
         pass
 
+    def announce_workflow( self, workflows ):
+        l_type = locator()
+
+        command = ''
+        command += 'cd %s\n' % ( l_type.workLocation() )
+        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+        command += 'wmgo.py '+' '.join( workflows )+'\n'
+        ssh_exec = ssh_executor(server='cms-pdmv-op.cern.ch')
+        _, stdout, stderr = ssh_exec.execute( command )
+        if not stdout and not stderr:
+            self.logger.error('SSH error while changing status of'+' '.join(workflows ))
+            return False
+
+        return True
+
     def get_command(self, mcm_r, batchNumber, to_execute=False):
         command = ''
 
