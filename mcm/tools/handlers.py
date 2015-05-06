@@ -112,14 +112,16 @@ class ConfigMakerAndUploader(Handler):
 
     def internal_run(self):
         if not self.lock.acquire(blocking=False):
+            self.logger.error("Could not acquire lock for ConfigMakerAndUploader. prepid %s" % (self.prepid))
             return False
         try:
+            self.logger.error("Acquired lock for ConfigMakerAndUploader. prepid %s" %(self.prepid))
             req = request(self.request_db.get(self.prepid))
             ret = req.prepare_and_upload_config()
             return True if ret else False
         finally:
+            self.logger.error("Releasing a lock for ConfigMakerAndUploader. prepid %s" %(self.prepid))
             self.lock.release()
-
 
 class RuntestGenvalid(Handler):
     """
@@ -493,6 +495,7 @@ class RequestInjector(Handler):
                 handler=self.prepid)
 
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
+            self.logger.error("Acquire lock for RequestInjector. prepid %s" % (self.prepid))
             if not self.lock.acquire(blocking=False):
                 return {"prepid": self.prepid, "results": False,
                         "message": "The request with name {0} is being handled already".format(self.prepid)}
@@ -511,7 +514,7 @@ class ChainRequestInjector(Handler):
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
         self.lock = kwargs["lock"]
-        self.prepid = kwargs["prepid"] 
+        self.prepid = kwargs["prepid"]
         self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
 
     def injection_error(self, message, rs):
@@ -535,8 +538,10 @@ class ChainRequestInjector(Handler):
 
     def internal_run(self):
         if not self.lock.acquire(blocking=False):
+            self.logger.error("Could not acquire lock for ChainRequestInjector. prepid %s" % (self.prepid))
             return False
         try:
+            self.logger.error("Acquired lock for ChainRequestInjector. prepid %s" % (self.prepid))
             crdb = database('chained_requests')
             rdb = database('requests')
             if not crdb.document_exists( self.prepid ):
@@ -557,11 +562,12 @@ class ChainRequestInjector(Handler):
             mcm_rs=[]
             ## upload all config files to config cache, with "configuration economy" already implemented
             for cr in mcm_crs:
+
                 mcm_cr = chained_request(cr)
                 chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
                 for rn in chain:
                     mcm_rs.append( request( rdb.get( rn )))
-                
+
                     if self.check_approval and mcm_rs[-1].get_attribute('approval')!='submit':
                         self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
                                 rn,
@@ -578,8 +584,8 @@ class ChainRequestInjector(Handler):
                                 ))
                         return False
                     uploader = ConfigMakerAndUploader(prepid=rn, lock = locker.lock(rn))
-                    uploader.run()
-            
+                    uploader.internal_run()
+
             mcm_r = mcm_rs[-1]
             batch_name = BatchPrepId().next_batch_id( batch_type , create_batch=True)
             semaphore_events.increment(batch_name)
@@ -619,7 +625,6 @@ class ChainRequestInjector(Handler):
                         self.logger.error('Could not save the invalidations {0}'.format(objects_to_invalidate))
                     return False
 
-                
                 # what gets printed into the batch object
                 added_requests = []
                 once=set()
@@ -631,8 +636,8 @@ class ChainRequestInjector(Handler):
 
                 ##edit the batch object
                 with locker.lock(batch_name):
-                    bdb = database('batches') 
-                    bat = batch(bdb.get(batch_name))      
+                    bdb = database('batches')
+                    bat = batch(bdb.get(batch_name))
                     bat.add_requests(added_requests)
                     bat.update_history({'action': 'updated', 'step': task_name })
                     bat.reload()
@@ -648,27 +653,27 @@ class ChainRequestInjector(Handler):
                         if rn in seen: continue # don't do it twice
                         seen.add(rn)
                         mcm_r = request( rdb.get( rn ) )
-                        message+=mcm_r.textified()  
+                        message+=mcm_r.textified()
                         message+="\n\n"
                         mcm_r.set_attribute('reqmgr_name', added )
-                        mcm_r.update_history({'action': 'inject','step' : batch_name}) 
-                        if not self.check_approval: 
-                            mcm_r.set_attribute('approval', 'submit')        
-                        mcm_r.set_status(with_notification=False)           
+                        mcm_r.update_history({'action': 'inject','step' : batch_name})
+                        if not self.check_approval:
+                            mcm_r.set_attribute('approval', 'submit')
+                        mcm_r.set_status(with_notification=False)
                         mcm_r.reload()
                         mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
                     ## re-get the object
                     mcm_cr = chained_request( crdb.get(cr['prepid']))
                     #take care of changes to the chain
-                    mcm_cr.update_history({'action' : 'inject','step': batch_name}) 
+                    mcm_cr.update_history({'action' : 'inject','step': batch_name})
                     mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain'))-1)
                     mcm_cr.set_attribute('status','processing')
                     mcm_cr.notify('Injection succeeded for %s'% mcm_cr.get_attribute('prepid'),
                                   message)
                     mcm_cr.reload()
-                
+
                 return True
-        except Exception as e: 
+        except Exception as e:
             self.injection_error("Error with injecting chains for %s :\n %s"%( self.prepid, traceback.format_exc()),[])
 
         finally:
