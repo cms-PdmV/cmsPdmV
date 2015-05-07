@@ -604,7 +604,7 @@ class ListReleases(RESTResource):
 class GetLocksInfo(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
-        pass
+
     def GET(self, *args):
         from tools.locker import locker, semaphore_thread_number
         data = locker.lock_dictionary
