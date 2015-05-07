@@ -1538,7 +1538,6 @@ done
                     'name': stats_r['pdmv_request_name']})
 
             changes_happen = True
-
         if len(mcm_rr):
             tiers_expected = self.get_tiers() 
             collected = self.collect_outputs( mcm_rr , tiers_expected )
@@ -1619,6 +1618,7 @@ done
             not_good.update({'message': 'Not implemented yet to inspect a request in %s status and approval %s' % (
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
+
     def collect_outputs(self, mcm_rr , tiers_expected ):
         procstrings_expected = self.get_processing_strings()
         collected = []
@@ -1633,7 +1633,7 @@ done
                         (_, gdsn, gproc, gtier) = goodds.split('/')
                         if dsn != gdsn or not set(
                             gproc.split("-")).issubset(proc.split("-")):
-                            
+
                             goodone = False #due to #724 we check if expected
                                                         #process_string is subset of generated ones
             if goodone:
@@ -1643,7 +1643,6 @@ done
                 those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
                 ## only add those that are not already there
                 collected.extend(filter(lambda dn: not dn in collected, those))
-                
         ## order the collected dataset in order of expected tiers
         collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
         return collected
