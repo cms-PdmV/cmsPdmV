@@ -2,7 +2,6 @@
 
 from json_base import json_base
 
-
 class flow(json_base):
 
     _json_base__schema = {
@@ -32,43 +31,42 @@ class flow(json_base):
 
     def add_allowed_campaign(self,  cid):
         self.logger.log('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
-        
-        # import database connector
+
         try:
             from couchdb_layer.mcm_database import database
         except ImportError as ex:
             self.logger.error('Could not import database connector class. Reason: %s' % (ex), level='critical')
             return False
-        
+
         # initialize database connector
         try:
             cdb = database('campaigns')
         except database.DatabaseAccessError as ex:
             return False
-            
+
         # check campaign exists
         if not cdb.document_exists(cid):
             raise self.CampaignDoesNotExistException(cid)
-        
+
         # check for duplicate
         allowed = self.get_attribute('allowed_campaigns')
         if cid in allowed:
             raise self.DuplicateCampaignEntry(cid)
-        
+
         # append and make persistent
         allowed.append(cid)
         self.set_attribute('allowed_campaigns',  allowed)
 
         # update history
         self.update_history({'action':'add allowed campaign', 'step':cid})
-        
+
         return True
-        
+
     def remove_allowed_campaign(self,  cid):
         allowed = self.get_attribute('allowed_campaigns')
         if cid not in allowed:
             raise self.CampaignDoesNotExistException(cid)
-        
+
         # remove it and make persistent
         allowed.remove(cid)
         self.set_attribute('allowed_campaigns',  allowed)

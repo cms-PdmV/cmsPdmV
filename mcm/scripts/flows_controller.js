@@ -80,7 +80,7 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.selectedCls = function(column) {
     return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
   };
-    
+
   $scope.changeSorting = function(column) {
     var sort = $scope.sort;
     if (sort.column == column) {
@@ -161,9 +161,15 @@ var ModalDemoCtrl = function ($scope, $http, $modal) {
         console.log(flowId);
         $http({method: 'PUT', url:'restapi/flows/save/', data:{prepid: flowId}})
             .success(function(data, status){
-          $scope.setSuccess(status);
+              if (data["results"] == true)
+              {
+                $scope.setSuccess(status);
+              }
+              else{
+                $scope.setFailure(status);
+              }
             }).error(function(data,status){
-          $scope.setFailure(status);
+              $scope.setFailure(status);
          });
     })
   };
@@ -190,7 +196,7 @@ var CreateFlowModalInstance = function($scope, $modalInstance) {
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <div ng-hide="show_history">'+
     '    <input type="button" value="Show" ng-click="show_history=true;">'+
