@@ -293,8 +293,7 @@ class ClearInvalidations(RESTResource):
 class AcknowledgeInvalidation(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
-        ## to be made a setting for editing on the fly ?
-        self.access_user = ['vlimant','mcremone']
+        self.access_user = settings().get_value('allowed_to_acknowledge')
         self.__doc__ = "Acknowledge the invalidation of a given object. Restricted to %s" % (
                 ','.join(self.acces_user))
 
