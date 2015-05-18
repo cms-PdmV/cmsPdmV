@@ -292,12 +292,15 @@ class ClearInvalidations(RESTResource):
 
 class AcknowledgeInvalidation(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.user
+        self.access_limit = access_rights.administrator
         self.access_user = settings().get_value('allowed_to_acknowledge')
         self.__doc__ = "Acknowledge the invalidation of a given object. Restricted to %s" % (
                 ','.join(self.access_user))
 
     def GET(self, *args):
+        """
+        Acknowledge the invalidation. By just changeing its status
+        """
         idb = database('invalidations')
         if not len(args):
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
