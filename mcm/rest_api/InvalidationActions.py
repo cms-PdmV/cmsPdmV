@@ -294,8 +294,6 @@ class AcknowledgeInvalidation(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
         self.access_user = settings().get_value('allowed_to_acknowledge')
-        self.__doc__ = "Acknowledge the invalidation of a given object. Restricted to %s" % (
-                ','.join(self.access_user))
 
     def GET(self, *args):
         """
