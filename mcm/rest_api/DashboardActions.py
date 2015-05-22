@@ -606,7 +606,16 @@ class GetLocksInfo(RESTResource):
         self.access_limit = access_rights.administrator
 
     def GET(self, *args):
-        from tools.locker import locker, semaphore_thread_number
-        data = locker.lock_dictionary
-        return dumps({"locks_len": len(data), "locks_data": str(data),
-                "bounded_semaphore" : semaphore_thread_number._current})
+        from tools.locker import locker
+        data = {"RLocks" : locker.lock_dictionary, "Locks" : locker.thread_lock_dictionary}
+        return dumps({"locks_len": len(data), "locks_data": str(data)})
+
+class GetQueueInfo(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+
+    def GET(self):
+        from tools.handlers import submit_pool, validation_pool
+        data = {"validation queue len" : validation_pool.get_queue_length(),
+                "submission queue len" : submit_pool.get_queue_length()}
+        return dumps(data)
