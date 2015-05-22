@@ -1399,7 +1399,7 @@ done
         self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
-            refresh=False):
+            refresh=False, forced=False):
 
         #existing rwma
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name',
@@ -1530,7 +1530,6 @@ done
                 if (earliest_time and 'pdmv_submission_time' in stats_r and
                         stats_r['pdmv_submission_time'] and
                         int(stats_r['pdmv_submission_time']) < int(earliest_time)):
-
                     continue
 
             mcm_content = transfer(stats_r, keys_to_import)
@@ -1540,7 +1539,7 @@ done
             changes_happen = True
         if len(mcm_rr):
             tiers_expected = self.get_tiers() 
-            collected = self.collect_outputs( mcm_rr , tiers_expected )
+            collected = self.collect_outputs(mcm_rr , tiers_expected, skip_check=forced)
             completed = 0
             if len(collected):
                 (valid,completed) = self.collect_status_and_completed_events( mcm_rr, collected[0])
@@ -1559,14 +1558,11 @@ done
         if (len(mcm_rr) and 'content' in mcm_rr[-1] and
                 'pdmv_present_priority' in mcm_rr[-1]['content'] and
                 mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
-
             self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
             self.update_history({'action' : 'wm priority',
                     'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
-
             changes_happen=True
-
-        return changes_happen
+	return changes_happen
 
     def inspect(self):
         ### this will look for corresponding wm requests, add them,
@@ -1619,7 +1615,7 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr , tiers_expected ):
+    def collect_outputs(self, mcm_rr , tiers_expected, skip_check=False):
         procstrings_expected = self.get_processing_strings()
         collected = []
         for wma in reversed(mcm_rr):
@@ -1640,7 +1636,8 @@ done
                 ## reduce to what was expected of it
                 those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                 ## reduce to what processing string were expected
-                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
+		if not skip_check:
+        	    those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
                 ## only add those that are not already there
                 collected.extend(filter(lambda dn: not dn in collected, those))
         ## order the collected dataset in order of expected tiers
