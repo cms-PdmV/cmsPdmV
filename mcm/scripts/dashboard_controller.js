@@ -62,7 +62,7 @@ function resultsCtrl($scope, $http, $location, $window){
         });
         return output_array
     }
-    
+
     $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>";
     $scope.get_stats = function(query, add){
         $scope.loadingData = true;
@@ -128,7 +128,19 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.update["success"] = false;
             $scope.update["fail"] = true;
             $scope.update["status_code"] = data.status;
-    })};
+        });
+        var promise2 = $http.get("restapi/dashboard/queue_info");
+        promise2.then(function(data, status){
+            $scope.update["success"] = true;
+            $scope.update["fail"] = false;
+            $scope.update["status_code"] = data.status;
+            $scope.queue_info = data.data;
+        }, function(data, status){
+            $scope.update["success"] = false;
+            $scope.update["fail"] = true;
+            $scope.update["status_code"] = data.status;
+        });
+    };
 
     $scope.getLogData = function(log_name){
         var lines = $scope.logs.lines>100?-1:$scope.logs.lines;

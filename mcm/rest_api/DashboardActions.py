@@ -612,10 +612,10 @@ class GetLocksInfo(RESTResource):
 
 class GetQueueInfo(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.user
 
     def GET(self):
         from tools.handlers import submit_pool, validation_pool
-        data = {"validation queue len" : validation_pool.get_queue_length(),
-                "submission queue len" : submit_pool.get_queue_length()}
+        data = {"validation_len" : validation_pool.get_queue_length(),
+                "submission_len" : submit_pool.get_queue_length()}
         return dumps(data)
