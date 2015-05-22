@@ -25,7 +25,6 @@ from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
 
-
 class request(json_base):
     class DuplicateApprovalStep(Exception):
         def __init__(self, approval=None):
@@ -425,10 +424,16 @@ class request(json_base):
             do_runtest = False
 
         if do_runtest:
-            from tools.handlers import RuntestGenvalid
+            from tools.handlers import RuntestGenvalid, validation_pool
+            self.logger.log('Putting request %s: to validation queue' % (
+                    self.get_attribute('prepid')))
+
             threaded_test = RuntestGenvalid(rid=str(self.get_attribute('prepid')))
-            ## this will set the status on completion, or reset the request.
-            threaded_test.start()
+            validation_pool.add_task(threaded_test.internal_run)
+
+            self.logger.log('Request was put to queue. Queue len: %s' % (
+                    validation_pool.tasks.qsize()))
+
         else:
             self.set_status()
 
@@ -572,23 +577,38 @@ class request(json_base):
         sync_submission = True
         if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
-            from tools.handlers import RequestInjector
+            from tools.handlers import RequestInjector, submit_pool
+
+            _q_lock = locker.thread_lock(self.get_attribute('prepid'))
+            if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
+                return {"prepid": self.get_attribute('prepid'), "results": False,
+                        "message": "The request {0} request is being handled already".format(
+                                self.get_attribute('prepid'))}
 
             threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'),
-                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
+                    queue_lock=_q_lock)
 
-            threaded_submission.start()
+            submit_pool.add_task(threaded_submission.internal_run)
         else:
             #### not settting any status forward
             ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
 
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
-                from tools.handlers import ChainRequestInjector
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
-                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+                from tools.handlers import ChainRequestInjector, submit_pool
 
-                threaded_submission.start()
+                _q_lock = locker.thread_lock(self.get_attribute('prepid'))
+                if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
+                    return {"prepid": self.get_attribute('prepid'), "results": False,
+                            "message": "The request {0} request is being handled already".format(
+                                    self.get_attribute('prepid'))}
+
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
+                        queue_lock=_q_lock)
+
+                submit_pool.add_task(threaded_submission.internal_run)
             pass
 
     def is_action_root(self):

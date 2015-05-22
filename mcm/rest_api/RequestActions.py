@@ -20,7 +20,7 @@ from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
 from tools.settings import settings
-from tools.handlers import RequestInjector
+from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 
@@ -986,7 +986,7 @@ class TestRequest(RESTResource):
         self.counter = 0
 
     def GET(self, *args):
-        """ 
+        """
         this is test for admins only
         """
 
@@ -994,17 +994,17 @@ class TestRequest(RESTResource):
             return dumps({"results": 'Error: No arguments were given'})
 
         rdb = database('requests')
-        
+
         mcm_r = request( rdb.get(args[0]))
-        
-        outs= mcm_r.get_outputs()
+
+        outs = mcm_r.get_outputs()
 
         return dumps(outs)
 
 class UploadConfig(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
-        
+
     def GET(self, *args, **kwargs):
         """
         Upload the configuration
@@ -1013,13 +1013,13 @@ class UploadConfig(RESTResource):
         server = 'cms-pdmv-op.cern.ch'
         if "server" in kwargs:
             server = kwargs["server"]
-        from tools.handlers import ConfigMakerAndUploader
+        from tools.handlers import ConfigMakerAndUploader, submit_pool
         from tools.locker import locker
-        load = ConfigMakerAndUploader( prepid = args[0] , server = server, lock = locker.lock( args[0] ))
-        load.start()
+        load = ConfigMakerAndUploader(prepid=args[0], server=server, lock=locker.lock(args[0]))
+        submit_pool.add_task(load.internal_run)
 
 class InjectRequest(RESTResource):
-    
+
     def __init__(self):
         # set user access to administrator
         self.db_name = 'requests'
@@ -1037,9 +1037,17 @@ class InjectRequest(RESTResource):
         res = []
         for r_id in ids:
             self.logger.log('Forking the injection of request {0} '.format(r_id))
-            RequestInjector(prepid=r_id, lock=locker.lock(r_id)).start()
+            _q_lock = locker.thread_lock(r_id)
+            if not locker.thread_acquire(r_id, blocking=False):
+                res.append({"prepid": r_id, "results": False,
+                        "message": "The request {0} request is being handled already".format(r_id)})
+                continue
+
+            _submit = RequestInjector(prepid=r_id, lock=locker.lock(r_id), queue_lock=_q_lock)
+            submit_pool.add_task(_submit.internal_run)
             res.append({"prepid": r_id, "results": True,
-                        "message": "The request {0} will be forked unless same request is being handled already" .format(r_id)})
+                        "message": "The request {0} will be forked unless same request is being handled already".format(r_id)})
+
         return dumps(res)
 
 
