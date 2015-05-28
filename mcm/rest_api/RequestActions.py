@@ -912,9 +912,9 @@ class InspectStatus(RESTResource):
             return res[0]
 
 class UpdateStats(RESTResource):
-    def __init__(self):  
+    def __init__(self):
         self.access_limit = access_rights.administrator
-    def GET(self, *args): 
+    def GET(self, *args):
         """
         Triggers the forced update of the stats page for the given request id
         """
@@ -922,22 +922,30 @@ class UpdateStats(RESTResource):
             return dumps({"results" : False, "message" : "no argument was provided"})
         rid = args[0]
         refresh_stats = True
-        if len(args) == 2:
+        if len(args) > 1:
             if args[1] == "no_refresh":
 		refresh_stats = False
             else:
                 return dumps({"results" : False, "message" : "2nd argument is unknown"})
 
+        # set forcing argument
+        force = False
+        if len(args) == 3 and args[2] == 'force':
+            force = True
+
         rdb = database('requests')
         if not rdb.document_exists(rid):
-            return dumps({"prepid" : rid, "results": False, "message" : '%s does not exist' % rid})
-        mcm_r = request(rdb.get(rid ))
-        if mcm_r.get_stats(limit_to_set=0.0,refresh=refresh_stats):
+            return dumps({"prepid" : rid, "results": False,
+                    "message" : '%s does not exist' % rid})
+
+        mcm_r = request(rdb.get(rid))
+        if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
             mcm_r.reload()
             return dumps({"prepid" : rid, "results": True})
         else:
-            return dumps({"prepid" : rid, "results": False, "message" : "no apparent changes"})
-        
+            return dumps({"prepid" : rid, "results": False,
+                    "message" : "no apparent changes"})
+
 class SetStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator

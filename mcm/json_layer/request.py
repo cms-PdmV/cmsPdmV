@@ -1401,7 +1401,7 @@ done
         self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
-            refresh=False):
+            refresh=False, forced=False):
 
         #existing rwma
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name',
@@ -1543,7 +1543,7 @@ done
             changes_happen = True
         if len(mcm_rr):
             tiers_expected = self.get_tiers()
-            collected = self.collect_outputs(mcm_rr, tiers_expected)
+            collected = self.collect_outputs(mcm_rr, tiers_expected, skip_check=forced)
             completed = 0
             if len(collected):
                 (valid,completed) = self.collect_status_and_completed_events(mcm_rr, collected[0])
@@ -1622,7 +1622,7 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr , tiers_expected ):
+    def collect_outputs(self, mcm_rr, tiers_expected, skip_check=False):
         procstrings_expected = self.get_processing_strings()
         collected = []
         for wma in reversed(mcm_rr):
@@ -1643,11 +1643,16 @@ done
                 ## reduce to what was expected of it
                 those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                 ## reduce to what processing string were expected
-                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
+                if not skip_check:
+                    those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected,
+                            those)
+
                 ## only add those that are not already there
                 collected.extend(filter(lambda dn: not dn in collected, those))
         ## order the collected dataset in order of expected tiers
-        collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]),
+                                                        tiers_expected.index(d2.split('/')[-1])))
+
         return collected
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
