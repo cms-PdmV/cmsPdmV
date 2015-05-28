@@ -279,7 +279,7 @@
               </div>
               <div ng-switch-when="Name of fragment">
                 <div ng-show="data[value.db_name];">
-                  <a ng-href='https://raw.github.com/cms-sw/genproductions/{{data["fragment_tag"]}}/{{data[value.db_name].replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
+                  <a ng-href='https://raw.githubusercontent.com/cms-sw/genproductions/{{data["fragment_tag"]}}/python/{{data[value.db_name].replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
                   <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github repo</a>
                   <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["fragment_tag"];'>, old file in cvs</a>
                   <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/' target="_self" ng-hide='data["fragment_tag"];'>,cvs repo </a>
