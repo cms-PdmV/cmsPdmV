@@ -1101,6 +1101,8 @@ class GetDefaultGenParams(RESTResource):
 
 
 class NotifyUser(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
 
     def PUT(self):
         """
@@ -1116,23 +1118,29 @@ class NotifyUser(RESTResource):
 
         for pid in pids:
             if not rdb.document_exists(pid):
-                results.append({"prepid": pid, "results": False, "message": "%s does not exist" % pid})
+                results.append({"prepid": pid, "results": False,
+                        "message": "%s does not exist" % pid})
+
                 return dumps(results)
 
             req = request(rdb.get(pid))
             # notify the actors of the request
-            
+
             req.notify('Communication about request %s' % pid,
-                       '%s \n\n %srequests?prepid=%s\n'%(message, 
-                                                       l_type.baseurl(), 
-                                                       pid),accumulate=True)
+                       '%s \n\n %srequests?prepid=%s\n' % (message,
+                                l_type.baseurl(), pid), accumulate=True)
+
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
             if not rdb.save(req.json()):
-                results.append({"prepid": pid, "results": False, "message": "Could not save %s" % pid})
+                results.append({"prepid": pid, "results": False,
+                        "message": "Could not save %s" % pid})
+
                 return dumps(results)
 
-            results.append({"prepid": pid, "results": True, "message": "Notification send for %s" % pid})
+            results.append({"prepid": pid, "results": True,
+                    "message": "Notification send for %s" % pid})
+
         return dumps(results)
 
 
