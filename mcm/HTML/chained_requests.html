@@ -116,7 +116,7 @@
                   <a ng-click='isSureModal("force flow", data.prepid)' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);">
                     <i class="icon-fast-forward"></i>
                   </a>
-                  <a ng-click='isSureModal("reserve", data.prepid)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);">
+                  <a ng-click='dropdownModal(data.prepid)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);">
                     <i class="icon-indent-right"></i>
                   </a>
                   <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
@@ -250,5 +250,16 @@
       </div>
     </div>
   </span>
+<!-- MODAL-->
+<script type="text/ng-template" id="dropdownModal.html"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Are you sure to {{toggle_prepid}}?</h4>
+  </div>  <!--end of modal header-->
+  <div class="modal-footer" style="background-color:{{modal_color}}">
+    <button class="btn btn-warning" ng-click="yes()">Yes</button>
+    <button class="btn btn-success" ng-click="no()">No</button>
+  </div> <!--end of modal footer-->
+</script>
+<!-- END of MODAL-->
   </body>
 </html>
