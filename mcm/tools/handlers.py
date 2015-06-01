@@ -531,7 +531,7 @@ class RequestInjector(Handler):
                             "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
                 __ret = self.submitter.internal_run()
                 self.logger.inject('Request submitter returned: %s' % (__ret),
-                        level='info',handler=self.prepid)
+                        level='info', handler=self.prepid)
 
             finally:
                 self.lock.release()

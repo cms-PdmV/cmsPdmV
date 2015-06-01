@@ -250,9 +250,14 @@ class logger:
                 msg = msg.replace('\n', '<breakline>')
                 getattr(self.inject_logger, level)(msg)
                 try:
-                    self.inject_logger.removeHandler(self.inject_handlers[handler])
+                    #self.inject_logger.removeHandler(self.inject_handlers[handler])
+                    ## unefficient way to create/remove file handlers everytime we log
+                    ## but we dont leave unneeded filehandlers for each submitted prepid
+                    ## when max for system is 1024 ->
+                    ## logging should be rewritten not to use
+                    ## lame owerriding classes but main logging module directly
+                    self.remove_inject_handler(handler)
                 except:
                     pass
-
 
 logfactory = logger("mcm")
