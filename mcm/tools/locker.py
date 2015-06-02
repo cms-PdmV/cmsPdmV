@@ -1,4 +1,4 @@
-from threading import RLock, Event
+from threading import RLock, Event, Lock
 from tools.logger import logfactory
 from collections import defaultdict
 
@@ -17,6 +17,8 @@ class Locker(object):
     # using reentrant lock so other threads don't release it
     internal_lock = RLock()
     lock_dictionary = defaultdict(RLock)
+    ## we also have a dict of Lock which can be release from different threads
+    thread_lock_dictionary = defaultdict(Lock)
     logger = logfactory
 
     def lock(self, lock_id):
@@ -39,8 +41,36 @@ class Locker(object):
             self.logger.log("Releasing lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
-locker = Locker()
+    ### Thread sharable lock methods: can be released by different threads
+    ### mostly needed for submission time locks before putting to Queue
+    def thread_lock(self, lock_id):
+        """
+        Create and return Lock object to be shared between threads
+        """
+        with self.internal_lock:
+            lock = self.thread_lock_dictionary[lock_id]
+        return lock
 
+    def thread_acquire(self, lock_id, blocking=True):
+        """
+        Acquire a Lock in our  global locks dictionary
+        """
+        with self.internal_lock:
+            lock = self.thread_lock_dictionary[lock_id]
+            self.logger.log("Acquiring simple lock %s for lock_id %s" % (lock, lock_id))
+        return lock.acquire(blocking)
+
+    def thread_release(self, lock_id):
+        """
+        Releasing a lock but also keeping lock object in dict.
+        ???? maybe this should be fixed to not save unneeded not used lock objects
+        """
+        with self.internal_lock:
+            lock = self.thread_lock_dictionary[lock_id]
+            self.logger.log("Releasing simple lock %s for lock_id %s" % (lock, lock_id))
+        return lock.release()
+
+locker = Locker()
 
 class SemaphoreEvents(object):
     """
@@ -85,60 +115,3 @@ class SemaphoreEvents(object):
                 return True
 
 semaphore_events = SemaphoreEvents()
-
-
-from tools.settings import settings
-class BoundedSemaphoreChangeableMax(object):
-    """
-    Class works like bounded semaphore, but the max value can be changed - either directly or the max can be taken
-    from function specified instead of max_val parameter (then the max property setter won't make difference).
-    """
-
-    def __init__(self, max_val = 1, max_func = None):
-        self._max = max_val
-        self._max_func = max_func
-        self._current = 0
-        self._lock = RLock()
-        self._event = Event()
-        self.logger = logfactory
-
-
-    @property
-    def max(self):
-        with self._lock:
-            return self._max_func() if self._max_func else self._max
-
-    @max.setter
-    def max(self, value):
-        with self._lock:
-            self._max = value
-
-    def acquire(self, blocking = True):
-        while True:
-            with self._lock:
-                current_max = self.max
-                if self._current < current_max:
-                    self._current += 1
-                    self.logger.log("Bounded semaphore's value incremented to: {0} , maximum: {1}".format(self._current, current_max))
-                    if self._current == current_max:
-                        self._event.clear()
-                    return True
-                if not blocking:
-                    return False
-            self._event.wait()
-
-    def release(self):
-        with self._lock:
-            self._current -= 1
-            self.logger.log("Bounded semaphore's value decremented to: {0} , maximum: {1}".format(self._current, self.max))
-            if self._current < 0:
-                raise ValueError("Semaphore released too many times!")
-            self._event.set()
-
-    def __enter__(self):
-        self.acquire()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.release()
-
-semaphore_thread_number = BoundedSemaphoreChangeableMax(max_func = lambda : settings().get_value('max_number_of_threads'))

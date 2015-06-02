@@ -11,9 +11,9 @@ from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
-from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations
+from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
@@ -318,6 +318,7 @@ root.restapi.invalidations.get = GetInvalidation()
 root.restapi.invalidations.delete = DeleteInvalidation()
 root.restapi.invalidations.announce = AnnounceInvalidations()
 root.restapi.invalidations.clear = ClearInvalidations()
+root.restapi.invalidations.acknowledge = AcknowledgeInvalidation()
 
 # REST news Actions
 root.restapi.news.get = GetSingleNew()
@@ -335,6 +336,8 @@ root.restapi.dashboard.get_verbosities = GetVerbosities()
 root.restapi.dashboard.get_connection = TestConnection()
 root.restapi.dashboard.get_releases = ListReleases()
 root.restapi.dashboard.lock_info = GetLocksInfo()
+root.restapi.dashboard.queue_info = GetQueueInfo()
+
 # REST mccms Actions
 root.restapi.mccms.get = GetMccm()
 root.restapi.mccms.update = UpdateMccm()

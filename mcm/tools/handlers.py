@@ -1,10 +1,13 @@
 import os
-from threading import Thread, Lock
 import time
 import traceback
+from random import randint
+from itertools import izip
+from threading import Thread, Lock
+from Queue import Queue
+
 from tools.batch_control import batch_control
 from tools.installer import installer
-from tools.locker import semaphore_thread_number
 from tools.logger import logfactory
 from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
@@ -16,92 +19,77 @@ from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
-from itertools import izip
 
 
-class PoolOfHandlers(Thread):
-    """
-    Class used for instantiating and taking care of running a number of handlers in parallel. It provides them
-    with lock for protection of concurrently-vulnerable parts of program (e.g. database access).
-    """
-
-    logger = logfactory
-
-    def __init__(self, handler_class, arguments):
-        """
-        handler_class is used to instantiate the objects.
-
-        arguments parameter is a list of arguments (dictionnaries) passed to the handler_class' constructor method.
-        """
+###SETTING THREAD POOL###
+class Worker(Thread):
+    """Thread executing tasks from a given queue"""
+    def __init__(self, tasks, name):
         Thread.__init__(self)
-        try:
-            self._handlers_list = []
-            self._lock = Lock()
-            for arg in arguments:
-                if not isinstance(arg, dict):  # if arg is e.g. list
-                    raise TypeError("Arguments should be a list of dictionaries")
-                arg['lock'] = self._lock
-                self._handlers_list.append(handler_class(**arg))
-            self.logger.log("Instantiated %s handlers %s in pool" % (len(arguments),
-                    handler_class.__name__))
-
-        except:
-            self.logger.error('Failed to instantiate handlers \n %s' % (
-                    traceback.format_exc()))
+        self.tasks = tasks
+        self.daemon = True
+        self.worker_name = name
+        self.logger = logfactory
+        self.start()
 
     def run(self):
-        """
-        Starts the handlers from pool.
-        """
-        self.logger.log("Starting %s handlers" % (len(self._handlers_list)))
-        for handler_object in self._handlers_list:
-            handler_object.start()
-        for handler_object in self._handlers_list:
-            handler_object.join()
+        while True:
+            self.logger.log("Worker %s trying to get work" % (self.worker_name))
+            func, args, kargs = self.tasks.get()
+            try:
+                self.logger.log("Worker %s acquired task: %s" % (self.worker_name, func))
+                func(*args, **kargs)
+            except Exception, e:
+                self.logger.log("Exception in %s thread: %s Traceback:\n%s" % (
+                        self.worker_name, str(e), traceback.format_exc()))
+                self.tasks.task_done() ## do we want to mark task_done if it crashed?
+            self.tasks.task_done()
 
+class ThreadPool:
+    """Pool of threads consuming tasks from a queue"""
+    def __init__(self, name, max_workers):
+        self.tasks = Queue(0)
+        self.name = name
+        self.worker_number = max_workers
+        self.logger = logfactory
+        worker_name_pool = ["Antanas", "Adrian", "Giovanni", "Gaelle", "Phat"]
 
-class Handler(Thread):
+        for i in range(self.worker_number): #number should be taken from DB
+            _name = "%s-%s" % (worker_name_pool[randint(0,4)], i)
+            Worker(self.tasks, _name) ##number of concurrent worker threads
+
+    def add_task(self, func, *args, **kargs):
+        """Add a task to the queue"""
+        ##here  should be lock to put a task and after finish release it
+        self.logger.log("Adding a task: %s to the Queue" % (func))
+        self.tasks.put((func, args, kargs))
+
+    def wait_completion(self):
+        """Wait for completion of all the tasks in the queue"""
+        self.tasks.join()
+
+    def get_queue_length(self):
+        """Return the number of tasks waiting in the Queue"""
+        return self.tasks.qsize()
+
+###END OF THREAD POOL##
+
+submit_pool = ThreadPool("submission", settings().get_value('threads_num_submission'))
+validation_pool = ThreadPool("validation", settings().get_value('threads_num_validation'))
+
+class Handler():
     """
-    A class which threads a list of operations. Override internal_run for main processing and rollback if you want to
-    have a rollback option in case of process failure.
+    A class which manages locks for the resources.
     """
     logger = logfactory
     hname = '' # handler's name
     lock = None
-    thread_semaphore = semaphore_thread_number
 
     def __init__(self, **kwargs):
-        Thread.__init__(self)
-        self.res = []
         if 'lock' not in kwargs:
             self.lock = Lock()
         else:
             self.lock = kwargs['lock']
-
-    def run(self): ## creates a new Thread and increments semaphore's value
-        """
-        Should not be overridden! Use internal_run instead.
-        """
-        with semaphore_thread_number:
-            try:
-                self.internal_run()
-                # set the status, save the request, notify ...
-                pass
-            except:
-                ## catch anything that comes this way and handle it
-                # logging, rolling back the request, notifying, ...
-                self.rollback()
-                pass
-
-    def internal_run(self): ## runs in same thread. not increasing boundedSemaphore
-        pass
-
-    def rollback(self):
-        pass
-
-    def status(self):
-        return self.res
-
 
 class ConfigMakerAndUploader(Handler):
     """
@@ -153,10 +141,8 @@ class RuntestGenvalid(Handler):
             timeout = None
             with open(test_script, 'w') as there:
                 ## one has to wait just a bit, so that the approval change operates, and the get retrieves the latest greatest _rev number
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 time.sleep(10)
                 mcm_r = request(self.db.get(self.rid))
-                #self.logger.error('Revision %s'%( self.db.get(self.rid)['_rev']))
                 ## the following does change something on the request object, to be propagated in case of success
                 there.write(mcm_r.get_setup_file(location.location(),
                         run=True, do_valid=True))
@@ -264,7 +250,6 @@ class RunChainValid(Handler):
                         mcm_r.get_attribute('prepid')), message)
 
                 continue
-
             notify = True
             if notify_one and notify_one != rid:
                 notify = False
@@ -273,6 +258,9 @@ class RunChainValid(Handler):
 
     def internal_run(self):
         if not self.lock.acquire(blocking=False):
+            self.logger.error("Couldnt acquire lock for chain validation. prepid %s" % (
+                self.crid))
+
             return False
         from tools.installer import installer
         from tools.batch_control import batch_control
@@ -364,11 +352,15 @@ class RunChainValid(Handler):
             for rid in self.requests_ids:
                 s_label = 'chainvalid-%s' % rid
                 semaphore_events.decrement(s_label)
+
             mess = 'We have been taken out of run_safe of runtest_genvalid for %s because \n %s \n During an un-excepted exception. Please contact support.' % (
                     self.crid, traceback.format_exc())
 
             self.logger.error(mess)
         finally:
+            self.logger.error("Releasing lock for chain validation. prepid %s" % (
+                self.crid))
+
             self.lock.release()
             if location:
                 location.close()
@@ -518,10 +510,11 @@ class RequestSubmitter(Handler):
 class RequestInjector(Handler):
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
-        self.lock = kwargs["lock"]
+        self.lock = kwargs["lock"] ##internal process lock for recources
         self.prepid = kwargs["prepid"]
         self.uploader = ConfigMakerAndUploader(**kwargs)
         self.submitter = RequestSubmitter(**kwargs)
+        self.queue_lock = kwargs["queue_lock"] ##lock if request is put in processing POOL
 
     def internal_run(self):
         self.logger.inject('## Logger instance retrieved', level='info',
@@ -538,10 +531,11 @@ class RequestInjector(Handler):
                             "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
                 __ret = self.submitter.internal_run()
                 self.logger.inject('Request submitter returned: %s' % (__ret),
-                        level='info',handler=self.prepid)
+                        level='info', handler=self.prepid)
 
             finally:
                 self.lock.release()
+                self.queue_lock.release()
 
 class ChainRequestInjector(Handler):
     def __init__(self, **kwargs):
@@ -549,6 +543,7 @@ class ChainRequestInjector(Handler):
         self.lock = kwargs["lock"]
         self.prepid = kwargs["prepid"]
         self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
+        self.queue_lock = kwargs["queue_lock"] ##lock if request is put in processing POOL
 
     def injection_error(self, message, rs):
         self.logger.error(message)
@@ -576,11 +571,9 @@ class ChainRequestInjector(Handler):
 
             return False
         try:
-            self.logger.error("Acquired lock for ChainRequestInjector. prepid %s" % (
-                    self.prepid))
-
             crdb = database('chained_requests')
             rdb = database('requests')
+            batch_name = None
             if not crdb.document_exists( self.prepid ):
                 ## it's a request actually, pick up all chains containing it
                 mcm_r = rdb.get( self.prepid )
@@ -727,5 +720,7 @@ class ChainRequestInjector(Handler):
                 self.prepid, traceback.format_exc()),[])
 
         finally: ##we decrement batch id and release lock on prepid+lower semaphore
-            semaphore_events.decrement(batch_name)
+            if batch_name: ##ditry thing for now. Because batch name can be None for certain use-cases in code above
+                semaphore_events.decrement(batch_name)
             self.lock.release()
+            self.queue_lock.release()

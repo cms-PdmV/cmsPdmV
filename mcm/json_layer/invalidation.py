@@ -5,7 +5,7 @@ from tools.user_management import user_pack
 
 class invalidation(json_base):
 
-    _json_base__status = ['new', 'announced']
+    _json_base__status = ['new', 'announced', 'acknowledged']
 
     _json_base__schema = {
         '_id': '',

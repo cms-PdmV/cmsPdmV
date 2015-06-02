@@ -281,10 +281,14 @@ class CreateFlow(FlowRESTResource):
             self.logger.error('Could not initialize flow object. Reason: %s' % ex)
             return {"results": False}
 
-        if not f.get_attribute('prepid'):
+        __prepid = f.get_attribute('prepid')
+        if not __prepid:
             self.logger.error('prepid is not defined.')
             return {"results": False, 'message': 'Error: PrepId was not defined.'}
 
+        if __prepid.find("_") != -1:
+            self.logger.error('Flow prepID has an "_" character')
+            return {"results": False, 'message': 'Error: PrepId should not have "_" in it.'}
         f.set_attribute('_id', f.get_attribute('prepid'))
 
         #uniquing the allowed campaigns if passed duplicates by mistake

@@ -152,7 +152,8 @@
                   Flow name: <input type="text" ng-model="flow.flowId"/>
               </div> <!--end of modal body-->
               <div class="modal-footer">
-                <button class="btn btn-success" ng-click="save()">Create</button>
+                <font color="red" ng-if="flow.flowId.indexOf('_') != -1">Flow name should not have "_" in it</font>
+                <button class="btn btn-success" ng-click="save()" ng-disabled="flow.flowId.indexOf('_') != -1">Create</button>
                 <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
               </div> <!--end of modal footer-->
             </script>

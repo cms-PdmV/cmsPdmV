@@ -11,6 +11,6 @@ kill -9 `ps -e -f | grep mcm | grep -v $$ | awk '{print $2}'`
 revision=`git describe --abbrev=0`
 echo "running revision",$revision
 export MCM_REVISION=$revision
-echo "started on: ", `date`
+echo "started on: " `date`
 # start CherryPy
 python2.6 main.py

@@ -20,7 +20,7 @@ from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
 from tools.settings import settings
-from tools.handlers import RequestInjector
+from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 
@@ -912,9 +912,9 @@ class InspectStatus(RESTResource):
             return res[0]
 
 class UpdateStats(RESTResource):
-    def __init__(self):  
+    def __init__(self):
         self.access_limit = access_rights.administrator
-    def GET(self, *args): 
+    def GET(self, *args):
         """
         Triggers the forced update of the stats page for the given request id
         """
@@ -922,22 +922,27 @@ class UpdateStats(RESTResource):
             return dumps({"results" : False, "message" : "no argument was provided"})
         rid = args[0]
         refresh_stats = True
-        if len(args) == 2:
-            if args[1] == "no_refresh":
-		refresh_stats = False
-            else:
-                return dumps({"results" : False, "message" : "2nd argument is unknown"})
+        if len(args) > 1 and args[1] == "no_refresh":
+            refresh_stats = False
+
+        # set forcing argument
+        force = False
+        if len(args) == 3 and args[2] == 'force':
+            force = True
 
         rdb = database('requests')
         if not rdb.document_exists(rid):
-            return dumps({"prepid" : rid, "results": False, "message" : '%s does not exist' % rid})
-        mcm_r = request(rdb.get(rid ))
-        if mcm_r.get_stats(limit_to_set=0.0,refresh=refresh_stats):
+            return dumps({"prepid" : rid, "results": False,
+                    "message" : '%s does not exist' % rid})
+
+        mcm_r = request(rdb.get(rid))
+        if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
             mcm_r.reload()
             return dumps({"prepid" : rid, "results": True})
         else:
-            return dumps({"prepid" : rid, "results": False, "message" : "no apparent changes"})
-        
+            return dumps({"prepid" : rid, "results": False,
+                    "message" : "no apparent changes"})
+
 class SetStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
@@ -986,7 +991,7 @@ class TestRequest(RESTResource):
         self.counter = 0
 
     def GET(self, *args):
-        """ 
+        """
         this is test for admins only
         """
 
@@ -994,17 +999,17 @@ class TestRequest(RESTResource):
             return dumps({"results": 'Error: No arguments were given'})
 
         rdb = database('requests')
-        
+
         mcm_r = request( rdb.get(args[0]))
-        
-        outs= mcm_r.get_outputs()
+
+        outs = mcm_r.get_outputs()
 
         return dumps(outs)
 
 class UploadConfig(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
-        
+
     def GET(self, *args, **kwargs):
         """
         Upload the configuration
@@ -1013,13 +1018,13 @@ class UploadConfig(RESTResource):
         server = 'cms-pdmv-op.cern.ch'
         if "server" in kwargs:
             server = kwargs["server"]
-        from tools.handlers import ConfigMakerAndUploader
+        from tools.handlers import ConfigMakerAndUploader, submit_pool
         from tools.locker import locker
-        load = ConfigMakerAndUploader( prepid = args[0] , server = server, lock = locker.lock( args[0] ))
-        load.start()
+        load = ConfigMakerAndUploader(prepid=args[0], server=server, lock=locker.lock(args[0]))
+        submit_pool.add_task(load.internal_run)
 
 class InjectRequest(RESTResource):
-    
+
     def __init__(self):
         # set user access to administrator
         self.db_name = 'requests'
@@ -1037,9 +1042,17 @@ class InjectRequest(RESTResource):
         res = []
         for r_id in ids:
             self.logger.log('Forking the injection of request {0} '.format(r_id))
-            RequestInjector(prepid=r_id, lock=locker.lock(r_id)).start()
+            _q_lock = locker.thread_lock(r_id)
+            if not locker.thread_acquire(r_id, blocking=False):
+                res.append({"prepid": r_id, "results": False,
+                        "message": "The request {0} request is being handled already".format(r_id)})
+                continue
+
+            _submit = RequestInjector(prepid=r_id, lock=locker.lock(r_id), queue_lock=_q_lock)
+            submit_pool.add_task(_submit.internal_run)
             res.append({"prepid": r_id, "results": True,
-                        "message": "The request {0} will be forked unless same request is being handled already" .format(r_id)})
+                        "message": "The request {0} will be forked unless same request is being handled already".format(r_id)})
+
         return dumps(res)
 
 
@@ -1085,6 +1098,8 @@ class GetDefaultGenParams(RESTResource):
 
 
 class NotifyUser(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
 
     def PUT(self):
         """
@@ -1100,23 +1115,29 @@ class NotifyUser(RESTResource):
 
         for pid in pids:
             if not rdb.document_exists(pid):
-                results.append({"prepid": pid, "results": False, "message": "%s does not exist" % pid})
+                results.append({"prepid": pid, "results": False,
+                        "message": "%s does not exist" % pid})
+
                 return dumps(results)
 
             req = request(rdb.get(pid))
             # notify the actors of the request
-            
+
             req.notify('Communication about request %s' % pid,
-                       '%s \n\n %srequests?prepid=%s\n'%(message, 
-                                                       l_type.baseurl(), 
-                                                       pid),accumulate=True)
+                       '%s \n\n %srequests?prepid=%s\n' % (message,
+                                l_type.baseurl(), pid), accumulate=True)
+
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
             if not rdb.save(req.json()):
-                results.append({"prepid": pid, "results": False, "message": "Could not save %s" % pid})
+                results.append({"prepid": pid, "results": False,
+                        "message": "Could not save %s" % pid})
+
                 return dumps(results)
 
-            results.append({"prepid": pid, "results": True, "message": "Notification send for %s" % pid})
+            results.append({"prepid": pid, "results": True,
+                    "message": "Notification send for %s" % pid})
+
         return dumps(results)
 
 

@@ -1,21 +1,20 @@
 from couchdb_layer.mcm_database import database
 from tools.locker import locker
 
-
 class settings:
     cache=dict()
 
     def __init__(self):
         self.__db = database('settings')
-    
+
     def get(self, label):
         with locker.lock(label):
             if not label in self.cache:
                 setting = self.__db.get(label)
                 self.cache[label] = setting
             return self.cache[label]
-            
-    def get_value(self, label ):
+
+    def get_value(self, label):
         return self.get(label)['value']
 
     def get_notes(self, label ):
@@ -40,4 +39,3 @@ class settings:
             if result:
                 self.cache[label] = self.__db.get(label)
             return result
-

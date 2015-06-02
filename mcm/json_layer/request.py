@@ -25,12 +25,12 @@ from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
 
-
 class request(json_base):
     class DuplicateApprovalStep(Exception):
         def __init__(self, approval=None):
             self.__approval = repr(approval)
-            request.logger.error('Duplicate Approval Step: Request has already been %s approved' % (self.__approval))
+            request.logger.error('Duplicate Approval Step: Request has already been %s approved' % (
+                    self.__approval))
 
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
@@ -102,7 +102,9 @@ class request(json_base):
                     self.is_root = True
 
             else:
-                raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
+                raise Exception('Campaign %s does not exist in the database' % (
+                        json_input['member_of_campaign']))
+
         else:
             raise Exception('Request is not a member of any campaign')
 
@@ -114,38 +116,6 @@ class request(json_base):
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
-
-    ##JR: not used and not necessary
-    #def add_sequence(self,
-    #          steps=[],
-    #          nameorfragment='',
-    #          conditions='',
-    #          eventcontent=[],
-    #          datatier=[],
-    #          beamspot='',
-    #          customise=[],
-    #          filtername='',
-    #          geometry='',
-    #          magField='',
-    #          pileup='NoPileUp',
-    #          datamix='NODATAMIXER',
-    #          scenario='',
-    #          processName='',
-    #          harvesting='',
-    #          particle_table='',
-    #          inputCommands='',
-    #          dropDescendant=False,
-    #          donotDropOnInput=True,
-    #          restoreRNDSeeds='',
-    #          slhc=''):
-    #    seq = sequence()
-    #    seq.build(steps, nameorfragment, conditions, eventcontent, datatier, beamspot, customise, filtername, geometry, magField, pileup, datamix, scenario, processName, harvesting, particle_table, inputCommands, dropDescendant, donotDropOnInput, restoreRNDSeeds, slhc)
-    #    sequences = self.get_attribute('sequences')
-    #    index = len(sequences) + 1
-    #    seq.set_attribute('index', index)
-    #    sequences.append(seq.json())
-    #    self.set_attribute('sequences', sequences)
-
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         ## call the base
@@ -159,7 +129,9 @@ class request(json_base):
                 chain = chained_request(crdb.get(inchain))
                 a_change = False
                 a_change += chain.set_last_status(self.get_attribute('status'))
-                a_change += chain.set_processing_status(self.get_attribute('prepid'), self.get_attribute('status'))
+                a_change += chain.set_processing_status(self.get_attribute('prepid'),
+                        self.get_attribute('status'))
+
                 if a_change:
                     crdb.save(chain.json())
 
@@ -199,7 +171,7 @@ class request(json_base):
         total_events_should_be = previous_events * self.get_efficiency()
         margin = int(total_events_should_be *1.2)
         if self.get_attribute('total_events') > margin: ## safety factor of 20%
-            raise self.WrongApprovalSequence(self.get_attribute('status'),what,
+            raise self.WrongApprovalSequence(self.get_attribute('status'), what,
                     'The requested number of events (%d > %d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request' %(
                         self.get_attribute('total_events'), margin,
                         total_events_should_be, previous_events,
@@ -434,6 +406,11 @@ class request(json_base):
             if not self.get_attribute('process_string') and not __flow_ps: ## if they both are empty
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
+        else:
+            if self.get_attribute('process_string') or __flow_ps: ## if both are not empty string
+                raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                        'The sequences is the same as one of the campaign, but a request process string %s  or flow process string %s has been provided' % (
+                                self.get_attribute('process_string'), __flow_ps))
 
         if for_chain:
             return
@@ -443,14 +420,20 @@ class request(json_base):
         do_runtest = not validation_disable
 
         by_pass = settings().get_value('validation_bypass')
-        if self.get_attribute('prepid') in by_pass: 
+        if self.get_attribute('prepid') in by_pass:
             do_runtest = False
 
         if do_runtest:
-            from tools.handlers import RuntestGenvalid
+            from tools.handlers import RuntestGenvalid, validation_pool
+            self.logger.log('Putting request %s: to validation queue' % (
+                    self.get_attribute('prepid')))
+
             threaded_test = RuntestGenvalid(rid=str(self.get_attribute('prepid')))
-            ## this will set the status on completion, or reset the request.
-            threaded_test.start()
+            validation_pool.add_task(threaded_test.internal_run)
+
+            self.logger.log('Request was put to queue. Queue len: %s' % (
+                    validation_pool.tasks.qsize()))
+
         else:
             self.set_status()
 
@@ -492,9 +475,9 @@ class request(json_base):
             request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
             if request_is_at != 0:
                 self.check_with_previous( mcm_cr['chain'][request_is_at-1],rdb, 'approve', and_set=for_chain)
-            if for_chain: 
+            if for_chain:
                 continue
-            
+
             if request_is_at != mcm_cr['step']:
                 all_good=True
                 chain=mcm_cr['chain'][mcm_cr['step']:]
@@ -565,8 +548,6 @@ class request(json_base):
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                         'There is an expected output dataset naming collision with %s' % (
                                 text))
-            
-
 
         moveon_with_single_submit=True ## for the case of chain request submission
         is_the_current_one=False
@@ -591,31 +572,43 @@ class request(json_base):
                 ## check that something else in the chain it belongs to is indicating that
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                         'The request (%s)is not the current step (%s) of its chain (%s)' % (
-                            self.get_attribute('prepid'),
-                            mcm_cr['step'],
-                            c)
-                        )
+                            self.get_attribute('prepid'), mcm_cr['step'], c))
 
         sync_submission = True
         if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
-            from tools.handlers import RequestInjector
+            from tools.handlers import RequestInjector, submit_pool
+
+            _q_lock = locker.thread_lock(self.get_attribute('prepid'))
+            if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
+                return {"prepid": self.get_attribute('prepid'), "results": False,
+                        "message": "The request {0} request is being handled already".format(
+                                self.get_attribute('prepid'))}
 
             threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'),
-                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
+                    queue_lock=_q_lock)
 
-            threaded_submission.start()
+            submit_pool.add_task(threaded_submission.internal_run)
         else:
             #### not settting any status forward
             ## the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
 
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
-                from tools.handlers import ChainRequestInjector
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
-                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')))
+                from tools.handlers import ChainRequestInjector, submit_pool
 
-                threaded_submission.start()
+                _q_lock = locker.thread_lock(self.get_attribute('prepid'))
+                if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
+                    return {"prepid": self.get_attribute('prepid'), "results": False,
+                            "message": "The request {0} request is being handled already".format(
+                                    self.get_attribute('prepid'))}
+
+                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
+                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
+                        queue_lock=_q_lock)
+
+                submit_pool.add_task(threaded_submission.internal_run)
             pass
 
     def is_action_root(self):
@@ -631,8 +624,11 @@ class request(json_base):
         for in_chain_id in self.get_attribute('member_of_chain'):
             if not crdb.document_exists(in_chain_id):
                 self.logger.error(
-                    'for %s there is a chain inconsistency with %s' % ( self.get_attribute('prepid'), in_chain_id))
+                    'for %s there is a chain inconsistency with %s' % (
+                            self.get_attribute('prepid'), in_chain_id))
+
                 return False
+
             in_chain = crdb.get(in_chain_id)
             original_action = adb.get(in_chain['chain'][0])
             my_action_item = original_action['chains'][in_chain['member_of_campaign']]
@@ -666,9 +662,9 @@ class request(json_base):
                 self.get_attribute('fragment_tag'), name, fragment_retry_amount )
             # add the part to make it local
             if get:
-                get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % ( name )
+                get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % (name)
                 ##lets check if downloaded file actually exists and has more than 0 bytes
-                get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' %(name)
+                get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' % (name)
 
         if get:
             get_me += '\n'
@@ -680,13 +676,15 @@ class request(json_base):
         fragment = self.get_attribute('name_of_fragment')
         if self.get_attribute('fragment') and not fragment:
             #fragment='Configuration/GenProduction/python/%s_fragment.py'%(self.get_attribute('prepid').replace('-','_'))
-            fragment = 'Configuration/GenProduction/python/%s-fragment.py' % (self.get_attribute('prepid'))
+            fragment = 'Configuration/GenProduction/python/%s-fragment.py' % (
+                    self.get_attribute('prepid'))
+
         if fragment and not fragment.startswith('Configuration/GenProduction/python/'):
             fragment = 'Configuration/GenProduction/python/' + fragment
+
         return fragment
 
     def build_cmsDriver(self, sequenceindex):
-
         fragment = self.get_fragment()
 
         ##JR
@@ -742,8 +740,8 @@ class request(json_base):
         ## last one
             command += '--fileout file:%s.root ' % (self.get_attribute('prepid'))
         else:
-            command += '--fileout file:%s_step%d.root ' % (self.get_attribute('prepid'), sequenceindex + 1)
-
+            command += '--fileout file:%s_step%d.root ' % (
+                    self.get_attribute('prepid'), sequenceindex + 1)
 
         ##JR
         if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['', 'NoPileUp']):
@@ -776,9 +774,6 @@ class request(json_base):
             freshSeq = []
             freshKeep = []
             if flownWith:
-            #self.logger.error('Using a flow: %s and a campaign %s , to recast %s'%(flownWith['prepid'],
-            #                                                                       camp.get_attribute('prepid'),
-            #                                                                       new_req['prepid']))
                 request.put_together(camp, flownWith, self)
             else:
                 for i in range(len(camp.get_attribute('sequences'))):
@@ -845,7 +840,7 @@ class request(json_base):
         r_tiers=[]
         keeps = self.get_attribute('keep_output')
         for (i, s) in enumerate(self.get_attribute('sequences')):
-            if i<len(keeps) and not keeps[i]: continue
+            if i < len(keeps) and not keeps[i]: continue
             r_tiers.extend( self.get_tier(i) )
         ## the last tier is the main output : reverse it
         return list(reversed(r_tiers))
@@ -859,18 +854,16 @@ class request(json_base):
         v = self.get_attribute('version')
 
         for (i, s) in enumerate(self.get_attribute('sequences')):
-            if i<len(keeps) and not keeps[i]: continue
+            if i < len(keeps) and not keeps[i]: continue
             proc = self.get_processing_string(i)
             tiers = s['datatier']
             if isinstance(tiers, str):
                 ##only for non-migrated requests
                 tiers = tiers.split(',')
             for t in tiers:
-                outs.append('/%s/%s-%s-v%s/%s' % ( dsn,
-                                                   camp,
-                                                   proc,
-                                                   v,
-                                                   t))
+                outs.append('/%s/%s-%s-v%s/%s' % (
+                        dsn, camp, proc, v,t))
+
         return outs
 
     def get_processing_string(self, i):
@@ -918,7 +911,8 @@ class request(json_base):
         import xml.dom.minidom
 
         release_announcement = settings().get_value('release_announcement')
-        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure %s ' % ( release_announcement )).read())
+        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure %s ' % (
+                release_announcement )).read())
 
         for arch in xml_data.documentElement.getElementsByTagName("architecture"):
             scram_arch = arch.getAttribute('name')
@@ -926,6 +920,7 @@ class request(json_base):
                 release = str(project.getAttribute('label'))
                 if release == release_to_find:
                     self.scram_arch = scram_arch
+
         return self.scram_arch
 
     def make_release(self):
@@ -938,6 +933,7 @@ class request(json_base):
         makeRel += 'fi\n'
         makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
         makeRel += 'eval `scram runtime -sh`\n' ## setup the cmssw
+
         return makeRel
 
     def get_setup_file(self, directory='', events=None, run=False, do_valid=False):
@@ -946,11 +942,6 @@ class request(json_base):
 
         l_type = locator()
         infile = '#!/bin/bash\n'
-        #if directory:
-        ## go into the request directory itself to setup the release, since we cannot submit more than one at a time ...
-        #    infile += 'cd ' + os.path.abspath(directory + '../') + '\n'
-
-        ##create a release directory "at the root" if not already existing
 
         if directory:
             infile += self.make_release()
@@ -1002,7 +993,6 @@ class request(json_base):
                     if int(self.get_attribute("sequences")[-1]["inline_custom"]) != 0:
                         inline_c = '--inline_custom 1 '
 
-
             # tweak a bit more finalize cmsDriver command
             res = cmsd
             configuration_names.append(os.path.join(directory,
@@ -1024,10 +1014,16 @@ class request(json_base):
             if run:
 
                 if previous :
-                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" %(self.get_attribute('prepid'), previous+1))
+                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" % (
+                            self.get_attribute('prepid'), previous+1))
+
                 else:
-                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" %(self.get_attribute('prepid')))
-                res += 'cmsRun -e -j %s %s || exit $? ; \n' % (runtest_xml_file, configuration_names[-1])
+                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" % (
+                            self.get_attribute('prepid')))
+
+                res += 'cmsRun -e -j %s %s || exit $? ; \n' % (
+                        runtest_xml_file, configuration_names[-1])
+
                 if events>=0 : res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
                 res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
@@ -1096,9 +1092,14 @@ done
         self.update_history({'action': 'priority', 'step': new_priority})
         saved = self.reload()
         if not saved:
-            self.logger.error('Could not save request {0} with new priority'.format(self.get_attribute('prepid')))
+            self.logger.error('Could not save request {0} with new priority'.format(
+                    self.get_attribute('prepid')))
+
             return False
-        self.logger.log('Priority of request {0} was changed to {1}'.format(self.get_attribute('prepid'), new_priority))
+
+        self.logger.log('Priority of request {0} was changed to {1}'.format(
+                self.get_attribute('prepid'), new_priority))
+
         return True
 
     def change_priority(self, new_priority):
@@ -1111,7 +1112,9 @@ done
             return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
-            self.logger.log('tryign to change priority to %s at %s' % ( self.get_attribute('prepid'), new_priority))
+            self.logger.log('tryign to change priority to %s at %s' % (
+                    self.get_attribute('prepid'), new_priority))
+
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
                 ssh_exec = ssh_executor(server='cms-pdmv-op.cern.ch')
@@ -1125,14 +1128,18 @@ done
                 _, stdout, stderr = ssh_exec.execute(cmd)
                 self.logger.log(cmd)
                 if not stdout and not stderr:
-                    self.logger.error('SSH error while changing priority of {0}'.format(self.get_attribute('prepid')))
+                    self.logger.error('SSH error while changing priority of {0}'.format(
+                            self.get_attribute('prepid')))
+
                     return False
                 output_text = stdout.read()
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
                 changed = False
                 for line in output_text.split("\n"):
                     if 'Unable to change priority of workflow' in line:
-                        self.logger.error("Request {0}. {1}".format(self.get_attribute('prepid'), line))
+                        self.logger.error("Request {0}. {1}".format(
+                                self.get_attribute('prepid'), line))
+
                         changed = False
                     if 'Changed priority for' in line:
                         changed = True
@@ -1167,7 +1174,7 @@ done
         ## gen valid configs
         self.genvalid_driver = None
         valid_sequence = None
-        (yes_to_valid,n_to_valid) = self.get_valid_and_n()
+        (yes_to_valid, n_to_valid) = self.get_valid_and_n()
         l_type = locator()
 
         if not yes_to_valid:
@@ -1255,7 +1262,6 @@ done
                 #self.genvalid_driver += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/eff -H "Content-Type: application/xml" -X PUT --data "@%s%s_gv.xml" \n' %(self.get_attribute('prepid'), directory, self.get_attribute('prepid'))
 
             cmsd_list += self.genvalid_driver + '\n'
-            ###self.logger.log( 'valid request %s'%( genvalid_request.json() ))
             cmsd_list += self.harvesting_driver + '\n'
 
         ##that's the end of the part for gen-valid that should be somewhere else
@@ -1263,32 +1269,30 @@ done
         return infile, cmsd_list
 
     def setup_harvesting(self, directory, run):
-        genvalid_harvesting_python_file = os.path.join(directory, "{0}_genvalid_harvesting.py".format(self.get_attribute('prepid')))
+        genvalid_harvesting_python_file = os.path.join(directory,
+                "{0}_genvalid_harvesting.py".format(self.get_attribute('prepid')))
+
         get_a_GT = 'auto:startup'
         for s in self.get_attribute('sequences'):
             if 'conditions' in s:
                 get_a_GT = s['conditions']
                 break
         self.harvesting_driver = 'cmsDriver.py step2 --filein file:%s_genvalid.root --conditions %s --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %s --no_exec || exit $? ; \n' % (
-            self.get_attribute('prepid'),
-            get_a_GT,
-            genvalid_harvesting_python_file)
+                self.get_attribute('prepid'), get_a_GT, genvalid_harvesting_python_file)
+
         if run:
             self.harvesting_driver += 'cmsRun %s || exit $? ; \n' % genvalid_harvesting_python_file
 
         dqm_dataset = '/RelVal%s/%s-%s_%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
-                                                               self.get_attribute('cmssw_release'),
-                                                               self.get_attribute('member_of_campaign'),
-                                                               self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
-                                                               self.get_attribute('version')
-        )
+                self.get_attribute('cmssw_release'), self.get_attribute('member_of_campaign'),
+                self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
+                self.get_attribute('version'))
+
         dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s_%s-%s-genvalid-v%s__DQM.root' % (
-            self.get_attribute('dataset_name'),
-            self.get_attribute('cmssw_release'),
-            self.get_attribute('member_of_campaign'),
-            self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
-            self.get_attribute('version')
-        )
+                self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'),
+                self.get_attribute('member_of_campaign'),
+                self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
+                self.get_attribute('version'))
 
         where = 'https://cmsweb.cern.ch/dqm/relval'
         l_type = locator()
@@ -1338,7 +1342,6 @@ done
 
         return ''
 
-
     def verify_sanity(self):
         ###check whether there are missing bits and pieces in the request
         ##maybe raise instead of just returning false
@@ -1351,14 +1354,11 @@ done
                     'name_of_fragment'):
                 if wma_type == 'LHEStepZero' and self.get_attribute('mcdb_id') <= 0:
                     raise Exception('No CVS Production Tag is defined. No fragement name, No fragment text')
-                    #return False
         for cmsDriver in self.build_cmsDrivers():
             if not 'conditions' in cmsDriver:
                 raise Exception('Conditions are not defined in %s' % (cmsDriver))
-                #return False
 
         return True
-
 
     def get_actors(self, N=-1, what='author_username', Nchild=-1):
         #get the actors from itself, and all others it is related to
@@ -1373,8 +1373,10 @@ done
             ## this protection is bad against malformed db content. it should just fail badly with exception
             if not crdb.document_exists(cr):
                 self.logger.error('For requests %s, the chain %s of which it is a member of does not exist.' % (
-                    self.get_attribute('prepid'), cr))
+                        self.get_attribute('prepid'), cr))
+
                 continue
+
             crr = crdb.get(cr)
             for (other_i, other) in enumerate(crr['chain']):
                 ## skip myself
@@ -1385,7 +1387,7 @@ done
                 other_r = request(rdb.get(other))
                 lookedat.append(other_r.get_attribute('prepid'))
                 actors.extend(json_base.get_actors(other_r, N, what))
-            #self.logger.log('Looked at %s'%(str(lookedat)))
+
         actors = list(set(actors))
         return actors
 
@@ -1399,7 +1401,7 @@ done
         self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
-            refresh=False):
+            refresh=False, forced=False):
 
         #existing rwma
         if not keys_to_import: keys_to_import = ['pdmv_dataset_name',
@@ -1443,7 +1445,9 @@ done
         failed_to_find = []
         for (rwma_i, rwma) in enumerate(mcm_rr):
             if not statsDB.document_exists(rwma['name']):
-                self.logger.error('the request %s is linked in McM already, but is not in stats DB' % (rwma['name']))
+                self.logger.error('the request %s is linked in McM already, but is not in stats DB' % (
+                        rwma['name']))
+
                 ## very likely, this request was aborted, rejected, or failed
                 ## connection check was done just above
                 if rwma_i != 0:
@@ -1467,7 +1471,7 @@ done
                 mcm_content = transfer(stats_r, keys_to_import)
                 mcm_rr[rwma_i]['content'] = mcm_content
 
-        ## take out the one which were not found ! 
+        ## take out the one which were not found !
         # the original one ([0]) is never removed
         mcm_rr = filter(lambda wmr: not wmr['name'] in failed_to_find, mcm_rr)
 
@@ -1484,7 +1488,6 @@ done
             earliest_date = d
             earliest_time = t
 
-        
         ####
         ## look for new ones
         ## we could have to de-sync the following with
@@ -1539,11 +1542,11 @@ done
 
             changes_happen = True
         if len(mcm_rr):
-            tiers_expected = self.get_tiers() 
-            collected = self.collect_outputs( mcm_rr , tiers_expected )
+            tiers_expected = self.get_tiers()
+            collected = self.collect_outputs(mcm_rr, tiers_expected, skip_check=forced)
             completed = 0
             if len(collected):
-                (valid,completed) = self.collect_status_and_completed_events( mcm_rr, collected[0])
+                (valid,completed) = self.collect_status_and_completed_events(mcm_rr, collected[0])
             else:
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
@@ -1555,7 +1558,7 @@ done
             self.set_attribute('output_dataset', collected)
 
         self.set_attribute('reqmgr_name', mcm_rr)
-        
+
         if (len(mcm_rr) and 'content' in mcm_rr[-1] and
                 'pdmv_present_priority' in mcm_rr[-1]['content'] and
                 mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
@@ -1564,7 +1567,7 @@ done
             self.update_history({'action' : 'wm priority',
                     'step' : mcm_rr[-1]['content']['pdmv_present_priority']})
 
-            changes_happen=True
+            changes_happen = True
 
         return changes_happen
 
@@ -1619,7 +1622,7 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr , tiers_expected ):
+    def collect_outputs(self, mcm_rr, tiers_expected, skip_check=False):
         procstrings_expected = self.get_processing_strings()
         collected = []
         for wma in reversed(mcm_rr):
@@ -1640,11 +1643,16 @@ done
                 ## reduce to what was expected of it
                 those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
                 ## reduce to what processing string were expected
-                those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected , those)
+                if not skip_check:
+                    those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected,
+                            those)
+
                 ## only add those that are not already there
                 collected.extend(filter(lambda dn: not dn in collected, those))
         ## order the collected dataset in order of expected tiers
-        collected = sorted( collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]),
+                                                        tiers_expected.index(d2.split('/')[-1])))
+
         return collected
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
@@ -1696,11 +1704,11 @@ done
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
-                    valid,counted= self.collect_status_and_completed_events( mcm_rr, ds_for_accounting )
+                    valid,counted= self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
 
                     self.set_attribute('output_dataset', collected)
                     self.set_attribute('completed_events', counted )
-                    
+
                     if not valid:
                         not_good.update({'message' : 'Not all outputs are valid'})
                         saved = db.save(self.json())
@@ -1723,7 +1731,7 @@ done
                                 wma_r['content']['pdmv_dataset_name'])})
                         saved = db.save(self.json())
                         return not_good
-                    
+
                     if len(collected) == 0:
                         ## there was no matching tier
                         not_good.update({'message': '%s completed but no tiers match any of %s' % (
@@ -1733,8 +1741,6 @@ done
                         return not_good
                         ## set next status: which can only be done at this stage
 
-
-                        
                     self.set_status(with_notification=True)
                     ## save the request back to db
                     saved = db.save(self.json())
@@ -1787,9 +1793,10 @@ done
 
     def textified(self):
         l_type = locator()
-        view_in_this_order = ['pwg', 'prepid', 'dataset_name', 'mcdb_id', 'analysis_id', 'notes', 'total_events',
-                              'validation', 'approval', 'status', 'input_dataset', 'member_of_chain', 'reqmgr_name',
-                              'completed_events']
+        view_in_this_order = ['pwg', 'prepid', 'dataset_name', 'mcdb_id', 'analysis_id', 'notes',
+                'total_events', 'validation', 'approval', 'status', 'input_dataset',
+                'member_of_chain', 'reqmgr_name', 'completed_events']
+
         text = ''
         for view in view_in_this_order:
             if self.get_attribute(view):
@@ -1806,7 +1813,7 @@ done
         return text
 
     def target_for_test(self):
-        #could reverse engineer the target 
+        #could reverse engineer the target
         return settings().get_value('test_target')
 
     def get_efficiency_error(self, relative=True):
@@ -1896,10 +1903,10 @@ done
             n_test = self.get_attribute('total_events') / n_per_test
             max_n = settings().get_value('max_lhe_test')
             time_per_test = settings().get_value('lhe_test_time_event')
-            if max_n >=0:                
+            if max_n >=0:
                 n_test = min(n_test, max_n)
             estimate_lhe = n_test * (time_per_test * n_per_test)
-            
+
         return int(max((estimate_rt+estimate_gv+estimate_lhe) / fraction, default))
         #return int((estimate_rt+estimate_gv+estimate_lhe) / fraction)
 
@@ -1923,7 +1930,7 @@ done
         else:
             fraction = settings().get_value('test_timeout_fraction')
             timeout = settings().get_value('batch_timeout') * 60. * fraction
-            
+
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
         self.logger.log('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
@@ -1981,9 +1988,9 @@ done
         except Exception as e:
             #trace=str(e)
             trace = traceback.format_exc()
-            self.logger.error('Failed to get %s reports for %s \n %s' %( what,
-                                                                         self.get_attribute('prepid'),
-                                                                         trace))
+            self.logger.error('Failed to get %s reports for %s \n %s' % (what,
+                    self.get_attribute('prepid'), trace))
+
             return (False, trace)
 
     def update_performance(self, xml_doc, what):
@@ -2192,6 +2199,7 @@ done
                             timing, total_event,
                             total_event_in),
                         accumulate=True)
+
                 self.set_attribute('time_event', timing)
                 to_be_saved = True
             if timing and timing < (timing_fraction * self.get_attribute('time_event')):
@@ -2206,6 +2214,7 @@ done
                             timing,
                             total_event,
                             total_event_in)
+
                     self.set_attribute('time_event', timing)
                     to_be_saved = True
                 else:
@@ -2221,7 +2230,6 @@ done
                     raise Exception(message)
 
                 self.notify(subject, message, accumulate=True)
-
 
             ## size check
             if file_size and file_size > self.get_attribute('size_event'):
@@ -2241,9 +2249,10 @@ done
                         accumulate=True)
                 self.set_attribute('size_event', file_size)
                 to_be_saved = True
+
             if file_size and file_size < int(0.90 * self.get_attribute('size_event')):
                 ## size over-estimated
-                ## warn if over-estimated by more than 10% 
+                ## warn if over-estimated by more than 10%
                 self.notify(
                     'Runtest for %s: size per event over-estimate.' % (
                         self.get_attribute('prepid')),
@@ -2336,17 +2345,16 @@ done
             next_request.set_attribute(key, current_request.get_attribute(key))
 
     def reset(self, hard=True):
-
         ## check on who's trying to do so
         if self.current_user_level <= access_rights.generator_convener and not self.get_attribute('status') in [
             'validation', 'defined', 'new']:
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                                'You have not enough karma to reset the request')
+                    'You have not enough karma to reset the request')
 
         if self.current_user_level <= access_rights.generator_convener and self.get_attribute(
                 'approval') == 'validation' and self.get_attribute('status') == 'new':
             raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                                'Cannot reset a request when running validation')
+                    'Cannot reset a request when running validation')
 
         chains = self.get_attribute('member_of_chain')
         from json_layer.chained_request import chained_request
@@ -2363,9 +2371,8 @@ done
                     if mcm_r.get_attribute('status') in ['submitted','done']:
                     ## cannot reset a request that is part of a further on-going chain
                         raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                                            'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (chain,
-                                                                                                                                                                                     mcm_r.get_attribute('prepid'),
-                                                                                                                                                                                     mcm_r.get_attribute('status')))
+                                'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (
+                                    chain, mcm_r.get_attribute('prepid'), mcm_r.get_attribute('status')))
 
         if hard:
             self.approve(0)
@@ -2412,7 +2419,6 @@ done
                     increase_revision = True
                     break
 
-
         ##do not increase version if not in an announced batch
         bdb = database('batches')
         if increase_revision:
@@ -2425,8 +2431,6 @@ done
                         increase_revision = False
                         ## we could be done checking, but we'll move along to remove the requests from all existing non announced batches
                         mcm_b.remove_request(self.get_attribute('prepid'))
-
-
 
         ## aditionnal value to reset
         self.set_attribute('completed_events', 0)
@@ -2447,8 +2451,7 @@ done
             self.set_status(step=0, with_notification=True)
         else:
             self.set_attribute('approval', 'approve')
-            self.set_status(step=self._json_base__status.index('approved')
-                , with_notification=True)
+            self.set_status(step=self._json_base__status.index('approved'), with_notification=True)
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
@@ -2495,6 +2498,7 @@ done
                             self.logger.error('the release %s architecture is invalid'% self.get_attribute('member_of_campaign'))
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid'%self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
+
                         machine_name = "cms-pdmv-op.cern.ch"
                         executor = ssh_executor(server=machine_name)
                         _, stdout, stderr = executor.execute(command)
@@ -2530,10 +2534,9 @@ done
                             docid = line.split()[-1]
                             additional_config_ids[i] = docid
                             hash_id = self.configuration_identifier(i)
-                            saved = config_db.save({"_id": hash_id,
-                                                    "docid": docid,
-                                                    "prepid": prepid,
-                                                    "unique_string": self.unique_string(i)})
+                            saved = config_db.save({"_id": hash_id, "docid": docid,
+                                    "prepid": prepid, "unique_string": self.unique_string(i)})
+
                             to_release.remove(hash_id)
                             locker.release(hash_id)
                             if not saved:
