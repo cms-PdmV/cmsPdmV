@@ -221,8 +221,12 @@ function resultsCtrl($scope, $http, $location, $window){
             $scope.selected_prepids = [];
         });
 
-  $scope.flowChainedRequest = function(prepid, force){
-    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force);
+  $scope.flowChainedRequest = function(prepid, force, campaign){
+    if (campaign != undefined) {
+	    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force+"/"+campaign);	
+	} else {
+	    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force);
+	}
     promise.then(function(data){
       $scope.parse_report([data.data],status);
     }, function(data){
@@ -647,20 +651,21 @@ testApp.directive("loadRequestsFields", function($http, $location){
 
 var ModalDropdownCtrl = function($scope, $modalInstance, $http, prepid) {
     $scope.loadingData = true;
+    $scope.campaignListDropdown = ["--------"];
     var promise = $http.get("search?db_name=chained_requests&get_raw&prepid=" + prepid)
     promise.then(function(data){
 	var moc = data.data.rows[0].doc.member_of_campaign;
 	var promiseDeep = $http.get("search?db_name=chained_campaigns&get_raw&prepid=" + moc)
 	promiseDeep.then(function(d){
-	    $scope.campaignListDropdown = [];
     	    d.data.rows[0].doc.campaigns.forEach(function(c) {
 		$scope.campaignListDropdown.push(c[0]);
 		});
+	    $scope.loadingData = false;
 	});
     });
     $scope.toggle_prepid = prepid;
-    $scope.confirm = function() {
-	console.log('confirmed')
+    $scope.confirm = function(id) {
+	$modalInstance.close(id);
     };
     $scope.cancel = function() {
         $modalInstance.dismiss();
@@ -669,7 +674,7 @@ var ModalDropdownCtrl = function($scope, $modalInstance, $http, prepid) {
 
 var ModalDemoCtrl = function ($scope, $http, $modal) {
     $scope.dropdownModal = function(prepid) {
-	$modal.open({
+	var isConfirmed = $modal.open({
 		templateUrl: 'dropdownModal.html',
 		controller: ModalDropdownCtrl,
 		resolve: {
@@ -677,7 +682,14 @@ var ModalDemoCtrl = function ($scope, $http, $modal) {
 			    return prepid;
 		    }
 		}
-	});	
+	});
+	isConfirmed.result.then(function (campaign) {
+		if (campaign == undefined || campaign == ["--------"]) {
+			$scope.flowChainedRequest(prepid, '/reserve');
+		} else {
+			$scope.flowChainedRequest(prepid, '/reserve', campaign);
+		}
+	});
     }
 
     $scope.isSureModal = function (action, prepid) {

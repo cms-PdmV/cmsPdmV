@@ -256,12 +256,12 @@
     <h4>Limited reservation for {{toggle_prepid}}?</h4>
   </div> 
   <div class="modal-body">
-    <select ng-model="campaign">
+	<select ng-model="dropdownSelector">
 	<option ng-repeat="elem in campaignListDropdown">{{elem}}</option>
 	</select>
   </div>
   <div class="modal-footer">
-    <button class="btn btn-warning" ng-click="confirm()">Confirm</button>
+    <button class="btn btn-warning" ng-click="confirm(dropdownSelector)">Confirm</button>
     <button class="btn btn-success" ng-click="cancel()">Cancel</button>
   </div>
 </script>
