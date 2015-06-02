@@ -253,12 +253,17 @@
 <!-- MODAL-->
 <script type="text/ng-template" id="dropdownModal.html"> <!--hidden modal template-->
   <div class="modal-header">
-    <h4>Are you sure to {{toggle_prepid}}?</h4>
-  </div>  <!--end of modal header-->
-  <div class="modal-footer" style="background-color:{{modal_color}}">
-    <button class="btn btn-warning" ng-click="yes()">Yes</button>
-    <button class="btn btn-success" ng-click="no()">No</button>
-  </div> <!--end of modal footer-->
+    <h4>Limited reservation for {{toggle_prepid}}?</h4>
+  </div> 
+  <div class="modal-body">
+    <select ng-model="campaign">
+	<option ng-repeat="elem in campaignListDropdown">{{elem}}</option>
+	</select>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-warning" ng-click="confirm()">Confirm</button>
+    <button class="btn btn-success" ng-click="cancel()">Cancel</button>
+  </div>
 </script>
 <!-- END of MODAL-->
   </body>

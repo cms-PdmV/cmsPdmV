@@ -645,50 +645,39 @@ testApp.directive("loadRequestsFields", function($http, $location){
   }
 });
 
-var ModalDropdownCtrl = function($scope, $modalInstance, prepid) {
+var ModalDropdownCtrl = function($scope, $modalInstance, $http, prepid) {
+    $scope.loadingData = true;
+    var promise = $http.get("search?db_name=chained_requests&get_raw&prepid=" + prepid)
+    promise.then(function(data){
+	var moc = data.data.rows[0].doc.member_of_campaign;
+	var promiseDeep = $http.get("search?db_name=chained_campaigns&get_raw&prepid=" + moc)
+	promiseDeep.then(function(d){
+	    $scope.campaignListDropdown = [];
+    	    d.data.rows[0].doc.campaigns.forEach(function(c) {
+		$scope.campaignListDropdown.push(c[0]);
+		});
+	});
+    });
     $scope.toggle_prepid = prepid;
-
-    var stringToColour = function(str) {
-        //converts any string to hexadecimal color format
-        var hash = 0;
-        for (var i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        var colour = '#';
-        for (i = 0; i < 3; i++) {
-            var value = (hash >> (i * 8)) & 0xFF;
-            colour += ('00' + value.toString(16)).substr(-2);
-        }
-        return colour;
+    $scope.confirm = function() {
+	console.log('confirmed')
     };
-
-    $scope.modal_color = stringToColour('a');
-
-    $scope.yes = function() {
-        $modalInstance.close();
-    };
-
-    $scope.no = function() {
+    $scope.cancel = function() {
         $modalInstance.dismiss();
     };
 };
 
 var ModalDemoCtrl = function ($scope, $http, $modal) {
     $scope.dropdownModal = function(prepid) {
-	console.log('a');
-	var isConfirmed = $modal.open({
+	$modal.open({
 		templateUrl: 'dropdownModal.html',
 		controller: ModalDropdownCtrl,
 		resolve: {
 		    prepid: function() {
-				console.log('b');
 			    return prepid;
 		    }
 		}
 	});	
-	isConfirmed.result.then(function() {
-	    console.log('Confirmed');
-	});
     }
 
     $scope.isSureModal = function (action, prepid) {
