@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
-        <title>Chained requests page McM</title>  
+        <title>Chained requests page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
@@ -59,7 +59,7 @@
               <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
   	        </div>
   	        <div ng-switch-default>
-		  {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_requests_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
+		          {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_requests_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
                 <i class="icon-resize-vertical"></i>
@@ -80,46 +80,46 @@
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);">
+                  <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);" ng-href="#">
                     <i class="icon-minus-sign"></i>
                   </a>
                   <a ng-href="edit?db_name=chained_requests&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                     <i class="icon-wrench"></i>
                   </a>
-                  <a ng-click="load_puce(data.prepid)" rel="tooltip" title="Load short view">
+                  <a ng-click="load_puce(data.prepid)" rel="tooltip" title="Load short view" ng-href="#">
                     <i class="icon-eye-open"></i>
                   </a>
-                  <a ng-click='isSureModal("reset", data.prepid)' rel="tooltip" title="Reset" ng-hide="role(3);">
+                  <a ng-click='isSureModal("reset", data.prepid)' rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
                     <i class="icon-repeat"></i>
                   </a>
-		  <a ng-click='isSureModal("validate", data.prepid)' rel="tooltip" title="Validate the chain" ng-hide="role(1);">
-		    <i class="icon-star-empty"></i>
-		  </a>
-                  <a ng-click='isSureModal("next step", data.prepid)' rel="tooltip" title="Next step" ng-hide="role(3);">
+                  <a ng-click='isSureModal("validate", data.prepid)' rel="tooltip" title="Validate the chain" ng-hide="role(1);" ng-href="#">
+                    <i class="icon-star-empty"></i>
+                  </a>
+                  <a ng-click='isSureModal("next step", data.prepid)' rel="tooltip" title="Next step" ng-hide="role(3);" ng-href="#">
                     <i class="icon-chevron-right"></i>
                   </a>
-                  <a ng-href='public/restapi/chained_requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self">
+                  <a ng-href='public/restapi/chained_requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self" ng-href="#">
                     <i class="icon-download"></i>
                   </a>
-                  <a ng-href='public/restapi/chained_requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
+                  <a ng-href='public/restapi/chained_requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self" ng-href="#">
                     <i class="icon-ok-circle"></i>
-                  </a>                  
-		  <a ng-click='isSureModal("soft reset", data.prepid)' rel="tooltip" title="Soft reset the flow" ng-hide="role(3);">
-		    <i class="icon-step-backward"></i>
-		  </a>
-                  <a ng-click='isSureModal("rewind", data.prepid)' rel="tooltip" title="Rewind the flow" ng-hide="role(3);">
+                  </a>
+                  <a ng-click='isSureModal("soft reset", data.prepid)' rel="tooltip" title="Soft reset the flow" ng-hide="role(3);" ng-href="#">
+                    <i class="icon-step-backward"></i>
+                  </a>
+                  <a ng-click='isSureModal("rewind", data.prepid)' rel="tooltip" title="Rewind the flow" ng-hide="role(3);" ng-href="#">
                     <i class="icon-backward"></i>
                   </a>
-                  <a ng-click='isSureModal("flow", data.prepid)' rel="tooltip" title="Flow" ng-hide="role(3);">
+                  <a ng-click='isSureModal("flow", data.prepid)' rel="tooltip" title="Flow" ng-hide="role(3);" ng-href="#">
                     <i class="icon-forward"></i>
                   </a>
-                  <a ng-click='isSureModal("force flow", data.prepid)' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);">
+                  <a ng-click='isSureModal("force flow", data.prepid)' rel="tooltip" title="Force Flow" target="_self" ng-hide="role(3);" ng-href="#">
                     <i class="icon-fast-forward"></i>
                   </a>
-                  <a ng-click='dropdownModal(data.prepid)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);">
+                  <a ng-click='dropdownModal(data.prepid, data.member_of_campaign)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);" ng-href="#">
                     <i class="icon-indent-right"></i>
                   </a>
-                  <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);">
+                  <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);" ng-href="#">
                     <i class="icon-screenshot"></i>
                   </a>
                   <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
@@ -134,7 +134,7 @@
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
               <div ng-switch-when="Chain">
-		<a ng-href='requests?member_of_chain={{data.prepid}}' rel="tooltip" title="Show request in chain {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
+                <a ng-href='requests?member_of_chain={{data.prepid}}' rel="tooltip" title="Show request in chain {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
                   <a ng-show="$index==0" ng-href='actions?prepid={{chain}}&starts={{chain.split("-")[1]}}' rel="tooltip" title="Show action for {{chain}}" target="_self"><i class="icon-qrcode"></i></a>
                   <a ng-show="$index==0" ng-href='mccms?contains={{chain}}' rel="tooltip" title="Show mccms for {{chain}}" target="_self"><i class="icon-tasks"></i></a>
@@ -151,7 +151,7 @@
                     </span>
                   </span>
                   <!-- <reqmgr-Name ng-model="chain" prepid="data.prepid"> -->
-		  
+
                   <span ng-switch on="$index == data[value.db_name].length-1"><!-- Display arrow only after n-1 element -->
                     <a ng-switch-when="false">
                       <i  class="icon-arrow-right"></i>
@@ -254,7 +254,7 @@
 <script type="text/ng-template" id="dropdownModal.html"> <!--hidden modal template-->
   <div class="modal-header">
     <h4>Limited reservation for {{toggle_prepid}}?</h4>
-  </div> 
+  </div>
   <div class="modal-body">
 	<select ng-model="dropdownSelector">
 	<option ng-repeat="elem in campaignListDropdown">{{elem}}</option>
