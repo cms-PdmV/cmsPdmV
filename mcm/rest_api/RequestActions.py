@@ -922,11 +922,8 @@ class UpdateStats(RESTResource):
             return dumps({"results" : False, "message" : "no argument was provided"})
         rid = args[0]
         refresh_stats = True
-        if len(args) > 1:
-            if args[1] == "no_refresh":
-		refresh_stats = False
-            else:
-                return dumps({"results" : False, "message" : "2nd argument is unknown"})
+        if len(args) > 1 and args[1] == "no_refresh":
+            refresh_stats = False
 
         # set forcing argument
         force = False
