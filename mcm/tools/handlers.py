@@ -149,7 +149,9 @@ class RuntestGenvalid(Handler):
 
                 timeout = mcm_r.get_timeout()
 
-            batch_test = batch_control(self.rid, test_script, timeout=timeout)
+            __memory = mcm_r.get_attribute("memory")
+            batch_test = batch_control(self.rid, test_script, timeout=timeout,
+                    memory=__memory)
 
             try:
                 success = batch_test.test()
@@ -292,7 +294,15 @@ class RunChainValid(Handler):
             with open(test_script, 'w') as there:
                 there.write(chain_setup_script)
                 timeout = mcm_cr.get_timeout(scratch=self.scratch)
-            batch_test = batch_control( self.crid, test_script, timeout=timeout)
+            ##get max memory for request in chain
+            __max_mem = mcm_rs[0].get_attribute("memory")
+            for elem in mcm_rs:
+                __local_mem = elem.get_attribute("memory")
+                if  __local_mem> __max_mem:
+                    __max_mem = __local_mem
+
+            batch_test = batch_control( self.crid, test_script, timeout=timeout,
+                    memory=__max_mem)
 
             try:
                 success = batch_test.test()
