@@ -940,8 +940,13 @@ class UpdateStats(RESTResource):
             mcm_r.reload()
             return dumps({"prepid" : rid, "results": True})
         else:
-            return dumps({"prepid" : rid, "results": False,
-                    "message" : "no apparent changes"})
+            if force:
+                mcm_r.reload()
+                return({"prepid" : rid, "results": False,
+                        "message" : "no apparent changes, but request was foced to reload"})
+            else:
+                return dumps({"prepid" : rid, "results": False,
+                        "message" : "no apparent changes"})
 
 class SetStatus(RESTResource):
     def __init__(self):
