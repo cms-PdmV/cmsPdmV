@@ -4,11 +4,10 @@
         <title>Requests page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        <!--<link href="scripts/css/typeahead.js-bootstrap.css" rel="stylesheet" type="text/css"/>-->
         <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
-        
+
          <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
          <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
@@ -18,7 +17,6 @@
          <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
          <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
-         
          <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap', 'pasvaz.bindonce']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -36,7 +34,6 @@
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container" >
-    <!-- <div ng-controller="TabsDemoCtrl"> -->
       <tabs>
         <pane heading="Select View" active="tabsettings.view.active">
           <select-well ng-if="selectionReady" database="{{dbName}}" selection="requests_defaults" always-show="true"></select-well>
@@ -45,7 +42,6 @@
           <div class="control-group">
             List request from a list file: <ddl-file-reader ng-model="cf"> </ddl-file-reader>
             <button class="btn btn-mini" align="middle" ng-click="upload(cf);">Upload</button>
-            <!--<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_file_listing" rel="tooltip" title="Glossary for listing from file"><i class="icon-question-sign"></i></a>-->
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Lists_Requests" rel="tooltip" title="Help on listing from file"><i class="icon-question-sign"></i></a>
           </div>
         </pane>
@@ -60,10 +56,8 @@
           </form>
         </pane>
       </tabs>
-    <!-- </div> -->
-      
     </div><!--End of container-->
-    <!-- <div class="table-wrapper"> -->
+
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
@@ -157,7 +151,7 @@
                 <a ng-click="open_isSureModal('toggle',data.prepid)" rel="tooltip" ng-hide="role(4);" title="Toggle status" ng-href="#">
                   <i class="icon-step-forward"></i>
                 </a>
-                <a ng-href='actions?prepid={{data.prepid}}&select={{data.member_of_campaign}}' rel="tooltip" title="View action on this request" target="_self"> 
+                <a ng-href='actions?prepid={{data.prepid}}&select={{data.member_of_campaign}}' rel="tooltip" title="View action on this request" target="_self">
                   <i class="icon-qrcode"></i>
                 </a>
                 <a ng-href='chained_requests?contains={{data.prepid}}' rel="tooltip" title="View chains containing {{data.prepid}}" target="_self">
@@ -218,7 +212,7 @@
                 <a ng-show='data.reqmgr_name.length!=0' ng-href='batches?contains={{data.prepid}}' rel="tooltip" title="View batches containing {{data.prepid}}" target="_self"><i class="icon-tags"></i></a>
                 <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
-	            <div ng-switch-when="Pwg"> 
+	            <div ng-switch-when="Pwg">
 		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
               <div ng-switch-when="Approvals">
@@ -254,7 +248,7 @@
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
                     <dt>{{key}}</dt>
-                    <dd>{{value}}</dd>                
+                    <dd>{{value}}</dd>
                 </dl>
               </div>
               <div ng-switch-when="Output dataset">
@@ -283,7 +277,7 @@
               </div>
               <div ng-switch-when="Name of fragment">
                 <div ng-show="data[value.db_name];">
-                  <a ng-href='https://raw.githubusercontent.com/cms-sw/genproductions/{{data["fragment_tag"]}}/python/{{data[value.db_name].replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
+                  <a ng-href='https://raw.githubusercontent.com/cms-sw/genproductions/{{data["fragment_tag"]}}/python/{{data[value.db_name].replace("Configuration/GenProduction/python/", "").replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[value.db_name]}}</a>
                   <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github repo</a>
                   <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[value.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain' target="_self" ng-show='data["fragment_tag"];'>, old file in cvs</a>
                   <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/' target="_self" ng-hide='data["fragment_tag"];'>,cvs repo </a>
@@ -297,7 +291,6 @@
               <div ng-switch-when="Member of campaign">
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[value.db_name]}}' rel="tooltip" title="View request for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign {{data[value.db_name]}}" target="_self"><i class="icon-book"></i></a>
-		
               </div>
               <div ng-switch-when="Validation">
                 <ul style="margin-bottom: 0px;">
@@ -364,7 +357,7 @@
         </tr>
       </tbody>
     </table>
-  <!-- </div> -->
+
     <!-- Notify MODAL-->
     <script type="text/ng-template" id="notifyModal.html"> <!--hidden modal template-->
       <div class="modal-header">
@@ -477,6 +470,6 @@
 
     </div>
     <!-- <a ng-href='/mcm' target='_self'><div class="navbar-fixed-bottom" id="news_banner"></div></a> -->
-  </span>  
+  </span>
   </body>
 </html>

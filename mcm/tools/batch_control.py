@@ -9,13 +9,14 @@ import errno
 
 class batch_control:
     """
-    a class to which is passed a script for batch testing and provides monitoring and logging, and success status
+    a class to which is passed a script for batch testing and provides monitoring and logging
+    and success status
     """
     logger = logfactory
     hname = '' # handler's name
     group = 'no-group'
 
-    def __init__(self, test_id, test_script, timeout=None):
+    def __init__(self, test_id, test_script, timeout=None, memory=None):
         self.script_for_test = test_script
         self.test_id = test_id
         self.test_err = os.path.abspath( self.script_for_test + '.err')
@@ -40,6 +41,8 @@ class batch_control:
             self.timeout = int(timeout / 60.)
         if (self.timeout / 3600. ) > 8.:
             self.queue = '1nd' ## fall back to the one day queue at worse
+        if memory:
+            self.test_max_mem = memory*1000 ##we convert from MB to KB for batch
 
     def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
         if not stdin and not stdout and not stderr:
@@ -49,7 +52,6 @@ class batch_control:
         return True
 
     def build_batch_command(self):
-            
         cmd = 'bsub -J ' + self.test_id
         cmd += ' -g ' + self.group
         cmd += ' -q ' + self.queue
@@ -58,21 +60,22 @@ class batch_control:
             cmd += ' -W %s'%  self.timeout
         cmd += ' -eo ' + self.test_err
         cmd += ' -oo ' + self.test_out
+        cmd += ' -M ' + str(self.test_max_mem)
         cmd += ' bash ' + os.path.abspath(self.script_for_test)
-        
         return cmd
-    
+
     def batch_submit(self):
         cmd = self.build_batch_command()
         if not cmd:
             return False
 
         self.logger.log('submission command: \n%s' % cmd)
-        
+
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
-        if not self.check_ssh_outputs(stdin, stdout, stderr, "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)): return False
-        
+        if not self.check_ssh_outputs(stdin, stdout, stderr,
+                "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)): return False
+
         self.logger.log(stdout.read())
         errors = stderr.read()
         self.logger.log('SSH remote execution stderr stream: \n%s' % (errors))
@@ -81,18 +84,20 @@ class batch_control:
             return False
 
         return True
-    
+
     def monitor_job_status(self):
-        
+
         cmd = 'bjobs -w -J %s -g %s' % (self.test_id, self.group)
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-        if not self.check_ssh_outputs(stdin, stdout, stderr, "Problem with SSH execution of command bjobs -w -J %s -g %s" % (self.test_id, self.group)): return False
-            
+        if not self.check_ssh_outputs(stdin, stdout, stderr,
+                "Problem with SSH execution of command bjobs -w -J %s -g %s" % (self.test_id,
+                        self.group)): return False
+
         for line in [l for l in stdout.read().split('\n') if self.test_id in l]:
             jid = line.split()[0]
             self.logger.log(self.get_job_percentage(jid))
             return False
-        
+
         return True
 
     def get_job_percentage(self, jobid):
@@ -101,17 +106,20 @@ class batch_control:
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
         if not stdin and not stdout and not stderr:
-            self.log_err = 'SSH execution problem with command bjobs -WP -J %s -g %s' % (self.test_id, self.group)
+            self.log_err = 'SSH execution problem with command bjobs -WP -J %s -g %s' % (
+                    self.test_id, self.group)
+
             return 'SSH execution problem with command bjobs -WP -J %s -g %s' % (self.test_id, self.group)
 
         for line in [l for l in stdout.read().split('\n') if jobid in l]:
-            return '<job %s monitor hearbeat> job completion: %s' % (self.test_id, line.strip().rsplit(' ')[-2])
+            return '<job %s monitor hearbeat> job completion: %s' % (self.test_id,
+                    line.strip().rsplit(' ')[-2])
 
         return 'Not found the percentage for %s job' % jobid
 
     def get_job_result(self):
         cmd = 'cat %s' % self.test_out
-        
+
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         self.logger.log("Reading file with command %s" % cmd)
         time_out=settings().get_value('batch_retry_timeout')
@@ -124,7 +132,7 @@ class batch_control:
         trials_time_out=10
         trials=0
         ## wait for afs to synchronize the output file
-        while ((not stdin and not stdout and not stderr) or err) and trials<trials_time_out:
+        while ((not stdin and not stdout and not stderr) or err) and trials < trials_time_out:
             time.sleep(time_out)
             trials+=1
             self.logger.log('Trying to get %s for the %s time'% (self.test_out, trials+1) )
@@ -133,8 +141,10 @@ class batch_control:
                 out=stdout.read()
                 err=stderr.read()
 
-        if trials>=trials_time_out:
-            self.log_err = '%s could not be retrieved after %s tries in interval of %s s'%( self.test_out, trials, time_out )
+        if trials >= trials_time_out:
+            self.log_err = '%s could not be retrieved after %s tries in interval of %s s' % (
+                    self.test_out, trials, time_out)
+
             self.logger.error(self.log_err)
             return False
 
@@ -144,39 +154,21 @@ class batch_control:
             elif 'Exited with' in line:
                 # self.logger.error('workflow batch test returned: %s' % (line))
                 self.log_out = out
-                
+
                 cmd = 'cat %s' % self.test_err
                 stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-                if not self.check_ssh_outputs(stdin, stdout, stderr, 'Could not read the error log file: %s' % self.test_err): return False
+                if not self.check_ssh_outputs(stdin, stdout, stderr,
+                        'Could not read the error log file: %s' % self.test_err): return False
+
                 self.log_err = stdout.read()
                 return False
 
-        self.log_out = "We could get %s, but it does not look properly formatted. \n %s" %( self.test_out, out)
+        self.log_out = "We could get %s, but it does not look properly formatted. \n %s" % (
+                self.test_out, out)
+
         self.log_err = stderr.read()
         return False
 
-    """
-    def __read_job_log_file(self):
-        for log in self.configurationLogFiles:
-            stdin, stdout, stderr = self.__remote_exec('cat %s'%(log))
-            if not stdin and not stdout and not stderr:
-                continue
-            data = stdout.read()
-            if data.strip():
-                self.job_log_when_failed = data
-                self.logger.inject('Configuration test %s log: \n %s'%(log,data))
-                
-    def __read_job_error(self,extension='.err'):
-        stdin, stdout, stderr = self.__remote_exec('cat %s%s' % (self.directory + self.request.get_attribute('prepid'),extension))
-
-        if not stdin and not stdout and not stderr:
-            return
-
-        data = stdout.read()
-        if data.strip():
-	    self.logger.inject('Job %s file dump: \n%s' % (extension,data), level='error', handler=self.hname)
-
-    """
     def test(self):
         if not self.ssh_exec:
             return False
