@@ -623,22 +623,26 @@ class InjectChainedRequest(RESTResource):
         if not len(args):
             return dumps({"results" : False, "message" : "no argument was passe"})
 
+        pid = args[0]
+
         from tools.handlers import ChainRequestInjector, submit_pool
 
-        _q_lock = locker.thread_lock(self.get_attribute('prepid'))
-        if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
-            return dumps({"prepid": self.get_attribute('prepid'), "results": False,
+        _q_lock = locker.thread_lock(pid)
+        if not locker.thread_acquire(pid, blocking=False):
+            return dumps({"prepid": pid, "results": False,
                     "message": "The request {0} request is being handled already".format(
-                            self.get_attribute('prepid'))})
+                        pid)})
 
-        thread = ChainRequestInjector(prepid=args[0], lock=locker.lock(args[0]), queue_lock=_q_lock)
+        thread = ChainRequestInjector(prepid=pid, lock=locker.lock(pid), queue_lock=_q_lock,
+                check_approval=False)
+
         if self.mode == 'show':
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return thread.make_command()
         else:
             submit_pool.add_task(thread.internal_run)
             #thread.start()
-            return dumps({"results" : True, "message" : "chain submission for %s on-going" % args[0]})
+            return dumps({"results" : True, "message" : "chain submission for %s on-going" % pid})
 
 class TaskChainDict(RESTResource):
     def __init__(self):

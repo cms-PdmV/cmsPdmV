@@ -7,12 +7,11 @@ from json_layer.batch import batch
 from tools.locker import locker,semaphore_events
 from tools.settings import settings
 
-# generates the next valid prepid 
+# generates the next valid prepid
 class BatchPrepId():
     def __init__(self):
         self.bdb = database('batches')
 
-        
     def next_id(self, for_request, create_batch=True):
         flown_with = for_request['flown_with']
         next_campaign = for_request['member_of_campaign']
@@ -27,7 +26,8 @@ class BatchPrepId():
                      flown_with,
                      create_batch)
 
-    def next_batch_id(self, next_campaign, version=0, extension=0, process_string="",flown_with="", create_batch=True):
+    def next_batch_id(self, next_campaign, version=0, extension=0, process_string="",
+            flown_with="", create_batch=True):
 
         with locker.lock('batch name clashing protection'):
             if flown_with:
@@ -63,32 +63,33 @@ class BatchPrepId():
                 res_next = filter(lambda x: x['prepid'].split('-')[0].split('_')[-1] == next_campaign.split('_')[-1] , res)
                 if not res_next:
                     ## not even a document with *_<campaign>-* existing: ---> creating a new family
-                    batchNumber=1
+                    batchNumber = 1
                 else:
                     ## pick up the last+1 serial number of *_<campaign>-*  family
-                    batchNumber=max(map(lambda x: int(x['prepid'].split('-')[-1]), res_next)) + 1
+                    batchNumber = max(map(lambda x: int(x['prepid'].split('-')[-1]), res_next)) + 1
             else:
                 ## pick up the last serial number of that family
-                batchNumber=max(res_new)
+                batchNumber = max(res_new)
 
-            batchName+='-%05d'%(batchNumber)
+            batchName += '-%05d' % (batchNumber)
+
             if not self.bdb.document_exists(batchName) and create_batch:
                 newBatch = batch({'_id':batchName,
                                   'prepid':batchName,
                                   'version' : version,
                                   'extension' : extension,
                                   'process_string' : process_string})
-                notes=""
+                notes = ""
                 cdb = database('campaigns')
                 cs = []
-                if not cdb.document_exists( next_campaign ):
+                if not cdb.document_exists(next_campaign):
                     ccdb = database('chained_campaigns')
-                    if ccdb.document_exists( next_campaign ):  
-                        mcm_cc = ccdb.get( next_campaign )
+                    if ccdb.document_exists(next_campaign):
+                        mcm_cc = ccdb.get(next_campaign)
                         for (c,f) in mcm_cc['campaigns']:
-                            cs.append(c)
+                            cs.append(cdb.get(c))
                 else:
-                    cs = [cdb.get( next_campaign )]
+                    cs = [cdb.get(next_campaign)]
                 for mcm_c in cs:
                     if mcm_c['notes']:
                         notes+="Notes about the campaign %s:\n"%mcm_c['prepid']+mcm_c['notes']+"\n"
