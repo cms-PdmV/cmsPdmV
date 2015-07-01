@@ -119,6 +119,9 @@
                   <a ng-click='dropdownModal(data.prepid, data.member_of_campaign)' rel="tooltip" title="Reserve chain" target="_self" ng-hide="role(3);" ng-href="#">
                     <i class="icon-indent-right"></i>
                   </a>
+                  <a ng-click="inject_chain(data.prepid)" rel="tooltip" title="Submit TaskChain" ng-hide="role(3);" ng-href="#">
+                    <i class="icon-play-circle"></i>
+                  </a>
                   <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);" ng-href="#">
                     <i class="icon-screenshot"></i>
                   </a>
