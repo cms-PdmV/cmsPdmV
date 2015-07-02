@@ -330,7 +330,6 @@ class InspectChainedCampaignsRest(RESTResource):
                 res.append(__inspect_ret)
 
         if len(res)>1:
-            self.logger.log("Inspection finished. Returned: %s" %(res))
             return res
         elif len(res):
             self.logger.log("Inspection finished. Returned: %s" %(res[0]))
