@@ -13,7 +13,7 @@ function resultsCtrl($scope, $http, $location, $window){
   }else{
     $scope.dbName = $location.search()["db_name"];
   }
-  
+
   $search_data = {};
   $scope.new = {};
   $scope.selectedAll = false;
@@ -264,7 +264,7 @@ function resultsCtrl($scope, $http, $location, $window){
       alert("No requests selected");
     };
   };
- 
+
   $scope.multiple_load = function(){
     for (i_load=0; i_load< $scope.selected_prepids.length; i_load++){
 	    $scope.load_puce( $scope.selected_prepids[i_load] );
@@ -294,7 +294,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.action_report[data[i]['prepid']] = data[i]['message'];
       to_reload=false;
         }
-      }      
+      }
       if (to_reload == true)
     {
         $scope.setSuccess(status);
@@ -307,14 +307,14 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.setFailure = function(status){
     $scope.update["success"] = false;
-    $scope.update["fail"] = true; 
-    $scope.update["status_code"] = status; 
+    $scope.update["fail"] = true;
+    $scope.update["status_code"] = status;
   };
 
   $scope.setSuccess = function(status){
     $scope.update["success"] = true;
-    $scope.update["fail"] = false; 
-    $scope.update["status_code"] = status; 
+    $scope.update["fail"] = false;
+    $scope.update["status_code"] = status;
     $scope.getData();
   };
 
@@ -353,7 +353,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
       $scope.update["status_code"] = status;
-    }); 
+    });
    };
   $scope.upload = function(file){
     /*Upload a file to server*/
@@ -387,7 +387,7 @@ function resultsCtrl($scope, $http, $location, $window){
       },function(data){
         console.log("error",data);
       });
-    }  
+    }
   };
   $scope.multiple_inspect = function()
   {
@@ -405,10 +405,21 @@ function resultsCtrl($scope, $http, $location, $window){
                   $scope.preloadRequest(k,element.prepid);
                 }
               }
-            });              
+            });
           }
         });
     });
+  };
+
+  $scope.inject_chain = function(prepid)
+  {
+    var __url = "restapi/"+$scope.dbName+"/inject/"+prepid
+    var promise = $http.get(__url);
+    promise.then(function(data, status){
+      $scope.parse_report([data.data], data.status);
+    }, function(data){
+      $scope.setFailure(data.status);
+    })
   };
 };
 

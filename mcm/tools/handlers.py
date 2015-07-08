@@ -606,7 +606,7 @@ class ChainRequestInjector(Handler):
                 for rn in chain:
                     mcm_rs.append(request(rdb.get(rn)))
                     if self.check_approval and mcm_rs[-1].get_attribute('approval') != 'submit':
-                        self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                        self.logger.error('requests %s is in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
                                 rn, mcm_rs[-1].get_attribute('status'),
                                 mcm_rs[-1].get_attribute('approval')))
 

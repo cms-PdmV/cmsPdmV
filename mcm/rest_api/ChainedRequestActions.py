@@ -642,7 +642,9 @@ class InjectChainedRequest(RESTResource):
         else:
             submit_pool.add_task(thread.internal_run)
             #thread.start()
-            return dumps({"results" : True, "message" : "chain submission for %s on-going" % pid})
+            return dumps({"results" : True,
+                    "message" : "chain submission for %s will be forked unless same request is being handled already" % pid,
+                    "prepid" : pid})
 
 class TaskChainDict(RESTResource):
     def __init__(self):
