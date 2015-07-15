@@ -256,13 +256,15 @@ class json_base:
         if hasattr(self, fcn):
             #self.logger.log('Calling %s '%(fcn))
             ## that function should through if not approvable
-            getattr(self, fcn)()
+            __ret = getattr(self, fcn)()
             self.notify('Approval %s for %s %s' % (self.__approvalsteps[next_step],
                                                    self.__class__.__name__,
                                                    self.get_attribute('prepid')),
                         self.textified(),
                         accumulate=True
             )
+            if __ret:
+                return __ret
 
     def textified(self):
         return 'no body'

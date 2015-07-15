@@ -785,6 +785,7 @@ class ApproveRequest(RESTResource):
             return self.approve(rid, val, hard)
 
     def approve(self, rid, val=-1,hard=True):
+        _res = ""
         db = database('requests')
         if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
@@ -799,7 +800,7 @@ class ApproveRequest(RESTResource):
                 saved = db.update(req.json())
             else:
                 with locker.lock('{0}-wait-for-approval'.format( rid ) ):
-                    req.approve(val)
+                    _res = req.approve(val)
                     saved = db.update(req.json())
 
         except request.WrongApprovalSequence as ex:
@@ -809,11 +810,14 @@ class ApproveRequest(RESTResource):
         except request.IllegalApprovalStep as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except:
-            trace=traceback.format_exc()
+            trace = traceback.format_exc()
             self.logger.error("Exception caught in approval\n%s"%(trace))
             return {'prepid': rid, 'results': False, 'message': trace}
         if saved:
-            return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
+            if _res:
+                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': False, 'message' : _res["message"]}
+            else:
+                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
         else:
             return {'prepid': rid, 'results': False, 'message': 'Could not save the request after approval'}
 
