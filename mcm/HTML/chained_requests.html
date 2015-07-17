@@ -220,7 +220,7 @@
     <!-- {{r_status}} -->
     <!-- {{local_requests}} -->
     <div class="row-fluid custom-footer">
-      <div class="span5" style="margin-top:20px;">
+      <div class="span5" style="margin-top:20px;" ng-controller="ModalDemoCtrl">
         Multiple selection buttons
 	      <a ng-click="multiple_load()" rel="tooltip" title="Load short view for selected requests" ng-href="#">
 	        <i class="icon-eye-open"></i>
@@ -243,6 +243,9 @@
         <a ng-click="multiple_flow('/force')" rel="tooltip" ng-hide="role(3);" title="Force Flow selected requests" ng-href="#">
          <i class="icon-fast-forward"></i>
         </a>
+        <a ng-click='multipleDropDownModal(selected_prepids)' rel="tooltip" title="Reserve selected chains" target="_self" ng-hide="role(3);" ng-href="#">
+          <i class="icon-indent-right"></i>
+        </a>
         <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
         </a>
@@ -259,9 +262,9 @@
     <h4>Limited reservation for {{toggle_prepid}}?</h4>
   </div>
   <div class="modal-body">
-	<select ng-model="dropdownSelector">
-	<option ng-repeat="elem in campaignListDropdown">{{elem}}</option>
-	</select>
+	  <select ng-model="dropdownSelector">
+	    <option ng-repeat="elem in campaignListDropdown">{{elem}}</option>
+	  </select>
   </div>
   <div class="modal-footer">
     <button class="btn btn-warning" ng-click="confirm(dropdownSelector)">Confirm</button>
