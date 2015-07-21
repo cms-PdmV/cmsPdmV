@@ -186,6 +186,7 @@ class request(json_base):
             self.set_attribute('total_events', int(1+total_events_should_be / float(rounding_unit))*int(rounding_unit))
 
     def ok_to_move_to_approval_validation(self, for_chain=False):
+        message = ""
         if self.current_user_level == 0:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
