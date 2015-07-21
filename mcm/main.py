@@ -11,7 +11,7 @@ from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
-from rest_api.InvalidationActions import InspectInvalidation, GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation
+from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
@@ -313,7 +313,6 @@ root.restapi.batches.hold = HoldBatch()
 root.restapi.batches.notify = NotifyBatch()
 
 # REST invalidation Actions
-root.restapi.invalidations.inspect = InspectInvalidation()
 root.restapi.invalidations.get = GetInvalidation()
 root.restapi.invalidations.delete = DeleteInvalidation()
 root.restapi.invalidations.announce = AnnounceInvalidations()

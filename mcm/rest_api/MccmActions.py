@@ -130,7 +130,7 @@ class CreateMccm(RESTResource):
 class CancelMccm(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
-        
+
     def GET(self,  *args):
         """
         Cancel the MccM ticket provided in argument. Does not delete it but put the status as cancelled.
@@ -149,7 +149,6 @@ class CancelMccm(RESTResource):
             return dumps({"results": True})
         else:
             return dumps({"results": False, "message": "Could not save the ticket to be cancelled."})
-            
 
 class DeleteMccm(RESTResource):
 
@@ -225,15 +224,15 @@ class GenerateChains(RESTResource):
                     "message" : "status is %s, expecting new"%( mcm_m.get_attribute('status'))}
         if mcm_m.get_attribute('block')==0:
             return {"prepid":mid,
-                    "results" : False, 
+                    "results" : False,
                     "message" : "No block selected"}
         if len(mcm_m.get_attribute('chains'))==0:
             return {"prepid":mid,
-                    "results" : False, 
+                    "results" : False,
                     "message" : "No chains selected"}
         if len(mcm_m.get_attribute('requests'))==0:
             return {"prepid":mid,
-                    "results" : False, 
+                    "results" : False,
                     "message" : "No requests selected"}
 
         aids = []
@@ -252,7 +251,7 @@ class GenerateChains(RESTResource):
                     return {"prepid":mid,
                             "results" : False,
                             "message" : "inconsistent range of ids %s -> %s" %(r[0],r[1])}
-                
+
                 aids.extend( map( lambda s : "%s-%s-%05d"%( pwg1, campaign1, s), range( serial1, serial2+1)))
             else:
                 aids.append( r )
@@ -280,22 +279,22 @@ class GenerateChains(RESTResource):
             mcm_r = rdb.get(aid)
             if mcm_r['member_of_campaign'] != allowed_campaign:
                 return {"prepid":mid,
-                        "results" : False, 
+                        "results" : False,
                         "message" : "A request (%s) is not from the allowed root campaign %s" %( aid, allowed_campaign) }
             if mcm_r['status']=='new' and mcm_r['approval']=='validation':
                 return {"prepid":mid,
-                        "results" : False, 
+                        "results" : False,
                         "message" : "A request (%s) is being validated." %( aid) }
             if mcm_r['flown_with']:
                 return {"prepid":mid,
                         "results" : False,
                         "message" : "A request (%s) is in the middle of a chain already."%(aid)}
-        
+
         if not mcm_m.get_attribute('repetitions'):
             return {"prepid":mid,
                     "results" : False,
                     "message" : "The number of repetitions (%s) is invalid"%( mcm_m.get_attribute('repetitions') )}
-            
+
         res=[]
         for aid in aids:
             for times in range(mcm_m.get_attribute('repetitions')):
@@ -330,7 +329,7 @@ class MccMReminder(RESTResource):
         mdb = database('mccms')
         mccms = mdb.queries(['status==new'])
         udb = database('users')
-        
+
         block_threshold = 0
         if len(args):
             block_threshold = int(args[0])
@@ -349,7 +348,7 @@ Dear Production Managers,
  please find below the details of %s opened MccM tickets that need to be operated.
 
 ''' % (len(mccms))
-        
+
         for mccm in mccms:
             message += 'Ticket : %s (block %s)\n'%( mccm['prepid'], mccm['block'] )
             message += ' %smccms?prepid=%s \n\n' % (l_type.baseurl(), mccm['prepid'])
@@ -362,9 +361,8 @@ Dear Production Managers,
         com.sendMail(to_who,
                      subject,
                      message)
-        
+
         return dumps({"results" : True, "message" : map( lambda m : m['prepid'], mccms)})
-    
 
 class MccMDisplay(RESTResource):
     def __init__(self):
@@ -374,7 +372,7 @@ class MccMDisplay(RESTResource):
         """
         Twiki display of mccm ticket for a given meeting date and /pwg optional
         """
-        
+
         date = args[0]
         pwgs=None
         if len(args)>1:
@@ -383,7 +381,7 @@ class MccMDisplay(RESTResource):
         mdb = database('mccms')
 
         to_be_shown= ['prepid','notes','deadline','requests','chains','repetitions']
-        l_type=locator()        
+        l_type=locator()
         mdocs= mdb.queries(['meeting==%s'% date])
         if pwgs:
             text="---++ MccM Tickets for %s : %s \n"%( date, ', '.join(pwgs) )
@@ -402,13 +400,9 @@ class MccMDisplay(RESTResource):
             text+="[[%smccms?meeting=%s][link to McM]]\n"%( l_type.baseurl(), date )
             for t in mdocs:
                 text+="   * "
-                for item in to_be_shown:   
+                for item in to_be_shown:
                     if item in t:
-                        text+="%s "% t[item]       
+                        text+="%s "% t[item]
                 text+='\n'
 
         return text
-
-        
-        
-

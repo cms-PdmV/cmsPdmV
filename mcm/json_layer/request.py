@@ -408,9 +408,8 @@ class request(json_base):
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
         else:
             if self.get_attribute('process_string') or __flow_ps: ## if both are not empty string
-                raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                        'The sequences is the same as one of the campaign, but a request process string %s  or flow process string %s has been provided' % (
-                                self.get_attribute('process_string'), __flow_ps))
+                message = {"message" : "Request was put to validation, while the sequences is the same as one of the campaign and could trigger dataset collision. Make sure process string is provided"}
+
 
         if for_chain:
             return
@@ -436,6 +435,9 @@ class request(json_base):
 
         else:
             self.set_status()
+
+        if message:
+            return message
 
     def ok_to_move_to_approval_define(self):
         if self.current_user_level == 0:

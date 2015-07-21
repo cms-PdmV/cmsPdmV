@@ -216,9 +216,10 @@ class chained_request(json_base):
                                                              self.get_attribute('member_of_campaign')))
 
         if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
-                                                                                                              stop_at_campaign))
+            return False
+            # raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
+            #                                              'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
+            #                                                                                                   stop_at_campaign))
                     
 
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))

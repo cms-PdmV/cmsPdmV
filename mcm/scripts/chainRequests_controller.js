@@ -75,11 +75,6 @@ function resultsCtrl($scope, $http, $location, $window){
 		    }
 	    }
 	  }
-	//i = $scope.result.indexOf(prepid);
-	//this_one=$scope.result[i];
-	//console.log($scope.result)
-	//	console.log(prepid,i,this_one);
-	//["puce"] = ['icon-signal','icon-signal'];
   };
 
   $scope.delete_object = function(db, value){
@@ -223,7 +218,7 @@ function resultsCtrl($scope, $http, $location, $window){
 
   $scope.flowChainedRequest = function(prepid, force, campaign){
     if (campaign != undefined) {
-	    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force+"/"+campaign);	
+	    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force+"/"+campaign);
 	} else {
 	    var promise = $http.get("restapi/"+$scope.dbName+"/flow/"+prepid+force);
 	}
@@ -378,9 +373,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.local_requests[chain] = local_data;
         if (load_single != "")
         {
-          // console.log($scope.local_requests[chain]);
           _.each($scope.local_requests[chain],function(element, index){
-            // console.log("braodcast: ",element.name, index, load_single);
             $scope.$broadcast('loadDataSet', [element.name, index, load_single]);
           });
         }
@@ -428,7 +421,7 @@ function resultsCtrl($scope, $http, $location, $window){
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <div ng-hide="show_history">'+
     '    <input type="button" value="Show" ng-click="show_history=true;">'+
@@ -454,7 +447,7 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
-   '          <td style="padding: 0px;">{{elem.step}}</td>'+  
+   '          <td style="padding: 0px;">{{elem.step}}</td>'+
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
@@ -577,23 +570,6 @@ testApp.directive("loadRequestsFields", function($http, $location){
       scope.showUrl = false;
       scope.showOption = {};
 
-      // scope.getSearch = function () {
-      //   scope.listfields = {};
-      //   scope.showUrl = false;
-      //   var promise = $http.get("restapi/requests/searchable/do");
-      //   scope.loadingData = true;
-      //   promise.then(function(data){
-      //     scope.loadingData = false;
-      //     scope.searchable = data.data;
-      //     _.each(scope.searchable, function(element,key){
-      //       element.unshift("------"); //lets insert into begining of array an default value to not include in search
-      //       scope.listfields[key] = "------";
-      //     });
-      //   }, function(data){
-      //     scope.loadingData = false;
-      //     alert("Error getting searchable fields: "+data.status);
-      //   });
-      // };
       scope.cleanSearchUrl = function () {
         _.each($location.search(),function(elem,key){
           $location.search(key,null);
@@ -683,6 +659,49 @@ var ModalDropdownCtrl = function($scope, $modalInstance, $http, prepid, member_o
     };
 };
 
+var MultipleReserveCtrl = function($scope, $modalInstance, $http, selected_prepids) {
+  $scope.campaignListDropdown = ["--------"];
+  $scope.dropdownSelector = $scope.campaignListDropdown[0];
+
+  // we should get unique list of member_of campaign for thse chained_request
+  // then retrieve a list of chained_campaigns as retrieved in reserve modal
+  //   and unique the campaign list
+
+  var __chains = [];
+
+  _.each(selected_prepids, function(elem){
+    //pwd-chain_camp-id we parse out the chain_campaign prepid
+    var __local_split = elem.split("-");
+    __chains.push(__local_split[1]);
+  });
+  // unique to query only for needed chained_campaigns
+  __chains = _.uniq(__chains);
+
+  $scope.loadingData = true;
+  _.each(__chains, function(elem){
+    var promise = $http.get("search?db_name=chained_campaigns&get_raw&prepid=" +
+        elem);
+
+    promise.then(function(data){
+      data.data.rows[0].doc.campaigns.forEach(function(c) {
+        //we add campaign only once, to not have duplicates
+        if ($scope.campaignListDropdown.indexOf(c[0]) == -1) {
+          $scope.campaignListDropdown.push(c[0]);
+        }
+      });
+    // here should be failure handling
+    });
+  });
+  $scope.loadingData = false;
+
+  $scope.confirm = function(id){
+    $modalInstance.close(id);
+  }
+  $scope.cancel = function() {
+      $modalInstance.dismiss();
+    };
+};
+
 var ModalDemoCtrl = function ($scope, $http, $modal) {
   $scope.dropdownModal = function(prepid, member_of_campaign) {
     var isConfirmed = $modal.open({
@@ -703,6 +722,30 @@ var ModalDemoCtrl = function ($scope, $http, $modal) {
       } else {
         $scope.flowChainedRequest(prepid, '/reserve', campaign);
       }
+    });
+  }
+  // multiple selection modal -> we pass list of campaigns, and for selected prepids
+  // we should do a reserve method for eatch
+  $scope.multipleDropDownModal = function(selected_prepids){
+    var multiple_reservation = $modal.open({
+      templateUrl: 'dropdownModal.html',
+      controller: MultipleReserveCtrl,
+      resolve: {
+        selected_prepids: function(){
+          return selected_prepids;
+        }
+      }
+    });
+
+    multiple_reservation.result.then(function (campaign) {
+      //here we trigger reservation for multiple selected chains to selected campaign
+      _.each(selected_prepids, function (elem) {
+        if (campaign == undefined || campaign == ["--------"]) {
+          $scope.flowChainedRequest(elem, '/reserve');
+        } else {
+          $scope.flowChainedRequest(elem, '/reserve', campaign);
+        }
+      });
     });
   }
 
