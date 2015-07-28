@@ -145,7 +145,12 @@ class request(json_base):
 
         if self.get_attribute('status') != 'new': ## after being new, very limited can be done on it
             for key in self._json_base__schema:
-                editable[key] = False
+                ## we want to be able to edit total_events untill approved status
+                if self._json_base__status.index(self.get_attribute("status")) <= 2 and key == "total_events":
+                    editable[key] = True
+                else:
+                    editable[key] = False
+
             if self.current_user_level != 0: ## not a simple user
                 always_editable = settings().get_value('editable_request')
                 for key in always_editable:
