@@ -414,7 +414,7 @@ class request(json_base):
                         'The sequences of the request has been changed with respect to the campaign, but no processing string has been provided')
         else:
             if self.get_attribute('process_string') or __flow_ps: ## if both are not empty string
-                message = {"message" : "Request was put to validation, while the sequences is the same as one of the campaign and could trigger dataset collision. Make sure process string is provided"}
+                message = {"message" : "Request was put to validation. Process string was provided while the sequences is the same as one of the campaign."}
 
 
         if for_chain:
