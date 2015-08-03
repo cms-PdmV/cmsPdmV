@@ -849,3 +849,22 @@ class GetSetupForChains(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return cr.get_setup(directory=directory, run=run, events=events, validation=valid)
+
+class TestOutputDSAlgo(RESTResource):
+    def __init__(self, mode='setup'):
+        self.access_limit = access_rights.user
+
+
+    def GET(self, *args, **kwargs):
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+
+        crdb = database('chained_requests')
+        if not crdb.document_exists(args[0]):
+            return dumps({"results": False,
+                    "message": "Chained request with prepid {0} does not exist".format(args[0])})
+
+        cr = chained_request(crdb.get(args[0]))
+
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return cr.test_output_ds()

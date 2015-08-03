@@ -1,10 +1,11 @@
+import json
+import traceback
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
 from flow import flow
 
 from couchdb_layer.mcm_database import database
-import json
 from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
@@ -173,6 +174,73 @@ class chained_request(json_base):
         return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)
         #return self.flow_to_next_step_clean(input_dataset,  block_black_list,  block_white_list)
 
+    def get_ds_input(self, __output_dataset, __seq):
+        try:
+            self.logger.log("###DEBUG### output_ds : %s" % (__output_dataset))
+            input_ds = ""
+            possible_dt_inputs = settings().get_value('datatier_input')
+            ##we take sequence 1step datetier
+            ## check if "step" is a string -> some DR requests has single step string with , in it...
+            ## some DR requests has it.... most probably the generated ones
+
+            if isinstance(__seq[0]["step"], basestring):
+                __step = __seq[0]["step"].split(",")[0].split(":")[0]
+            else:
+                __step = __seq[0]["step"][0].split(":")[0]
+
+            self.logger.log("###DEBUG### step: %s, shit: %s" % (__step, __seq[0]["step"]))
+
+            if __step in possible_dt_inputs:
+                __possible_inputs = possible_dt_inputs[__step]
+                ## highest priority is first.. we should take acording output_ds
+                __prev_output = __output_dataset
+                __prev_tiers = [el.split("/")[-1] for el in __prev_output]
+
+                for elem in __possible_inputs:
+                    if elem in __prev_tiers:
+                        input_ds = __prev_output[__prev_tiers.index(elem)]
+                        ##dirty stuff
+                        self.logger.log("###DEBUG### found a possible DS: %s" % (input_ds))
+                        self.logger.log("###DEBUG### \t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
+                        break
+            else:
+                ##if step is not defined in dictionary -> we default to previous logic
+                input_ds = __output_dataset[0]
+            ##if we didn't find anything in for loop above, fall back to previous
+            if not input_ds:
+                if len(__output_dataset) > 0:
+                    ##in case the output_dataset is ""
+                    input_ds = __output_dataset[0]
+
+            self.logger.log("###DEBUG### return DS: %s" % (input_ds))
+            return input_ds
+        except Exception as ex:
+            self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
+            return ""
+
+    def test_output_ds(self):
+        req_db = database("requests")
+        ret = ""
+        res = ""
+        output_ds = None
+        for req_id in self.get_attribute("chain"):
+            req = request(req_db.get(req_id))
+            if output_ds != None:
+                ###BOH mulptiple ID,step for
+                ## TOP-chain_RunIIWinter15pLHE_flowRunIIWinter15pLHEtoGS_flowRunIISpring15DR74Startup25ns_flowRunIISpring15ReMiniAODv1Test-00001
+                self.logger.log("Working for request: %s, sequence: %s"  %(req.get_attribute("prepid"), req.get_attribute("sequences")))
+                ret = self.get_ds_input(output_ds, req.get_attribute("sequences"))
+                res += "%s input DS: %s\n" % (req_id, ret)
+            else:
+                res += "%s input DS: %s\n" % (req_id, ret)
+            ##for test purposes to migrate DS selection
+            #if req.get_attribute("input_dataset") != ret:
+            #    print "chain %s request:%s" %(self.get_attribute("prepid"), req_id)
+            #    print "input DS differs!\n is:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret)
+
+            output_ds = req.get_attribute("output_dataset")
+        return res
+
     def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, stop_at_campaign=None):
         if not block_white_list: block_white_list = []
         if not block_black_list: block_black_list = []
@@ -220,7 +288,7 @@ class chained_request(json_base):
             # raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
             #                                              'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
             #                                                                                                   stop_at_campaign))
-                    
+
 
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
         if next_step >= len(mcm_cc['campaigns']):
@@ -289,8 +357,6 @@ class chained_request(json_base):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'the flow is getting into a MCReproc campaign but not size per event is specified')
 
-
-        
         ## check that it is allowed to flow
         allowed_flow_approvals = ['flow', 'submit']
         ###### cascade of checks
@@ -330,8 +396,9 @@ class chained_request(json_base):
 
             notify_on_fail=True ## to be tuned according to the specific cases
             if current_request.get_attribute('completed_events') <= 0:
+                self.logger.error("###DEBUG### compl_evts: %s, prepid: %s" % (current_request.get_attribute('completed_events'),current_request.json()))
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                             'The number of events completed is negative or null')
+                                                             'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
             else:
                 allowed_request_statuses = ['done']
                 ## determine if this is a root -> non-root transition to potentially apply staged number
@@ -401,8 +468,6 @@ class chained_request(json_base):
             toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
             ## make sure they get ordered by prepid
             related_crs = sorted(crdb.queries(['root_request==%s' % original_action_id]), key=lambda cr : cr['prepid'])
-            
-            
 
             vetoed_last=[]
             for existing_cr in related_crs:
@@ -428,7 +493,7 @@ class chained_request(json_base):
                 truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
                 self.logger.error('to match : %s , this one %s' % ( toMatch, truncated ))
                 if truncated == toMatch:
-                    #we found a chained request that starts with all same steps          
+                    #we found a chained request that starts with all same steps
                     mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
                     if len(mcm_cr.get_attribute('chain')) <= next_step:
                         #found one, but it has not enough content either
@@ -479,22 +544,6 @@ class chained_request(json_base):
         #current_request -> next_request
         #current_campaign -> next_campaign
 
-        ##determine whether we have an input dataset for the next request
-        if len(current_request.get_attribute('output_dataset')):
-            input_dataset = current_request.get_attribute('output_dataset')[0]
-        elif len(current_request.get_attribute('reqmgr_name')):
-            last_wma = current_request.get_attribute('reqmgr_name')[-1]
-            if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
-                input_dataset = last_wma['content']['pdmv_dataset_name']
-            else:
-                statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
-                if statsDB.document_exists(last_wma['name']):
-                    latestStatus = statsDB.get(last_wma['name'])
-                    input_dataset = latestStatus['pdmv_dataset_name']
-
-        if input_dataset:
-            next_request.set_attribute('input_dataset', input_dataset)
-
 
         ## set blocks restriction if any
         if block_black_list:
@@ -507,6 +556,36 @@ class chained_request(json_base):
 
         ##assemble the campaign+flow => request
         request.put_together(next_campaign, mcm_f, next_request)
+
+        ##determine whether we have an input dataset for the next request
+        self.logger.log("##DEBUG### here we define input DS")
+        if len(current_request.get_attribute('output_dataset')):
+            ##here we should determine the input dataset from DB dict based on
+            ## current_request's 1st step in sequence
+            input_dataset = self.get_ds_input(
+                    current_request.get_attribute('output_dataset'),
+                    next_request.get_attribute("sequences"))
+
+
+        elif len(current_request.get_attribute('reqmgr_name')):
+            self.logger.log("###DEBUG### input_ds based by request_manager....")
+            last_wma = current_request.get_attribute('reqmgr_name')[-1]
+            if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
+                self.logger.log("###DEBUG###\tget from rqmngr")
+                input_dataset = self.get_ds_input(last_wma['content']['pdmv_dataset_list'],
+                        next_request.get_attribute("sequences"))
+            else:
+                self.logger.log("###DEBUG###\tget from stats")
+                statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
+                if statsDB.document_exists(last_wma['name']):
+                    latestStatus = statsDB.get(last_wma['name'])
+                    input_dataset = self.get_ds_input(latestStatus['pdmv_dataset_list'],
+                            next_request.get_attribute("sequences"))
+
+        if input_dataset:
+            self.logger.log("###DEBUG### setting input_ds to: %s" % (input_dataset))
+            next_request.set_attribute('input_dataset', input_dataset)
+
         if not reserve:
             #already taking stage and threshold into account
             next_request.set_attribute('total_events', next_total_events)
@@ -516,8 +595,8 @@ class chained_request(json_base):
 
         if not request_saved:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'Could not save the new request %s' % (
-                                                             next_request.get_attribute('prepid')))
+                    'Could not save the new request %s' % (
+                            next_request.get_attribute('prepid')))
 
         ## inspect priority
         self.set_priority(original_action_item['block_number'])
