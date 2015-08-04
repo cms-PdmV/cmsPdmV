@@ -176,7 +176,7 @@ class chained_request(json_base):
 
     def get_ds_input(self, __output_dataset, __seq):
         try:
-            self.logger.log("###DEBUG### output_ds : %s" % (__output_dataset))
+            self.logger.log("get_ds_input output_ds: %s" % (__output_dataset))
             input_ds = ""
             possible_dt_inputs = settings().get_value('datatier_input')
             ##we take sequence 1step datetier
@@ -188,8 +188,6 @@ class chained_request(json_base):
             else:
                 __step = __seq[0]["step"][0].split(":")[0]
 
-            self.logger.log("###DEBUG### step: %s, shit: %s" % (__step, __seq[0]["step"]))
-
             if __step in possible_dt_inputs:
                 __possible_inputs = possible_dt_inputs[__step]
                 ## highest priority is first.. we should take acording output_ds
@@ -200,8 +198,8 @@ class chained_request(json_base):
                     if elem in __prev_tiers:
                         input_ds = __prev_output[__prev_tiers.index(elem)]
                         ##dirty stuff
-                        self.logger.log("###DEBUG### found a possible DS: %s" % (input_ds))
-                        self.logger.log("###DEBUG### \t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
+                        self.logger.log("get_ds_input found a possible DS: %s" % (input_ds))
+                        self.logger.log("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
                         break
             else:
                 ##if step is not defined in dictionary -> we default to previous logic
@@ -212,7 +210,7 @@ class chained_request(json_base):
                     ##in case the output_dataset is ""
                     input_ds = __output_dataset[0]
 
-            self.logger.log("###DEBUG### return DS: %s" % (input_ds))
+            self.logger.log("get_ds_input returns input_ds: %s" % (input_ds))
             return input_ds
         except Exception as ex:
             self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
@@ -226,17 +224,16 @@ class chained_request(json_base):
         for req_id in self.get_attribute("chain"):
             req = request(req_db.get(req_id))
             if output_ds != None:
-                ###BOH mulptiple ID,step for
-                ## TOP-chain_RunIIWinter15pLHE_flowRunIIWinter15pLHEtoGS_flowRunIISpring15DR74Startup25ns_flowRunIISpring15ReMiniAODv1Test-00001
                 self.logger.log("Working for request: %s, sequence: %s"  %(req.get_attribute("prepid"), req.get_attribute("sequences")))
                 ret = self.get_ds_input(output_ds, req.get_attribute("sequences"))
                 res += "%s input DS: %s\n" % (req_id, ret)
             else:
                 res += "%s input DS: %s\n" % (req_id, ret)
-            ##for test purposes to migrate DS selection
-            #if req.get_attribute("input_dataset") != ret:
-            #    print "chain %s request:%s" %(self.get_attribute("prepid"), req_id)
-            #    print "input DS differs!\n is:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret)
+            #for test purposes to migrate DS selection
+            if req.get_attribute("input_dataset") != ret:
+                res += "input DS differs!\nis:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret)
+                self.logger.log("chain %s request:%s" % (self.get_attribute("prepid"), req_id))
+                self.logger.log("input DS differs!\n is:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret))
 
             output_ds = req.get_attribute("output_dataset")
         return res
@@ -558,7 +555,6 @@ class chained_request(json_base):
         request.put_together(next_campaign, mcm_f, next_request)
 
         ##determine whether we have an input dataset for the next request
-        self.logger.log("##DEBUG### here we define input DS")
         if len(current_request.get_attribute('output_dataset')):
             ##here we should determine the input dataset from DB dict based on
             ## current_request's 1st step in sequence
@@ -583,7 +579,7 @@ class chained_request(json_base):
                             next_request.get_attribute("sequences"))
 
         if input_dataset:
-            self.logger.log("###DEBUG### setting input_ds to: %s" % (input_dataset))
+            self.logger.log("%s setting input_ds to: %s" % (next_request.get_attribute("prepid"), input_dataset))
             next_request.set_attribute('input_dataset', input_dataset)
 
         if not reserve:
