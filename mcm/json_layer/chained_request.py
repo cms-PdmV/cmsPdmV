@@ -775,7 +775,7 @@ class chained_request(json_base):
         #get the max and apply to all as a conservative estimation
         #this should probably be a bit more subtle
         return t*len(req_ids)
-            
+
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')
@@ -786,7 +786,6 @@ class chained_request(json_base):
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):
             req = request(rdb.get(req_id))
-            if req.get_attribute('status') in ['submitted','done']: continue
             ev = events
             if not ev and index!=0 and not req.is_root:
                 ev = -1
