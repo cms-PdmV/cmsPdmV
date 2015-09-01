@@ -2,7 +2,7 @@ from tools.locator import locator
 from tools.ssh_executor import ssh_executor
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
-from tools.settings import settings 
+from tools.settings import settings
 
 class request_to_wmcontrol:
     """
@@ -74,7 +74,7 @@ class request_to_wmcontrol:
 
         max_forward_eff = mcm_r.get_forward_efficiency()
         events_per_lumi = settings().get_value('events_per_lumi')
-        
+
         if wmagent_type == 'MonteCarlo':
 
             # calculate eff dev
@@ -83,7 +83,7 @@ class request_to_wmcontrol:
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
         elif wmagent_type == 'MonteCarloFromGEN':
-            # calculate eff dev                
+            # calculate eff dev
             command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
 
             command += ' --input-ds %s' % (mcm_r.get_attribute('input_dataset'))
@@ -114,7 +114,6 @@ class request_to_wmcontrol:
                 command += ' --lhe '
                 if not processString:
                     processString = ''
-                processString += 'STEP0ATCERN'
 
         elif wmagent_type == 'ReDigi':
 
@@ -155,7 +154,7 @@ class request_to_wmcontrol:
                         else:
                             command += ' --step%d-cfg %s_%d_cfg.py' % ( i + 1, mcm_r.get_attribute('prepid'), i + 1)
 
-                # set the output of 
+                # set the output of
                 if i < len(eventcontentlist) - 1:
                     command += ' --step' + str(i + 1) + '-output ' + content
 
@@ -163,7 +162,6 @@ class request_to_wmcontrol:
                 command += ' --blocks "' + ','.join(mcm_r.get_attribute('block_white_list')) + '"'
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
-            
 
         if processString:
             command += ' --process-string ' + processString

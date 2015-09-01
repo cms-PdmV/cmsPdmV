@@ -1419,6 +1419,7 @@ done
                 'pdmv_present_priority','pdmv_prep_id']
 
         mcm_rr = self.get_attribute('reqmgr_name')
+        __curr_output = self.get_attribute('output_dataset')
 
         ### first trigger an update of the stats itself
         if refresh:
@@ -1561,6 +1562,11 @@ done
                 # above how much change do we update : 5%
 
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
+                changes_happen = True
+            ##we check if output_dataset managed to change.
+            ## ussually when request is assigned, but no evts are generated
+            if __curr_output != collected:
+                self.logger.log("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
                 changes_happen = True
             self.set_attribute('completed_events', completed)
             self.set_attribute('output_dataset', collected)

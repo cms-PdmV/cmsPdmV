@@ -409,6 +409,7 @@ class chained_request(json_base):
                                                          allowed_request_statuses)
                 ##special check at transition that the statistics is good enough
                 if at_a_transition:
+                    self.logger.log("ChainedRequest is at transition. id: " % (self.get_attribute('prepid')))
                     # at a root -> non-root transition only does the staged/threshold functions !
                     if 'staged' in original_action_item:
                         next_total_events = int(original_action_item['staged'])
@@ -774,7 +775,7 @@ class chained_request(json_base):
         #get the max and apply to all as a conservative estimation
         #this should probably be a bit more subtle
         return t*len(req_ids)
-            
+
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')
@@ -785,7 +786,6 @@ class chained_request(json_base):
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):
             req = request(rdb.get(req_id))
-            if req.get_attribute('status') in ['submitted','done']: continue
             ev = events
             if not ev and index!=0 and not req.is_root:
                 ev = -1
