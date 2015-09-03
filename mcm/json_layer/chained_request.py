@@ -409,7 +409,7 @@ class chained_request(json_base):
                                                          allowed_request_statuses)
                 ##special check at transition that the statistics is good enough
                 if at_a_transition:
-                    self.logger.log("ChainedRequest is at transition. id: " % (self.get_attribute('prepid')))
+                    self.logger.log("ChainedRequest is at transition. id: %s" % (self.get_attribute('prepid')))
                     # at a root -> non-root transition only does the staged/threshold functions !
                     if 'staged' in original_action_item:
                         next_total_events = int(original_action_item['staged'])
