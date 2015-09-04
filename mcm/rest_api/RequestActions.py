@@ -864,7 +864,7 @@ class GetStatus(RESTResource):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
 
         mcm_r = db.get(rid)
-        
+
         while not 'status' in mcm_r:
             time.sleep(0.5)
             mcm_r = db.get(rid)
@@ -1478,7 +1478,6 @@ class StalledReminder(RESTResource):
         if reminded!=0:
             com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
                          subject, text)
-        
 
 class RequestsReminder(RESTResource):
     def __init__(self):
@@ -1496,7 +1495,7 @@ class RequestsReminder(RESTResource):
             if 'all' in what:
                 what = None
 
-            if len(args)>=2:
+            if len(args) >= 2:
                 who = args[1].split(',')
 
         udb = database('users')
@@ -1536,9 +1535,9 @@ class RequestsReminder(RESTResource):
         l_type = locator()
 
         def count_entries(campaigns_and_ids):
-            s=0
+            s = 0
             for (camp, ids) in campaigns_and_ids.items():
-                s+=len(ids)
+                s += len(ids)
             return s
 
         def prepare_text_for(campaigns_and_ids, status_for_link, username_for_link=None):
@@ -1607,32 +1606,33 @@ class RequestsReminder(RESTResource):
                 if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
                 fw = mcm_r['flown_with']
                 # to get a remind only on request that are in a chain (including flown by construction)
-                if len(mcm_r['member_of_chain'])==0: continue
+                if len(mcm_r['member_of_chain']) == 0: continue
                 # to get a remind only on request that are being necessary to move forward : being the request being processed in at least a chain.
-                on_going=False
+                on_going = False
                 for in_chain in mcm_r['member_of_chain']:
                     mcm_cr = chained_request( crdb.get( in_chain ) )
                     if mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step')] == rid:
-                        on_going=True
+                        on_going = True
                         break
+                    time.sleep(0.5) #we don't want to crash DB with a lot of single queries
                 if not on_going: continue
 
                 all_involved = request(mcm_r).get_actors()
                 for contact in all_involved:
                     if not contact in ids_for_users:
                         ids_for_users[contact]={}
-                    
+
                     if not c in ids_for_users[contact]:
                         ids_for_users[contact][c] = set()
                     ids_for_users[contact][c].add( rid )
-                    
+
             #then remove the non generator
             gen_contacts = map(lambda u : u['username'], udb.queries(['role==generator_contact']))
             for contact in ids_for_users.keys():
                 if who and not contact in who:
                     ids_for_users.pop( contact )
                     continue
-                if contact not in gen_contacts: 
+                if contact not in gen_contacts:
                     # not a contact
                     ids_for_users.pop( contact )
                     continue
@@ -1644,29 +1644,29 @@ class RequestsReminder(RESTResource):
                         ids_for_users[contact][c] = sorted( ids_for_users[contact][c] )
                     #for serialization only in dumps
                     #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
-                
+
                 #if there is nothing left. remove
-                if not len( ids_for_users[contact].keys() ):
+                if not len(ids_for_users[contact].keys()):
                     ids_for_users.pop( contact )
                     continue
 
             if len(ids_for_users):
                 for (contact, campaigns_and_ids) in ids_for_users.items():
                     for c in campaigns_and_ids:
-                        all_ids.update( campaigns_and_ids[c] )
+                        all_ids.update(campaigns_and_ids[c])
 
                     mcm_u = udb.get( contact )
                     if len(campaigns_and_ids):
                         message = 'Few requests need your action \n\n'
                         message += prepare_text_for(campaigns_and_ids, '')
-                        to_who=[settings().get_value('service_account')]
+                        to_who = [settings().get_value('service_account')]
                         if l_type.isDev():
-                            message += '\nto %s' %( mcm_u['email'] )
+                            message += '\nto %s' % (mcm_u['email'])
                         else:
-                            to_who.append( mcm_u['email'] )
-                        name=contact
+                            to_who.append(mcm_u['email'])
+                        name = contact
                         if mcm_u['fullname']:
-                            name=mcm_u['fullname']
+                            name = mcm_u['fullname']
                         com.sendMail(to_who,
                                      'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name),
                                      message
