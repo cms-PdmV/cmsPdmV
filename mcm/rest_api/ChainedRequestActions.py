@@ -677,7 +677,8 @@ class TaskChainDict(RESTResource):
                            "TimePerEvent" : r.get_attribute("time_event"),
                            "SizePerEvent" : r.get_attribute('size_event'),
                            "Memory" : r.get_attribute('memory'),
-                           "FilterEfficiency" : r.get_efficiency()
+                           "FilterEfficiency" : r.get_efficiency(),
+                           "PrepID" : r.get_attribute('prepid')
                            }
 
                 if len(r.get_attribute('config_id')) > si:
