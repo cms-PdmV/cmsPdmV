@@ -98,7 +98,11 @@
                    title="View historical statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-facetime-video"></i>
                 </a>
-                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
+                <a ng-href="/pmp/performance?m=false&r={{data.prepid}}" rel="tooltip"
+                   title="View  performance statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-heart"></i>
+                </a>
+		<a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
                   <i class="icon-repeat"></i>
                 </a>
                 <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
