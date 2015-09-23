@@ -69,13 +69,15 @@
                   <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
                     <i class="icon-refresh"></i>
                   </a>
-                  <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip"
-                     title="View growing statistics for {{data.prepid}}" target="_blank">
-                    <i class="icon-film"></i>
-                  </a>
-                  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
+                 <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
                     <i class="icon-screenshot"></i>
                   </a>
+ 	         <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                    <i class="icon-picture"></i>
+                 </a>
+  	         <a ng-href="/pmp/present?c=true&m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                    <i class="icon-film"></i>
+                 </a>
                 <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
                     <div class="modal-header">
                         <h4>Create a chained request</h4>
