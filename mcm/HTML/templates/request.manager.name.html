@@ -26,7 +26,6 @@
         </span>
         Last update on {{stats_cache[rqmngr['name']].pdmv_monitor_time}}
            </br>
-           <a ng-href="{{links[rqmngr.name]}}"><img width={{image_width}} ng-src="{{links[rqmngr.name]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>
            <ul style="margin-bottom: 0px;" ng-show="true;">
              <li ng-repeat="DS in stats_cache[rqmngr['name']].pdmv_dataset_list">
                <span ng-switch on="stats_cache[rqmngr['name']].pdmv_dataset_statuses[DS].pdmv_status_in_DAS == 'VALID'">
