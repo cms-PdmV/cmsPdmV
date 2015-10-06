@@ -22,7 +22,7 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.selectedCls = function(column) {
     return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
   };
-    
+
   $scope.changeSorting = function(column) {
     var sort = $scope.sort;
     if (sort.column == column) {
@@ -79,7 +79,7 @@ function resultsCtrl($scope, $http, $location, $window){
         $scope.selectionReady = true;
     },function(){
        alert("Error getting information");
-    });  
+    });
   };
 
   $scope.delete = function(id)
