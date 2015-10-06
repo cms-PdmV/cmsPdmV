@@ -86,6 +86,12 @@
                   <a rel="tooltip" title="Announce invalidation" ng-click="do_action(invalidations_info['_id'], 'announce');" ng-hide="role(3);" target="_self" ng-href="#">
                     <i class="icon-bullhorn"></i>
                   </a>
+                  <a rel="tooltip" title="Hold invalidation" ng-click="do_action(invalidations_info['_id'], 'new_to_hold');" ng-hide="role(3);" ng-if="invalidations_info['status'] == 'new'" target="_self" ng-href="#">
+                    <i class="icon-time"></i>
+                  </a>
+                  <a rel="tooltip" title="Move hold invalidation back to new" ng-click="do_action(invalidations_info['_id'], 'hold_to_new');" ng-hide="role(3);" ng-if="invalidations_info['status'] == 'hold'" target="_self" ng-href="#">
+                    <i class="icon-hand-left"></i>
+                  </a>
                   <input type="checkbox" ng-click="add_to_selected_list(invalidations_info['_id'])" ng-checked="selected_objects.indexOf(invalidations_info['_id']) != -1">
                 </div>
                 <div ng-switch-when="Type">
@@ -114,6 +120,12 @@
           </a>
           <a ng-click="do_action(selected_objects, 'announce');" rel="tooltip" ng-hide="role(3);" title="Announce selected invalidations" ng-href="#">
             <i class="icon-bullhorn"></i>
+          </a>
+          <a ng-click="do_action(selected_objects, 'new_to_hold');" rel="tooltip" ng-hide="role(3);" title="Hold selected invalidations" ng-href="#">
+            <i class="icon-time"></i>
+          </a>
+          <a ng-click="do_action(selected_objects, 'hold_to_new');" rel="tooltip" ng-hide="role(3);" title="Move selected HOLD invalidations to new" ng-href="#">
+            <i class="icon-hand-left"></i>
           </a>
           <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_objects.length">
         </span>

@@ -11,7 +11,7 @@ from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
-from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation
+from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutOnHoldInvalidation, PutHoldtoNewInvalidations
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
@@ -320,6 +320,8 @@ root.restapi.invalidations.delete = DeleteInvalidation()
 root.restapi.invalidations.announce = AnnounceInvalidations()
 root.restapi.invalidations.clear = ClearInvalidations()
 root.restapi.invalidations.acknowledge = AcknowledgeInvalidation()
+root.restapi.invalidations.new_to_hold = PutOnHoldInvalidation()
+root.restapi.invalidations.hold_to_new = PutHoldtoNewInvalidations()
 
 # REST news Actions
 root.restapi.news.get = GetSingleNew()

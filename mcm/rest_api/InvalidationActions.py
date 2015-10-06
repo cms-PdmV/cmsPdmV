@@ -246,3 +246,65 @@ class AcknowledgeInvalidation(RESTResource):
         else:
             return dumps({"results": False, "message" : "Could not save the change in %s" % (
                     args[0])})
+
+class PutOnHoldInvalidation(RESTResource):
+    def __init__(self):
+        self.db_name = "invalidations"
+        self.access_limit = access_rights.production_manager
+
+    def PUT(self):
+        """
+        Put single invalidation on hold so DS would not be invalidated
+        """
+        input_data = threaded_loads(request.body.read().strip())
+        if not len(input_data):
+            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+        self.logger.log("Putting invalidation on HOLD. input: %s" % (input_data))
+        db = database(self.db_name)
+        res = []
+        for el in input_data:
+            if db.document_exists(el):
+                doc = db.get(el)
+                __invl = invalidation(doc)
+                if __invl.get_attribute("status") == "new":
+                    ret = __invl.set_attribute('status', 'hold')
+                    out = db.update(ret)
+                    res.append({"object": el, "results" : True, "message" : out})
+                else:
+                    res.append({"object" : el, "results" : False, "message" : "status not new"})
+            else:
+                __msg = "%s dosn't exists in DB" % (el)
+                res.append({"object": el, "results" : False, "message" : __msg})
+
+        return dumps({"results" : res})
+
+class PutHoldtoNewInvalidations(RESTResource):
+    def __init__(self):
+        self.db_name = "invalidations"
+        self.access_limit = access_rights.production_manager
+
+    def PUT(self):
+        """
+        Move HOLD invalidations back to status new
+        """
+        input_data = threaded_loads(request.body.read().strip())
+        if not len(input_data):
+            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+
+        self.logger.log("Putting invalidation from HOLD back to new. input: %s" % (input_data))
+        db = database(self.db_name)
+        res = []
+        for el in input_data:
+            if db.document_exists(el):
+                doc = db.get(el)
+                __invl = invalidation(doc)
+                if __invl.get_attribute("status") == "hold":
+                    ret = __invl.set_attribute("status", "new")
+                    out = db.update(ret)
+                    res.append(out)
+                else:
+                    res.append({"object" : el, "results" : False, "message" : "status not HOLD"})
+            else:
+                __msg = __msg = "%s dosn't exists in DB" % (el)
+                res.append({"object" : el, "results" : False, "message" : __msg})
+        return dumps({"results" : res})
