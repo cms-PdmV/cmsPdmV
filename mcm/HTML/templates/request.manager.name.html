@@ -7,6 +7,9 @@
       <a class="margin-r" ng-show="!isDevMachine();" ng-href="https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr['name']}}" rel="tooltip" title="Details" target="_self">details</a>,
       <a class="margin-r" ng-hide="stats_cache[rqmngr['name']]" ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr['name']}}" rel="tooltip" title="Stats" target="_self">stats</a>,
       <a ng-show="r_prepid.split('-').length < 3" ng-href="requests?prepid={{rqmngr.content.pdmv_prep_id}}" rel="tooltip" title="view request {{rqmngr.content.pdmv_prep_id}}" target="_self"> {{rqmngr.content.pdmv_prep_id}}</a>
+      <a ng-href="/pmp/historical?r={{rqmngr['name']}}" rel="tooltip" title="View historical statistics for {{rqmngr['name']" target="_blank">
+        <i class="icon-facetime-video"></i>
+      </a>
       <a ng-click="load_dataset_list(rqmngr.name, $index);openStatistics();" ng-hide="stats_cache[rqmngr['name']]" rel="tooltip" title="Load statistics" ng-href="#"> <i class="icon-eye-open"></i></a>
       <b><font color="red" ng-show="stats_cache[rqmngr['name']] && !underscore.isObject(stats_cache[rqmngr['name']])"> Stats Not Found</font></b>
       <span ng-show="underscore.isObject(stats_cache[rqmngr['name']])"><br/>
@@ -23,7 +26,6 @@
         </span>
         Last update on {{stats_cache[rqmngr['name']].pdmv_monitor_time}}
            </br>
-           <a ng-href="{{links[rqmngr.name]}}"><img width={{image_width}} ng-src="{{links[rqmngr.name]}}" ng-mouseover="image_width = 700" ng-mouseleave="image_width = 150"/></a>
            <ul style="margin-bottom: 0px;" ng-show="true;">
              <li ng-repeat="DS in stats_cache[rqmngr['name']].pdmv_dataset_list">
                <span ng-switch on="stats_cache[rqmngr['name']].pdmv_dataset_statuses[DS].pdmv_status_in_DAS == 'VALID'">

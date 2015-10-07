@@ -13,7 +13,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutOnHoldInvalidation, PutHoldtoNewInvalidations
 from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetStats, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
+from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
@@ -333,8 +333,6 @@ root.restapi.news.update = UpdateNew()
 root.restapi.dashboard.get_bjobs = GetBjobs()
 root.restapi.dashboard.get_log_feed = GetLogFeed()
 root.restapi.dashboard.get_logs = GetLogs()
-root.restapi.dashboard.get_stats = GetStats()
-root.restapi.dashboard.get_stats_new = GetStats(with_data=True)
 root.restapi.dashboard.get_revision = GetRevision()
 root.restapi.dashboard.get_start_time = GetStartTime(start_time)
 root.restapi.dashboard.get_verbosities = GetVerbosities()

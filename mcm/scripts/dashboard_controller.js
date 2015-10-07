@@ -1,18 +1,5 @@
 function resultsCtrl($scope, $http, $location, $window){
-    //test
-    $scope.allRequestData=[];
-    $scope.requests = {};
-    $scope.requests.selections=['prepid', 'priority', 'pwg'];
-    $scope.requests.options={grouping:['member_of_campaign'], value:"total_events", stacking:[], coloring:"status" };
-    $scope.requests.settings={duration:1000, legend:true, sort:true};
-    $scope.requests.radio={'scale':["log", "linear"], 'operation':["sum", "count"]};
-    $scope.piecharts = {};
-    $scope.piecharts.sum = "total_events";
-    $scope.piecharts.fullTerms = ["new", "validation", "defined", "approved", "submitted", "done"];
-    $scope.piecharts.compactTerms = ["done", "to do"];
-    $scope.piecharts.nestBy = ["member_of_campaign", "status"];
-    $scope.piecharts.domain = ["new", "validation", "done" , "approved", "submitted", "nothing", "defined", "to do"];
-    //endtest
+
     $scope.update = [];
     $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
     $scope.turn_off_button_clicked = false;
@@ -20,9 +7,6 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.tabsettings={
         batch:{
             active:true
-        },
-        stats:{
-            active:false
         },
         logs:{
             active:false
@@ -63,29 +47,6 @@ function resultsCtrl($scope, $http, $location, $window){
         return output_array
     }
 
-    $scope.dashboard_stats = "<html><body><Please load the stats.</body></html>";
-    $scope.get_stats = function(query, add){
-        $scope.loadingData = true;
-	var promise = $http.get("search/?db_name=requests&page=-1&"+query);
-      promise.then(function(data){
-          if(query!='' && add) {
-            data.data.results.push.apply(data.data.results, $scope.allRequestData);
-          }
-        $scope.loadingData = false;
-        $scope.allRequestData = data.data.results;
-      }, function(){
-        alert("Error getting requests");
-        $scope.loadingData = false;
-
-    });
-
-	// var promise = $http.get("/mcm/restapi/dashboard/get_stats/all");
-	// promise.then(function(data, status){
-	// 	$scope.dashboard_stats = data.data;
-	//     }, function(data, status){
-	// 	alert("Error getting stats "+status);
-	//     });
-    };
     $scope.resetRestCounter = function() {
         $scope.clear_rest_button_clicked = true;
       var promise = $http.get("restapi/control/reset_rest_counter");

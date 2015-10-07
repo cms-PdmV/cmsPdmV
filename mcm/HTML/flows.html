@@ -61,15 +61,21 @@
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-href="/mcm/restapi/dashboard/get_stats/{{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-picture"></i>
-                </a>
-                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_self" ng-hide="role(3);">
+               <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" target="_self" ng-hide="role(3);">
                   <i class="icon-repeat"></i>
                 </a>
                 <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" target="_self" ng-hide="role(3);">
                   <i class="icon-chevron-right"></i>
                 </a>
+               <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-picture"></i>
+                </a>
+                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-film"></i>
+                </a>
+                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-facetime-video"></i>
+                </a> 
               </div>
 	      <div ng-switch-when="PrepId">
                 <a ng-href='flows?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>

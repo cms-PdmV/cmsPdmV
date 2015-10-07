@@ -86,13 +86,7 @@
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-href="/mcm/restapi/dashboard/get_stats/{{data.prepid}}" rel="tooltip" title="View old statistics for {{data.prepid}}" target="_blank" ng-hide="role(4);">
-                  <i class="icon-picture"></i>
-                </a>
-                <a ng-href="/mcm/get_stats?prepid={{data.prepid}}" rel="tooltip" title="View statistics for {{data.prepid}}" target="_blank" ng-hide="role(2);">
-                  <i class="icon-picture"></i>
-                </a>
-                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
+		<a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
                   <i class="icon-repeat"></i>
                 </a>
                 <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
@@ -104,7 +98,19 @@
                 <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests">
                   <i class="icon-screenshot"></i>
                 </a>
-                <script type="text/ng-template" id="createRequestModal.html"> <!--hidden modal template-->
+                 <a ng-href="/pmp/present?m=false&r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-picture"></i>
+                </a>
+		<a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-film"></i>
+                </a>
+                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-facetime-video"></i>
+                </a>
+                <a ng-href="/pmp/performance?m=false&r={{data.prepid}}" rel="tooltip" title="View  performance statistics for {{data.prepid}}" target="_blank">
+                  <i class="icon-heart"></i>
+                </a>
+	               <script type="text/ng-template" id="createRequestModal.html"> <!--hidden modal template-->
                     <div class="modal-header">
                         <h4>Create a request</h4>
                     </div>  <!--end of modal header-->
