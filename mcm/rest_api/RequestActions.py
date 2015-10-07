@@ -217,7 +217,6 @@ class CloneRequest(RequestRESTResource):
             if new_json['flown_with']:
                 return {"results": False, "message": "cannot clone a request that has been flown"}
 
-        
             to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','priority','analysis_id', 'extension','output_dataset']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 ## this is a cloning accross campaign: a few other things need to be cleanedup
@@ -263,7 +262,7 @@ class UpdateRequest(RequestRESTResource):
             res = self.update_request(cherrypy.request.body.read().strip())
             return res
         except Exception as e:
-            #trace = traceback.format_exc() 
+            #trace = traceback.format_exc()
             trace = str(e)
             self.logger.error('Failed to update a request from API \n%s'%( trace ) )
             return {'results': False, 'message': 'Failed to update a request from API %s'% trace}
@@ -454,7 +453,6 @@ class MigrateRequest(RequestRESTResource):
                 collected = list(set(collected))
                 mcm_r.set_attribute('output_dataset', collected)
 
-            
             saved = db.save(mcm_r.json())
 
             ## force to add an action on those requests
@@ -687,9 +685,9 @@ class DeleteRequest(RESTResource):
             crdb.delete(doc['prepid'])
 
 class GetRequestByDataset(RESTResource):
-    def __init__(self):   
+    def __init__(self):
         pass
-    
+
     def GET(self, *args):
         """
         retrieve the dictionnary of a request, based on the output dataset specified
@@ -703,11 +701,11 @@ class GetRequestByDataset(RESTResource):
             return dumps({"results" : r[0]})
         else:
             return dumps({"results": {}})
-        
+
 class GetRequestOutput(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
-        
+
     def GET(self, *args):
         """
         Retrieve the list of datasets from a give request
@@ -734,8 +732,7 @@ class GetRequestOutput(RESTResource):
                     res[main_arg].extend( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'] )
                 else:
                     res[main_arg].append( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'] )
-                
-                
+
         return dumps(res)
 
 class GetRequest(RESTResource):
@@ -890,7 +887,7 @@ class InspectStatus(RESTResource):
         db = database('requests')
         crdb = database('chained_requests')
         for r in rlist:
-            if not db.document_exists(r): 
+            if not db.document_exists(r):
                 res.append({"prepid": r, "results": False, 'message': '%s does not exist' % r})
                 continue
             mcm_r = request(db.get(r))
@@ -1255,7 +1252,7 @@ class RequestPerformance(RESTResource):
 
 class RequestLister():
     def __init__(self):
-        pass 
+        pass
 
     def get_objects(self, all_ids, retrieve_db):
         all_objects = []
