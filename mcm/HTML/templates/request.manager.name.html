@@ -7,7 +7,7 @@
       <a class="margin-r" ng-show="!isDevMachine();" ng-href="https://cmsweb.cern.ch/reqmgr/view/details/{{rqmngr['name']}}" rel="tooltip" title="Details" target="_self">details</a>,
       <a class="margin-r" ng-hide="stats_cache[rqmngr['name']]" ng-href="http://cms-pdmv.cern.ch/stats/?RN={{rqmngr['name']}}" rel="tooltip" title="Stats" target="_self">stats</a>,
       <a ng-show="r_prepid.split('-').length < 3" ng-href="requests?prepid={{rqmngr.content.pdmv_prep_id}}" rel="tooltip" title="view request {{rqmngr.content.pdmv_prep_id}}" target="_self"> {{rqmngr.content.pdmv_prep_id}}</a>
-      <a ng-href="/pmp/historical?r={{rqmngr['name']}}" rel="tooltip" title="View historical statistics for {{rqmngr['name']" target="_blank">
+      <a ng-href="/pmp/historical?r={{rqmngr['name']}}" rel="tooltip" title="View historical statistics for {{rqmngr['name']}}" target="_blank">
         <i class="icon-facetime-video"></i>
       </a>
       <a ng-click="load_dataset_list(rqmngr.name, $index);openStatistics();" ng-hide="stats_cache[rqmngr['name']]" rel="tooltip" title="Load statistics" ng-href="#"> <i class="icon-eye-open"></i></a>
