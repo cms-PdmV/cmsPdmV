@@ -38,15 +38,18 @@ class CreateChainedCampaign(RESTResource):
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results":False, "message":str(ex)}
 
-        self.logger.log('Creating new chained_campaign %s...' % (ccamp.get_attribute('prepid')))
+        self.logger.log('Creating new chained_campaign %s...' % (
+                ccamp.get_attribute('prepid')))
 
         ccamp.set_attribute("_id", ccamp.get_attribute("prepid"))
         if not ccamp.get_attribute("_id") :#or self.db.document_exists(ccamp.get_attribute("_id")):
-            self.logger.error('Campaign %s already exists. Cannot re-create it.' % (ccamp.get_attribute('_id')))
+            self.logger.error('Campaign %s already exists. Cannot re-create it.' % (
+                    ccamp.get_attribute('_id')))
+
             return {"results":False, "message":'Error: Campaign '+ccamp.get_attribute("_id")+' already exists'}
 
         # update history
-        ccamp.update_history({'action':'created'})
+        ccamp.update_history({'action' : 'created'})
         saved = db.save(ccamp.json())
 
         # update actions db
@@ -54,25 +57,24 @@ class CreateChainedCampaign(RESTResource):
 
         # update campaigns db
         self.update_campaigns(ccamp)
-        
+
         if saved:
-            return {"results":True, "prepid" : ccamp.get_attribute("prepid")}
+            return {"results" : True, "prepid" : ccamp.get_attribute("prepid")}
         else:
-            return {"results":False, "message":"could not save to DB"}
+            return {"results" : False, "message" : "could not save to DB"}
 
     def update_campaigns(self, ccamp):
         cdb = database('campaigns')
-        next=None
-        self.logger.log('Looking at campaigns %s' %( ccamp.get_attribute('campaigns') ))
-        for ( c, f ) in reversed(ccamp.get_attribute('campaigns')):
+        next = None
+        self.logger.log('Looking at campaigns %s' % (ccamp.get_attribute('campaigns')))
+        for (c, f) in reversed(ccamp.get_attribute('campaigns')):
             mcm_c = cdb.get(c)
             if next:
                 if not next in mcm_c['next']:
                     mcm_c['next'].append(next)
                     mcm_c['next'].sort()
-                    cdb.update( mcm_c )
+                    cdb.update(mcm_c)
             next = c
-                    
 
     # update the actions db to include the new chain
     def update_actions(self, ccamp):
@@ -92,32 +94,6 @@ class CreateChainedCampaign(RESTResource):
             # save to db
             adb.update(a.json())
 
-"""
-    def update_actions(self):
-        # get all campaigns in the chained campaign
-        camps = self.ccamp.get_attribute('campaigns')
-
-        self.logger.log('Updating actions for new chained_campaign %s ...' % (self.ccamp.get_attribute('_id')))
-
-        # for every campaign with a defined flow
-        for c, f in camps:
-            if f:
-                # update all its requests
-                self.update_action(c)
-
-    # find all actions that belong to requests in cid
-    # and append cid in the chain
-    def update_action(self,  cid):
-        rel_ac = self.adb.query('member_of_campaign=='+cid)
-        for a in rel_ac:
-            # avoid duplicate entries
-            if cid not in a['chains']:
-                # append new chain id and set to 0
-                a['chains'][cid]['flag']=False
-                # save to db
-                self.adb.update(a)
-"""
-
 class UpdateChainedCampaign(RESTResource):
         def __init__(self):
                 self.access_limit = access_rights.production_manager
@@ -130,73 +106,25 @@ class UpdateChainedCampaign(RESTResource):
 
         def update_campaign(self, jsdata):
             db = database('chained_campaigns')
-            data = threaded_loads( jsdata)
+            data = threaded_loads(jsdata)
             if '_rev' not in data:
-                return {"results":False}
+                return {"results" : False}
             try:
                 ccamp = chained_campaign(json_input=data)
             except chained_campaign('').IllegalAttributeName as ex:
-                return {"results":False}
+                return {"results" : False}
 
 
             if not ccamp.get_attribute("_id"):
                 self.logger.error('prepid returned was None')
                 return {"results":False}
 
-            self.logger.log('Updating chained_campaign %s ...' % (ccamp.get_attribute('_id')))
+            self.logger.log('Updating chained_campaign %s ...' % (
+                    ccamp.get_attribute('_id')))
 
             # update history
-            ccamp.update_history({'action':'updated'})
-
-            return {"results":db.update(ccamp.json())}
-
-"""        
-class AddRequestToChain(RESTResource):
-    def __init__(self):
-        self.request_db = database('requests')
-        self.campaign_db = database('campaigns')
-        self.chained_db = database('chained_requests')
-        self.ccamp_db = database('chained_campaigns')
-        self.campaign = None
-
-    def POST(self, *args):
-        if not args:
-            return dumps({"results":False})
-        if len(args) < 2:
-            return dumps({"results":False})
-        return self.import_request(args[0], args[1])
-
-    def add_request(self, chainid, campaignid):
-
-        self.logger.log('Generating new request to add in %s...' % (chainid))
-
-        if not chainid:
-            self.logger.error('chained_request\'s prepid was None.')
-            return dumps({"results":False})
-        else:
-            try:
-                chain = chained_request(chained_request_json=self.chained_db.get(chainid))
-            except Exception as ex:
-                self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-                return dumps({"results":False})
-        if not campaignid:
-            self.logger.error('id of the campaign provided was None')
-            return dumps({"results":False})
-        else:
-            try:
-                camp = campaign(campaign_json=self.campaign_db.get(campaignid))
-            except Exception as ex:
-                self.logger.error('Could not initialize campaign object. Reason: %s' % (ex))
-                return dumps({"results":False})
-        req = camp.add_request()
-        new_req = chain.add_request(req)
-
-        # save everything
-        if not self.chained_db.save(chain.json()):
-            self.logger.error('Could not save newly created request to database.')
-            return dumps({"results":False})
-        return dumps({"results":self.request_db.save(new_req)})
-"""
+            ccamp.update_history({'action' : 'updated'})
+            return {"results" : db.update(ccamp.json())}
 
 class DeleteChainedCampaign(RESTResource):
     def __init__(self):
@@ -207,22 +135,22 @@ class DeleteChainedCampaign(RESTResource):
         Delete a chained campaign and all related
         """
         if not args:
-            return dumps({"results":False})
-        force=False
-        if len(args)>1:
-            force=(args[1]=='force')
+            return dumps({"results" : False})
+        force = False
+        if len(args) > 1:
+            force = (args[1] == 'force')
         return dumps(self.delete_request(args[0], force))
 
     def delete_request(self, ccid, force=False):
-        if not self.delete_all_requests(ccid, force ):
-            return {"results":False}
+        if not self.delete_all_requests(ccid, force):
+            return {"results" : False}
 
         # update all relevant actions
         self.update_actions(ccid)
         db = database(self.db_name)
-        return {"results": db.delete(ccid)}
+        return {"results" : db.delete(ccid)}
 
-    def update_actions(self,  cid):
+    def update_actions(self, cid):
         # get all actions that contain cid in their chains
         adb = database('actions')
         actions = adb.query('chain=='+cid)
@@ -234,7 +162,7 @@ class DeleteChainedCampaign(RESTResource):
 
     def delete_all_requests(self, cid, force=False):
         rdb = database('chained_requests')
-        res = rdb.query('member_of_campaign=='+cid, page_num=-1)
+        res = rdb.query('member_of_campaign==' + cid, page_num=-1)
         if len(res) and not force:
             return False
         try:
@@ -244,7 +172,6 @@ class DeleteChainedCampaign(RESTResource):
         except Exception as ex:
             print str(ex)
             return False
-
 
 class GetChainedCampaign(RESTResource):
     def __init__(self):
@@ -257,47 +184,44 @@ class GetChainedCampaign(RESTResource):
         """
         if not args:
             self.logger.error('No arguments were given.')
-            return dumps({"results":False})
+            return dumps({"results" : False})
         return dumps(self.get_request(args[0]))
 
     def get_request(self, id):
-        return {"results":self.db.get(id)}
-
+        return {"results" : self.db.get(id)}
 
 class GenerateChainedRequests(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
 
-    def GET(self,  *args):
+    def GET(self, *args):
         """
         Generate the chained requests for a given chained campaign.
         """
-        #return dumps({"results":"Broken and should not be used yet"})
 
         if not args:
             self.logger.error('No arguments were given')
-            return dumps({"results":'Error: No arguments were given'})
+            return dumps({"results" : 'Error: No arguments were given'})
         return dumps(self.generate_requests(args[0]))
 
     def generate_requests(self, ccid):
         ccdb = database('chained_campaigns')
         adb = database('actions')
         if not ccdb.document_exists(ccid):
-            return {"results":False}
+            return {"results" : False}
 
         mcm_cc = chained_campaign( ccdb.get(ccid))
         ## get the root campaign id
         root_campaign = mcm_cc.get_attribute('campaigns')[0][0]
 
         ## get all actions belonging to that root campaign
-        root_actions = adb.queries(['member_of_campaign==%s'%(root_campaign)])
-        res=[]
+        root_actions = adb.queries(['member_of_campaign==%s' % (root_campaign)])
+        res = []
         generator = GenerateChainedRequests()
         for a in root_actions:
             res.append(generator.generate_request(a['prepid']))
 
         return res
-
 
 class InspectChainedCampaignsRest(RESTResource):
     def __init__(self):
@@ -313,7 +237,7 @@ class InspectChainedCampaignsRest(RESTResource):
         crdb = database('chained_requests')
         res = []
         for ccid in ccids.split(','):
-            crlist = crdb.queries(["member_of_campaign==%s"% ccid,
+            crlist = crdb.queries(["member_of_campaign==%s" % ccid,
                     "last_status==done",
                     "status==processing"])
 
@@ -329,17 +253,17 @@ class InspectChainedCampaignsRest(RESTResource):
                 self.logger.log("Inspection for: %s returned: %s" %(cr, __inspect_ret))
                 res.append(__inspect_ret)
 
-        if len(res)>1:
+        if len(res) > 1:
             return res
         elif len(res):
-            self.logger.log("Inspection finished. Returned: %s" %(res[0]))
+            self.logger.log("Inspection finished. Returned: %s" % (res[0]))
             return res[0]
         else:
-            self.logger.log("Inspection finished. Returned: %s" %([]))
+            self.logger.log("Inspection finished. Returned: %s" % ([]))
             return []
 
 
-class InspectChainedRequests(InspectChainedCampaignsRest): 
+class InspectChainedRequests(InspectChainedCampaignsRest):
     def __init__(self):
         InspectChainedCampaignsRest.__init__(self)
 
@@ -349,7 +273,7 @@ class InspectChainedRequests(InspectChainedCampaignsRest):
         """
         if not args:
             self.logger.error('No arguments were given')
-            return dumps({"results":'Error: No arguments were given'})
+            return dumps({"results" : 'Error: No arguments were given'})
         return dumps(self.multiple_inspect(args[0]))
 
 class InspectChainedCampaigns(InspectChainedCampaignsRest):
@@ -370,8 +294,8 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
                               ## in background
             shuffle(ccid_list)
             try:
-                p  = multiprocessing.Process(target = self.multiple_inspect,
-                        args = (','.join( ccid_list ),))
+                p  = multiprocessing.Process(target=self.multiple_inspect,
+                        args=(','.join( ccid_list ),))
 
                 p.start()
                 return dumps({"results" : True, "message":
@@ -418,9 +342,12 @@ class SelectNewChainedCampaigns(RESTResource):
             if last_campaign in allowed_campaigns_dict:
                 next_campaigns.extend(allowed_campaigns_dict[last_campaign])
 
-            traverse_next_campaigns(next_campaigns, chains_dict, chain, chain_name,allowed_campaigns_dict)
+            traverse_next_campaigns(next_campaigns, chains_dict, chain,
+                    chain_name, allowed_campaigns_dict)
 
-        def traverse_next_campaigns(next_campaigns, chains_dict, previous_campaigns, previous_chain_name, allowed_campaigns_dict):
+        def traverse_next_campaigns(next_campaigns, chains_dict, previous_campaigns,
+            previous_chain_name, allowed_campaigns_dict):
+
             """
             Go through all possible connections between chains.
             """
@@ -431,11 +358,12 @@ class SelectNewChainedCampaigns(RESTResource):
                 new_campaigns = list(previous_campaigns)
                 new_campaigns.append((next_campaign, flow))
                 if db_existence:
-                    mcm_cc=ccdb.get(chain_name)
-                    validity=mcm_cc['valid']
+                    mcm_cc = ccdb.get(chain_name)
+                    validity = mcm_cc['valid']
                     #all_cc.append(mcm_cc)
                 else:
-                    all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns, "exists": False})
+                    all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns,
+                            "exists": False})
 
                 # chained_campaigns = self.ccdb.queries(['prepid==%s' % chain_name])
                 # db_existence = False
@@ -444,7 +372,9 @@ class SelectNewChainedCampaigns(RESTResource):
                 #    db_existence = True
                 #    if chained_campaigns[0]['valid']:
                 #        validity = True
-                chains_dict[chain_name] = {"campaigns_list": new_campaigns, "exists_in_database": db_existence, "valid": validity}
+                chains_dict[chain_name] = {"campaigns_list": new_campaigns,
+                        "exists_in_database": db_existence, "valid": validity}
+
                 # recursively fill all the possible chains
                 finish_chain(chain_name, chains_dict, allowed_campaigns_dict)
 
@@ -453,7 +383,8 @@ class SelectNewChainedCampaigns(RESTResource):
         for flow in flows:
             allowed_campaigns = flow['allowed_campaigns']
             for allowed_campaign in allowed_campaigns:
-                allowed_campaigns_dict[allowed_campaign].append((flow['prepid'], flow['next_campaign']))
+                allowed_campaigns_dict[allowed_campaign].append((flow['prepid'],
+                        flow['next_campaign']))
 
         chains_dict = defaultdict(dict) # chain_id:{"campaigns_list": list, "exists_in_database":exists, "valid":validity})
         # creation of output dictionary
@@ -462,10 +393,10 @@ class SelectNewChainedCampaigns(RESTResource):
             if len(campaigns) == 0 or campaigns[0]["root"] == 1:
                 continue
             next_campaigns = allowed_campaigns_dict[allowed_c]
-            traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)], 'chain_' + allowed_c, allowed_campaigns_dict)
+            traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)],
+                'chain_' + allowed_c, allowed_campaigns_dict)
 
         return dumps({"results" : all_cc})
-
 
 class ListChainCampaignPrepids(RESTResource):
     def __init__(self):
@@ -487,6 +418,8 @@ class ListChainCampaignPrepids(RESTResource):
         if key:
             search_key = key
         result = self.db.raw_query(view_name, {'key': search_key})
-        self.logger.log('All list raw_query view:%s searching for: %s' %(view_name,search_key))
+        self.logger.log('All list raw_query view:%s searching for: %s' % (
+                view_name, search_key))
+
         data = [key['value'] for key in result]
         return {"results": data}
