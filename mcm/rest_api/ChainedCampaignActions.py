@@ -226,6 +226,9 @@ class GenerateChainedRequests(RESTResource):
 class InspectChainedCampaignsRest(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        ##define this method as stream
+        self._cp_config = {'response.stream': True}
+        self.running = False
 
     def listAll(self):
         ccdb = database('chained_campaigns')
@@ -234,34 +237,32 @@ class InspectChainedCampaignsRest(RESTResource):
         return prepids_list
 
     def multiple_inspect(self, ccids):
+
+        self.running = True
         crdb = database('chained_requests')
         res = []
-        for ccid in ccids.split(','):
+        for ccid in ccids.split(',')[:10]:
+            ##20+sec qury -> should be rewritten to use lucene
             crlist = crdb.queries(["member_of_campaign==%s" % ccid,
                     "last_status==done",
                     "status==processing"])
-
+            __res = []
             self.logger.log('crlist %s in chained_camp %s ' % (crlist, ccid))
             for cr in crlist:
-                mcm_cr = chained_request( cr )
+
+                mcm_cr = chained_request(cr)
                 if mcm_cr:
                     __inspect_ret = mcm_cr.inspect()
                 else:
                     __inspect_ret = {"prepid":cr, "results":False,
                             'message' : '%s does not exist' % cr}
 
-                self.logger.log("Inspection for: %s returned: %s" %(cr, __inspect_ret))
-                res.append(__inspect_ret)
+                self.logger.log("Inspection for: %s returned: %s" % (cr, __inspect_ret))
+                __res.append(__inspect_ret)
 
-        if len(res) > 1:
-            return res
-        elif len(res):
-            self.logger.log("Inspection finished. Returned: %s" % (res[0]))
-            return res[0]
-        else:
-            self.logger.log("Inspection finished. Returned: %s" % ([]))
-            return []
+            yield dumps(__res, indent=4)
 
+        self.running = False
 
 class InspectChainedRequests(InspectChainedCampaignsRest):
     def __init__(self):
@@ -274,7 +275,7 @@ class InspectChainedRequests(InspectChainedCampaignsRest):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results" : 'Error: No arguments were given'})
-        return dumps(self.multiple_inspect(args[0]))
+        return self.multiple_inspect(args[0])
 
 class InspectChainedCampaigns(InspectChainedCampaignsRest):
     def __init__(self):
@@ -284,34 +285,21 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         """
         Inspect the chained requests of all chained campaigns, requires /all
         """
+
         if not args:
             return dumps({"results" : 'Error: No arguments were given'})
         if args[0] != 'all':
             return dumps({"results" : 'Error: Incorrect argument provided'})
 
-        if len(multiprocessing.active_children()) < 1:  ##see if already running
-            ccid_list = self.listAll()                  ##we run only 1 inspection
-                              ## in background
-            shuffle(ccid_list)
-            try:
-                p  = multiprocessing.Process(target=self.multiple_inspect,
-                        args=(','.join( ccid_list ),))
+        self.logger.log('InspectChainedRequests is running: %s' % (self.running))
+        if self.running:
+            return dumps({"results" : 'Already running inspection'})
 
-                p.start()
-                return dumps({"results" : True, "message":
-                        "Successfully forked inspection to background. PID: %s"
-                        % p.pid})
-
-            except Exception as e:
-                self.logger.error('Error while forking an inspection')
-                self.logger.exception(e)
-                return dumps({"results" : False,
-                        message : "Failed in forking the process"})
-        else:
-            return dumps({"results" : True,
-                    "message" : "Already running inspection in background. PID: %s"
-                            %multiprocessing.active_children()[0].pid})
-
+        #force pretify output in browser for multiple lines
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        ccid_list = self.listAll()
+        shuffle(ccid_list)
+        return self.multiple_inspect(','.join(ccid_list))
 
 class SelectNewChainedCampaigns(RESTResource):
 
