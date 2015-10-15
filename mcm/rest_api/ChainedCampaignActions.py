@@ -241,7 +241,7 @@ class InspectChainedCampaignsRest(RESTResource):
         self.running = True
         crdb = database('chained_requests')
         res = []
-        for ccid in ccids.split(',')[:10]:
+        for ccid in ccids.split(','):
             ##20+sec qury -> should be rewritten to use lucene
             crlist = crdb.queries(["member_of_campaign==%s" % ccid,
                     "last_status==done",
