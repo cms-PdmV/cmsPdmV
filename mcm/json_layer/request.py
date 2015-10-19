@@ -306,9 +306,12 @@ class request(json_base):
             #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
             my_extension = self.get_attribute('extension')
             my_id = self.get_attribute('prepid')
+            my_process_string = self.get_attribute('process_string')
+
             for similar in similar_ds:
                 if similar['prepid'] == my_id: continue
-                if int(similar['extension']) == int(my_extension):
+                if (int(similar['extension']) == int(my_extension)) and (my_process_string == similar["process_string"]):
+                    self.logger.log("ApprovalSequence similar prepid: %s" % (similar["prepid"]))
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                             'Two requests with the same dataset name, same process string and they are the same extension mumber (%s)' % (
                             my_extension))
