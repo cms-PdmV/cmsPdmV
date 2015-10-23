@@ -17,7 +17,7 @@ class flow(json_base):
         'approval': ''
     }
 
-    _json_base__approvalsteps = ['none', 'flow', 'submit']
+    _json_base__approvalsteps = ['none', 'flow', 'submit', "tasksubmit"]
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
