@@ -660,6 +660,32 @@ class TaskChainDict(RESTResource):
         arg0 = args[0]
         crdb = database('chained_requests')
         rdb = database('requests')
+        settingsDB = database('settings')
+
+        __DT_prio = settingsDB.get('datatier_input')["value"]
+
+        def get_list_of_steps(in_string):
+            if isinstance(in_string, basestring):
+                ##in case sequence is defined as string -> legacy support
+                return [el.split(":")[0] for el in in_string.split(",")]
+            else:
+                return [el.split(":")[0] for el in in_string]
+
+        def do_datatier_selection(possible_inputs, __prev_outputs):
+            ##we check for every possible tier in prioritised possible inputs
+            ## we iterate on all generated unique previous outputs
+            ## if its a match -> we return
+            self.logger.log("##DEBUG do_datatier_selection input:\n%s %s" % (
+                possible_inputs, __prev_outputs))
+
+            __in_taskName = ""
+            __in_InputModule = ""
+            for possible in possible_inputs:
+                 for taskName, tier in reversed(__prev_outputs):
+                    for t in tier:
+                        if t == possible:
+                            return "%soutput" % (t), taskName
+
         def request_to_tasks(r,base,depend):
             events_per_lumi = settings().get_value('events_per_lumi')
             ts = []
@@ -680,6 +706,7 @@ class TaskChainDict(RESTResource):
                            "FilterEfficiency" : r.get_efficiency(),
                            "PrepID" : r.get_attribute('prepid')
                            }
+                __list_of_steps = get_list_of_steps(r.get_attribute('sequences')[si]['step'])
 
                 if len(r.get_attribute('config_id')) > si:
                     task_dict["ConfigCacheID"] = r.get_attribute('config_id')[si]
@@ -714,10 +741,29 @@ class TaskChainDict(RESTResource):
                             task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
                                               "InputDataset" : r.get_attribute('input_dataset')})
                 else:
-                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                      "InputFromOutputModule" : ts[-1]['output_'],
-                                      "InputTask" : ts[-1]['TaskName']})
+                    ##here we select the appropriate DATATier from previous step
+                    # in case -step tier1,tier2,tier3 and
+                    __curr_first_step = __list_of_steps[0]
+                    __prev_tiers = [(ts[-1]["TaskName"], ts[-1]["_output_tiers_"])]
+                    tModule = tName = ""
 
+                    if __curr_first_step in __DT_prio:
+                        ##if 1st step is defined in DataTier priority dictionary
+                        tModule, tName = do_datatier_selection(
+                                __DT_prio[__curr_first_step], __prev_tiers)
+
+                    if tModule != "" and tName != "":
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                "InputFromOutputModule" : tModule,
+                                "InputTask" : tName})
+                    else:
+                        ##fallback solution
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                "InputFromOutputModule" : ts[-1]['output_'],
+                                "InputTask" : ts[-1]['TaskName']})
+
+                task_dict['_first_step_'] = __list_of_steps[0]
+                task_dict['_output_tiers_'] = r.get_attribute('sequences')[si]["eventcontent"]
                 task_dict['output_'] = "%soutput" % (r.get_attribute('sequences')[si]['eventcontent'][0])
                 task_dict['priority_'] = r.get_attribute('priority')
                 task_dict['request_type_'] = r.get_wmagent_type()
@@ -733,6 +779,8 @@ class TaskChainDict(RESTResource):
             task_name = 'task_' + arg0
         else:
             mcm_crs = [crdb.get(arg0)]
+            ##here name should be task_chain's[curr_step] request_prepid
+            # so it would be task_prepid-of-current-request same as in top
             task_name = arg0
 
         if len(mcm_crs) == 0:  return dumps({})
@@ -743,41 +791,59 @@ class TaskChainDict(RESTResource):
         if 'scratch' in argv:
             ignore_status = True
 
-        veto_point=None
+        veto_point = None
         if 'upto' in argv:
-            veto_point=int(argv['upto'])
+            veto_point = int(argv['upto'])
 
         for mcm_cr in mcm_crs:
             starting_point = mcm_cr['step']
-            if ignore_status: starting_point=0
-            for (ir,r) in enumerate(mcm_cr['chain']):
+            if ignore_status: starting_point = 0
+            for (ir, r) in enumerate(mcm_cr['chain']):
                 if (ir < starting_point) :
                     continue ## ad no task for things before what is already done
                 if veto_point and (ir > veto_point):
                     continue
-                mcm_r = request( rdb.get( r ) )
-                if mcm_r.get_attribute('status')=='done' and not ignore_status:
+                mcm_r = request(rdb.get( r ))
+                if mcm_r.get_attribute('status') == 'done' and not ignore_status:
                     continue
 
                 if not r in tasktree:
-                    tasktree[r] = {
-                        'next' : [],
-                        'dict' : [],
-                        'rank' : ir
-                        }
-                base = (ir==0) ## there is only one that needs to start from scratch
-                depend = (ir>starting_point) ## all the ones later than the starting point depend on a previous task
-                if ir<(len(mcm_cr['chain'])-1):
-                    tasktree[r]['next'].append( mcm_cr['chain'][ir+1])
+                    tasktree[r] = {'next' : [], 'dict' : [], 'rank' : ir}
+
+                base = (ir == 0) ## there is only one that needs to start from scratch
+                depend = (ir > starting_point) ## all the ones later than the starting point depend on a previous task
+                if ir < (len(mcm_cr['chain']) - 1):
+                    tasktree[r]['next'].append( mcm_cr['chain'][ir + 1])
 
                 tasktree[r]['dict'] = request_to_tasks( mcm_r, base, depend)
 
-        for (r,item) in tasktree.items():
-            for n in item['next']:
-                tasktree[n]['dict'][0].update({"InputFromOutputModule" : item['dict'][-1]['output_'],
-                        "InputTask" : item['dict'][-1]['TaskName']})
+        for (r, item) in tasktree.items():
+            ##here we should generate unique list of steps+output tiers
+            #as we iterate over requests in tasktree
+            __uniq_tiers = []
+            for el in item['dict']:
+                ##map of tiers and taskID in order of steps
+                __uniq_tiers.append((el['TaskName'], el['_output_tiers_']))
 
-        wma={
+            item['unique_tiers_'] = __uniq_tiers
+            for n in item['next']:
+                ##here we should take input from datatier selection;
+                #have a map of tiers -> taskNames and select appropriate one
+                __input_tier = tasktree[n]['dict'][0]['_first_step_']
+                tModule = tName = ""
+                if __input_tier in __DT_prio:
+                    ##in case there is a possible DataTier in global_dict
+                    tModule, tName = do_datatier_selection(__DT_prio[__input_tier], __uniq_tiers)
+
+                if tModule != "" and tName != "":
+                    tasktree[n]['dict'][0].update({"InputFromOutputModule" : tModule,
+                            "InputTask" : tName})
+                else:
+                    ##default & fallback solution
+                    tasktree[n]['dict'][0].update({"InputFromOutputModule" : item['dict'][-1]['output_'],
+                            "InputTask" : item['dict'][-1]['TaskName']})
+
+        wma = {
             "RequestType" : "TaskChain",
             "inputMode" : "couchDB",
             "Group" : "ppd",
@@ -790,7 +856,7 @@ class TaskChainDict(RESTResource):
             }
 
         task = 1
-        for (r,item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
+        for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:  wma['RequestPriority'] = d['priority_']
                 if d['request_type_'] in ['ReDigi']:  wma['SubRequestType'] = 'ReDigi'
@@ -811,8 +877,8 @@ class TaskChainDict(RESTResource):
         wma['Campaign' ] = wma['Task1']['AcquisitionEra']
         wma['PrepID' ] = task_name
         wma['RequestString' ] = wma['PrepID']
-
-        return dumps(wma)
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self, mode='setup'):
