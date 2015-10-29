@@ -1,5 +1,6 @@
 import json
 import traceback
+import time
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
@@ -102,25 +103,138 @@ class chained_request(json_base):
         last_r = request(rdb.get(self.get_attribute('chain')[-1]))
         return last_r.get_actors(N,what,Nchild)
 
-    def flow_trial(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False):
+    def get_list_of_superflows(self):
+        """
+        get a list of 2 or more consequitive campaigns
+        where flow approval==tasksubmit
+        """
+
+        cDB = database("chained_campaigns")
+        flowDB = database("flows")
+
+        __curr_step = self.get_attribute("step")
+        __cc = cDB.get(self.get_attribute("member_of_campaign"))
+        __list_of_campaigns = []
+        FLOW_APPRVAL_FOR_TASKCHAIN = "tasksubmit"
+        chainid = self.get_attribute('prepid')
+
+        ##we work only starting from current step
+        #+1 so we dont want to take current campaign
+        for chain in __cc["campaigns"][__curr_step+1:]:
+            self.logger.log("##DEBUG current flow %s" % (chain))
+            __ongoing_flow = flowDB.get(chain[1])
+            if __ongoing_flow:
+            ##check in case flow doesnt exists
+                self.logger.log("##DEBUG flow approval: %s" % (__ongoing_flow["approval"]))
+                if __ongoing_flow["approval"] == FLOW_APPRVAL_FOR_TASKCHAIN:
+                    ##do we need a list? we could save only last campaign's prepid
+                    __list_of_campaigns.append(chain[0])
+                elif len(__list_of_campaigns) >= 2:
+                    ##we case previously we had 2 or more consequitive superflows
+                    # and 3rd was normal flow we return only the previous superflows
+                    return __list_of_campaigns
+                else:
+                    #in case superflow->flow we return nothing
+                    self.logger.log("##DEBUG next_flow is just a normal flow ")
+                    return []
+
+        return __list_of_campaigns
+
+    def flow_trial(self, input_dataset='', block_black_list=None, block_white_list=None,
+            check_stats=True, reserve=False, super_flow=False):
+
         if not block_black_list: block_black_list = []
         if not block_white_list: block_white_list = []
+
+        cDB = database("chained_campaigns")
+        reqDB = database("requests")
+
+        __curr_step = self.get_attribute("step")
+        __list_of_campaigns = []
+
         chainid = self.get_attribute('prepid')
+
+        __list_of_campaigns = self.get_list_of_superflows()
+        super_flow = len(__list_of_campaigns) >= 2
+
         try:
-            if self.flow(check_stats=check_stats):
-                db = database('chained_requests')
-                db.update(self.json())
-                ## toggle the last request forward
-                self.toggle_last_request()
-                return {"prepid": chainid, "results": True}
-            return {"prepid": chainid, "results": False, "message": "Failed to flow."}
+            if not super_flow:
+                self.logger.log("##DEBUG we are defaulting to normal flow")
+                ###we do original flowing
+                ## and toggle last request
+                if self.flow(check_stats=check_stats):
+                    db = database('chained_requests')
+                    db.update(self.json())
+                    ## toggle the last request forward
+                    self.toggle_last_request()
+                    return {"prepid": chainid, "results": True}
+            else:
+                ##we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
+                # 1) reserve requests to FLOW_APPRVAL_FOR_TASKCHAIN's end
+                # 2) flow chained_req to next_step
+                # 3) approve just reserved requests
+                # 4) approve 1st request to trigger submission as TaskChain
+                self.logger.log("##DEBUG we are doing super_flow stuff")
+                self.logger.log("##DEBUG which flows we want to do:%s" % (__list_of_campaigns))
+
+                ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
+                            block_white_list, check_stats=True)
+                if ret_flow:
+                    ##force updating the chain_request document in DB and here
+                    self.reload()
+                else:
+                    self.logger.log("chained_request flow returned: %s" % (ret_flow))
+                    return {"results" : False, "message" : "Failed to flow"}
+
+                reservation_res = self.reserve(limit=__list_of_campaigns[-1])
+                self.logger.log("##DEBUG reserve returned: %s" % (reservation_res))
+                self.logger.log("##DEBUG reserve returned: %s" % (reservation_res))
+                if reservation_res["results"] == True:
+
+                    chain = self.get_attribute("chain")
+                    self.logger.log("##DEBUG whole chain %s" % (chain))
+
+                    self.logger.log("##DEBUG after flowing chained_request: %s" % (ret_flow))
+                    ##for now +1 because current_step was saved before actual flowing
+                    for elem in self.get_attribute("chain")[__curr_step+1:]:
+                        if not reqDB.document_exists(elem):
+                            return {"results" : False, "message" : "Reuest not found in DB"}
+                        next_req = request(reqDB.get(elem))
+                        self.logger.log("##DEBUG to-be approved: %s" % (elem))
+                        with locker.lock('{0}-wait-for-approval'.format(elem)):
+                            ret = next_req.approve()
+                            saved = reqDB.save(next_req.json())
+                        if not saved:
+                            self.logger.log("Could not save request %s to DB after approval" % (
+                                    elem))
+
+                            return {"results" : False,
+                                    "message" : "Could not save request after approval"}
+
+                        self.logger.log("##DEBUG cr.flow approval ret: %s" % (ret))
+
+                    to_submit_req = self.get_attribute("chain")[__curr_step+1]
+                    self.logger.log("##DEBUG will try to approve/submit a request:%s" % (
+                            to_submit_req))
+
+                    ##if we reaced up to here there is no point to check if request exists
+                    __sub_req = request(reqDB.get(to_submit_req))
+                    with locker.lock('{0}-wait-for-approval'.format(to_submit_req)):
+                        __sub_ret = __sub_req.approve()
+                        saved = reqDB.save(__sub_req.json())
+                    if not saved:
+                        self.logger.log("Could not save request %s to DB after approval" % (
+                                __sub_ret))
+
+                    return {"results" : True, "message" : "Flow finieshed successfully"}
+                else:
+                    return {"results" : False, "message" : "Reservation failed"}
+                return {"prepid": chainid, "results": False, "message": "We are failing superflow for now...."}
+
+
         except Exception as ex:
+            self.logger.log("Error in chained_request flow.%s" % (str(ex)))
             return {"prepid": chainid, "results": False, "message": str(ex)}
-            #return {"prepid":chainid,"results":False, "message":str(ex)+'\n'+traceback.format_exc()}
-            #except chained_request.NotInProperStateException as ex:
-            #    return {"prepid":chainid,"results":False, "message":str(ex)}
-            #except chained_request.ChainedRequestCannotFlowException as ex:
-            #    return {"prepid":chainid,"results":False, "message":str(ex)}
 
     def request_join(self, req):
         with locker.lock(req.get_attribute('prepid')):
@@ -128,11 +242,12 @@ class chained_request(json_base):
             chain.append(self.get_attribute('_id'))
             req.set_attribute("member_of_chain", chain)
         loc = locator()
-        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')), 
-                   "Request {0} has successfully joined chain {1}\n\n{2}\n".format(req.get_attribute('prepid'),
-                                                                                          self.get_attribute('_id'),
-                                                                                          "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])),
+        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')),
+                   "Request {0} has successfully joined chain {1}\n\n{2}\n".format(
+                            req.get_attribute('prepid'), self.get_attribute('_id'),
+                            "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])),
                    accumulate=True)
+
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         if not req.get_attribute('prepid') in self.get_attribute('chain'):
             chain = self.get_attribute('chain')
@@ -355,7 +470,7 @@ class chained_request(json_base):
                                                          'the flow is getting into a MCReproc campaign but not size per event is specified')
 
         ## check that it is allowed to flow
-        allowed_flow_approvals = ['flow', 'submit']
+        allowed_flow_approvals = ['flow', 'submit' , "tasksubmit"]
         ###### cascade of checks
         """
         if not reserve and not mcm_f.get_attribute('approval') in allowed_flow_approvals:
@@ -664,7 +779,7 @@ class chained_request(json_base):
 
         ## let it toggle the last request to a given approval only if the chained request allows it
         if self.get_attribute('approval') == 'none':
-            return 
+            return
 
         ccdb = database('chained_campaigns')
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
@@ -746,6 +861,17 @@ class chained_request(json_base):
                 okay = False
         return okay
 
+    def timer(method):
+        def timed(*args, **kw):
+            t0 = time.time()
+            result = method(*args, **kw)
+            t1 = time.time()
+            # if t1-t0 > 100:
+            json_base.logger.log("%s ####method took: %s" % (method.__name__, t1-t0))
+            return result
+        return timed
+
+    @timer
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
 
