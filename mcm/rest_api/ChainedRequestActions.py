@@ -685,6 +685,8 @@ class TaskChainDict(RESTResource):
                     for t in tier:
                         if t == possible:
                             return "%soutput" % (t), taskName
+            ##return empty values if nothing found
+            return "", ""
 
         def request_to_tasks(r,base,depend):
             events_per_lumi = settings().get_value('events_per_lumi')
