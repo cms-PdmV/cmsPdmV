@@ -291,13 +291,18 @@ class request(json_base):
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
 
+
+
         ## same thing but using db query => faster
         find_similar = ['dataset_name==%s' % (self.get_attribute('dataset_name')),
                 'member_of_campaign==%s' % ( self.get_attribute('member_of_campaign'))]
 
         if self.get_attribute('process_string'):
             find_similar.append('process_string==%s' % ( self.get_attribute('process_string')))
+
         similar_ds = rdb.queries(find_similar)
+        ######+200MB RAM!!!
+        ##TO-DO rewite to use lucene query...
 
         if len(similar_ds) > 1:
             #if len(similar_ds)>2:
@@ -334,6 +339,7 @@ class request(json_base):
                         'The request has an mcdbid, an input dataset, not part of a chain, and not a result of a migration.')
 
         else:
+
             crdb = database('chained_requests')
             for cr in self.get_attribute('member_of_chain'):
                 mcm_cr = crdb.get(cr)
@@ -1555,9 +1561,11 @@ done
         if len(mcm_rr):
             tiers_expected = self.get_tiers()
             collected = self.collect_outputs(mcm_rr, tiers_expected, skip_check=forced)
+            ##1st element which is not DQMIO
+            __ds_to_calc = next(el for el in collected if el.find("DQMIO") == -1)
             completed = 0
             if len(collected):
-                (valid,completed) = self.collect_status_and_completed_events(mcm_rr, collected[0])
+                (valid, completed) = self.collect_status_and_completed_events(mcm_rr, __ds_to_calc)
             else:
                 self.logger.error('Could not calculate completed from last request')
                 completed = 0
@@ -1570,6 +1578,7 @@ done
             if __curr_output != collected:
                 self.logger.log("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
                 changes_happen = True
+
             self.set_attribute('completed_events', completed)
             self.set_attribute('output_dataset', collected)
 
