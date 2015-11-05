@@ -741,7 +741,8 @@ class TaskChainDict(RESTResource):
                                               "InputTask" : None})
                         else:
                             task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                              "InputDataset" : r.get_attribute('input_dataset')})
+                                              "InputDataset" : r.get_attribute('input_dataset'),
+                                              "RequestNumEvents" : r.get_attribute("total_events")})
                 else:
                     ##here we select the appropriate DATATier from previous step
                     # in case -step tier1,tier2,tier3 and
