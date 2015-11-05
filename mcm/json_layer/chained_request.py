@@ -703,6 +703,10 @@ class chained_request(json_base):
             next_request.set_attribute('total_events', next_total_events)
 
             next_request.update_history({'action': 'flow', 'step': self.get_attribute('prepid')})
+
+        if mcm_f.get_attribute('approval') == "tasksubmit" and next_request.get_attribute("total_events") == -1:
+            ## in case we reserve multiple steps and they are injected as TaskChain
+            next_request.set_attribute("total_events", current_request.get_attribute("total_events"))
         request_saved = rdb.save(next_request.json())
 
         if not request_saved:
