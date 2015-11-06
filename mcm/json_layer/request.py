@@ -886,10 +886,19 @@ class request(json_base):
     def get_processing_string(self, i):
         ingredients = []
         if self.get_attribute('flown_with'):
+            ccDB = database('chained_campaigns')
             fdb = database('flows')
-            f = fdb.get(self.get_attribute('flown_with'))
-            if 'process_string' in f['request_parameters']:
-                ingredients.append(f['request_parameters']['process_string'])
+            # could 2nd chain_req be with different process_string??
+            ##we dont want to use chained_camp object -> circular dependency :/
+            ## so we work on json object
+            __cc_id = self.get_attribute("member_of_chain")[0].split("-")[1]
+            __cc = ccDB.get(__cc_id)
+            for camp, flow in __cc["campaigns"]:
+                if flow != None:
+                    f = fdb.get(flow)
+                    if 'process_string' in f['request_parameters']:
+                        ingredients.append(f['request_parameters']['process_string'])
+
         ingredients.append(self.get_attribute('process_string'))
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
         if self.get_attribute('extension'):
