@@ -181,9 +181,10 @@ class ListReleases(RESTResource):
         cdb = database('campaigns')
 
         if status:
-            cs = cdb.queries(['status==%s'%status])
+            __query = cdb.construct_lucene_query({'status' : status})
+            cs = cdb.full_text_search('search', __query, page=-1)
         else:
-            cs = cdb.queries([])
+            cs = cdb.get_all()
 
         releases_set=set()
         releases=defaultdict(lambda : list())
