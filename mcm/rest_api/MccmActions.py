@@ -265,9 +265,10 @@ class GenerateChains(RESTResource):
         ccs=[]
         for cc in mcm_m.get_attribute('chains'):
             if cc.startswith('chain'):
-                ccs.extend( ccdb.queries(['prepid==%s'% cc]) )
+                __query = ccdb.construct_lucene_query({'prepid' : cc})
             else:
-                ccs.extend( ccdb.queries(['alias==%s'% cc]) )
+                __query = ccdb.construct_lucene_query({'alias' : cc})
+            ccs.extend(ccdb.full_text_search('search', __query, page=-1))
         ## collect the name of the campaigns it can belong to
         ccs = list(set(map(lambda cc : cc['campaigns'][0][0], ccs)))
         if len(ccs)!=1:
@@ -327,8 +328,10 @@ class MccMReminder(RESTResource):
         Send a reminder to the production managers for existing opened mccm documents
         """
         mdb = database('mccms')
-        mccms = mdb.queries(['status==new'])
         udb = database('users')
+
+        __query = mdb.construct_lucene_query({'status' : 'new'})
+        mccms = mdb.full_text_search('search', __query, page=-1)
 
         block_threshold = 0
         if len(args):
@@ -372,17 +375,18 @@ class MccMDisplay(RESTResource):
         """
         Twiki display of mccm ticket for a given meeting date and /pwg optional
         """
-
+        mdb = database('mccms')
         date = args[0]
         pwgs=None
+
         if len(args)>1:
             pwgs=args[1].split(',')
 
-        mdb = database('mccms')
-
         to_be_shown= ['prepid','notes','deadline','requests','chains','repetitions']
         l_type=locator()
-        mdocs= mdb.queries(['meeting==%s'% date])
+
+        __query = mdb.construct_lucene_query({'meeting' : date})
+        mdocs = mdb.full_text_search('search', __query, page=-1)
         if pwgs:
             text="---++ MccM Tickets for %s : %s \n"%( date, ', '.join(pwgs) )
             for pwg in pwgs:
