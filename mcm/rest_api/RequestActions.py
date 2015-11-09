@@ -680,7 +680,8 @@ class DeleteRequest(RESTResource):
 
     def delete_chained_requests(self, pid):
         crdb = database('chained_requests')
-        mcm_crs = crdb.queries(['contains==' + pid])
+        __query = crdb.construct_lucene_query({'contains' : pid})
+        mcm_crs = crdb.full_text_search('search', __query, page=-1)
         for doc in mcm_crs:
             crdb.delete(doc['prepid'])
 
@@ -692,11 +693,13 @@ class GetRequestByDataset(RESTResource):
         """
         retrieve the dictionnary of a request, based on the output dataset specified
         """
-        if not args: 
+        if not args:
             return dumps({"results": {}})
         datasetname = '/'+'/'.join(args).replace('*','')
-        rdb =database('requests')
-        r=rdb.queries(['produce==%s' % datasetname])
+        rdb = database('requests')
+        __query = rdb.construct_lucene_query({'produce' : datasetname})
+        r = rdb.full_text_search('search', __query, page=-1)
+
         if len(r):
             return dumps({"results" : r[0]})
         else:
@@ -715,10 +718,11 @@ class GetRequestOutput(RESTResource):
         res = { main_arg : []}
         rdb = database('requests')
 
-        if len(args)>1 and args[1]=='chain':
+        if len(args) > 1 and args[1] == 'chain':
             collect = []
             crdb = database('chained_requests')
-            for cr in crdb.queries(['contains==%s'% main_arg]):
+            __query = crdb.construct_lucene_query({'contains' : main_arg})
+            for cr in crdb.full_text_search('search', __query, page=-1):
                 for r in reversed(cr['chain']):
                     if not r in collect:
                         collect.append(r)
@@ -1264,7 +1268,8 @@ class RequestLister():
                 else:
                     if retrieve_db.db_name == 'actions': ##try retrieve action doc for root request
                         crdb = database('chained_requests') #if the action ID doesn't exist
-                        for req in crdb.queries(['contains==' + oid]):
+                        __query = crdb.construct_lucene_query({'contains' : oid})
+                        for req in crdb.full_text_search('search', __query, page=-1):
                             if not req['chain'][0] in added_actions:
                                 if retrieve_db.document_exists(req['chain'][0]):
                                     all_objects.append(retrieve_db.get(req['chain'][0])) ##we add a root request
@@ -1359,7 +1364,8 @@ class RequestLister():
                     added_actions = []
                     if odb.db_name == 'actions' and an_id == None:
                         crdb = database('chained_requests')
-                        for req in crdb.queries(['contains==' + word]):
+                        __query2 = crdb.construct_lucene_query({'contains' : word})
+                        for req in crdb.full_text_search('search', __query2, page=-1):
                             if not req['chain'][0] in added_actions:
                                 all_ids.append(req['chain'][0]) ##we add a root request
                                 added_actions.append(req['chain'][0])
@@ -1369,7 +1375,8 @@ class RequestLister():
             if not cdb.document_exists(possible_campaign):
                 continue
                 ## get all requests
-            all_requests = odb.queries(['member_of_campaign==%s' % possible_campaign])
+            __query3 = odb.construct_lucene_query({'member_of_campaign' : possible_campaign})
+            all_requests = odb.full_text_search('search', __query3, page=-1)
             for request in all_requests:
                 if request['dataset_name'] in possible_dsn:
                     all_ids.append(request['prepid'])
@@ -1413,7 +1420,8 @@ class StalledReminder(RESTResource):
         rdb = database('requests')
         bdb = database('batches')
         statsDB = database('stats',url='http://cms-pdmv-stats.cern.ch:5984/')
-        rs = rdb.queries(['status==submitted'])
+        __query = rdb.construct_lucene_query({'status' : 'submitted'})
+        rs = rdb.full_text_search('search', __query, page=-1)
         today = time.mktime( time.gmtime())
         text="The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n"%( time_since, time_remaining, below_completed)
         reminded=0
@@ -1434,8 +1442,14 @@ class StalledReminder(RESTResource):
 
             if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
                 reminded+=1
-                bs = bdb.queries(['contains==%s'%r['prepid'],'status==announced'])
-                bs.extend(bdb.queries(['contains==%s'%r['prepid'],'status==hold']))
+                __query2 = bdb.construct_lucene_query({'contains' : r['prepid'],
+                        'status' : 'announced'})
+
+                __query3 = bdb.construct_lucene_query({'contains' : r['prepid'],
+                        'status' : 'hold'})
+
+                bs = bdb.full_text_search('search', __query2, page=-1)
+                bs.extend(bdb.full_text_search('search', __query3, page=-1))
                 ## take the last one ?
                 in_batch = 'NoBatch'
                 if len (bs):
@@ -1466,11 +1480,14 @@ class StalledReminder(RESTResource):
         com = communicator()
 
         udb = database('users')
-        production_managers = udb.queries(['role==production_manager'])
-        gen_conveners = udb.queries(['role==generator_convener'])
+        __query4 = udb.construct_lucene_query({'role' : 'production_manager'})
+        __query5 = udb.construct_lucene_query({'role' : 'generator_convener'})
+
+        production_managers = udb.full_text_search('search', __query4, page=-1)
+        gen_conveners = udb.full_text_search('search', __query5, page=-1)
         people_list = production_managers + gen_conveners
 
-        subject="Gentle reminder of %d requests that appear stalled"%(reminded)
+        subject = "Gentle reminder of %d requests that appear stalled"%(reminded)
 
         if reminded!=0:
             com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
@@ -1499,7 +1516,6 @@ class RequestsReminder(RESTResource):
         rdb = database('requests')
         crdb = database('chained_requests')
 
-        #all_requests = rdb.queries([])
         # a dictionary  campaign : [ids]
         ids_for_production_managers = {}
         # a dictionary  campaign : [ids]
@@ -1511,7 +1527,8 @@ class RequestsReminder(RESTResource):
         ## fill up the reminders
         def get_all_in_status(status, extracheck=None):
             campaigns_and_ids = {}
-            for mcm_r in rdb.queries(['status==%s' % status]):
+            __query = rdb.construct_lucene_query({'status' : status})
+            for mcm_r in rdb.full_text_search('search', __query, page=-1):
                 ## check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
                 if not c in campaigns_and_ids:
@@ -1571,7 +1588,8 @@ class RequestsReminder(RESTResource):
                 res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
 
             if len(ids_for_production_managers):
-                production_managers = udb.queries(['role==production_manager'])
+                __query2 = udb.construct_lucene_query({'role' : 'production_manager'})
+                production_managers = udb.full_text_search('search', __query2, page=-1)
                 message = 'A few request that needs to be submitted \n\n'
                 message += prepare_text_for(ids_for_production_managers, 'approved')
                 com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
@@ -1584,7 +1602,8 @@ class RequestsReminder(RESTResource):
             for c in ids_for_gen_conveners:
                 res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
             if len(ids_for_gen_conveners):
-                gen_conveners = udb.queries(['role==generator_convener'])
+                __query3 = udb.construct_lucene_query({'role' : 'generator_convener'})
+                gen_conveners = udb.full_text_search('search', __query3, page=-1)
                 message = 'A few requests need your approvals \n\n'
                 message += prepare_text_for(ids_for_gen_conveners, 'defined')
                 com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')],
@@ -1595,8 +1614,10 @@ class RequestsReminder(RESTResource):
             all_ids = set()
             ## remind the gen contact about requests that are:
             ##   - in status new, and have been flown
-            mcm_rs = rdb.queries(['status==new'])
-            mcm_rs.extend(rdb.queries(['status==validation']))
+            __query4 = rdb.construct_lucene_query({'status' : 'new'})
+            __query5 = rdb.construct_lucene_query({'status' : 'validation'})
+            mcm_rs = rdb.full_text_search('search', __query4, page=-1)
+            mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
             for mcm_r in mcm_rs:
                 c = mcm_r['member_of_campaign']
                 rid = mcm_r['prepid']
@@ -1624,7 +1645,8 @@ class RequestsReminder(RESTResource):
                     ids_for_users[contact][c].add( rid )
 
             #then remove the non generator
-            gen_contacts = map(lambda u : u['username'], udb.queries(['role==generator_contact']))
+            __query6 = udb.construct_lucene_query({'role' : 'generator_contact'})
+            gen_contacts = map(lambda u : u['username'], udb.full_text_search('search', __query6, page=-1))
             for contact in ids_for_users.keys():
                 if who and not contact in who:
                     ids_for_users.pop( contact )
