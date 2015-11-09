@@ -7,14 +7,12 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
 from tools.json import threaded_loads
 
-
-# generates the next valid prepid 
 class GetAllNews(RESTResourceIndex):
 
     def get_all_news(self):
         db = database('news')
-        #return self.db.get_all()
-        return db.queries(['announced=="true"'])
+        __query = db.construct_lucene_query({'announced' : 'true'})
+        return db.full_text_search('search', __query, page=-1)
 
     def GET(self, *args):
         """
@@ -27,7 +25,6 @@ class GetAllNews(RESTResourceIndex):
             all_news = all_news[:n_last]
 
         return json.dumps(all_news)
-
 
 class GetSingleNew(RESTResourceIndex):
 
@@ -46,7 +43,6 @@ class GetSingleNew(RESTResourceIndex):
             self.logger.error('No arguments were given')
             return json.dumps({"results":{}})
         return json.dumps(self.get_single_new(args[0]))
-
 
 class CreateNews(RESTResourceIndex):
     def __init__(self):
@@ -77,7 +73,6 @@ class CreateNews(RESTResourceIndex):
         Create a new in news DB
         """
         return json.dumps(self.create_new(cherrypy.request.body.read().strip()))
-
 
 class UpdateNew(RESTResourceIndex):
     def __init__(self):
