@@ -215,7 +215,8 @@ class GenerateChainedRequests(RESTResource):
         root_campaign = mcm_cc.get_attribute('campaigns')[0][0]
 
         ## get all actions belonging to that root campaign
-        root_actions = adb.queries(['member_of_campaign==%s' % (root_campaign)])
+        __query = adb.construct_lucene_query({'member_of_campaign' : root_campaign})
+        root_actions = adb.full_text_search('search', __query, page=-1)
         res = []
         generator = GenerateChainedRequests()
         for a in root_actions:
@@ -242,10 +243,11 @@ class InspectChainedCampaignsRest(RESTResource):
         crdb = database('chained_requests')
         res = []
         for ccid in ccids.split(','):
-            ##20+sec qury -> should be rewritten to use lucene
-            crlist = crdb.queries(["member_of_campaign==%s" % ccid,
-                    "last_status==done",
-                    "status==processing"])
+            __query = crdb.construct_lucene_query({'member_of_campaign' : ccid,
+                    'last_status' : 'done', 'status' : 'processing'})
+
+            crlist = crdb.full_text_search('search', __query, page=-1)
+
             __res = []
             self.logger.log('crlist %s in chained_camp %s ' % (crlist, ccid))
             for cr in crlist:
@@ -314,7 +316,7 @@ class SelectNewChainedCampaigns(RESTResource):
         fdb = database('flows')
         ccdb = database('chained_campaigns')
         cdb = database('campaigns')
-        flows = fdb.queries([])
+        flows = db.get_all()
         all_cc = []
 
         def finish_chain(chain_name, chains_dict, allowed_campaigns_dict):
@@ -353,13 +355,6 @@ class SelectNewChainedCampaigns(RESTResource):
                     all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns,
                             "exists": False})
 
-                # chained_campaigns = self.ccdb.queries(['prepid==%s' % chain_name])
-                # db_existence = False
-                # validity = False
-                # if len(chained_campaigns) > 0:
-                #    db_existence = True
-                #    if chained_campaigns[0]['valid']:
-                #        validity = True
                 chains_dict[chain_name] = {"campaigns_list": new_campaigns,
                         "exists_in_database": db_existence, "valid": validity}
 
@@ -377,7 +372,9 @@ class SelectNewChainedCampaigns(RESTResource):
         chains_dict = defaultdict(dict) # chain_id:{"campaigns_list": list, "exists_in_database":exists, "valid":validity})
         # creation of output dictionary
         for allowed_c in allowed_campaigns_dict:
-            campaigns = cdb.queries(['prepid==%s' % allowed_c])
+            __query = cdb.construct_lucene_query({'prepid' : allowed_c})
+            ##do we really need page -1 and do fti search while looking for single doc?
+            campaigns = cdb.full_text_search('search', __query, page=-1)
             if len(campaigns) == 0 or campaigns[0]["root"] == 1:
                 continue
             next_campaigns = allowed_campaigns_dict[allowed_c]
