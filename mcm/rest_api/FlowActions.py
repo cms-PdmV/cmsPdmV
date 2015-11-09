@@ -26,7 +26,7 @@ class FlowRESTResource(RESTResource):
             b = set(b)
             return [aa for aa in a if aa not in b]
 
-        # init 
+        # init
         to_be_removed, to_be_created = [], []
 
         # compute old - new
@@ -43,7 +43,8 @@ class FlowRESTResource(RESTResource):
         adb = database('actions')
 
         # find all actions that belong to a campaign
-        allacs = adb.queries(['member_of_campaign==%s' % c])
+        __query = adb.construct_lucene_query({'member_of_campaign' : c})
+        allacs = adb.full_text_search('search', __query, page =-1)
 
         # for each action
         for ac in allacs:
@@ -159,103 +160,6 @@ class FlowRESTResource(RESTResource):
         #### we can switch this method off in order to not generate godzillions of chained campaigns
         ## we have the SelectChainedCampaigns ability for that
         return
-
-        # # check to see if next is legal
-        # if not self.cdb.document_exists(next):
-        #     raise ValueError('Campaign ' + str(next) + ' does not exist.')
-        #
-        # n = self.cdb.get(next)
-        # self.logger.log('investigating for next ' + next)
-        # if n['root'] == 0:
-        #     self.logger.error('Campaign %s is a root campaign.' % (next))
-        #     raise ValueError('Campaign ' + str(next) + ' is a root campaign.')
-        #
-        # for c in allowed:
-        #     #self.logger.log('investigating for '+c)
-        #     # check to see if this chained campaign is already created
-        #     fid = self.f.get_attribute('_id')
-        #     ##JR. could not find the reason for the next lines
-        #     #if fid:
-        #     #    if self.ccdb.document_exists('chain_'+c+'_'+fid):
-        #     #        continue
-        #     #else:
-        #     #    if self.ccdb.document_exists('chain_'+c):
-        #     #        continue
-        #
-        #     # init campaign objects
-        #     camp = self.cdb.get(c)
-        #     #if c is NOT a root campaign
-        #     if camp['root'] == 1 or camp['root'] == -1:
-        #         # get all chained campaigns that have the allowed c as the last step
-        #         ccs = self.ccdb.queries(['last_campaign==%s' % (c)])
-        #         self.logger.log('for alst campaign %s' % ( c ))
-        #         self.logger.log('found %d to deal with' % (len(ccs)))
-        #         self.logger.log('found %s' % ( map(lambda doc: doc['prepid'], ccs) ))
-        #         # for each chained campaign
-        #         for cc in ccs:
-        #             ## skipping the chained campaign that has only the last campaign in it ... WHY ?
-        #             #if cc['_id'] == 'chain_'+camp['_id']:
-        #             #    continue
-        #
-        #             nextName = cc['_id'] + '_' + self.f.get_attribute('prepid')
-        #
-        #             if self.ccdb.document_exists(nextName):
-        #                 continue
-        #
-        #             self.logger.log('treating ' + cc['_id'])
-        #
-        #             # init a ccamp object based on the old
-        #             ccamp = chained_campaign(json_input=cc)
-        #
-        #             # disable it
-        #             ccamp.stop()
-        #             # update to db
-        #             self.ccdb.update(ccamp.json())
-        #
-        #             # append the next campaign in the chain
-        #             ccamp.add_campaign(next, self.f.get_attribute('prepid'))
-        #             # update the id
-        #             ccamp.set_attribute('_id', nextName)#ccamp.get_attribute('_id')+'_'+self.f.get_attribute('prepid'))
-        #             ccamp.set_attribute('prepid', ccamp.get_attribute('_id'))
-        #
-        #             # reset the alias
-        #             ccamp.set_attribute('alias', '')
-        #
-        #             # restart chained campaign
-        #             ccamp.start()
-        #
-        #             # save new chained campaign to database
-        #             self.ccdb.save(ccamp.json())
-        #
-        #     # else if c is root campaign:
-        #     #if camp['root']==0 or camp['root']==-1:
-        #     if camp['root'] == 0:
-        #         ccamp = chained_campaign()
-        #         # add allowed root
-        #         ccamp.add_campaign(c) # assume root. flow=None
-        #
-        #         # add next with given flow
-        #         ccamp.add_campaign(next, self.f.get_attribute('prepid'))
-        #
-        #         # init campaign objects
-        #         camp = campaign(self.cdb.get(c))
-        #         # add meta (energy)
-        #         ### not there anymore ccamp.set_attribute('energy', camp['energy'])
-        #
-        #         # add a prepid
-        #         if fid:
-        #             ccamp.set_attribute('prepid',
-        #                                 'chain_' + camp.get_attribute('prepid') + '_' + self.f.get_attribute('_id'))
-        #         else:
-        #             ccamp.set_attribute('prepid', 'chain_' + camp.get_attribute('prepid'))
-        #
-        #         ccamp.set_attribute('_id', ccamp.get_attribute('prepid'))
-        #
-        #         self.ccdb.save(ccamp.json())
-        #
-        #     # update actions
-        #     self.update_actions(c)
-
 
 class CreateFlow(FlowRESTResource):
     def __init__(self):
@@ -427,18 +331,20 @@ class DeleteFlow(RESTResource):
 
     def delete_chained_campaigns(self, fid, ccdb):
         # get all campaigns that contain the flow : fid
-        ccamps = ccdb.queries(['contains==%s' % fid])
+        __query = ccdb.construct_lucene_query({'contains' : fid})
+        ccamps = ccdb.full_text_search('search', __query, page=-1)
 
         # check that all relelvant chained campaigns are empty
         crdb = database('chained_requests')
         for cc in ccamps:
-            mcm_crs = crdb.queries(['member_of_campaign==%s' % (cc['prepid'])])
+            __query2 = ccdb.construct_lucene_query({'member_of_campaign' : cc['prepid']})
+            mcm_crs = ccdb.full_text_search('search', __query2)
             if len(mcm_crs) != 0:
                 raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign' % (fid,
                                                                                                              cc[
                                                                                                                  'prepid']))
 
-        ## all chained campaigns are empty : 
+        ## all chained campaigns are empty :
         #=> remove them one by one
         for cc in ccamps:
             ccdb.delete(cc['prepid'])
@@ -450,12 +356,14 @@ class DeleteFlow(RESTResource):
 
         next_c = f['next_campaign']
         # get all campaigns that contain the flow's next campaign in the campaign's next
-        camps = cdb.queries(['next==%s' % next_c])
+        __query = cdb.construct_lucene_query({'next' : next_c})
+        camps = cdb.full_text_search('search', __query, page=-1)
 
         for c in camps:
             ##check that nothing allows to flow in it
-            # get the list of chained campaign that still contain both 
-            mcm_ccs = ccdb.queries(['contains==' + c['prepid'], 'contains==' + next_c])
+            # get the list of chained campaign that still contain both
+            __query2 = ccdb.construct_lucene_query({'contains' : [c['prepid'], next_c]})
+            mcm_ccs = ccdb.full_text_search('search', __query2, page=-1)
             if not len(mcm_ccs):
                 #there a no chained campaign left, that uses both that campaign and next_c
                 c['next'].remove(fid)

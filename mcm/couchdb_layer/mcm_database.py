@@ -504,10 +504,18 @@ class database:
         """
         constructed_query = ""
         for param in query:
-            query[param] = query[param].replace(" ", "+")
-            constructed_query += param + ':' + self.escapeLuceneArg(query[param])
+            if isinstance(query[param], list):
+                for ind, el in enumerate(query[param]):
+                    constructed_query += param + ':' + self.escapeLuceneArg(el.replace(" ", "+"))
+                    if ind != len(query[param]) - 1:
+                        ##we are not adding AND in the end of partially constructed query
+                        constructed_query += "+AND+"
+            else:
+                query[param] = query[param].replace(" ", "+")
+                constructed_query += param + ':' + self.escapeLuceneArg(query[param])
             if constructed_query != "":
                 constructed_query += '+AND+'
+        ##we remove the +AND+ in the end of query
         return constructed_query[:-5]
 
     def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False):
