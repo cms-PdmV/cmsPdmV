@@ -344,9 +344,11 @@ class SetAction(GenerateChainedRequests):
         ccdb = database('chained_campaigns')
 
         mcm_a = action(adb.get(aid))
-        ccs = ccdb.queries(['alias==%s'% cc])
+        __query = ccdb.construct_lucene_query({'alias' : cc})
+        ccs = ccdb.full_text_search('search', __query, page=-1)
         if not len(ccs):
-            ccs = ccdb.queries(['prepid==%s'% cc])
+            __query2 = ccdb.construct_lucene_query({'prepid' : cc})
+            ccs = ccdb.full_text_search('search', __query2, page=-1)
         if not len(ccs) :
             return {"results": False, "message": "%s not a chained campaigns"%(cc)}
 
@@ -412,7 +414,7 @@ class DetectChains(RESTResource):
 
     def find_all_chains(self, db):
         self.logger.log('Identifying all possible chains for all actions in the database...')
-        aids = lambda x: x['prepid'] , db.queries([])
+        aids = lambda x: x['prepid'] , db.get_all()
         res = []
         for aid in aids:
             res.append(self.find_chains(aid,db))
