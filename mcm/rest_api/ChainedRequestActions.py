@@ -478,7 +478,7 @@ class SearchableChainedRequest(RESTResource):
         """
         rdb = database('chained_requests')
         if len(args) and args[0] == 'do':
-            all_requests = rdb.queries([])
+            all_requests = rdb.get_all()
 
             searchable = {}
 
