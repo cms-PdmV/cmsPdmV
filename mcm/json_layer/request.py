@@ -1571,9 +1571,10 @@ done
             tiers_expected = self.get_tiers()
             collected = self.collect_outputs(mcm_rr, tiers_expected, skip_check=forced)
             ##1st element which is not DQMIO
-            __ds_to_calc = next(el for el in collected if el.find("DQMIO") == -1)
             completed = 0
             if len(collected):
+                ##we find the first DS not DQMIO, if not possible default to 0th elem
+                __ds_to_calc = next((el for el in collected if el.find("DQMIO") == -1), collected[0])
                 (valid, completed) = self.collect_status_and_completed_events(mcm_rr, __ds_to_calc)
             else:
                 self.logger.error('Could not calculate completed from last request')
