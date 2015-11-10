@@ -335,8 +335,10 @@ class CampaignsRESTResource(RESTResource):
             ## also inspect the request for submit !
             rlist = []
             for in_status in in_statuses:
-                rlist.extend(rdb.queries(["member_of_campaign==%s" % (c),
-                        "status==%s" % (in_status)]))
+                __query = rdb.construct_lucene_query({'member_of_campaign' : c,
+                        'status' : in_status})
+
+                rlist.extend(rdb.full_text_search('search', __query, page=-1))
 
             for r in rlist:
                 mcm_r = request(r)
