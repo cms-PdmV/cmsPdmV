@@ -291,18 +291,13 @@ class request(json_base):
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
 
-
-
-        ## same thing but using db query => faster
-        find_similar = ['dataset_name==%s' % (self.get_attribute('dataset_name')),
-                'member_of_campaign==%s' % ( self.get_attribute('member_of_campaign'))]
+        __query = rdb.construct_lucene_query({'dataset_name' : self.get_attribute('dataset_name'),
+                'member_of_campaign' : self.get_attribute('member_of_campaign')})
 
         if self.get_attribute('process_string'):
-            find_similar.append('process_string==%s' % ( self.get_attribute('process_string')))
+            __query['process_string'] = self.get_attribute('process_string')
 
-        similar_ds = rdb.queries(find_similar)
-        ######+200MB RAM!!!
-        ##TO-DO rewite to use lucene query...
+        similar_ds = rdb.full_text_search("search", __query, page=-1)
 
         if len(similar_ds) > 1:
             #if len(similar_ds)>2:
@@ -547,7 +542,8 @@ class request(json_base):
 
         ## do a dataset collision check : remind that it requires the flows to have process_string properly set
         rdb = database('requests')
-        similar_ds = rdb.queries(['dataset_name==%s'%(self.get_attribute('dataset_name'))])
+        __query = rdb.construct_lucene_query({'dataset_name' : self.get_attribute('dataset_name')})
+        similar_ds = rdb.full_text_search('search', __query, page=-1)
         my_ps_and_t = self.get_camp_plus_ps_and_tiers()
         for (camp, my_ps, my_t) in my_ps_and_t:
             check_ingredients = map(lambda s : s.lower() , my_ps.split('_'))
@@ -2459,7 +2455,8 @@ done
         if increase_revision:
             for req in req_to_invalidate:
                 # find the batch it is in
-                bs = bdb.queries(['contains==%s' % ( req )])
+                __query = bdb.construct_lucene_query({'contains' : req})
+                bs = bdb.full_text_search('search', __query, page=-1)
                 for b in bs:
                     mcm_b = batch(b)
                     if not mcm_b.get_attribute('status') in ['done', 'announced']:
