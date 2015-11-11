@@ -249,7 +249,7 @@ class InspectChainedCampaignsRest(RESTResource):
             crlist = crdb.full_text_search('search', __query, page=-1)
 
             __res = []
-            self.logger.log('crlist %s in chained_camp %s ' % (crlist, ccid))
+            self.logger.log('crlist %s in chained_camp %s ' % (len(crlist), ccid))
             for cr in crlist:
 
                 mcm_cr = chained_request(cr)
