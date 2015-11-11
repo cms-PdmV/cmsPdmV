@@ -228,43 +228,6 @@ class database:
 
             return []
 
-    def unique_res(self,query_result):
-        docids = map(lambda doc : doc['_id'] , query_result)
-        docids_s = list(set(docids))
-        if len(docids) != len(docids_s):
-            docids_s = []
-            return_dict = copy.deepcopy( query_result )
-            for doc in query_result:
-                if not doc['_id'] in docids_s:
-                    docids_s.append(doc['_id'])
-                else:
-                    return_dict.remove(doc)
-            return return_dict
-        return query_result
-
-    def queries( self, query_list, limit=20):
-        ##page_nume does not matter
-        if not len(query_list):
-            return self.get_all(page_num=-1, limit=limit)
-        try:
-            results_list=[]
-            ##make each query separately and retrieve only the doc with counting == len(query_list)
-            for (i, query_item) in enumerate(query_list):
-                res = self.query(query_item, page_num=-1, limit=limit)
-                query_result = self.unique_res(res)
-                if i != 0:
-                    ## get only the one already in the intersection
-                    id_list = map(lambda doc : doc['_id'], results_list)
-                    results_list = filter(lambda doc : doc['_id'] in id_list, query_result)
-                else:
-                    results_list = query_result
-            return results_list
-        except Exception as ex:
-            self.logger.error('Could not load view for queris: <%s> . Reason: %s' % (
-                    '<br>'.join(query_list), ex))
-
-            return []
-
     def __extract_operators(self,  query=''):
         if not query:
             return ()
