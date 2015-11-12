@@ -784,7 +784,8 @@ class TaskChainDict(RESTResource):
             mcm_crs = [crdb.get(arg0)]
             ##here name should be task_chain's[curr_step] request_prepid
             # so it would be task_prepid-of-current-request same as in top
-            task_name = arg0
+            __req_id = mcm_crs[0]['chain'][mcm_crs[0]['step']]
+            task_name = 'task_' + __req_id
 
         if len(mcm_crs) == 0:  return dumps({})
 
