@@ -121,10 +121,6 @@ class request_to_wmcontrol:
 
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
 
-            ## if PU dataset name is defined : add it
-            if mcm_r.get_attribute('pileup_dataset_name') and mcm_r.get_attribute('pileup_dataset_name').strip():
-                command += ' --pileup-ds ' + mcm_r.get_attribute('pileup_dataset_name')
-
             ## provide the total number of events requested: by default it is the amount in the input dataset.
             # and wmcontrol / wma should understand that we want partial statistics if that number is lower than expected
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
@@ -162,6 +158,10 @@ class request_to_wmcontrol:
                 command += ' --blocks "' + ','.join(mcm_r.get_attribute('block_white_list')) + '"'
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
+
+        ## if PU dataset name is defined : add it
+        if mcm_r.get_attribute('pileup_dataset_name') and mcm_r.get_attribute('pileup_dataset_name').strip():
+                command += ' --pileup-ds ' + mcm_r.get_attribute('pileup_dataset_name')
 
         if processString:
             command += ' --process-string ' + processString
