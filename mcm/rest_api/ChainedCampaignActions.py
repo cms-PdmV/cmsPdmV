@@ -268,6 +268,7 @@ class InspectChainedCampaignsRest(RESTResource):
             yield dumps(__res, indent=4)
 
         self.running = False
+        self.logger.log("ChainedCampaigns inspection finished. running: %s" % self.running)
 
 class InspectChainedRequests(InspectChainedCampaignsRest):
     def __init__(self):
