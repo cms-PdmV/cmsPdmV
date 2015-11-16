@@ -2,6 +2,7 @@
 
 import cherrypy
 import multiprocessing
+import time
 
 from json import dumps
 from collections import defaultdict
@@ -257,11 +258,13 @@ class InspectChainedCampaignsRest(RESTResource):
                     __inspect_ret = mcm_cr.inspect()
                 else:
                     __inspect_ret = {"prepid":cr, "results":False,
-                            'message' : '%s does not exist' % cr}
+                            'message' : '%s does not exist' % cr['prepid']}
 
-                self.logger.log("Inspection for: %s returned: %s" % (cr, __inspect_ret))
+                self.logger.log("Inspection for: %s returned: %s" % (cr['prepid'], __inspect_ret))
                 __res.append(__inspect_ret)
 
+            ##force slowing-down of inspect to not abuse the DB
+            time.sleep(2)
             yield dumps(__res, indent=4)
 
         self.running = False
