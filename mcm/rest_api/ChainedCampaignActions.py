@@ -316,7 +316,7 @@ class SelectNewChainedCampaigns(RESTResource):
         fdb = database('flows')
         ccdb = database('chained_campaigns')
         cdb = database('campaigns')
-        flows = db.get_all()
+        flows = fdb.get_all()
         all_cc = []
 
         def finish_chain(chain_name, chains_dict, allowed_campaigns_dict):
