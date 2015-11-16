@@ -178,7 +178,7 @@ class chained_request(json_base):
                 self.logger.log("##DEBUG which flows we want to do:%s" % (__list_of_campaigns))
 
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
-                            block_white_list, check_stats=True)
+                            block_white_list, check_stats=check_stats)
                 if ret_flow:
                     ##force updating the chain_request document in DB and here
                     self.reload()
