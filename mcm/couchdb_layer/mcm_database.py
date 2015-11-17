@@ -485,10 +485,22 @@ class database:
         """
         queries loadView method with lucene interface for full text search
         """
+        __retries = 3
         limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_design/lucene/%s?q=%s" % (index_name, query)
-        data = self.db.FtiSearch(url, options={'limit': limit,
-                'include_docs': True, 'skip': skip, 'sort': '_id'}, get_raw=get_raw) #we sort ascending by doc._id field
+        for i in xrange(1, __retries+1):
+            try:
+                data = self.db.FtiSearch(url, options={'limit': limit,
+                        'include_docs': True, 'skip': skip, 'sort': '_id'},
+                        get_raw=get_raw) #we sort ascending by doc._id field
+
+                break
+            except Exception as ex:
+                self.logger.log("lucene DB query: %s failed %s. retrying: %s out of: %s" % (
+                        url, ex, i, __retries))
+
+            ##if we are retrying we should wait little bit
+            time.sleep(0.5)
 
         return data if get_raw else [ elem["doc"] for elem in data['rows']]
 
