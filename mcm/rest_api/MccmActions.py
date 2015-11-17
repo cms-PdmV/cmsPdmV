@@ -10,7 +10,7 @@ from tools.user_management import access_rights
 from tools.json import threaded_loads
 
 import cherrypy
-
+import time
 
 class GetMccm(RESTResource):
 
@@ -195,11 +195,11 @@ class GenerateChains(RESTResource):
         """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
-        mid=args[0]
-        reserve=False
-        if len(args)>1:
-            reserve= (args[1]=='reserve')
-            if len(args)>2:
+        mid = args[0]
+        reserve = False
+        if len(args) > 1:
+            reserve = (args[1]=='reserve')
+            if len(args) > 2:
                 reserve = args[2]
 
         lock = locker.lock(mid)
@@ -210,59 +210,66 @@ class GenerateChains(RESTResource):
                 lock.release()
             return dumps(res)
         else:
-            return dumps({"results" : False, "message" : "%s is already being operated on"% mid} )
+            return dumps({"results" : False,
+                    "message" : "%s is already being operated on" % mid})
 
     def generate(self, mid, reserve=False):
         mdb = database('mccms')
         rdb = database('requests')
 
-        mcm_m = mccm(mdb.get( mid ))
+        mcm_m = mccm(mdb.get(mid))
 
         if mcm_m.get_attribute('status')!='new':
-            return {"prepid":mid,
+            return {"prepid" : mid,
                     "results" : False,
-                    "message" : "status is %s, expecting new"%( mcm_m.get_attribute('status'))}
-        if mcm_m.get_attribute('block')==0:
-            return {"prepid":mid,
+                    "message" : "status is %s, expecting new" % (
+                            mcm_m.get_attribute('status'))}
+
+        if mcm_m.get_attribute('block') == 0:
+            return {"prepid" : mid,
                     "results" : False,
                     "message" : "No block selected"}
-        if len(mcm_m.get_attribute('chains'))==0:
-            return {"prepid":mid,
+
+        if len(mcm_m.get_attribute('chains')) == 0:
+            return {"prepid" : mid,
                     "results" : False,
                     "message" : "No chains selected"}
-        if len(mcm_m.get_attribute('requests'))==0:
-            return {"prepid":mid,
+
+        if len(mcm_m.get_attribute('requests')) == 0:
+            return {"prepid" : mid,
                     "results" : False,
                     "message" : "No requests selected"}
 
         aids = []
         for r in mcm_m.get_attribute('requests'):
-            if type(r)==list:
-                if len(r) >2:
-                    return {"prepid":mid,
+            if type(r) == list:
+                if len(r) > 2:
+                    return {"prepid" : mid,
                             "results" : False,
                             "message" : "range of id too large"}
 
                 (pwg1, campaign1, serial1) = r[0].split('-')
                 (pwg2, campaign2, serial2) = r[1].split('-')
-                serial1=int(serial1)
-                serial2=int(serial2)
-                if pwg1!=pwg2 or campaign1!=campaign2:
-                    return {"prepid":mid,
+                serial1 = int(serial1)
+                serial2 = int(serial2)
+                if pwg1 != pwg2 or campaign1 != campaign2:
+                    return {"prepid" : mid,
                             "results" : False,
-                            "message" : "inconsistent range of ids %s -> %s" %(r[0],r[1])}
+                            "message" : "inconsistent range of ids %s -> %s" % (r[0], r[1])}
 
-                aids.extend( map( lambda s : "%s-%s-%05d"%( pwg1, campaign1, s), range( serial1, serial2+1)))
+                aids.extend(map(lambda s : "%s-%s-%05d" % (pwg1, campaign1, s),
+                        range(serial1, serial2+1)))
+
             else:
-                aids.append( r )
+                aids.append(r)
 
-        if len(aids) != len(list(set( aids ))):
-            return {"prepid":mid,
+        if len(aids) != len(list(set(aids))):
+            return {"prepid" : mid,
                     "results" : False,
                     "message" : "There are duplicate actions in the ticket"}
 
         ccdb = database('chained_campaigns')
-        ccs=[]
+        ccs = []
         for cc in mcm_m.get_attribute('chains'):
             if cc.startswith('chain'):
                 __query = ccdb.construct_lucene_query({'prepid' : cc})
@@ -274,47 +281,58 @@ class GenerateChains(RESTResource):
         if len(ccs)!=1:
             return {"prepid":mid,
                     "results" : False,
-                    "message" : "inconsistent list of chains %s, leading to different root campaigns %s"%(mcm_m.get_attribute('chains'),ccs)}
-        allowed_campaign=ccs[0]
+                    "message" : "inconsistent list of chains %s, leading to different root campaigns %s" % (mcm_m.get_attribute('chains'), ccs)}
+
+        allowed_campaign = ccs[0]
         for aid in aids:
             mcm_r = rdb.get(aid)
             if mcm_r['member_of_campaign'] != allowed_campaign:
-                return {"prepid":mid,
+                return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is not from the allowed root campaign %s" %( aid, allowed_campaign) }
-            if mcm_r['status']=='new' and mcm_r['approval']=='validation':
-                return {"prepid":mid,
+                        "message" : "A request (%s) is not from the allowed root campaign %s" % (aid, allowed_campaign)}
+
+            if mcm_r['status'] == 'new' and mcm_r['approval'] == 'validation':
+                return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is being validated." %( aid) }
+                        "message" : "A request (%s) is being validated." % (aid)}
+
             if mcm_r['flown_with']:
-                return {"prepid":mid,
+                return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is in the middle of a chain already."%(aid)}
+                        "message" : "A request (%s) is in the middle of a chain already." % (aid)}
 
         if not mcm_m.get_attribute('repetitions'):
-            return {"prepid":mid,
+            return {"prepid" : mid,
                     "results" : False,
-                    "message" : "The number of repetitions (%s) is invalid"%( mcm_m.get_attribute('repetitions') )}
+                    "message" : "The number of repetitions (%s) is invalid" % (
+                            mcm_m.get_attribute('repetitions'))}
 
-        res=[]
+        res = []
         for aid in aids:
             for times in range(mcm_m.get_attribute('repetitions')):
                 for cc in mcm_m.get_attribute('chains'):
-                    b=mcm_m.get_attribute('block')
-                    s=None
-                    t=None
-                    special=mcm_m.get_attribute('special')
-                    if mcm_m.get_attribute('staged')!=0:
-                        s= mcm_m.get_attribute('staged')
-                    if mcm_m.get_attribute('threshold')!=0:
-                        t=mcm_m.get_attribute('threshold')
+                    b = mcm_m.get_attribute('block')
+                    s = None
+                    t = None
+                    special = mcm_m.get_attribute('special')
+                    if mcm_m.get_attribute('staged') != 0:
+                        s = mcm_m.get_attribute('staged')
+                    if mcm_m.get_attribute('threshold') != 0:
+                        t = mcm_m.get_attribute('threshold')
 
-                    res.append( {"prepid":mid,"results" : True,"message": "%s x %s in %s block %s s %s t %s"%( times, aid, cc, b, s ,t )})
-                    res.append(self.setter.set_action(aid, cc, b, staged=s, threshold=t, reserve=reserve, special=special))
+                    res.append({"prepid" : mid, "results" : True,
+                            "message": "%s x %s in %s block %s s %s t %s" % (
+                                    times, aid, cc, b, s ,t)})
+
+                    res.append(self.setter.set_action(aid,
+                            cc, b, staged=s, threshold=t, reserve=reserve, special=special))
+
+                    ##for now we put a small delay to not crash index with a lot of action
+                    time.sleep(2)
 
         mcm_m.set_status()
-        mdb.update( mcm_m.json())
-        return {"prepid":mid,
+        mdb.update(mcm_m.json())
+        return {"prepid" : mid,
                 "results" : True,
                 "message" : res}
 
