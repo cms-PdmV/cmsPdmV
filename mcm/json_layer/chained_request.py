@@ -125,7 +125,6 @@ class chained_request(json_base):
             __ongoing_flow = flowDB.get(chain[1])
             if __ongoing_flow:
             ##check in case flow doesnt exists
-                self.logger.log("##DEBUG flow approval: %s" % (__ongoing_flow["approval"]))
                 if __ongoing_flow["approval"] == FLOW_APPRVAL_FOR_TASKCHAIN:
                     ##do we need a list? we could save only last campaign's prepid
                     __list_of_campaigns.append(chain[0])
@@ -134,8 +133,7 @@ class chained_request(json_base):
                     # and 3rd was normal flow we return only the previous superflows
                     return __list_of_campaigns
                 else:
-                    #in case superflow->flow we return nothing
-                    self.logger.log("##DEBUG next_flow is just a normal flow ")
+                    #in case superflow->flow we return nothing as its a normal flow
                     return []
 
         return __list_of_campaigns
@@ -174,33 +172,28 @@ class chained_request(json_base):
                 # 2) flow chained_req to next_step
                 # 3) approve just reserved requests
                 # 4) approve 1st request to trigger submission as TaskChain
-                self.logger.log("##DEBUG we are doing super_flow stuff")
-                self.logger.log("##DEBUG which flows we want to do:%s" % (__list_of_campaigns))
+                self.logger.log("SUPERFLOW which flows we want to do:%s" % (__list_of_campaigns))
 
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
                             block_white_list, check_stats=check_stats)
+
+                self.logger.log("SUPERFLOW after flowing chained_request: %s" % (ret_flow))
                 if ret_flow:
                     ##force updating the chain_request document in DB and here
                     self.reload()
                 else:
-                    self.logger.log("chained_request flow returned: %s" % (ret_flow))
                     return {"results" : False, "message" : "Failed to flow"}
 
                 reservation_res = self.reserve(limit=__list_of_campaigns[-1])
                 self.logger.log("##DEBUG reserve returned: %s" % (reservation_res))
-                self.logger.log("##DEBUG reserve returned: %s" % (reservation_res))
                 if reservation_res["results"] == True:
 
                     chain = self.get_attribute("chain")
-                    self.logger.log("##DEBUG whole chain %s" % (chain))
-
-                    self.logger.log("##DEBUG after flowing chained_request: %s" % (ret_flow))
                     ##for now +1 because current_step was saved before actual flowing
                     for elem in self.get_attribute("chain")[__curr_step+1:]:
                         if not reqDB.document_exists(elem):
                             return {"results" : False, "message" : "Reuest not found in DB"}
                         next_req = request(reqDB.get(elem))
-                        self.logger.log("##DEBUG to-be approved: %s" % (elem))
                         with locker.lock('{0}-wait-for-approval'.format(elem)):
                             ret = next_req.approve()
                             saved = reqDB.save(next_req.json())
@@ -472,19 +465,7 @@ class chained_request(json_base):
         ## check that it is allowed to flow
         allowed_flow_approvals = ['flow', 'submit' , "tasksubmit"]
         ###### cascade of checks
-        """
-        if not reserve and not mcm_f.get_attribute('approval') in allowed_flow_approvals:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The flow (%s) is not in proper approval state (%s)'%( 
-                                                            mcm_f.get_attribute('prepid'),
-                                                            mcm_f.get_attribute('approval')))
 
-        if not reserve and not self.get_attribute('approval') in allowed_flow_approvals:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The chained request (%s) is not in the proper approval state (%s)'% (
-                                                            self.get_attribute('_id'),
-                                                            self.get_attribute('approval')))
-        """
         if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
             if reserve or not self.get_attribute('approval') in allowed_flow_approvals:
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
@@ -508,7 +489,10 @@ class chained_request(json_base):
 
             notify_on_fail=True ## to be tuned according to the specific cases
             if current_request.get_attribute('completed_events') <= 0:
-                self.logger.error("###DEBUG### compl_evts: %s, prepid: %s" % (current_request.get_attribute('completed_events'),current_request.json()))
+                self.logger.error("###DEBUG### compl_evts: %s, prepid: %s" % (
+                        current_request.get_attribute('completed_events'),
+                        current_request.get_attribute('prepid')))
+
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
             else:
