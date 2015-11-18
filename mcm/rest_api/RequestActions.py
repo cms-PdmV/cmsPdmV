@@ -860,6 +860,10 @@ class GetStatus(RESTResource):
             return self.status(rid)
 
     def status(self, rid):
+        if rid == "":
+            self.logger.log("someone is looking for empty request status", level=warning)
+            return {"results" : "You shouldnt be looking for empty prepid"}
+
         db = database('requests')
         if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
