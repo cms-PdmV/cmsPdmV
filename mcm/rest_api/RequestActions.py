@@ -860,6 +860,7 @@ class GetStatus(RESTResource):
             return self.status(rid)
 
     def status(self, rid):
+        __retries = 3
         if rid == "":
             self.logger.log("someone is looking for empty request status", level=warning)
             return {"results" : "You shouldnt be looking for empty prepid"}
@@ -871,8 +872,11 @@ class GetStatus(RESTResource):
         mcm_r = db.get(rid)
 
         while not 'status' in mcm_r:
-            time.sleep(0.5)
+            if __retries == 0:
+                return {"prepid": rid, "results": "Ran out of retries to query DB"}
+            time.sleep(1)
             mcm_r = db.get(rid)
+            __retries -= 1
 
         return {rid: mcm_r['status']}
 
