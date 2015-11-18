@@ -862,7 +862,7 @@ class GetStatus(RESTResource):
     def status(self, rid):
         __retries = 3
         if rid == "":
-            self.logger.log("someone is looking for empty request status", level=warning)
+            self.logger.log("someone is looking for empty request status", level='warning')
             return {"results" : "You shouldnt be looking for empty prepid"}
 
         db = database('requests')
