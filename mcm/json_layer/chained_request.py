@@ -210,18 +210,18 @@ class chained_request(json_base):
                     self.logger.log("##DEBUG will try to approve/submit a request:%s" % (
                             to_submit_req))
 
-                    ##if we reaced up to here there is no point to check if request exists
+                    ##if we reached up to here there is no point to check if request exists
                     __sub_req = request(reqDB.get(to_submit_req))
                     with locker.lock('{0}-wait-for-approval'.format(to_submit_req)):
                         __sub_ret = __sub_req.approve()
-                        saved = reqDB.save(__sub_req.json())
-                    if not saved:
-                        self.logger.log("Could not save request %s to DB after approval" % (
-                                __sub_ret))
 
-                    return {"results" : True, "message" : "Flow finieshed successfully"}
+                    return {"results" : True, "message" : "SUPERFLOW finished successfully",
+                            "prepid": chainid}
+
                 else:
-                    return {"results" : False, "message" : "Reservation failed"}
+                    return {"results" : False, "message" : "Reservation failed",
+                            "prepid": chainid}
+
                 return {"prepid": chainid, "results": False, "message": "We are failing superflow for now...."}
 
 
