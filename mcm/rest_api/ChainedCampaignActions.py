@@ -242,15 +242,16 @@ class InspectChainedCampaignsRest(RESTResource):
 
         self.running = True
         crdb = database('chained_requests')
-
         try:
             for ccid in ccids.split(','):
                 __query = crdb.construct_lucene_query({'member_of_campaign' : ccid,
                         'last_status' : 'done', 'status' : 'processing'})
 
                 crlist = crdb.full_text_search('search', __query, page=-1)
-                __res = []
-                self.logger.log('crlist %s in chained_camp %s ' % (len(crlist), ccid))
+
+                ##we yield len of cr_list so we would know how much data later on we processed
+                yield dumps({'prepid': ccid, 'cr_len': len(crlist)}, indent=2)
+
                 for cr in crlist:
                     mcm_cr = chained_request(cr)
                     if mcm_cr:
@@ -260,20 +261,21 @@ class InspectChainedCampaignsRest(RESTResource):
                                 'message' : '%s does not exist' % cr['prepid']}
 
                     self.logger.log("Inspection for: %s returned: %s" % (cr['prepid'], __inspect_ret))
-                    __res.append(__inspect_ret)
+                    yield dumps(__inspect_ret, indent=8)
 
                 ##force slowing-down of inspect to not abuse the DB
                 time.sleep(2)
-                yield dumps(__res, indent=4)
 
             self.running = False
             self.logger.log("ChainedCampaigns inspection finished. running: %s" % self.running)
+
         except Exception as ex:
             self.running = False
-            self.logger.log("ChainedCampaigns inspection crashed. reason: %s" % str(ex))
+            self.logger.log("ChainedCampaigns inspection crashed. reason: %s" % str(ex),
+                    level='error')
 
-
-
+            yield dumps({'message': 'crlist crashed: %s' % (str(ex)),
+                    'last_used_query' : __query})
 
 class InspectChainedRequests(InspectChainedCampaignsRest):
     def __init__(self):
