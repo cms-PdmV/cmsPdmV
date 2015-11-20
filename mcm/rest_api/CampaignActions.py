@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import cherrypy
+import time
+
 from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -347,6 +349,8 @@ class CampaignsRESTResource(RESTResource):
                 else:
                     res.append({"prepid": r, "results":False,
                             'message' : '%s does not exist' % (r)})
+
+            time.sleep(2)
 
         if len(res) > 1:
             return res
