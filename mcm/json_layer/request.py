@@ -894,6 +894,9 @@ class request(json_base):
                     f = fdb.get(flow)
                     if 'process_string' in f['request_parameters']:
                         ingredients.append(f['request_parameters']['process_string'])
+                ##don't include process_strings from flows which goes after request
+                if self.get_attribute('member_of_campaign') == camp:
+                    break
 
         ingredients.append(self.get_attribute('process_string'))
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
@@ -1738,7 +1741,7 @@ done
                     valid,counted= self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
 
                     self.set_attribute('output_dataset', collected)
-                    self.set_attribute('completed_events', counted )
+                    self.set_attribute('completed_events', counted)
 
                     if not valid:
                         not_good.update({'message' : 'Not all outputs are valid'})
@@ -2581,6 +2584,7 @@ done
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.logger.inject("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids),
                                    handler=prepid)
+
                 self.overwrite( {'config_id' : sorted_additional_config_ids} )
             return command
         finally:
