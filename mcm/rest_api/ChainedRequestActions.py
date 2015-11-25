@@ -535,8 +535,13 @@ class TestChainedRequest(RESTResource):
 
         crdb = database('chained_requests')
         rdb = database('requests')
+        settingsDB = database('settings')
         mcm_cr = chained_request(crdb.get(args[0]))
         mcm_rs = []
+        if settingsDB.get('run_validations')['value'] == False:
+            return dumps({"results" : False,
+                    'message': 'validation jobs are not allowed for now...',
+                    "prepid" : args[0]})
 
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request( rdb.get( rid ) )

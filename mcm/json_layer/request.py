@@ -191,6 +191,11 @@ class request(json_base):
             self.set_attribute('total_events', int(1+total_events_should_be / float(rounding_unit))*int(rounding_unit))
 
     def ok_to_move_to_approval_validation(self, for_chain=False):
+        settingsDB = database('settings')
+        if settingsDB.get('run_validations')['value'] == False:
+            self.set_status(0)
+            self.approve(0)
+            return {'message': 'validation jobs are not allowed for now...'}
         message = ""
         if self.current_user_level == 0:
             ##not allowed to do so
