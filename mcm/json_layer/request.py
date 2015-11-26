@@ -192,10 +192,13 @@ class request(json_base):
 
     def ok_to_move_to_approval_validation(self, for_chain=False):
         settingsDB = database('settings')
-        if settingsDB.get('run_validations')['value'] == False:
-            self.set_status(0)
-            self.approve(0)
-            return {'message': 'validation jobs are not allowed for now...'}
+        if settingsDB.get('validation_stop')['value'] == True:
+            self.test_failure(message=None, what='', rewind=True,
+                    with_notification=False)
+
+            return {'message': ('validation jobs are halted to allow forthcoming '
+                'mcm restart - try again later')}
+
         message = ""
         if self.current_user_level == 0:
             ##not allowed to do so

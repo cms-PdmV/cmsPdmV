@@ -538,9 +538,10 @@ class TestChainedRequest(RESTResource):
         settingsDB = database('settings')
         mcm_cr = chained_request(crdb.get(args[0]))
         mcm_rs = []
-        if settingsDB.get('run_validations')['value'] == False:
+        if settingsDB.get('validation_stop')['value'] == True:
             return dumps({"results" : False,
-                    'message': 'validation jobs are not allowed for now...',
+                    'message': ('validation jobs are halted to allow forthcoming mcm '
+                            'restart - try again later'),
                     "prepid" : args[0]})
 
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
