@@ -1591,15 +1591,15 @@ done
                 # above how much change do we update : 5%
 
             if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
+                self.set_attribute('completed_events', completed)
                 changes_happen = True
             ##we check if output_dataset managed to change.
             ## ussually when request is assigned, but no evts are generated
-            if __curr_output != collected:
+            # we check for done status so we wouldn't be updating old requests with changed infrastructure
+            if (__curr_output != collected) and (self.get_attribute('status') != 'done'):
                 self.logger.log("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
+                self.set_attribute('output_dataset', collected)
                 changes_happen = True
-
-            self.set_attribute('completed_events', completed)
-            self.set_attribute('output_dataset', collected)
 
         self.set_attribute('reqmgr_name', mcm_rr)
 
