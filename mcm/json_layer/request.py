@@ -299,11 +299,13 @@ class request(json_base):
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
 
-        __query = rdb.construct_lucene_query({'dataset_name' : self.get_attribute('dataset_name'),
-                'member_of_campaign' : self.get_attribute('member_of_campaign')})
+        __q_params = {'dataset_name' : self.get_attribute('dataset_name'),
+                'member_of_campaign' : self.get_attribute('member_of_campaign')}
 
         if self.get_attribute('process_string'):
-            __query['process_string'] = self.get_attribute('process_string')
+            __q_params['process_string'] = self.get_attribute('process_string')
+
+        __query = rdb.construct_lucene_query(__q_params)
 
         similar_ds = rdb.full_text_search("search", __query, page=-1)
 
