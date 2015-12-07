@@ -674,7 +674,7 @@ class chained_request(json_base):
                         next_request.get_attribute("sequences"))
             else:
                 self.logger.log("###DEBUG###\tget from stats")
-                statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
+                statsDB = database('stats', url='http://vocms084.cern.ch:5984/')
                 if statsDB.document_exists(last_wma['name']):
                     latestStatus = statsDB.get(last_wma['name'])
                     input_dataset = self.get_ds_input(latestStatus['pdmv_dataset_list'],

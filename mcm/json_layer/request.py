@@ -1455,7 +1455,7 @@ done
             updater = stats_updater()
             out = updater.update(self.get_attribute('prepid'))
 
-        statsDB = database('stats', url='http://cms-pdmv-stats.cern.ch:5984/')
+        statsDB = database('stats', url='http://vocms084.cern.ch:5984/')
 
         changes_happen = False
 
