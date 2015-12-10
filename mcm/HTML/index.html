@@ -35,14 +35,21 @@
       <p> <a href="https://github.com/cms-PdmV/cmsPdmV/compare/{{mcm_revision}}...master"> Upcoming developments </a></p>
       <p> Up since {{start_time}}</p>
     </div>
-  <span class="span12">
+  <span class="span5">
+  </span>
+  <span class="span2">
+    <div align="middle">
+      <pre style="text-align: left;">{{fancy_elem}}</pre>
+    </div>
+  </span>
+  <!-- <span class="span12">
     <form style="height: 500px; overflow: auto;">
-      <div ng-repeat="new in news |  orderBy: 'date' :true" style="margin-top: 20px;"> <!-- true for reverse sorting as smallest goes first -->
+      <div ng-repeat="new in news |  orderBy: 'date' :true" style="margin-top: 20px;"> true for reverse sorting as smallest goes first
         <strong>{{new.subject}}</strong>  Date: {{new.date}}, Author: <i>{{new.author}}</i>
         <pre>{{new.text}}</pre>
       </div>
     </form>
-  </span>
+  </span> -->
   </div><!--End of container -->
   <!-- <div class="navbar-fixed-bottom" id="news_banner"></div> -->
 </body>

@@ -1,4 +1,4 @@
-function mainCtrl($scope, $http, $location, $window, $modal){
+function mainCtrl($scope, $http, $location, $window, $modal, $interval){
   $scope.stats_cache = {};
   $scope.full_details = {};
   $scope.mcm_revision = "";
@@ -44,10 +44,10 @@ var promise;
     $scope.user.name = data.data.username;
     $scope.user.role = data.data.role;
     $scope.user.roleIndex = parseInt(data.data.role_index);
-    if (['anorkus', 'ijurkows'].indexOf($scope.user.name) == -1 ) //if user is the one to get news
-    {
-      $scope.setNews();
-    }
+    // if (['anorkus', 'ijurkows'].indexOf($scope.user.name) == -1 ) //if user is the one to get news
+    // {
+    $scope.setNews();
+    // }
   },function(data){
     alert("Error getting user information. Error: "+data.status);
   });
@@ -83,14 +83,227 @@ var promise;
 
   $scope.setNews = function ()
   {
-    if ($scope.getNews()){
-      var promise = $http.get("restapi/news/getall/5");
-      promise.then(function(data){
-        $scope.news = data.data;
-      },function(data){
-        alert("Error getting news. Error: "+data.status);
-      });
+    var path = $window.location.pathname;
+    var page = path.split("/").pop();
+    if (page == "") //if its a home page we want to display tree
+    {
+      $scope.tree = [
+        " "+"\n"+
+        " "+"\n"+
+        "     ^*"+"\n"+
+        "    /)\\\\ "+"\n"+
+        "    7.~ \\O__"+"\n"+
+        "   /o!!\\ \\ "+"\n"+
+        "   7!&!~  \\"+"\n"+
+        "  /!@!;!\\ |\\ "+"\n"+
+        "  7`!o!!~ |_\\_"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^"+"\n"+
+        "    /)\\ * "+"\n"+
+        "    7.~ |_O_ "+"\n"+
+        "   /o!!\\  \\ /"+"\n"+
+        "   7!&!~   )"+"\n"+
+        "  /!@!;!\\ /| "+"\n"+
+        "  7`!o!!~ \\_\\_"+"\n",
+
+        " "+"\n"+
+        "      * "+"\n"+
+        "     ^ \\  "+"\n"+
+        "    /)\\ \\O_/ "+"\n"+
+        "    7.~  \\"+"\n"+
+        "   /o!!\\ _) "+"\n"+
+        "   7!&!~ \\ \\"+"\n"+
+        "  /!@!;!\\   \\ "+"\n"+
+        "  7`!o!!~  ___"+"\n",
+
+        "    ` , "+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`     "+"\n"+
+        "    /)\\   "+"\n"+
+        "    7.~  _O_ "+"\n"+
+        "   /o!!\\ \\\\ /"+"\n"+
+        "   7!&!~   )"+"\n"+
+        "  /!@!;!\\ /| "+"\n"+
+        "  7`!o!!~ \\_\\_"+"\n",
+
+        "    ` ,"+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`  "+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    \\_O_/"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /| "+"\n"+
+        "  7`!o!!~  \\|_"+"\n",
+
+        "    ` ,"+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`  "+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    \\_O_/"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /| "+"\n"+
+        "  7`!o!!~  \\|_"+"\n",
+
+        "    ` ,"+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`  "+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    \\_O_/"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /| "+"\n"+
+        "  7`!o!!~  \\|_"+"\n",
+
+        "    ` ,"+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`  "+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    \\_O_/"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /| "+"\n"+
+        "  7`!o!!~  \\|_"+"\n",
+
+        "    ` ,"+"\n"+
+        "   - * -"+"\n"+
+        "    ,^`  "+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    \\_O_/"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /| "+"\n"+
+        "  7`!o!!~  \\|_"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^*"+"\n"+
+        "    /)\\  "+"\n"+
+        "    7.~    /_O_\\"+"\n"+
+        "   /o!!\\     / "+"\n"+
+        "   7!&!~    /"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^"+"\n"+
+        "    /)\\*  /"+"\n"+
+        "    7.~   \\O_\\"+"\n"+
+        "   /o!!\\   | "+"\n"+
+        "   7!&!~   |"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^"+"\n"+
+        "    /)\\ *\\ "+"\n"+
+        "    7.~   \\O_\\"+"\n"+
+        "   /o!!\\   | "+"\n"+
+        "   7!&!~   |"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^    *"+"\n"+
+        "    /)\\   | "+"\n"+
+        "    7.~   \\O_\\"+"\n"+
+        "   /o!!\\   | "+"\n"+
+        "   7!&!~   |"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        "     "+"\n"+
+        "     ^    *"+"\n"+
+        "    /)\\   |\\"+"\n"+
+        "    7.~   \O"+"\n"+
+        "   /o!!\\   | "+"\n"+
+        "   7!&!~   |"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        "     "+"\n"+
+        "     ^     "+"\n"+
+        "    /)\\   *\\"+"\n"+
+        "    7.~  /_O"+"\n"+
+        "   /o!!\\    ) "+"\n"+
+        "   7!&!~   ("+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        "     "+"\n"+
+        "     ^ "+"\n"+
+        "    /)\\  __"+"\n"+
+        "    7.~ *__O"+"\n"+
+        "   /o!!\\   | "+"\n"+
+        "   7!&!~   |"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        "     "+"\n"+
+        "     ^ "+"\n"+
+        "    /)\\ *__"+"\n"+
+        "    7.~  \\_O"+"\n"+
+        "   /o!!\\   \\ "+"\n"+
+        "   7!&!~    )"+"\n"+
+        "  /!@!;!\\  /\\ "+"\n"+
+        "  7`!o!!~  \\_\\"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^*"+"\n"+
+        "    /)\\\\ "+"\n"+
+        "    7.~ \\O__"+"\n"+
+        "   /o!!\\ \\ "+"\n"+
+        "   7!&!~  \\"+"\n"+
+        "  /!@!;!\\ |\\ "+"\n"+
+        "  7`!o!!~ |_\\_"+"\n",
+
+        " "+"\n"+
+        " "+"\n"+
+        "     ^*"+"\n"+
+        "    /)\\\\ "+"\n"+
+        "    7.~ \\O__"+"\n"+
+        "   /o!!\\ \\ "+"\n"+
+        "   7!&!~  \\"+"\n"+
+        "  /!@!;!\\ |\\ "+"\n"+
+        "  7`!o!!~ |_\\_"+"\n"
+      ];
+
+      $scope._xmas_max = $scope.tree.length;
+      $scope._xmas_x = 0;
+
+      var t = function tick() {
+        $scope.fancy_elem = $scope.tree[$scope._xmas_x] +
+          " /#!'!99!\\[___]"+"\n"+
+          " 7o!!+!%!~  H"+"\n"+
+          "   [McM]   /|\\"+"\n"
+        $scope._xmas_x++;
+        if ($scope._xmas_x == $scope._xmas_max)
+          {
+            $scope._xmas_x=0
+          };
+      };
+      $interval(t, 450);
     }
+    // if ($scope.getNews()){
+    //   var promise = $http.get("restapi/news/getall/5");
+    //   promise.then(function(data){
+    //     $scope.news = data.data;
+    //   },function(data){
+    //     alert("Error getting news. Error: "+data.status);
+    //   });
+    // }
   }
 // End of news!
 
