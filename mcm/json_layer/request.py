@@ -568,6 +568,7 @@ class request(json_base):
             collisions = filter( lambda ps : ps in my_ps_and_t, similar_ps_and_t)
             if len(collisions)!=0:
                 text=str(collisions)
+                self.logger.log("Possible collisions prepid: %s" % (similar['prepid']))
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                         'There is an expected output dataset naming collision with %s' % (
                                 text))

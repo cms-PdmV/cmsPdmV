@@ -173,6 +173,7 @@ class chained_request(json_base):
                 # 3) approve just reserved requests
                 # 4) approve 1st request to trigger submission as TaskChain
                 self.logger.log("SUPERFLOW which flows we want to do:%s" % (__list_of_campaigns))
+                __submit_step = 1
 
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
                             block_white_list, check_stats=check_stats)
@@ -194,6 +195,18 @@ class chained_request(json_base):
                         if not reqDB.document_exists(elem):
                             return {"results" : False, "message" : "Reuest not found in DB"}
                         next_req = request(reqDB.get(elem))
+                        if next_req.get_attribute('approval') == 'submit':
+                            ##in case we assign already existing request which completed in other chain
+                            self.logger.log("##DEBUG next_request is: %s" % (next_req.get_attribute('prepid')))
+
+                            ###We have to flow chain to get its step to overpass the done request
+                            __ret = self.flow(check_stats=check_stats)
+                            if __ret:
+                                self.reload()
+                                ##we don't want to submit the 1st request which is already done.
+                                __submit_step += 1
+                            ##else should we explicitly crash flow or will it fail on 1st approval?
+                            continue
                         with locker.lock('{0}-wait-for-approval'.format(elem)):
                             ret = next_req.approve()
                             saved = reqDB.save(next_req.json())
@@ -206,7 +219,7 @@ class chained_request(json_base):
 
                         self.logger.log("##DEBUG cr.flow approval ret: %s" % (ret))
 
-                    to_submit_req = self.get_attribute("chain")[__curr_step+1]
+                    to_submit_req = self.get_attribute("chain")[__curr_step + __submit_step]
                     self.logger.log("##DEBUG will try to approve/submit a request:%s" % (
                             to_submit_req))
 
