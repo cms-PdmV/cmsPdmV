@@ -1,4 +1,4 @@
-function mainCtrl($scope, $http, $location, $window, $modal, $interval){
+function mainCtrl($scope, $http, $location, $window, $modal){
   $scope.stats_cache = {};
   $scope.full_details = {};
   $scope.mcm_revision = "";
@@ -21,7 +21,7 @@ var promise;
     if ($location.path().indexOf(elem) != -1)
     {
       get_rev = false;
-    } 
+    }
   });
   if (get_rev && $window.document.title != "McM maintenance")
   {
@@ -44,270 +44,25 @@ var promise;
     $scope.user.name = data.data.username;
     $scope.user.role = data.data.role;
     $scope.user.roleIndex = parseInt(data.data.role_index);
-    // if (['anorkus', 'ijurkows'].indexOf($scope.user.name) == -1 ) //if user is the one to get news
-    // {
-    $scope.setNews();
-    // }
   },function(data){
     alert("Error getting user information. Error: "+data.status);
   });
 // Endo of user info request
 
-// GET all news
-  $scope.getNews = function(){ //we check for wich page to get news -> home page gets news all the time
-    var pages_not_to_get_news = ["requests","campaigns","chained_campaigns","flows","actions","chained_requests","batch","dashboard","users","edit"];
-    var return_info = true;
-    _.each(pages_not_to_get_news, function(elem){
-      if($location.path().indexOf(elem) != -1)
-      {
-        return_info = false;
-      }
-    });
-      return return_info;
-  };
-
-    $scope.turnOnServer = function() {
-      if ($window.document.title == "McM maintenance") {
+  $scope.turnOnServer = function() {
+    if ($window.document.title == "McM maintenance") {
       $scope.turn_on_button_clicked = true;
       var promise = $http.get("restapi/control/turn_on");
       promise.then(function(){
-            alert("Server turned on");
+          alert("Server turned on");
           setTimeout(function(){$window.location.reload()}, 5000);
       }, function(){
-            alert("Server failed to turn on");
+          alert("Server failed to turn on");
           $scope.turn_on_button_clicked = false;
           setTimeout(function(){$window.location.reload()}, 1000);
-    });
-
-  }};
-
-  $scope.setNews = function ()
-  {
-    var path = $window.location.pathname;
-    var page = path.split("/").pop();
-    if (page == "") //if its a home page we want to display tree
-    {
-      $scope.tree = [
-        " "+"\n"+
-        " "+"\n"+
-        "     ^*"+"\n"+
-        "    /)\\\\ "+"\n"+
-        "    7.~ \\O__"+"\n"+
-        "   /o!!\\ \\ "+"\n"+
-        "   7!&!~  \\"+"\n"+
-        "  /!@!;!\\ |\\ "+"\n"+
-        "  7`!o!!~ |_\\_"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^"+"\n"+
-        "    /)\\ * "+"\n"+
-        "    7.~ |_O_ "+"\n"+
-        "   /o!!\\  \\ /"+"\n"+
-        "   7!&!~   )"+"\n"+
-        "  /!@!;!\\ /| "+"\n"+
-        "  7`!o!!~ \\_\\_"+"\n",
-
-        " "+"\n"+
-        "      * "+"\n"+
-        "     ^ \\  "+"\n"+
-        "    /)\\ \\O_/ "+"\n"+
-        "    7.~  \\"+"\n"+
-        "   /o!!\\ _) "+"\n"+
-        "   7!&!~ \\ \\"+"\n"+
-        "  /!@!;!\\   \\ "+"\n"+
-        "  7`!o!!~  ___"+"\n",
-
-        "    ` , "+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`     "+"\n"+
-        "    /)\\   "+"\n"+
-        "    7.~  _O_ "+"\n"+
-        "   /o!!\\ \\\\ /"+"\n"+
-        "   7!&!~   )"+"\n"+
-        "  /!@!;!\\ /| "+"\n"+
-        "  7`!o!!~ \\_\\_"+"\n",
-
-        "    ` ,"+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`  "+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    \\_O_/"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /| "+"\n"+
-        "  7`!o!!~  \\|_"+"\n",
-
-        "    ` ,"+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`  "+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    \\_O_/"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /| "+"\n"+
-        "  7`!o!!~  \\|_"+"\n",
-
-        "    ` ,"+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`  "+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    \\_O_/"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /| "+"\n"+
-        "  7`!o!!~  \\|_"+"\n",
-
-        "    ` ,"+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`  "+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    \\_O_/"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /| "+"\n"+
-        "  7`!o!!~  \\|_"+"\n",
-
-        "    ` ,"+"\n"+
-        "   - * -"+"\n"+
-        "    ,^`  "+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    \\_O_/"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /| "+"\n"+
-        "  7`!o!!~  \\|_"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^*"+"\n"+
-        "    /)\\  "+"\n"+
-        "    7.~    /_O_\\"+"\n"+
-        "   /o!!\\     / "+"\n"+
-        "   7!&!~    /"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^"+"\n"+
-        "    /)\\*  /"+"\n"+
-        "    7.~   \\O_\\"+"\n"+
-        "   /o!!\\   | "+"\n"+
-        "   7!&!~   |"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^"+"\n"+
-        "    /)\\ *\\ "+"\n"+
-        "    7.~   \\O_\\"+"\n"+
-        "   /o!!\\   | "+"\n"+
-        "   7!&!~   |"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^    *"+"\n"+
-        "    /)\\   | "+"\n"+
-        "    7.~   \\O_\\"+"\n"+
-        "   /o!!\\   | "+"\n"+
-        "   7!&!~   |"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        "     "+"\n"+
-        "     ^    *"+"\n"+
-        "    /)\\   |\\"+"\n"+
-        "    7.~   \O"+"\n"+
-        "   /o!!\\   | "+"\n"+
-        "   7!&!~   |"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        "     "+"\n"+
-        "     ^     "+"\n"+
-        "    /)\\   *\\"+"\n"+
-        "    7.~  /_O"+"\n"+
-        "   /o!!\\    ) "+"\n"+
-        "   7!&!~   ("+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        "     "+"\n"+
-        "     ^ "+"\n"+
-        "    /)\\  __"+"\n"+
-        "    7.~ *__O"+"\n"+
-        "   /o!!\\   | "+"\n"+
-        "   7!&!~   |"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        "     "+"\n"+
-        "     ^ "+"\n"+
-        "    /)\\ *__"+"\n"+
-        "    7.~  \\_O"+"\n"+
-        "   /o!!\\   \\ "+"\n"+
-        "   7!&!~    )"+"\n"+
-        "  /!@!;!\\  /\\ "+"\n"+
-        "  7`!o!!~  \\_\\"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^*"+"\n"+
-        "    /)\\\\ "+"\n"+
-        "    7.~ \\O__"+"\n"+
-        "   /o!!\\ \\ "+"\n"+
-        "   7!&!~  \\"+"\n"+
-        "  /!@!;!\\ |\\ "+"\n"+
-        "  7`!o!!~ |_\\_"+"\n",
-
-        " "+"\n"+
-        " "+"\n"+
-        "     ^*"+"\n"+
-        "    /)\\\\ "+"\n"+
-        "    7.~ \\O__"+"\n"+
-        "   /o!!\\ \\ "+"\n"+
-        "   7!&!~  \\"+"\n"+
-        "  /!@!;!\\ |\\ "+"\n"+
-        "  7`!o!!~ |_\\_"+"\n"
-      ];
-
-      $scope._xmas_max = $scope.tree.length;
-      $scope._xmas_x = 0;
-
-      var t = function tick() {
-        $scope.fancy_elem = $scope.tree[$scope._xmas_x] +
-          " /#!'!99!\\[___]"+"\n"+
-          " 7o!!+!%!~  H"+"\n"+
-          "   [McM]   /|\\"+"\n"
-        $scope._xmas_x++;
-        if ($scope._xmas_x == $scope._xmas_max)
-          {
-            $scope._xmas_x=0
-          };
-      };
-      $interval(t, 450);
+      });
     }
-    // if ($scope.getNews()){
-    //   var promise = $http.get("restapi/news/getall/5");
-    //   promise.then(function(data){
-    //     $scope.news = data.data;
-    //   },function(data){
-    //     alert("Error getting news. Error: "+data.status);
-    //   });
-    // }
-  }
-// End of news!
-
-
+  };
 
   $scope.isDevMachine = function(){
     is_dev = $location.host().indexOf("dev") != -1;
