@@ -273,7 +273,7 @@ class FlowToNextStep(RESTResource):
             return creq.reserve(limit = reserve)
         return creq.flow_trial( inputds,  inblack,  inwhite, check_stats)
 
-    def flow(self, chainid, check_stats=True, reserve = False):
+    def flow(self, chainid, check_stats=True, reserve=False):
         try:
             db = database('chained_requests')
             creq = chained_request(json_input=db.get(chainid))
