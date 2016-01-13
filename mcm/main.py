@@ -12,7 +12,6 @@ from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutOnHoldInvalidation, PutHoldtoNewInvalidations
-from rest_api.NewsAction import GetAllNews, GetSingleNew, CreateNews, UpdateNew
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminder
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
@@ -91,9 +90,6 @@ def settings_html( *args, **kwargs):
 def invalidations_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','invalidations.html'))
 @cherrypy.expose
-def news_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','news.html'))
-@cherrypy.expose
 def edit_many_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','edit_many.html'))
 
@@ -134,7 +130,6 @@ root.users = users
 root.batches = batches
 root.invalidations = invalidations_html
 root.injection_status = injection_status
-root.news = news_html
 root.dashboard = dashboard_html
 root.edit_many = edit_many_html
 root.mccms = mccms_html
@@ -154,7 +149,6 @@ root.restapi.flows = RESTResourceIndex()
 root.restapi.users = RESTResourceIndex()
 root.restapi.batches = RESTResourceIndex()
 root.restapi.invalidations = RESTResourceIndex()
-root.restapi.news = RESTResourceIndex()
 root.restapi.dashboard = RESTResourceIndex()
 root.restapi.mccms = RESTResourceIndex()
 root.restapi.settings = RESTResourceIndex()
@@ -322,12 +316,6 @@ root.restapi.invalidations.clear = ClearInvalidations()
 root.restapi.invalidations.acknowledge = AcknowledgeInvalidation()
 root.restapi.invalidations.new_to_hold = PutOnHoldInvalidation()
 root.restapi.invalidations.hold_to_new = PutHoldtoNewInvalidations()
-
-# REST news Actions
-root.restapi.news.get = GetSingleNew()
-root.restapi.news.getall = GetAllNews()
-root.restapi.news.save = CreateNews()
-root.restapi.news.update = UpdateNew()
 
 # REST dashboard Actions
 root.restapi.dashboard.get_bjobs = GetBjobs()
