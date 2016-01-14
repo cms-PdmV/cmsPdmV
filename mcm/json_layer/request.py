@@ -310,24 +310,23 @@ class request(json_base):
         similar_ds = rdb.full_text_search("search", __query, page=-1)
 
         if len(similar_ds) > 1:
-            #if len(similar_ds)>2:
-            #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Three or more requests with the same dataset name, same process string in the same campaign')
-            #if similar_ds[0]['extension'] == similar_ds[1]['extension']:
-            #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','Two requests with the same dataset name, same process string and they are not extension of each other')
             my_extension = self.get_attribute('extension')
             my_id = self.get_attribute('prepid')
-            my_process_string = self.get_attribute('process_string')
+            my_process_strings = self.get_processing_strings()
 
             for similar in similar_ds:
                 if similar['prepid'] == my_id: continue
-                if (int(similar['extension']) == int(my_extension)) and (my_process_string == similar["process_string"]):
-                    self.logger.log("ApprovalSequence similar prepid: %s" % (similar["prepid"]))
+                similar_r = request(similar)
+                similar_process_strings = similar_r.get_processing_strings()
+                if (int(similar['extension']) == int(my_extension)) and (
+                    set(my_process_strings) == set(similar_process_strings)):
+
+                    self.logger.log("ApprovalSequence similar prepid: %s" % (
+                            similar["prepid"]))
+
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                            'Two requests with the same dataset name, same process string and they are the same extension mumber (%s)' % (
-                            my_extension))
-            # check whether there are similar requests (same mcdb_id, campaign and number of events) if the campaign is a root campaign
-        #if mcm_c['root'] == 0 and self.get_attribute('mcdb_id') > 0:
-        #    rdb.raw_query('mcdb_check', {'key': [mcm_c['prepid'], self.get_attribute('mcdb_id'), self.get_attribute('total_events')], 'group': True})
+                            'Request %s with the same dataset name, same process string and they are the same extension mumber (%s)' % (
+                            similar['prepid'], my_extension))
 
         ##this below needs fixing
         if not len(self.get_attribute('member_of_chain')):
