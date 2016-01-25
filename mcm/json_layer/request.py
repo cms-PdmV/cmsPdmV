@@ -1615,7 +1615,7 @@ done
 
         return changes_happen
 
-    def inspect(self):
+    def inspect(self, force=False):
         ### this will look for corresponding wm requests, add them,
         ### check on the last one in date and check the status of the output DS for -> done
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1623,7 +1623,7 @@ done
         # only if you are in submitted status
         ## later, we could inspect on "approved" and trigger injection
         if self.get_attribute('status') == 'submitted':
-            return self.inspect_submitted()
+            return self.inspect_submitted(force=force)
         elif self.get_attribute('status') == 'approved':
             return self.inspect_approved()
 
@@ -1714,7 +1714,7 @@ done
                 valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
         return (valid,counted)
 
-    def inspect_submitted(self):
+    def inspect_submitted(self, force):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
         ## get fresh up to date stats
         changes_happen = self.get_stats()
@@ -1759,14 +1759,15 @@ done
                         return not_good
 
                     ## make sure no expected tier was left behind
-                    if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],
-                            collected)), tiers_expected)):
+                    if not force:
+                        if not all( map( lambda t :  any(map(lambda dn : t==dn.split('/')[-1],
+                                collected)), tiers_expected)):
 
-                        not_good.update({'message' : 'One of the expected tiers %s has not been produced'
-                                % ( tiers_expected )})
+                            not_good.update({'message' : 'One of the expected tiers %s has not been produced'
+                                    % ( tiers_expected )})
 
-                        saved = db.save(self.json())
-                        return not_good
+                            saved = db.save(self.json())
+                            return not_good
 
 
                     if self.get_attribute('completed_events') <= 0:
