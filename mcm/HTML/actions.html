@@ -59,15 +59,15 @@
             <span ng-switch="column.text">
               <span ng-switch-when="Actions">
                 {{column.text}}
-                <a rel="tooltip" title="Generate all chained requests" ng-click="generateAllRequests()" ng-hide="generatingAllIcon || role(3);" style="">
+                <a rel="tooltip" title="Generate all chained requests" ng-click="generateAllRequests()" ng-hide="generatingAllIcon || role(3);" style="" ng-href="#">
                   <i class="icon-play"></i>
                 </a>
                 <img ng-show="generatingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                <a rel="tooltip" title="Refresh all actions" ng-click="refreshActions()" ng-hide="refreshingAllIcon ||  role(3);">
+                <a rel="tooltip" title="Refresh all actions" ng-click="refreshActions()" ng-hide="refreshingAllIcon ||  role(3);" ng-href="#">
                   <i class="icon-refresh"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                <a ng-click="commitAllChanges();" ng-show="changed_prepids.length > 0" rel="tooltip" title="Commit all changed values">
+                <a ng-click="commitAllChanges();" ng-show="changed_prepids.length > 0" rel="tooltip" title="Commit all changed values" ng-href="#">
                   <i class="icon-warning-sign"></i>
                 </a>
                 <!-- SORTING lines -->
@@ -89,7 +89,7 @@
                 <a ng-href='chained_requests?member_of_campaign={{column.db_name}}' rel="tooltip" title="Show chained requests in chained campaign {{column.db_name}}" target="_self">
                   <i class="icon-indent-left"></i>
                 </a>
-                <a rel="tooltip" title="Generate chained requests for {{column.db_name}}" ng-click="generateRequests(column.db_name)" ng-hide="role(3);">
+                <a rel="tooltip" title="Generate chained requests for {{column.db_name}}" ng-click="generateRequests(column.db_name)" ng-hide="role(3);" ng-href="#">
                   <i class="icon-play"></i>
                 </a>
                 <!-- SORTING lines -->
@@ -121,14 +121,14 @@
                 <a ng-href='chained_requests?root_request={{data[value.db_name]}}' rel="tooltip" title="Show all chained requests starting with {{data[value.db_name]}}" target="_self">
                   <i class="icon-indent-left"></i>
                 </a>
-                <a rel="tooltip" title="Generate chained requests for {{data[value.db_name]}}" ng-click="generateRequests(data[value.db_name])" ng-hide="role(3);">
+                <a rel="tooltip" title="Generate chained requests for {{data[value.db_name]}}" ng-click="generateRequests(data[value.db_name])" ng-hide="role(3);" ng-href="#">
                   <i class="icon-play"></i>
                 </a>
                 <img ng-show="generatingIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                <a rel="tooltip" title="Refresh action {{data[value.db_name]}}" ng-click="refreshSingleAction(data[value.db_name])" ng-hide="refreshingAllIcon || role(3);">
+                <a rel="tooltip" title="Refresh action {{data[value.db_name]}}" ng-click="refreshSingleAction(data[value.db_name])" ng-hide="refreshingAllIcon || role(3);" ng-href="#">
                   <i class="icon-refresh"></i>
                 </a>
-                <a ng-click="commit(data[value.db_name]);" rel="tooltip" title="Save updated values for {{data[value.db_name]}}" ng-show="changed_prepids.indexOf(data[value.db_name])!=-1">
+                <a ng-click="commit(data[value.db_name]);" rel="tooltip" title="Save updated values for {{data[value.db_name]}}" ng-show="changed_prepids.indexOf(data[value.db_name])!=-1" ng-href="#">
                   <i class="icon-warning-sign"></i>
                 </a>
                 <img ng-show="refreshingAllIcon" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
@@ -175,13 +175,13 @@
       <div class="span5" style="margin-top:20px;">
         <span ng-hide="role(1);">
           Place for multiple selection
-          <a ng-click="toggleMultipleInput();" ng-hide="showMultipleInput || role(3);" title="Edit action parameters for selected actions">
+          <a ng-click="toggleMultipleInput();" ng-hide="showMultipleInput || role(3);" title="Edit action parameters for selected actions" ng-href="#">
             <i class="icon-wrench"></i>
           </a>
-          <a ng-click="toggleMultipleTransfer();" ng-hide="showMultipleTransfer || role(3);" title="Move action parameter to another chained campaign">
+          <a ng-click="toggleMultipleTransfer();" ng-hide="showMultipleTransfer || role(3);" title="Move action parameter to another chained campaign" ng-href="#">
             <i class="icon-share-alt"></i>
           </a>
-          <a ng-show="multipleChanged" ng-click="commitMultipleSelection();" rel="tooltip" title="Values updated. Commit?">
+          <a ng-show="multipleChanged" ng-click="commitMultipleSelection();" rel="tooltip" title="Values updated. Commit?" ng-href="#">
             <i class="icon-warning-sign"></i>
           </a>
           <img ng-show="updatingMultipleActions" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
@@ -195,7 +195,7 @@
               <input type="number" style="margin-bottom: 0px; width: 25px;" ng-model="multipleSelection.threshold"/>
               <span class="add-on">%</span>
             </span>
-            <a ng-click="toggleMultipleInput();">
+            <a ng-click="toggleMultipleInput();" ng-href="#">
               <i class="icon-remove"></i>
             </a>
           </div>
@@ -203,7 +203,7 @@
             <select ng-model="selected_transfer_target">
               <option ng-repeat="elem in allChainedCampaings">{{elem.db_name}}</option>
             </select>
-            <a ng-click="transferMultiple();">
+            <a ng-click="transferMultiple();" ng-href="#">
               <i class="icon-step-forward"></i>
             </a>
           </span>
