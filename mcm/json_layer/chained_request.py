@@ -157,14 +157,17 @@ class chained_request(json_base):
 
         try:
             if not super_flow:
-                self.logger.log("we are defaulting to normal flow")
+                self.logger.log("we are defaulting to normal flow for: %s" % (
+                        self.get_attribute('prepid')))
+
                 ###we do original flowing
                 ## and toggle last request
                 if self.flow(check_stats=check_stats):
                     db = database('chained_requests')
                     db.update(self.json())
                     ## toggle the last request forward
-                    self.toggle_last_request()
+                    __ret = self.toggle_last_request()
+                    self.logger.log("toggle_last returned: %s" % (__ret))
                     return {"prepid" : chainid, "results" : True}
             else:
                 ##we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
@@ -805,13 +808,14 @@ class chained_request(json_base):
         fdb = database('flows')
         mcm_f = flow(fdb.get(flow_name))
         # check whether we have to do something even more subtle with the request
-        if mcm_f.get_attribute('approval') == 'submit' or self.get_attribute('approval') == 'submit':
+        if mcm_f.get_attribute('approval') in ['submit', 'tasksubmit'] or self.get_attribute('approval') == 'submit':
             rdb = database('requests')
-            next_request = request(rdb.get(self.get_attribute('chain')[self.get_attribute('step')]))
+            next_request = request(
+                    rdb.get(self.get_attribute('chain')[self.get_attribute('step')]))
 
             current_r_approval = next_request.get_attribute('approval')
             time_out = 0
-            #self.logger.error('Trying to move %s from %s to submit'% (next_request.get_attribute('prepid'), current_r_approval))
+
             while current_r_approval != 'submit' and time_out <= 10:
                 time_out += 1
                 #get it back from db to avoid _red issues
