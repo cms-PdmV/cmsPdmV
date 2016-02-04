@@ -60,8 +60,9 @@ class ThreadPool:
 
     def add_task(self, func, *args, **kargs):
         """Add a task to the queue"""
-        ##here  should be lock to put a task and after finish release it
-        self.logger.log("Adding a task: %s to the Queue" % (func))
+        self.logger.log("Adding a task: %s to the Queue %s. Currently in Queue: %s" % (
+                func, id(self.tasks), self.get_queue_length()))
+
         self.tasks.put((func, args, kargs))
 
     def wait_completion(self):
@@ -422,7 +423,7 @@ class RequestSubmitter(Handler):
                 if not okay: return False
                 batch_name = BatchPrepId().next_id(req.json())
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
-                executor = ssh_executor(server='cms-pdmv-op.cern.ch')
+                executor = ssh_executor(server='vocms081.cern.ch')
                 try:
                     cmd = req.prepare_submit_command(batch_name)
                     self.logger.inject("Command being used for injecting request {0}: {1}".format(
@@ -628,7 +629,7 @@ class ChainRequestInjector(Handler):
             semaphore_events.increment(batch_name)
             self.logger.error('found batch %s'% batch_name)
 
-            with ssh_executor(server = 'cms-pdmv-op.cern.ch') as ssh:
+            with ssh_executor(server = 'vocms081.cern.ch') as ssh:
                 cmd = self.make_command(mcm_r)
                 self.logger.error('prepared command %s' % cmd)
                 ## modify here to have the command to be executed

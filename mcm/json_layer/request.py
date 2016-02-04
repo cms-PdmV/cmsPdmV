@@ -1151,7 +1151,7 @@ done
 
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='cms-pdmv-op.cern.ch')
+                ssh_exec = ssh_executor(server='vocms081.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
@@ -2545,7 +2545,7 @@ done
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid'%self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "cms-pdmv-op.cern.ch"
+                        machine_name = "vocms081.cern.ch"
                         executor = ssh_executor(server=machine_name)
                         _, stdout, stderr = executor.execute(command)
                         if not stdout and not stderr:
