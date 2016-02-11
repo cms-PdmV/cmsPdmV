@@ -891,9 +891,14 @@ class InspectStatus(RESTResource):
         """
         if not args:
             return dumps({"results": 'Error: No arguments were given'})
-        return dumps(self.multiple_inspect(args[0]))
 
-    def multiple_inspect(self, rid):
+        force = False
+        if len(args) > 1 and args[1] == "force":
+            force = True
+
+        return dumps(self.multiple_inspect(args[0], force))
+
+    def multiple_inspect(self, rid, force_req):
         rlist = rid.rsplit(',')
         res = []
         db = database('requests')
@@ -904,7 +909,7 @@ class InspectStatus(RESTResource):
                 continue
             mcm_r = request(db.get(r))
             if mcm_r:
-                answer = mcm_r.inspect()
+                answer = mcm_r.inspect(force_req)
                 res.append(answer)
                 ### trigger chained request inspection on "true" results from inspection
                 if answer['results']:
