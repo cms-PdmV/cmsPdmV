@@ -1,11 +1,11 @@
 import json
 import traceback
 import time
+
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
 from flow import flow
-
 from couchdb_layer.mcm_database import database
 from tools.priority import priority
 from tools.locker import locker
@@ -46,7 +46,8 @@ class chained_request(json_base):
             self.name = str(oname)
             self.level = str(alevel)
             self.allowed = ' or '.join(map(lambda s: '"%s"' % s, allowed))
-            chained_request.logger.error('%s has not reached status %s : "%s"' % (self.name, self.allowed, self.level))
+            chained_request.logger.error('%s has not reached status %s : "%s"' % (
+                    self.name, self.allowed, self.level))
 
         def __str__(self):
             return 'Error: ' + self.name + ' is in"' + self.level + '" status. requires ' + self.allowed
@@ -121,7 +122,7 @@ class chained_request(json_base):
         ##we work only starting from current step
         #+1 so we dont want to take current campaign
         for chain in __cc["campaigns"][__curr_step+1:]:
-            self.logger.log("##DEBUG current flow %s" % (chain))
+            self.logger.info("##DEBUG current flow %s" % (chain))
             __ongoing_flow = flowDB.get(chain[1])
             if __ongoing_flow:
             ##check in case flow doesnt exists
@@ -157,7 +158,7 @@ class chained_request(json_base):
 
         try:
             if not super_flow:
-                self.logger.log("we are defaulting to normal flow for: %s" % (
+                self.logger.info("we are defaulting to normal flow for: %s" % (
                         self.get_attribute('prepid')))
 
                 ###we do original flowing
@@ -167,7 +168,7 @@ class chained_request(json_base):
                     db.update(self.json())
                     ## toggle the last request forward
                     __ret = self.toggle_last_request()
-                    self.logger.log("toggle_last returned: %s" % (__ret))
+                    self.logger.info("toggle_last returned: %s" % (__ret))
                     return {"prepid" : chainid, "results" : True}
             else:
                 ##we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
@@ -175,7 +176,7 @@ class chained_request(json_base):
                 # 2) flow chained_req to next_step
                 # 3) approve just reserved requests
                 # 4) approve 1st request to trigger submission as TaskChain
-                self.logger.log("SUPERFLOW which flows we want to do: %s" % (
+                self.logger.info("SUPERFLOW which flows we want to do: %s" % (
                         __list_of_campaigns))
 
                 __submit_step = 1
@@ -183,7 +184,7 @@ class chained_request(json_base):
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
                         block_white_list, check_stats=check_stats)
 
-                self.logger.log("SUPERFLOW after flowing chained_request: %s" % (ret_flow))
+                self.logger.info("SUPERFLOW after flowing chained_request: %s" % (ret_flow))
                 if ret_flow:
                     ##force updating the chain_request document in DB and here
                     self.reload()
@@ -228,16 +229,16 @@ class chained_request(json_base):
                             ret = next_req.approve()
                             saved = reqDB.save(next_req.json())
                         if not saved:
-                            self.logger.log("Could not save request %s to DB after approval" % (
+                            self.logger.info("Could not save request %s to DB after approval" % (
                                     elem))
 
                             return {"results" : False,
                                     "message" : "Could not save request after approval"}
 
-                        self.logger.log("SUPERFLOW cr.flow approval ret: %s" % (ret))
+                        self.logger.info("SUPERFLOW cr.flow approval ret: %s" % (ret))
 
                     to_submit_req = self.get_attribute("chain")[__curr_step + __submit_step]
-                    self.logger.log("SUPERFLOW will try to approve/submit a request: %s" % (
+                    self.logger.info("SUPERFLOW will try to approve/submit a request: %s" % (
                             to_submit_req))
 
                     ##if we reached up to here there is no point to check if request exists
@@ -257,7 +258,7 @@ class chained_request(json_base):
 
 
         except Exception as ex:
-            self.logger.log("Error in chained_request flow: %s" % (str(ex)))
+            self.logger.info("Error in chained_request flow: %s" % (str(ex)))
             return {"prepid" : chainid, "results" : False, "message" : str(ex)}
 
     def request_join(self, req):
@@ -315,7 +316,7 @@ class chained_request(json_base):
 
     def get_ds_input(self, __output_dataset, __seq):
         try:
-            self.logger.log("get_ds_input output_ds: %s" % (__output_dataset))
+            self.logger.info("get_ds_input output_ds: %s" % (__output_dataset))
             input_ds = ""
             possible_dt_inputs = settings().get_value('datatier_input')
             ##we take sequence 1step datetier
@@ -337,8 +338,8 @@ class chained_request(json_base):
                     if elem in __prev_tiers:
                         input_ds = __prev_output[__prev_tiers.index(elem)]
                         ##dirty stuff
-                        self.logger.log("get_ds_input found a possible DS: %s" % (input_ds))
-                        self.logger.log("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
+                        self.logger.info("get_ds_input found a possible DS: %s" % (input_ds))
+                        self.logger.info("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
                         break
             else:
                 ##if step is not defined in dictionary -> we default to previous logic
@@ -349,7 +350,7 @@ class chained_request(json_base):
                     ##in case the output_dataset is ""
                     input_ds = __output_dataset[0]
 
-            self.logger.log("get_ds_input returns input_ds: %s" % (input_ds))
+            self.logger.info("get_ds_input returns input_ds: %s" % (input_ds))
             return input_ds
         except Exception as ex:
             self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
@@ -363,7 +364,9 @@ class chained_request(json_base):
         for req_id in self.get_attribute("chain"):
             req = request(req_db.get(req_id))
             if output_ds != None:
-                self.logger.log("Working for request: %s, sequence: %s"  %(req.get_attribute("prepid"), req.get_attribute("sequences")))
+                self.logger.info("Working for request: %s, sequence: %s"  %(
+                        req.get_attribute("prepid"), req.get_attribute("sequences")))
+
                 ret = self.get_ds_input(output_ds, req.get_attribute("sequences"))
                 res += "%s input DS: %s\n" % (req_id, ret)
             else:
@@ -371,8 +374,9 @@ class chained_request(json_base):
             #for test purposes to migrate DS selection
             if req.get_attribute("input_dataset") != ret:
                 res += "input DS differs!\nis:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret)
-                self.logger.log("chain %s request:%s" % (self.get_attribute("prepid"), req_id))
-                self.logger.log("input DS differs!\n is:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret))
+                self.logger.info("chain %s request:%s" % (self.get_attribute("prepid"), req_id))
+                self.logger.info("input DS differs!\n is:%s\nto-be:%s\n" % (
+                        req.get_attribute("input_dataset"), ret))
 
             output_ds = req.get_attribute("output_dataset")
         return res
@@ -380,7 +384,7 @@ class chained_request(json_base):
     def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, stop_at_campaign=None):
         if not block_white_list: block_white_list = []
         if not block_black_list: block_black_list = []
-        self.logger.log('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
+        self.logger.info('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'chained_request %s has got no root' % (
@@ -520,7 +524,7 @@ class chained_request(json_base):
 
             notify_on_fail=True ## to be tuned according to the specific cases
             if current_request.get_attribute('completed_events') <= 0:
-                self.logger.error("###DEBUG### compl_evts: %s, prepid: %s" % (
+                self.logger.debug("compl_evts: %s, prepid: %s" % (
                         current_request.get_attribute('completed_events'),
                         current_request.get_attribute('prepid')))
 
@@ -539,7 +543,9 @@ class chained_request(json_base):
                                                          allowed_request_statuses)
                 ##special check at transition that the statistics is good enough
                 if at_a_transition:
-                    self.logger.log("ChainedRequest is at transition. id: %s" % (self.get_attribute('prepid')))
+                    self.logger.info("ChainedRequest is at transition. id: %s" % (
+                            self.get_attribute('prepid')))
+
                     # at a root -> non-root transition only does the staged/threshold functions !
                     if 'staged' in original_action_item:
                         next_total_events = int(original_action_item['staged'])
@@ -621,7 +627,7 @@ class chained_request(json_base):
                 if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
                     continue
                 truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
-                self.logger.error('to match : %s , this one %s' % ( toMatch, truncated ))
+                self.logger.error('to match : %s , this one %s' % (toMatch, truncated))
                 if truncated == toMatch:
                     #we found a chained request that starts with all same steps
                     mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
@@ -697,14 +703,14 @@ class chained_request(json_base):
 
 
         elif len(current_request.get_attribute('reqmgr_name')):
-            self.logger.log("###DEBUG### input_ds based by request_manager....")
+            self.logger.debug("input_ds based by request_manager....")
             last_wma = current_request.get_attribute('reqmgr_name')[-1]
             if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
-                self.logger.log("###DEBUG###\tget from rqmngr")
+                self.logger.debug("\tget from rqmngr")
                 input_dataset = self.get_ds_input(last_wma['content']['pdmv_dataset_list'],
                         next_request.get_attribute("sequences"))
             else:
-                self.logger.log("###DEBUG###\tget from stats")
+                self.logger.debug("\tget from stats")
                 statsDB = database('stats', url='http://vocms084.cern.ch:5984/')
                 if statsDB.document_exists(last_wma['name']):
                     latestStatus = statsDB.get(last_wma['name'])
@@ -712,7 +718,9 @@ class chained_request(json_base):
                             next_request.get_attribute("sequences"))
 
         if input_dataset:
-            self.logger.log("%s setting input_ds to: %s" % (next_request.get_attribute("prepid"), input_dataset))
+            self.logger.info("%s setting input_ds to: %s" % (
+                    next_request.get_attribute("prepid"), input_dataset))
+
             next_request.set_attribute('input_dataset', input_dataset)
 
         if not reserve:
@@ -857,8 +865,9 @@ class chained_request(json_base):
             expected_end = max(0, self.get_attribute('prepid').count('_') - 1)
             current_status = self.get_attribute('status')
             ## the current request is the one the status has just changed
-            self.logger.log('processing status %s given %s and at %s and stops at %s ' % (
-                current_status, status, self.get_attribute('step'), expected_end))
+            self.logger.info('processing status %s given %s and at %s and stops at %s ' % (
+                    current_status, status, self.get_attribute('step'), expected_end))
+
             if self.get_attribute('step') == expected_end and status == 'done' and current_status == 'processing':
                 ## you're supposed to be in processing status
                 self.set_status()
@@ -879,7 +888,7 @@ class chained_request(json_base):
             ##only those that can still be changed
             #set to the maximum priority
             if not req.change_priority(priority().priority(level)):
-                self.logger.log('Could not save updated priority for %s' % r)
+                self.logger.info('Could not save updated priority for %s' % r)
                 okay = False
         return okay
 
@@ -889,7 +898,7 @@ class chained_request(json_base):
             result = method(*args, **kw)
             t1 = time.time()
             # if t1-t0 > 100:
-            json_base.logger.log("%s ####method took: %s" % (method.__name__, t1-t0))
+            json_base.logger.info("%s ####method took: %s" % (method.__name__, t1-t0))
             return result
         return timed
 

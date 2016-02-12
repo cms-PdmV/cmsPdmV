@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import cherrypy
-from tools.logger import logfactory
+import logging
+
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
 from tools.settings import settings
@@ -14,11 +15,13 @@ class json_base:
     __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
     __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
     __schema = {}
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
 
     class WrongApprovalSequence(Exception):
         def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to approve %s in status %s. %s' % (approval, status, message)
+            self.text = 'It is illegale to approve %s in status %s. %s' % (approval,
+                    status, message)
+
             json_base.logger.error(self.text)
 
         def __str__(self):
@@ -26,7 +29,9 @@ class json_base:
 
     class WrongStatusSequence(Exception):
         def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to change status %s in approval %s. %s' % (status, approval, message)
+            self.text = 'It is illegale to change status %s in approval %s. %s' % (status,
+                    approval, message)
+
             json_base.logger.error(self.text)
 
         def __str__(self):
@@ -35,7 +40,7 @@ class json_base:
     class IllegalAttributeName(Exception):
         def __init__(self, attribute=None):
             self.__attribute = repr(attribute)
-            json_base.logger.error('Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal')
+            json_base.logger.error('Invalid Json Format: Attribute %s is illegal' % (self.__attribute))
 
         def __str__(self):
             return 'Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal'
@@ -254,7 +259,6 @@ class json_base:
         ## is it allowed to move on
         fcn = 'ok_to_move_to_approval_%s' % (self.__approvalsteps[next_step])
         if hasattr(self, fcn):
-            #self.logger.log('Calling %s '%(fcn))
             ## that function should through if not approvable
             __ret = getattr(self, fcn)()
             self.notify('Approval %s for %s %s' % (self.__approvalsteps[next_step],
@@ -273,7 +277,6 @@ class json_base:
         if 'status' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 
-        #self.logger.log('Updating to step %s'%(step))
         next_step = 0
         if to_status:
             if not to_status in self.__status:
@@ -300,7 +303,6 @@ class json_base:
         if self.__json['status'] == self.__status[next_step]:
             return
 
-        #self.logger.log('Updating the status for object %s to %s...' % (self.get_attribute('_id'), self.__status[next_step]))
         if with_notification:
             self.notify(
                 'Status changed for request %s to %s' % (self.get_attribute('prepid'), self.__status[next_step]),
@@ -381,7 +383,9 @@ class json_base:
             subject += '. And no destination was set'
 
         sender = sender if sender else self.current_user_email
-        self.logger.log('Notification %s from %s send to %s [acc:%s]' % (subject, sender,', '.join(dest),accumulate))
+        self.logger.info('Notification %s from %s send to %s [acc:%s]' % (subject,
+                sender,', '.join(dest),accumulate))
+
         return self.com.sendMail(dest,
                                  subject,
                                  message,
@@ -413,7 +417,7 @@ class submission_details(json_base):
         try:
             import time
         except ImportError as ex:
-            self.logger.error('Could not import "time" module. Returned: %s' % (ex), level='critical')
+            self.logger.error('Could not import "time" module. Returned: %s' % (ex))
 
         localtime = time.localtime(time.time())
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
+import re
 
-#from couchdb_layer.prep_database import database
 from json_base import json_base
 from sequence import sequence
-import re
 
 class campaign(json_base):
     class DuplicateApprovalStep(Exception):
@@ -13,7 +12,7 @@ class campaign(json_base):
 
         def __str__(self):
             return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
-    
+
     class CampaignExistsException(Exception):
         def __init__(self,  cid):
             self.c = cid
@@ -65,19 +64,19 @@ class campaign(json_base):
         # update self according to json_input
         self.update(json_input)
         self.validate()
-        
+
     def add_sequence(self, seq_json=None,  step=-1, name='default'):
         seq_json = seq_json if seq_json else {}
         seq = sequence(json_input=seq_json)
         sequences = self.get_attribute('sequences')
-        
+
         if step == -1:
             index = len(sequences) + 1
         elif step <= len(sequences):
             index = step
         else:
             return
-            
+
         sequences[index].update({name : seq.json()})
         self.set_attribute('sequences', sequences)
 
@@ -109,7 +108,7 @@ class campaign(json_base):
                      stepcd[key] = cd
              cds.append(stepcd)
         return cds
-    
+
     def add_request(self,  req_json={}):
         try:
             from request import request
@@ -148,7 +147,7 @@ class campaign(json_base):
                raise Exception('Cannot start a campaign with no release')
            if not self.get_attribute('type'):
                raise Exception('Cannot start a campaign with no type')
-           
+
            self.set_status(1)
        else:
            raise NotImplementedError('Could not toggle status for object %s' % (self.get_attribute('_id')))
@@ -174,4 +173,3 @@ class campaign(json_base):
         except IndexError:
             return True
         return True
-

@@ -5,13 +5,14 @@ import time
 import os
 import copy
 import ast
+import logging
+
 from tools.locator import locator
-from tools.logger import logfactory
 from collections import defaultdict
 from couchDB_interface import *
 
 class database:
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
@@ -91,7 +92,7 @@ class database:
             result = self.__get_from_cache(prepid)
             if result: return result
 
-        self.logger.log('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
+        self.logger.info('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
         try:
             doc = self.db.document(id=prepid)
             if self.cache:
@@ -134,7 +135,7 @@ class database:
         return self.__id_exists(prepid=id)
 
     def document_exists(self, prepid=''):
-    	self.logger.log('Checking existence of document "%s" in "%s"...' % (
+    	self.logger.info('Checking existence of document "%s" in "%s"...' % (
                 prepid,self.db_name))
 
         return self.__id_exists(prepid)
@@ -161,7 +162,7 @@ class database:
         if not self.__id_exists(prepid):
             return False
 
-        self.logger.log('Trying to delete document "%s"...' % (prepid))
+        self.logger.info('Trying to delete document "%s"...' % (prepid))
         try:
             self.db.delete_doc(id=prepid)
             if self.cache:
@@ -174,7 +175,7 @@ class database:
 
     def update(self,  doc={}):
         if '_id' in doc:
-            self.logger.log('Updating document "%s" in "%s"' % (doc['_id'], self.db_name))
+            self.logger.info('Updating document "%s" in "%s"' % (doc['_id'], self.db_name))
         if self.__document_exists(doc):
             if self.cache:
                 ##JR the revision in the cache is not the one in the DB at this point
@@ -496,7 +497,7 @@ class database:
 
                 break
             except Exception as ex:
-                self.logger.log("lucene DB query: %s failed %s. retrying: %s out of: %s" % (
+                self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (
                         url, ex, i, __retries))
 
             ##if we are retrying we should wait little bit

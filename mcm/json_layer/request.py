@@ -9,9 +9,9 @@ import hashlib
 import copy
 import traceback
 import time
+import logging
 
 from couchdb_layer.mcm_database import database
-
 from json_layer.json_base import json_base
 from json_layer.campaign import campaign
 from json_layer.flow import flow
@@ -24,6 +24,7 @@ from tools.installer import installer
 from tools.settings import settings
 from tools.locker import locker
 from tools.user_management import access_rights
+from tools.logger import InjectionLogAdapter
 
 class request(json_base):
     class DuplicateApprovalStep(Exception):
@@ -110,6 +111,9 @@ class request(json_base):
 
         self._json_base__schema['status'] = self.get_status_steps()[0]
         self._json_base__schema['approval'] = self.get_approval_steps()[0]
+
+        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"),
+                {'handle': json_input['prepid']})
 
         # update self according to json_input
         self.setup()
@@ -321,7 +325,7 @@ class request(json_base):
                 if (int(similar['extension']) == int(my_extension)) and (
                     set(my_process_strings) == set(similar_process_strings)):
 
-                    self.logger.log("ApprovalSequence similar prepid: %s" % (
+                    self.logger.info("ApprovalSequence similar prepid: %s" % (
                             similar["prepid"]))
 
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
@@ -397,19 +401,19 @@ class request(json_base):
                 # label = default , seq = dict
                 if in_there(seq, self_sequence) and in_there(self_sequence, seq):
                     ## identical sequences
-                    self.logger.log('identical sequences %s' % label)
+                    self.logger.info('identical sequences %s' % label)
                     this_matching.add(label)
                 else:
-                    self.logger.log('different sequences %s \n %s \n %s' % (label,
+                    self.logger.info('different sequences %s \n %s \n %s' % (label,
                             seq.json(), self_sequence.json()))
 
             if len(matching_labels) == 0:
                 matching_labels = this_matching
-                self.logger.log('Matching labels %s' % matching_labels)
+                self.logger.info('Matching labels %s' % matching_labels)
             else:
                 # do the intersect
                 matching_labels = matching_labels - (matching_labels - this_matching)
-                self.logger.log('Matching labels after changes %s' % matching_labels)
+                self.logger.info('Matching labels after changes %s' % matching_labels)
 
         ## Here we get flow process_string to check
         __flow_ps = ""
@@ -420,7 +424,7 @@ class request(json_base):
                 __flow_ps = f['request_parameters']['process_string']
 
         if len(matching_labels) == 0:
-            self.logger.log('The sequences of the request is not the same as any the ones of the campaign')
+            self.logger.info('The sequences of the request is not the same as any the ones of the campaign')
             # try setting the process string ? or just raise an exception ?
             if not self.get_attribute('process_string') and not __flow_ps: ## if they both are empty
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
@@ -443,13 +447,13 @@ class request(json_base):
 
         if do_runtest:
             from tools.handlers import RuntestGenvalid, validation_pool
-            self.logger.log('Putting request %s: to validation queue' % (
+            self.logger.info('Putting request %s: to validation queue' % (
                     self.get_attribute('prepid')))
 
             threaded_test = RuntestGenvalid(rid=str(self.get_attribute('prepid')))
             validation_pool.add_task(threaded_test.internal_run)
 
-            self.logger.log('Request was put to queue. Queue len: %s' % (
+            self.logger.info('Request was put to queue. Queue len: %s' % (
                     validation_pool.tasks.qsize()))
 
         else:
@@ -567,7 +571,7 @@ class request(json_base):
             collisions = filter( lambda ps : ps in my_ps_and_t, similar_ps_and_t)
             if len(collisions)!=0:
                 text=str(collisions)
-                self.logger.log("Possible collisions prepid: %s" % (similar['prepid']))
+                self.logger.info("Possible collisions prepid: %s" % (similar['prepid']))
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                         'There is an expected output dataset naming collision with %s' % (
                                 text))
@@ -719,7 +723,8 @@ class request(json_base):
             seq = sequence(self.get_attribute('sequences')[sequenceindex])
         except Exception:
             self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (
-                self.get_attribute('prepid'), sequenceindex), level='critical')
+                    self.get_attribute('prepid'), sequenceindex))
+
             return ''
 
         cmsDriverOptions = seq.build_cmsDriver()
@@ -1131,7 +1136,7 @@ done
 
             return False
 
-        self.logger.log('Priority of request {0} was changed to {1}'.format(
+        self.logger.info('Priority of request {0} was changed to {1}'.format(
                 self.get_attribute('prepid'), new_priority))
 
         return True
@@ -1146,7 +1151,7 @@ done
             return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
-            self.logger.log('tryign to change priority to %s at %s' % (
+            self.logger.info('trying to change priority to %s at %s' % (
                     self.get_attribute('prepid'), new_priority))
 
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
@@ -1160,7 +1165,7 @@ done
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
                 _, stdout, stderr = ssh_exec.execute(cmd)
-                self.logger.log(cmd)
+                self.logger.info(cmd)
                 if not stdout and not stderr:
                     self.logger.error('SSH error while changing priority of {0}'.format(
                             self.get_attribute('prepid')))
@@ -1597,7 +1602,7 @@ done
             ## ussually when request is assigned, but no evts are generated
             # we check for done status so we wouldn't be updating old requests with changed infrastructure
             if (__curr_output != collected) and (self.get_attribute('status') != 'done'):
-                self.logger.log("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
+                self.logger.info("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
                 self.set_attribute('output_dataset', collected)
                 changes_happen = True
 
@@ -1978,12 +1983,12 @@ done
 
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
-        self.logger.log('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
+        self.logger.info('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
             if self.get_attribute('time_event'):
                 events = timeout / float(self.get_attribute('time_event'))
-                self.logger.log('N for test was lowered to %s to not exceed %s * %s min time-out' % (
+                self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
                     events, fraction, settings().get_value('batch_timeout') ))
             else:
                 self.logger.error('time per event is set to 0 !')
@@ -2318,7 +2323,8 @@ done
                 memory *= safe_margin
                 if memory > 4000:
                     self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
-                        self.get_attribute('prepid'), safe_margin, memory))
+                            self.get_attribute('prepid'), safe_margin, memory))
+
                     self.notify(
                         'Runtest for %s: memory over-usage' % (
                             self.get_attribute('prepid')),
@@ -2550,8 +2556,7 @@ done
                         _, stdout, stderr = executor.execute(command)
                         if not stdout and not stderr:
                             self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.logger.inject('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
-                                               level='error', handler=prepid)
+                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                             self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                               what='Configuration upload')
                             return False
@@ -2567,9 +2572,9 @@ done
                             self.logger.error(
                                 'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
                                     cfgs_to_upload, cfgs_uploaded, output, error))
-                            self.logger.inject(
+                            self.inject_logger.error(
                                 'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error), level='error', handler=prepid)
+                                    cfgs_to_upload, cfgs_uploaded, output, error))
                             self.test_failure(
                                 'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
                                     cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
@@ -2586,15 +2591,13 @@ done
                             to_release.remove(hash_id)
                             locker.release(hash_id)
                             if not saved:
-                                self.logger.inject(
-                                    'Could not save the configuration {0}'.format(self.configuration_identifier(i)),
-                                    level='warning', handler=prepid)
+                                self.inject_logger.error(
+                                    'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
 
-                        self.logger.inject("Full upload result: {0}".format(output), handler=prepid)
+                        self.inject_logger.info("Full upload result: {0}".format(output))
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
-                self.logger.inject("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids),
-                                   handler=prepid)
+                self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))
 
                 self.overwrite( {'config_id' : sorted_additional_config_ids} )
             return command

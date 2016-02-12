@@ -1,11 +1,10 @@
 #!/usr/bin/env python
+from copy import deepcopy
 
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
 from json_layer.json_base import json_base
 from json_layer.chained_request import chained_request
-from copy import deepcopy
-
 
 class action(json_base):
 
@@ -177,20 +176,6 @@ class action(json_base):
         crdb = database('chained_requests')
         okay = True
         for inCC in chains:
-            ### this is the old convention
-            #if 'flag' in chains[inCC] and chains[inCC]['flag']:
-            #    if 'chains' in chains[inCC]:
-            #        for acr in chains[inCC]['chains']:
-            #            if forChains and not acr in forChains: continue
-            #            cr=chained_request(crdb.get(acr))
-            #            cc=cr.get_attribute('member_of_campaign')
-            #            #if 'block_number' in chains[cc] and chains[cc]['block_number']:
-            #            if chains[cc]['block_number']:
-            #                cr.set_priority(chains[cc]['block_number'])
-            #                self.logger.log('Set priority block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-            #            else:
-            #                self.logger.error('Could not set block %s to %s'%(chains[cc]['block_number'],cr.get_attribute('prepid')))
-            ## new convention
             if 'chains' in chains[inCC] and type(chains[inCC]['chains']) == dict:
                 for acr in chains[inCC]['chains']:
                     if forChains and not acr in forChains: continue
@@ -198,7 +183,7 @@ class action(json_base):
                     bn = chains[inCC]['chains'][acr]['block_number']
                     cr = chained_request(crdb.get(acr))
                     if bn:
-                        self.logger.log('Set priority block %s to %s' % (bn, acr))
+                        self.logger.info('Set priority block %s to %s' % (bn, acr))
                         if not cr.set_priority( bn ):
                             okay = False
                     else:

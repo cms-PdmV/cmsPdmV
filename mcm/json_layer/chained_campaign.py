@@ -14,7 +14,7 @@ class chained_campaign(json_base):
 
         def __str__(self):
             return 'Error: Campaign ' +  self.c +  ' does not exist.'
-    
+
     class FlowDoesNotExistException(Exception):
         def __init__(self,  flowid):
             self.f = str(flowid)
@@ -39,7 +39,7 @@ class chained_campaign(json_base):
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-        
+
         # update self according to json_input
         self.update(json_input)
         self.validate()
@@ -50,7 +50,7 @@ class chained_campaign(json_base):
             return
         self.update_history({'action':'start'})
         self._json_base__json['valid']=True
-    
+
     # stop() makes the chained campaign invisible to the actions page
     def stop(self):
         if not self._json_base__json['valid']:
@@ -59,29 +59,32 @@ class chained_campaign(json_base):
         self._json_base__json['valid']=False
 
     def add_campaign(self, campaign_id,  flow_name=None):
-        self.logger.log('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id'))) 
+        self.logger.info('Adding a new campaign %s to chained campaign %s' % (
+                campaign_id, self.get_attribute('_id')))
 
         camp_db = database('campaigns')
         flow_db = database('flows')
-            
+
         if not camp_db.document_exists(campaign_id):
-            raise self.CampaignDoesNotExistException(campaign_id) 
-        
+            raise self.CampaignDoesNotExistException(campaign_id)
+
         # check to see if flow_name is none (campaign_id = root)
         if flow_name is not None:
             if not flow_db.document_exists(flow_name):
                 raise self.FlowDoesNotExistException(flow_name)
-        
+
         camps = self.get_attribute('campaigns')
         if not camps or camps is None:
             camps = []
         camps.append([campaign_id,  flow_name])
         self.set_attribute('campaigns', camps)
-        
+
         return True
-        
+
     def remove_campaign(self,  cid):
-        self.logger.log('Removing campaign %s from chained_campaign %s' % (cid, self.get_attribute('_id'))) 
+        self.logger.info('Removing campaign %s from chained_campaign %s' % (cid,
+                self.get_attribute('_id')))
+
         camps = self.get_attribute('campaigns')
         new_camps = []
         if not camps or camps is None:
@@ -91,22 +94,24 @@ class chained_campaign(json_base):
                 if cid in c:
                     continue
                 new_camps.append((c, f))
-                
+
         self.set_attribute('campaigns',  new_camps)
-    
+
     # create a chained request spawning from root_request_id
     def generate_request(self,  root_request_id):
-        self.logger.log('Building a new chained_request for chained_campaign %s. Root request: %s' % (self.get_attribute('_id'), root_request_id ))
+        self.logger.info('Building a new chained_request for chained_campaign %s. Root request: %s' % (
+                self.get_attribute('_id'), root_request_id ))
+
         try:
             rdb = database('requests')
             crdb = database('chained_requests')
         except database.DatabaseAccessError as ex:
             return {}
-            
+
         # check to see if root request id exists
         if not rdb.document_exists(root_request_id):
             return {}
-        
+
         # init new creq
 
         # parse request id
@@ -118,7 +123,6 @@ class chained_campaign(json_base):
 
         creq = chained_request(crdb.get(cid))
 
-        
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
@@ -126,24 +130,23 @@ class chained_campaign(json_base):
 
         if not creq.get_attribute('prepid'):
             raise ValueError('Prepid returned was None')
-        
+
         # set the default values that will be carried over to the next step in the chain
         req = rdb.get(root_request_id)
-        
 
         creq.set_attribute("dataset_name", req["dataset_name"])
         creq.set_attribute("pwg", req["pwg"])
-        
+
         # add root request to chain
         creq.set_attribute('chain',  [root_request_id])
 
         # update history
         creq.update_history({'action':'created'})
         self.update_history({'action':'add request','step':creq.get_attribute('_id')})
-        
+
         # save to database
         return creq.json()
-        
+
     def __remove_request_parameters(self,  rootid=None):
         ob = self.get_attribute('action_parameters')
         res = {}

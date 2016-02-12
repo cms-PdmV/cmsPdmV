@@ -1,6 +1,4 @@
-import cherrypy
 from json_base import json_base
-
 
 class user(json_base):
 

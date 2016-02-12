@@ -1,6 +1,5 @@
 from json_base import json_base
 
-
 class setting(json_base):
 
     _json_base__schema = {
@@ -18,7 +17,7 @@ class setting(json_base):
         self.get_current_user_role_level()
 
     def get_editable(self):
-        editable= {}
+        editable = {}
         for key in self._json_base__schema:
             editable[key] = True
         return editable

@@ -30,12 +30,12 @@ class flow(json_base):
         self.validate()
 
     def add_allowed_campaign(self,  cid):
-        self.logger.log('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
+        self.logger.info('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
 
         try:
             from couchdb_layer.mcm_database import database
         except ImportError as ex:
-            self.logger.error('Could not import database connector class. Reason: %s' % (ex), level='critical')
+            self.logger.error('Could not import database connector class. Reason: %s' % (ex))
             return False
 
         # initialize database connector

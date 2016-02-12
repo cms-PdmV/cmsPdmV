@@ -1,10 +1,10 @@
+import re
+
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
 from tools.user_management import authenticator
 from tools.locator import locator
-import re
 from tools.settings import settings
-
 
 class batch(json_base):
 
@@ -37,13 +37,13 @@ class batch(json_base):
         b_requests = filter(lambda r : r['content']['pdmv_prep_id'] != rid, b_requests)
         self.set_attribute( 'requests', b_requests)
         self.reload()
- 
+
     def add_requests(self,a_list):
         b_requests=self.get_attribute('requests')
         b_requests.extend(a_list)
         ## sort them
         b_requests = sorted(b_requests, key=lambda d : d['content']['pdmv_prep_id'])
-        self.set_attribute('requests', b_requests ) 
+        self.set_attribute('requests', b_requests )
 
     def add_notes(self,notes):
         b_notes=self.get_attribute('notes')
@@ -51,7 +51,7 @@ class batch(json_base):
         self.set_attribute('notes',b_notes)
 
     def get_subject(self, added=""):
-        
+
         (campaign,batchNumber)=self.get_attribute('prepid').split('_')[-1].split('-')
         if self.get_attribute('prepid').split('_')[0] == 'Task': ## convention for taskchain
             rdb = database('requests')
@@ -60,7 +60,7 @@ class batch(json_base):
                 pid=r['content']['pdmv_prep_id']
                 mcm_r = rdb.get(pid)
                 campaigns.add( mcm_r['member_of_campaign'] )
-            
+
             subject="New %s production, batch %d"%(','.join(campaigns),int(batchNumber))
         else:
             subject="New %s production, batch %d"%(campaign,int(batchNumber))
@@ -136,8 +136,8 @@ class batch(json_base):
         if current_notes:
             message+="Additional comments for this batch:\n"+current_notes+'\n'
 
-        self.logger.log('Message send for batch %s'%(self.get_attribute('prepid')))
-        
+        self.logger.info('Message send for batch %s'%(self.get_attribute('prepid')))
+
         self.get_current_user_role_level()
 
 
@@ -150,7 +150,7 @@ class batch(json_base):
         #if self.current_user_level != 3:
         #    auth = authenticator()
         #    sender = auth.get_random_product_manager_email()
-        
+
         #current_message_id = self.get_attribute('message_id')
         returned_id = self.notify(subject,
                                   message,
