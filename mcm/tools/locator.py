@@ -41,7 +41,7 @@ class locator:
             return 'https://cms-pdmv-int.cern.ch/mcm/'
         else:
             return 'https://cms-pdmv.cern.ch/mcm/'
-        
+
     def cmsweburl(self):
         if self.isDev():
             return 'https://cmsweb-testbed.cern.ch/'

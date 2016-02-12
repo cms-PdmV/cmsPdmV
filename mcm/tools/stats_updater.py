@@ -9,7 +9,7 @@ class stats_updater:
         self.force = ""
         if force:
             self.force = '--force'
-            
+
     def update( self, arg ):
         com=''
         com+='export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'

@@ -1,21 +1,19 @@
 import logging
 import os
 import shutil
-from tools.logger import mcm_formatter, logfactory
-from tools.locator import locator
 
+from tools.locator import locator
 from rest_api.BatchPrepId import BatchPrepId
 
-
 class installer:
-    """ 
-    that class is meant for initializing the request directory and care of removing it
-    
     """
-    logger = logfactory
+    that class is meant for initializing the request directory and care of removing it
+
+    """
+    logger = logging.getLogger("mcm_error")
 
     def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True):
-        
+
         self.cleanup = clean_on_exit
 
         self.careOfExistingDirectory = care_on_existing
@@ -32,9 +30,9 @@ class installer:
                 self.logger.error('Directory ' + self.directory + ' already exists.')
                 raise Exception('Data directory %s already exists' % self.directory)
             else:
-                self.logger.log('Directory ' + self.directory + ' already exists.')
+                self.logger.info('Directory ' + self.directory + ' already exists.')
         else:
-            self.logger.log('Creating directory :' + self.directory)
+            self.logger.info('Creating directory :' + self.directory)
 
             # recursively create any needed parents and the dir itself
             os.makedirs(self.directory)

@@ -1,6 +1,8 @@
 import os
 import time
 import traceback
+import logging
+
 from random import randint
 from itertools import izip
 from threading import Thread, Lock
@@ -8,7 +10,6 @@ from Queue import Queue
 
 from tools.batch_control import batch_control
 from tools.installer import installer
-from tools.logger import logfactory
 from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -19,7 +20,7 @@ from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
-
+from tools.logger import InjectionLogAdapter
 
 ###SETTING THREAD POOL###
 class Worker(Thread):
@@ -29,19 +30,20 @@ class Worker(Thread):
         self.tasks = tasks
         self.daemon = True
         self.worker_name = name
-        self.logger = logfactory
+        self.logger = logging.getLogger("mcm_error")
         self.start()
 
     def run(self):
         while True:
-            self.logger.log("Worker %s trying to get work" % (self.worker_name))
+            self.logger.info("Worker %s trying to get work" % (self.worker_name))
             func, args, kargs = self.tasks.get()
             try:
-                self.logger.log("Worker %s acquired task: %s" % (self.worker_name, func))
+                self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
             except Exception, e:
-                self.logger.log("Exception in %s thread: %s Traceback:\n%s" % (
+                self.logger.error("Exception in %s thread: %s Traceback:\n%s" % (
                         self.worker_name, str(e), traceback.format_exc()))
+
                 self.tasks.task_done() ## do we want to mark task_done if it crashed?
             self.tasks.task_done()
 
@@ -51,7 +53,7 @@ class ThreadPool:
         self.tasks = Queue(0)
         self.name = name
         self.worker_number = max_workers
-        self.logger = logfactory
+        self.logger = logging.getLogger("mcm_error")
         worker_name_pool = ["Antanas", "Adrian", "Giovanni", "Gaelle", "Phat"]
 
         for i in range(self.worker_number): #number should be taken from DB
@@ -60,7 +62,7 @@ class ThreadPool:
 
     def add_task(self, func, *args, **kargs):
         """Add a task to the queue"""
-        self.logger.log("Adding a task: %s to the Queue %s. Currently in Queue: %s" % (
+        self.logger.info("Adding a task: %s to the Queue %s. Currently in Queue: %s" % (
                 func, id(self.tasks), self.get_queue_length()))
 
         self.tasks.put((func, args, kargs))
@@ -82,7 +84,7 @@ class Handler():
     """
     A class which manages locks for the resources.
     """
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
     hname = '' # handler's name
     lock = None
 
@@ -161,7 +163,7 @@ class RuntestGenvalid(Handler):
                 success = False
 
             if success:
-                self.logger.log("batch_test result is %s" % success)
+                self.logger.info("batch_test result is %s" % success)
                 (success, batch_test.log_err) = mcm_r.pickup_all_performance(
                         location.location())
 
@@ -386,16 +388,17 @@ class RequestSubmitter(Handler):
         self.prepid = kwargs["prepid"]
         self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
         self.request_db = database('requests')
+        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"),
+                {'handle': self.prepid})
 
     def injection_error(self, message, req):
-        self.logger.inject(message, handler=self.prepid)
+        self.inject_logger.info(message)
         if req:
             req.test_failure(message, what='Request injection')
 
     def check_request(self):
         if not self.request_db.document_exists(self.prepid):
-            self.logger.inject("The request {0} does not exist".format(self.prepid),
-                    level='error', handler=self.prepid)
+            self.inject_logger.error("The request {0} does not exist".format(self.prepid))
 
             return False, None
         req = request(self.request_db.get(self.prepid))
@@ -426,8 +429,8 @@ class RequestSubmitter(Handler):
                 executor = ssh_executor(server='vocms081.cern.ch')
                 try:
                     cmd = req.prepare_submit_command(batch_name)
-                    self.logger.inject("Command being used for injecting request {0}: {1}".format(
-                            self.prepid, cmd), handler=self.prepid)
+                    self.inject_logger.info("Command being used for injecting request {0}: {1}".format(
+                            self.prepid, cmd))
 
                     _, stdout, stderr = executor.execute(cmd)
                     if not stdout and not stderr:
@@ -457,9 +460,9 @@ class RequestSubmitter(Handler):
                             for inv_req in injected_requests if inv_req not in approved_requests]
 
                     if objects_to_invalidate:
-                        self.logger.inject(
+                        self.inject_logger.info(
                             "Some of the workflows had to be invalidated: {0}".format(
-                                    objects_to_invalidate), handler=self.prepid)
+                                    objects_to_invalidate))
 
                         invalidation = database('invalidation')
                         saved = invalidation.save_all(objects_to_invalidate)
@@ -500,8 +503,8 @@ class RequestSubmitter(Handler):
 
                         return False
                     for added_req in added_requests:
-                        self.logger.inject('Request {0} sent to {1}'.format(
-                            added_req['name'], batch_name), handler=self.prepid)
+                        self.inject_logger.info('Request {0} sent to {1}'.format(
+                            added_req['name'], batch_name))
 
                     return True
                 finally: ##lover batch semahore, created on submission time
@@ -526,13 +529,14 @@ class RequestInjector(Handler):
         self.uploader = ConfigMakerAndUploader(**kwargs)
         self.submitter = RequestSubmitter(**kwargs)
         self.queue_lock = kwargs["queue_lock"] ##lock if request is put in processing POOL
+        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"),
+                {'handle': self.prepid})
 
     def internal_run(self):
-        self.logger.inject('## Logger instance retrieved', level='info',
-                handler=self.prepid)
+        self.inject_logger.info('## Logger instance retrieved')
 
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
-            self.logger.error("Acquire lock for RequestInjector. prepid %s" % (self.prepid))
+            self.logger.info("Acquire lock for RequestInjector. prepid %s" % (self.prepid))
             if not self.lock.acquire(blocking=False):
                 return {"prepid": self.prepid, "results": False,
                         "message": "The request with name {0} is being handled already".format(self.prepid)}
@@ -541,8 +545,7 @@ class RequestInjector(Handler):
                     return {"prepid": self.prepid, "results": False,
                             "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
                 __ret = self.submitter.internal_run()
-                self.logger.inject('Request submitter returned: %s' % (__ret),
-                        level='info', handler=self.prepid)
+                self.inject_logger.info('Request submitter returned: %s' % (__ret))
 
             finally:
                 self.lock.release()
@@ -636,8 +639,8 @@ class ChainRequestInjector(Handler):
                 _, stdout, stderr = ssh.execute(cmd)
                 output = stdout.read()
                 error = stderr.read()
-                self.logger.log(output)
-                self.logger.log(error)
+                self.logger.info(output)
+                self.logger.info(error)
                 injected_requests = [l.split()[-1] for l in output.split('\n') if
                                      l.startswith('Injected workflow:')]
 

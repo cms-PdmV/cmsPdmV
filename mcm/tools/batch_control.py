@@ -1,18 +1,19 @@
 import time
 import os
-from tools.logger import logfactory
+import socket
+import errno
+import logging
+
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.settings import settings
-import socket
-import errno
 
 class batch_control:
     """
     a class to which is passed a script for batch testing and provides monitoring and logging
     and success status
     """
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
     hname = '' # handler's name
     group = 'no-group'
 
@@ -69,16 +70,16 @@ class batch_control:
         if not cmd:
             return False
 
-        self.logger.log('submission command: \n%s' % cmd)
+        self.logger.info('submission command: \n%s' % cmd)
 
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
 
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)): return False
 
-        self.logger.log(stdout.read())
+        self.logger.info(stdout.read())
         errors = stderr.read()
-        self.logger.log('SSH remote execution stderr stream: \n%s' % (errors))
+        self.logger.info('SSH remote execution stderr stream: \n%s' % (errors))
         if 'Job not submitted' in errors:
             self.log_err = errors
             return False
@@ -95,7 +96,7 @@ class batch_control:
 
         for line in [l for l in stdout.read().split('\n') if self.test_id in l]:
             jid = line.split()[0]
-            self.logger.log(self.get_job_percentage(jid))
+            self.logger.info(self.get_job_percentage(jid))
             return False
 
         return True
@@ -121,7 +122,7 @@ class batch_control:
         cmd = 'cat %s' % self.test_out
 
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
-        self.logger.log("Reading file with command %s" % cmd)
+        self.logger.info("Reading file with command %s" % cmd)
         time_out=settings().get_value('batch_retry_timeout')
         out=""
         err=""
@@ -135,7 +136,7 @@ class batch_control:
         while ((not stdin and not stdout and not stderr) or err) and trials < trials_time_out:
             time.sleep(time_out)
             trials+=1
-            self.logger.log('Trying to get %s for the %s time'% (self.test_out, trials+1) )
+            self.logger.info('Trying to get %s for the %s time' % (self.test_out, trials+1))
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
             if stdout:
                 out=stdout.read()

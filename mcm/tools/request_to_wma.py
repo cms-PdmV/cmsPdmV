@@ -1,3 +1,5 @@
+import logging
+
 from tools.locator import locator
 from tools.ssh_executor import ssh_executor
 from couchdb_layer.mcm_database import database
@@ -10,6 +12,7 @@ class request_to_wmcontrol:
     """
 
     def __init__(self):
+        self.logger = logging.getLogger("mcm_error")
         pass
 
     def get_command(self, mcm_r, batchNumber, to_execute=False):
@@ -200,6 +203,6 @@ class request_to_wmcontrol:
             self.logger.error('There were no request manager name recorded \n %s' % fullOutPutText)
             return False
 
-        self.logger.log('Injection output: %s' % fullOutPutText)
+        self.logger.info('Injection output: %s' % fullOutPutText)
 
         return True

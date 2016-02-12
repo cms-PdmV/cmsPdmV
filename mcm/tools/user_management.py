@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-from collections import defaultdict
 import cherrypy
+
+from collections import defaultdict
 from tools.locker import locker
 from tools.settings import settings
 from couchdb_layer.mcm_database import database

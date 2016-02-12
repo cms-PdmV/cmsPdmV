@@ -1,17 +1,19 @@
 import smtplib
 import os
+import logging
+
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
 from email.utils import make_msgid
 from tools.locator import locator
-from tools.logger import logfactory
 from collections import defaultdict
 from tools.settings import settings
 from tools.locker import locker
+
 class communicator:
     cache = {}
-    logger = logfactory 
+    logger = logging.getLogger("mcm_error")
 
     def __init__(self):
         self.from_opt = 'user' # could be service at some point
@@ -21,24 +23,24 @@ class communicator:
         with locker.lock('accumulating_notifcations'):
             for key in self.cache.keys():
                 (subject,sender,addressee)=key
-                if self.cache[key]['N'] <= Nmin: 
+                if self.cache[key]['N'] <= Nmin:
                     ## flush only above a certain amount of messages
                     continue
                 destination = addressee.split(COMMASPACE)
                 text = self.cache[key]['Text']
                 msg = MIMEMultipart()
-                
+
                 msg['From'] = sender
                 msg['To'] = addressee
                 msg['Date'] = formatdate(localtime=True)
-                new_msg_ID = make_msgid()  
-                msg['Message-ID'] = new_msg_ID 
+                new_msg_ID = make_msgid()
+                msg['Message-ID'] = new_msg_ID
                 msg['Subject'] = subject
-                
+
                 ## add a signature automatically
                 text += '\n\n'
                 text += 'McM Announcing service'
-                #self.logger.log('Sending a message from cache \n%s'% (text))
+                #self.logger.info('Sending a message from cache \n%s'% (text))
                 try:
                     msg.attach(MIMEText(text))
                     smtpObj = smtplib.SMTP()
@@ -81,7 +83,7 @@ class communicator:
         msg['Date'] = formatdate(localtime=True)
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID
-        
+
         if reply_msg_ID is not None:
             msg['In-Reply-To'] = reply_msg_ID
             msg['References'] = reply_msg_ID
@@ -102,7 +104,7 @@ class communicator:
                     self.cache[key]['N']+=1
                 else:
                     self.cache[key] = {'Text' : text, 'N':1}
-                #self.logger.log('Got a message in cache %s'% (self.cache.keys()))
+                #self.logger.info('Got a message in cache %s'% (self.cache.keys()))
                 return new_msg_ID
 
 

@@ -1,7 +1,7 @@
-from threading import RLock, Event, Lock
-from tools.logger import logfactory
-from collections import defaultdict
+import logging
 
+from threading import RLock, Event, Lock
+from collections import defaultdict
 
 class Locker(object):
     """
@@ -19,7 +19,7 @@ class Locker(object):
     lock_dictionary = defaultdict(RLock)
     ## we also have a dict of Lock which can be release from different threads
     thread_lock_dictionary = defaultdict(Lock)
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
 
     def lock(self, lock_id):
         # defaultdict and setdefault are not atomic in python 2,6, some manual locking needed
@@ -32,13 +32,13 @@ class Locker(object):
     def acquire(self, lock_id, blocking=True):
         with self.internal_lock:
             lock = self.lock_dictionary[lock_id]
-            self.logger.log("Acquiring lock %s for lock_id %s" % (lock, lock_id))
+            self.logger.info("Acquiring lock %s for lock_id %s" % (lock, lock_id))
         return lock.acquire(blocking)
 
     def release(self, lock_id):
         with self.internal_lock:
             lock = self.lock_dictionary[lock_id]
-            self.logger.log("Releasing lock %s for lock_id %s" % (lock, lock_id))
+            self.logger.info("Releasing lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
     ### Thread sharable lock methods: can be released by different threads
@@ -57,7 +57,7 @@ class Locker(object):
         """
         with self.internal_lock:
             lock = self.thread_lock_dictionary[lock_id]
-            self.logger.log("Acquiring simple lock %s for lock_id %s" % (lock, lock_id))
+            self.logger.info("Acquiring simple lock %s for lock_id %s" % (lock, lock_id))
         return lock.acquire(blocking)
 
     def thread_release(self, lock_id):
@@ -67,7 +67,7 @@ class Locker(object):
         """
         with self.internal_lock:
             lock = self.thread_lock_dictionary[lock_id]
-            self.logger.log("Releasing simple lock %s for lock_id %s" % (lock, lock_id))
+            self.logger.info("Releasing simple lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
 locker = Locker()
@@ -78,7 +78,7 @@ class SemaphoreEvents(object):
     reaches 0. Non-waiting threads should use increment/decrement statements.
     """
 
-    logger = logfactory
+    logger = logging.getLogger("mcm_error")
     event_dictionary = defaultdict(Event)
     count_dictionary = defaultdict(int)
 
@@ -90,12 +90,12 @@ class SemaphoreEvents(object):
         with locker.lock(lock_id):
             self.count_dictionary[lock_id] += 1
             self.event_dictionary[lock_id].clear()
-            self.logger.log("Semaphore {0} incremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
+            self.logger.info("Semaphore {0} incremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
 
     def decrement(self, lock_id):
         with locker.lock(lock_id):
             self.count_dictionary[lock_id] = max(0, self.count_dictionary[lock_id]-1) ## floor to 0
-            self.logger.log("Semaphore {0} decremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
+            self.logger.info("Semaphore {0} decremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
             if self.count_dictionary[lock_id] == 0:
                 self.event_dictionary[lock_id].set()
 
