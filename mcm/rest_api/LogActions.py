@@ -5,7 +5,6 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.user_management import access_rights
 
-
 class ReadInjectionLog(RESTResource):
     def __init__(self):
         self.logfile = 'logs/inject.log'
@@ -60,4 +59,7 @@ class GetVerbosities(RESTResource):
         """
         Get all the possible verbosities and currently chosen one
         """
-        return dumps({"results": (self.logger.get_verbosities(), self.logger.get_verbosity())})
+        ##TO-DO
+        #remove this method... no need to display log verbosity in dashboard
+        verbosities = {0: "basic logging", 1: "error logging", 2: "error and info logging", 3: "full logging"}
+        return dumps({"results": (verbosities, self.logger.getEffectiveLevel())})

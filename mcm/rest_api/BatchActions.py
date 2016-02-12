@@ -165,7 +165,7 @@ class InspectBatches(BatchAnnouncer):
                     res.append(self.announce_with_text(new_batch['_id'],
                             'Automatic announcement.'))
         else:
-            self.logger.log('Not announcing any batch')
+            self.logger.info('Not announcing any batch')
 
         if settings().get_value('batch_set_done'):
             ## check on on-going batches
@@ -211,7 +211,7 @@ class InspectBatches(BatchAnnouncer):
                     res.append({"results": False, "prepid" : this_bid,
                             "message" : "Not completed"})
         else:
-            self.logger.log('Not setting any batch to done')
+            self.logger.info('Not setting any batch to done')
 
         #anyways return something
         return dumps(res)
@@ -314,15 +314,15 @@ class NotifyBatch(RESTResource):
         subject = single_batch.get_subject('[Notification]')
         current_message_id = single_batch.get_attribute('message_id')
 
-        self.logger.log('current msgID: %s' % current_message_id)
+        self.logger.info('current msgID: %s' % current_message_id)
         if current_message_id != '':
             result = single_batch.notify(subject, message, who=to_who,
                     sender=None, reply_msg_ID=current_message_id)
 
-            self.logger.log('result if True : %s' % result)
+            self.logger.info('result if True : %s' % result)
         else:
             result = single_batch.notify(subject, message, who=to_who, sender=None)
-            self.logger.log('result if False : %s' % result)
+            self.logger.info('result if False : %s' % result)
 
         single_batch.update_history({'action':'notify', 'step' : message})
         single_batch.reload()

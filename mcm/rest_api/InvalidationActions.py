@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
 import itertools
+
 from json import dumps
-from couchdb_layer.mcm_database import database
+from cherrypy import request
+
 from RestAPIMethod import RESTResource
+from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.invalidation import invalidation
 from tools.settings import settings
 from tools.user_management import access_rights
 from tools.json import threaded_loads
-from cherrypy import request
+
 
 class Invalidate(RESTResource):
 
@@ -147,7 +150,7 @@ class DeleteInvalidation(RESTResource):
             self.logger.error('Delete invalidations: no arguments were given')
             return dumps({"results": False})
         db = database("invalidations")
-        self.logger.log('Deleting invalidation: %s' % (args[0]))
+        self.logger.info('Deleting invalidation: %s' % (args[0]))
         return dumps({"results": db.delete(args[0])})
 
 class AnnounceInvalidations(RESTResource):
@@ -160,7 +163,7 @@ class AnnounceInvalidations(RESTResource):
         Announce selected invalidations to Data OPS
         """
         input_data = threaded_loads(request.body.read().strip())
-        self.logger.error("invaldations input: %s" % (input_data))
+        self.logger.info("invaldations input: %s" % (input_data))
         if len(input_data) > 0:
             return self.announce(input_data)
         else:
@@ -177,7 +180,7 @@ class AnnounceInvalidations(RESTResource):
             elif tmp["type"] == "request" and tmp["status"] == "new":
                 __r_list.append(tmp)
             else:
-                self.logger.error("Tried to ANNOUNCE non new invaldation: %s" % (
+                self.logger.info("Tried to ANNOUNCE non new invaldation: %s" % (
                         tmp["object"]))
 
         announcer = Announcer()
@@ -259,7 +262,7 @@ class PutOnHoldInvalidation(RESTResource):
         input_data = threaded_loads(request.body.read().strip())
         if not len(input_data):
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
-        self.logger.log("Putting invalidation on HOLD. input: %s" % (input_data))
+        self.logger.info("Putting invalidation on HOLD. input: %s" % (input_data))
         db = database(self.db_name)
         res = []
         for el in input_data:
@@ -291,7 +294,7 @@ class PutHoldtoNewInvalidations(RESTResource):
         if not len(input_data):
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
 
-        self.logger.log("Putting invalidation from HOLD back to new. input: %s" % (input_data))
+        self.logger.info("Putting invalidation from HOLD back to new. input: %s" % (input_data))
         db = database(self.db_name)
         res = []
         for el in input_data:

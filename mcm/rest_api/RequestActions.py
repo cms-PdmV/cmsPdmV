@@ -88,13 +88,13 @@ class RequestRESTResource(RESTResource):
             a.set_attribute('dataset_name', mcm_req.get_attribute('dataset_name'))
             a.set_attribute('member_of_campaign', mcm_req.get_attribute('member_of_campaign'))
             a.find_chains()
-            self.logger.log('Adding an action for %s' % (mcm_req.get_attribute('prepid')))
+            self.logger.info('Adding an action for %s' % (mcm_req.get_attribute('prepid')))
             adb.save(a.json())
         else:
             a = action(adb.get(mcm_req.get_attribute('prepid')))
             if a.get_attribute('dataset_name') != mcm_req.get_attribute('dataset_name'):
                 a.set_attribute('dataset_name', mcm_req.get_attribute('dataset_name'))
-                self.logger.log('Updating an action for %s' % (mcm_req.get_attribute('prepid')))
+                self.logger.info('Updating an action for %s' % (mcm_req.get_attribute('prepid')))
                 adb.save(a.json())
 
     def import_request(self, data, db, label='created', step=None):
@@ -115,7 +115,7 @@ class RequestRESTResource(RESTResource):
         if camp.get_attribute('status') != 'started':
             return {"results": False, "message": "Cannot create a request in a campaign that is not started"}
 
-        self.logger.log('Building new request...')
+        self.logger.info('Building new request...')
 
         # set '_id' and 'prepid' fields
         if mcm_req.get_attribute('_id'):
@@ -130,8 +130,7 @@ class RequestRESTResource(RESTResource):
         existed = False
         if db.document_exists(mcm_req.get_attribute('_id')):
             existed = True
-            self.logger.error('prepid %s already exists. Generating another...' % (mcm_req.get_attribute('_id')),
-                              level='warning')
+            self.logger.error('prepid %s already exists. Generating another...' % (mcm_req.get_attribute('_id')))
 
             prepid = RequestPrepId().next_prepid(mcm_req.get_attribute('pwg'),
                                                  mcm_req.get_attribute('member_of_campaign'))
@@ -144,9 +143,7 @@ class RequestRESTResource(RESTResource):
                 self.logger.error('prepid returned was None')
                 return {"results": False, "message": "internal error and the request id is null"}
 
-        self.logger.log('New prepid: %s' % (mcm_req.get_attribute('prepid')))
-
-
+        self.logger.info('New prepid: %s' % (mcm_req.get_attribute('prepid')))
 
         ## put a generator info by default in case of possible root request
         if camp.get_attribute('root') <= 0:
@@ -264,8 +261,8 @@ class UpdateRequest(RequestRESTResource):
         except Exception as e:
             #trace = traceback.format_exc()
             trace = str(e)
-            self.logger.error('Failed to update a request from API \n%s'%( trace ) )
-            return {'results': False, 'message': 'Failed to update a request from API %s'% trace}
+            self.logger.error('Failed to update a request from API \n%s' % (trace))
+            return {'results': False, 'message': 'Failed to update a request from API %s' % trace}
 
     def update_request(self, data):
         data = threaded_loads(data)
@@ -294,9 +291,9 @@ class UpdateRequest(RequestRESTResource):
         editable = previous_version.get_editable()
         for (key, right) in editable.items():
             # does not need to inspect the ones that can be edited
-            if right: 
+            if right:
                 if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
-                    self.logger.log('##UPDATING [%s] field## %s: %s vs %s' % (
+                    self.logger.info('##UPDATING [%s] field## %s: %s vs %s' % (
                         mcm_req.get_attribute('prepid'), key,
                         previous_version.get_attribute(key),
                         mcm_req.get_attribute(key)
@@ -312,11 +309,11 @@ class UpdateRequest(RequestRESTResource):
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
                 #raise ValueError('Illegal change of parameter')
 
-        self.logger.log('Updating request %s...' % (mcm_req.get_attribute('prepid')))
+        self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
         if len(mcm_req.get_attribute('history')) and 'action' in mcm_req.get_attribute('history')[0] and \
                         mcm_req.get_attribute('history')[0]['action'] == 'migrated':
-            self.logger.log(
+            self.logger.info(
                 'Not changing the actions for %s as it has been migrated' % (mcm_req.get_attribute('prepid')))
             pass
         else:
@@ -792,7 +789,7 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
         req = request(json_input=db.get(rid))
 
-        self.logger.log('Approving request %s for step "%s"' % (rid, val))
+        self.logger.info('Approving request %s for step "%s"' % (rid, val))
 
         #req.approve(val)
         try:
@@ -812,7 +809,7 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except:
             trace = traceback.format_exc()
-            self.logger.error("Exception caught in approval\n%s"%(trace))
+            self.logger.error("Exception caught in approval\n%s" % (trace))
             return {'prepid': rid, 'results': False, 'message': trace}
         if saved:
             if _res:
@@ -862,7 +859,7 @@ class GetStatus(RESTResource):
     def status(self, rid):
         __retries = 3
         if rid == "":
-            self.logger.log("someone is looking for empty request status", level='warning')
+            self.logger.info("someone is looking for empty request status")
             return {"results" : "You shouldnt be looking for empty prepid"}
 
         db = database('requests')
@@ -1064,7 +1061,7 @@ class InjectRequest(RESTResource):
         ids = args[0].split(',')
         res = []
         for r_id in ids:
-            self.logger.log('Forking the injection of request {0} '.format(r_id))
+            self.logger.info('Forking the injection of request {0} '.format(r_id))
             _q_lock = locker.thread_lock(r_id)
             if not locker.thread_acquire(r_id, blocking=False):
                 res.append({"prepid": r_id, "results": False,
@@ -1288,7 +1285,7 @@ class RequestLister():
                                     all_objects.append(retrieve_db.get(req['chain'][0])) ##we add a root request
                                     added_actions.append(req['chain'][0])
 
-        self.logger.error("Got %s ids identified" % ( len(all_objects)))
+        self.logger.error("Got %s ids identified" % (len(all_objects)))
         return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
@@ -1308,9 +1305,7 @@ class RequestLister():
         return None
 
     def identify_a_dataset_name(self, word):
-        #self.logger.error('word %s %s'%(word, word.count('/')))
         if word.count('/') == 3:
-            #self.logger.error('word %s'%(word))
             (junk, dsn, ps, tier) = word.split('/')
             if junk:
                 return None
@@ -1739,7 +1734,7 @@ class UpdateMany(RequestRESTResource):
                 return_info.append(self.updateSingle.update_request(dumps(document)))
             except Exception as e:
                 return_info.append( {"results" : False, "message" : str(e)} )
-        self.logger.log('updating requests: %s' % return_info)
+        self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
 
 
@@ -1777,7 +1772,7 @@ class GetAllRevisions(RequestRESTResource):
                 single_result = self.opener.open(single_request)
                 single_doc = single_result.read()
                 list_of_revs.append(threaded_loads(single_doc))
-        self.logger.log('Getting all revisions for: %s' % doc_id)
+        self.logger.info('Getting all revisions for: %s' % doc_id)
         return {"results": list_of_revs}
 
 
@@ -1803,10 +1798,10 @@ class ListRequestPrepids(RequestRESTResource):
         view_name = view
         if key:
             result = self.db.raw_query(view_name, {'key': '"%s"'%key})
-            self.logger.log('All list raw_query view:%s searching for: %s' %(view_name, key))
+            self.logger.info('All list raw_query view:%s searching for: %s' % (view_name, key))
         else:
             result = self.db.raw_query(view_name)
-            self.logger.log('All list raw_query view:%s searching for all' %(view_name))
+            self.logger.info('All list raw_query view:%s searching for all' % (view_name))
         data = [key['value'] for key in result]
         return {"results": data}
 

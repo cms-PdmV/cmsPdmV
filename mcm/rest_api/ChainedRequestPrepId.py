@@ -7,7 +7,7 @@ from RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 from json_layer.chained_request import chained_request
 
-# generates the next valid prepid 
+# generates the next valid prepid
 class ChainedRequestPrepId(RESTResourceIndex):
     def __init__(self):
         self.ccamp_db_name = 'chained_campaigns'
@@ -39,13 +39,13 @@ class ChainedRequestPrepId(RESTResourceIndex):
             ## construct the new id
             new_prepid = pwg + '-' + campaign + '-' + str(sn).zfill(5)
             if sn==1:
-                self.logger.log('Beginning new prepid family: %s' % (new_prepid))
+                self.logger.info('Beginning new prepid family: %s' % (new_prepid))
 
             new_request = chained_request({'_id':new_prepid, 'prepid':new_prepid, 'pwg':pwg, 'member_of_campaign':campaign})
             new_request.update_history({'action':'created'})
             creq_db.save(new_request.json())
             self.serial_number_cache[(campaign, pwg)] = sn
-            self.logger.log('New chain id: %s' % new_prepid, level='debug')
+            self.logger.info('New chain id: %s' % new_prepid, level='debug')
 
             return new_prepid
 

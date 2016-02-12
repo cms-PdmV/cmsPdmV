@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import cherrypy
+
 from json import dumps
+
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.settings import settings

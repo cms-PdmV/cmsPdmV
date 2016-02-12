@@ -1,7 +1,9 @@
+import cherrypy
+
+from json import dumps
+
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
-from json import dumps
-import cherrypy
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 

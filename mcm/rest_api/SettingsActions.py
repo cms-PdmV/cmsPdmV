@@ -1,12 +1,13 @@
-from rest_api.RestAPIMethod import RESTResource
+import cherrypy
+
 from json import dumps
+
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.setting import setting
 from tools.settings import settings
 from tools.user_management import access_rights
 from tools.json import threaded_loads
-import cherrypy
-
 
 class GetSetting(RESTResource):
     def __init__(self):
@@ -109,5 +110,5 @@ class UpdateSetting(RESTResource):
                     key, previous_version.get_attribute(key), new_version.get_attribute(key), right))
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
-        self.logger.log('Updating setting %s...' % (new_version.get_attribute('prepid')))
+        self.logger.info('Updating setting %s...' % (new_version.get_attribute('prepid')))
         return {"results": settings().set(new_version.get_attribute('prepid'), new_version.json())}

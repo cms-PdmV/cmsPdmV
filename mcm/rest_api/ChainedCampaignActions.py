@@ -39,7 +39,7 @@ class CreateChainedCampaign(RESTResource):
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results":False, "message":str(ex)}
 
-        self.logger.log('Creating new chained_campaign %s...' % (
+        self.logger.info('Creating new chained_campaign %s...' % (
                 ccamp.get_attribute('prepid')))
 
         ccamp.set_attribute("_id", ccamp.get_attribute("prepid"))
@@ -67,7 +67,7 @@ class CreateChainedCampaign(RESTResource):
     def update_campaigns(self, ccamp):
         cdb = database('campaigns')
         next = None
-        self.logger.log('Looking at campaigns %s' % (ccamp.get_attribute('campaigns')))
+        self.logger.info('Looking at campaigns %s' % (ccamp.get_attribute('campaigns')))
         for (c, f) in reversed(ccamp.get_attribute('campaigns')):
             mcm_c = cdb.get(c)
             if next:
@@ -120,7 +120,7 @@ class UpdateChainedCampaign(RESTResource):
                 self.logger.error('prepid returned was None')
                 return {"results":False}
 
-            self.logger.log('Updating chained_campaign %s ...' % (
+            self.logger.info('Updating chained_campaign %s ...' % (
                     ccamp.get_attribute('_id')))
 
             # update history
@@ -260,19 +260,20 @@ class InspectChainedCampaignsRest(RESTResource):
                         __inspect_ret = {"prepid":cr, "results":False,
                                 'message' : '%s does not exist' % cr['prepid']}
 
-                    self.logger.log("Inspection for: %s returned: %s" % (cr['prepid'], __inspect_ret))
+                    self.logger.info("Inspection for: %s returned: %s" % (cr['prepid'],
+                            __inspect_ret))
+
                     yield dumps(__inspect_ret, indent=8)
 
                 ##force slowing-down of inspect to not abuse the DB
                 time.sleep(2)
 
             self.running = False
-            self.logger.log("ChainedCampaigns inspection finished. running: %s" % self.running)
+            self.logger.info("ChainedCampaigns inspection finished. running: %s" % self.running)
 
         except Exception as ex:
             self.running = False
-            self.logger.log("ChainedCampaigns inspection crashed. reason: %s" % str(ex),
-                    level='error')
+            self.logger.error("ChainedCampaigns inspection crashed. reason: %s" % str(ex))
 
             yield dumps({'message': 'crlist crashed: %s' % (str(ex)),
                     'last_used_query' : __query})
@@ -304,7 +305,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         if args[0] != 'all':
             return dumps({"results" : 'Error: Incorrect argument provided'})
 
-        self.logger.log('InspectChainedRequests is running: %s' % (self.running))
+        self.logger.info('InspectChainedRequests is running: %s' % (self.running))
         if self.running:
             return dumps({"results" : 'Already running inspection'})
 
@@ -414,7 +415,7 @@ class ListChainCampaignPrepids(RESTResource):
         if key:
             search_key = key
         result = self.db.raw_query(view_name, {'key': search_key})
-        self.logger.log('All list raw_query view:%s searching for: %s' % (
+        self.logger.info('All list raw_query view:%s searching for: %s' % (
                 view_name, search_key))
 
         data = [key['value'] for key in result]

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
+
 from json import dumps
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
@@ -28,7 +29,7 @@ class CreateAction(RESTResource):
         except request.IllegalAttributeName as ex:
             return dumps({"results":False})
 
-        self.logger.log('Building new action %s by hand...' % (mcm_a.get_attribute('_id')))
+        self.logger.info('Building new action %s by hand...' % (mcm_a.get_attribute('_id')))
 
         priority_set = mcm_a.inspect_priority()
 
@@ -60,7 +61,7 @@ class UpdateAction(RESTResource):
             mcm_a = action(content)
         except request.IllegalAttributeName as ex:
             return {"results":False}
-        self.logger.log('Updating action "%s" by hand...' % (mcm_a.get_attribute('_id')))
+        self.logger.info('Updating action "%s" by hand...' % (mcm_a.get_attribute('_id')))
 
         ## massage the json for removing null items that could be send by the action editor interface
         chains = mcm_a.get_attribute('chains')
@@ -95,7 +96,7 @@ class UpdateMultipleActions(UpdateAction):
         """
         Update a multiple number of actions at the same time from the provided json content
         """
-        self.logger.log('Updating multiple actions')
+        self.logger.info('Updating multiple actions')
         data = threaded_loads(cherrypy.request.body.read().strip())
 
         results = []
@@ -141,7 +142,7 @@ class SelectChain(RESTResource):
 
     def select_chain(self, aid, chainid):
         db = database(self.db_name)
-        self.logger.log('Selecting chain %s for action %s...' % (chainid, aid))
+        self.logger.info('Selecting chain %s for action %s...' % (chainid, aid))
         # if action exists
         if db.document_exists(aid):
             # initialize the object
@@ -165,14 +166,14 @@ class DeSelectChain(RESTResource):
         Allows to UN-select a given chained request for a given action id /action_id/chain_id
         """
         if not args:
-            self.logger.error('No arguments were given')
+            self.logger.info('No arguments were given')
             return dumps({"results":'Error: No arguments were given'})
 
         return dumps({'results':self.deselect_chain(args[0], args[1])})
 
     def deselect_chain(self, aid, chainid):
         db = database(self.db_name)
-        self.logger.log('Deselecting chain %s for action %s...' % (chainid, aid))
+        self.logger.info('Deselecting chain %s for action %s...' % (chainid, aid))
         # if action exists
         if db.document_exists(aid):
             # initialize the object
@@ -215,7 +216,7 @@ class GenerateChainedRequests(RESTResource):
         if not adb.document_exists(aid):
             return {'results' : False, 'message' : '%s does not exist'%(aid)}
 
-        self.logger.log('Generating all selected chained_requests for action %s' % (aid))
+        self.logger.info('Generating all selected chained_requests for action %s' % (aid))
         mcm_a = action(adb.get(aid))
         chains = mcm_a.get_attribute('chains')
         hasChainsChanged = False
@@ -298,7 +299,7 @@ class GenerateAllChainedRequests(GenerateChainedRequests):
 
     def generate_requests(self):
         adb = database('actions')
-        self.logger.log('Generating all possible (and selected) chained_requests...')
+        self.logger.info('Generating all possible (and selected) chained_requests...')
         allacs = adb.get_all(-1) # no pagination
         res = []
         for a in allacs:
@@ -402,7 +403,7 @@ class DetectChains(RESTResource):
         return dumps(res)
 
     def find_chains(self, aid, db):
-        self.logger.log('Identifying all possible chains for action %s' % (aid))
+        self.logger.info('Identifying all possible chains for action %s' % (aid))
 
         try:
             ac = action(json_input=db.get(aid))
@@ -413,7 +414,7 @@ class DetectChains(RESTResource):
             return {'results' : False, 'prepid' : aid, 'message' : str(ex)}
 
     def find_all_chains(self, db):
-        self.logger.log('Identifying all possible chains for all actions in the database...')
+        self.logger.info('Identifying all possible chains for all actions in the database...')
         aids = lambda x: x['prepid'] , db.get_all()
         res = []
         for aid in aids:

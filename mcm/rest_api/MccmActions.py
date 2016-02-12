@@ -1,5 +1,9 @@
-from rest_api.RestAPIMethod import RESTResource
+import cherrypy
+import time
+
 from json import dumps
+
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from tools.locker import locker
@@ -8,9 +12,6 @@ from tools.communicator import communicator
 from tools.settings import settings
 from tools.user_management import access_rights
 from tools.json import threaded_loads
-
-import cherrypy
-import time
 
 class GetMccm(RESTResource):
 
@@ -72,10 +73,12 @@ class UpdateMccm(RESTResource):
             if right: continue
             if previous_version.get_attribute(key) != new_version.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
-                    key, previous_version.get_attribute(key), new_version.get_attribute(key), right))
+                        key, previous_version.get_attribute(key),
+                        new_version.get_attribute(key), right))
+
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
-        self.logger.log('Updating mccm %s...' % (new_version.get_attribute('prepid')))
+        self.logger.info('Updating mccm %s...' % (new_version.get_attribute('prepid')))
 
 
         # update history
@@ -111,7 +114,7 @@ class CreateMccm(RESTResource):
         mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
         mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
         mccm_d.update_history({'action': 'created'})
-        self.logger.log('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
+        self.logger.info('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
         return dumps({"results": db.save(mccm_d.json()), "prepid": mccm_d.get_attribute('prepid')})
 
 

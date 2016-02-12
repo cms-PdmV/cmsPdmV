@@ -4,6 +4,7 @@ import cherrypy
 import traceback
 
 from json import dumps
+
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from ChainedRequestPrepId import ChainedRequestPrepId
@@ -52,7 +53,7 @@ class CreateChainedRequest(RESTResource):
             raise ValueError('Prepid returned was None')
 
 
-        self.logger.log('Created new chained_request %s' % cr_id)
+        self.logger.info('Created new chained_request %s' % cr_id)
 
         # update history with the submission details
         req.update_history({'action': 'created'})
@@ -62,14 +63,14 @@ class CreateChainedRequest(RESTResource):
     def save_request(self, db, req):
         if not db.document_exists(req.get_attribute('_id')):
             if db.save(req.json()):
-                self.logger.log('new chained_request successfully saved.')
+                self.logger.info('new chained_request successfully saved.')
                 return {"results":True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
                 return {"results":False}
         else:
             if db.update(req.json()):
-                self.logger.log('new chained_request successfully saved.')
+                self.logger.info('new chained_request successfully saved.')
                 return {"results":True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
@@ -97,8 +98,8 @@ class UpdateChainedRequest(RESTResource):
             raise ValueError('Prepid returned was None')
             #req.set_attribute('_id', req.get_attribute('prepid')
 
-        self.logger.log('Updating chained_request %s' % (req.get_attribute('_id')))
-        self.logger.log('wtf %s'%(str(req.get_attribute('approval'))))
+        self.logger.info('Updating chained_request %s' % (req.get_attribute('_id')))
+        self.logger.info('wtf %s'%(str(req.get_attribute('approval'))))
         # update history
         req.update_history({'action': 'update'})
 
@@ -223,7 +224,7 @@ class FlowToNextStep(RESTResource):
         reserve = False
         if len(args)>1:
             check_stats=(args[1]!='force')
-            self.logger.log(args)
+            self.logger.info(args)
             reserve = args[1]=='reserve'
             if len(args)>2:
                 reserve = args[2]
@@ -253,7 +254,7 @@ class FlowToNextStep(RESTResource):
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return {"results":str(ex)}
 
-        self.logger.log('Attempting to flow to next step for chained_request %s' %  (
+        self.logger.info('Attempting to flow to next step for chained_request %s' %  (
                 creq.get_attribute('_id')))
 
         # if the chained_request can flow, do it
@@ -284,12 +285,12 @@ class FlowToNextStep(RESTResource):
 
         # if the chained_request can flow, do it
         if reserve:
-            self.logger.log('Attempting to reserve to next step for chained_request %s' % (
+            self.logger.info('Attempting to reserve to next step for chained_request %s' % (
                     creq.get_attribute('_id')))
 
             return creq.reserve( limit = reserve )
 
-        self.logger.log('Attempting to flow to next step for chained_request %s' % (
+        self.logger.info('Attempting to flow to next step for chained_request %s' % (
                 creq.get_attribute('_id')))
 
         return creq.flow_trial(check_stats=check_stats)
@@ -681,7 +682,7 @@ class TaskChainDict(RESTResource):
             ##we check for every possible tier in prioritised possible inputs
             ## we iterate on all generated unique previous outputs
             ## if its a match -> we return
-            self.logger.log("##DEBUG do_datatier_selection input:\n%s %s" % (
+            self.logger.debug("do_datatier_selection input:\n%s %s" % (
                 possible_inputs, __prev_outputs))
 
             __in_taskName = ""

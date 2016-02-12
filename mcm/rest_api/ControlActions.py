@@ -1,5 +1,6 @@
 import cherrypy
 import simplejson
+
 from collections import defaultdict
 
 from RestAPIMethod import RESTResource
@@ -27,9 +28,9 @@ class RenewCertificate(RESTResource):
         for elem in machines:
             ssh_exec = ssh_executor(server=elem)
             try:
-                self.logger.log("Renewing certificate for: %s" % (elem))
+                self.logger.info("Renewing certificate for: %s" % (elem))
                 stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
-                self.logger.log("Certificate renewed:\n{0}".format(stdout.read()))
+                self.logger.info("Certificate renewed:\n{0}".format(stdout.read()))
             finally:
                 ssh_exec.close_executor()
 
@@ -61,7 +62,10 @@ class ChangeVerbosity(RESTResource):
             return dumps({"results": False, "message": "New verbosity was not an integer"})
 
         if settings().set_value('log_verbosity', lvl):
-            self.logger.set_verbosity(lvl)
+            ##TO-DO:
+            # do we really need this?
+            self.logger.info("We want to set log verbosity to: %s" % (lvl))
+            #self.logger.set_verbosity(lvl)
         else:
             return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
         return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})
@@ -75,7 +79,7 @@ class TurnOffServer(RESTResource):
         """
         Turn off server.
         """
-        self.logger.log("Shutting down the server")
+        self.logger.info("Shutting down the server")
         cherrypy.engine.exit()
 
 
@@ -166,8 +170,10 @@ class Search(RESTResource):
         if args:
             args = self.prepare_typed_args(args, db_name)
             lucene_query = odb.construct_lucene_query(args)
-            self.logger.log("lucene url: %s" % (lucene_query) )
-            res = odb.full_text_search("search", lucene_query, page=page, limit=limit, get_raw=get_raw)
+            self.logger.info("lucene url: %s" % (lucene_query))
+            res = odb.full_text_search("search", lucene_query, page=page,
+                    limit=limit, get_raw=get_raw)
+
         else:
             res = odb.get_all(page, limit, get_raw=get_raw)
         return res

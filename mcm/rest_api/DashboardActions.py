@@ -1,16 +1,17 @@
 #!/usr/bin/env python
-
-from RestAPIMethod import RESTResource
-from tools.ssh_executor import ssh_executor
-from json import dumps
 import os
 import time
 import copy
-from couchdb_layer.mcm_database import database
-from collections import defaultdict
-from tools.user_management import access_rights
 import traceback
+
+from json import dumps
 from math import sqrt
+from collections import defaultdict
+
+from RestAPIMethod import RESTResource
+from tools.ssh_executor import ssh_executor
+from couchdb_layer.mcm_database import database
+from tools.user_management import access_rights
 
 class GetBjobs(RESTResource):
     def __init__(self):
@@ -79,7 +80,7 @@ class GetRevision(RESTResource):
         self.access_limit = access_rights.user
 
     def GET(self, *args):
-        """ 
+        """
         returns the current tag of the software running
         """
         import subprocess
@@ -124,7 +125,7 @@ class TestConnection(RESTResource):
         self.counter = 0
 
     def GET(self, *args):
-        """ 
+        """
         this is test of connection through ssh to /node/iterations
         """
         sta=0
@@ -143,26 +144,27 @@ class TestConnection(RESTResource):
                 err = stderr.read()
                 if ('private' in out and 'public' in out and 'PdmV' in out):
                     success+=1
-                    self.logger.error("test: %s SUCCESS \n out:\n%s \n err:\n %s"%( i, out,err))
+                    self.logger.info("test: %s SUCCESS \n out:\n%s \n err:\n %s" % (i, out,err))
                 else:
                     tail+=1
-                    self.logger.error("test: %s failed \n out:\n%s \n err:\n %s"%( i, out,err))
+                    self.logger.info("test: %s failed \n out:\n%s \n err:\n %s" % (i, out,err))
             except:
                 fail+=1
-                self.logger.error("test: %s failed %s"%(i, traceback.format_exc()))
-            
+                self.logger.error("test: %s failed %s" % (i, traceback.format_exc()))
+
             sto=time.time()
             spend.append( sto - sta )
 
-        mean= sum(spend) / len(spend)
-        rms= sqrt(sum( map( lambda v : (v-mean)*(v-mean), spend)) / len(spend))
+        mean = sum(spend) / len(spend)
+        rms = sqrt(sum( map( lambda v : (v-mean)*(v-mean), spend)) / len(spend))
+
         return dumps({"server" : server,
-                      "trials" : N, 
+                      "trials" : N,
                       "time": spend,
                       "mean": mean,
                       "rms": rms,
                       "success" : success,
-                      "fail" : fail, 
+                      "fail" : fail,
                       "max" : max(spend),
                       "min": min(spend),
                       "total" : sum(spend)

@@ -1,17 +1,16 @@
 #!/usr/bin/env python
+import cherrypy
+import logging
 
 from tools.user_management import access_rights, roles
 from tools.user_management import authenticator as auth_obj, user_pack
-from tools.logger import logfactory
 from tools.locator import locator
 from tools.locker import locker
-import cherrypy
-
 
 class RESTResource(object):
     authenticator = auth_obj(limit=access_rights.production_manager)
-    #logger = cherrypy.log
-    logger = logfactory
+
+    logger = logging.getLogger("mcm_error")
     access_limit = None
     access_user = []
 
@@ -33,7 +32,7 @@ class RESTResource(object):
             raise cherrypy.HTTPError(405, "Method not implemented.")
 
         if self.access_limit is not None:
-            self.logger.log('Setting access limit to access_rights.%s (%s)' % (roles[self.access_limit], self.access_limit))
+            self.logger.info('Setting access limit to access_rights.%s (%s)' % (roles[self.access_limit], self.access_limit))
             self.authenticator.set_limit(self.access_limit)
         elif cherrypy.request.method in self.limit_per_method:
             self.authenticator.set_limit(self.limit_per_method[cherrypy.request.method])

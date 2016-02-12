@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import cherrypy
+import traceback
+
 from json import dumps
+
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
@@ -9,8 +12,6 @@ from json_layer.flow import flow
 from json_layer.action import action
 from tools.user_management import access_rights
 from tools.json import threaded_loads
-import traceback
-
 
 class FlowRESTResource(RESTResource):
     def __init__(self):
@@ -39,7 +40,7 @@ class FlowRESTResource(RESTResource):
         return to_be_created, to_be_removed
 
     def update_actions(self, c):
-        self.logger.log('Updating actions...')
+        self.logger.info('Updating actions...')
         adb = database('actions')
 
         # find all actions that belong to a campaign
@@ -199,7 +200,7 @@ class CreateFlow(FlowRESTResource):
         if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
             f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
 
-        self.logger.log('Creating new flow %s ...' % (f.get_attribute('_id')))
+        self.logger.info('Creating new flow %s ...' % (f.get_attribute('_id')))
 
         nc = f.get_attribute('next_campaign')
 
@@ -224,25 +225,6 @@ class CreateFlow(FlowRESTResource):
 
         # update all relevant campaigns with the "Next" parameter
         return self.update_derived_objects(flow().json() ,f.json())
-        #try:
-        #    self.update_campaigns(f.get_attribute('next_campaign'), f.get_attribute('allowed_campaigns'), cdb)
-        #except Exception as ex:
-        #    self.logger.error('Error: update_campaigns returned:' + str(ex))
-        #    return {"results": 'Error: update_campaigns returned:' + str(ex)}
-
-        # create all possible chained_campaigns from the next and allowed campaigns
-        #try:
-        #    self.update_chained_campaigns(f.get_attribute('next_campaign'),
-        #                                  f.get_attribute('allowed_campaigns'))
-        #except Exception as ex:
-        #    self.logger.error(
-        #        'Could not build derived chained_campaigns for flow {0}. Reason: {1}'.format(
-        #            f.get_attribute('_id'), ex))
-        #    return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
-
-        # save to database
-        #return {"results": True}
-
 
 class UpdateFlow(FlowRESTResource):
     def __init__(self):
