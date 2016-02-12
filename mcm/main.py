@@ -21,7 +21,7 @@ from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffSe
 from json_layer.sequence import sequence #to get campaign sequences
 from tools.settings import settings
 from tools.communicator import communicator
-from tools.logger import rest_formatter, mcm_formatter, logfactory
+from tools.logger import UserFilter, MemoryFilter
 
 import logging
 import logging.handlers
@@ -356,11 +356,13 @@ root.restapi.control.turn_off = TurnOffServer()
 root.restapi.control.reset_rest_counter = ResetRESTCounters()
 root.restapi.control.communicate = Communicate()
 
+##Define loggers
 
 log = cherrypy.log
 log.error_file = None
 log.access_file = None
 
+#ERROR log file
 maxBytes = getattr(log, "rot_maxBytes", 10000000)
 backupCount = getattr(log, "rot_backupCount", 1000)
 fname = getattr(log, "rot_error_file", "logs/error.log")
@@ -368,43 +370,54 @@ fname = getattr(log, "rot_error_file", "logs/error.log")
 logger = logging.getLogger()
 logger.setLevel(0)
 
-
-# set up custom PREP2 logger
 ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-ha.setFormatter(mcm_formatter())
+error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+
+usr_filt = UserFilter()
+ha.setFormatter(error_formatter)
+ha.addFilter(usr_filt)
 log.error_log.addHandler(ha)
-logger = logging.getLogger("mcm_error")
-logger.addHandler(ha)
+error_logger = logging.getLogger("mcm_error")
+error_logger.addHandler(ha)
 
 # set up injection logger
-logger = logging.getLogger("mcm_inject")
+##due to LogAdapter empty space for message will be added inside of it
+inject_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+inject_logger = logging.getLogger("mcm_inject")
 hi = logging.FileHandler('logs/inject.log', 'a')
-hi.setFormatter(mcm_formatter())
+hi.setFormatter(inject_formatter)
+inject_logger.addHandler(hi)
 
-logger.addHandler(hi)
-
-# Make a new RotatingFileHandler for the access log.
+#Access log file
 fname = getattr(log, "rot_access_file", "logs/access.log")
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+rest_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+
+mem_filt = MemoryFilter()
 h.setLevel(logging.DEBUG)
-h.setFormatter(rest_formatter())
+h.setFormatter(rest_formatter)
+h.addFilter(usr_filt)
+h.addFilter(mem_filt)
 log.access_log.addHandler(h)
-logfactory.set_verbosity(int(settings().get_value("log_verbosity")))
 
 def start():
-    logfactory.log(".mcm_rest_counter persistence opening")
+    error_logger.info(".mcm_rest_counter persistence opening")
+    error_logger.info("CherryPy version:%s" % (cherrypy.__version__))
     RESTResource.counter = shelve.open('.mcm_rest_counter')
 
 def stop():
-    logfactory.log(".mcm_rest_counter persistence closing")
+    error_logger.info(".mcm_rest_counter persistence closing")
     RESTResource.counter.close()
-    logfactory.log("Flushing communications")
+    error_logger.info("Flushing communications")
     com = communicator()
     com.flush(0)
 
 def maintain():
     if not cherrypy.engine.execv:
-        logfactory.log("going to maintenance")
+        error_logger.info("going to maintenance")
         subprocess.call("python2.6 main_tenance.py &", shell=True)
 
 cherrypy.engine.subscribe('start', start)
