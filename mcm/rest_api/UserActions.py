@@ -101,15 +101,17 @@ class GetUser(RESTResource):
 class SaveUser(RESTResource):
     def __init__(self):
         self.db_name = 'users'
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.generator_convener
 
     def PUT(self):
         """
         Save the information about a given user
         """
+
         db = database(self.db_name)
         data = threaded_loads(cherrypy.request.body.read().strip())
         new_user = user(data)
+        self.logger.debug("is trying to update entry for %s" % (new_user.get_attribute('username')))
         if '_rev' in data:
             new_user.update_history({'action': 'updated'})
             return dumps({"results": db.update(new_user.json())})
