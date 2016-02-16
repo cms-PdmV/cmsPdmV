@@ -45,7 +45,7 @@ class ChainedRequestPrepId(RESTResourceIndex):
             new_request.update_history({'action':'created'})
             creq_db.save(new_request.json())
             self.serial_number_cache[(campaign, pwg)] = sn
-            self.logger.info('New chain id: %s' % new_prepid, level='debug')
+            self.logger.info('New chain id: %s' % new_prepid)
 
             return new_prepid
 
