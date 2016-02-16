@@ -112,9 +112,6 @@ class request(json_base):
         self._json_base__schema['status'] = self.get_status_steps()[0]
         self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
-        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"),
-                {'handle': json_input['prepid']})
-
         # update self according to json_input
         self.setup()
         self.update(json_input)
@@ -2520,6 +2517,8 @@ done
         to_release = []
         config_db = database("configs")
         prepid = self.get_attribute('prepid')
+        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"),
+                {'handle': prepid})
         try:
             additional_config_ids = {}
             cfgs_to_upload = {}
