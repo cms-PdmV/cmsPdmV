@@ -17,8 +17,7 @@ class database:
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-            database.logger.error('Database "%s" was not found.' % (self.db),
-                    level='critical')
+            database.logger.error('Database "%s" was not found.' % (self.db))
 
         def __str__(self):
             return 'Error: Database ',  self.db,  ' was not found.'
@@ -26,8 +25,7 @@ class database:
     class DatabaseAccessError(Exception):
         def __init__(self,  db=''):
             self.db = str(db)
-            database.logger.error('Could not access database "%s".' % (self.db),
-                    level='critical')
+            database.logger.error('Could not access database "%s".' % (self.db))
 
         def __str__(self):
             return 'Error: Could not access database ',  self.db
@@ -114,20 +112,18 @@ class database:
 
     def __document_exists(self,  doc):
         if not doc:
-            self.logger.error('Trying to locate empty string.', level='warning')
+            self.logger.info('Trying to locate empty string.')
             return False
         id = ''
         if 'prepid' not in doc:
             if '_id' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.',
-                        level='critical')
+                self.logger.error('Document does not have an "_id" parameter.')
 
                 return False
             id = doc['_id']
         elif '_id' not in doc:
             if 'prepid' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.',
-                        level='critical')
+                self.logger.error('Document does not have an "_id" parameter.')
 
                 return False
             id = doc['prepid']
@@ -414,7 +410,7 @@ class database:
 
     def save(self, doc={}):
         if not doc:
-            self.logger.error('Tried to save empty document.', level='warning')
+            self.logger.error('Tried to save empty document.')
             return False
         try:
             saved = self.db.commitOne(doc)
@@ -513,15 +509,15 @@ class database:
             cached_sequence = self.__get_from_cache(sequence_id)
             if cached_sequence == current_update_seq:
                 result = self.__get_from_cache(cache_id)
-                self.logger.error('Accessing cache for:%s. Results : %s' % (
-                        cache_id, len(result)), level='warning')
+                self.logger.info('Accessing cache for:%s. Results : %s' % (
+                        cache_id, len(result)))
 
                 if result: return result
             else:
                 self.__save_to_cache(sequence_id, current_update_seq)
         try:
-            self.logger.error('Raw query to the view. Accessed view: %s/%s' % (
-                    view_doc, view_name), level='warning')
+            self.logger.info('Raw query to the view. Accessed view: %s/%s' % (
+                    view_doc, view_name))
 
             url = "_design/%s/_view/%s" % (view_doc, view_name)
             result = self.db.loadView(url, options)['rows']
