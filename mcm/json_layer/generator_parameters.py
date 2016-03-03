@@ -14,7 +14,8 @@ class generator_parameters(json_base):
         'filter_efficiency': -1.0,
         'filter_efficiency_error': -1.0,
         'match_efficiency': -1.0,
-        'match_efficiency_error': -1.0
+        'match_efficiency_error': -1.0,
+        'negative_weights_fraction': -1.0
     }
 
     #def __init__(self, author_name,  author_cmsid=-1,   author_inst_code='',  author_project='', json_input={} ):

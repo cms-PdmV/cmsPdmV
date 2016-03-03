@@ -958,6 +958,8 @@ testApp.directive("generatorParams", function($http){
     '        <dd class="clearfix">{{param["match_efficiency"]}}</dd>'+
     '        <dt>{{"match efficiency error"}}</dt>'+
     '        <dd class="clearfix">{{param["match_efficiency_error"]}}</dd>'+
+    '        <dt>{{"negative weights fraction"}}</dt>'+
+    '        <dd class="clearfix">{{param["negative_weights_fraction"]}}</dd>'+
     '        <dt>{{"author username"}}</dt>'+
     '        <dd class="clearfix">{{param["submission_details"]["author_username"]}}</dd>'+
     '      </dl>'+

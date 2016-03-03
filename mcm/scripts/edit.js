@@ -120,7 +120,8 @@ var genParamModalCtrl = function($scope, $http, $modal) {
       "Filter efficiency": "filter_efficiency",
       "Filter efficiency error": "filter_efficiency_error",
       "Match efficiency": "match_efficiency",
-      "Match efficiency error": "match_efficiency_error"
+      "Match efficiency error": "match_efficiency_error",
+      "Negative weights fraction": 'negative_weights_fraction'
   };
 
   $scope.openGenParam = function(action, index) {
