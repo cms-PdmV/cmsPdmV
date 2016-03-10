@@ -1169,6 +1169,8 @@ done
 
                     return False
                 output_text = stdout.read()
+                error_text = stderr.read()
+
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
                 changed = False
                 for line in output_text.split("\n"):
@@ -1181,6 +1183,9 @@ done
                         changed = True
                 if not changed:
                     self.logger.error("Could not change priority because %s" % output_text)
+                    if len(error_text) > 0:
+                        self.logger.error("Issue while changing priority for:%s\nstderr:\n%s" % (
+                                self.get_attribute('prepid'), error_text))
                     return False
             return self.modify_priority(new_priority)
 
