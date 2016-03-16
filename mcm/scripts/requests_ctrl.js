@@ -50,20 +50,20 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     if($location.search()["query"] === undefined){
 	//$location.search("query",'""');
     }
-    
+
   $scope.setFailure = function(status){
     $scope.update["success"] = false;
-    $scope.update["fail"] = true; 
-    $scope.update["status_code"] = status; 
+    $scope.update["fail"] = true;
+    $scope.update["status_code"] = status;
   };
 
   $scope.setSuccess = function(status){
 	  $scope.update["success"] = true;
-	  $scope.update["fail"] = false; 
-	  $scope.update["status_code"] = status; 
+	  $scope.update["fail"] = false;
+	  $scope.update["status_code"] = status;
 	  $scope.getData();
   };
-    
+
   $scope.parse_one = function( report ){
     $scope.action_status[report['prepid']] = report['results'];
     if ( report ['results'] == true)
@@ -174,7 +174,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.selectedCls = function(column) {
       return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
     };
-    
+
     $scope.changeSorting = function(column) {
       var sort = $scope.sort;
       if (sort.column == column) {
@@ -637,7 +637,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 
   $scope.linkify = function(inputText) {
     var replaceText, replacePattern1, replacePattern2, replacePattern3;
-    
+
     replacedText = inputText;
 
     //URLs starting with http://, https://, or ftp://
@@ -647,7 +647,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
     //    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
     //    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank"><i class="icon-shopping-cart"></i></a>');
-    
+
     //replace anything that is /.../DQM
     replacePattern3 = /.*,\s+(\/.*DQM)/gim;
     //replacePattern3 = /(\/.*DQM)/gim;
@@ -656,7 +656,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     else{
 	replacedText = replacedText.replace(replacePattern3, '<a href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset=$1;workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for $1" target="_blank"><i class="icon-th-large"></i></a>');}
 
-    return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'    
+    return replacedText.replace(/\n/g,"<br>")  //return formatted links with new line to <br> as HTML <P> tag skips '\n'
   }
 
   $scope.togglePane = function(val){
@@ -1107,6 +1107,7 @@ testApp.directive("loadFields", function($http, $location){
     }
   }
 });
+
 testApp.directive("customActorList", function($http){
   return {
     restrict: 'EA',
