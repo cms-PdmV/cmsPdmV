@@ -176,7 +176,7 @@
                    title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
-		 <a ng-href="/pmp/present?r={{data.prepid}}&m=true" rel="tooltip"
+                <a ng-href="/pmp/present?r={{data.prepid}}&m=true" rel="tooltip"
                    title="View growing statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-film"></i>
                 </a>
@@ -184,7 +184,7 @@
                    title="View historical statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-facetime-video"></i>
                 </a>
-		<input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
+                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
               </div>
@@ -471,6 +471,19 @@
         </a>
         <a ng-click="get_list();" rel="tooltip" ng-hide="role(1);" title="View only selected prepids" ng-href="#">
           <i class="icon-th-list"></i>
+        </a>
+        <a ng-href="/pmp/present?r={{selected_prepids.join()}}" rel="tooltip"
+          title="View announced statistics for selected prepids" target="_blank">
+          <i class="icon-picture"></i>
+        </a>
+        <a ng-href="/pmp/present?r={{selected_prepids.join()}}&m=true" rel="tooltip"
+           title="View growing statistics for selected prepids" target="_blank">
+          <i class="icon-film"></i>
+        </a>
+        <!-- TO-DO we should check if prepid is submitted/done status: how to? -->
+        <a ng-href="/pmp/historical?r={{selected_prepids.join()}}" rel="tooltip"
+           title="View historical statistics for selected prepids" target="_blank">
+          <i class="icon-facetime-video"></i>
         </a>
         <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </span>
