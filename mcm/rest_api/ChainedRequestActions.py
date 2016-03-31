@@ -715,6 +715,9 @@ class TaskChainDict(RESTResource):
                            "FilterEfficiency" : r.get_efficiency(),
                            "PrepID" : r.get_attribute('prepid')
                            }
+                if 'nThreads' in r.get_attribute('sequences')[si]:
+                    task_dict["Multicore"] = r.get_attribute('sequences')[si]['nThreads']
+
                 __list_of_steps = get_list_of_steps(r.get_attribute('sequences')[si]['step'])
 
                 if len(r.get_attribute('config_id')) > si:
@@ -863,7 +866,9 @@ class TaskChainDict(RESTResource):
             "TaskChain" : 0,
             "ProcessingVersion": 1,
             "RequestPriority" : 0,
-            "SubRequestType" : "MC"
+            "SubRequestType" : "MC",
+            ##we default to 1 in multicore global
+            "Multicore" : 1,
             }
 
         task = 1

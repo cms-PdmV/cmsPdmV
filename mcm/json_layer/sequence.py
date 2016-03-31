@@ -45,6 +45,8 @@ class sequence(json_base):
     def srepr(self,arg):
         if isinstance(arg, basestring): # Python 3: isinstance(arg, str)
             return arg.decode('utf-8')
+        elif isinstance(arg, int): ##in case we have int we should make it string for cmsDriver construction
+            return str(arg)
         try:
             return ",".join(self.srepr(x) for x in arg)
         except TypeError: # catch when for loop fails

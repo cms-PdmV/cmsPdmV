@@ -15,6 +15,22 @@ class request_to_wmcontrol:
         self.logger = logging.getLogger("mcm_error")
         pass
 
+    def get_min_cores(self, all_seq):
+        """
+        get min number of cores from all sequences so we submit standalone with min one
+        """
+        ##default to None
+        min_one = None
+
+        for seq in all_seq:
+            if 'nThreads' in seq:
+                if seq['nThreads'] < min_one or min_one == None:
+                    min_one = seq['nThreads']
+            else:
+                ##this should mean that a request is single core and we dont set nThreads
+                return None
+        return min_one
+
     def get_command(self, mcm_r, batchNumber, to_execute=False):
         command = ''
 
@@ -70,6 +86,9 @@ class request_to_wmcontrol:
         command += ' --user pdmvserv '
         command += ' --group ppd '
         command += ' --batch %s' % batchNumber
+        n_cores = self.get_min_cores(mcm_r.get_attribute('sequences'))
+        if n_cores:
+            command += ' --num-cores %s' % (n_cores)
 
         processString = mcm_r.get_attribute('process_string')
         processingString = mcm_r.get_processing_string(0)
