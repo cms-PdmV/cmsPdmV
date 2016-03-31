@@ -27,7 +27,7 @@ class request_to_wmcontrol:
                 if seq['nThreads'] < min_one or min_one == None:
                     min_one = seq['nThreads']
             else:
-                ##this should mean that a request is single core and we dont set nThreads
+                ##this means that a request is single core and we dont set nThreads
                 return None
         return min_one
 
