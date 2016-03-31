@@ -43,9 +43,10 @@ class UpdateMccm(RESTResource):
         """
         try:
             return dumps(self.update(cherrypy.request.body.read().strip()))
-        except:
+        except Exception as ex:
             self.logger.error('Failed to update an mccm from API')
-            return dumps({'results': False, 'message': 'Failed to update an mccm from API'})
+            return dumps({'results': False, 'message': 'Failed to update an mccm from API. Reason: %s' % (
+                    str(ex))})
 
     def update(self, body):
         data = threaded_loads(body)

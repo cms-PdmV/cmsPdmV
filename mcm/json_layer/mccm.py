@@ -32,6 +32,13 @@ class mccm(json_base):
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
         # update self according to json_input
+        if 'repetitions' in json_input:
+            if int(json_input['repetitions']) > 10:
+                self.logger.error("Issue in creating mccm... To many repetitions:%s" % (
+                        json_input['repetitions']))
+
+                raise Exception('More than 10 repetitions')
+
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
