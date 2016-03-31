@@ -55,6 +55,9 @@ class sequence(json_base):
     def to_command_line(self, attribute):
         if attribute == 'index':
             return ''
+        if attribute == 'nThreads':
+            if self.get_attribute('nThreads') <= 1:
+                return ''
         if self.get_attribute(attribute) == '':
             return ''
         elif self.get_attribute(attribute) == True:

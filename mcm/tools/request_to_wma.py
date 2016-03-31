@@ -88,7 +88,8 @@ class request_to_wmcontrol:
         command += ' --batch %s' % batchNumber
         n_cores = self.get_min_cores(mcm_r.get_attribute('sequences'))
         if n_cores:
-            command += ' --num-cores %s' % (n_cores)
+            ##conveert to int to check if user didnt input some characters
+            command += ' --num-cores %s' % (int(n_cores))
 
         processString = mcm_r.get_attribute('process_string')
         processingString = mcm_r.get_processing_string(0)

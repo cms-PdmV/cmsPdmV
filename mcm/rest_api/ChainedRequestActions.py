@@ -716,7 +716,7 @@ class TaskChainDict(RESTResource):
                            "PrepID" : r.get_attribute('prepid')
                            }
                 if 'nThreads' in r.get_attribute('sequences')[si]:
-                    task_dict["Multicore"] = r.get_attribute('sequences')[si]['nThreads']
+                    task_dict["Multicore"] = int(r.get_attribute('sequences')[si]['nThreads'])
 
                 __list_of_steps = get_list_of_steps(r.get_attribute('sequences')[si]['step'])
 
