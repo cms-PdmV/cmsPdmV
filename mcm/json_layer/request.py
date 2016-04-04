@@ -294,7 +294,7 @@ class request(json_base):
 
             if self.get_attribute('mcdb_id') < 0:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                        'The request should have a positive of null mcdb id')
+                        'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
 
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
