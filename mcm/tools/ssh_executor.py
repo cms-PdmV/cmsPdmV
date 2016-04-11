@@ -3,6 +3,7 @@ import time
 import os
 import re
 import logging
+import random
 
 from tools.logger import InjectionLogAdapter
 from threading import BoundedSemaphore
@@ -46,6 +47,7 @@ class ssh_executor:
             raise paramiko.AuthenticationException('Credentials could not be retrieved.')
 
         try:
+            time.sleep(2*random.randrange(8))
             self.ssh_client.connect(self.ssh_server,  port=self.ssh_server_port,  username=us,  password=pw)
         except paramiko.AuthenticationException as ex:
             self.logger.error('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex))
