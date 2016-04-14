@@ -20,6 +20,7 @@ class mccm(json_base):
         'pwg': '',
         'requests': [],
         'chains': [],
+        'tags': [],
         'repetitions': 1,
         'size': 0,
         'status': 'new',
@@ -36,9 +37,7 @@ class mccm(json_base):
             if int(json_input['repetitions']) > 10:
                 self.logger.error("Issue in creating mccm... To many repetitions:%s" % (
                         json_input['repetitions']))
-
                 raise Exception('More than 10 repetitions')
-
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
