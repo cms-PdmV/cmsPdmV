@@ -136,6 +136,9 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.isArray = function(obj){
     return angular.isArray(obj)
   };
+  $scope.findToken = function(tok){
+    $window.location.href = "requests?&tags="+tok.value
+  };
   $scope.generateAllRequests = function (input_data)
   {
     var tmp_url = [];

@@ -68,7 +68,7 @@ function resultCtrl($scope, $http, $location, $window){
       page = $location.search()["page"];
       $scope.list_page = parseInt(page);
     }
-    
+
     $scope.parseEditableObject = function(editable){
       _.each(editable, function(elem,key){
         if (elem == false){
@@ -81,7 +81,7 @@ function resultCtrl($scope, $http, $location, $window){
         }
       });
     };
-    
+
     $scope.delete_object = function(db, value){
       $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
         if (data["results"]){
@@ -93,7 +93,7 @@ function resultCtrl($scope, $http, $location, $window){
         alert('Error no.' + status + '. Could not delete object.');
       });
     };
-    
+
     $scope.booleanize_sequence = function(sequence){
       _.each(sequence, function(value, key){
         if (_.isString(value))
@@ -159,7 +159,7 @@ function resultCtrl($scope, $http, $location, $window){
         case "campaigns":
           _.each($scope.result["sequences"], function(sequence){
             _.each(sequence, function(subSequence, key){
-              if (key != "$$hashKey") //ignore angularhs hashkey 
+              if (key != "$$hashKey") //ignore angularhs hashkey
               {
                 $scope.booleanize_sequence(subSequence);
                 if (_.isString(subSequence["step"]))
@@ -175,8 +175,11 @@ function resultCtrl($scope, $http, $location, $window){
                   subSequence["eventcontent"] = subSequence["eventcontent"].split(",");
                 }
               }
-            });  
+            });
           });
+          break;
+        case "mccms":
+          $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
           break;
         default:
           break;
@@ -210,7 +213,7 @@ function resultCtrl($scope, $http, $location, $window){
     $scope.selectedCls = function(column) {
       return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
     };
-    
+
     $scope.changeSorting = function(column) {
       var sort = $scope.sort;
       if (sort.column == column){
@@ -245,7 +248,7 @@ function resultCtrl($scope, $http, $location, $window){
           if (codemirror != null){
             _.each(angular.element(codemirror),function(elem){
               elem.CodeMirror.refresh();
-            });          
+            });
           }
         },300);
         //});
@@ -281,7 +284,7 @@ function resultCtrl($scope, $http, $location, $window){
     promise.then(function(data){
 	    $scope.all_pwgs = data.data.results;
 	});
-    
+
   };
   $scope.addUserPWG = function(elem){
     if($scope.result["pwg"].indexOf(elem) == -1){
@@ -304,7 +307,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     require: 'ngModel',
     replace: true,
     restrict: 'E',
-    template: 
+    template:
     '<div>'+
     '  <ul>'+
     '    <li ng-repeat="elem in requests_data">'+
@@ -390,7 +393,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           scope.bad_sub_request = false;
           var __request = scope.requests_data[index];
           scope.requests_data[index] = [];
-          scope.requests_data[index].push(__request); 
+          scope.requests_data[index].push(__request);
           scope.requests_data[index].push(scope.tmpRequest[index]);
           scope.show_new[__request] = false;
         }
@@ -471,12 +474,13 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     }
   }
 });
+
 testApp.directive("customMccmChains", function($http, $rootScope){
   return {
     replace: false,
-    restrict: 'E',   
+    restrict: 'E',
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <ul>'+
     '   <li ng-repeat="elem in chain_data">'+

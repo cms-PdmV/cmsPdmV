@@ -4,6 +4,8 @@
         <title>Mccms page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
@@ -11,6 +13,7 @@
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
         <script type="text/javascript" src="scripts/angular.min.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
+        <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
            <script type="text/javascript">
@@ -67,7 +70,7 @@
       	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
-		<a rel="tooltip" title="Delete ticket" ng-click="remove(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
+                <a rel="tooltip" title="Delete ticket" ng-click="remove(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
                 <a rel="tooltip" title="Edit details" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(1);" target="_self"><i class="icon-wrench"></i></a>
                 <a rel="tooltip" title="Cancel ticket {{mccm_info.prepid}}" ng-click="cancel(mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-thumbs-down"></i></a>
                 <a rel="tooltip" title="Generate chains for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
@@ -99,10 +102,10 @@
               <div ng-switch-when="Notes" style="width:500px;overflow:auto">
                 <pre>{{mccm_info[data.db_name]}}</pre>
               </div>
-	      <div ng-switch-when="Special" align="center">
-		<i class="icon-ok" ng-show="mccm_info[data.db_name]"></i>
-		<i class="icon-remove" ng-show="!mccm_info[data.db_name]"></i>
-	      </div>
+              <div ng-switch-when="Special" align="center">
+                <i class="icon-ok" ng-show="mccm_info[data.db_name]"></i>
+                <i class="icon-remove" ng-show="!mccm_info[data.db_name]"></i>
+              </div>
               <div ng-switch-when="Name">
                 {{mccm_info[data.db_name]}}
                 <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
@@ -112,13 +115,16 @@
                     <div ng-repeat="elem in mccm_info[data.db_name]">
                       <li ng-hide="isArray(elem);">
                         <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
-			<a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
+                        <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
                       </li>
                       <li ng-show="isArray(elem);">
                         <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
                       </li>
                     </div>
                 </ul>
+              </div>
+              <div ng-switch-when="Tags">
+                  <tokenfield ng-disabled="true" on-click="findToken" tokens="mccm_info[data.db_name]"/>
               </div>
               <div ng-switch-when="History">
                 <div custom-history ng-model="mccm_info[data.db_name]"></div>
