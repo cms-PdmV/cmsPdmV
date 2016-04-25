@@ -170,10 +170,21 @@ class request(json_base):
         return editable
 
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
-        previous_one = request( rdb.get( previous_id ) )
-        previous_events = previous_one.get_attribute('total_events')
-        if previous_one.get_attribute('completed_events')>0:
-            previous_events = previous_one.get_attribute('completed_events')
+        previous_one = rdb.get(previous_id)
+        input_ds = self.get_ds_input(previous_one['reqmgr_name'][-1]['content']['pdmv_dataset_list'],
+                self.get_attribute('sequences'))
+
+        if input_ds == "":
+            ##in case our datatier selection failed we back up to default method
+            previous_events = previous_one['total_events']
+            if previous_one['completed_events'] > 0:
+                previous_events = previous_one['completed_events']
+        else:
+            previous_events = previous_one['reqmgr_name'][-1]["content"][
+                    "pdmv_dataset_statuses"][input_ds]["pdmv_evts_in_DAS"]
+
+        self.logger.debug("Possible input for validation:%s events: %s" % (input_ds, previous_events))
+
         total_events_should_be = previous_events * self.get_efficiency()
         margin = int(total_events_should_be *1.2)
         if self.get_attribute('total_events') > margin: ## safety factor of 20%
@@ -183,7 +194,7 @@ class request(json_base):
                         total_events_should_be, previous_events,
                         self.get_efficiency()))
         if and_set:
-            if self.get_attribute('total_events')>0:
+            if self.get_attribute('total_events') > 0:
                 ## do not overwrite the number for no reason
                 return
             from math import log10

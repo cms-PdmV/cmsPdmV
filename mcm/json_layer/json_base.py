@@ -2,6 +2,7 @@
 
 import cherrypy
 import logging
+import traceback
 
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
@@ -398,6 +399,48 @@ class json_base:
             if not isinstance(self.__json[key], type(self.__schema[key])):
                 return False
         return True
+
+    def get_ds_input(self, __output_dataset, __seq):
+        try:
+            self.logger.info("get_ds_input output_ds: %s" % (__output_dataset))
+            input_ds = ""
+            possible_dt_inputs = settings().get_value('datatier_input')
+            ##we take sequence 1step datetier
+            ## check if "step" is a string -> some DR requests has single step string with , in it...
+            ## some DR requests has it.... most probably the generated ones
+
+            if isinstance(__seq[0]["step"], basestring):
+                __step = __seq[0]["step"].split(",")[0].split(":")[0]
+            else:
+                __step = __seq[0]["step"][0].split(":")[0]
+
+            if __step in possible_dt_inputs:
+                __possible_inputs = possible_dt_inputs[__step]
+                ## highest priority is first.. we should take acording output_ds
+                __prev_output = __output_dataset
+                __prev_tiers = [el.split("/")[-1] for el in __prev_output]
+
+                for elem in __possible_inputs:
+                    if elem in __prev_tiers:
+                        input_ds = __prev_output[__prev_tiers.index(elem)]
+                        ##dirty stuff
+                        self.logger.info("get_ds_input found a possible DS: %s" % (input_ds))
+                        self.logger.info("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
+                        break
+            else:
+                ##if step is not defined in dictionary -> we default to previous logic
+                input_ds = __output_dataset[0]
+            ##if we didn't find anything in for loop above, fall back to previous
+            if not input_ds:
+                if len(__output_dataset) > 0:
+                    ##in case the output_dataset is ""
+                    input_ds = __output_dataset[0]
+
+            self.logger.info("get_ds_input returns input_ds: %s" % (input_ds))
+            return input_ds
+        except Exception as ex:
+            self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
+            return ""
 
 
 class submission_details(json_base):
