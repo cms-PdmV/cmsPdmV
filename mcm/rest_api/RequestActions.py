@@ -618,7 +618,7 @@ class GetSetupForRequest(RESTResource):
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.generator_convener
 
     def DELETE(self, *args):
         """
@@ -633,42 +633,57 @@ class DeleteRequest(RESTResource):
         db = database(self.db_name)
         crdb = database('chained_requests')
         adb = database('actions')
-        mcm_r = request(db.get( pid))
+        mcm_r = request(db.get(pid))
+
+        if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
+            ##if request has a member_of_campaign we user role to be equal or more than
+            ## prod_manager, so we have to do check manually and return False
+            return {"prepid": pid, "results": False,
+                    "message": "Only prod_managers and up can delete already chained requests"}
 
         if mcm_r.get_attribute('status') != 'new':
-            return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) in status %s" %( pid, mcm_r.get_attribute('status'))}
+            return {"prepid": pid, "results": False,
+                    "message": "Not possible to delete a request (%s) in status %s" % (
+                            pid, mcm_r.get_attribute('status'))}
 
         in_chains = mcm_r.get_attribute('member_of_chain')
         for in_chain in in_chains:
-            mcm_cr = chained_request( crdb.get(in_chain) )
+            mcm_cr = chained_request(crdb.get(in_chain))
             try:
                 action_item = mcm_cr.retrieve_original_action_item(adb)
                 ## this is a valid action item
-                return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is part of a valid chain (%s)" %( pid, in_chain)}
+                return {"prepid": pid, "results": False,
+                        "message": "Not possible to delete a request (%s) that is part of a valid chain (%s)" % (
+                                pid, in_chain)}
+
             except:
                 ## this is not a valid action item
                 # further check
-                if mcm_cr.get_attribute('chain')[-1]!= pid:
+                if mcm_cr.get_attribute('chain')[-1] != pid:
                     ## the pid is not the last of the chain
-                    return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (pid, in_chain)}
-                if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index( pid ):
+                    return {"prepid": pid, "results": False,
+                            "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
+                                    pid, in_chain)}
+
+                if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index(pid):
                     ## we are currently processing that request
-                    return {"prepid" : pid, "results": False,"message":"Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (pid, mcm_cr.get_attribute('step'), in_chain)}
+                    return {"prepid": pid, "results": False,
+                            "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
+                                        pid, mcm_cr.get_attribute('step'), in_chain)}
+
                 ## found a chain that deserves the request to be pop-ep out from the end
                 new_chain = mcm_cr.get_attribute('chain')
-                new_chain.remove( pid )
+                new_chain.remove(pid)
                 mcm_cr.set_attribute('chain', new_chain)
-                mcm_cr.update_history({'action':'remove request', 'step': pid})
+                mcm_cr.update_history({'action': 'remove request', 'step': pid})
                 mcm_cr.reload()
-
 
         # delete actions !
         self.delete_action(pid)
 
         # delete chained requests !
         #self.delete_chained_requests(self,pid):
-
-        return {"prepid" : pid, "results": db.delete(pid)}
+        return {"prepid": pid, "results": db.delete(pid)}
 
     def delete_action(self, pid):
         adb = database('actions')
