@@ -42,8 +42,8 @@ class SaveSetting(RESTResource):
         try:
             res = self.update(cherrypy.request.body.read().strip())
             return dumps(res)
-        except:
-            self.logger.error('Failed to update a setting from API')
+        except Exception as ex:
+            self.logger.error('Failed to update a setting from API. Reason: %s' % (str(ex)))
             return dumps({'results': False, 'message': 'Failed to update a setting from API'})
 
     def update(self, body):
