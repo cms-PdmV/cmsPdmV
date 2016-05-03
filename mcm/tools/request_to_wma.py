@@ -128,12 +128,7 @@ class request_to_wmcontrol:
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
             command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
 
-            if mcm_r.get_attribute('mcdb_id') <= 0:
-                numberOfEventsPerJob = mcm_r.numberOfEventsPerJob()
-                if not numberOfEventsPerJob:
-                    raise ValueError('Number of events per job could not be retrieved')
-                command += ' --events-per-job %s' % numberOfEventsPerJob
-            else:
+            if mcm_r.get_attribute('mcdb_id') > 0:
                 command += ' --lhe '
                 if not processString:
                     processString = ''

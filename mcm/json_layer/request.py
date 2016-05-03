@@ -293,16 +293,6 @@ class request(json_base):
                     'The number of requested event is invalid: Negative')
 
         if self.get_wmagent_type() == 'LHEStepZero':
-            if self.get_attribute('mcdb_id') == 0:
-                nevents_per_job = self.numberOfEventsPerJob()
-                if not nevents_per_job:
-                    raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                            'The number of events per job cannot be retrieved for lhe production')
-
-                elif nevents_per_job >= self.get_attribute('total_events'):
-                    raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                            'The number of events per job is greater or equal to the number of events requested')
-
             if self.get_attribute('mcdb_id') < 0:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                         'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
@@ -1842,17 +1832,6 @@ done
         else:
             for line in []:
                 yield line
-
-    def numberOfEventsPerJob(self):
-        fragmnt_lines = self.parse_fragment()
-        for line in fragmnt_lines:
-            if 'nEvents' in line:
-                try:
-                    numbers = re.findall(r'[0-9]+', line)
-                    return int(numbers[len(numbers) - 1])
-                except:
-                    return None
-        return None
 
     def textified(self):
         l_type = locator()
