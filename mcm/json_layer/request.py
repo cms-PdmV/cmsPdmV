@@ -171,8 +171,11 @@ class request(json_base):
 
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = rdb.get(previous_id)
-        input_ds = self.get_ds_input(previous_one['reqmgr_name'][-1]['content']['pdmv_dataset_list'],
-                self.get_attribute('sequences'))
+        input_ds = ""
+
+        if len(previous_one['reqmgr_name']) > 0:
+            input_ds = self.get_ds_input(previous_one['reqmgr_name'][-1]['content']['pdmv_dataset_list'],
+                    self.get_attribute('sequences'))
 
         if input_ds == "":
             ##in case our datatier selection failed we back up to default method
