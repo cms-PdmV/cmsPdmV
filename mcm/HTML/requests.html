@@ -96,7 +96,7 @@
           <td ng-repeat="value in requests_defaults" ng-if="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
-                <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(2);" title="Delete request" ng-href="#">
+                <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(1);" title="Delete request" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <!--[IF IE]>
