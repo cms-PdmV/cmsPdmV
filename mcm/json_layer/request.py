@@ -169,12 +169,19 @@ class request(json_base):
 
         return editable
 
+    def get_events_for_dataset(self, workflows, dataset):
+        self.logger.debug("Running num_events search for dataset")
+        for elem in workflows:
+            if dataset in elem["content"]["pdmv_dataset_statuses"]:
+                return elem["content"]["pdmv_dataset_statuses"][dataset]["pdmv_evts_in_DAS"]
+        ##TO-DO do we need to put a default return? As all the time there must be a DS
+
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = rdb.get(previous_id)
         input_ds = ""
 
         if len(previous_one['reqmgr_name']) > 0:
-            input_ds = self.get_ds_input(previous_one['reqmgr_name'][-1]['content']['pdmv_dataset_list'],
+            input_ds = self.get_ds_input(previous_one['output_dataset'],
                     self.get_attribute('sequences'))
 
         if input_ds == "":
@@ -183,8 +190,8 @@ class request(json_base):
             if previous_one['completed_events'] > 0:
                 previous_events = previous_one['completed_events']
         else:
-            previous_events = previous_one['reqmgr_name'][-1]["content"][
-                    "pdmv_dataset_statuses"][input_ds]["pdmv_evts_in_DAS"]
+            previous_events = self.get_events_for_dataset(previous_one['reqmgr_name'],
+                    input_ds)
 
         self.logger.debug("Possible input for validation:%s events: %s" % (input_ds, previous_events))
 
