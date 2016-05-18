@@ -245,6 +245,10 @@ class chained_request(json_base):
                     __sub_req = request(reqDB.get(to_submit_req))
                     with locker.lock('{0}-wait-for-approval'.format(to_submit_req)):
                         __sub_ret = __sub_req.approve()
+                        saved2 = reqDB.save(__sub_req.json())
+                        self.logger.debug("SUPERFLOW to_submit_req current status: %s aprroval: %s saved2: %s" % (
+                                __sub_req.get_attribute("status"),
+                                __sub_req.get_attribute("approval"), saved2))
 
                     return {"results" : True, "message" : "SUPERFLOW finished successfully",
                             "prepid" : chainid}
@@ -258,7 +262,7 @@ class chained_request(json_base):
 
 
         except Exception as ex:
-            self.logger.info("Error in chained_request flow: %s" % (str(ex)))
+            self.logger.info("Error in chained_request flow: %s" % (traceback.format_exc()))
             return {"prepid" : chainid, "results" : False, "message" : str(ex)}
 
     def request_join(self, req):
