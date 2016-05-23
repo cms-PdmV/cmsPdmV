@@ -1,4 +1,5 @@
 from json_base import json_base
+from tools.settings import settings
 
 class user(json_base):
 
@@ -20,3 +21,14 @@ class user(json_base):
         self.update(json_input)
         self.validate()
 
+    def get_pwgs(self):
+        """
+        return all accessible PWGs for the user
+        """
+        all_pwgs = settings().get_value('pwg')
+        if self.get_attribute('role') in ['production_manager',
+                'administrator', 'generator_convener']:
+
+            return all_pwgs
+        else:
+            return self.get_attribute('pwg')

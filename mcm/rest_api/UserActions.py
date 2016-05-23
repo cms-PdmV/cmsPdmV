@@ -63,13 +63,9 @@ class GetUserPWG(RESTResource):
         user_name = args[0]
         if db.document_exists(user_name):
             mcm_user = user(db.get(args[0]))
-            if mcm_user.get_attribute('role') in ['production_manager', 'administrator', 'generator_convener']:
-                return dumps({"results": all_pwgs})
-            else:
-                return dumps({"results": mcm_user.get_attribute('pwg')})
+            return dumps({"results": mcm_user.get_pwgs()})
         else:
             return dumps({"results": []})
-
 
 class GetAllUsers(RESTResource):
     def __init__(self):
