@@ -176,6 +176,11 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     };
 
     $scope.changeSorting = function(column) {
+      if (column == "filter_efficiency")
+      {
+        // when switching to filter_efficienty the actual value is in generator parameters
+        column = "generator_parameters.slice(-1)[0]['filter_efficiency']"
+      }
       var sort = $scope.sort;
       if (sort.column == column) {
         sort.descending = !sort.descending;
@@ -187,10 +192,13 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 
     $scope.parseColumns = function () {
         if ($scope.result.length != 0) {
-            columns = _.keys($scope.result[0]).sort();
+            columns = _.keys($scope.result[0]);
+            columns.push("filter_efficiency");
+            columns.sort();
             rejected = _.reject(columns, function (v) {
                 return v[0] == "_";
             }); //check if charat[0] is _ which is couchDB value to not be shown
+
             $scope.columns = _.sortBy(rejected, function (v) {
                 return v;
             });  //sort array by ascending order
@@ -210,11 +218,11 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
                     elem.select = false;
                 });
                 _.each($location.search()['fields'].split(','), function (column) {
-                    _.each($scope.requests_defaults, function (elem) {
-                        if (elem.db_name == column) {
-                            elem.select = true;
-                        }
-                    });
+                  _.each($scope.requests_defaults, function (elem) {
+                    if (elem.db_name == column) {
+                      elem.select = true;
+                    }
+                  });
                 });
             }
         }

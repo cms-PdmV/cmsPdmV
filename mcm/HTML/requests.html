@@ -359,6 +359,9 @@
                 {{data[value.db_name]}}
                 <a class="label label-info" ng-show="data[value.db_name]" rel="tooltip" title="seconds" ng-href="#">s</a>
               </div>
+              <div ng-switch-when="Filter efficiency" align="center">
+                {{data["generator_parameters"].slice(-1)[0]["filter_efficiency"]}}
+              </div>
               <div ng-switch-default align="center">{{data[value.db_name]}}</div>
             </div>
           </td>
