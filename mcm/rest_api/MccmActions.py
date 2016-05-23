@@ -6,6 +6,7 @@ from json import dumps
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
+from json_layer.user import user
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
@@ -133,7 +134,7 @@ class CreateMccm(RESTResource):
 
 class CancelMccm(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.production_manager
+        self.access_limit = access_rights.generator_contact
 
     def GET(self,  *args):
         """
@@ -141,10 +142,24 @@ class CancelMccm(RESTResource):
         """
         if not args:
             return dumps({"results": False, "message": "No id given to cancel."})
+
         db = database('mccms')
-        mcm_mccm = mccm(db.get( args[0] ))
+        udb = database('users')
+
+        mcm_mccm = mccm(db.get(args[0]))
+        curr_user = user(udb.get(mcm_mccm.current_user))
+
+        self.logger.info("Canceling an mccm: %s" % (args[0]))
+
         if mcm_mccm.get_attribute('status') == 'done':
+            self.logger.info("You cannot cancel 'done' mccm ticket")
             return dumps({"results": False, "message": "Cannot cancel done tickets"})
+
+        if not mcm_mccm.get_attribute("pwg") in curr_user.get_pwgs():
+            self.logger.info("User's PWGs: %s doesnt include ticket's PWG: %s" % (
+                    curr_user.get_pwgs(), mcm_mccm.get_attribute("pwg")))
+
+            return dumps({"results": False, "message": "You cannot cancel ticket with different PWG than yours"})
 
         mcm_mccm.set_attribute('status','cancelled')
         mcm_mccm.update_history({'action': 'cancelled'})
