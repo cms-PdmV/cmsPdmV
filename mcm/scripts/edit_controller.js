@@ -497,7 +497,9 @@ testApp.directive("customMccmChains", function($http, $rootScope){
     '        <i class="icon-plus" ng-hide="add_chain"></i>'+
     '        <i class="icon-minus" ng-show="add_chain"></i>'+
     '      </a>'+
-    '      <select ng-model="new_chain" ng-show="add_chain" class="input-xxlarge" ng-options="elem as alias_map[elem] for elem in list_of_chained_campaigns"></select>'+
+    '      <select id="mySel" class="input-xxlarge" ng-model="new_chain" ng-show="add_chain">'+
+    '        <option ng-repeat="elem in list_of_chained_campaigns track by $index" value="{{elem}}">{{alias_map[elem]}}</option>'+
+    '      </select>'+
     '      <a ng-href="#">'+
     '        <i class="icon-plus-sign" ng-click="pushNewMcMChain()" ng-show="add_chain"></i>'+
     '      </a>'+
@@ -523,6 +525,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         scope.alias_map = {};
         scope.original_chain_list = [];
         scope.getChains(scope.root_campaign);
+        scope.show_error = false;
       };
       scope.toggleAddNewChain = function(){
         if(scope.add_chain)
@@ -542,6 +545,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
               if (elem.alias != "") //lets construct alais map
               {
                 scope.alias_map[elem.prepid] = elem.alias;
+                // we need to store original prepid when fetching requests!
                 scope.alias_map[elem.alias] = elem.prepid;
               }else{
                 scope.alias_map[elem.prepid] = elem.prepid;
@@ -564,6 +568,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
             scope.original_chain_list = _.uniq(scope.original_chain_list);
             scope.list_of_chained_campaigns.sort(); //sort list to be in ascending order
             scope.new_chain = scope.list_of_chained_campaigns[0];
+            $("#mySel").select2({dropdownAutoWidth : true});
           });
         }
       };
@@ -582,6 +587,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
       }
       scope.pushNewMcMChain = function()
       {
+        scope.show_error = false;
         scope.chain_data.push(scope.alias_map[scope.new_chain]);
         if (scope.chain_data[0].indexOf('_') != -1)
         {
