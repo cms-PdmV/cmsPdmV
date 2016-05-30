@@ -543,11 +543,15 @@ class GetFragmentForRequest(RESTResource):
         if not args:
             self.logger.error('No arguments were given')
             return dumps({"results": 'Error: No arguments were given.'})
+
+        ##TO-DO: do we need it? We should keep it fow backward compatibility
         v = False
         if len(args) > 1:
             v = True
+
         db = database(self.db_name)
         res = self.get_fragment(db.get(prepid=args[0]), v)
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(res) if isinstance(res, dict) else res
 
     def get_fragment(self, data, view):
@@ -557,23 +561,7 @@ class GetFragmentForRequest(RESTResource):
             return {"results": ''}
 
         fragmentText = mcm_req.get_attribute('fragment')
-        if view:
-            fragmentHTML = "<pre>"
-            fragmentHTML += fragmentText
-            fragmentHTML += "</pre>"
-            return fragmentHTML
-            # fragmentHTML = ""
-            # for line in fragmentText.split('\n'):
-            #     blanks = ""
-            #     while line.startswith(' '):
-            #         blanks += "&nbsp;"
-            #         line = line[1:]
-            #     line = blanks + line
-            #     fragmentHTML += line.replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;") + "<br>"
-            # return fragmentHTML
-        else:
-            return fragmentText
-
+        return fragmentText
 
 class GetSetupForRequest(RESTResource):
     def __init__(self, mode='setup'):
