@@ -253,6 +253,7 @@ class InspectChainedCampaignsRest(RESTResource):
                 yield dumps({'prepid': ccid, 'cr_len': len(crlist)}, indent=2)
 
                 for cr in crlist:
+                    time.sleep(0.5)
                     mcm_cr = chained_request(cr)
                     if mcm_cr:
                         __inspect_ret = mcm_cr.inspect()

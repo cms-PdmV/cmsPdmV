@@ -131,9 +131,6 @@ class database:
         return self.__id_exists(prepid=id)
 
     def document_exists(self, prepid=''):
-    	self.logger.info('Checking existence of document "%s" in "%s"...' % (
-                prepid,self.db_name))
-
         return self.__id_exists(prepid)
 
     def __id_exists(self,  prepid=''):

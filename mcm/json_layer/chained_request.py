@@ -1,5 +1,4 @@
 import json
-import traceback
 import time
 
 from json_base import json_base
@@ -122,7 +121,6 @@ class chained_request(json_base):
         ##we work only starting from current step
         #+1 so we dont want to take current campaign
         for chain in __cc["campaigns"][__curr_step+1:]:
-            self.logger.info("##DEBUG current flow %s" % (chain))
             __ongoing_flow = flowDB.get(chain[1])
             if __ongoing_flow:
             ##check in case flow doesnt exists
@@ -168,7 +166,6 @@ class chained_request(json_base):
                     db.update(self.json())
                     ## toggle the last request forward
                     __ret = self.toggle_last_request()
-                    self.logger.info("toggle_last returned: %s" % (__ret))
                     return {"prepid" : chainid, "results" : True}
             else:
                 ##we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
@@ -184,7 +181,6 @@ class chained_request(json_base):
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
                         block_white_list, check_stats=check_stats)
 
-                self.logger.info("SUPERFLOW after flowing chained_request: %s" % (ret_flow))
                 if ret_flow:
                     ##force updating the chain_request document in DB and here
                     self.reload()
@@ -235,11 +231,7 @@ class chained_request(json_base):
                             return {"results" : False,
                                     "message" : "Could not save request after approval"}
 
-                        self.logger.info("SUPERFLOW cr.flow approval ret: %s" % (ret))
-
                     to_submit_req = self.get_attribute("chain")[__curr_step + __submit_step]
-                    self.logger.info("SUPERFLOW will try to approve/submit a request: %s" % (
-                            to_submit_req))
 
                     ##if we reached up to here there is no point to check if request exists
                     __sub_req = request(reqDB.get(to_submit_req))
@@ -262,7 +254,7 @@ class chained_request(json_base):
 
 
         except Exception as ex:
-            self.logger.info("Error in chained_request flow: %s" % (traceback.format_exc()))
+            self.logger.info("Error in chained_request flow: %s" % (str(ex)))
             return {"prepid" : chainid, "results" : False, "message" : str(ex)}
 
     def request_join(self, req):

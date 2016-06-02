@@ -402,7 +402,6 @@ class json_base:
 
     def get_ds_input(self, __output_dataset, __seq):
         try:
-            self.logger.info("get_ds_input output_ds: %s" % (__output_dataset))
             input_ds = ""
             possible_dt_inputs = settings().get_value('datatier_input')
             ##we take sequence 1step datetier
@@ -424,8 +423,8 @@ class json_base:
                     if elem in __prev_tiers:
                         input_ds = __prev_output[__prev_tiers.index(elem)]
                         ##dirty stuff
-                        self.logger.info("get_ds_input found a possible DS: %s" % (input_ds))
-                        self.logger.info("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
+                        # self.logger.info("get_ds_input found a possible DS: %s" % (input_ds))
+                        # self.logger.info("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
                         break
             else:
                 ##if step is not defined in dictionary -> we default to previous logic
