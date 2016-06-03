@@ -1869,3 +1869,94 @@ class GetUniqueValues(RESTResource):
         data = db.raw_view_query(view_doc="unique", view_name=field_name, options={"group":True})
         unique_list = [str(elem["key"]) for elem in data]
         return {"results": unique_list}
+
+class PutToForceComplete(RESTResource):
+
+    def __init__(self):
+        self.access_limit = access_rights.generator_contact
+
+    def PUT(self):
+        """
+        Put a request to a force complete list
+        """
+        data = threaded_loads(cherrypy.request.body.read().strip())
+        pid = data['prepid']
+
+        reqDB = database('requests')
+        settingsDB = database('settings')
+
+        self.logger.info('Will try to add to forcecomplete a request: %s' % (pid))
+
+        req = request(reqDB.get(pid))
+        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+
+
+        ##do some checks
+        if req.get_attribute('status') != 'submitted':
+            self.logger.info('%s is not submitted for forcecompletion' % (pid))
+            message = 'Cannot add a request which is not submitted'
+            return dumps({"prepid": pid, "results": False, 'message': message})
+
+        if pid in forcecomplete_list['value'].keys():
+            self.logger.info('%s already in forcecompletion' % (pid))
+            message = 'Request already in forcecomplete list'
+            return dumps({"prepid": pid, "results": False, 'message': message})
+
+        forcecomplete_list['value'][pid] = req.get_attribute('reqmgr_name')[-1]['name']
+        ret = settingsDB.update(forcecomplete_list)
+
+        ##lets see if we succeeded in saving it to settings DB
+        if ret:
+            req.update_history({'action': 'forcecomplete'})
+            reqDB.save(req.json())
+        else:
+            self.logger.error('%s failed to save forcecomplete in settings DB' % (pid))
+            message = 'Failed to save forcecomplete to DB'
+            return dumps({"prepid": pid, "results": False, 'message': message})
+
+        return dumps({"prepid": pid, "results": True,
+                'message' :'Successfully added request to force complete list'})
+
+class ForceCompleteMethods(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.generator_contact
+        self.access_user = settings().get_value('allowed_to_acknowledge')
+
+    def GET(self):
+        """
+        Get a list of workflows for force complete
+        """
+        settingsDB = database('settings')
+
+        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+
+        return dumps(forcecomplete_list['value'].values())
+
+    def DELETE(self, *args):
+        """
+        Delete a request from forcecomplete list
+        """
+        if not args:
+            self.logger.error('No arguments were given to delete forcecomplete')
+            return dumps({"results": False})
+
+        pid = args[0]
+        settingsDB = database('settings')
+
+        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+
+        if pid not in forcecomplete_list['value'].keys():
+            message = 'Request not in forcecomplete list'
+            return dumps({"prepid": pid, "results": False, 'message': message})
+
+        self.logger.info("Deleting a request%s from forcecomplete" % (pid))
+        del(forcecomplete_list['value'][pid])
+        ret = settingsDB.update(forcecomplete_list)
+
+        if ret:
+            message = "Successfully removed request form forcecomplete"
+            return dumps({"prepid": pid, "results": True,
+                'message' :message})
+        else:
+            message = 'Failed to save forcecomplete to DB'
+            return dumps({"prepid": pid, "results": False, 'message': message})

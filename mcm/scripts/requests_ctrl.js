@@ -366,7 +366,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
 	  });
   };
 
-  $scope.inspect_many = function(){ 
+  $scope.inspect_many = function(){
     $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+$scope.selected_prepids.join()}).success(function(data,status){
       $scope.parse_report(data,status);
 	  }).error(function(data,status){
@@ -707,6 +707,22 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $scope.upload({"contents": imaginary_file.join("\n")});
       $scope.file_was_uploaded = false;
     }
+  };
+  $scope.add_to_focecomplete = function(prepid)
+  {
+    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/add_forcecomplete', data: {'prepid': prepid}}).success(function(data,status){
+      $scope.update["success"] = data["results"];
+      $scope.update["fail"] = !data["results"];
+      $scope.update["status_code"] = status;
+      if (data["message"])
+      {
+        $scope.update["status_code"] = data["message"];
+      }
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
   };
 }
 
