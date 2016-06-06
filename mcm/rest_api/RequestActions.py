@@ -1897,12 +1897,12 @@ class PutToForceComplete(RESTResource):
             message = 'Cannot add a request which is not submitted'
             return dumps({"prepid": pid, "results": False, 'message': message})
 
-        if pid in forcecomplete_list['value'].keys():
+        if pid in forcecomplete_list['value']:
             self.logger.info('%s already in forcecompletion' % (pid))
             message = 'Request already in forcecomplete list'
             return dumps({"prepid": pid, "results": False, 'message': message})
 
-        forcecomplete_list['value'][pid] = req.get_attribute('reqmgr_name')[-1]['name']
+        forcecomplete_list['value'].append(pid)
         ret = settingsDB.update(forcecomplete_list)
 
         ##lets see if we succeeded in saving it to settings DB
@@ -1930,7 +1930,8 @@ class ForceCompleteMethods(RESTResource):
 
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
 
-        return dumps(forcecomplete_list['value'].values())
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return dumps(forcecomplete_list['value'], indent=4)
 
     def DELETE(self, *args):
         """
@@ -1945,18 +1946,18 @@ class ForceCompleteMethods(RESTResource):
 
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
 
-        if pid not in forcecomplete_list['value'].keys():
+        if pid not in forcecomplete_list['value']:
             message = 'Request not in forcecomplete list'
             return dumps({"prepid": pid, "results": False, 'message': message})
 
         self.logger.info("Deleting a request%s from forcecomplete" % (pid))
-        del(forcecomplete_list['value'][pid])
+        forcecomplete_list['value'].remove(pid)
         ret = settingsDB.update(forcecomplete_list)
 
         if ret:
             message = "Successfully removed request form forcecomplete"
             return dumps({"prepid": pid, "results": True,
-                'message' :message})
+                'message': message})
         else:
             message = 'Failed to save forcecomplete to DB'
             return dumps({"prepid": pid, "results": False, 'message': message})
