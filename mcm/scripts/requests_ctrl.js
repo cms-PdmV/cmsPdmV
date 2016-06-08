@@ -511,6 +511,9 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
                   case "clone":
                       $scope.clone(prepid);
                       break;
+                  case "forcecomplete":
+                      $scope.add_to_focecomplete(prepid);
+                      break;
                   default:
                       break;
               }
@@ -710,13 +713,20 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   };
   $scope.add_to_focecomplete = function(prepid)
   {
+    // PUT a request to force complete list
     $http({method:'PUT', url:'restapi/'+$scope.dbName+'/add_forcecomplete', data: {'prepid': prepid}}).success(function(data,status){
       $scope.update["success"] = data["results"];
       $scope.update["fail"] = !data["results"];
       $scope.update["status_code"] = status;
       if (data["message"])
       {
+        // if we have an actual message returned display it instead of status code
         $scope.update["status_code"] = data["message"];
+      }
+      if ($scope.update["success"])
+      {
+        // reload the data to display history changes
+        $scope.getData();
       }
     }).error(function(status){
       $scope.update["success"] = false;
