@@ -16,6 +16,7 @@ from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
 from json_layer.action import action
 from json_layer.campaign import campaign
+from json_layer.user import user
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
@@ -1884,10 +1885,12 @@ class PutToForceComplete(RESTResource):
 
         reqDB = database('requests')
         settingsDB = database('settings')
+        udb = database('users')
 
         self.logger.info('Will try to add to forcecomplete a request: %s' % (pid))
 
         req = request(reqDB.get(pid))
+        curr_user = user(udb.get(req.current_user))
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
 
 
@@ -1895,6 +1898,21 @@ class PutToForceComplete(RESTResource):
         if req.get_attribute('status') != 'submitted':
             self.logger.info('%s is not submitted for forcecompletion' % (pid))
             message = 'Cannot add a request which is not submitted'
+            return dumps({"prepid": pid, "results": False, 'message': message})
+
+        # we want users to close only theirs PWGs
+        if not req.get_attribute("pwg") in curr_user.get_pwgs():
+            self.logger.info("User's PWG:%s is doesnt have requests PWG:%s" % (
+                    curr_user.get_pwgs(), req.get_attribute("pwg")))
+
+            message = "User's PWG:%s is doesnt have requests PWG:%s" % (
+                    ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
+
+            return dumps({"prepid": pid, "results": False, 'message': message})
+        #check if request if at least 50% complete
+        if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5:
+            self.logger.info('%s is below 50percent completion' % (pid))
+            message = 'Request is below 50 percent completion'
             return dumps({"prepid": pid, "results": False, 'message': message})
 
         if pid in forcecomplete_list['value']:
