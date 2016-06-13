@@ -402,7 +402,7 @@ class database:
             self.db.commit()
             return True
         except Exception as ex:
-            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
+            self.logger.error('Could not save_all changes to database. Reason: %s' % (ex))
             return False
 
     def save(self, doc={}):
@@ -413,7 +413,7 @@ class database:
             saved = self.db.commitOne(doc)
             return True
         except Exception as ex:
-            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
+            self.logger.error('Could not save changes %s to database. Reason: %s' % (doc['_id'], ex))
             return False
 
     def count(self):
