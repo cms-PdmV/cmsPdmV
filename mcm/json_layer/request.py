@@ -1594,9 +1594,13 @@ done
                     'name': stats_r['pdmv_request_name']})
 
             changes_happen = True
+
         if len(mcm_rr):
             tiers_expected = self.get_tiers()
-            collected = self.collect_outputs(mcm_rr, tiers_expected, skip_check=forced)
+            collected = self.collect_outputs(mcm_rr, tiers_expected, self.get_processing_strings(),
+                    self.get_attribute("dataset_name"), self.get_attribute("member_of_campaign"),
+                    skip_check=forced)
+
             ##1st element which is not DQMIO
             completed = 0
             if len(collected):
@@ -1684,37 +1688,45 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr, tiers_expected, skip_check=False):
-        procstrings_expected = self.get_processing_strings()
+    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
+        re_to_match = re.compile("/%s/%s(.*)-v(.*)/" % (prime_ds, camp))
         collected = []
-        for wma in reversed(mcm_rr):
-            if not 'pdmv_dataset_list' in wma['content']: continue
+        versioned = {}
+
+        for wma in mcm_rr:
+            if not 'content' in wma:
+                continue
+            if not 'pdmv_dataset_list' in wma['content']:
+                continue
             those = wma['content']['pdmv_dataset_list']
-            goodone = True
-            if len(collected):
-                for ds in those:
-                    (_, dsn, proc, tier) = ds.split('/')
-                    for goodds in collected:
-                        (_, gdsn, gproc, gtier) = goodds.split('/')
-                        if dsn != gdsn or not set(
-                            gproc.split("-")).issubset(proc.split("-")):
 
-                            goodone = False #due to #724 we check if expected
-                                                        #process_string is subset of generated ones
-            if goodone:
-                ## reduce to what was expected of it
-                those = filter(lambda dn : dn.split('/')[-1] in tiers_expected, those)
-                ## reduce to what processing string were expected
-                if not skip_check:
-                    those = filter(lambda dn : dn.split('/')[-2].split('-')[-2] in procstrings_expected,
-                            those)
+            for ds in those:
+                if re.match(re_to_match, ds) or skip_check:
+                    ###get current version
+                    #0th element is empty string of first /
+                    #1st is datset+process_string
+                    #2nd is version number
+                    #3rd is datatier
+                    curr_v = re.split('(.*)-v(.*)/', ds)
+                    #Do some checks
+                    if not curr_v[-1] in tiers_expected:
+                        continue
+                    if not skip_check:
+                        if not ds.split('/')[-2].split('-')[-2] in proc_strings:
+                            ##most likely there is a fake/wrong dataset
+                            continue
+                    #find and save the max version for the dataset
+                    uniq_name = curr_v[1] + curr_v[-1]
+                    if uniq_name in versioned:
+                        if curr_v[-2] > versioned[uniq_name]["version"]:
+                            versioned[uniq_name] = {"version": curr_v[-2],
+                                    "full_dataset": ds}
+                    else:
+                        versioned[uniq_name] = {"version": curr_v[-2],
+                                "full_dataset": ds}
 
-                ## only add those that are not already there
-                collected.extend(filter(lambda dn: not dn in collected, those))
-        ## order the collected dataset in order of expected tiers
-        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]),
-                                                        tiers_expected.index(d2.split('/')[-1])))
-
+        collected = [versioned[el]["full_dataset"] for el in versioned]
+        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
         return collected
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
@@ -1754,7 +1766,9 @@ done
                 if wma_r['content']['pdmv_status_from_reqmngr'] in ['announced', 'normal-archived']:
                     ## this is enough to get all datasets
                     tiers_expected = self.get_tiers()
-                    collected = self.collect_outputs( mcm_rr , tiers_expected )
+                    collected = self.collect_outputs(mcm_rr, tiers_expected,
+                            self.get_processing_strings(), self.get_attribute("dataset_name"),
+                            self.get_attribute("member_of_campaign"))
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
                     if not len(collected):
@@ -1766,7 +1780,7 @@ done
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
-                    valid,counted= self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
+                    valid,counted = self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
 
                     self.set_attribute('output_dataset', collected)
                     self.set_attribute('completed_events', counted)
