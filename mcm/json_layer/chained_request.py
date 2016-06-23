@@ -817,7 +817,10 @@ class chained_request(json_base):
             status = step_r['status']
 
         if pid == self.get_attribute('chain')[self.get_attribute('step')]:
-            expected_end = max(0, self.get_attribute('prepid').count('_') - 1)
+            cdb = database("chained_campaigns")
+            chained_camp = cdb.get(self.get_attribute("member_of_campaign"))
+            ##we do -1 as chained_request step counts from 0
+            expected_end = len(chained_camp["campaigns"])-1
             current_status = self.get_attribute('status')
             ## the current request is the one the status has just changed
             self.logger.info('processing status %s given %s and at %s and stops at %s ' % (
@@ -827,7 +830,7 @@ class chained_request(json_base):
                 ## you're supposed to be in processing status
                 self.set_status()
                 return True
-                ##only when updating with a submitted request status do we change to processing
+            ##only when updating with a submitted request status do we change to processing
             if status in ['submitted'] and current_status == 'new':
                 self.set_status()
                 return True
