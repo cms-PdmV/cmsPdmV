@@ -487,8 +487,10 @@ class request(json_base):
         self.set_status()
 
     def ok_to_move_to_approval_approve(self, for_chain=False):
-        max_user_level=1
-        if for_chain:   max_user_level=0
+        max_user_level = 1
+        if for_chain:
+            max_user_level = 0
+
         if self.current_user_level <= max_user_level:
             ##not allowed to do so
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
@@ -506,18 +508,29 @@ class request(json_base):
         for cr in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(cr)
             request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
+
             if request_is_at != 0:
-                self.check_with_previous( mcm_cr['chain'][request_is_at-1],rdb, 'approve', and_set=for_chain)
+                self.check_with_previous(mcm_cr['chain'][request_is_at-1],
+                        rdb, 'approve', and_set=for_chain)
+
             if for_chain:
                 continue
 
             if request_is_at != mcm_cr['step']:
-                all_good=True
-                chain=mcm_cr['chain'][mcm_cr['step']:]
+                all_good = True
+                chain = mcm_cr['chain'][mcm_cr['step']:]
                 for r in chain:
-                    if r == self.get_attribute('prepid'): continue # don't self check
-                    mcm_r = request( rdb.get(r) )
-                    all_good &= (mcm_r.get_attribute('status') in ['defined','validation','approved'])
+                    if r == self.get_attribute('prepid'):
+                        # don't self check
+                        continue
+
+                    mcm_r = request(rdb.get(r))
+                    if mcm_r.is_root:
+                        ##we check if request needs validation,
+                        ##so we wont approve a request which is not yet validated
+                        all_good &= (mcm_r.get_attribute('status') in ['defined',
+                                'validation','approved'])
+
                 if not all_good:
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                             'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
