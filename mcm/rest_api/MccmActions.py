@@ -92,6 +92,8 @@ class UpdateMccm(RESTResource):
 class CreateMccm(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        sdb = database('settings')
+        self.possible_pwgs = sdb.get("pwg")["value"]
 
     def PUT(self):
         """
@@ -101,23 +103,40 @@ class CreateMccm(RESTResource):
             mccm_d = mccm(threaded_loads(cherrypy.request.body.read().strip()))
         except Exception as e:
             self.logger.error(mccm_d.json())
-            self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(e))
-            return dumps({"results": False, "message": "Something went wrong with loading the mccm data:\n {0}".format(e)})
+            self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(
+                    e))
+
+            return dumps({"results": False,
+                    "message": "Something went wrong with loading the mccm data:\n {0}".format(
+                            e)})
 
         if not mccm_d.get_attribute('prepid'):
             self.logger.error('Non-existent prepid')
             return dumps({"results": False, "message": "The mccm ticket has no id!"})
+
+        if mccm_d.get_attribute("pwg") not in self.possible_pwgs:
+            self.logger.error('Trying to create Mccm with non-existant PWG: %s' % (
+                    mccm_d.get_attribute("pwg")))
+
+            return dumps({"results": False,
+                    "message": "The mccm ticket has non-existant PWG!"})
+
         db = database('mccms')
-        if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'): # need to complete the pwg
+        # need to complete the prepid
+        if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'):
             mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg'), db))
         elif db.document_exists(mccm_d.get_attribute('prepid')):
-            return dumps({"results": False, "message": "Mccm document {0} already exists".format(mccm_d.get_attribute('prepid'))})
+            return dumps({"results": False,
+                    "message": "Mccm document {0} already exists".format(
+                            mccm_d.get_attribute('prepid'))})
 
         mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
         mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
         mccm_d.update_history({'action': 'created'})
         self.logger.info('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
-        return dumps({"results": db.save(mccm_d.json()), "prepid": mccm_d.get_attribute('prepid')})
+
+        return dumps({"results": db.save(mccm_d.json()),
+                "prepid": mccm_d.get_attribute('prepid')})
 
 
     def fill_id(self, pwg, db):
