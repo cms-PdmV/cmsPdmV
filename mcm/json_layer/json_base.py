@@ -124,7 +124,15 @@ class json_base:
             if not db.document_exists(self.get_attribute('_id')):
                 return False
             ## reload the doc with db
-            self.__init__(db.get(self.get_attribute('_id')))
+            t = db.get(self.get_attribute('_id'))
+            self.__init__(t)
+            if "_rev" in json_input:
+                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: %s" % (
+                        t["_rev"], json_input["_rev"]))
+
+            else:
+                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: none" % (t["_rev"]))
+
             ## add what was provided on top
             self._json_base__json.update( json_input )
             ## save back
