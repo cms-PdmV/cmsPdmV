@@ -413,7 +413,10 @@ class database:
             saved = self.db.commitOne(doc)
             return True
         except Exception as ex:
-            self.logger.error('Could not save changes %s to database. Reason: %s' % (doc['_id'], ex))
+            ##display _rev id for doc we are saving so to ease debugging
+            self.logger.error('Could not save changes %s to database rev: %s. Reason: %s' % (
+                    doc['_id'], doc['_rev'], ex))
+
             return False
 
     def count(self):
