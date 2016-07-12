@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
+        <base href="/mcm/">
         <title>Edit page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -14,7 +15,7 @@
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
         <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
@@ -145,12 +146,12 @@
                     <div ng-switch-when="Tags">
                       <tokenfield  show-autocomplete-on-focus="true" tokens="result[column.db_name]" allow-duplicates="false" before-create="addToken" on-remove="removeToken" type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}"/>
                     </div>
-                    <div ng-switch-when="Request parameters">
-                      <ng-form name="fieldForm">
-                        <a class="btn btn-small" target="_self" href="#" ng-click="update();">
+                    <div ng-switch-when="Request parameters" ng-controller="ModalDemoCtrl">
+                      <ng-form name="fieldForm" id="fieldForm">
+                        <a class="btn btn-small" href="#" ng-click="update();">
                           <i class="icon-refresh"></i>
                         </a>
-                        <a class="btn btn-small btn-info text-uppercase" target="_self" ng-click="openRequestParametersModal()" href="#">Edit</a>
+                        <a class="btn btn-small btn-info text-uppercase" ng-click="openRequestParametersModal()" href="#">Edit</a>
                         <span class="badge badge-important" ng-show="fieldForm.$invalid">Bad JSON formatting</span>
                         <span class="badge badge-success" ng-show="!fieldForm.$invalid">Valid JSON formatting</span>
                         <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>

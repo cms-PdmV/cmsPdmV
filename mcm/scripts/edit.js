@@ -1,186 +1,258 @@
-var ModalDemoCtrl = function ($scope, $modal) {
-  $scope.openSequenceEdit = function (seq1, seq2, number) {
-    $scope.sequenceToShow = [];
-    $scope.sequenceHidden = [];
-    var sequences = {};
-    _.each($scope.dbName == "requests" ? $scope.result.sequences[number] : $scope.result.sequences[seq1][seq2], function(value,key){
+angular.module('testApp').controller('ModalDemoCtrl',
+  ['$scope', '$modal',
+  function ModalDemoCtrl($scope, $modal) {
+    $scope.openSequenceEdit = function (seq1, seq2, number) {
+      $scope.sequenceToShow = [];
+      $scope.sequenceHidden = [];
+      var sequences = {};
+      _.each($scope.dbName == "requests" ? $scope.result.sequences[number] : $scope.result.sequences[seq1][seq2], function(value,key){
         if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value)) {
           $scope.sequenceToShow.push(key);
         } else {
           $scope.sequenceHidden.push(key);
         }
         sequences[key]=value;
-    });
-    //sort both lists ???
-    $scope.sequenceHidden.sort();
+      });
+      //sort both lists ???
+      $scope.sequenceHidden.sort();
       var sequenceEditModal = $modal.open({
-          templateUrl: 'sequenceEditModal.html',
-          controller: SequenceEditModalInstanceCtrl,
-          resolve: {
-              sequenceHidden: function() {
-                  return $scope.sequenceHidden;
-              },
-              sequenceToShow: function() {
-                  return $scope.sequenceToShow;
-              },
-              selectedHidden: function() {
-                  return $scope.sequenceHidden[0];
-              },
-              sequences: function() {
-                  return sequences;
-              }
+        templateUrl: 'sequenceEditModal.html',
+        controller: SequenceEditModalInstanceCtrl,
+        resolve: {
+          sequenceHidden: function() {
+            return $scope.sequenceHidden;
+          },
+          sequenceToShow: function() {
+            return $scope.sequenceToShow;
+          },
+          selectedHidden: function() {
+            return $scope.sequenceHidden[0];
+          },
+          sequences: function() {
+            return sequences;
           }
+        }
       });
+
       sequenceEditModal.result.then(function(newSequence) {
-         if( $scope.dbName == "requests") {
-            $scope.result.sequences[number] = newSequence; // we should somehow change driver shown as well
-         } else {
-            $scope.result.sequences[seq1][seq2] = newSequence;
-         }
+        if( $scope.dbName == "requests") {
+          $scope.result.sequences[number] = newSequence; // we should somehow change driver shown as well
+        } else {
+          $scope.result.sequences[seq1][seq2] = newSequence;
+        }
       });
-  };
+    };
 
-  $scope.openNewSequence = function(define_name, index) {
+    $scope.openNewSequence = function(define_name, index) {
       var sequenceAddModal = $modal.open({
-          templateUrl: 'sequenceAddModal.html',
-          controller: SequenceAddModalInstanceCtrl,
-          resolve: {
-              define_name: function() {
-                  return define_name;
-              },
-              defaultSequence: function() {
-                  return _.clone($scope.default_sequences);
-              }
+        templateUrl: 'sequenceAddModal.html',
+        controller: SequenceAddModalInstanceCtrl,
+        resolve: {
+          define_name: function() {
+            return define_name;
+          },
+          defaultSequence: function() {
+            return _.clone($scope.default_sequences);
           }
-        });
+        }
+      });
+
       sequenceAddModal.result.then(function(data) {
-          if($scope.dbName == "requests") {
-              $scope.drivers.push(data.sequence);
-              $scope.result.sequences.push(data.sequence);
+        if($scope.dbName == "requests") {
+          $scope.drivers.push(data.sequence);
+          $scope.result.sequences.push(data.sequence);
+        } else {
+          if(!define_name) {
+            $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
+            $scope.result.sequences[_.size($scope.result.sequences)] = {default: data.sequence};
           } else {
-              if(!define_name) {
-                $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
-                $scope.result.sequences[_.size($scope.result.sequences)] = {default: data.sequence};
-              } else {
-                $scope.drivers[index][data.name] = data.sequence;
-                $scope.result.sequences[index][data.name] = data.sequence;
-              }
+            $scope.drivers[index][data.name] = data.sequence;
+            $scope.result.sequences[index][data.name] = data.sequence;
           }
+        }
       })
-  };
+    };
 
-  $scope.isBoolean = function(value){
-    return angular.isBoolean(value);
-  };
+    $scope.isBoolean = function(value){
+      return angular.isBoolean(value);
+    };
 
-};
-
-
-var SequenceAddModalInstanceCtrl = function($scope, $modalInstance, define_name, defaultSequence) {
-    $scope.define_name = define_name;
-    $scope.sequences = {
+    var SequenceAddModalInstanceCtrl = function($scope, $modalInstance, define_name, defaultSequence) {
+      $scope.define_name = define_name;
+      $scope.sequences = {
         newSequenceName: "",
         newSequence: defaultSequence
-    };
+      };
 
-    $scope.save = function() {
+      $scope.save = function() {
         $modalInstance.close({name: $scope.sequences.newSequenceName, sequence: $scope.sequences.newSequence});
+      };
+
+      $scope.close = function() {
+        $modalInstance.dismiss();
+      }
     };
 
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    }
-};
-
-var SequenceEditModalInstanceCtrl = function($scope, $modalInstance, sequences, selectedHidden, sequenceToShow, sequenceHidden) {
-    $scope.sequence = {
+    var SequenceEditModalInstanceCtrl = function($scope, $modalInstance, sequences, selectedHidden, sequenceToShow, sequenceHidden) {
+      $scope.sequence = {
         toShow: sequenceToShow,
         hidden: sequenceHidden,
         selectedHidden: selectedHidden,
         sequences: sequences
+      };
+
+      $scope.showHiddenSequence = function() {
+          $scope.sequence.toShow.push($scope.sequence.selectedHidden);
+          $scope.sequence.hidden.splice($scope.sequence.hidden.indexOf($scope.sequence.selectedHidden), 1);
+          $scope.sequence.selectedHidden = $scope.sequence.hidden[0];
+      };
+      $scope.close = function() {
+          $modalInstance.dismiss();
+      };
+      $scope.save = function() {
+          $modalInstance.close($scope.sequence.sequences);
+      }
     };
 
-    $scope.showHiddenSequence = function() {
-        $scope.sequence.toShow.push($scope.sequence.selectedHidden);
-        $scope.sequence.hidden.splice($scope.sequence.hidden.indexOf($scope.sequence.selectedHidden), 1);
-        $scope.sequence.selectedHidden = $scope.sequence.hidden[0];
+    // Generator parameters stuff
+    $scope.showData = {
+        "Cross section": "cross_section",
+        "Filter efficiency": "filter_efficiency",
+        "Filter efficiency error": "filter_efficiency_error",
+        "Match efficiency": "match_efficiency",
+        "Match efficiency error": "match_efficiency_error",
+        "Negative weights fraction": 'negative_weights_fraction'
     };
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    };
-    $scope.save = function() {
-        $modalInstance.close($scope.sequence.sequences);
-    }
-};
 
-var genParamModalCtrl = function($scope, $http, $modal) {
-
-  $scope.showData = {
-      "Cross section": "cross_section",
-      "Filter efficiency": "filter_efficiency",
-      "Filter efficiency error": "filter_efficiency_error",
-      "Match efficiency": "match_efficiency",
-      "Match efficiency error": "match_efficiency_error",
-      "Negative weights fraction": 'negative_weights_fraction'
-  };
-
-  $scope.openGenParam = function(action, index) {
+    $scope.openGenParam = function(action, index) {
       var data = [];
       if(action == "Edit") {
           data = $scope.genParam_data[index];
       } else {
           data = $scope.defaultGenParams;
       }
-    var genParamModal = $modal.open({
-      templateUrl: 'generatorParamsModal.html',
-      controller: GeneratorParamsInstandeModal,
-      resolve: {
+
+      var genParamModal = $modal.open({
+        templateUrl: 'generatorParamsModal.html',
+        controller: GeneratorParamsInstandeModal,
+        resolve: {
           data: function() {
-              return _.clone(data);
+            return _.clone(data);
           },
           action: function() {
-              return action;
+            return action;
           },
           showData: function() {
-              return $scope.showData;
+            return $scope.showData;
           }
-      }
-    });
-    genParamModal.result.then(function(new_gen_params) {
+        }
+      });
+
+      genParamModal.result.then(function(new_gen_params) {
         _.each(new_gen_params, function(elem,key){
           if (_.isString(elem) && key !="$$hashKey"){
             new_gen_params[key] = parseFloat(elem);
           }
         });
         if(action == "Edit") {
-            _.each(new_gen_params, function(elem,key){
-              if (!isNaN(elem)){
-                $scope.genParam_data[index][key] = elem;
-              }
-            });
+          _.each(new_gen_params, function(elem,key){
+            if (!isNaN(elem)){
+              $scope.genParam_data[index][key] = elem;
+            }
+          });
         } else { // Add
-            $scope.genParam_data.push(new_gen_params);
+          $scope.genParam_data.push(new_gen_params);
         }
-    });
+      });
+    };
 
-  };
-
-};
-
-var GeneratorParamsInstandeModal = function($scope, $modalInstance, data, action, showData) {
-    $scope.action = action;
-    $scope.gen_params = {
+    var GeneratorParamsInstandeModal = function($scope, $modalInstance, data, action, showData) {
+      $scope.action = action;
+      $scope.gen_params = {
         data: data,
         show: showData
-    };
-    $scope.closeGenParam = function() {
+      };
+      $scope.closeGenParam = function() {
         $modalInstance.dismiss();
+      };
+      $scope.saveGenParam = function() {
+        $modalInstance.close($scope.gen_params.data);
+      };
     };
 
-    $scope.saveGenParam = function() {
-        $modalInstance.close($scope.gen_params.data);
+  // Flows Request params shit
+  var EditRequestParametersCtrl = function ( $modalInstance, initRequestParams, parseRequestParams) {
+    $scope.req_param_data = [{name: "Time Event", value: initRequestParams.time_event, id: "time_event", type: "int"}, {name: "Size Event", value: initRequestParams.size_event, id: "size_event", type: "int"}, {name: "Process String", value: initRequestParams.process_string, id: "process_string"}, {name: "Sequences", value: initRequestParams.sequences, id: "sequences"}, {name: "More", value: parseRequestParams, id:"more"}];
+    $scope.addrem = function (seq, x) {
+      for (var i in $scope.req_param_data) {
+        if (!seq && $scope.req_param_data[i].name == "More") {
+          x < 0 ? $scope.req_param_data[i].value.push({field: '', value: ''}) : $scope.req_param_data[i].value.splice(x, 1);
+        } else if (seq && $scope.req_param_data[i].id == "sequences") {
+          x < 0 ? $scope.req_param_data[i].value.push({default:{pileup: '', customise: '', conditions: ''}}) : $scope.req_param_data[i].value.splice(x, 1);
+        }
+      }
     };
-};
+      $scope.doneRequestModal = function () {
+        var newJSON = {};
+        for (var i in $scope.req_param_data) {
+          if ($scope.req_param_data[i].value && $scope.req_param_data[i].id != 'more') {
+            if ($scope.req_param_data[i].type == 'int') {
+              newJSON[$scope.req_param_data[i].id] = parseInt($scope.req_param_data[i].value, 10);
+            } else {
+              newJSON[$scope.req_param_data[i].id] = $scope.req_param_data[i].value;
+            }
+          } else if($scope.req_param_data[i].id == 'more') {
+              for (var j in $scope.req_param_data[i].value) {
+                newJSON[$scope.req_param_data[i].value[j].field] = $scope.req_param_data[i].value[j].value;
+              }
+          }
+        }
+
+        try {
+          $scope.whatever_value = JSON.stringify(newJSON, undefined, 4);
+          $scope.fieldForm.$setViewValue(newJSON);
+          $scope.fieldForm.$setValidity("bad_json", false);
+        } catch (err){
+          $scope.fieldForm.$setValidity("bad_json", true);
+        }
+
+        $modalInstance.dismiss();
+      };
+
+      $scope.closeRequestModal = function() {
+        $modalInstance.dismiss();
+      }
+    };
+
+    $scope.openRequestParametersModal = function () {
+      $modal.open({
+        templateUrl: "HTML/templates/edit.request.parameters.html",
+        controller: EditRequestParametersCtrl,
+        scope: $scope,
+        resolve: {
+          initRequestParams: function () {
+            return JSON.parse($scope.whatever_value);
+          },
+          parseRequestParams: function () {
+            var copy = JSON.parse($scope.whatever_value);
+            var remove_array = ["time_event", "sequences", "size_event", "process_string"];
+            for (var i in remove_array) {
+              delete copy[remove_array[i]];
+            }
+            var rt = []
+            for (var i in copy) {
+              rt.push({field: i, value: copy[i]});
+            }
+            return rt;
+          },
+          getFieldValue: function(){
+            return $scope.whatever_value;
+          }
+        }
+      });
+    };
+  }
+]);
 
 testApp.directive("sequenceEdit", function($http){
   return {
@@ -431,7 +503,7 @@ testApp.directive("generatorParams", function($http){
   return {
     require: 'ngModel',
     template:
-    '<div ng-controller="genParamModalCtrl">'+
+    '<div ng-controller="ModalDemoCtrl">'+
         ///MODAL
     '  <script  type="text/ng-template" id="generatorParamsModal.html">'+ //hidden modal template
     '    <div class="modal-header">'+
@@ -507,78 +579,10 @@ testApp.directive("inlineEditable", function ($modal) {
                     ctrl.$setValidity("bad_json", false);
                 }
             };
-            scope.openRequestParametersModal = function () {
-                $modal.open({
-                    templateUrl: "HTML/templates/edit.request.parameters.html",
-                    controller: EditRequestParametersCtrl,
-                    resolve: {
-                        initRequestParams: function () {
-                            return JSON.parse(scope.whatever_value);
-                        },
-                        parseRequestParams: function () {
-                            var copy = JSON.parse(scope.whatever_value);
-                            var remove_array = ["time_event", "sequences", "size_event", "process_string"];
-                            for (var i in remove_array) {
-                                delete copy[remove_array[i]];
-                            }
-                            var rt = []
-                            for (var i in copy) {
-                                rt.push({field: i, value: copy[i]});
-                            }
-                            return rt;
-                        },
-                        getCtrl: function () {
-                            return ctrl;
-                        },
-                        getScope: function () {
-                            return scope;
-                        }
-                    }
-                });
-            };
+
         }
     };
 });
-
-var EditRequestParametersCtrl = function ($scope, $modalInstance, initRequestParams, parseRequestParams, getCtrl, getScope) {
-    $scope.data = [{name: "Time Event", value: initRequestParams.time_event, id: "time_event", type: "int"}, {name: "Size Event", value: initRequestParams.size_event, id: "size_event", type: "int"}, {name: "Process String", value: initRequestParams.process_string, id: "process_string"}, {name: "Sequences", value: initRequestParams.sequences, id: "sequences"}, {name: "More", value: parseRequestParams, id:"more"}];
-    $scope.addrem = function (seq, x) {
-        for (var i in $scope.data) {
-            if (!seq && $scope.data[i].name == "More") {
-                x < 0 ? $scope.data[i].value.push({field: '', value: ''}) : $scope.data[i].value.splice(x, 1);
-            } else if (seq && $scope.data[i].id == "sequences") {
-                x < 0 ? $scope.data[i].value.push({default:{pileup: '', customise: '', conditions: ''}}) : $scope.data[i].value.splice(x, 1);
-            }
-        }
-    };
-    $scope.done = function () {
-        var newJSON = {};
-        for (var i in $scope.data) {
-            if ($scope.data[i].value && $scope.data[i].id != 'more') {
-                if ($scope.data[i].type == 'int') {
-                    newJSON[$scope.data[i].id] = parseInt($scope.data[i].value, 10);
-                } else {
-                    newJSON[$scope.data[i].id] = $scope.data[i].value;
-                }
-            } else if($scope.data[i].id == 'more') {
-                for (var j in $scope.data[i].value) {
-                    newJSON[$scope.data[i].value[j].field] = $scope.data[i].value[j].value;
-                }
-            }
-        }
-        try {
-            getScope.whatever_value = JSON.stringify(newJSON, undefined, 4);
-            getCtrl.$setViewValue(newJSON);
-            getCtrl.$setValidity("bad_json", true);
-        } catch (err){
-            getCtrl.$setValidity("bad_json", false);
-        }
-        $modalInstance.dismiss();
-    };
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    }
-};
 
 testApp.directive("customValidationEdit", function(){
   return {
