@@ -1,12 +1,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
+        <base href="/mcm/">
         <title>Injection status page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        
+
         <script type="text/javascript" src="scripts/underscore.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
   <!--[IF IE]>
@@ -24,17 +25,17 @@
   </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
-  	<div ng-include="'HTML/navbar_template.html'"></div>
-	<text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
-	<text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
-  	<table class="table table-bordered table-stripped">
+    <div ng-include="'HTML/navbar_template.html'"></div>
+    <text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
+    <text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
+    <table class="table table-bordered table-stripped">
       <thead>
-      	<tr style="white-space: nowrap;">
-      	  <th>PrepId</th>
-      	  <th>Status</th>
-      	  <th>10 lines of log</th>
-      	  <th>Full log</th>
-      	</tr>
+        <tr style="white-space: nowrap;">
+          <th>PrepId</th>
+          <th>Status</th>
+          <th>10 lines of log</th>
+          <th>Full log</th>
+        </tr>
       </thead>
       <tbody>
         <tr ng-repeat="elem in data" style="white-space: nowrap;">
@@ -42,7 +43,7 @@
             <a ng-href='requests?prepid={{elem["prepid"]}}' rel="tooltip" title="View details of request {{elem['prepid']}}" target="_blank">{{elem['prepid']}}</a>
           </td>
           <td>
-	          <span ng-switch="elem['status']">
+            <span ng-switch="elem['status']">
               <img ng-switch-when="submitted" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-green.gif" rel="tooltip" title="Sucess"/>
               <img ng-switch-when="approved" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
               <img ng-switch-when="undefined" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" rel="tooltip" title="Processing"/>
@@ -62,12 +63,7 @@
           </td>
         </tr>
       </tbody>
-  	</table>
-	<!--{{prepid}}-->
-	<!--<text ng-show="nextUpdate">Next line update in {{timeToUpdate}} seconds</text>-->
-    <!-- <div ng-click="reload();">
-      <i class="icon-refresh"></i>
-    </div>-->
+    </table>
     <text ng-show="prepid.length!=0"> There are still {{prepid.length}} on-going submissions : {{prepid.join()}} </text>
     <text ng-show="prepid.length==0"> <b>No more status update to be done. The batch submission has completed.</b></text>
     </span>
