@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
+        <base href="/mcm/">
         <title>Edit page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
         <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
-        
+
         <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
         <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
          <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
          <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
@@ -57,7 +58,6 @@
           position: fixed;
         }
         </style>
-        
 </head>
 <body ng-controller="mainCtrl">
   <span ng-controller="resultsCtrl">
@@ -131,7 +131,7 @@
                   <div ng-switch-when="Submission details">
                     <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
                       <dt>{{key}}</dt>
-                      <dd>{{value}}</dd>                
+                      <dd>{{value}}</dd>
                     </dl>
                   </div>
                   <div ng-switch-when="Generator parameters">
@@ -156,7 +156,7 @@
                       <tokenfield  show-autocomplete-on-focus="true" tokens="result[column.db_name]" allow-duplicates="false" before-create="addToken" on-remove="removeToken" type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}"/>
                     </div>
                   <div ng-switch-when="Request parameters">
-                    <ng-form name="fieldForm">
+                    <ng-form name="fieldForm" id="fieldForm">
                       <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                       <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                     </ng-form>
