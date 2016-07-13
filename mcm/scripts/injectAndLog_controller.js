@@ -1,4 +1,6 @@
-function resultsCtrl($scope, $http, $location, $timeout, $window){
+angular.module('testApp').controller('resultsCtrl',
+  ['$scope', '$http', '$location', '$timeout', '$window',
+  function resultsCtrl($scope, $http, $location, $timeout, $window){
     $scope.buttonHide = false;
     $scope.prepid = $location.search()["prepid"];
     $scope.injection = "";
@@ -17,6 +19,7 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
       	$scope.injectError = true;
       });
     };
+
     $scope.getLog = function(){
     	stop = $timeout(function(){
           var promise = $http.get('restapi/requests/injectlog/'+$scope.prepid) //get log
@@ -29,6 +32,5 @@ function resultsCtrl($scope, $http, $location, $timeout, $window){
           });
         }, 3000);
     };
-
 }
 var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
