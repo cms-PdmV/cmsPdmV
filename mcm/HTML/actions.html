@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
+        <base href="/mcm/">
         <title>Actions page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -8,7 +9,7 @@
 
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
 
         <!--[IF IE]>
@@ -23,7 +24,7 @@
         <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/actions_controller.js"></script>
-  </head> 
+  </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>

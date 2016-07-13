@@ -1,4 +1,6 @@
-function resultsCtrl($scope, $http, $location, $window){
+angular.module('testApp').controller('resultsCtrl',
+  ['$scope', '$http', '$location', '$window',
+  function resultsCtrl($scope, $http, $location, $window){
     $scope.chainedCampaigns_defaults = [
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:true, db_name:''},
@@ -47,7 +49,7 @@ function resultsCtrl($scope, $http, $location, $window){
           }
           else
           {
-            $scope.update["success"] = false;  
+            $scope.update["success"] = false;
             $scope.update["fail"] = true;
           }
           $scope.update["status_code"] = status;
@@ -65,7 +67,7 @@ function resultsCtrl($scope, $http, $location, $window){
   $scope.selectedCls = function(column) {
     return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
   };
-    
+
   $scope.changeSorting = function(column) {
     var sort = $scope.sort;
     if (sort.column == column) {
@@ -75,7 +77,7 @@ function resultsCtrl($scope, $http, $location, $window){
       sort.descending = false;
     }
   };
-   
+
   $scope.filterResults = function(){
     var data =_.filter($scope.result, function(element){
       return element["valid"];
@@ -86,111 +88,115 @@ function resultsCtrl($scope, $http, $location, $window){
       return $scope.result;
     }
   };
-    $scope.getData = function () {
-        var query = "";
-        var select = false;
-        _.each($location.search(), function (value, key) {
-            if (key != 'shown' && key != 'select' && key != 'fields') {
-                query += "&" + key + "=" + value;
-            }
-            if (key == 'select') {
-                select = true;
-            }
-        });
-        $scope.got_results = false; //to display/hide the 'found n results' while reloading
-        var promise, get_raw;
-        if (select) {
-            promise = $http.get("restapi/chained_campaigns/select");
-        }
-        else {
-            get_raw = true;
-            promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw");
-        }
-        //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
-        promise.then(function (data) {
-            $scope.result_status = data.status;
-            $scope.got_results = true;
-            $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
-            if ($scope.result === undefined) {
-                alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
-                return; //stop doing anything if results are undefined
-            }
-            if ($scope.result.length != 0) {
-                columns = _.keys($scope.result[0]);
-                rejected = _.reject(columns, function (v) {
-                    return v[0] == "_";
-                }); //check if charat[0] is _ which is couchDB value to not be shown
-                $scope.columns = _.sortBy(rejected, function (v) {
-                    return v;
-                });  //sort array by ascending order
-                _.each(rejected, function (v) {
-                    add = true;
-                    _.each($scope.chainedCampaigns_defaults, function (column) {
-                        if (column.db_name == v) {
-                            add = false;
-                        }
-                    });
-                    if (add) {
-                        $scope.chainedCampaigns_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
-                    }
-                });
-                if (_.keys($location.search()).indexOf('fields') != -1) {
-                    _.each($scope.chainedCampaigns_defaults, function (elem) {
-                        elem.select = false;
-                    });
-                    _.each($location.search()['fields'].split(','), function (column) {
-                        _.each($scope.chainedCampaigns_defaults, function (elem) {
-                            if (elem.db_name == column) {
-                                elem.select = true;
-                            }
-                        });
-                    });
-                }
-            }
-            $scope.selectionReady = true;
-        }, function () {
-            alert("Error getting information");
-        });
-    };
 
-   $scope.$watch(function() {
-      var loc_dict = $location.search();
-      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
-    },
-    function(){
-        $scope.getData();
-        $scope.selected_prepids = [];
-    });
-
-  $scope.create = function( cc_name ) {
-      for (var i = 0; i< $scope.result.length; i++) {
-          if($scope.result[i].prepid == cc_name) {
-              var campaigns = $scope.result[i].campaigns;
-              break
+  $scope.getData = function () {
+      var query = "";
+      var select = false;
+      _.each($location.search(), function (value, key) {
+          if (key != 'shown' && key != 'select' && key != 'fields') {
+              query += "&" + key + "=" + value;
           }
+          if (key == 'select') {
+              select = true;
+          }
+      });
+      $scope.got_results = false; //to display/hide the 'found n results' while reloading
+      var promise, get_raw;
+      if (select) {
+          promise = $http.get("restapi/chained_campaigns/select");
       }
-      $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: cc_name, campaigns:campaigns}}).success(function(data, status){
-	      if (data.results){
-            $window.location.href ="edit?db_name=chained_campaigns&prepid="+data.prepid;
-          } else {
-              alert("Error:" + data.message + status)
+      else {
+          get_raw = true;
+          promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw");
+      }
+      //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
+      promise.then(function (data) {
+          $scope.result_status = data.status;
+          $scope.got_results = true;
+          $scope.result = get_raw ? _.pluck(data.data.rows, 'doc') : data.data.results;
+          if ($scope.result === undefined) {
+              alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
+              return; //stop doing anything if results are undefined
           }
+          if ($scope.result.length != 0) {
+              columns = _.keys($scope.result[0]);
+              rejected = _.reject(columns, function (v) {
+                  return v[0] == "_";
+              }); //check if charat[0] is _ which is couchDB value to not be shown
+              $scope.columns = _.sortBy(rejected, function (v) {
+                  return v;
+              });  //sort array by ascending order
+              _.each(rejected, function (v) {
+                  add = true;
+                  _.each($scope.chainedCampaigns_defaults, function (column) {
+                      if (column.db_name == v) {
+                          add = false;
+                      }
+                  });
+                  if (add) {
+                      $scope.chainedCampaigns_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                  }
+              });
+              if (_.keys($location.search()).indexOf('fields') != -1) {
+                  _.each($scope.chainedCampaigns_defaults, function (elem) {
+                      elem.select = false;
+                  });
+                  _.each($location.search()['fields'].split(','), function (column) {
+                      _.each($scope.chainedCampaigns_defaults, function (elem) {
+                          if (elem.db_name == column) {
+                              elem.select = true;
+                          }
+                      });
+                  });
+              }
+          }
+          $scope.selectionReady = true;
+      }, function () {
+          alert("Error getting information");
+      });
+  };
+
+  $scope.$watch(function() {
+    var loc_dict = $location.search();
+    return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+  },
+    function(){
+      $scope.getData();
+      $scope.selected_prepids = [];
+    }
+  );
+
+  $scope.create = function( cc_name ){
+    for (var i = 0; i< $scope.result.length; i++) {
+      if($scope.result[i].prepid == cc_name) {
+        var campaigns = $scope.result[i].campaigns;
+        break
+      }
+    }
+    $http({method: 'PUT', url:'restapi/chained_campaigns/save/', data:{prepid: cc_name, campaigns:campaigns}}).success(function(data, status){
+      if (data.results){
+        $window.location.href ="edit?db_name=chained_campaigns&prepid="+data.prepid;
+      } else {
+        alert("Error:" + data.message + status);
+      }
 	  }).error(function(data, status){
         alert("Error:"+ status);
         console.log(data, status);
-	     });
+	   });
   };
-
 }
+]);
 
-var ModalDemoCtrl = function ($scope, $http, $window, $modal) {
-  $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
-  $scope.selectedPwg= 'BPH';
-  $scope.createChainedRequest = function (id) {
-    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
-    promise.then(function(data){
-	    var pwgs = data.data.results;
-        $modal.open( {
+angular.module('testApp').controller('ModalDemoCtrl',
+  ['$scope', '$http', '$window', '$modal',
+  function ModalDemoCtrl($scope, $http, $window, $modal) {
+    $scope.pwgs = ['BPH', 'BTV', 'EGM', 'EWK', 'EXO', 'FWD', 'HIG', 'HIN', 'JME', 'MUO', 'QCD', 'SUS', 'TAU', 'TRK', 'TOP'];
+    $scope.selectedPwg= 'BPH';
+    $scope.createChainedRequest = function (id) {
+      var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
+      promise.then(function(data){
+	      var pwgs = data.data.results;
+        $modal.open({
           templateUrl: 'createChainedRequestModal.html',
           controller: ChainedRequestCreationModal,
           resolve: {
@@ -205,44 +211,41 @@ var ModalDemoCtrl = function ($scope, $http, $window, $modal) {
               }
           }
         })
-	});
-  };
-};
-
-var ChainedRequestCreationModal = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
-
-    $scope.pwgs = pwgs;
-    $scope.prepid = prepid;
-    $scope.pwg = {
-        selected: selectedPwg
+	    });
     };
 
-    $scope.save=function () {
-        if ($scope.pwg.selected) {
-            $http({method: 'PUT', url: 'restapi/chained_requests/save/', data: {member_of_campaign: $scope.prepid, pwg: $scope.pwg.selected}}).success(function (data, status) {
-                if (data.results) {
-                    $window.location.href = "edit?db_name=chained_requests&prepid=" + data.prepid;
-                } else {
-                    alert("Error:" + data.message + status);
-                }
-            }).error(function (data, status) {
-                alert("Error:" + status);
+    var ChainedRequestCreationModal = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
+      $scope.pwgs = pwgs;
+      $scope.prepid = prepid;
+      $scope.pwg = {
+        selected: selectedPwg
+      };
+      $scope.save = function(){
+        if ($scope.pwg.selected){
+          $http({method: 'PUT', url: 'restapi/chained_requests/save/', data: {member_of_campaign: $scope.prepid, pwg: $scope.pwg.selected}}).success(function (data, status) {
+            if (data.results) {
+              $window.location.href = "edit?db_name=chained_requests&prepid=" + data.prepid;
+            } else {
+              alert("Error:" + data.message + status);
+          }
+          }).error(function (data, status){
+              alert("Error:" + status);
             });
         } else {
-            alert("Error: No PWG defined!");
+          alert("Error: No PWG defined!");
         }
-    };
-
-    $scope.close = function() {
+      };
+      $scope.close = function() {
         $modalInstance.dismiss();
-    }
-};
+      }
+    };
+  }
+]);
 
-// var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <div ng-hide="show_history">'+
     '    <input type="button" value="Show" ng-click="show_history=true;">'+

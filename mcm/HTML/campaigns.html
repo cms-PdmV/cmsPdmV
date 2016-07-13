@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
+        <base href="/mcm/">
         <title>Campaigns page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
-        
+
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <!--[IF IE]>
            <script type="text/javascript">
@@ -29,14 +30,14 @@
   <span ng-controller="resultsCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
         <div style='margin-bottom: 5px' class="container">
-            <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+          <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
         </div>
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
         <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
 	        <div ng-switch-when="Actions">
-            {{column.text}} 
+            {{column.text}}
                 <!-- SORTING lines -->
             <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
               <i class="icon-resize-vertical"></i>
@@ -48,7 +49,7 @@
             <!-- END OF: SORTING lines -->
 	        </div>
 	        <div ng-switch-default>
-		  {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
+            {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
                 <!-- SORTING lines -->
             <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
               <i class="icon-resize-vertical"></i>
@@ -71,37 +72,45 @@
              <a ng-href="admin/_utils/document.html?campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
 	          </div>
             <div ng-switch-when="Actions">
-       <!--     MODAL -->
+              <!--     MODAL -->
               <div ng-controller="ModalDemoCtrl">
-                <a ng-click="openRequestCreator(data['prepid'])" rel="tooltip" title="Create new request"  target="_self" ng-show="!role(1) && (!role(3) || data['root']!=1);">
+                <a ng-click="openRequestCreator(data['prepid'])" rel="tooltip" title="Create new request" ng-show="!role(1) && (!role(3) || data['root']!=1);" ng-href="#">
                   <i class="icon-plus-sign"></i>
                 </a>
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self"><i class="icon-align-right"></i></a>
-                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self"> <i class="icon-magnet"></i></a>
-                <a ng-href='actions?select={{data.prepid}}' rel="tooltip" title="View actions on this campaign" target="_self"> <i class="icon-qrcode"></i></a>
-                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}"  target="_self"><i class="icon-folder-open"></i></a>
-                <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);">
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
+                  <i class="icon-align-right"></i>
+                </a>
+                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self">
+                  <i class="icon-magnet"></i>
+                </a>
+                <a ng-href='actions?select={{data.prepid}}' rel="tooltip" title="View actions on this campaign" target="_self">
+                  <i class="icon-qrcode"></i>
+                </a>
+                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
+                  <i class="icon-folder-open"></i>
+                </a>
+                <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-		<a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self">
+                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step">
+                <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step" ng-href="#">
                   <i class="icon-chevron-right"></i>
                 </a>
-                <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status">
+                <a ng-click="next_status(data.prepid)" rel="tooltip" ng-hide="role(3);" title="Toggle status" ng-href="#">
                   <i class="icon-flag"></i>
                 </a>
-                <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests">
+                <a ng-click="single_step('inspect',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of all requests" ng-href="#">
                   <i class="icon-screenshot"></i>
                 </a>
                  <a ng-href="/pmp/present?m=false&r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
-		<a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-film"></i>
                 </a>
                 <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
@@ -125,11 +134,11 @@
                     </div> <!--end of modal footer-->
                 </script>
               </div> <!--end of modalControler DIV-->
-        <!--     END OF MODAL                 -->
+            <!--     END OF MODAL                 -->
             </div>
-	      <div ng-switch-when="Notes">
-		<div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
-	      </div>
+            <div ng-switch-when="Notes">
+              <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+            </div>
             <div ng-switch-when="Sequences">
               <div sequence-display ng-model="data.prepid"></div>
             </div>
@@ -143,7 +152,7 @@
             <div ng-switch-when="Submission details">
               <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
                   <dt>{{key}}</dt>
-                  <dd>{{value}}</dd>                
+                  <dd>{{value}}</dd>
               </dl>
             </div>
             <div ng-switch-when="Process string">
@@ -164,9 +173,9 @@
 	          <div ng-switch-when="Type">
 	            <a ng-href='campaigns?type={{data[value.db_name]}}' rel="tooltip" title="View campaigns of type {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-book"></i></a>
 	          </div>
-		  <div ng-switch-when="CMSSW Release">
-		    <a ng-href='campaigns?cmssw_release={{data[value.db_name]}}' rel="tooltip" title="View campaigns using release {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-		  </div>
+            <div ng-switch-when="CMSSW Release">
+              <a ng-href='campaigns?cmssw_release={{data[value.db_name]}}' rel="tooltip" title="View campaigns using release {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+            </div>
             <div ng-switch-when="Energy">
               <a ng-href='campaigns?energy={{data[value.db_name]}}' rel="tooltip" title="View campaigns of energy {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
             </div>
@@ -217,7 +226,6 @@
     <!--     END OF MODAL  -->
     </div>
   </div>
-  <!-- <a ng-href='/mcm' target='_self'><div class="navbar-fixed-bottom" id="news_banner"></div></a> -->
 </span>
 </body>
 </html>

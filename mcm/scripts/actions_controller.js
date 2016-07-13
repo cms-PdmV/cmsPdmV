@@ -1,11 +1,13 @@
-function resultsCtrl($scope, $http, $location, $window, $modal){
+angular.module('testApp').controller('resultsCtrl',
+  ['$scope', '$http', '$location', '$window','$modal',
+  function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.filt = {}; //define an empty filter a stupid update test for github
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "actions";
     }else{
       $scope.dbName = $location.search()["db_name"];
     }
-       
+
     $scope.actions_defaults = [
     //  {text:'Actions',select:true, db_name:'prepid'}
     //  {text:'Actions',select:true, db_name:''},
@@ -31,7 +33,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         active:false
       }
     };
-    
+
     //watch selectedOption -> to change it corespondigly in URL
     $scope.$watch("selectedOption", function(){
       $scope.update = [];
@@ -116,7 +118,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
           $scope.getData("");
         }
           $scope.selectionReady = true;
-        // 
+        //
       }, function(status) {
         $scope.update['success'] = false;
         $scope.update['fail'] = true;
@@ -253,7 +255,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   $scope.selectedCls = function(column) {
     return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
   };
-    
+
   $scope.changeSorting = function(column) {
     var sort = $scope.sort;
     if (sort.column == column){
@@ -274,7 +276,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
     }
   };
-  
+
   $scope.generateRequests = function(id){
     var generateUrl = "";
     if ( id.indexOf("chain_") !=-1){
@@ -305,9 +307,9 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
   $scope.generateAllRequests = function(){
     $scope.generatingAllIcon = true;
     var ids_on_the_page=[];
-    _.each($scope.result, function(item){      
-	    ids_on_the_page.push(item.prepid);          
-	  });  
+    _.each($scope.result, function(item){
+	    ids_on_the_page.push(item.prepid);
+	  });
     generateUrl = "restapi/actions/generate_chained_requests/"+ids_on_the_page.join();
     promise = $http.get(generateUrl);
     promise.then(function(data){
@@ -417,7 +419,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
         var doc_to_update = list_of_docs[list_of_docs.length-1];
         _.each(elem, function(chain, chain_name){
           if (chain.selected == true){ //if we want to update floating values ->
-            doc_to_update['chains'][chain_name]['threshold']= $scope.multipleSelection['threshold'];  
+            doc_to_update['chains'][chain_name]['threshold']= $scope.multipleSelection['threshold'];
             doc_to_update['chains'][chain_name]['block_number']= $scope.multipleSelection['block_number'];
             doc_to_update['chains'][chain_name]['staged']= $scope.multipleSelection['staged'];
             if ($scope.multipleSelection['flag'] !== undefined){
@@ -435,7 +437,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
               doc_to_update['chains'][chain_name]['chains'][super_chain_name]['flag'] = $scope.multipleSelection['flag'];
             }else{
               doc_to_update['chains'][chain_name]['chains'][super_chain_name]['flag'] = false;
-            } 
+            }
           });
         });
       });
@@ -490,7 +492,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       }
       if (super_chain.block_number !== undefined){
         super_chain.block_number = parseInt(super_chain.block_number);
-      } 
+      }
       });
     });
     return doc;
@@ -552,7 +554,6 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $scope.got_results = true;
       $scope.result_status = data.status;
 
-      
       var list_of_campaigns = []; // we want a pop-up appear to inform user
       _.each($scope.result, function(elem)
       {
@@ -588,7 +589,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
           value['block_number'] = parseInt(value['block_number']);
         }
       });
-    });    
+    });
     $http({method:'PUT', url:'restapi/actions/update/',data:angular.toJson($scope.result[place])}).success(function(data,status){
       $scope.changed_prepids = $scope.changed_prepids.splice($scope.changed_prepids.indexOf(prepid),0);
       $scope.getData($scope.result[place]['prepid']);
@@ -627,11 +628,11 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     }else{
       $scope.update['success'] = false;
       $scope.update['fail'] = true;
-      $scope.update['result'] = "No actions were selected for transfer";      
+      $scope.update['result'] = "No actions were selected for transfer";
     };
   };
   $scope.openattentionModal = function(list_of_camps)
-  {  
+  {
     var attentionModal = $modal.open( {
       templateUrl: 'attentionModal.html',
       controller: attentionModalInstance,
@@ -647,7 +648,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
     //   console.log("information modal close", list_of_campaigns);
     // })
   };
-};
+
 
   var attentionModalInstance = function($scope, $modalInstance, list_of_camps)
   {
@@ -658,7 +659,9 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $modalInstance.dismiss();
     };
   };
-// var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
+
+}]);
+
 testApp.directive("customPrepId", function ($rootScope, $http) {
     return {
         restrict: 'E',
@@ -681,7 +684,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
 		          scope.displayBox = false;
 	          }
           };
-          scope.open = function(){ 
+          scope.open = function(){
             if (scope.displayBox == true){
               scope.displayBox = false;
             }else {
@@ -700,14 +703,14 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
             }
           };
 
-	        scope.change = function() { 
+	        scope.change = function() {
 	          scope.anychanges;
 	        };
 
 	        scope.$watch("actionInfo",function(){
             if (! _.isEqual(scope.actionInfo,angular.fromJson(scope.originalInfo))){
               scope.anychanges = true;
-              if (scope.changed_prepids.indexOf(scope.prepid) == -1){ 
+              if (scope.changed_prepids.indexOf(scope.prepid) == -1){
                 scope.changed_prepids.push(scope.prepid);
               }
             }else{

@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
-        <title>Chained campaigns page McM</title>  
+        <base href="/mcm/">
+        <title>Chained campaigns page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
-        
+
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
          <!--[IF IE]>
            <script type="text/javascript">
@@ -46,21 +47,21 @@
                 <a ng-href='chained_campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-align-right"></i></a>
                 <a ng-href="admin/_utils/document.html?chained_campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
-	            <div ng-switch-when="Valid" align="center">
-		            <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
-		              <i class="icon-ok" ng-show="data.valid"></i>
-		              <i class="icon-remove" ng-show="!data.valid"></i>
-		            </a>
-	            </div>
+              <div ng-switch-when="Valid" align="center">
+                <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
+                  <i class="icon-ok" ng-show="data.valid"></i>
+                  <i class="icon-remove" ng-show="!data.valid"></i>
+                </a>
+              </div>
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">
-		         <a ng-click="createChainedRequest(data.prepid)" rel="tooltip" title="Create new request" target="_self" ng-hide="role(3);">
+                  <a ng-click="createChainedRequest(data.prepid)" rel="tooltip" title="Create new request" ng-hide="role(3);" ng-href="#">
                     <i class="icon-plus-sign"></i>
                   </a>
                   <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self" ng-hide="data.exists==false;">
                     <i class="icon-indent-left"></i>
                   </a>
-                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3) || data.exists==false;">
+                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3) || data.exists==false;" ng-href="#">
                     <i class="icon-minus-sign"></i>
                   </a>
                   <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3) || data.exists==false;">
@@ -69,41 +70,41 @@
                   <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
                     <i class="icon-refresh"></i>
                   </a>
-                 <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
+                  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
                     <i class="icon-screenshot"></i>
                   </a>
- 	         <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                  <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
                     <i class="icon-picture"></i>
-                 </a>
-  	         <a ng-href="/pmp/present?c=true&m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                  </a>
+                  <a ng-href="/pmp/present?c=true&m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
                     <i class="icon-film"></i>
-                 </a>
-                <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
-                    <div class="modal-header">
-                        <h4>Create a chained request</h4>
-                    </div>  <!--end of modal header-->
-                    <div class="modal-body">
-                      Create chained request for: {{prepid}} campaign
-                      <select ng-options="value for value in pwgs" ng-model="pwg.selected" style="width: 90px; margin-bottom: 0px;">
-                      </select>
-                    </div> <!--end of modal body-->
-                    <div class="modal-footer">
-                      <button class="btn btn-success" ng-click="save()">Create</button>
-                      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                    </div> <!--end of modal footer-->
-                </script>
+                  </a>
+                  <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
+                      <div class="modal-header">
+                          <h4>Create a chained request</h4>
+                      </div>  <!--end of modal header-->
+                      <div class="modal-body">
+                        Create chained request for: {{prepid}} campaign
+                        <select ng-options="value for value in pwgs" ng-model="pwg.selected" style="width: 90px; margin-bottom: 0px;">
+                        </select>
+                      </div> <!--end of modal body-->
+                      <div class="modal-footer">
+                        <button class="btn btn-success" ng-click="save()">Create</button>
+                        <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+                      </div> <!--end of modal footer-->
+                  </script>
                 </div> <!--end of modalControler DIV-->
         <!--     END OF MODAL                 -->
               </div>
-	      <div ng-switch-when="Notes">
-		<div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
-	      </div>
-	      <div ng-switch-when="Alias">
-		<a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
-	      </div>
+        <div ng-switch-when="Notes">
+        <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+        </div>
+        <div ng-switch-when="Alias">
+          <a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
+        </div>
               <div ng-switch-when="Campaigns">
                 <ul>
-                  <li ng-repeat="element in data[value.db_name]"> 
+                  <li ng-repeat="element in data[value.db_name]">
                     <div ng-switch on="_.isArray(element)">
                       <div ng-switch-when="true" ng-switch on="element[1]!=null;">
                         <div ng-switch-when="true">
@@ -133,7 +134,7 @@
               <div ng-switch-when="Submission details">
                 <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
                     <dt>{{key}}</dt>
-                    <dd>{{value}}</dd>                
+                    <dd>{{value}}</dd>
                 </dl>
               </div>
               <div ng-switch-when="History">

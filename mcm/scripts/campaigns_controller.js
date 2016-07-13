@@ -1,5 +1,7 @@
-function resultsCtrl($scope, $http, $location, $window){
-//     http://prep-test.cern.ch/search/?db_name=campaigns&query=%22%22&page=0
+angular.module('testApp').controller('resultsCtrl',
+  ['$scope', '$http', '$location', '$window',
+  function resultsCtrl($scope, $http, $location, $window){
+
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
@@ -21,7 +23,7 @@ function resultsCtrl($scope, $http, $location, $window){
       $scope.dbName = $location.search()["db_name"];
     }
     $scope.new = {};
-    
+
     $scope.delete_object = function(db, value){
       $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
         if (data["results"]){
@@ -29,12 +31,10 @@ function resultsCtrl($scope, $http, $location, $window){
           $scope.update["fail"] = false;
           $scope.update["status_code"] = status;
           $scope.getData();
-//                 alert('Object was deleted successfully.');
         }else{
           $scope.update["success"] = false;
           $scope.update["fail"] = true;
           $scope.update["status_code"] = status;
-//                 alert('Could not save data to database.');
         }
         }).error(function(status){
           $scope.update["success"] = false;
@@ -55,7 +55,7 @@ function resultsCtrl($scope, $http, $location, $window){
     $scope.selectedCls = function(column) {
       return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
     };
-    
+
     $scope.changeSorting = function(column) {
       var sort = $scope.sort;
       if (sort.column == column) {
@@ -75,7 +75,7 @@ function resultsCtrl($scope, $http, $location, $window){
 	    $scope.getData();
 	}else{
 	    $scope.update["success"] = false;
-	    $scope.update["fail"] = true;  
+	    $scope.update["fail"] = true;
 	    $scope.update["status_code"] = data.message;
 	}
       }).error(function(status){
@@ -92,9 +92,9 @@ function resultsCtrl($scope, $http, $location, $window){
 	    $scope.update["status_code"] = data["results"];
 	    $scope.getData();
 	}else{
-	    $scope.update["success"] = false;             
-	    $scope.update["fail"] = true;            
-	    $scope.update["status_code"] = data.message;             
+	    $scope.update["success"] = false;
+	    $scope.update["fail"] = true;
+	    $scope.update["status_code"] = data.message;
 	}
       }).error(function(status){
         $scope.update["success"] = false;
@@ -163,113 +163,106 @@ function resultsCtrl($scope, $http, $location, $window){
     function(){
         $scope.getData();
     });
-}
+}]);
 
-var ModalDemoCtrl = function ($scope, $http, $modal) {
-  $scope.openRequestCreator = function (id) {
-    var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
-    promise.then(function(data){
-	    var pwgs = data.data.results;
-        $modal.open( {
-          templateUrl: 'createRequestModal.html',
-          controller: ModalCreateRequest,
-          resolve: {
+angular.module('testApp').controller('ModalDemoCtrl',
+  ['$scope', '$http', '$modal',
+  function ModalDemoCtrl($scope, $http, $modal) {
+    $scope.openRequestCreator = function (id) {
+      var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
+      promise.then(function(data){
+	      var pwgs = data.data.results;
+          $modal.open({
+            templateUrl: 'createRequestModal.html',
+            controller: ModalCreateRequest,
+            resolve: {
               pwgs: function(){
-                  return pwgs;
+                return pwgs;
               },
               selectedPwg: function(){
                 return pwgs[0];
               },
               prepid: function() {
-                  return id;
+                return id;
               }
-          }
-        })
-	});
-
-  };
-
-
-  $scope.openCampaignCreator = function () {
-        var campaignModal = $modal.open( {
-          templateUrl: 'createCampaignModal.html',
-          controller: ModalCreateCampaign
-
             }
-        );
-      campaignModal.result.then(function(campaignId) {
-          $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: campaignId}}).success(function(data, status){
-            $scope.update["success"] = data.results;
-            $scope.update["fail"] = false;
-            $scope.update["status_code"] = status;
-            $scope.getData();
-          }).error(function(data,status){
-              $scope.update["success"] = false;
-              $scope.update["fail"] = true;
-              $scope.update["status_code"] = status;
-      });
-
-      })
-  };
-
-var ModalCreateRequest = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
-    $scope.prepid = prepid;
-    $scope.pwgs = pwgs;
-    $scope.pwg = {
-        selected: selectedPwg
+          })
+	    });
     };
 
-    $scope.save = function () {
+    $scope.openCampaignCreator = function () {
+      var campaignModal = $modal.open( {
+        templateUrl: 'createCampaignModal.html',
+        controller: ModalCreateCampaign
+      });
+      campaignModal.result.then(function(campaignId) {
+        $http({method: 'PUT', url:'restapi/campaigns/save/', data:{prepid: campaignId}}).success(function(data, status){
+        $scope.update["success"] = data.results;
+        $scope.update["fail"] = false;
+        $scope.update["status_code"] = status;
+        $scope.getData();
+      }).error(function(data,status){
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = status;
+      });
+      })
+    };
+
+    var ModalCreateRequest = function($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid) {
+      $scope.prepid = prepid;
+      $scope.pwgs = pwgs;
+      $scope.pwg = {
+        selected: selectedPwg
+      };
+      $scope.save = function () {
         if ($scope.pwg.selected) {
             $http({method: 'PUT', url: 'restapi/requests/save/', data: {member_of_campaign: $scope.prepid, pwg: $scope.pwg.selected}}).success(function (data, stauts) {
-                if (data.results) {
-                    $window.location.href = "edit?db_name=requests&query=" + data.prepid;
-                } else {
-                    alert("Error:" + data.message);
-                }
-            }).error(function (data, status) {
+              if (data.results) {
+                $window.location.href = "edit?db_name=requests&query=" + data.prepid;
+              } else {
+                alert("Error:" + data.message);
+              }
+              }).error(function (data, status) {
                 alert("Error:" + status);
-            });
+              });
         } else {
-            alert("Error: No PWG defined!");
+          alert("Error: No PWG defined!");
         }
         $modalInstance.close();
+      };
+      $scope.close = function() {
+        $modalInstance.dismiss();
+      }
     };
 
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    }
-};
-
-var ModalCreateCampaign = function($scope, $modalInstance, $http) {
-    $scope.campaign = {
+    var ModalCreateCampaign = function($scope, $modalInstance, $http) {
+      $scope.campaign = {
         id: ""
-    };
-
-    $scope.close = function() {
+      };
+      $scope.close = function() {
         $modalInstance.dismiss();
-    };
-
-    $scope.save = function() {
+      };
+      $scope.save = function() {
         $modalInstance.close($scope.campaign.id);
-    }
-}
-};
+      }
+    };
+}]);
 
 // NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("inlineEditable", function(){
   return{
       require: 'ngModel',
-      template: 
+      template:
       '<textarea ng-model="whatever_value" ng-change="update()" style="width: 390px; height: 152px;">'+
       '</textarea>',
       link: function(scope, element, attrs, ctrl){
-       
+
        ctrl.$render = function () {
             scope.whatever_value = JSON.stringify(ctrl.$viewValue, null, 4);
        }
-       
+
        scope.update = function () {
            var object = null;
            try {
@@ -286,7 +279,7 @@ testApp.directive("inlineEditable", function(){
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <div ng-hide="show_history">'+
     '    <input type="button" value="Show" ng-click="show_history=true;">'+
@@ -341,8 +334,8 @@ testApp.directive("sequenceDisplay", function($http){
     '  <div ng-show="show_sequence">'+
 	//    '    <input type="button" value="Hide" ng-click="show_sequence=false;">'+
     '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
-    '     <i class="icon-remove"></i>'+  
-    '    </a>'+     
+    '     <i class="icon-remove"></i>'+
+    '    </a>'+
     '    <ul>'+
     '      <li ng-repeat="sequence in driver">'+
     '        <ul ng-repeat="(key,value) in sequence">'+
