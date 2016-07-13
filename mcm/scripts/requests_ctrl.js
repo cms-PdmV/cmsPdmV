@@ -1,4 +1,6 @@
-function resultsCtrl($scope, $http, $location, $window, $modal){
+angular.module('testApp').controller('resultsCtrl',
+  ['$scope', '$http', '$location', '$window', '$modal',
+  function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.requests_defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
@@ -734,7 +736,7 @@ function resultsCtrl($scope, $http, $location, $window, $modal){
       $scope.update["status_code"] = status;
     });
   };
-}
+}]);
 
 var NotifyModalInstance = function($scope, $modalInstance) {
     $scope.data = {text: ""};
@@ -848,7 +850,7 @@ testApp.directive("customApproval", function(){
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
-    template: 
+    template:
     '<div>'+
     '  <div ng-hide="show_history">'+
     '    <input type="button" value="Show" ng-click="show_history=true;">'+

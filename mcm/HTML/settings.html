@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
+        <base href="/mcm/">
         <title>Settings page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -9,7 +10,7 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
@@ -35,7 +36,7 @@
       <thead>
         <tr>
           <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
-	          <div ng-switch-when="Actions">
+            <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -46,8 +47,8 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
-	          <div ng-switch-default>
+            </div>
+            <div ng-switch-default>
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -58,14 +59,14 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
-      	<tr ng-repeat="settings_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-if="data.select">
-      	  <div ng-switch on="data.text">
+        <tr ng-repeat="settings_info in result | orderBy:sort.column: sort.descending">
+          <td ng-repeat="data in defaults" ng-if="data.select">
+          <div ng-switch on="data.text">
             <div ng-switch-when="Prepid">
               <a ng-href="settings?prepid={{settings_info['prepid']}}" rel="tooltip" title="View only {{settings_info['prepid']}}" target="_self"> {{settings_info['prepid']}}</a>
               <a ng-href="admin/_utils/document.html?settings/{{settings_info['prepid']}}" rel="tooltip" title="Admin view of {{settings_info['prepid']}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
@@ -74,7 +75,7 @@
               <a rel="tooltip" title="Edit settings" ng-href="edit?db_name=settings&prepid={{settings_info['prepid']}}" ng-hide="role(4);" target="_self">
                 <i class="icon-wrench"></i>
               </a>
-      	    </div>
+            </div>
             <div ng-switch-when="Notes">
               <div style="width:400px"><pre>{{settings_info[data.db_name]}} </pre></div>
             </div>
@@ -85,8 +86,8 @@
               {{settings_info[data.db_name]}}
             </div>
           </div>
-      	  </td>
-      	</tr>
+          </td>
+        </tr>
       </tbody>
     </table>
     <div class="row-fluid custom-footer">
@@ -95,4 +96,4 @@
     </div>
   </span>
   </body>
-</html> 
+</html>
