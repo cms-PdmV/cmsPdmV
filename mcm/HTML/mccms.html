@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
+        <base href="/mcm/">
         <title>Mccms page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -11,7 +12,7 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
         <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
@@ -112,15 +113,15 @@
               </div>
               <div ng-switch-when="Requests">
                 <ul>
-                    <div ng-repeat="elem in mccm_info[data.db_name]">
-                      <li ng-hide="isArray(elem);">
-                        <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
-                        <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
-                      </li>
-                      <li ng-show="isArray(elem);">
-                        <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
-                      </li>
-                    </div>
+                  <div ng-repeat="elem in mccm_info[data.db_name]">
+                    <li ng-hide="isArray(elem);">
+                      <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
+                      <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
+                    </li>
+                    <li ng-show="isArray(elem);">
+                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
+                    </li>
+                  </div>
                 </ul>
               </div>
               <div ng-switch-when="Tags">

@@ -1,4 +1,6 @@
-function mainCtrl($scope, $http, $location, $window, $modal){
+angular.module('testApp').controller('mainCtrl',
+   ['$scope','$http', '$location', '$window', '$modal',
+  function mainCtrl($scope, $http, $location, $window, $modal){
   $scope.stats_cache = {};
   $scope.full_details = {};
   $scope.mcm_revision = "";
@@ -117,6 +119,7 @@ var promise;
   };
 
 }
+]);
 
 testApp.directive('slider', function () {
 return {
