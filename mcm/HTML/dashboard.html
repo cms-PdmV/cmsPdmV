@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-    <head>
+  <head>
+        <base href="/mcm/">
         <title>Dashboard for McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
@@ -10,10 +11,9 @@
         <script type="text/javascript" src="scripts/underscore.js"></script>
         <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.min.js"></script>
+        <script type="text/javascript" src="scripts/angular.js"></script>
         <script type="text/javascript" src="scripts/jquery/bootstrap-slider.js"></script>
         <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
-        <!--<script src="http://code.angularjs.org/1.0.7/angular-cookies.min.js"></script>-->
          <!--[IF IE]>
            <script type="text/javascript">
              var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -26,115 +26,111 @@
          <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/dashboard_controller.js"></script>
-    </head>
-    <body ng-controller="mainCtrl">
-        <span ng-controller="resultsCtrl">
-            <div ng-include="'HTML/navbar_template.html'"></div>
-                <tabs>
-                    <pane heading="Batch info" active="tabsettings.batch.active">
-                        <div class="row-fluid"><div class="offset4"><h2>Batch information</h2></div></div>
-                        <div class="row-fluid">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-inverse btn-mini disabled">bjobs </button>
-                                <button type="button" class="btn btn-mini active" ng-model="bjobsOptions.bjobsOutput" btn-radio="''">Default output</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -l'" btn-checkbox-false="''">-l</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -w'" btn-checkbox-false="''">-w</button>
-                                <!--<button type="button" class="btn btn-mini" ng-show="isDevMachine();" ng-model="bjobsOptions.bjobsDev" btn-checkbox btn-checkbox-true="' -J *-dev'" btn-checkbox-false="''">-J *-dev</button>-->
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsAll" btn-checkbox btn-checkbox-true="' -a'" btn-checkbox-false="''">-a</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsPending" btn-checkbox btn-checkbox-true="' -p'" btn-checkbox-false="''">-p</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsDone" btn-checkbox btn-checkbox-true="' -d'" btn-checkbox-false="''">-d</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsRunning" btn-checkbox btn-checkbox-true="' -r'" btn-checkbox-false="''">-r</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsSuspended" btn-checkbox btn-checkbox-true="' -s'" btn-checkbox-false="''">-s</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WL'" btn-checkbox-false="''">-WL</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WF'" btn-checkbox-false="''">-WF</button>
-                                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WP'" btn-checkbox-false="''">-WP</button>
-                            </div>
-                            <a ng-click="getBjobsData()" rel="tooltip" title="Manually refresh bjobs output" >
-                                <i class="icon-refresh"></i>
-                            </a>
-                        </div>
-                        <div class="row-fluid">
-                            <pre><div class="well"><span id="preBatch" class="fontPre">{{results}}</span></div></pre>
-                        </div>
-                        <div>
-                            <p>Currently waiting in <b>validation</b> queue: {{queue_info["validation_len"]}}</p>
-                            <p>Currently waiting in <b>submission</b> queue: {{queue_info["submission_len"]}}</p>
-                        </div>
-                    </pane>
-                    <pane heading="Logs" active="tabsettings.logs.active">
-                        <div class="row-fluid"><h2>Feed from logs</h2></div>
-                        <div class="row-fluid">
-                            <div class="offset4 span6">
-                                <!--<div class="btn-group">-->
-                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'error'">error log</button>-->
-                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'inject'">injection log</button>-->
-                                    <!--<button type="button" class="btn btn-small" ng-model="logs.type" btn-radio="'access'">access log</button>-->
-                                <!--</div>-->
-                                <label>Log to display:
-                                    <select id="selectLog" class="span3" ng-model = "selectedLog" ng-options="log.name for log in logs.list"></select>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="row-fluid">
-                            <div class="span6">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-primary btn-mini disabled">Number of lines to show:</button>
-                                    <button type="button" class="btn btn-inverse btn-mini disabled" style="width:25px">{{getLines(logs.lines)}}</button>
-                                </div>
-                                <slider value="logs.lines" sliding="logs.sliding"></slider>
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-primary btn-mini disabled">Verbosity level:</button>
-                                    <a type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
-                                        {{logs.verbosity}}
-                                        <span class="caret"></span>
-                                    </a>
-                                      <ul class="dropdown-menu">
-                                        <li ng-repeat="(level, string) in logs.verbosities">
-                                          <a ng-click="verbositySelected(level)">{{string}}</a>
-                                        </li>
-                                      </ul>
-                                </div>
-                                <a ng-click="getLogData(logs.list[getLogIndex()].name)" rel="tooltip" title="Manually refresh log feed" >
-                                    <i class="icon-refresh"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="row-fluid">
-                               <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
-                        </div>
-                    </pane>
-                    <pane heading="Control" active="tabsettings.control.active">
-                        <div class="row-fluid">
-                            <div class="well span4 offset4">
-                                <button type="button" class="btn btn-danger btn-block" ng-click="turnOffServer()" ng-disabled="role(4) || turn_off_button_clicked"><i class="icon-warning-sign icon-white"></i> Turn off McM <i class="icon-warning-sign icon-white"></i></button>
-                                <button type="button" class="btn btn-danger btn-block" ng-click="resetRestCounter()" ng-disabled="role(4) || clear_rest_button_clicked"><i class="icon-remove-sign icon-white"></i> Reset REST counters <i class="icon-remove-sign icon-white"></i></button>
-                            </div>
-                        </div>
-                        <div class="row-fluid">
-                            <div class="well span4 offset4">
-                                <button type="button" ng-click="openPage('http://sls.cern.ch/lrf-lsf/info.php?user=pdmvserv')" class="btn btn-info btn-block"><i class="icon-info-sign icon-white"></i> Check LSF usage for pdmvserv <i class="icon-info-sign icon-white"></i></button>
-                            </div>
-                        </div>
-                    </pane>
-                </tabs>
-                <div class="row-fluid">
-                    <div class="span3" style="margin-top:20px;">
-                            <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-                        <div ng-show="update['success']">
-                            Success. Status code:<font color="green">{{update['status_code']}}</font>
-                        </div>
-                        <div ng-show="update['fail']">
-                            Fail. Status code:<font color="red">{{update['status_code']}}</font>
-                        </div>
-                    </div>
-                    <div align="right">
-                        <label>Font size:
-                            <select class="span1" id="selectFont" ng-model="fontSize">
-                                <option ng-repeat="elem in items">{{elem}}</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
-        </span>
-    </body>
-</html> 
+  </head>
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
+      <div ng-include="'HTML/navbar_template.html'"></div>
+      <tabs>
+        <pane heading="Batch info" active="tabsettings.batch.active">
+          <div class="row-fluid"><div class="offset4"><h2>Batch information</h2></div></div>
+            <div class="row-fluid">
+              <div class="btn-group">
+                <button type="button" class="btn btn-inverse btn-mini disabled">bjobs </button>
+                <button type="button" class="btn btn-mini active" ng-model="bjobsOptions.bjobsOutput" btn-radio="''">Default output</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -l'" btn-checkbox-false="''">-l</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -w'" btn-checkbox-false="''">-w</button>
+                <!--<button type="button" class="btn btn-mini" ng-show="isDevMachine();" ng-model="bjobsOptions.bjobsDev" btn-checkbox btn-checkbox-true="' -J *-dev'" btn-checkbox-false="''">-J *-dev</button>-->
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsAll" btn-checkbox btn-checkbox-true="' -a'" btn-checkbox-false="''">-a</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsPending" btn-checkbox btn-checkbox-true="' -p'" btn-checkbox-false="''">-p</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsDone" btn-checkbox btn-checkbox-true="' -d'" btn-checkbox-false="''">-d</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsRunning" btn-checkbox btn-checkbox-true="' -r'" btn-checkbox-false="''">-r</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsSuspended" btn-checkbox btn-checkbox-true="' -s'" btn-checkbox-false="''">-s</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WL'" btn-checkbox-false="''">-WL</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WF'" btn-checkbox-false="''">-WF</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WP'" btn-checkbox-false="''">-WP</button>
+              </div>
+              <a ng-click="getBjobsData()" rel="tooltip" title="Manually refresh bjobs output" >
+                <i class="icon-refresh"></i>
+              </a>
+            </div>
+            <div class="row-fluid">
+              <pre><div class="well"><span id="preBatch" class="fontPre">{{results}}</span></div></pre>
+            </div>
+            <div>
+              <p>Currently waiting in <b>validation</b> queue: {{queue_info["validation_len"]}}</p>
+              <p>Currently waiting in <b>submission</b> queue: {{queue_info["submission_len"]}}</p>
+            </div>
+          </div>
+        </pane>
+        <pane heading="Logs" active="tabsettings.logs.active">
+          <div class="row-fluid"><h2>Feed from logs</h2></div>
+          <div class="row-fluid">
+            <div class="offset4 span6">
+              <label>Log to display:
+                  <select id="selectLog" class="span3" ng-model="selectedLog" ng-options="log.name for log in logs.list"></select>
+              </label>
+            </div>
+          </div>
+          <div class="row-fluid">
+            <div class="span6">
+              <div class="btn-group">
+                <button type="button" class="btn btn-primary btn-mini disabled">Number of lines to show:</button>
+                <button type="button" class="btn btn-inverse btn-mini disabled" style="width:25px">{{getLines(logs.lines)}}</button>
+              </div>
+              <slider value="logs.lines" sliding="logs.sliding"></slider>
+              <div class="btn-group">
+                <button type="button" class="btn btn-primary btn-mini disabled">Verbosity level:</button>
+                <a type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
+                  {{logs.verbosity}}
+                  <span class="caret"></span>
+                </a>
+                  <ul class="dropdown-menu">
+                    <li ng-repeat="(level, string) in logs.verbosities">
+                      <a ng-click="verbositySelected(level)">{{string}}</a>
+                    </li>
+                  </ul>
+              </div>
+              <a ng-click="getLogData(logs.list[getLogIndex()].name)" rel="tooltip" title="Manually refresh log feed" >
+                <i class="icon-refresh"></i>
+              </a>
+            </div>
+          </div>
+          <div class="row-fluid">
+            <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
+          </div>
+        </pane>
+        <pane heading="Control" active="tabsettings.control.active">
+          <div class="row-fluid">
+            <div class="well span4 offset4">
+              <button type="button" class="btn btn-danger btn-block" ng-click="turnOffServer()" ng-disabled="role(4) || turn_off_button_clicked"><i class="icon-warning-sign icon-white"></i> Turn off McM <i class="icon-warning-sign icon-white"></i></button>
+              <button type="button" class="btn btn-danger btn-block" ng-click="resetRestCounter()" ng-disabled="role(4) || clear_rest_button_clicked"><i class="icon-remove-sign icon-white"></i> Reset REST counters <i class="icon-remove-sign icon-white"></i></button>
+            </div>
+          </div>
+          <div class="row-fluid">
+            <div class="well span4 offset4">
+              <button type="button" ng-click="openPage('http://sls.cern.ch/lrf-lsf/info.php?user=pdmvserv')" class="btn btn-info btn-block"><i class="icon-info-sign icon-white"></i> Check LSF usage for pdmvserv <i class="icon-info-sign icon-white"></i></button>
+            </div>
+          </div>
+        </pane>
+      </tabs>
+      <div class="row-fluid">
+        <div class="span3" style="margin-top:20px;">
+          <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+          <div ng-show="update['success']">
+            Success. Status code:<font color="green">{{update['status_code']}}</font>
+          </div>
+          <div ng-show="update['fail']">
+            Fail. Status code:<font color="red">{{update['status_code']}}</font>
+          </div>
+        </div>
+        <div align="right">
+          <label>Font size:
+            <select class="span1" id="selectFont" ng-model="fontSize">
+              <option ng-repeat="elem in items">{{elem}}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </span>
+  </body>
+</html>
