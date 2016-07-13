@@ -102,10 +102,6 @@ def graph_painter_html(*args, **kwargs):
     return open(os.path.join(file_location, 'HTML', 'graph_painter.html'))
 
 @cherrypy.expose
-def get_stats_html(*args, **kwargs):
-    return open(os.path.join(file_location, 'HTML', 'get_stats.html'))
-
-@cherrypy.expose
 def graph_representation_html(*args, **kwargs):
     return open(os.path.join(file_location, 'HTML', 'graph.html'))
 
@@ -135,7 +131,6 @@ root.edit_many = edit_many_html
 root.mccms = mccms_html
 root.settings = settings_html
 root.graph = graph_painter_html
-root.get_stats = get_stats_html
 root.graph_representation = graph_representation_html
 
 # REST API - RESTResourceIndex is the directory of available commands
