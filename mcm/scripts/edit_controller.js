@@ -1,4 +1,6 @@
-function resultCtrl($scope, $http, $location, $window){
+angular.module('testApp').controller('resultCtrl',
+  ['$scope', '$http', '$location', '$window',
+  function resultCtrl($scope, $http, $location, $window){
 
     $scope.defaults = [];
     $scope.underscore = _;
@@ -49,7 +51,7 @@ function resultCtrl($scope, $http, $location, $window){
         $scope.not_editable_list = ["Username", "Role"];
         break;
       case "mccms":
-	      $scope.not_editable_list = ["Prepid", "Pwg"];
+        $scope.not_editable_list = ["Prepid", "Pwg"];
         var promise = $http.get("restapi/mccms/editable/"+$scope.prepid)
         promise.then(function(data){
           $scope.parseEditableObject(data.data.results);
@@ -150,11 +152,10 @@ function resultCtrl($scope, $http, $location, $window){
               sequence["eventcontent"] = sequence["eventcontent"].split(",");
             }
           });
-         $scope.result["time_event"] = parseFloat($scope.result["time_event"]);
-         $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
-         $scope.result["memory"] = parseFloat($scope.result["memory"]);
-         $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
-  //$scope.listify_blocks();
+          $scope.result["time_event"] = parseFloat($scope.result["time_event"]);
+          $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
+          $scope.result["memory"] = parseFloat($scope.result["memory"]);
+          $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
           break;
         case "campaigns":
           _.each($scope.result["sequences"], function(sequence){
@@ -225,82 +226,81 @@ function resultCtrl($scope, $http, $location, $window){
     };
 
 
-  $scope.getData = function(){
-    var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
-    promise.then(function(data){
-      $scope.result = data.data.results;
-      if ($scope.result.length != 0){
-        columns = _.keys($scope.result);
-        rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-        _.each(rejected, function(v){
-          add = true;
-          _.each($scope.defaults, function(column){
-            if (column.db_name == v){
-              add = false;
+    $scope.getData = function(){
+      var promise = $http.get("restapi/"+ $location.search()["db_name"]+"/get/"+$scope.prepid)
+      promise.then(function(data){
+        $scope.result = data.data.results;
+        if ($scope.result.length != 0){
+          columns = _.keys($scope.result);
+          rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
+          _.each(rejected, function(v){
+            add = true;
+            _.each($scope.defaults, function(column){
+              if (column.db_name == v){
+                add = false;
+              }
+            });
+            if (add){
+              $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
             }
           });
-          if (add){
-            $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-          }
-        });
-        setTimeout(function(){ //update fragment field
-          codemirror = document.querySelector('.CodeMirror');
-          if (codemirror != null){
-            _.each(angular.element(codemirror),function(elem){
-              elem.CodeMirror.refresh();
-            });
-          }
-        },300);
-        //});
+          setTimeout(function(){ //update fragment field
+            codemirror = document.querySelector('.CodeMirror');
+            if (codemirror != null){
+              _.each(angular.element(codemirror),function(elem){
+                elem.CodeMirror.refresh();
+              });
+            }
+          },300);
+          //});
+        }
+      }, function(){ alert("Error getting information"); });
+    };
+
+    $scope.$watch('list_page', function(){
+     $scope.getData();
+    });
+
+    $scope.editableFragment = function(){
+      return $scope.not_editable_list.indexOf('Fragment')!=-1;
+    };
+
+    $scope.hideSequence = function(roleNumber){
+      if ($scope.role(roleNumber)){
+        return true; //if we hide by role -> hide
+      }else{ //else we check if sequence is in editable list
+        if ($scope.not_editable_list.indexOf("Sequences")!=-1){
+          return true; //if its in list -> hide
+        }else{
+          return false; //else let be displayed: ng-hide=false
+        }
       }
-    }, function(){ alert("Error getting information"); });
-  };
+    };
 
-   $scope.$watch('list_page', function(){
-    $scope.getData();
-   });
+    $scope.removeUserPWG = function(elem){
+      //console.log(_.without($scope.result["pwg"], elem));
+      $scope.result["pwg"] = _.without($scope.result["pwg"], elem);
+    };
 
-  $scope.editableFragment = function(){
-    return $scope.not_editable_list.indexOf('Fragment')!=-1;
-  };
-  $scope.hideSequence = function(roleNumber){
-    if ($scope.role(roleNumber)){
-      return true; //if we hide by role -> hide
-    }else{ //else we check if sequence is in editable list
-      if ($scope.not_editable_list.indexOf("Sequences")!=-1){
-        return true; //if its in list -> hide
-      }else{
-        return false; //else let be displayed: ng-hide=false
+    $scope.showAddUserPWG = function(){
+      $scope.showSelectPWG = true;
+      var promise = $http.get("restapi/users/get_pwg")
+      promise.then(function(data){
+        $scope.all_pwgs = data.data.results;
+      });
+    };
+
+    $scope.addUserPWG = function(elem){
+      if($scope.result["pwg"].indexOf(elem) == -1){
+        $scope.result["pwg"].push(elem);
       }
-    }
-  };
-  $scope.removeUserPWG = function(elem){
-    //console.log(_.without($scope.result["pwg"], elem));
-    $scope.result["pwg"] = _.without($scope.result["pwg"], elem);
-  };
-  $scope.showAddUserPWG = function(){
-    $scope.showSelectPWG = true;
-    var promise = $http.get("restapi/users/get_pwg")
-    promise.then(function(data){
-	    $scope.all_pwgs = data.data.results;
-	});
+    };
 
-  };
-  $scope.addUserPWG = function(elem){
-    if($scope.result["pwg"].indexOf(elem) == -1){
-      $scope.result["pwg"].push(elem);
-    }
-  };
-
-  $scope.addToken = function(tok) {
+    $scope.addToken = function(tok) {
       $http({method:'PUT', url:'restapi/tags/add/', data:JSON.stringify({tag:tok.value})})
-  };
-
-  $scope.removeToken = function(tok) {
-      // for now let's store all tags, can be changed in future for some checks
-//      $http({method:'PUT', url:'restapi/tags/remove/', data:JSON.stringify({tag:tok.value})})
+    };
   }
-}
+]);
 
 testApp.directive("customRequestsEdit", function($http, $rootScope){
   return {
@@ -539,7 +539,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
       {
         if (scope.list_of_chained_campaigns.length == 0)
         {
-		      var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1");
+          var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1");
           promise.then(function (data) {
             _.each(data.data.results, function (elem) {
               if (elem.alias != "") //lets construct alais map
