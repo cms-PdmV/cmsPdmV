@@ -961,7 +961,7 @@ class UpdateStats(RESTResource):
         else:
             if force:
                 mcm_r.reload()
-                return({"prepid" : rid, "results": False,
+                return dumps({"prepid" : rid, "results": False,
                         "message" : "no apparent changes, but request was foced to reload"})
             else:
                 return dumps({"prepid" : rid, "results": False,
