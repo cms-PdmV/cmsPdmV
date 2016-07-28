@@ -6,5 +6,5 @@
 .mcm_rest_counter
 logs/
 WMCore/
-mcm/static/build/*
+mcm/scripts/build/*
 mcm/node_modules/*
