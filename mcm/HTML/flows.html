@@ -4,24 +4,19 @@
         <base href="/mcm/">
         <title>Flows page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
-        <script type="text/javascript" src="scripts/underscore.js"></script>
-        <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-        <script type="text/javascript" src="scripts/jquery.cookie.js"></script>
-        <script type="text/javascript" src="scripts/angular.js"></script>
-        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
-         <!--[IF IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-           </script>
-         <![endif]-->
-         <![if !IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-           </script>
-         <![endif]>
+        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+        <!--[IF IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+          </script>
+        <![endif]-->
+        <![if !IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+          </script>
+        <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/flows_controller.js"></script>
   </head>
@@ -36,12 +31,12 @@
       <thead>
         <tr>
           <th ng-repeat="column in flows_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
-	    <div ng-switch-when="Actions">
-	      {{column.text}}
-	    </div>
-	    <div ng-switch-default>
-	      {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#flows_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-	    </div>
+            <div ng-switch-when="Actions">
+              {{column.text}}
+            </div>
+            <div ng-switch-default>
+              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#flows_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
+            </div>
           </th>
         </tr>
       </thead>
@@ -78,20 +73,20 @@
                   <i class="icon-facetime-video"></i>
                 </a>
               </div>
-	            <div ng-switch-when="PrepId">
+              <div ng-switch-when="PrepId">
                 <a ng-href='flows?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
-		            <a ng-href="admin/_utils/document.html?flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
+                <a ng-href="admin/_utils/document.html?flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Approval" align="center">
                 <i class="{{approvalIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-		            <a ng-href='flows?approval={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all flows in approval {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+                <a ng-href='flows?approval={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all flows in approval {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="Allowed Campaigns">
                 <ul>
                   <li ng-repeat="value in data[value.db_name]">
                     <a ng-href='flows?allowed_campaigns={{value}}' rel="tooltip" title="View flows starting from {{value}}" target="_self">{{value}}<i class="icon-magnet"></i></a>
                     <a ng-href='campaigns?prepid={{value}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
-		              </li>
+                  </li>
                 </ul>
               </div>
               <div ng-switch-when="Next Campaign">
@@ -104,9 +99,9 @@
                     <dd>{{value}}</dd>
                 </dl>
               </div>
-	            <div ng-switch-when="Notes">
-		            <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
-	            </div>
+              <div ng-switch-when="Notes">
+                <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+              </div>
                <div ng-switch-when="Request parameters">
                 <ul>
                   <li ng-repeat="(key, param) in data[value.db_name]">

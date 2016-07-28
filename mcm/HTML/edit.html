@@ -4,21 +4,14 @@
         <base href="/mcm/">
         <title>Edit page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        <link href="scripts/css/tokenfield-typeahead.css" rel="stylesheet" type="text/css"/>
-        <link href="scripts/css/bootstrap-tokenfield.css" rel="stylesheet" type="text/css"/>
+        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
         <link href="scripts/css/select2.css" rel="stylesheet" type="text/css"/>
-        <link href="scripts/css/mcm.css" rel="stylesheet" type="text/css"/>
 
         <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
         <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
 
-        <script type="text/javascript" src="scripts/underscore.js"></script>
-        <script type="text/javascript" src="scripts/jquery/jquery-1.11.0.min.js"></script>
-        <script type="text/javascript" src="scripts/angular.js"></script>
-        <script type="text/javascript" src="scripts/ui-bootstrap-tpls-0.8.0.min.js"></script>
-        <script type="text/javascript" src="scripts/jquery/bootstrap-tokenfield.min.js"></script>
-        <script type="text/javascript" src="scripts/jquery/typeahead.min.js"></script>
+        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+        <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
         <!--[IF IE]>
           <script type="text/javascript">
             var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
@@ -33,6 +26,7 @@
         <script src="scripts/edit.js"></script>
         <script src="scripts/edit_controller.js"></script>
 
+        <!-- angularui is needed for codemirror -->
         <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
         <script src="scripts/angular-ui.min.js"></script>
         <script src="scripts/select2.min.js"></script>
