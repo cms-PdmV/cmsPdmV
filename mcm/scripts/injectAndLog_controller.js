@@ -33,4 +33,5 @@ angular.module('testApp').controller('resultsCtrl',
         }, 3000);
     };
 }
-var testApp = angular.module('testApp',[]).config(function($locationProvider){$locationProvider.html5Mode(true);});
+]);
+

@@ -1,5 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html lang="eng" ng-app="testApp">
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
         <base href="/mcm/">
         <title>Log page McM</title>
@@ -7,7 +7,18 @@
         <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
         <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+        <!--[IF IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(false);});
+          </script>
+        <![endif]-->
+        <![if !IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
+          </script>
+        <![endif]>
         <script src="scripts/injectAndLog_controller.js"></script>
+
   </head>
   <body ng-controller="resultsCtrl">
   	<div class="container">
