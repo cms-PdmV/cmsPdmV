@@ -700,6 +700,7 @@ angular.module('testApp').controller('resultsCtrl',
   $scope.findToken = function(tok){
     $window.location.href = "requests?&tags="+tok.value
   };
+
   $scope.get_list = function()
   {
     if ($scope.selected_prepids.length > 0)
@@ -735,6 +736,30 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.update["fail"] = true;
       $scope.update["status_code"] = status;
     });
+  };
+
+  $scope.getLinktoDmytro = function(wf_data,prepid,text){
+    // return a link to computings private monitoring of requests url:
+    // https://dmytro.web.cern.ch/dmytro/cmsprodmon/workflows.php?prep_id=
+    var base_link = "https://dmytro.web.cern.ch/dmytro/cmsprodmon/workflows.php?prep_id="
+    if (wf_data[wf_data.length - 1])
+    { //we check if wf exists...
+      var name = wf_data[wf_data.length - 1]["name"];
+      var prepid = name.slice(
+          name.indexOf("-")-3,
+          name.lastIndexOf("-")+6); //-3 for PWG +6 for '-numerical_id'
+
+      if (name.indexOf("task")) //we check if it was a taskchain
+      {
+        return base_link + "task_" + prepid;
+      }
+      else {
+        return base_link + prepid;
+      }
+    }
+    else {
+      return "";
+    }
   };
 }]);
 

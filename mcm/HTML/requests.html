@@ -179,6 +179,10 @@
                    title="View historical statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-facetime-video"></i>
                 </a>
+                <a ng-if="data.status == 'done' || data.status == 'submitted'" ng-href="{{getLinktoDmytro(data.reqmgr_name)}}" rel="tooltip"
+                   title="Computing's monitoring for {{data.prepid}}" target="_blank">
+                  <i class="icon-camera"></i>
+                </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                 <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
