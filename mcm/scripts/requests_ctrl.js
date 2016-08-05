@@ -749,7 +749,7 @@ angular.module('testApp').controller('resultsCtrl',
           name.indexOf("-")-3,
           name.lastIndexOf("-")+6); //-3 for PWG +6 for '-numerical_id'
 
-      if (name.indexOf("task")) //we check if it was a taskchain
+      if (name.indexOf("task") != -1) //we check if it was a taskchain
       {
         return base_link + "task_" + prepid;
       }
@@ -764,114 +764,114 @@ angular.module('testApp').controller('resultsCtrl',
 }]);
 
 var NotifyModalInstance = function($scope, $modalInstance) {
-    $scope.data = {text: ""};
+  $scope.data = {text: ""};
 
-    $scope.notify = function() {
-        $modalInstance.close($scope.data.text);
-    };
+  $scope.notify = function() {
+    $modalInstance.close($scope.data.text);
+  };
 
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    };
+  $scope.close = function() {
+    $modalInstance.dismiss();
+  };
 };
 
 var SubmissionModalInstance = function($scope, $modalInstance, $window, inject_data) {
+  $scope.data = {
+    injectModalData: inject_data,
+    anySuccessful: _.some(inject_data, function(elem) {
+      return elem["results"];
+    })
+  };
 
-    $scope.data = {
-        injectModalData: inject_data,
-        anySuccessful: _.some(inject_data, function(elem) {
-            return elem["results"];
-        })
-    };
+  $scope.openInjectStatus = function() {
+    var prepids = [];
+    _.each($scope.data.injectModalData, function(element){
+      if(element["results"]) {
+        prepids.push(element["prepid"]);
+      }
+    });
+    $window.open("injection_status?prepid="+prepids.join());
+    $modalInstance.close();
+  };
 
-    $scope.openInjectStatus = function() {
-        var prepids = [];
-        _.each($scope.data.injectModalData, function(element){
-            if(element["results"]) {
-                prepids.push(element["prepid"]);
-            }
-        });
-        $window.open("injection_status?prepid="+prepids.join());
-        $modalInstance.close();
-    };
-
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    };
+  $scope.close = function() {
+    $modalInstance.dismiss();
+  };
 };
 
 var CloneModalInstance = function($http, $scope, $modalInstance, cloneId, clonePWG, cloneCampaign, allPWGs) {
-    $scope.data = {
-        cloneId: cloneId,
-        clonePWG: clonePWG,
-        cloneCampaign: cloneCampaign
-    };
-    $scope.allPWGs = allPWGs;
-    $scope.allCampaigns = [];
+  $scope.data = {
+    cloneId: cloneId,
+    clonePWG: clonePWG,
+    cloneCampaign: cloneCampaign
+  };
+  $scope.allPWGs = allPWGs;
+  $scope.allCampaigns = [];
 
-    var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
-      promise.then(function(data){
-        $scope.allCampaigns = data.data.results;
-      });
+  var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
+  promise.then(function(data){
+    $scope.allCampaigns = data.data.results;
+  });
 
-    $scope.clone = function() {
-        $modalInstance.close({"pwg":$scope.data.clonePWG, "campaign":$scope.data.cloneCampaign});
-    };
+  $scope.clone = function() {
+    $modalInstance.close({"pwg":$scope.data.clonePWG, "campaign":$scope.data.cloneCampaign});
+  };
 
-    $scope.close = function() {
-        $modalInstance.dismiss();
-    };
+  $scope.close = function() {
+    $modalInstance.dismiss();
+  };
 };
 
 // NEW for directive
 // var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
 testApp.directive("customApproval", function(){
-    return{
-        require: 'ngModel',
-        template:
-        '<div>'+
-        '  <div ng-hide="display_table">'+
-        '    <input type="button" value="Show" ng-click="display_approval()">'+
-        '    {{whatever.length}} step(-s)'+
-        '  </div>'+
-        '  <div ng-show="display_table">'+
-        '    <input type="button" value="Hide" ng-click="display_approval()">'+
-        '    {{whatever.length}} step(-s)'+
-        '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
-        '      <thead>'+
-        '        <tr>'+
-        '          <th style="padding: 0px;">Index</th>'+
-        '          <th style="padding: 0px;">Approver</th>'+
-        '          <th style="padding: 0px;">Step</th>'+
-        '        </tr>'+
-        '      </thead>'+
-        '      <tbody>'+
-        '        <tr ng-repeat="elem in approval">'+
-        '          <td style="padding: 0px;">{{elem.index}}</td>'+
-        '          <td style="padding: 0px;">{{elem.approver}}</td>'+
-        '          <td style="padding: 0px;">{{elem.approval_step}}</td>'+
-        '        <tr>'+
-        '      </tbody>'+
-        '    </table>'+
-        '  </div>'+
-        '</div>',
-        link: function(scope, element, attrs, ctrl){
-            ctrl.$render = function(){
-                scope.whatever = ctrl.$viewValue;
-            };
-            scope.display_table= false;
-            scope.approval = {};
-            scope.display_approval = function(){
-                if (scope.display_table){
-                    scope.display_table = false;
-                }else{
-                  scope.display_table = true;
-                  scope.approval = ctrl.$viewValue;
-                }
-            };
+  return{
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <div ng-hide="display_table">'+
+    '    <input type="button" value="Show" ng-click="display_approval()">'+
+    '    {{whatever.length}} step(-s)'+
+    '  </div>'+
+    '  <div ng-show="display_table">'+
+    '    <input type="button" value="Hide" ng-click="display_approval()">'+
+    '    {{whatever.length}} step(-s)'+
+    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
+    '      <thead>'+
+    '        <tr>'+
+    '          <th style="padding: 0px;">Index</th>'+
+    '          <th style="padding: 0px;">Approver</th>'+
+    '          <th style="padding: 0px;">Step</th>'+
+    '        </tr>'+
+    '      </thead>'+
+    '      <tbody>'+
+    '        <tr ng-repeat="elem in approval">'+
+    '          <td style="padding: 0px;">{{elem.index}}</td>'+
+    '          <td style="padding: 0px;">{{elem.approver}}</td>'+
+    '          <td style="padding: 0px;">{{elem.approval_step}}</td>'+
+    '        <tr>'+
+    '      </tbody>'+
+    '    </table>'+
+    '  </div>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.whatever = ctrl.$viewValue;
+      };
+      scope.display_table= false;
+      scope.approval = {};
+      scope.display_approval = function(){
+        if (scope.display_table){
+          scope.display_table = false;
+        }else{
+          scope.display_table = true;
+          scope.approval = ctrl.$viewValue;
         }
+      };
     }
+  }
 });
+
 testApp.directive("customHistory", function(){
   return {
     require: 'ngModel',
@@ -886,7 +886,6 @@ testApp.directive("customHistory", function(){
     '      <thead>'+
     '        <tr>'+
     '          <th style="padding: 0px;">Action</th>'+
-//     '          <th style="padding: 0px;">Message</th>'+
     '          <th style="padding: 0px;">Date</th>'+
     '          <th style="padding: 0px;">User</th>'+
     '          <th style="padding: 0px;">Step</th>'+ //is it needed?
@@ -895,7 +894,6 @@ testApp.directive("customHistory", function(){
     '      <tbody>'+
     '        <tr ng-repeat="elem in show_info">'+
     '          <td style="padding: 0px;">{{elem.action}}</td>'+
-//     '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
     '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
     '          <td style="padding: 0px;">'+
     '              <div ng-switch="elem.updater.author_name">'+
@@ -928,10 +926,8 @@ testApp.directive("sequenceDisplay", function($http){
     '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();show_sequence=true;">'+
     '     <i class="icon-eye-open"></i>'+
     '    </a>'+
-	//    '    <input type="button" value="Show" ng-click="getCmsDriver();show_sequence=true;">'+
     '  </div>'+
     '  <div ng-show="show_sequence">'+
-	//    '    <input type="button" value="Hide" ng-click="show_sequence=false;">'+
     '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
     '     <i class="icon-remove"></i>'+
     '    </a>'+
@@ -947,30 +943,31 @@ testApp.directive("sequenceDisplay", function($http){
       ctrl.$render = function(){
         scope.show_sequence = false;
         scope.sequencePrepId = ctrl.$viewValue;
-//         scope.sequencePrepId = scope.dbName;
       };
 
       scope.getCmsDriver = function(){
-          if (scope.driver ===undefined){
+        if (scope.driver ===undefined){
           var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.sequencePrepId);
           promise.then(function(data){
             scope.driver = data.data.results;
           }, function(data){
-             alert("Error: ", data.status);
-        });
-	}
+            alert("Error: ", data.status);
+          });
+        }
       };
+
       scope.resetOptions = function(){
-          var promise = $http.get("restapi/"+scope.dbName+"/option_reset/"+scope.sequencePrepId);
-          promise.then(function(data){
-            scope.driver = data.data.results[scope.sequencePrepId];
-          }, function(data){
-             alert("Error: ", data.status);
-        });
-      };
+        var promise = $http.get("restapi/"+scope.dbName+"/option_reset/"+scope.sequencePrepId);
+        promise.then(function(data){
+          scope.driver = data.data.results[scope.sequencePrepId];
+        }, function(data){
+          alert("Error: ", data.status);
+      });
+    };
    }
   }
 });
+
 testApp.directive("generatorParams", function($http){
   return {
     require: 'ngModel',
@@ -983,7 +980,6 @@ testApp.directive("generatorParams", function($http){
     '      <span ng-show="display_list.indexOf($index) != -1">'+ //if index in list of possible views -> then display
     '        <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '          <dt>{{"version"}}</dt>'+
-    // '          <dd>{{$index}}</dd>'+
     '          <dd class="clearfix">{{param["version"]}}</dd>'+
     '          <dt>{{"cross section"}}</dt>'+
     '          <dd class="clearfix">{{param["cross_section"]}}'+
@@ -1005,7 +1001,6 @@ testApp.directive("generatorParams", function($http){
     '    <li ng-switch-when="false">'+ //last parameter to be displayed all the time
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">'+
     '        <dt>{{"version"}}</dt>'+
-    // '          <dd>{{$index}}</dd>'+
     '        <dd class="clearfix">{{param["version"]}}</dd>'+
     '        <dt>{{"cross section"}}</dt>'+
     '        <dd class="clearfix">{{param["cross_section"]}}'+
@@ -1044,6 +1039,7 @@ testApp.directive("generatorParams", function($http){
     }
   };
 });
+
 testApp.directive("loadFields", function($http, $location){
   return {
     replace: true,
@@ -1075,23 +1071,11 @@ testApp.directive("loadFields", function($http, $location){
       scope.test_values = [];
       scope.test_data = "";
 
-      // scope.getSearch = function(){
-      //   scope.listfields = {};
-      //   scope.showUrl = false;
-      //   var promise = $http.get("restapi/"+scope.dbName+"/searchable/do");
-      //   scope.loadingData = true;
-      //   promise.then(function(data){
-      //     scope.loadingData = false;
-      //     scope.searchable = data.data;
-      //   }, function(data){
-      //     scope.loadingData = false;
-      //     alert("Error getting searchable fields: "+data.status);
-      //   });
-      // };
       scope.zeroPad = function(num, places){
         var zero = places - num.toString().length + 1;
         return Array(+(zero > 0 && zero)).join("0") + num;
-      }
+      };
+
       scope.goToNextPrepid = function(increment){
         if($location.search()["prepid"]){
           var prepid = $location.search()["prepid"];
@@ -1101,12 +1085,14 @@ testApp.directive("loadFields", function($http, $location){
           scope.getData();
         }
       };
+
       scope.cleanSearchUrl = function(){
         _.each($location.search(),function(elem,key){
           $location.search(key,null);
         });
         $location.search("page",0);
       };
+
       scope.getUrl = function(){
         scope.cleanSearchUrl();
          //var url = "?";
@@ -1120,6 +1106,7 @@ testApp.directive("loadFields", function($http, $location){
         });
         scope.getData();
       };
+
       scope.toggleSelectOption = function(option){
         scope.search_change(option);
         if (scope.showOption[option])
@@ -1130,6 +1117,7 @@ testApp.directive("loadFields", function($http, $location){
           scope.showOption[option] = true;
         }
       };
+
       scope.search_change = function(field_name )
       {
         if (scope.searchable[field_name].length == 0)
@@ -1137,17 +1125,18 @@ testApp.directive("loadFields", function($http, $location){
           var promise = $http.get("restapi/"+scope.dbName+"/unique_values/"+field_name);
           scope.loadingData = true;
           promise.then(function(data){
-              scope.loadingData = false;
-              _.each(data.data.results, function(elem)
-                {
-                  scope.searchable[field_name].push(elem);
-                });
-            }, function(data){
-              scope.loadingData = false;
-              alert("Error getting searchable fields: "+data.status);
+            scope.loadingData = false;
+            _.each(data.data.results, function(elem)
+            {
+              scope.searchable[field_name].push(elem);
             });
+          }, function(data){
+            scope.loadingData = false;
+            alert("Error getting searchable fields: "+data.status);
+          });
         }
       };
+
       scope.$watch('tabsettings.navigation.active', function(){
         if (scope.tabsettings.navigation.active)
         {
