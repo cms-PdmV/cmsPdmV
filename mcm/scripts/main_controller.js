@@ -84,7 +84,7 @@ var promise;
   //return everyting thats after main url
   $scope.getLocation = function(){
     var __location = $location.url();
-    return __ret_value.replace(/page=\d+/g,"").substring(1); //remove 1st character which is / to make a relative link
+    return __location.replace(/page=\d+/g,"").substring(1); //remove 1st character which is / to make a relative link
   };
 
   $scope.role = function(priority){
