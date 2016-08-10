@@ -75,7 +75,7 @@
                 <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');" ng-hide="role(3);" target="_self" ng-href="#">
+                <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');" ng-hide="role(3);" ng-href="#">
                   <i class="icon-fire"></i>
                 </a>
                 <a rel="tooltip" title="Announce invalidation" ng-click="do_action(invalidations_info['_id'], 'announce');" ng-hide="role(3);" ng-href="#">

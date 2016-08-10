@@ -104,10 +104,10 @@
                 <a ng-click="openCloneModal(data.prepid, data.pwg, data.member_of_campaign)" rel="tooltip" ng-hide="role(1);" title="Clone Request" ng-href="#">
                   <i class="icon-share-alt"></i>
                 </a>
-                <a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(1);" target="_self" ng-href="#">
+                <a ng-click="open_isSureModal('reset',data.prepid)" rel="tooltip" title="Reset" ng-hide="role(1);" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="open_isSureModal('option_reset',data.prepid)" rel="tooltip" title="Option Reset" ng-hide="role(1);" target="_self" ng-href="#">
+                <a ng-click="open_isSureModal('option_reset',data.prepid)" rel="tooltip" title="Option Reset" ng-hide="role(1);" ng-href="#">
                   <i class="icon-share"></i>
                 </a>
                 <a ng-click="open_isSureModal('approve',data.prepid)" rel="tooltip" title="Next step" ng-hide="role(1);" ng-href="#">
@@ -137,7 +137,7 @@
                 <!--<a ng-click="open_isSureModal('hello',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Rewind status" ng-href="#">
                   <i class="icon-step-backward"></i>
                 </a>-->
-                <a ng-click="open_isSureModal('soft_reset',data.prepid)" rel="tooltip" title="Soft Reset" ng-hide="role(3);" target="_self" ng-href="#">
+                <a ng-click="open_isSureModal('soft_reset',data.prepid)" rel="tooltip" title="Soft Reset" ng-hide="role(3);" ng-href="#">
                   <i class="icon-step-backward"></i>
                 </a>
                 <a ng-click="open_isSureModal('toggle',data.prepid)" rel="tooltip" ng-hide="role(4);" title="Toggle status" ng-href="#">
@@ -459,7 +459,7 @@
         <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" title="Notify selected prepids" ng-href="#">
           <i class="icon-envelope"></i>
         </a>
-        <a ng-click="open_isSureModal('soft reset', 'selected requests')" rel="tooltip" ng-hide="role(3);" title="Soft reset selected requests" target="_self" ng-href="#">
+        <a ng-click="open_isSureModal('soft reset', 'selected requests')" rel="tooltip" ng-hide="role(3);" title="Soft reset selected requests" ng-href="#">
           <i class="icon-step-backward"></i>
         </a>
         <a ng-click="loadStats()" rel="tooltip" title="Load statistics" ng-href="#">

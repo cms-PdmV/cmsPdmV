@@ -90,7 +90,7 @@
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" target="_self" ng-href="#">
+                <a ng-click="single_step('approve',data.prepid+'/0')" rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
                 <a ng-click="single_step('approve',data.prepid)" rel="tooltip" ng-hide="role(3);" title="Next step" ng-href="#">
