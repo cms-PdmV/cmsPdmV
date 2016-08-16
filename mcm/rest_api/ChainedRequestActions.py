@@ -986,9 +986,14 @@ class ForceChainReqToDone(RESTResource):
                     "message": "Chained request with prepid {0} does not exist".format(prepid)})
 
         cr = chained_request(self.crdb.get(prepid))
-        cr.set_status(to_status="done")
-        self.logger.debug("forceing chain_req status to done. cr status:%s" %(
-                cr.get_attribute("status")))
 
-        ret = self.crdb.save(cr.json())
+        if cr.get_attribute("status") != "done":
+            cr.set_status(to_status="done")
+            self.logger.debug("forcing chain_req status to done. cr status:%s" %(
+                    cr.get_attribute("status")))
+
+            ret = self.crdb.save(cr.json())
+        else:
+            ret = "Chained request already in status done"
+
         return {'prepid': prepid, 'message': ret}
