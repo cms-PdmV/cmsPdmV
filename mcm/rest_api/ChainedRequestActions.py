@@ -956,3 +956,39 @@ class TestOutputDSAlgo(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return cr.test_output_ds()
+
+class ForceChainReqToDone(RESTResource):
+    def __init__(self, mode='setup'):
+        self.access_limit = access_rights.production_manager
+        self.crdb = database('chained_requests')
+
+    def GET(self, *args, **kwargs):
+        """
+        Force chained_request to set status to done
+        """
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+
+        if ',' in args[0]:
+            rlist = args[0].rsplit(',')
+            res = []
+            for r in rlist:
+                res.append(self.force_status_done(r))
+            return dumps(res, indent=4)
+        else:
+            return dumps([self.force_status_done(args[0])], indent=4)
+
+    def force_status_done(self, prepid):
+        if not self.crdb.document_exists(prepid):
+            return dumps({"results": False,
+                    "message": "Chained request with prepid {0} does not exist".format(prepid)})
+
+        cr = chained_request(self.crdb.get(prepid))
+        cr.set_status(to_status="done")
+        self.logger.debug("forceing chain_req status to done. cr status:%s" %(
+                cr.get_attribute("status")))
+
+        ret = self.crdb.save(cr.json())
+        return {'prepid': prepid, 'message': ret}
