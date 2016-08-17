@@ -21,7 +21,7 @@ angular.module('testApp').controller('mainCtrl',
      $window.location.href = newLocation;
     }
   }
-var promise;
+  var promise;
   var get_rev = true;
   _.each(["campaigns","chained_campaigns","flows","actions","requests","chained_requests","batch","invalidations","mccms","dashboard","users","edit","news","settings"], function (elem){
     if ($location.path().indexOf(elem) != -1)
@@ -86,9 +86,14 @@ var promise;
     var __location = $location.url();
     return __location.replace(/page=\d+/g,"").substring(1); //remove 1st character which is / to make a relative link
   };
+  //return fullUrl
+  $scope.getFullLocation = function(){
+    var __location = $location.url();
+    return __location.substring(1); //remove 1st character which is / to make a relative link
+  };
 
   $scope.role = function(priority){
-      return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
+    return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
   };
   //watch length of pending HTTP requests -> if there are display loading;
   $scope.$watch(function(){ return $http.pendingRequests.length;}, function(v){

@@ -282,25 +282,28 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.parse_report = function(data,status){
       to_reload=true;
-      for (i=0;i<data.length;i++){
-      $scope.action_status[data[i]['prepid']] = data[i]['results'];
-      if ( data[i]['results'] == true)
-          {
-        $scope.action_report[data[i]['prepid']] = 'OK';
-          }
-      else
-          {
-        $scope.action_report[data[i]['prepid']] = data[i]['message'];
-        to_reload=false;
-          }
-        }
-        if (to_reload == true)
-      {
-          $scope.setSuccess(status);
+      if (!_.isArray(data)) //multiple inspecting 1 chain will return result of singe inspection
+      { //we have to convert to list of results
+        data = [data];
       }
-        else
+      for (i=0; i<data.length; i++){
+        $scope.action_status[data[i]['prepid']] = data[i]['results'];
+        if ( data[i]['results'] == true)
+        {
+          $scope.action_report[data[i]['prepid']] = 'OK';
+        } else
+        {
+          $scope.action_report[data[i]['prepid']] = data[i]['message'];
+          to_reload=false;
+        }
+      };
+
+      if (to_reload == true)
       {
-          $scope.setFailure(status);
+        $scope.setSuccess(status);
+      } else
+      {
+        $scope.setFailure(status);
       }
     };
 
