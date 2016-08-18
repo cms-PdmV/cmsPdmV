@@ -121,6 +121,12 @@
                   <a ng-click="single_step('inspect',data.prepid,'')" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);" ng-href="#">
                     <i class="icon-screenshot"></i>
                   </a>
+                  <a ng-click="force_done(data.prepid, 'to_done')" rel="tooltip" title="Force done status" ng-hide="role(3);"  ng-if="data.status != 'done' && data.status != 'force_done'" ng-href="#">
+                    <i class="icon-circle-arrow-up"></i>
+                  </a>
+                  <a ng-click="force_done(data.prepid)" rel="tooltip" title="Move force_done status to done" ng-hide="role(3);"  ng-if="data.status == 'force_done'" ng-href="#">
+                    <i class="icon-circle-arrow-down"></i>
+                  </a>
                   <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
                     <i class="icon-picture"></i>
                   </a>
@@ -238,8 +244,14 @@
         <a ng-click='multipleDropDownModal(selected_prepids)' rel="tooltip" title="Reserve selected chains" ng-hide="role(3);" ng-href="#">
           <i class="icon-indent-right"></i>
         </a>
-        <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect slected chained requests" ng-hide="role(3);" ng-href="#">
+        <a ng-click="multiple_step('inspect','')" rel="tooltip" title="Inspect selected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
+        </a>
+        <a ng-click="multiple_step('force_done','')" rel="tooltip" title="Force done selected chained requests" ng-hide="role(3);" ng-href="#">
+          <i class="icon-circle-arrow-up"></i>
+        </a>
+        <a ng-click="multiple_step('back_forcedone','')" rel="tooltip" title="Move force_done back to processing for selected chained requests" ng-hide="role(3);" ng-href="#">
+          <i class="icon-circle-arrow-up"></i>
         </a>
         <a ng-href="graph?prepid={{selected_prepids.join()}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
           <i class="icon-picture"></i>

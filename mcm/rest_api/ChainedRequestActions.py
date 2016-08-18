@@ -993,10 +993,10 @@ class ForceChainReqToDone(RESTResource):
                     cr.get_attribute("status")))
 
             ret = self.crdb.save(cr.json())
+            return {'prepid': prepid, 'message': ret, 'results' : True}
         else:
             ret = "Chained request already in status done"
-
-        return {'prepid': prepid, 'message': ret}
+            return {'prepid': prepid, 'message': ret, 'results': False}
 
 class ForceStatusDoneToProcessing(RESTResource):
     def __init__(self):
@@ -1034,7 +1034,7 @@ class ForceStatusDoneToProcessing(RESTResource):
                     cr.get_attribute("status")))
 
             ret = self.crdb.save(cr.json())
+            return {'prepid': prepid, 'message': ret, 'results': True}
         else:
             ret = "Chained request not in status force_done"
-
-        return {'prepid': prepid, 'message': ret}
+            return {'prepid': prepid, 'message': ret, 'results': False}

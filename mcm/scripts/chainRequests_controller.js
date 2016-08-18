@@ -424,6 +424,25 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.setFailure(data.status);
       })
     };
+
+    $scope.force_done = function(prepid, action)
+    {
+      if (action == 'to_done')
+      {
+        var __url = "restapi/"+$scope.dbName+"/force_done/"+prepid
+      }else
+      {
+        var __url = "restapi/"+$scope.dbName+"/back_forcedone/"+prepid
+      }
+
+      var promise = $http.get(__url);
+      promise.then(function(data, status){
+        $scope.parse_report(data.data, data.status);
+      }, function(data){
+        $scope.setFailure(data.status);
+      })
+    };
+
 }]);
 
 // NEW for directive
