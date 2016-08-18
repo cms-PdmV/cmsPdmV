@@ -958,7 +958,7 @@ class TestOutputDSAlgo(RESTResource):
         return cr.test_output_ds()
 
 class ForceChainReqToDone(RESTResource):
-    def __init__(self, mode='setup'):
+    def __init__(self):
         self.access_limit = access_rights.production_manager
         self.crdb = database('chained_requests')
 
@@ -976,9 +976,9 @@ class ForceChainReqToDone(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.force_status_done(r))
-            return dumps(res, indent=4)
+            return dumps(res)
         else:
-            return dumps([self.force_status_done(args[0])], indent=4)
+            return dumps([self.force_status_done(args[0])])
 
     def force_status_done(self, prepid):
         if not self.crdb.document_exists(prepid):
@@ -987,13 +987,54 @@ class ForceChainReqToDone(RESTResource):
 
         cr = chained_request(self.crdb.get(prepid))
 
-        if cr.get_attribute("status") != "done":
-            cr.set_status(to_status="done")
+        if not (cr.get_attribute("status") in ["done", "force_done"]):
+            cr.set_status(to_status="force_done")
             self.logger.debug("forcing chain_req status to done. cr status:%s" %(
                     cr.get_attribute("status")))
 
             ret = self.crdb.save(cr.json())
         else:
             ret = "Chained request already in status done"
+
+        return {'prepid': prepid, 'message': ret}
+
+class ForceStatusDoneToProcessing(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        self.crdb = database('chained_requests')
+
+    def GET(self, *args, **kwargs):
+        """
+        Move chained_request from force_done to processing
+        """
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+
+        if ',' in args[0]:
+            rlist = args[0].rsplit(',')
+            res = []
+            for r in rlist:
+                res.append(self.force_status(r))
+            return dumps(res)
+        else:
+            return dumps([self.force_status(args[0])])
+
+    def force_status(self, prepid):
+        if not self.crdb.document_exists(prepid):
+            return dumps({"results": False,
+                    "message": "Chained request with prepid {0} does not exist".format(prepid)})
+
+        cr = chained_request(self.crdb.get(prepid))
+
+        if cr.get_attribute("status") == "force_done":
+            cr.set_status(to_status="processing")
+            self.logger.debug("Moving chain_req back to satus 'processing'. cr status:%s" %(
+                    cr.get_attribute("status")))
+
+            ret = self.crdb.save(cr.json())
+        else:
+            ret = "Chained request not in status force_done"
 
         return {'prepid': prepid, 'message': ret}

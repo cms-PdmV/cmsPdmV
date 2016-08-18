@@ -61,7 +61,7 @@ class chained_request(json_base):
 
     _json_base__approvalsteps = ['none', 'flow', 'submit']
 
-    _json_base__status = ['new', 'processing', 'done']
+    _json_base__status = ['new', 'processing', 'done', 'force_done']
 
     _json_base__schema = {
         '_id': '',
@@ -863,6 +863,10 @@ class chained_request(json_base):
     @timer
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
+
+        if self.get_attribute('status') == 'force_done':
+            not_good.update({'message': 'cannot inspect in force_done status'})
+            return not_good
 
         if self.get_attribute('last_status') == 'done':
             return self.inspect_done()
