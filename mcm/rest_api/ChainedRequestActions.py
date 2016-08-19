@@ -282,7 +282,7 @@ class FlowToNextStep(RESTResource):
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return {"results":str(ex)}
 
-
+        #TO-DO check if chained_request is in settings forceflow_list and remove it!
         # if the chained_request can flow, do it
         if reserve:
             self.logger.info('Attempting to reserve to next step for chained_request %s' % (
@@ -1038,3 +1038,36 @@ class ForceStatusDoneToProcessing(RESTResource):
         else:
             ret = "Chained request not in status force_done"
             return {'prepid': prepid, 'message': ret, 'results': False}
+
+class ToForceFlowList(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.generator_contact
+        self.sdb = database('settings')
+
+    def GET(self, *args, **kwargs):
+        """
+        Add selected prepid's to global force complete list for later action
+        """
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+
+        if ',' in args[0]:
+            rlist = args[0].rsplit(',')
+        else:
+            rlist = [args[0]]
+        res = []
+
+        forceflow_list = self.sdb.get("list_of_forceflow")
+        ##TO-DO check if prepid exists!
+        ##TO-DO check the status of chain_req!
+        for el in rlist:
+            if el not in forceflow_list["value"]:
+                forceflow_list["value"].append(el)
+                res.append({"prepid": el, 'results': True, 'message': 'OK'})
+            else:
+                res.append({"prepid": el, 'results': False, 'message': 'Chained request already in forceflow list'})
+
+        ##TO-DO check the update return value
+        ret = self.sdb.update(forceflow_list)
+
+        return dumps(res)
