@@ -427,6 +427,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.force_done = function(prepid, action)
     {
+      // Move chain request status to force_done or vice versa
       if (action == 'to_done')
       {
         var __url = "restapi/"+$scope.dbName+"/force_done/"+prepid
@@ -445,6 +446,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.add_to_forceflow = function(prepid)
     {
+      // Add chain_req prepid to global list of chains to be force_flown
       var __url = "restapi/"+$scope.dbName+"/force_flow/"+prepid
 
       var promise = $http.get(__url);
