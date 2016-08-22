@@ -443,6 +443,18 @@ angular.module('testApp').controller('resultsCtrl',
       })
     };
 
+    $scope.add_to_forceflow = function(prepid)
+    {
+      var __url = "restapi/"+$scope.dbName+"/force_flow/"+prepid
+
+      var promise = $http.get(__url);
+      promise.then(function(data, status){
+        $scope.parse_report(data.data, data.status);
+      }, function(data){
+        $scope.setFailure(data.status);
+      })
+    };
+
 }]);
 
 // NEW for directive

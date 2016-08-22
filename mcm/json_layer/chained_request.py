@@ -358,6 +358,7 @@ class chained_request(json_base):
         crdb = database('chained_requests')
         fdb = database('flows')
         adb = database('actions')
+        sdb = database('settings')
 
         l_type=locator()
 
@@ -622,6 +623,10 @@ class chained_request(json_base):
                 if not saved:
                     raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                                  'Unable to save %s with updated member_of_chains' % next_id)
+                forceflow_list = sdb.get("list_of_forceflow")
+                if self.get_attribute("prepid") in forceflow_list["value"]:
+                    forceflow_list["value"].remove(self.get_attribute("prepid"))
+                    sdb.update(forceflow_list)
             return True
         elif approach == 'patch':
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
@@ -731,6 +736,13 @@ class chained_request(json_base):
                 l_type.baseurl(), next_request.get_attribute('prepid'),
                 )
             next_request.notify(notification_subject, notification_text, accumulate=True)
+
+        #we remove the chain_req id from force_flow list if it's in there
+        forceflow_list = sdb.get("list_of_forceflow")
+        if self.get_attribute("prepid") in forceflow_list["value"]:
+            forceflow_list["value"].remove(self.get_attribute("prepid"))
+            sdb.update(forceflow_list)
+
         return True
 
     def retrieve_original_action_item(self, adb, original_action_id=None):
