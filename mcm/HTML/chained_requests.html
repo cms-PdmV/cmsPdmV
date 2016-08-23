@@ -127,7 +127,7 @@
                   <a ng-click="force_done(data.prepid)" rel="tooltip" title="Move force_done status to done" ng-hide="role(3);"  ng-if="data.status == 'force_done'" ng-href="#">
                     <i class="icon-circle-arrow-down"></i>
                   </a>
-                  <a ng-click="add_to_forceflow(data.prepid)" rel="tooltip" title="Add prepid to global forceflow list" ng-hide="role(3);"  ng-if="data.status == 'processing'" ng-href="#">
+                  <a ng-click="add_to_forceflow(data.prepid)" rel="tooltip" title="Add prepid to global forceflow list" ng-hide="role(1);"  ng-if="data.status == 'processing'" ng-href="#">
                     <i class="icon-gift"></i>
                   </a>
                   <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
