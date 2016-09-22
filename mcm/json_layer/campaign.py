@@ -44,6 +44,8 @@ class campaign(json_base):
          'www': '',
          #'completed_events': -1,
          #'total_events': -1,
+         'events_per_lumi' : {'singlecore' : 100, 'multicore': 202}, #default events per lumi for single core.
+         ##TO-DO: migrate existing campaigns to have the default value
          'root': 1, # -1: possible root, 0: root, 1: non-root
          'sequences': [], # list of jsons of jsons
          'approval': '',
