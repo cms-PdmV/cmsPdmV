@@ -24,8 +24,8 @@ class request_to_wmcontrol:
 
         for seq in all_seq:
             if 'nThreads' in seq:
-                if seq['nThreads'] < min_one or min_one == None:
-                    min_one = seq['nThreads']
+                if int(seq['nThreads']) < min_one or min_one == None:
+                    min_one = int(seq['nThreads'])
             else:
                 ##this means that a request is single core and we dont set nThreads
                 return None
@@ -94,11 +94,9 @@ class request_to_wmcontrol:
         processString = mcm_r.get_attribute('process_string')
         processingString = mcm_r.get_processing_string(0)
 
-
-        max_forward_eff = mcm_r.get_forward_efficiency()
-        events_per_lumi = settings().get_value('events_per_lumi')
-
         if wmagent_type == 'MonteCarlo':
+            max_forward_eff = mcm_r.get_forward_efficiency()
+            events_per_lumi = mcm_r.get_events_per_lumi(n_cores)
 
             # calculate eff dev
             command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
@@ -121,6 +119,8 @@ class request_to_wmcontrol:
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
 
         elif wmagent_type == 'LHEStepZero':
+            max_forward_eff = mcm_r.get_forward_efficiency()
+            events_per_lumi = mcm_r.get_events_per_lumi(n_cores)
 
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
             command += ' --events-per-lumi %s' % ( events_per_lumi / max_forward_eff )
