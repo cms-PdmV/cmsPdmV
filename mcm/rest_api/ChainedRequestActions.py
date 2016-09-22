@@ -696,7 +696,6 @@ class TaskChainDict(RESTResource):
             return "", ""
 
         def request_to_tasks(r,base,depend):
-            events_per_lumi = settings().get_value('events_per_lumi')
             ts = []
             for si in range(len(r.get_attribute('sequences'))):
                 task_dict = {"TaskName": "%s_%d" % (r.get_attribute('prepid'), si),
@@ -715,7 +714,8 @@ class TaskChainDict(RESTResource):
                            "FilterEfficiency" : r.get_efficiency(),
                            "PrepID" : r.get_attribute('prepid')
                            }
-                if 'nThreads' in r.get_attribute('sequences')[si]:
+                ##check if we have multicore an it's not an empty string
+                if 'nThreads' in r.get_attribute('sequences')[si] and r.get_attribute('sequences')[si]['nThreads']:
                     task_dict["Multicore"] = int(r.get_attribute('sequences')[si]['nThreads'])
 
                 __list_of_steps = get_list_of_steps(r.get_attribute('sequences')[si]['step'])
@@ -737,6 +737,11 @@ class TaskChainDict(RESTResource):
                                           "EventsPerLumi" : events_per_lumi,
                                           "LheInputFiles" : r.get_attribute('mcdb_id')>0
                                           })
+                        if 'Multicore' in task_dict:
+                            task_dict["EventsPerLumi"] = r.get_events_per_lumi(task_dict["Multicore"])
+                        else:
+                            task_dict["EventsPerLumi"] = r.get_events_per_lumi(None)
+
                         ## temporary work-around for request manager not creating enough jobs
                         ## https://github.com/dmwm/WMCore/issues/5336
                         ## inflate requestnumevents by the efficiency to create enough output

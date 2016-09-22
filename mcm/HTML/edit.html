@@ -260,6 +260,12 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
+                    <div ng-switch-when="Events per lumi">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
                     <div ng-switch-default style="width: 400px;">
                       <div ng-switch on="underscore.isBoolean(result[column.db_name])">
                         <div ng-switch-when="true">
