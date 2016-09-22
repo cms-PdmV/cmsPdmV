@@ -2642,3 +2642,15 @@ done
         batch_number = batch_name.split("-")[-1]
         cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
         return cmd
+
+    def get_events_per_lumi(self, num_cores):
+        cdb = database('campaigns')
+        camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
+        evts_per_lumi = camp.get_attribute("events_per_lumi")
+        if num_cores and num_cores > 1:
+            if 'multicore' in evts_per_lumi: #multicore value set for campaign
+                return evts_per_lumi["multicore"]
+            else: ##in case someone removed multicore from dict
+                return int(num_cores) * int(evts_per_lumi["singlecore"])
+        else: ##TO-DO what if singlecore is deleted from dict?
+            return evts_per_lumi["singlecore"]
