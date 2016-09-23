@@ -867,7 +867,6 @@ class TaskChainDict(RESTResource):
             "inputMode" : "couchDB",
             "Group" : "ppd",
             "Requestor": "pdmvserv",
-            "OpenRunningTimeout" : 43200,
             "TaskChain" : 0,
             "ProcessingVersion": 1,
             "RequestPriority" : 0,
