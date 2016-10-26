@@ -114,8 +114,8 @@
               <div ng-switch-when="Requests">
                 <ul>
                   <li ng-repeat="elem in data[value.db_name]">
-                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
-                    <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr/view/details/{{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
+                    <a ng-show="isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid={{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
+                    <a ng-hide="isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr2/fetch?rid={{elem.name}}' rel="tooltip" title="Details in request manager" target="_self">{{elem.name}}</a>
                     ,
                     <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
                     <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
