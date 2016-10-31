@@ -734,13 +734,9 @@ class TaskChainDict(RESTResource):
                         task_dict.update({"SplittingAlgo"  : "EventBased",
                                           "RequestNumEvents" : r.get_attribute('total_events'),
                                           "Seeding" : "AutomaticSeeding",
-                                          "EventsPerLumi" : events_per_lumi,
-                                          "LheInputFiles" : r.get_attribute('mcdb_id')>0
+                                          "EventsPerLumi" : r.get_events_per_lumi(task_dict.get("Multicore", None)),
+                                          "LheInputFiles" : r.get_attribute('mcdb_id') > 0
                                           })
-                        if 'Multicore' in task_dict:
-                            task_dict["EventsPerLumi"] = r.get_events_per_lumi(task_dict["Multicore"])
-                        else:
-                            task_dict["EventsPerLumi"] = r.get_events_per_lumi(None)
 
                         ## temporary work-around for request manager not creating enough jobs
                         ## https://github.com/dmwm/WMCore/issues/5336
