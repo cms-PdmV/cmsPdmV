@@ -890,9 +890,11 @@ class TaskChainDict(RESTResource):
         for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
             wma[item] = wma['Task%d'% wma['TaskChain']][item]
 
-        wma['Campaign' ] = wma['Task1']['AcquisitionEra']
-        wma['PrepID' ] = task_name
-        wma['RequestString' ] = wma['PrepID']
+        ##since 2016-11, processingString and AcquisitionEra is mandatory in global params
+        wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
+        wma['ProcessingString'] = wma['Task1']['ProcessingString']
+        wma['PrepID'] = task_name
+        wma['RequestString'] = wma['PrepID']
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(wma, indent=4)
 
