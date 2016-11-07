@@ -893,6 +893,7 @@ class TaskChainDict(RESTResource):
         ##since 2016-11, processingString and AcquisitionEra is mandatory in global params
         wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
         wma['ProcessingString'] = wma['Task1']['ProcessingString']
+        wma['Campaign'] = wma['Task1']['AcquisitionEra']
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
         cherrypy.response.headers['Content-Type'] = 'text/plain'
