@@ -3,7 +3,7 @@ from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList
+from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList, RemoveFromForceFlowList
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
@@ -275,6 +275,7 @@ root.restapi.chained_requests.test_ds_output = TestOutputDSAlgo()
 root.restapi.chained_requests.force_done = ForceChainReqToDone()
 root.restapi.chained_requests.back_forcedone = ForceStatusDoneToProcessing()
 root.restapi.chained_requests.force_flow = ToForceFlowList()
+root.restapi.chained_requests.remove_force_flow = RemoveFromForceFlowList()
 
 # REST Actions
 root.restapi.actions.save = CreateAction()

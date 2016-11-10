@@ -1074,3 +1074,34 @@ class ToForceFlowList(RESTResource):
         ret = self.sdb.update(forceflow_list)
 
         return dumps(res)
+
+class RemoveFromForceFlowList(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.generator_contact
+        self.sdb = database('settings')
+
+    def GET(self, *args, **kwargs):
+        """
+        Add selected prepid's to global force complete list for later action
+        """
+        if not len(args):
+            return dumps({"results": False, "message": "Chained request prepid not given"})
+
+        if ',' in args[0]:
+            rlist = args[0].rsplit(',')
+        else:
+            rlist = [args[0]]
+        res = []
+
+        forceflow_list = self.sdb.get("list_of_forceflow")
+        for el in rlist:
+            if el not in forceflow_list["value"]:
+                res.append({"prepid": el, 'results': False, 'message': 'Not in forceflow list'})
+            else:
+                forceflow_list["value"].remove(el)
+                res.append({"prepid": el, 'results': True, 'message': 'OK'})
+
+        ##TO-DO check the update return value
+        ret = self.sdb.update(forceflow_list)
+
+        return dumps(res)

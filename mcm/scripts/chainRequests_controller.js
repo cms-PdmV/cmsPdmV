@@ -457,6 +457,18 @@ angular.module('testApp').controller('resultsCtrl',
       })
     };
 
+    $scope.remove_from_forceflow = function(prepid)
+    {
+      // Add chain_req prepid to global list of chains to be force_flown
+      var __url = "restapi/"+$scope.dbName+"/remove_force_flow/"+prepid
+
+      var promise = $http.get(__url);
+      promise.then(function(data, status){
+        $scope.parse_report(data.data, data.status);
+      }, function(data){
+        $scope.setFailure(data.status);
+      })
+    };
 }]);
 
 // NEW for directive
