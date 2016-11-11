@@ -1082,8 +1082,9 @@ class RemoveFromForceFlowList(RESTResource):
 
     def GET(self, *args, **kwargs):
         """
-        Add selected prepid's to global force complete list for later action
+        Remove selected prepid's from global force_complete list
         """
+        ##TO-DO move method to use HTTP DELETE
         if not len(args):
             return dumps({"results": False, "message": "Chained request prepid not given"})
 
