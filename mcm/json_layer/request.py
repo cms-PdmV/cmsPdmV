@@ -4,12 +4,13 @@ import os
 import re
 import pprint
 import xml.dom.minidom
-from math import sqrt
 import hashlib
 import copy
 import traceback
 import time
 import logging
+from math import sqrt
+from json import loads
 
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
@@ -1197,20 +1198,23 @@ done
 
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
                 changed = False
-                for line in output_text.split("\n"):
-                    if 'Unable to change priority of workflow' in line:
-                        self.logger.error("Request {0}. {1}".format(
-                                self.get_attribute('prepid'), line))
+                try:
+                    __out = loads(output_text)
+                    for el in __out["result"]:
+                        __id = el.keys()[0]
+                        ##check if it is the workflow we wanted to change
+                        if __id in reqmgr_names:
+                            ##strangely reqmgr2 changes it's ouput structure alot
+                            ##let's pray that the key is always reqmgr_name
+                            if el[__id].upper() == "OK":
+                                self.logger.debug("Change of priority succeeded")
+                                changed = True
+                            else:
+                                changed = False
 
-                        changed = False
-                    if 'Changed priority for' in line:
-                        changed = True
-                if not changed:
-                    self.logger.error("Could not change priority because %s" % output_text)
-                    if len(error_text) > 0:
-                        self.logger.error("Issue while changing priority for:%s\nstderr:\n%s" % (
-                                self.get_attribute('prepid'), error_text))
-                    return False
+                except Exception as ex:
+                    self.logger.error("Failed parsing wmpriotiry output: %s" % (str(ex)))
+
             return self.modify_priority(new_priority)
 
     def get_valid_and_n(self):
