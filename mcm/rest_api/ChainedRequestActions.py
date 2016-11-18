@@ -707,7 +707,6 @@ class TaskChainDict(RESTResource):
                            "PrimaryDataset" : r.get_attribute('dataset_name'),
                            "AcquisitionEra" : r.get_attribute('member_of_campaign'),
                            "ProcessingString" : r.get_processing_string(si),
-                           "ProcessingVersion" : r.get_attribute('version'),
                            "TimePerEvent" : r.get_attribute("time_event"),
                            "SizePerEvent" : r.get_attribute('size_event'),
                            "Memory" : r.get_attribute('memory'),
@@ -728,6 +727,9 @@ class TaskChainDict(RESTResource):
 
                 if r.get_attribute('pileup_dataset_name'):
                     task_dict["MCPileup"] = r.get_attribute('pileup_dataset_name')
+                ##due to discussion in https://github.com/dmwm/WMCore/issues/7398
+                if r.get_attribute('version') > 0:
+                    task_dict["ProcessingVersion"] = r.get_attribute('version')
 
                 if si == 0:
                     if base:
