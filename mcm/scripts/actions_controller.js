@@ -792,8 +792,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '    </div>'+
         '    <input type="checkbox" ng-click="add_to_selected_list(prepid)" ng-checked="multiple_selection[prepid][column].selected" rel="tooltip" title="Add to multiple list" ng-hide="role(3);"/>'+
         '    <div ng-show="displayBox">'+
-        '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number">'+
-        '        <option ng-repeat="key in [1,2,3,4,5,6]" ng-selected="actionInfo.block_number == key">{{key}}</option>'+
+        '      <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.block_number" ng-options="key for key in [1,2,3,4,5,6]">'+
         '      </select>'+
         '      <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.staged"/>'+
         '      <span class="input-append">'+
@@ -812,8 +811,7 @@ testApp.directive("customPrepId", function ($rootScope, $http) {
         '          <i class="icon-indent-left"></i>'+
         '        </a>'+
         '        <form class="form-inline" ng-show="showSubForm[cr]">'+
-        '          <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.chains[cr].block_number" ng-disabled="role(3);">'+
-        '            <option ng-repeat="key in [1,2,3,4,5,6]" ng-selected="actionInfo.chains[cr].block_number == key">{{key}}</option>'+
+        '          <select class="input-mini" style="margin-bottom: 0px; margin-left: 2px;" ng-model="actionInfo.chains[cr].block_number" ng-disabled="role(3);" ng-options="key for key in [1,2,3,4,5,6]">'+
         '          </select>'+
         '          <input type="number" style="margin-bottom: 0px; width: 80px;" ng-model="actionInfo.chains[cr].staged" ng-disabled="role(3);"/>'+
         '          <span class="input-append">'+
