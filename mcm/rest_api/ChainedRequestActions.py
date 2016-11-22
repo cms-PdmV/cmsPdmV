@@ -79,7 +79,7 @@ class CreateChainedRequest(RESTResource):
 class UpdateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.access_limit = access_rights.administrator
+        self.access_limit = access_rights.production_manager
 
     def PUT(self):
         """
