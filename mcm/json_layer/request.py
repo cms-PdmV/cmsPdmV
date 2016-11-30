@@ -2424,7 +2424,7 @@ done
 
     @staticmethod
     def transfer(current_request, next_request):
-        to_be_transferred = ['dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id', 'notes', 'tags', 'extension']
+        to_be_transferred = ['dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id', 'notes', 'extension']
         for key in to_be_transferred:
             next_request.set_attribute(key, current_request.get_attribute(key))
 
