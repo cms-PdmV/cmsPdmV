@@ -144,13 +144,12 @@ angular.module('testApp').controller('resultsCtrl',
       }, function(){ alert("Error getting information"); });
     };
 
-     $scope.$watch(function() {
-        var loc_dict = $location.search();
-        return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
-      },
-      function(){
-          $scope.getData();
-      });
+    $scope.$watch(function() {
+      var loc_dict = $location.search();
+      return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
+    },function(){
+      $scope.getData();
+    });
   }]);
 
 angular.module('testApp').controller('ModalDemoCtrl',
