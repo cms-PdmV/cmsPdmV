@@ -123,7 +123,7 @@ angular.module('testApp').controller('resultsCtrl',
               alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
               return; //stop doing anything if results are undefined
           }
-          if ($scope.result.length != 0) {
+          if ($scope.result.length > 0) {
               columns = _.keys($scope.result[0]);
               rejected = _.reject(columns, function (v) {
                   return v[0] == "_";
@@ -154,6 +154,8 @@ angular.module('testApp').controller('resultsCtrl',
                       });
                   });
               }
+          }else{
+            alert("Error: " + data.data.message)
           }
           $scope.selectionReady = true;
       }, function () {

@@ -331,11 +331,12 @@ class SelectNewChainedCampaigns(RESTResource):
         """
 
         if not args:
-            #flows = fdb.get_all()
-            return dumps({"results" : 'Error: No arguments were given'})
+            return dumps({"results": False, "message": "No arguments were given"})
         else:
-            ##TO-DO check if flow exists!
-            __flow = self.fdb.get(args[0])
+            if self.fdb.document_exists(args[0]):
+                __flow = self.fdb.get(args[0])
+            else:
+                return dumps({"results": False, "message": "Given flow_prepid was not found"})
 
         self.logger.debug("Constructing newpossible chained_campaigns for flow: %s" % (
                 __flow["prepid"]))
