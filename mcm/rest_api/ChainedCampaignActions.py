@@ -320,81 +320,119 @@ class SelectNewChainedCampaigns(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.fdb = database('flows')
+        self.cdb = database('campaigns')
+        self.ccdb = database('chained_campaigns')
+
 
     def GET(self, *args):
         """
         Generate the list of chained campaigns documents that can be created from the content of flows and campaigns.
         """
-        # get all the flows
-        fdb = database('flows')
-        ccdb = database('chained_campaigns')
-        cdb = database('campaigns')
-        flows = fdb.get_all()
+
+        if not args:
+            #flows = fdb.get_all()
+            return dumps({"results" : 'Error: No arguments were given'})
+        else:
+            ##TO-DO check if flow exists!
+            __flow = self.fdb.get(args[0])
+
+        self.logger.debug("Constructing newpossible chained_campaigns for flow: %s" % (
+                __flow["prepid"]))
+
         all_cc = []
+        new_prepids = []
+        ##generetate the graph sstructure from selected flow
+        __connected_graph = self.bfs({}, [__flow["next_campaign"]])
 
-        def finish_chain(chain_name, chains_dict, allowed_campaigns_dict):
-            """
-            Start recursive finishing of chain.
-            """
-            chain = chains_dict[chain_name]["campaigns_list"]
-            try:
-                last_campaign, last_flow = chain[-1]
-            except TypeError:
-                return
-            next_campaigns = []
-            if last_campaign in allowed_campaigns_dict:
-                next_campaigns.extend(allowed_campaigns_dict[last_campaign])
+        ##start constructing all paths in graph to selected campaign
+        ## starting from any campaign in graph
+        for el in __connected_graph:
+            __camp = self.cdb.get(el)
+            ##check if starting campaign is root
+            if __camp["root"] in [-1, 0]:
+                ret = self.find_all_paths(__connected_graph, el, __flow["next_campaign"])
+                self.logger.debug("all paths return:%s" % (ret))
+                for path in ret:
+                    __prepid = "chain_"+"_".join(flow[0] for flow in path)
+                    ##safety check to not add same chained_campaigns all over
+                    if __prepid not in new_prepids:
+                        ##corss check if the contructed prepid is not already in DB
+                        if not self.ccdb.document_exists(__prepid):
+                            all_cc.append({"prepid": __prepid,
+                                    "campaigns": path, "exists": False})
 
-            traverse_next_campaigns(next_campaigns, chains_dict, chain,
-                    chain_name, allowed_campaigns_dict)
+                            self.logger.debug("possible new chained_campaign: %s" % (
+                                    __prepid))
 
-        def traverse_next_campaigns(next_campaigns, chains_dict, previous_campaigns,
-            previous_chain_name, allowed_campaigns_dict):
+        return dumps({"results": all_cc})
 
-            """
-            Go through all possible connections between chains.
-            """
-            for flow, next_campaign in next_campaigns:
-                chain_name = previous_chain_name+'_'+flow
-                db_existence = ccdb.document_exists(chain_name)
-                validity = False
-                new_campaigns = list(previous_campaigns)
-                new_campaigns.append((next_campaign, flow))
-                if db_existence:
-                    mcm_cc = ccdb.get(chain_name)
-                    validity = mcm_cc['valid']
-                    #all_cc.append(mcm_cc)
-                else:
-                    all_cc.append({'prepid': chain_name, 'campaigns': new_campaigns,
-                            "exists": False})
+    def bfs(self, graph, start):
+        """
+         A breadth-first search to construct a graph with all possible
+         connections from selected flow into adjacency lists
+        """
 
-                chains_dict[chain_name] = {"campaigns_list": new_campaigns,
-                        "exists_in_database": db_existence, "valid": validity}
+        visited = set()
+        queue = []
+        ##start from allowed campaigns,
+        ## there could be more than 1
+        queue.extend(start)
 
-                # recursively fill all the possible chains
-                finish_chain(chain_name, chains_dict, allowed_campaigns_dict)
+        while queue:
+            vertex = queue.pop(0)
 
-        allowed_campaigns_dict = defaultdict(list)
-        # preparation of dicts needed by later algorithm
-        for flow in flows:
-            allowed_campaigns = flow['allowed_campaigns']
-            for allowed_campaign in allowed_campaigns:
-                allowed_campaigns_dict[allowed_campaign].append((flow['prepid'],
-                        flow['next_campaign']))
+            ##if we haven't checked campaign
+            if vertex not in visited:
 
-        chains_dict = defaultdict(dict) # chain_id:{"campaigns_list": list, "exists_in_database":exists, "valid":validity})
-        # creation of output dictionary
-        for allowed_c in allowed_campaigns_dict:
-            __query = cdb.construct_lucene_query({'prepid' : allowed_c})
-            ##do we really need page -1 and do fti search while looking for single doc?
-            campaigns = cdb.full_text_search('search', __query, page=-1)
-            if len(campaigns) == 0 or campaigns[0]["root"] == 1:
-                continue
-            next_campaigns = allowed_campaigns_dict[allowed_c]
-            traverse_next_campaigns(next_campaigns, chains_dict, [(allowed_c, None)],
-                'chain_' + allowed_c, allowed_campaigns_dict)
+                visited.add(vertex)
+                ##find all flows which goes to selected campaign
+                __query = self.fdb.construct_lucene_query({"next_campaign": vertex})
+                other_allowed_flows = self.fdb.full_text_search("search",
+                        __query, page=-1)
 
-        return dumps({"results" : all_cc})
+                for el in other_allowed_flows:
+                    ##we check those campaigns which is current flow's input
+                    ##and add it to the global graph dictionary
+                    for camp in el["allowed_campaigns"]:
+                        if camp in graph:
+                            ##in case campaign is already there
+                            ## we check if the flow info is not there
+                            if not (el["prepid"], el["next_campaign"]) in graph[camp]:
+                                graph[camp].append((el["prepid"], el["next_campaign"]))
+                        else:
+                            graph[camp] = [(el["prepid"], el["next_campaign"])]
+
+                    queue.extend(el["allowed_campaigns"])
+
+        return graph
+
+    def find_all_paths(self, graph, start, end, flow=None, path=[]):
+        """
+         Find all paths in graph from two nodes. More here:
+         https://www.python.org/doc/essays/graphs/
+        """
+
+        ##start of chained_campaign has to start with root_campaign
+        if not flow:
+            path = path + [[start, None]]
+        else:
+            path = path + [[start, flow]]
+        ##check if we reached the end
+        if start == end:
+            return [path]
+        ##this is to check if the future campaign is not in graph
+        if not graph.has_key(start):
+            return []
+
+        paths = []
+        for node in graph[start]:
+            ##go recursively until the end of the path
+            newpaths = self.find_all_paths(graph, node[1], end,node[0], path)
+            for newpath in newpaths:
+                paths.append(newpath)
+
+        return paths
 
 class ListChainCampaignPrepids(RESTResource):
     def __init__(self):

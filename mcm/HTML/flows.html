@@ -57,13 +57,16 @@
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
-               <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
+                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
                 <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" ng-hide="role(3);" ng-href="#">
                   <i class="icon-chevron-right"></i>
                 </a>
-               <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
+                <a rel="tooltip" title="Show possible chained campaigns" ng-hide="role(3);" ng-href="chained_campaigns?select={{data.prepid}}" target="_blank">
+                  <i class="icon-list-alt"></i>
+                </a>
+                <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
                 <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
