@@ -176,7 +176,7 @@
                     <ul ng-repeat="elem in result[column.db_name]">
                       <li>
                         Step {{ $index +1 }}:
-                        <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1 || $index ==(result[column.db_name].length-1)">
+                        <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
                       </li>
                     </ul>
                   </div>
