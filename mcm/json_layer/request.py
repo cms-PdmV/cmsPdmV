@@ -986,7 +986,8 @@ class request(json_base):
         return self.scram_arch
 
     def make_release(self):
-        makeRel = 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
+        #makeRel = 'source  /afs/cern.ch/cms/cmsset_default.sh\n'
+        makeRel = 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
         makeRel += 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
         makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
         makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
