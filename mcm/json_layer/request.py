@@ -450,7 +450,7 @@ class request(json_base):
         validation_disable = settings().get_value('validation_disable')
         do_runtest = not validation_disable
 
-        by_pass = settings().get_value('validation_bypass')
+        by_pass = settingsDB.get('validation_bypass')['value']
         if self.get_attribute('prepid') in by_pass:
             do_runtest = False
 
