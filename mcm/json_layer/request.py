@@ -338,7 +338,7 @@ class request(json_base):
                             similar["prepid"]))
 
                     raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
-                            'Request %s with the same dataset name, same process string and they are the same extension mumber (%s)' % (
+                            'Request %s with the same dataset name, same process string and they are the same extension number (%s)' % (
                             similar['prepid'], my_extension))
 
         ##this below needs fixing
