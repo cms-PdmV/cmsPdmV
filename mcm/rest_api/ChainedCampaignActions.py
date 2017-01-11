@@ -355,7 +355,8 @@ class SelectNewChainedCampaigns(RESTResource):
                 ret = self.find_all_paths(__connected_graph, el, __flow["next_campaign"])
                 self.logger.debug("all paths return:%s" % (ret))
                 for path in ret:
-                    __prepid = "chain_"+"_".join(flow[0] for flow in path)
+                    #flow[1] is none for 1st root campaign, so we add campaign name instead of flow_id
+                    __prepid = "chain_"+"_".join(flow[1] if flow[1] else flow[0] for flow in path)
                     ##safety check to not add same chained_campaigns all over
                     if __prepid not in new_prepids:
                         ##corss check if the contructed prepid is not already in DB
