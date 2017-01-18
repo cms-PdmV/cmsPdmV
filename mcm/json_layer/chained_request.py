@@ -469,6 +469,7 @@ class chained_request(json_base):
 
         #what is going to be the required number of events for the next request
         #update the stats to its best
+        ##used for normal flowing
         if not reserve:
             current_request.get_stats()
             next_total_events=current_request.get_attribute('completed_events')
@@ -600,13 +601,19 @@ class chained_request(json_base):
                 approach = 'create'
 
         if approach == 'create':
+            self.logger.debug("creating new request in reservation")
             from rest_api.RequestPrepId import RequestPrepId
 
             next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
             next_request = request(rdb.get(next_id))
             request.transfer( current_request, next_request)
+            ##set total_events accordingly to current request.
+            next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else  current_request.get_attribute("total_events")
+            next_request.set_attribute("total_events", next_total_evts)
             self.request_join(next_request)
+
         elif approach == 'use':
+            self.logger.debug("using existing request in reservation")
             ## there exists a request in another chained campaign that can be re-used here.
             # take this one. advance and go on
             next_request = request(rdb.get(next_id))
@@ -629,10 +636,15 @@ class chained_request(json_base):
                     sdb.update(forceflow_list)
             return True
         elif approach == 'patch':
+            self.logger.debug("patching request in reservation")
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
             next_request = request( next_campaign.add_request( rdb.get(next_id)))
             ## propagate again some of the fields of the previous request.
-            request.transfer( current_request, next_request )
+            request.transfer(current_request, next_request)
+            ##set total_events accordingly to current request.
+            next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else  current_request.get_attribute("total_events")
+            next_request.set_attribute("total_events", next_total_evts)
+            self.request_join(next_request)
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'Unrecognized approach %s' %  approach )
