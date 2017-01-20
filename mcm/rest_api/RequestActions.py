@@ -1982,7 +1982,7 @@ class ForceCompleteMethods(RESTResource):
 
 class Reserve_and_ApproveChain(RESTResource):
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
+        self.access_limit = access_rights.production_manager
         self.cdb = database("chained_requests")
         self.rdb = database("requests")
 
