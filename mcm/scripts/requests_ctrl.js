@@ -761,6 +761,30 @@ angular.module('testApp').controller('resultsCtrl',
       return "";
     }
   };
+
+  $scope.reserveAndApprove = function(chainID){
+    console.log("about to reserve and approve chain", chainID);
+
+    $http({method:'GET', url:'restapi/'+$scope.dbName+'/reserveandapprove/'+chainID}).success(function(data, status){
+      $scope.update["success"] = data["results"];
+      $scope.update["fail"] = !data["results"];
+      $scope.update["status_code"] = status;
+      if (data["message"])
+      {
+        // if we have an actual message returned display it instead of status code
+        $scope.update["status_code"] = data["message"];
+      }
+      if ($scope.update["success"])
+      {
+        // reload the data to display history changes
+        $scope.getData();
+      }
+    }).error(function(status){
+      $scope.update["success"] = false;
+      $scope.update["fail"] = true;
+      $scope.update["status_code"] = status;
+    });
+  };
 }]);
 
 var NotifyModalInstance = function($scope, $modalInstance) {

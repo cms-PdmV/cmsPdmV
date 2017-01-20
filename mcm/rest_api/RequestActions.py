@@ -1979,3 +1979,51 @@ class ForceCompleteMethods(RESTResource):
         else:
             message = 'Failed to save forcecomplete to DB'
             return dumps({"prepid": pid, "results": False, 'message': message})
+
+class Reserve_and_ApproveChain(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.generator_contact
+        self.cdb = database("chained_requests")
+        self.rdb = database("requests")
+
+    def GET(self, *args):
+        """
+        Get chained_request object:
+            1) reserve it to the end
+            2) approve newly reserved requests
+        """
+        if not args:
+            self.logger.error('GetUniqueValues: No arguments were given')
+            return dumps({"results": False, 'message': 'Error: No arguments were given'})
+        return dumps(self.reserve_and_approve(args[0]))
+
+    def reserve_and_approve(self, chain_id):
+        self.logger.debug("Trying to reverse and approve chain: %s" % (chain_id))
+        creq = chained_request(self.cdb.get(chain_id))
+        __current_step = creq.get_attribute("step")
+
+        ##Try to reserve needed chained_req to the end
+        reserve_ret = creq.reserve(limit=True)
+        if not reserve_ret["results"]:
+            return reserve_ret
+
+        try:
+            return_list = []
+            for re in creq.get_attribute("chain")[__current_step + 1:]:
+                req = request(self.rdb.get(re))
+                with locker.lock('{0}-wait-for-approval'.format(re)):
+                    ret = req.approve()
+                    save = self.rdb.save(req.json())
+                    if not save:
+                        return {"results": False,
+                                "message": "Could not save request after approval"}
+
+                return_list.append(ret)
+
+            self.logger.debug("Approve returned: %s" % (return_list))
+            return {"results": reserve_ret}
+
+        except Exception as ex:
+            self.logger.error("Failed to approve requests in ReserveAndApprove")
+            return {"results": False,
+                    "message": str(ex)}
