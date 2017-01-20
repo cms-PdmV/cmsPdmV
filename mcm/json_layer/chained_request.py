@@ -601,10 +601,10 @@ class chained_request(json_base):
                 approach = 'create'
 
         if approach == 'create':
-            self.logger.debug("creating new request in reservation")
             from rest_api.RequestPrepId import RequestPrepId
 
             next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
+            self.logger.debug("creating new request in reservation: %s" % (next_id))
             next_request = request(rdb.get(next_id))
             request.transfer( current_request, next_request)
             ##set total_events accordingly to current request.
@@ -613,7 +613,7 @@ class chained_request(json_base):
             self.request_join(next_request)
 
         elif approach == 'use':
-            self.logger.debug("using existing request in reservation")
+            self.logger.debug("using existing request in reservation: %s" % (next_id))
             ## there exists a request in another chained campaign that can be re-used here.
             # take this one. advance and go on
             next_request = request(rdb.get(next_id))
@@ -636,9 +636,9 @@ class chained_request(json_base):
                     sdb.update(forceflow_list)
             return True
         elif approach == 'patch':
-            self.logger.debug("patching request in reservation")
+            self.logger.debug("patching request in reservation: %s" % (next_id))
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
-            next_request = request( next_campaign.add_request( rdb.get(next_id)))
+            next_request = request(next_campaign.add_request(rdb.get(next_id)))
             ## propagate again some of the fields of the previous request.
             request.transfer(current_request, next_request)
             ##set total_events accordingly to current request.
@@ -647,7 +647,7 @@ class chained_request(json_base):
             self.request_join(next_request)
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'Unrecognized approach %s' %  approach )
+                                                        'Unrecognized approach %s' %  approach)
 
         #current_request -> next_request
         #current_campaign -> next_campaign
