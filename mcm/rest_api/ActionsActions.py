@@ -282,7 +282,7 @@ class GenerateChainedRequests(RESTResource):
                 crdb.update(mcm_cr.json())
 
         if priority_set:
-            return {"results":True , "prepid": mcm_a.get_attribute('prepid')}
+            return {"results":True , "prepid": mcm_a.get_attribute('prepid'), 'generated_chains': new_chains}
         else:
             return {"results":False , "prepid": mcm_a.get_attribute('prepid'), "message":"Priorities not set properly"}
 

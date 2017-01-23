@@ -24,7 +24,8 @@ class mccm(json_base):
         'repetitions': 1,
         'size': 0,
         'status': 'new',
-        'special' : False
+        'special': False,
+        'generated_chains': []
     }
 
     _json_base__approvalsteps = ['none', 'approved']
@@ -57,7 +58,7 @@ class mccm(json_base):
         if self.get_attribute('status') == 'new':
             for key in self._json_base__schema:
                 editable[key] = True
-            not_editable=["status", "prepid","meeting","pwg","approval","message_id"]
+            not_editable=["status", "prepid", "meeting", "pwg", "approval", "message_id", "generated_chains"]
             for key in not_editable:
                 editable[key] = False
         else:

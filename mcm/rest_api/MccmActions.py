@@ -358,16 +358,19 @@ class GenerateChains(RESTResource):
                     if mcm_m.get_attribute('threshold') != 0:
                         t = mcm_m.get_attribute('threshold')
 
-                    res.append({"prepid" : mid, "results" : True,
-                            "message": "%s x %s in %s block %s s %s t %s" % (
-                                    times, aid, cc, b, s ,t)})
-
                     res.append(self.setter.set_action(aid,
                             cc, b, staged=s, threshold=t, reserve=reserve, special=special))
 
                     ##for now we put a small delay to not crash index with a lot of action
                     time.sleep(2)
 
+        generated_chains = []
+        for el in res:
+            for t in el["generated_chains"]:
+                generated_chains.append(t)
+
+        self.logger.debug("just generated chains: %s" % (generated_chains))
+        mcm_m.set_attribute("generated_chains", generated_chains)
         mcm_m.set_status()
         mdb.update(mcm_m.json())
         return {"prepid" : mid,
