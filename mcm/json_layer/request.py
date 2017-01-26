@@ -2536,8 +2536,7 @@ done
         if hard:
             self.set_status(step=0, with_notification=True)
         else:
-            self.set_attribute('approval', 'approve')
-            self.set_status(step=self._json_base__status.index('approved'), with_notification=True)
+            self.logger.error("You cannot use soft_reset for approval")
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
