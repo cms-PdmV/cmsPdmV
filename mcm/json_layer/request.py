@@ -612,7 +612,7 @@ class request(json_base):
                 if r == self.get_attribute('prepid'): continue # no self checking
                 mcm_r = request( rdb.get(r) )
                 ## we can move on to submit if everything coming next in the chain is new
-                moveon_with_single_submit &=(mcm_r.get_attribute('status') == 'new')
+                moveon_with_single_submit &=(mcm_r.get_attribute('status') in ['new', 'defined', 'validation'])
 
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
@@ -624,8 +624,10 @@ class request(json_base):
                             self.get_attribute('prepid'), mcm_cr['step'], c))
 
         sync_submission = True
+        self.logger.debug("sync submission:%s single_submit:%s" % (sync_submission, moveon_with_single_submit))
         if sync_submission and moveon_with_single_submit:
             # remains to the production manager to announce the batch the requests are part of
+            self.logger.info("Doing single request submission for:%s" % (self.get_attribute('prepid')))
             from tools.handlers import RequestInjector, submit_pool
 
             _q_lock = locker.thread_lock(self.get_attribute('prepid'))
@@ -645,6 +647,7 @@ class request(json_base):
 
             ### N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
             if not moveon_with_single_submit and is_the_current_one:
+                self.logger.info("Doing TaskChain submission for:%s" % (self.get_attribute('prepid')))
                 from tools.handlers import ChainRequestInjector, submit_pool
 
                 _q_lock = locker.thread_lock(self.get_attribute('prepid'))
@@ -658,7 +661,12 @@ class request(json_base):
                         queue_lock=_q_lock)
 
                 submit_pool.add_task(threaded_submission.internal_run)
-            pass
+            else:
+                self.logger.error("Not doing anything for submission. moveon_with_single_submit:%s is_the_current_one:%s" % (
+                        moveon_with_single_submit, is_the_current_one))
+                return {"prepid": self.get_attribute('prepid'), "results": False,
+                            "message": "The request was not submitted"}
+
 
     def is_action_root(self):
         action_db = database('actions')
@@ -2536,7 +2544,19 @@ done
         if hard:
             self.set_status(step=0, with_notification=True)
         else:
-            self.logger.error("You cannot use soft_reset for approval")
+            ##Doing soft reset: we should go 1 status/approval back if request is not done
+            ##when done, they need to do hard reset and invalidate wf's
+            self.logger.error("Soft resetting request: %s " % (self.get_attribute('prepid')))
+            __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
+            __status_index = self._json_base__status.index(self.get_attribute('status'))
+
+            #see if request in approved status & and the approval is above approved
+            if __status_index == 3 and __approval_index > 3:
+                self.set_attribute('approval', self._json_base__approvalsteps[__approval_index-1])
+                self.set_status(step=__status_index, with_notification=True)
+            else:
+                raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
+                        "You cannot soft reset below submit/approved")
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
