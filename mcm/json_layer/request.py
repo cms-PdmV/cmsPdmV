@@ -2546,17 +2546,19 @@ done
         else:
             ##Doing soft reset: we should go 1 status/approval back if request is not done
             ##when done, they need to do hard reset and invalidate wf's
-            self.logger.error("Soft resetting request: %s " % (self.get_attribute('prepid')))
-            __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
-            __status_index = self._json_base__status.index(self.get_attribute('status'))
+            self.logger.info("Soft resetting request: %s " % (self.get_attribute('prepid')))
 
             #see if request in approved status & and the approval is above approved
-            if __status_index == 3 and __approval_index > 3:
+            if self.get_attribute('status') == 'approved' and self.get_attribute('approval') in ['submit']:
+                __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
+                __status_index = self._json_base__status.index(self.get_attribute('status'))
                 self.set_attribute('approval', self._json_base__approvalsteps[__approval_index-1])
                 self.set_status(step=__status_index, with_notification=True)
             else:
-                raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                        "You cannot soft reset below submit/approved")
+                self.logger.debug("status: %s approval: %s" % (self.get_attribute('status'),
+                        self.get_attribute('approval')))
+                raise json_base.WrongStatusSequence(self.get_attribute('status'),
+                        self.get_attribute('approval'), "You cannot soft reset below submit/approved")
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
