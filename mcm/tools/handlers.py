@@ -495,7 +495,9 @@ class RequestSubmitter(Handler):
                         return False
                     #and in the end update request in database
                     req.update_history({'action': 'inject', 'step' : batch_name})
-                    req.set_status(with_notification=True)
+                    req.set_status(step=mcm_r._json_base__status.index('submitted'),
+                            with_notification=True)
+
                     saved = self.request_db.update(req.json())
                     if not saved:
                         self.injection_error('Could not update request {0} in database'.format(
@@ -714,7 +716,10 @@ class ChainRequestInjector(Handler):
                         mcm_r.update_history({'action': 'inject','step' : batch_name})
                         if not self.check_approval:
                             mcm_r.set_attribute('approval', 'submit')
-                        mcm_r.set_status(with_notification=False)
+                        ##set the status to submitted
+                        mcm_r.set_status(step=mcm_r._json_base__status.index('submitted'),
+                            with_notification=False)
+
                         mcm_r.reload()
                         mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
                     ## re-get the object
