@@ -612,7 +612,7 @@ class request(json_base):
                 if r == self.get_attribute('prepid'): continue # no self checking
                 mcm_r = request( rdb.get(r) )
                 ## we can move on to submit if everything coming next in the chain is new
-                moveon_with_single_submit &=(mcm_r.get_attribute('status') in ['new', 'defined', 'validation'])
+                moveon_with_single_submit &=(mcm_r.get_attribute('status') in ['new'])
 
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
