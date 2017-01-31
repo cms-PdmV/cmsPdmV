@@ -4,8 +4,8 @@
 source kinit.sh &
 
 # kill existing
-kill -9 `ps -e -f | grep main | grep python | awk '{print $2}'`
-kill -9 `ps -e -f | grep mcm | grep -v $$ | awk '{print $2}'`
+#kill -9 `ps -e -f | grep main | grep python | awk '{print $2}'`
+#kill -9 `ps -e -f | grep mcm | grep -v $$ | awk '{print $2}'`
 
 # the current version
 revision=`git describe --abbrev=0`
