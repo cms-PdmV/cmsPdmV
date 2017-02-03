@@ -1805,26 +1805,26 @@ class ListRequestPrepids(RequestRESTResource):
         self.db_name = 'requests'
         self.db = database('requests')
 
-    def GET(self, *args):
+    def GET(self, **args):
         """
-        List all prepids by given key(-s)
+        List all prepids by given options
         """
         if not args:
             self.logger.error(' No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        if len(args) >= 2:
-            return dumps(self.get_all_prepids(args[0], args[1]))
+        if 'view' in args:
+            view = args['view']
+            args.pop('view')
         else:
-            return dumps(self.get_all_prepids(args[0]))
+            self.logger.error(' No view was given')
+            return dumps({"results": False, 'message': 'Error: No view was given'})
+        return dumps(self.get_prepids(view, args))
 
-    def get_all_prepids(self, view, key=None):
-        view_name = view
-        if key:
-            result = self.db.raw_query(view_name, {'key': '"%s"'%key})
-            self.logger.info('All list raw_query view:%s searching for: %s' % (view_name, key))
-        else:
-            result = self.db.raw_query(view_name)
-            self.logger.info('All list raw_query view:%s searching for all' % (view_name))
+    def get_prepids(self, view_name, options):
+        if 'limit' in options:
+            options['limit'] = int(options['limit'])
+        result = self.db.raw_query(view_name, options)
+        self.logger.info('All list raw_query view:%s with options: %s' % (view_name, options))
         data = [key['value'] for key in result]
         return {"results": data}
 
