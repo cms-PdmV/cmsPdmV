@@ -330,7 +330,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '  </ul>'+
     '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
     '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in possible_requests | filter: $viewValue | limitTo: 10">'+
+    '  <input id="inputRequest" type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in preloadPossibleRequests()">'+
     '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
     '  <font color="red" ng-show="bad_request">Wrong request</font>'+
     '</div>'+
@@ -355,10 +355,9 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
               scope.campaign_name = scope.requests_data[0].split("-")[1];
               break;
           };
-        scope.preloadRequests(scope.campaign_name);
         $rootScope.$broadcast('loadChains', scope.campaign_name);
         }else{
-          scope.preloadAllRequests();
+
         };
       };
       scope.toggleNewRequest = function (elem)
@@ -405,10 +404,6 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         {
           scope.bad_request = true;
         }else{
-          if (scope.requests_data.length == 0)
-          {
-            preload = true;
-          }
           scope.bad_request = false;
           scope.requests_data.push(scope.tmpRequest["new"]);
           scope.toggleNewRequest('new');
@@ -416,11 +411,6 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           scope.tmpRequest["new"] = "";
           $rootScope.$broadcast('refreshChains', scope.campaign_name);
         }
-        if (preload)
-        {
-          var parsed_campaign = scope.requests_data[0].split("-")[1];
-          scope.preloadRequests(parsed_campaign);
-        };
       };
       scope.removeOldRequest = function (index)
       {
@@ -436,41 +426,22 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         {
           if (scope.result['chains'].length == 0)
           {
-            scope.preloadAllRequests();
             $rootScope.$broadcast('refreshChains', "_");
-          }else
-          {
-            var parsed_campaign = scope.result['chains'][0].split("_")[1];
-            scope.preloadRequests(parsed_campaign);
           };
         };
       };
-      scope.preloadRequests = function (id)
+      scope.preloadPossibleRequests = function ()
       {
-        if (scope.requests_data.length != 0)
-        {
-          id = scope.campaign_name;
-        };
-        var promise = $http.get("restapi/requests/search_view/member_of_campaign/" + id);
-        promise.then(function(data){
+        var element = document.getElementById('inputRequest');
+        var startkey = element.value;
+        var promise = $http.get("restapi/requests/search_view?view=all&startkey=" + startkey + "&limit=10");
+        return promise.then(function(data){
           scope.possible_requests = data.data.results;
+          return scope.possible_requests;
         }, function(data){
           alert("Error getting list of possible requests: " + data.data);
         });
       };
-      scope.preloadAllRequests = function ()
-      {
-        var promise = $http.get("restapi/requests/search_view/all");
-        promise.then(function(data){
-          scope.possible_requests = data.data.results;
-        }, function(data){
-          alert("Error getting list of possible requests: " + data.data);
-        });
-      };
-
-      scope.$on('loadRequests', function(event, chain){
-        scope.preloadRequests(chain);
-      });
     }
   }
 });
