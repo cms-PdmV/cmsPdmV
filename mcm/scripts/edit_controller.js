@@ -355,9 +355,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
               scope.campaign_name = scope.requests_data[0].split("-")[1];
               break;
           };
-        $rootScope.$broadcast('loadChains', scope.campaign_name);
-        }else{
-
+          $rootScope.$broadcast('loadChains', scope.campaign_name);
         };
       };
       scope.toggleNewRequest = function (elem)
@@ -399,7 +397,6 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       };
       scope.pushNewRequest = function()
       {
-        var preload = false;
         if (scope.possible_requests.indexOf(scope.tmpRequest["new"]) == -1)
         {
           scope.bad_request = true;
@@ -432,8 +429,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       };
       scope.preloadPossibleRequests = function ()
       {
-        var element = document.getElementById('inputRequest');
-        var startkey = element.value;
+        var startkey = angular.element('#inputRequest').val();
         var promise = $http.get("restapi/requests/search_view?view=all&startkey=" + startkey + "&limit=10");
         return promise.then(function(data){
           scope.possible_requests = data.data.results;
