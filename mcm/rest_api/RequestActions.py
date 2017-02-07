@@ -1634,7 +1634,7 @@ class RequestsReminder(RESTResource):
             mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
             for mcm_r in mcm_rs:
                 c = mcm_r['member_of_campaign']
-                rid = mcm_r['prepid']
+                request_id = mcm_r['prepid']
                 if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
                 fw = mcm_r['flown_with']
                 # to get a remind only on request that are in a chain (including flown by construction)
@@ -1643,17 +1643,18 @@ class RequestsReminder(RESTResource):
                 on_going = False
                 yield '.'
                 for in_chain in mcm_r['member_of_chain']:
-                    mcm_cr = chained_request( crdb.get( in_chain ) )
+                    mcm_chained_request = chained_request( crdb.get( in_chain ) )
                     try:
-                        if mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step')] == rid:
+                        if mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step')] == request_id:
                             on_going = True
                             break
                     except Exception as e:
+                        self.logger.error('Step not in chain: %s request: %s' % (mcm_chained_request.get_attribute('prepid'), request_id))
                         yield dumps(
                             {
                                 'error': 'step not in chain',
-                                'chain': mcm_cr.get_attribute('chain'),
-                                'step': mcm_cr.get_attribute('step')
+                                'chain': mcm_chained_request.get_attribute('prepid'),
+                                'request': request_id
                             },
                             indent=2
                         )
@@ -1670,7 +1671,7 @@ class RequestsReminder(RESTResource):
 
                     if not c in ids_for_users[contact]:
                         ids_for_users[contact][c] = set()
-                    ids_for_users[contact][c].add( rid )
+                    ids_for_users[contact][c].add( request_id )
                     yield '.'
 
             #then remove the non generator
