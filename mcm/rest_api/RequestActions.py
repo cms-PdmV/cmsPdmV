@@ -1820,7 +1820,7 @@ class ListRequestPrepids(RequestRESTResource):
         if 'limit' in options:
             limit = options['limit']
         if 'startkey' in options:
-            prepid = options['startkey'] + '*'
+            prepid = options['startkey'] +'*'
         request_db = database('requests')
         __query = request_db.construct_lucene_query({'prepid': prepid})
         query_result = request_db.full_text_search("search", __query, page=0, limit=limit, include_fields='prepid')
