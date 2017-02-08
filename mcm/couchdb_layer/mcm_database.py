@@ -478,7 +478,7 @@ class database:
         ##we remove the +AND+ in the end of query
         return constructed_query[:-5]
 
-    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False):
+    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields=''):
         """
         queries loadView method with lucene interface for full text search
         """
@@ -487,18 +487,23 @@ class database:
         url = "_design/lucene/%s?q=%s" % (index_name, query)
         for i in xrange(1, __retries+1):
             try:
-                data = self.db.FtiSearch(url, options={'limit': limit,
-                        'include_docs': True, 'skip': skip, 'sort': '_id'},
-                        get_raw=get_raw) #we sort ascending by doc._id field
-
+                options = {
+                    'limit': limit,
+                    'include_docs': True,
+                    'skip': skip,
+                    'sort': '_id'
+                }
+                if include_fields != '':
+                    options['include_fields'] = include_fields
+                data = self.db.FtiSearch(url, options=options, get_raw=get_raw) #we sort ascending by doc._id field
                 break
             except Exception as ex:
                 self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (
                         url, ex, i, __retries))
-
             ##if we are retrying we should wait little bit
             time.sleep(0.5)
-
+        if include_fields != '':
+            return [ elem["fields"] for elem in data['rows']]
         return data if get_raw else [ elem["doc"] for elem in data['rows']]
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):

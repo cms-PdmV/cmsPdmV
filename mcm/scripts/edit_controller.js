@@ -430,9 +430,11 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       scope.preloadPossibleRequests = function ()
       {
         var startkey = angular.element('#inputRequest').val();
-        var promise = $http.get("restapi/requests/search_view?view=all&startkey=" + startkey + "&limit=10");
+        var promise = $http.get("restapi/requests/search_view?startkey=" + startkey + "&limit=10");
         return promise.then(function(data){
-          scope.possible_requests = data.data.results;
+          data = JSON.parse(data.data)
+          results = JSON.parse(data)
+          scope.possible_requests = results.results;
           return scope.possible_requests;
         }, function(data){
           alert("Error getting list of possible requests: " + data.data);
