@@ -1793,21 +1793,21 @@ class ListRequestPrepids(RequestRESTResource):
         if not args:
             self.logger.error(' No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        if 'view' in args:
-            view = args['view']
-            args.pop('view')
-        else:
-            self.logger.error(' No view was given')
-            return dumps({"results": False, 'message': 'Error: No view was given'})
-        return dumps(self.get_prepids(view, args))
+        return dumps(self.get_prepids(args))
 
-    def get_prepids(self, view_name, options):
+    def get_prepids(self, options):
+        limit = 10
+        prepid = '*'
         if 'limit' in options:
-            options['limit'] = int(options['limit'])
-        result = self.db.raw_query(view_name, options)
-        self.logger.info('All list raw_query view:%s with options: %s' % (view_name, options))
-        data = [key['value'] for key in result]
-        return {"results": data}
+            limit = options['limit']
+        if 'startkey' in options:
+            prepid = options['startkey'] + '*'
+        request_db = database('requests')
+        __query = request_db.construct_lucene_query({'prepid': prepid})
+        query_result = request_db.full_text_search("search", __query, page=0, limit=limit, include_fields='prepid')
+        self.logger.info('Searching requests id with options: %s' % (options))
+        results = [record['prepid'] for record in query_result]
+        return dumps({"results": results})
 
 
 class GetUploadCommand(RESTResource):
