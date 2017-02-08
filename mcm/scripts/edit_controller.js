@@ -321,7 +321,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Remove itself" ><i class="icon-minus"></i></a>'+
     '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
     '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
-    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in possible_sub_requests[$index] | filter: $viewValue | limitTo: 10">'+
+    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
     '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
     '          <font color="red" ng-show="bad_sub_request">Wrong request</font>'+
     '        </span>'+
@@ -330,7 +330,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '  </ul>'+
     '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
     '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '  <input id="inputRequest" type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in preloadPossibleRequests()">'+
+    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
     '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
     '  <font color="red" ng-show="bad_request">Wrong request</font>'+
     '</div>'+
@@ -344,7 +344,6 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         scope.campaign_name = "";
         scope.bad_request = false;
         scope.bad_sub_request = false;
-        scope.possible_sub_requests = {};
         if (scope.requests_data.length != 0)
         {
           switch(_.isArray(scope.requests_data[0])){
@@ -371,19 +370,10 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       scope.addNewRequest = function (elem)
       {
         scope.toggleNewRequest(elem);
-        scope.possible_sub_requests[elem] = [];
-        var __pwg = scope.requests_data[elem].split("-")[0];
-        _.each(scope.possible_requests, function (el)
-        {
-          if (el.split('-')[0] == __pwg)
-          {
-            scope.possible_sub_requests[elem].push(el);
-          }
-        });
       };
       scope.saveNewRequest = function (index)
       {
-        if (scope.possible_sub_requests[index].indexOf(scope.tmpRequest[index]) == -1)
+        if (scope.possible_requests.indexOf(scope.tmpRequest[index]) == -1)
         {
           scope.bad_sub_request = true;
         }else{
@@ -427,10 +417,10 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           };
         };
       };
-      scope.preloadPossibleRequests = function ()
+      scope.preloadPossibleRequests = function (viewValue)
       {
-        var startkey = angular.element('#inputRequest').val();
-        var promise = $http.get("restapi/requests/search_view?startkey=" + startkey + "&limit=10");
+
+        var promise = $http.get("restapi/requests/search_view?startkey=" + viewValue + "&limit=10");
         return promise.then(function(data){
           data = JSON.parse(data.data)
           results = JSON.parse(data)
