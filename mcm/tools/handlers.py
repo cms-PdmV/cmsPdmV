@@ -495,7 +495,7 @@ class RequestSubmitter(Handler):
                         return False
                     #and in the end update request in database
                     req.update_history({'action': 'inject', 'step' : batch_name})
-                    req.set_status(step=mcm_r._json_base__status.index('submitted'),
+                    req.set_status(step=req._json_base__status.index('submitted'),
                             with_notification=True)
 
                     saved = self.request_db.update(req.json())
