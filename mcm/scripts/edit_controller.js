@@ -411,6 +411,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         scope.show_new[index] = false;
         if (scope.requests_data.length == 0)
         {
+          scope.campaign_name = "";
           if (scope.result['chains'].length == 0)
           {
             $rootScope.$broadcast('refreshChains', "_");
@@ -419,8 +420,8 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       };
       scope.preloadPossibleRequests = function (viewValue)
       {
-
-        var promise = $http.get("restapi/requests/search_view?startkey=" + viewValue + "&limit=10");
+        var campaign_name = scope.campaign_name == ""  ? '*' : scope.campaign_name;
+        var promise = $http.get("restapi/requests/search_view?limit=10&requestPrepId=" + viewValue + "&memberOfCampaign=" + campaign_name);
         return promise.then(function(data){
           data = JSON.parse(data.data)
           results = JSON.parse(data)

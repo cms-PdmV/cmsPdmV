@@ -1817,12 +1817,20 @@ class ListRequestPrepids(RequestRESTResource):
     def get_prepids(self, options):
         limit = 10
         prepid = '*'
+        member_of_campaign = '*'
         if 'limit' in options:
             limit = options['limit']
-        if 'startkey' in options:
-            prepid = options['startkey'] +'*'
+        if 'requestPrepId' in options:
+            prepid = options['requestPrepId'] + '*'
+        if 'memberOfCampaign' in options:
+            member_of_campaign = options['memberOfCampaign']
         request_db = database('requests')
-        __query = request_db.construct_lucene_query({'prepid': prepid})
+        __query = request_db.construct_lucene_query(
+            {
+                'prepid': prepid,
+                'member_of_campaign': member_of_campaign
+            }
+        )
         query_result = request_db.full_text_search("search", __query, page=0, limit=limit, include_fields='prepid')
         self.logger.info('Searching requests id with options: %s' % (options))
         results = [record['prepid'] for record in query_result]
