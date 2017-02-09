@@ -582,7 +582,8 @@ class request(json_base):
         my_ps_and_t = self.get_camp_plus_ps_and_tiers()
         for (camp, my_ps, my_t) in my_ps_and_t:
             check_ingredients = map(lambda s : s.lower() , my_ps.split('_'))
-            if any(map(lambda ing1: any(map(lambda ing2: ing1 in ing2 and ing1!=ing2,check_ingredients)), check_ingredients)) and self.current_user_level == 4:
+            __uniq_set = set()
+            if any(x in __uniq_set or __uniq_set.add(x) for x in check_ingredients) and self.current_user_level == 4:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                         "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
         for similar in similar_ds:
