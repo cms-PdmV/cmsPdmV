@@ -58,7 +58,7 @@ class ssh_executor:
         except paramiko.SSHException as ex:
             self.logger.error('There was a problem with the SSH connection. Reason: %s' % ex)
             return
-        except SocketError  as ex:
+        except Exception as ex:
             self.logger.error('Could not allocate socket for SSH. Reason: %s' % ex)
             return
 
