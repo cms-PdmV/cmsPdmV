@@ -347,7 +347,11 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         $rootScope.request_list_length = scope.requests_data.length;
         scope.bad_request = false;
         scope.bad_sub_request = false;
+<<<<<<< HEAD
         if (scope.requests_data.length != 0 && $rootScope.root_campaign == "")
+=======
+        if (scope.requests_data.length != 0)
+>>>>>>> 051bf745e68aaa1aefa0edb78a425dfd21c2aeae
         {
           switch(_.isArray(scope.requests_data[0])){
             case true:
@@ -357,7 +361,11 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
               $rootScope.root_campaign = scope.requests_data[0].split("-")[1];
               break;
           };
+<<<<<<< HEAD
           $rootScope.$broadcast('refreshChains', $rootScope.root_campaign);
+=======
+          $rootScope.$broadcast('loadChains', scope.campaign_name);
+>>>>>>> 051bf745e68aaa1aefa0edb78a425dfd21c2aeae
         };
       };
       scope.toggleNewRequest = function (elem)
@@ -376,7 +384,11 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       };
       scope.saveNewRequest = function (index)
       {
+<<<<<<< HEAD
         if (scope.possible_requests.indexOf(scope.tmpRequest[index]) == -1 || scope.lookForDuplicates(scope.tmpRequest[index]))
+=======
+        if (scope.possible_requests.indexOf(scope.tmpRequest[index]) == -1)
+>>>>>>> 051bf745e68aaa1aefa0edb78a425dfd21c2aeae
         {
           scope.bad_sub_request = true;
         }else{
