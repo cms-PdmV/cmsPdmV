@@ -321,7 +321,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Remove itself" ><i class="icon-minus"></i></a>'+
     '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
     '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
-    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in possible_sub_requests[$index] | filter: $viewValue | limitTo: 10">'+
+    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
     '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
     '          <font color="red" ng-show="bad_sub_request">Wrong request</font>'+
     '        </span>'+
@@ -330,7 +330,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     '  </ul>'+
     '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
     '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in possible_requests | filter: $viewValue | limitTo: 10">'+
+    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
     '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
     '  <font color="red" ng-show="bad_request">Wrong request</font>'+
     '</div>'+
@@ -341,24 +341,23 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         scope.show_new = {};
         scope.tmpRequest = {};
         scope.possible_requests = [];
-        scope.campaign_name = "";
+        if (typeof($rootScope.root_campaign) == "undefined"){
+          $rootScope.root_campaign = "";
+        }
+        $rootScope.request_list_length = scope.requests_data.length;
         scope.bad_request = false;
         scope.bad_sub_request = false;
-        scope.possible_sub_requests = {};
-        if (scope.requests_data.length != 0)
+        if (scope.requests_data.length != 0 && $rootScope.root_campaign == "")
         {
           switch(_.isArray(scope.requests_data[0])){
             case true:
-              scope.campaign_name = scope.requests_data[0][0].split("-")[1];
+              $rootScope.root_campaign = scope.requests_data[0][0].split("-")[1];
               break;
             default:
-              scope.campaign_name = scope.requests_data[0].split("-")[1];
+              $rootScope.root_campaign = scope.requests_data[0].split("-")[1];
               break;
           };
-        scope.preloadRequests(scope.campaign_name);
-        $rootScope.$broadcast('loadChains', scope.campaign_name);
-        }else{
-          scope.preloadAllRequests();
+          $rootScope.$broadcast('refreshChains', $rootScope.root_campaign);
         };
       };
       scope.toggleNewRequest = function (elem)
@@ -374,19 +373,10 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
       scope.addNewRequest = function (elem)
       {
         scope.toggleNewRequest(elem);
-        scope.possible_sub_requests[elem] = [];
-        var __pwg = scope.requests_data[elem].split("-")[0];
-        _.each(scope.possible_requests, function (el)
-        {
-          if (el.split('-')[0] == __pwg)
-          {
-            scope.possible_sub_requests[elem].push(el);
-          }
-        });
       };
       scope.saveNewRequest = function (index)
       {
-        if (scope.possible_sub_requests[index].indexOf(scope.tmpRequest[index]) == -1)
+        if (scope.possible_requests.indexOf(scope.tmpRequest[index]) == -1 || scope.lookForDuplicates(scope.tmpRequest[index]))
         {
           scope.bad_sub_request = true;
         }else{
@@ -398,79 +388,67 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           scope.show_new[__request] = false;
         }
       };
+      scope.lookForDuplicates = function (id){
+        for (var index=0; index < scope.requests_data.length; index++){
+          if(_.isArray(scope.requests_data[index])){
+            if(scope.requests_data[index][0] == id || scope.requests_data[index][1] == id){
+              return true;
+            }
+          }else{
+            if(scope.requests_data[index] == id){
+              return true;
+            }
+          }
+        }
+        return false;
+      }
       scope.pushNewRequest = function()
       {
-        var preload = false;
-        if (scope.possible_requests.indexOf(scope.tmpRequest["new"]) == -1)
+        if (scope.possible_requests.indexOf(scope.tmpRequest["new"]) == -1 || scope.lookForDuplicates(scope.tmpRequest["new"]))
         {
           scope.bad_request = true;
         }else{
-          if (scope.requests_data.length == 0)
-          {
-            preload = true;
-          }
           scope.bad_request = false;
           scope.requests_data.push(scope.tmpRequest["new"]);
+          $rootScope.request_list_length = scope.requests_data.length;
+          if(scope.requests_data.length == 1){
+            $rootScope.root_campaign = scope.tmpRequest["new"].split("-")[1];
+            $rootScope.$broadcast('refreshChains', $rootScope.root_campaign);
+          }
           scope.toggleNewRequest('new');
-          scope.campaign_name = scope.tmpRequest["new"].split("-")[1];
           scope.tmpRequest["new"] = "";
-          $rootScope.$broadcast('refreshChains', scope.campaign_name);
         }
-        if (preload)
-        {
-          var parsed_campaign = scope.requests_data[0].split("-")[1];
-          scope.preloadRequests(parsed_campaign);
-        };
       };
       scope.removeOldRequest = function (index)
       {
         if (_.isArray(scope.requests_data[index]))
         {
-          scope.requests_data[index] = scope.requests_data[index][0]
+          scope.requests_data[index] = scope.requests_data[index][0];
         }else
         {
           scope.requests_data.splice(index,1);
         }
         scope.show_new[index] = false;
-        if (scope.requests_data.length == 0)
+        $rootScope.request_list_length = scope.requests_data.length;
+        if (scope.requests_data.length == 0 && $rootScope.chain_list_length == 0)
         {
-          if (scope.result['chains'].length == 0)
-          {
-            scope.preloadAllRequests();
-            $rootScope.$broadcast('refreshChains', "_");
-          }else
-          {
-            var parsed_campaign = scope.result['chains'][0].split("_")[1];
-            scope.preloadRequests(parsed_campaign);
-          };
+          $rootScope.root_campaign = "";
+          $rootScope.$broadcast('noRequestsSelected');
         };
       };
-      scope.preloadRequests = function (id)
+      scope.preloadPossibleRequests = function (viewValue)
       {
-        if (scope.requests_data.length != 0)
-        {
-          id = scope.campaign_name;
-        };
-        var promise = $http.get("restapi/requests/search_view/member_of_campaign/" + id);
-        promise.then(function(data){
-          scope.possible_requests = data.data.results;
+        var campaign_name = $rootScope.root_campaign == "" ? '*' : $rootScope.root_campaign;
+        var promise = $http.get("restapi/requests/search_view?limit=10&requestPrepId=" + viewValue + "&memberOfCampaign=" + campaign_name);
+        return promise.then(function(data){
+          data = JSON.parse(data.data)
+          results = JSON.parse(data)
+          scope.possible_requests = results.results;
+          return scope.possible_requests;
         }, function(data){
           alert("Error getting list of possible requests: " + data.data);
         });
       };
-      scope.preloadAllRequests = function ()
-      {
-        var promise = $http.get("restapi/requests/search_view/all");
-        promise.then(function(data){
-          scope.possible_requests = data.data.results;
-        }, function(data){
-          alert("Error getting list of possible requests: " + data.data);
-        });
-      };
-
-      scope.$on('loadRequests', function(event, chain){
-        scope.preloadRequests(chain);
-      });
     }
   }
 });
@@ -497,12 +475,11 @@ testApp.directive("customMccmChains", function($http, $rootScope){
     '        <i class="icon-plus" ng-hide="add_chain"></i>'+
     '        <i class="icon-minus" ng-show="add_chain"></i>'+
     '      </a>'+
-    '      <select id="mySel" class="input-xxlarge" ng-model="new_chain" ng-show="add_chain">'+
-    '        <option ng-repeat="elem in list_of_chained_campaigns track by $index" value="{{elem}}">{{alias_map[elem]}}</option>'+
-    '      </select>'+
+    '      <input type="text" ng-model="new_chain" ng-show="add_chain" typeahead="id for id in preloadPossibleChains($viewValue)">'+
     '      <a ng-href="#">'+
     '        <i class="icon-plus-sign" ng-click="pushNewMcMChain()" ng-show="add_chain"></i>'+
     '      </a>'+
+    '      <font color="red" ng-show="bad_sub_chain">Wrong request</font>'+
     '    </form>'+
     '</div>'+
     '',
@@ -510,24 +487,28 @@ testApp.directive("customMccmChains", function($http, $rootScope){
     {
       ctrl.$render = function(){
         scope.chain_data = ctrl.$viewValue;
-        if (scope.chain_data.length != 0)
-        {
-          scope.root_campaign = scope.chain_data[0].split('_')[1];
-          if (scope.result['requests'].length == 0)
-          {
-            $rootScope.$broadcast('loadRequests', scope.root_campaign);
-          }
-        }else{
-          scope.root_campaign = "_";
+        if (typeof($rootScope.root_campaign) == "undefined"){
+          $rootScope.root_campaign = "";
         }
+        if (scope.chain_data.length != 0 && $rootScope.root_campaign == "")
+        {
+          var split = scope.chain_data[0].split('_');
+          if(split.length < 2){
+            scope.getPrepIdFromAlias(scope.chain_data[0]);
+          }else{
+            $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
+          }
+        }
+        $rootScope.chain_list_length = scope.chain_data.length;
         scope.new_chain = "";
         scope.list_of_chained_campaigns = [];
-        scope.alias_map = {};
-        scope.original_chain_list = [];
-        scope.getChains(scope.root_campaign);
-        scope.show_error = false;
+        scope.chained_campaigns_from_requests = [];
+        scope.bad_sub_chain = false;
       };
       scope.toggleAddNewChain = function(){
+        if($rootScope.root_campaign != "" && scope.chained_campaigns_from_requests.length == 0){
+          scope.refreshChains($rootScope.root_campaign);
+        }
         if(scope.add_chain)
         {
           scope.add_chain = false;
@@ -535,100 +516,101 @@ testApp.directive("customMccmChains", function($http, $rootScope){
           scope.add_chain = true;
         }
       };
-      scope.getChains = function(root_campaign)
-      {
-        if (scope.list_of_chained_campaigns.length == 0)
-        {
-          var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1");
-          promise.then(function (data) {
-            _.each(data.data.results, function (elem) {
-              if (elem.alias != "") //lets construct alais map
-              {
-                scope.alias_map[elem.prepid] = elem.alias;
-                // we need to store original prepid when fetching requests!
-                scope.alias_map[elem.alias] = elem.prepid;
-              }else{
-                scope.alias_map[elem.prepid] = elem.prepid;
-              }
-              scope.original_chain_list.push(elem.prepid);
-              if (elem.prepid.split("_")[1] == root_campaign)
-              {
-                if (scope.chain_data.indexOf(elem.prepid) == -1) //add only if its not already in chains -> in chain we display normal prepid no fcking ALIAS
-                {
-                  scope.list_of_chained_campaigns.push(elem.prepid);
-                }
-              }else if (root_campaign == "_")
-              {
-                scope.list_of_chained_campaigns.push(elem.prepid);
-              }
-            }, function(data){
-              alert("Error getting chained campaigns: " + data);
-            });
-            scope.list_of_chained_campaigns = _.uniq(scope.list_of_chained_campaigns);
-            scope.original_chain_list = _.uniq(scope.original_chain_list);
-            scope.list_of_chained_campaigns.sort(); //sort list to be in ascending order
-            scope.new_chain = scope.list_of_chained_campaigns[0];
-            $("#mySel").select2({dropdownAutoWidth : true});
-          });
-        }
-      };
       scope.remove = function(index){
-        //scope.list_of_chained_campaigns.push(scope.chain_data[index]);
         scope.chain_data.splice(index,1);
-        if (scope.chain_data.length != 0)
+        $rootScope.chain_list_length = scope.chain_data.length;
+        if (scope.chain_data.length == 0 && $rootScope.request_list_length == 0)
         {
-          scope.root_campaign = scope.chain_data[0].split('_')[1];
-        }else{
-          scope.root_campaign = "_";
-          $rootScope.$broadcast('loadRequests', "");
+          $rootScope.root_campaign = "";
+          scope.chained_campaigns_from_requests = [];
         }
-        scope.list_of_chained_campaigns = scope.original_chain_list;
-        scope.parseRootChains();
       }
       scope.pushNewMcMChain = function()
       {
-        scope.show_error = false;
-        scope.chain_data.push(scope.alias_map[scope.new_chain]);
-        if (scope.chain_data[0].indexOf('_') != -1)
-        {
-          scope.root_campaign = scope.chain_data[0].split('_')[1];
-        }else
-        {
-          scope.root_campaign = scope.alias_map[scope.chain_data[0]].split('_')[1];
+        if(scope.list_of_chained_campaigns.indexOf(scope.new_chain) == -1 || scope.chain_data.indexOf(scope.new_chain) != -1){
+          scope.bad_sub_chain = true;
+          return;
         }
-        $rootScope.$broadcast('loadRequests', scope.root_campaign);
-        scope.list_of_chained_campaigns.splice(scope.list_of_chained_campaigns.indexOf(scope.new_chain), 1); //lets remove not to duplicate
-        //scope.add_chain = false; //uncomment if we cant to close select field after each new chain_campaign addition
-        scope.parseRootChains();
-        scope.new_chain = scope.list_of_chained_campaigns[0];
+        scope.bad_sub_chain = false;
+        scope.chain_data.push(scope.new_chain);
+        if(scope.chain_data.length == 1){
+          $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
+          scope.refreshChains($rootScope.root_campaign);
+        }
+        scope.new_chain = "";
       };
-      scope.parseRootChains = function ()
-      {
-        var to_remove = [];
-        _.each(scope.list_of_chained_campaigns, function (elem, index)
-        {
-          if (elem.split("_")[1] != scope.root_campaign)
-          {
-            to_remove.push(elem);
+      scope.listFilter = function (list, value){
+        var result_list = [];
+        for (var index=0; index < list.length; index++){
+            if(list[index].includes(value)){
+              result_list.push(list[index]);
+            }
           }
-        });
-        if (scope.root_campaign != "_"){
-          scope.list_of_chained_campaigns = _.difference(scope.list_of_chained_campaigns, to_remove);
-        }else{
-          scope.list_of_chained_campaigns = scope.original_chain_list;
-        }
-        scope.list_of_chained_campaigns.sort(); //re-sort the list in select fields
-        scope.new_chain = scope.list_of_chained_campaigns[0];
+          return result_list;
       };
-
-      scope.$on('loadChains', function(event, chain){
-        scope.getChains(chain);
-        scope.parseRootChains();
-      });
+      scope.preloadPossibleChains = function(viewValue)
+      {
+        if($rootScope.request_list_length > 0 && scope.chained_campaigns_from_requests.length == 0){
+          //There are no chains for the selected requests, we don't want to do searches while the user is typing
+          return [];
+        }
+        if(scope.chained_campaigns_from_requests.length > 0){
+          scope.list_of_chained_campaigns = scope.chained_campaigns_from_requests;
+          return scope.listFilter(scope.list_of_chained_campaigns, viewValue);
+        }
+        var promise = scope.getChains(viewValue);
+        return promise.then(function(data) {
+          scope.list_of_chained_campaigns = data;
+          return scope.list_of_chained_campaigns;
+        }, function(data) {
+        });
+      };
+      scope.getChains = function (viewValue){
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=0&limit=10&include_fields=prepid&prepid=" + viewValue + "*");
+        return promise.then(function(data){
+          return scope.parseChainData(data);
+        }, function(data){
+          alert("Error getting list of possible chains: " + data.data);
+        }); 
+      };
+      scope.getPrepIdFromAlias = function (alias){
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid&alias=" + alias);
+        promise.then(function(data){
+            var prepid = scope.parseChainData(data);
+            if(prepid.length > 0){
+              $rootScope.root_campaign = prepid[0].split('_')[1];
+              scope.refreshChains($rootScope.root_campaign);
+            }
+        }, function(data){
+          alert("Error getting list of possible chains: " + data.data);
+        }); 
+      };
+      scope.parseChainData = function (data){
+        var prepids = [];
+        scope.chained_campaigns_from_requests = [];
+        for (var index = 0; index <  data.data.results.length; index++){
+          prepids.push(data.data.results[index]['prepid']);
+        }
+        return _.uniq(prepids);
+      };
+      scope.refreshChains = function (root_campaign)
+      {
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid&prepid=*" + root_campaign + "*");
+        promise.then(function(data){
+          scope.chained_campaigns_from_requests = scope.parseChainData(data);
+        }, function(data){
+          alert("Error getting list of possible chains: " + data.data);
+        });
+      };
       scope.$on('refreshChains', function(event, chain){
-        //scope.getChains(chain);
-        scope.root_campaign = chain;
-        scope.parseRootChains();
+        if(scope.chained_campaigns_from_requests.length == 0){
+          scope.refreshChains(chain);
+        }
+      });
+      scope.$on('noRequestsSelected', function(event){
+        if(scope.chain_data.length == 0){
+          scope.chained_campaigns_from_requests = [];
+        }
       });
     }
   }

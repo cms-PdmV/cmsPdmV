@@ -1805,28 +1805,36 @@ class ListRequestPrepids(RequestRESTResource):
         self.db_name = 'requests'
         self.db = database('requests')
 
-    def GET(self, *args):
+    def GET(self, **args):
         """
-        List all prepids by given key(-s)
+        List all prepids by given options
         """
         if not args:
             self.logger.error(' No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        if len(args) >= 2:
-            return dumps(self.get_all_prepids(args[0], args[1]))
-        else:
-            return dumps(self.get_all_prepids(args[0]))
+        return dumps(self.get_prepids(args))
 
-    def get_all_prepids(self, view, key=None):
-        view_name = view
-        if key:
-            result = self.db.raw_query(view_name, {'key': '"%s"'%key})
-            self.logger.info('All list raw_query view:%s searching for: %s' % (view_name, key))
-        else:
-            result = self.db.raw_query(view_name)
-            self.logger.info('All list raw_query view:%s searching for all' % (view_name))
-        data = [key['value'] for key in result]
-        return {"results": data}
+    def get_prepids(self, options):
+        limit = 10
+        prepid = '*'
+        member_of_campaign = '*'
+        if 'limit' in options:
+            limit = options['limit']
+        if 'requestPrepId' in options:
+            prepid = options['requestPrepId'] + '*'
+        if 'memberOfCampaign' in options:
+            member_of_campaign = options['memberOfCampaign']
+        request_db = database('requests')
+        __query = request_db.construct_lucene_query(
+            {
+                'prepid': prepid,
+                'member_of_campaign': member_of_campaign
+            }
+        )
+        query_result = request_db.full_text_search("search", __query, page=0, limit=limit, include_fields='prepid')
+        self.logger.info('Searching requests id with options: %s' % (options))
+        results = [record['prepid'] for record in query_result]
+        return dumps({"results": results})
 
 
 class GetUploadCommand(RESTResource):
