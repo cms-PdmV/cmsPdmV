@@ -632,6 +632,10 @@ class ChainRequestInjector(Handler):
 
                     uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
                     if not uploader.internal_run():
+                        mcm_cr.notify(
+                            'Configuration upload failed', 
+                            "There was a problem uploading the configuration for request %s"  % (request_prepid)
+                        )
                         self.logger.error('Problem with uploading the configuration for request %s' % (request_prepid))
                         return False
 
