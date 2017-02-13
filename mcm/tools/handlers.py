@@ -109,17 +109,15 @@ class ConfigMakerAndUploader(Handler):
         if not self.lock.acquire(blocking=False):
             self.logger.error("Could not acquire lock for ConfigMakerAndUploader. prepid %s" % (
                     self.prepid))
-
             return False
         try:
-            self.logger.error("Acquired lock for ConfigMakerAndUploader. prepid %s" % (
+            self.logger.info("Acquired lock for ConfigMakerAndUploader. prepid %s" % (
                     self.prepid))
-
             req = request(self.request_db.get(self.prepid))
             ret = req.prepare_and_upload_config()
             return True if ret else False
         finally:
-            self.logger.error("Releasing a lock for ConfigMakerAndUploader. prepid %s" % (
+            self.logger.info("Releasing a lock for ConfigMakerAndUploader. prepid %s" % (
                     self.prepid))
 
             self.lock.release()
@@ -540,12 +538,18 @@ class RequestInjector(Handler):
         with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
             self.logger.info("Acquire lock for RequestInjector. prepid %s" % (self.prepid))
             if not self.lock.acquire(blocking=False):
-                return {"prepid": self.prepid, "results": False,
-                        "message": "The request with name {0} is being handled already".format(self.prepid)}
+                return {
+                    "prepid": self.prepid,
+                    "results": False,
+                    "message": "The request with name {0} is being handled already".format(self.prepid)
+                }
             try:
                 if not self.uploader.internal_run():
-                    return {"prepid": self.prepid, "results": False,
-                            "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
+                    return {
+                        "prepid": self.prepid,
+                        "results": False,
+                        "message": "Problem with uploading the configuration for request {0}".format(self.prepid)
+                    }
                 __ret = self.submitter.internal_run()
                 self.inject_logger.info('Request submitter returned: %s' % (__ret))
 
@@ -609,11 +613,11 @@ class ChainRequestInjector(Handler):
             for cr in mcm_crs:
                 mcm_cr = chained_request(cr)
                 chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
-                for rn in chain:
-                    mcm_rs.append(request(rdb.get(rn)))
+                for request_prepid in chain:
+                    mcm_rs.append(request(rdb.get(request_prepid)))
                     if self.check_approval and mcm_rs[-1].get_attribute('approval') != 'submit':
                         self.logger.error('requests %s is in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
-                                rn, mcm_rs[-1].get_attribute('status'),
+                                request_prepid, mcm_rs[-1].get_attribute('status'),
                                 mcm_rs[-1].get_attribute('approval')))
 
                         return False
@@ -621,13 +625,15 @@ class ChainRequestInjector(Handler):
                     if mcm_rs[-1].get_attribute('status') != 'approved':
                         ## change the return format to percolate the error message
                         self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
-                                rn, mcm_rs[-1].get_attribute('status'),
+                                request_prepid, mcm_rs[-1].get_attribute('status'),
                                 mcm_rs[-1].get_attribute('approval')))
 
                         return False
 
-                    uploader = ConfigMakerAndUploader(prepid=rn, lock=locker.lock(rn))
-                    uploader.internal_run() ## we run in same thread that we locked in start
+                    uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
+                    if not uploader.internal_run():
+                        self.logger.error('Problem with uploading the configuration for request %s' % (request_prepid))
+                        return False
 
             mcm_r = mcm_rs[-1]
             batch_name = BatchPrepId().next_batch_id(batch_type, create_batch=True)

@@ -2656,8 +2656,10 @@ done
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))
-
-                self.overwrite( {'config_id' : sorted_additional_config_ids} )
+                if not self.overwrite( {'config_id' : sorted_additional_config_ids}):
+                    self.inject_logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid) )
+                    self.logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid) )
+                    return False
             return command
         finally:
             for i in to_release:
