@@ -509,12 +509,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         if($rootScope.root_campaign != "" && scope.chained_campaigns_from_requests.length == 0){
           scope.refreshChains($rootScope.root_campaign);
         }
-        if(scope.add_chain)
-        {
-          scope.add_chain = false;
-        }else{
-          scope.add_chain = true;
-        }
+        scope.add_chain = !scope.add_chain;
       };
       scope.remove = function(index){
         scope.chain_data.splice(index,1);
@@ -525,28 +520,46 @@ testApp.directive("customMccmChains", function($http, $rootScope){
           scope.chained_campaigns_from_requests = [];
         }
       }
+      scope.searchChain = function(chain)
+      {
+        for (var index=0; index < scope.list_of_chained_campaigns.length; index++){
+          var element = scope.list_of_chained_campaigns[index];
+          if(element[0] == chain || element[1] == chain){
+            return element;
+          }
+        }
+        return [];
+      };
       scope.pushNewMcMChain = function()
       {
-        if(scope.list_of_chained_campaigns.indexOf(scope.new_chain) == -1 || scope.chain_data.indexOf(scope.new_chain) != -1){
+        var chain = scope.searchChain(scope.new_chain); 
+        if(chain.length == 0 || scope.chain_data.indexOf(chain[0]) != -1 || scope.chain_data.indexOf(chain[1]) != -1){
           scope.bad_sub_chain = true;
           return;
         }
         scope.bad_sub_chain = false;
         scope.chain_data.push(scope.new_chain);
         if(scope.chain_data.length == 1){
-          $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
+          $rootScope.root_campaign = chain[0].split('_')[1];
           scope.refreshChains($rootScope.root_campaign);
         }
         scope.new_chain = "";
       };
-      scope.listFilter = function (list, value){
+      scope.listFilter = function (list, value, search_by){
         var result_list = [];
+        if(typeof(list) == "undefined"){
+          return [];
+        }
+        var search_index = search_by == 'alias' ? 1 : 0;
         for (var index=0; index < list.length; index++){
-            if(list[index].includes(value)){
-              result_list.push(list[index]);
-            }
+          if(list[index][search_index] != "" && list[index][search_index].includes(value,0)){
+            var toPush = list[index][search_index];
+            result_list.push(toPush);
+          } else if (list[index][0].includes(value,0)){
+            result_list.push(list[index][0]);
           }
-          return result_list;
+        }
+        return result_list;
       };
       scope.preloadPossibleChains = function(viewValue)
       {
@@ -554,19 +567,20 @@ testApp.directive("customMccmChains", function($http, $rootScope){
           //There are no chains for the selected requests, we don't want to do searches while the user is typing
           return [];
         }
+        var search_by = viewValue.includes('chain', 0) ? 'prepid' : 'alias';
         if(scope.chained_campaigns_from_requests.length > 0){
           scope.list_of_chained_campaigns = scope.chained_campaigns_from_requests;
-          return scope.listFilter(scope.list_of_chained_campaigns, viewValue);
+          return scope.listFilter(scope.list_of_chained_campaigns, viewValue, search_by);
         }
-        var promise = scope.getChains(viewValue);
+        var promise = scope.getChains(viewValue, search_by);
         return promise.then(function(data) {
           scope.list_of_chained_campaigns = data;
-          return scope.list_of_chained_campaigns;
+          return scope.listFilter(data, viewValue, search_by);
         }, function(data) {
         });
       };
-      scope.getChains = function (viewValue){
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=0&limit=10&include_fields=prepid&prepid=" + viewValue + "*");
+      scope.getChains = function (viewValue, search_by){
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=0&limit=10&include_fields=prepid,alias&" + search_by + "=" + viewValue + "*");
         return promise.then(function(data){
           return scope.parseChainData(data);
         }, function(data){
@@ -578,7 +592,11 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         promise.then(function(data){
             var prepid = scope.parseChainData(data);
             if(prepid.length > 0){
-              $rootScope.root_campaign = prepid[0].split('_')[1];
+              if(_.isArray(prepid[0])){
+                $rootScope.root_campaign = prepid[0][0].split('_')[1];
+              }else{
+                $rootScope.root_campaign = prepid[0].split('_')[1];
+              }
               scope.refreshChains($rootScope.root_campaign);
             }
         }, function(data){
@@ -586,16 +604,17 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         }); 
       };
       scope.parseChainData = function (data){
-        var prepids = [];
+        var chains = [];
         scope.chained_campaigns_from_requests = [];
         for (var index = 0; index <  data.data.results.length; index++){
-          prepids.push(data.data.results[index]['prepid']);
+          var doc = data.data.results[index];
+          chains.push([doc['prepid'], doc['alias']]);
         }
-        return _.uniq(prepids);
+        return chains;
       };
       scope.refreshChains = function (root_campaign)
       {
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid&prepid=*" + root_campaign + "*");
+        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid,alias&prepid=*" + root_campaign + "*");
         promise.then(function(data){
           scope.chained_campaigns_from_requests = scope.parseChainData(data);
         }, function(data){
