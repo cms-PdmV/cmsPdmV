@@ -600,7 +600,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
               scope.refreshChains($rootScope.root_campaign);
             }
         }, function(data){
-          alert("Error getting list of possible chains: " + data.data);
+          alert("Error getting the prepid for alias");
         }); 
       };
       scope.parseChainData = function (data){
