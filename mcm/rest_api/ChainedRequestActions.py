@@ -642,7 +642,6 @@ class InjectChainedRequest(RESTResource):
 
         thread = ChainRequestInjector(prepid=pid, lock=locker.lock(pid), queue_lock=_q_lock,
                 check_approval=False)
-
         if self.mode == 'show':
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return thread.make_command()
