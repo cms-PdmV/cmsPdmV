@@ -377,8 +377,60 @@ class GenerateChains(RESTResource):
                 "results" : True,
                 "message" : res}
 
+class MccMReminderGenContacts(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+        self._cp_config = {'response.stream': True}
 
-class MccMReminder(RESTResource):
+    def GET(self, *args):
+        """
+        Send a reminder to all generator contacts that have tickets with status equal to new
+        """
+        mccms_db = database('mccms')
+        users_db = database('users')
+        __query = mccms_db.construct_lucene_query({'status' : 'new'})
+        mccms_tickets = mccms_db.full_text_search('search', __query, page=0, limit=1)
+        non_gen_contact_authors = set()
+        authors_tickets_dict = dict()
+        for ticket in mccms_tickets:
+            yield '\nProcessing ticket %s' % (ticket['prepid'])
+            authors_history = set() #set to avoid the processing of one author more than one time 
+            for author in ticket['history']:
+                author_email = author['updater']['author_email']
+                if author_email in authors_history:
+                    continue
+                if author_email in authors_tickets_dict:
+                    author_tickets_dict[author_email].append(ticket['prepid'])
+                elif author_email not in non_gen_contact_authors:
+                    __role_query = users_db.construct_lucene_query({'email' : author_email})
+                    result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role')
+                    time.sleep(0.5) #we don't want to crash DB with a lot of single queries
+                    if result and result[0]['role'] == 'generator_contact':
+                        authors_tickets_dict[author_email] = [ticket['prepid']]
+                    else:
+                        non_gen_contact_authors.add(author_email)
+                authors_history.add(author_email)
+                yield '.'
+        subject_part1 = 'Gentle reminder on %s '
+        subject_part2 = ' to be operated by you'
+        message_part1 = 'Dear GEN Contact, \nPlease find below the details of %s MccM '
+        message_part2 = ' in status "new". Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n'
+        base_url = locator().baseurl()
+        mail_communicator = communicator()
+        for author_email, ticket_prepids in authors_tickets_dict.iteritems():
+            num_tickets = len(ticket_prepids)
+            full_message = (message_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + message_part2
+            for ticket_prepid in ticket_prepids:
+                full_message += 'Ticket: %s \n' % (ticket_prepid)
+                full_message += '%smccms?prepid=%s \n\n' % (base_url, ticket_prepid)
+                yield '.'
+            full_message += '\n'
+            subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
+            mail_communicator.sendMail([author_email], subject, full_message)
+            yield '\nEmail sent to %s\n' % (author_email)
+
+
+class MccMReminderProdManagers(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
 
@@ -419,7 +471,6 @@ Dear Production Managers,
 
         to_who = [settings().get_value('service_account')]
         to_who.extend( map( lambda u : u['email'], udb.query(query="role==production_manager", page_num=-1)))
-
         com.sendMail(to_who,
                      subject,
                      message)
