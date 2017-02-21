@@ -372,7 +372,7 @@ class GenerateChains(RESTResource):
                     "results" : False,
                     "message" : el['message'],
                     'chained_request_prepid': el['prepid']
-                }        
+                }
             for chain, requests in el["generated_chains"].iteritems():
                 generated_chains[chain] = requests
         self.logger.debug("just generated chains: %s" % (generated_chains))

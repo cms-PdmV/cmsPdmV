@@ -293,7 +293,7 @@ class GenerateChainedRequests(RESTResource):
                     }
         else:
             for chain in new_chains:
-                new_chains_dict[chain] = []        
+                new_chains_dict[chain] = []
         if priority_set:
             return {
                 "results":True,

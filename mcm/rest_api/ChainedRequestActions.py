@@ -13,7 +13,7 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
 from json_layer.action import action
 from json_layer.batch import batch
-from json_layer.mccm import mccm 
+from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 from tools.locker import locker
