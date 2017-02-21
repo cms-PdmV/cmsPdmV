@@ -290,7 +290,10 @@ class GenerateChainedRequests(RESTResource):
                         "results": False,
                         "prepid": mcm_a.get_attribute('prepid'),
                         "message": results_dict['message']
-                    }        
+                    }
+        else:
+            for chain in new_chains:
+                new_chains_dict[chain] = []        
         if priority_set:
             return {
                 "results":True,
