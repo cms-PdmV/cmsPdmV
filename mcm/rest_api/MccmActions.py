@@ -364,11 +364,17 @@ class GenerateChains(RESTResource):
                     ##for now we put a small delay to not crash index with a lot of action
                     time.sleep(2)
 
-        generated_chains = []
+        generated_chains = {}
         for el in res:
-            for t in el["generated_chains"]:
-                generated_chains.append(t)
-
+            if not el['results']:
+                return {
+                    "prepid" : mid,
+                    "results" : False,
+                    "message" : el['message'],
+                    'chained_request_prepid': el['prepid']
+                }        
+            for chain, requests in el["generated_chains"].iteritems():
+                generated_chains[chain] = requests
         self.logger.debug("just generated chains: %s" % (generated_chains))
         mcm_m.set_attribute("generated_chains", generated_chains)
         mcm_m.set_status()

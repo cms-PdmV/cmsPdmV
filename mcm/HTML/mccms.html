@@ -131,8 +131,11 @@
                 </ul>
               </div>
               <div ng-switch-when="Generated chains">
-                <ul ng-repeat="el in mccm_info[data.db_name]">
-                  <li>{{el}}</li>
+                <ul ng-repeat="(chain, requests) in mccm_info[data.db_name]">
+                  <li>{{chain}}</li>
+                  <ul ng-repeat="request in requests">
+                    <li>{{request}}</li>
+                  </ul>
                 </ul>
               </div>
       	      <div ng-switch-default>

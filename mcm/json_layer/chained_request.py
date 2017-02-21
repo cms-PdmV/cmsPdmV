@@ -4,6 +4,7 @@ import time
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
+from json_layer.mccm import mccm
 from flow import flow
 from couchdb_layer.mcm_database import database
 from tools.priority import priority
@@ -179,29 +180,34 @@ class chained_request(json_base):
                 __submit_step = 1
 
                 ret_flow = self.flow_to_next_step(input_dataset, block_black_list,
-                        block_white_list, check_stats=check_stats)
+                        block_white_list, check_stats=check_stats)['result']
 
                 if ret_flow:
                     ##force updating the chain_request document in DB and here
                     self.reload()
                 else:
                     return {"results" : False, "message" : "Failed to flow"}
-
+                generated_requests = []
                 for el in __list_of_campaigns:
                     reservation_res = self.reserve(limit=el)
                     if reservation_res["results"] != True:
-                        return {"results" : False,
-                                "prepid" : chainid,
-                                "message" : "error while reserving request"}
-
+                        return {
+                            "results" : False,
+                            "prepid" : chainid,
+                            "message" : "error while reserving request"
+                        }
+                    elif 'generated_requests' in reservation_res:
+                        generated_requests = generated_requests + reservation_res['generated_requests']
+                        reservation_res.pop('generated_requests')
                     ###we should check the last_status here
                     ##in case request is beying reused and not done - we stop.
                     if self.get_attribute('last_status') != "new" and self.get_attribute('last_status') != "done":
                         ##TO-DO make page reload info on failure or show message even if its OK
+                        self.save_requests(generated_requests)
                         return {"results" : True,
                                 "prepid" : chainid,
                                 "message" : "we cannot move further with last_status not done"}
-
+                self.save_requests(generated_requests)
                 if reservation_res["results"] == True:
 
                     chain = self.get_attribute("chain")
@@ -276,7 +282,7 @@ class chained_request(json_base):
             self.set_attribute("chain", chain)
             self.update_history({'action': 'add request', 'step': req.get_attribute('prepid')})
 
-    def reserve(self,limit=None):
+    def reserve(self,limit=None, save_requests=True):
         steps=0
         count_limit = None
         campaign_limit = None
@@ -288,26 +294,54 @@ class chained_request(json_base):
                 count_limit = int(limit)
             else:
                 campaign_limit = limit
-
+        generated_requests = []
         while True:
             steps+=1
             if count_limit and steps>count_limit:
                 ### stop here
                 break
             try:
-                if not self.flow_to_next_step(check_stats=False, reserve=True, stop_at_campaign = campaign_limit):
+                results_dict = self.flow_to_next_step(check_stats=False, reserve=True, stop_at_campaign = campaign_limit)
+                if not results_dict['result']:
                     break
                 saved = self.reload()
-                if not saved: return {"prepid": self.get_attribute("prepid"), "results": False, "message": "Failed to save chained request to database"}
+                if not saved: return {
+                    "prepid": self.get_attribute("prepid"),
+                    "results": False,
+                    "message": "Failed to save chained request to database"
+                }
+                if 'generated_request' in results_dict:
+                    generated_requests.append(results_dict['generated_request'])
             except Exception as ex:
-                return {"prepid": self.get_attribute("prepid"), "results": False, "message": str(ex)}
-        return {"prepid": self.get_attribute("prepid"), "results": True}
+                return {
+                    "prepid": self.get_attribute("prepid"),
+                    "results": False,
+                    "message": str(ex)
+                }
+        if save_requests:
+            self.save_requests(generated_requests)
+            return {
+                "prepid": self.get_attribute("prepid"),
+                "results": True
+            }
+        return {
+            "prepid": self.get_attribute("prepid"),
+            "results": True,
+            'generated_requests' : generated_requests
+        }
 
+    def save_requests(self, generated_requests):
+        chain_id = self.get_attribute('prepid')
+        mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
+        if mccm_ticket is not None:
+            mccm_ticket.update_mccm_generated_chains({chain_id: generated_requests})
+        else:
+            self.logger.error("No mccm with generated chain: %s" % (chain_id))
 
     def flow(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True):
         if not block_black_list: block_black_list = []
         if not block_white_list: block_white_list = []
-        return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)
+        return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)['result']
         #return self.flow_to_next_step_clean(input_dataset,  block_black_list,  block_white_list)
 
 
@@ -380,7 +414,7 @@ class chained_request(json_base):
                                                              self.get_attribute('member_of_campaign')))
 
         if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
-            return False
+            return {'result': False}
             # raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
             #                                              'reservation of chain %s should not go beyond %s' %( self.get_attribute('_id'),
             #                                                                                                   stop_at_campaign))
@@ -388,7 +422,7 @@ class chained_request(json_base):
 
         mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
         if next_step >= len(mcm_cc['campaigns']):
-            if reserve: return False
+            if reserve: return {'result': False}
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'chained_campaign %s does not allow any further flowing.' % (
                                                              self.get_attribute('member_of_campaign')))
@@ -415,7 +449,6 @@ class chained_request(json_base):
         if not fdb.document_exists(flow_name):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                          'The flow %s does not exist' % flow_name )
-
         mcm_f = flow(fdb.get(flow_name))
         if not 'sequences' in mcm_f.get_attribute('request_parameters'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
@@ -634,7 +667,7 @@ class chained_request(json_base):
                 if self.get_attribute("prepid") in forceflow_list["value"]:
                     forceflow_list["value"].remove(self.get_attribute("prepid"))
                     sdb.update(forceflow_list)
-            return True
+            return {'result': True}
         elif approach == 'patch':
             self.logger.debug("patching request in reservation: %s" % (next_id))
             ## there exists already a request in the chain (step!=last) and it is usable for the next stage
@@ -755,7 +788,10 @@ class chained_request(json_base):
             forceflow_list["value"].remove(self.get_attribute("prepid"))
             sdb.update(forceflow_list)
 
-        return True
+        return {
+            'result': True,
+            'generated_request': next_request.get_attribute('prepid')
+        }
 
     def retrieve_original_action_item(self, adb, original_action_id=None):
         if not original_action_id:

@@ -275,16 +275,34 @@ class GenerateChainedRequests(RESTResource):
 
         ## do the reservation of the whole chain ?
         res = []
+        new_chains_dict = {}
         if reserve:
             for cr in new_chains:
                 mcm_cr = chained_request(crdb.get(cr))
-                res.append(mcm_cr.reserve(limit=reserve))
-                crdb.update(mcm_cr.json())
-
+                results_dict = mcm_cr.reserve(limit=reserve, save_requests=False)
+                if results_dict['results'] and 'generated_requests' in results_dict:
+                    new_chains_dict[results_dict['prepid']] = results_dict['generated_requests']
+                    results_dict.pop('generated_requests')
+                    res.append(results_dict)
+                    crdb.update(mcm_cr.json())
+                else:
+                    return {
+                        "results": False,
+                        "prepid": mcm_a.get_attribute('prepid'),
+                        "message": results_dict['message']
+                    }        
         if priority_set:
-            return {"results":True , "prepid": mcm_a.get_attribute('prepid'), 'generated_chains': new_chains}
+            return {
+                "results":True,
+                "prepid": mcm_a.get_attribute('prepid'),
+                'generated_chains': new_chains_dict
+            }
         else:
-            return {"results":False , "prepid": mcm_a.get_attribute('prepid'), "message":"Priorities not set properly"}
+            return {
+                "results":False,
+                "prepid": mcm_a.get_attribute('prepid'),
+                "message":"Priorities not set properly"
+            }
 
 
 class GenerateAllChainedRequests(GenerateChainedRequests):
