@@ -335,8 +335,6 @@ class chained_request(json_base):
         mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
         if mccm_ticket is not None:
             mccm_ticket.update_mccm_generated_chains({chain_id: generated_requests})
-        else:
-            self.logger.error("No mccm with generated chain: %s" % (chain_id))
 
     def flow(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True):
         if not block_black_list: block_black_list = []

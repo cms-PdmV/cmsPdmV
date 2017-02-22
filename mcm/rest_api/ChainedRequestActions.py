@@ -250,8 +250,6 @@ class FlowToNextStep(RESTResource):
             mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
             if mccm_ticket is not None:
                 mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
-            else:
-                self.logger.error("No mccm with generated chain: %s" % (chain_id))
         if len(res) == 1:
             return res[0]
         return res

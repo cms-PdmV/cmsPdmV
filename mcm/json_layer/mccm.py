@@ -74,7 +74,9 @@ class mccm(json_base):
         try:
             return mccm(json_input=result[0])
         except Exception as ex:
+            mccms_db.logger.error('Initalization of mccm object failed: %s' % (str(ex)))
             return None
+        mccms_db.logger.error('No mccm with generated chain: %s' % (chain_id))
         return None
 
     def update_mccm_generated_chains(self, chains_requests_dict):
