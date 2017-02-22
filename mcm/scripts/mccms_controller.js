@@ -136,6 +136,19 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
+    $scope.approve_gen_request = function(prepid){
+      $http({method:'GET', url:'restapi/requests/approve/'+prepid}).success(function(data,status){
+        if (data.results){
+          alert("Everything went fine");
+        }
+        else{
+          alert(data.message);
+        }
+      }).error(function(data,status){
+        alert("Something went wrong");
+      });
+    };
+
     $scope.isArray = function(obj){
       return angular.isArray(obj)
     };

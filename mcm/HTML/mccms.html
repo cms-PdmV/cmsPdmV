@@ -132,9 +132,16 @@
               </div>
               <div ng-switch-when="Generated chains">
                 <ul ng-repeat="(chain, requests) in mccm_info[data.db_name]">
-                  <li>{{chain}}</li>
+                  <li>
+                    <a href="chained_requests?prepid={{chain}}" target="_self">{{chain}}</a>
+                  </li>
                   <ul ng-repeat="request in requests">
-                    <li>{{request}}</li>
+                    <li>
+                      <a href="requests?prepid={{request}}" target="_self">{{request}}</a>
+                      <a ng-click="approve_gen_request(request)" rel="tooltip" title="Next step">
+                        <i class="icon-chevron-right"></i>
+                      </a>
+                    </li>
                   </ul>
                 </ul>
               </div>
