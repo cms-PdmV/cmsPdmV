@@ -13,6 +13,7 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
 from json_layer.action import action
 from json_layer.batch import batch
+from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 from tools.locker import locker
@@ -233,13 +234,25 @@ class FlowToNextStep(RESTResource):
 
     def multiple_flow(self, rid, check_stats=True, reserve=False):
         if ',' in rid:
-            rlist = rid.rsplit(',')
-            res = []
-            for r in rlist:
-                 res.append(self.flow(r, check_stats=check_stats, reserve = reserve))
-            return res
+            chain_id_list = rid.rsplit(',')
         else:
-            return self.flow(rid, check_stats=check_stats, reserve = reserve)
+            chain_id_list = [rid]
+        res = []
+        chains_requests_dict = {}
+        for chain_id in chain_id_list:
+            flow_results = self.flow(chain_id, check_stats=check_stats, reserve = reserve)
+            if flow_results['results'] and 'generated_requests' in flow_results:
+                chains_requests_dict[chain_id] = flow_results['generated_requests']
+                flow_results.pop('generated_requests')
+            res.append(flow_results)
+        if len(chains_requests_dict):
+            chain_id = chains_requests_dict.iterkeys().next()
+            mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
+            if mccm_ticket is not None:
+                mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
+        if len(res) == 1:
+            return res[0]
+        return res
 
     def flow2(self,  data):
         try:
@@ -248,8 +261,9 @@ class FlowToNextStep(RESTResource):
             self.logger.error('Could not start flowing to next step. Reason: %s' % (ex))
             return {"results":str(ex)}
         db = database('chained_requests')
+        chain_id = vdata['prepid']
         try:
-            creq = chained_request(json_input=db.get(vdata['prepid']))
+            creq = chained_request(json_input=db.get(chain_id))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return {"results":str(ex)}
@@ -287,8 +301,7 @@ class FlowToNextStep(RESTResource):
         if reserve:
             self.logger.info('Attempting to reserve to next step for chained_request %s' % (
                     creq.get_attribute('_id')))
-
-            return creq.reserve( limit = reserve )
+            return creq.reserve( limit = reserve, save_requests=False)
 
         self.logger.info('Attempting to flow to next step for chained_request %s' % (
                 creq.get_attribute('_id')))

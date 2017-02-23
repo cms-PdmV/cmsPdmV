@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from json_base import json_base
-
+from couchdb_layer.mcm_database import database
 
 class mccm(json_base):
 
@@ -25,7 +25,7 @@ class mccm(json_base):
         'size': 0,
         'status': 'new',
         'special': False,
-        'generated_chains': []
+        'generated_chains': {}
     }
 
     _json_base__approvalsteps = ['none', 'approved']
@@ -65,3 +65,28 @@ class mccm(json_base):
             for key in self._json_base__schema:
                 editable[key] = False
         return editable
+
+    @staticmethod
+    def get_mccm_by_generated_chain(chain_id):
+        mccms_db = database('mccms')
+        __query = mccms_db.construct_lucene_query({'generated_chains' : chain_id})
+        result = mccms_db.full_text_search('search', __query, page=-1)
+        try:
+            return mccm(json_input=result[0])
+        except Exception as ex:
+            mccms_db.logger.error('Initalization of mccm object failed: %s' % (str(ex)))
+            return None
+        mccms_db.logger.error('No mccm with generated chain: %s' % (chain_id))
+        return None
+
+    def update_mccm_generated_chains(self, chains_requests_dict):
+        generated_chains = self.get_attribute('generated_chains')
+        for chain, requests in chains_requests_dict.iteritems():
+            if chain in generated_chains:
+                for request in chains_requests_dict[chain]:
+                    generated_chains[chain].append(request)
+            else:
+                generated_chains[chain] = chains_requests_dict[chain]
+        mccms_db = database('mccms')
+        mccms_db.save(self.json())
+
