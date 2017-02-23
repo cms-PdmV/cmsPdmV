@@ -82,7 +82,8 @@ class chained_request(json_base):
         #'generator_parameters':[], #prune
         #'request_parameters':{} # json with user prefs #prune
         'last_status': 'new',
-        'status': ''
+        'status': '',
+        'chain_type': 'TaskChain'
     }
 
     def __init__(self, json_input=None):

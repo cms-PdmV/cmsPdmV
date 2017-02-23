@@ -707,6 +707,43 @@ class TaskChainDict(RESTResource):
             ##return empty values if nothing found
             return "", ""
 
+        def get_chain_type(chain_type, wma_dict):
+            __keeps_output = []
+            __chain = "TaskChain"
+            ##get keep_output values for all the chains
+            for el in range(wma_dict["TaskChain"]):
+                __keeps_output.append(wma_dict["Task%s" % (el+1)]["KeepOutput"])
+
+            ##check if we keep only the last output
+            if __keeps_output.count(True) == 1 and __keeps_output[-1] == True:
+                __chain = "StepChain"
+
+            if __chain == "StepChain" and chain_type == "StepChain":
+                return  "StepChain"
+            else:
+                return "TaskChain"
+
+        def tranform_to_step_chain(wma_dict):
+            ##replace Task -> Step in inside dictionaries
+            for task_num in range(wma_dict["TaskChain"]):
+                for elem in wma_dict["Task%s" % (task_num+1)]:
+                    if "Task" in elem:
+                        wma_dict["Task%s" % (task_num+1)][
+                        elem.replace("Task", "Step")] = wma_dict["Task%s" % (task_num+1)].pop(elem)
+
+            ##we do same replacement on top level
+            for el in wma_dict:
+                ##check values first
+                if wma_dict[el].__class__ == str and "task" in wma_dict[el]:
+                    wma_dict[el] = wma_dict[el].replace("task", "step")
+
+                #if key has task in it replace it -> this deletes reference of key in dictionary
+                if "Task" in el:
+                    wma_dict[el.replace("Task", "Step")] = wma_dict.pop(el)
+
+            wma_dict["RequestType"] = "StepChain"
+            return wma_dict
+
         def request_to_tasks(r,base,depend):
             ts = []
             for si in range(len(r.get_attribute('sequences'))):
@@ -824,7 +861,9 @@ class TaskChainDict(RESTResource):
         if 'upto' in argv:
             veto_point = int(argv['upto'])
 
+        __chains_type = []
         for mcm_cr in mcm_crs:
+            __chains_type.append(mcm_cr["chain_type"])
             starting_point = mcm_cr['step']
             if ignore_status: starting_point = 0
             for (ir, r) in enumerate(mcm_cr['chain']):
@@ -910,8 +949,14 @@ class TaskChainDict(RESTResource):
         wma['Campaign'] = wma['Task1']['AcquisitionEra']
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
+
         cherrypy.response.headers['Content-Type'] = 'text/plain'
-        return dumps(wma, indent=4)
+
+        if get_chain_type("StepChain" if __chains_type.count("StepChain") == len(__chains_type) else "TaskChain"
+            , wma) == "TaskChain":
+            return dumps(wma, indent=4)
+        else:
+            return dumps(tranform_to_step_chain(wma), indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self, mode='setup'):

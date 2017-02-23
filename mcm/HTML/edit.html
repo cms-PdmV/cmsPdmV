@@ -264,6 +264,12 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
+                    <div ng-switch-when="Chain type">
+                      <button class="btn btn-info"
+                      ng-click="result[column.db_name] = result[column.db_name] === 'TaskChain' ? 'StepChain' : 'TaskChain'">
+                      {{result[column.db_name]}}
+                      </button>
+                    </div>
                     <div ng-switch-default style="width: 400px;">
                       <div ng-switch on="underscore.isBoolean(result[column.db_name])">
                         <div ng-switch-when="true">
