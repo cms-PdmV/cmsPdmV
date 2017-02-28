@@ -39,9 +39,11 @@ class mccm(json_base):
                 self.logger.error("Issue in creating mccm... To many repetitions:%s" % (
                         json_input['repetitions']))
                 raise Exception('More than 10 repetitions')
+
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
+        self.setup()
 
     @staticmethod
     def get_meeting_date():
