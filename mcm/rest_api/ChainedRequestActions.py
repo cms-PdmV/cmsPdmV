@@ -733,11 +733,9 @@ class TaskChainDict(RESTResource):
 
             ##we do same replacement on top level
             for el in wma_dict:
-                ##check values first
                 if wma_dict[el].__class__ == str and "task" in wma_dict[el]:
                     wma_dict[el] = wma_dict[el].replace("task", "step")
 
-                #if key has task in it replace it -> this deletes reference of key in dictionary
                 if "Task" in el:
                     wma_dict[el.replace("Task", "Step")] = wma_dict.pop(el)
 
@@ -755,6 +753,7 @@ class TaskChainDict(RESTResource):
                            "ScramArch": r.get_scram_arch(),
                            "PrimaryDataset" : r.get_attribute('dataset_name'),
                            "AcquisitionEra" : r.get_attribute('member_of_campaign'),
+                           "Campaign" : r.get_attribute('member_of_campaign'),
                            "ProcessingString" : r.get_processing_string(si),
                            "TimePerEvent" : r.get_attribute("time_event"),
                            "SizePerEvent" : r.get_attribute('size_event'),
@@ -946,7 +945,7 @@ class TaskChainDict(RESTResource):
         ##since 2016-11, processingString and AcquisitionEra is mandatory in global params
         wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
         wma['ProcessingString'] = wma['Task1']['ProcessingString']
-        wma['Campaign'] = wma['Task1']['AcquisitionEra']
+        wma['Campaign'] = wma['Task1']['Campaign']
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
 
