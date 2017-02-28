@@ -1728,22 +1728,43 @@ done
             those = wma['content']['pdmv_dataset_list']
 
             for ds in those:
-                if re.match(re_to_match, ds) or skip_check:
-                    ###get current version
-                    #0th element is empty string of first /
-                    #1st is datset+process_string
-                    #2nd is version number
-                    #3rd is datatier
+                if not self.is_in_middleof_stepchain():
+                    ##we do all the DS-PS/TIER checks for the requests and last Step
+                    if re.match(re_to_match, ds) or skip_check:
+                        ###get current version
+                        #0th element is empty string of first /
+                        #1st is datset+process_string
+                        #2nd is version number
+                        #3rd is datatier
+                        curr_v = re.split('(.*)-v(.*)/', ds)
+                        #Do some checks
+                        if not self.is_in_middleof_stepchain():
+                            if not curr_v[-1] in tiers_expected and not skip_check:
+                                continue
+                            if not skip_check:
+                                if not ds.split('/')[-2].split('-')[-2] in proc_strings:
+                                    ##most likely there is a fake/wrong dataset
+                                    continue
+                        #find and save the max version for the dataset
+                        uniq_name = curr_v[1] + curr_v[-1]
+                        if uniq_name in versioned:
+                            if curr_v[-2] > versioned[uniq_name]["version"]:
+                                versioned[uniq_name] = {"version": curr_v[-2],
+                                        "full_dataset": ds}
+                        else:
+                            versioned[uniq_name] = {"version": curr_v[-2],
+                                    "full_dataset": ds}
+                    else:
+                        self.logger.log("collect_outputs didn't match anything for: %s" % (
+                                self.get_attribute("prepid")))
+                else:
+                    ##If its a stepchain and request is in the middle:
+                    #we just add dataset(-s)
                     curr_v = re.split('(.*)-v(.*)/', ds)
-                    #Do some checks
-                    if not curr_v[-1] in tiers_expected:
-                        continue
-                    if not skip_check:
-                        if not ds.split('/')[-2].split('-')[-2] in proc_strings:
-                            ##most likely there is a fake/wrong dataset
-                            continue
-                    #find and save the max version for the dataset
                     uniq_name = curr_v[1] + curr_v[-1]
+                    self.logger.log("Collecting output for stepChain request: %s" % (
+                            self.get_attribute("prepid")))
+
                     if uniq_name in versioned:
                         if curr_v[-2] > versioned[uniq_name]["version"]:
                             versioned[uniq_name] = {"version": curr_v[-2],
@@ -1770,6 +1791,22 @@ done
                 counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
                 valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
         return (valid,counted)
+
+    def is_in_middleof_stepchain(self):
+        crdb = database("chained_requests")
+
+        for chain in self.get_attribute("member_of_chain"):
+            __chain = crdb.get(chain)
+            print(__chain)
+            ##check if request is not last step of chain
+            if __chain["chain_type"] == "TaskChain":
+                return False
+
+            last_in_chain = __chain["chain"].index(self.get_attribute("prepid")) == len(__chain["chain"])
+            if not last_in_chain and len(self.get_tiers()) != 0:
+                return False
+        return True
+
 
     def inspect_submitted(self, force):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1809,8 +1846,9 @@ done
                     ## find its statistics
                     valid,counted = self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
 
-                    self.set_attribute('output_dataset', collected)
-                    self.set_attribute('completed_events', counted)
+                    if not self.is_in_middleof_stepchain():
+                        self.set_attribute('output_dataset', collected)
+                        self.set_attribute('completed_events', counted)
 
                     if not valid:
                         not_good.update({'message' : 'Not all outputs are valid'})
@@ -1828,8 +1866,9 @@ done
                             saved = db.save(self.json())
                             return not_good
 
-
-                    if self.get_attribute('completed_events') <= 0:
+                    ##in case completed_evets is 0 and request is not StepChain
+                    ##we should not change the status as it could show potential issue in production
+                    if self.get_attribute('completed_events') <= 0 and not self.is_in_middleof_stepchain():
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
                                 wma_r['content']['pdmv_dataset_name'])})
