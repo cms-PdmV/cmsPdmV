@@ -273,6 +273,7 @@ testApp.controller('TabsController', ['$scope', '$element', function($scope, $el
       pane.selected = true;
       pane.active = true;
     }
+    event.preventDefault();
   };
 
   this.addPane = function addPane(pane) {

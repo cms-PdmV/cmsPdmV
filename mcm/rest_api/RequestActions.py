@@ -1883,18 +1883,21 @@ class GetInjectCommand(RESTResource):
 
 
 class GetUniqueValues(RESTResource):
-    def GET(self, *args):
+    def GET(self, *args, **kwargs):
         """
         Get unique values for navigation by field_name
         """
         if not args:
             self.logger.error('GetUniqueValues: No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.get_unique_values(args[0]))
+        return dumps(self.get_unique_values(args[0], kwargs))
 
-    def get_unique_values(self, field_name):
+    def get_unique_values(self, field_name, kwargs):
         db = database('requests')
-        data = db.raw_view_query(view_doc="unique", view_name=field_name, options={"group":True})
+        if 'limit' in kwargs:
+            kwargs['limit'] = int(kwargs['limit'])
+        kwargs['group'] = True
+        data = db.raw_view_query(view_doc="unique", view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
         unique_list = [str(elem["key"]) for elem in data]
         return {"results": unique_list}
 

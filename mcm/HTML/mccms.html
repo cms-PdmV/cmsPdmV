@@ -138,7 +138,7 @@
                   <ul ng-repeat="request in requests">
                     <li>
                       <a href="requests?prepid={{request}}" target="_self">{{request}}</a>
-                      <a ng-click="approve_gen_request(request)" rel="tooltip" title="Next step">
+                      <a ng-click="approve_gen_request(request)" ng-href='#' rel="tooltip" title="Next step">
                         <i class="icon-chevron-right"></i>
                       </a>
                     </li>
