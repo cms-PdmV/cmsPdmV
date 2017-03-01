@@ -113,10 +113,11 @@ class BatchAnnouncer(RESTResource):
         r = b.announce(message)
         workflows = ''
         for dictionary in b.get_attribute('requests'):
-            workflows += dictionary['content']['pdmv_prep_id'] + ','
+            workflows += dictionary['name'] + ','
         workflows = workflows[:-1]
-        approver = RequestApprover(bid, workflows)
-        submit_pool.add_task(approver.internal_run)
+        if workflows != ''
+            approver = RequestApprover(bid, workflows)
+            submit_pool.add_task(approver.internal_run)
         if r:
             return {"results":bdb.update(b.json()) , "message" : r , "prepid" : bid}
         else:
