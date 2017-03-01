@@ -38,10 +38,10 @@
             </span>
             <span class="control-group navigation-form">
               <label style="width: 80px">Tags</label>
-              <input type="text" ng-model="form_data.tags" style="margin-right: 50px" type="text" class="input-large" typeahead="tag for tag in preloadUniques($viewValue, 'tags')">
+              <input type="text" ng-model="form_data.tags" type="text" class="input-large" typeahead="tag for tag in preloadUniques($viewValue, 'tags')">
             </span>
+            <button ng-click="redirectToRequests()" class="btn btn-mini">Search requests</button>
           </form>
-          <button ng-click="redirectToRequests()" class="btn btn-large">Search requests</button>
         </pane>
       </tabs>
     </span>
