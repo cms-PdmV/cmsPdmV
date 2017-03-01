@@ -46,7 +46,7 @@ class request_to_wmcontrol:
 
         wmagent_type = mcm_r.get_wmagent_type()
         command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        command += 'wmcontrol.py --release %s' % (mcm_r.get_attribute('cmssw_release'))
+        command += 'wmcontrol.py --dont_approve --release %s' % (mcm_r.get_attribute('cmssw_release'))
         command += ' --arch %s' % (mcm_r.get_scram_arch())
         command += ' --conditions %s' % (mcm_r.get_attribute('sequences')[0]['conditions'])
         command += ' --version %s' % (mcm_r.get_attribute('version'))
