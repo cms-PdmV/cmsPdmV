@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
+  <base href="/mcm2/">
   <title>McM</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
@@ -45,7 +46,7 @@
               <label style="width: 80px">Mccm ticket</label>
               <input type="text" ng-model="form_data.ticket" style="margin-right: 225px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue, 'mccms')">
             </span>
-            <button ng-click="redirectToRequests()" class="btn btn-medium">Search</button>
+            <button ng-click="redirect()" class="btn btn-medium">Search</button>
           </form>
         </pane>
       </tabs>

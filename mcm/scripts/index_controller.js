@@ -32,7 +32,7 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
-    $scope.redirectToRequests = function (){
+    $scope.redirect = function (){
     	var request  = $scope.form_data.request;
     	var dataset = $scope.form_data.dataset;
     	var tags = $scope.form_data.tags;
