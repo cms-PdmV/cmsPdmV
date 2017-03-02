@@ -11,6 +11,7 @@ from tools.settings import settings
 from tools.locator import locator
 from tools.user_management import access_rights
 from tools.json import threaded_loads
+from tools.handlers import RequestApprover, submit_pool
 
 class SaveBatch(RESTResource):
     def __init__(self):
@@ -110,6 +111,13 @@ class BatchAnnouncer(RESTResource):
 
         b = batch(bdb.get(bid))
         r = b.announce(message)
+        workflows = ''
+        for dictionary in b.get_attribute('requests'):
+            workflows += dictionary['name'] + ','
+        workflows = workflows[:-1]
+        if workflows != ''
+            approver = RequestApprover(bid, workflows)
+            submit_pool.add_task(approver.internal_run)
         if r:
             return {"results":bdb.update(b.json()) , "message" : r , "prepid" : bid}
         else:

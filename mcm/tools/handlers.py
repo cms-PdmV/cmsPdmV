@@ -557,6 +557,41 @@ class RequestInjector(Handler):
                 self.lock.release()
                 self.queue_lock.release()
 
+class RequestApprover(Handler):
+    def __init__(self, batch_id, workflows):
+        self.workflows = workflows
+        self.batch_id = batch_id
+
+    def make_command(self):
+        l_type = locator()
+        command = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        test_path = ''
+        test_params = ''
+        if l_type.isDev():
+            test_path = '_testful'
+            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+        command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
+        return command
+
+    def internal_run(self):
+        command = self.make_command()
+        executor = ssh_executor(server='vocms081.cern.ch')
+        try:
+            self.logger.info("Command being used for approve requests: " + command)
+            _, stdout, stderr = executor.execute(command)
+            if not stdout and not stderr:
+                self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
+                return
+            output = stdout.read()
+            error = stderr.read()
+            self.logger.info('output: %s' % output)
+            if error and not output:
+                self.logger.error('Error in wmapprove: %s' % (error))
+        except Exception as e:
+            self.logger.error(
+                'Error while approving requests, batch id: %s, message: %s' % (self.batch_id, str(e)))
+
 class ChainRequestInjector(Handler):
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
@@ -581,7 +616,7 @@ class ChainRequestInjector(Handler):
         there = ''
         if l_type.isDev():
             there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        cmd += 'wmcontrol.py --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
+        cmd += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
         return cmd
 
     def internal_run(self):
