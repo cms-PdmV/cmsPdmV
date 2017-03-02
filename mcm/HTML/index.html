@@ -29,18 +29,23 @@
         <pane heading="Navigation" active="is_navigation_active">
           <form class="form-inline">
             <span >
-              <label style="width: 80px">Prepid</label>
-              <input type="text" ng-model="form_data.prepid" style="margin-right: 50px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue)">
+              <label style="width: 80px">Request</label>
+              <input type="text" ng-model="form_data.request" style="margin-right: 50px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue, 'requests')">
             </span>
             <span class="control-group navigation-form">
               <label style="width: 100px">Dataset name</label>
               <input type="text" ng-model="form_data.dataset" style="margin-right: 50px" type="text" class="input-large" typeahead="dataset for dataset in preloadUniques($viewValue, 'dataset_name')">
             </span>
             <span class="control-group navigation-form">
-              <label style="width: 80px">Tags</label>
+              <label style="width: 95px">Request tags</label>
               <input type="text" ng-model="form_data.tags" type="text" class="input-large" typeahead="tag for tag in preloadUniques($viewValue, 'tags')">
             </span>
-            <button ng-click="redirectToRequests()" class="btn btn-mini">Search requests</button>
+            <br><br>
+            <span class="control-group navigation-form">
+              <label style="width: 80px">Mccm ticket</label>
+              <input type="text" ng-model="form_data.ticket" style="margin-right: 225px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue, 'mccms')">
+            </span>
+            <button ng-click="redirectToRequests()" class="btn btn-medium">Search</button>
           </form>
         </pane>
       </tabs>

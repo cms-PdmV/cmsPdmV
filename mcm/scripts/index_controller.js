@@ -13,8 +13,8 @@ angular.module('testApp').controller('resultsCtrl',
     	return results;
   	};
 
-  	$scope.preloadPrepids = function (viewValue){
-    	var promise = $http.get("search/?db_name=requests&page=0&limit=10&include_fields=prepid&prepid=" + viewValue + "*");
+  	$scope.preloadPrepids = function (viewValue, database){
+    	var promise = $http.get("search/?db_name=" + database + "&page=0&limit=10&include_fields=prepid&prepid=" + viewValue + "*");
         return promise.then(function(data){
           return $scope.parseResponse(data, 'prepid');
         }, function(data){
@@ -33,12 +33,19 @@ angular.module('testApp').controller('resultsCtrl',
     };
 
     $scope.redirectToRequests = function (){
-    	var path = "requests?";
-    	var prepid  = $scope.form_data.prepid;
+    	var request  = $scope.form_data.request;
     	var dataset = $scope.form_data.dataset;
     	var tags = $scope.form_data.tags;
-    	if (typeof(prepid) != 'undefined' && prepid != ""){
-    		path += "prepid=" + prepid + "&";
+      var ticket = $scope.form_data.ticket;
+      var path = "mccms?";
+      if (typeof(ticket) != 'undefined' && ticket != ""){
+        path += "prepid=" + ticket;
+        $window.location.href = path;
+        return;
+      }
+      var path = "requests?";
+    	if (typeof(request) != 'undefined' && request != ""){
+    		path += "prepid=" + request + "&";
     	}
     	if (typeof(dataset) != 'undefined' && dataset != ""){
     		path += "dataset_name=" + dataset + "&";
