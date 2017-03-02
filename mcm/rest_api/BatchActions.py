@@ -115,7 +115,7 @@ class BatchAnnouncer(RESTResource):
         for dictionary in b.get_attribute('requests'):
             workflows += dictionary['name'] + ','
         workflows = workflows[:-1]
-        if workflows != ''
+        if workflows != '':
             approver = RequestApprover(bid, workflows)
             submit_pool.add_task(approver.internal_run)
         if r:
