@@ -395,18 +395,16 @@ class MccMReminderGenContacts(RESTResource):
         mccms_db = database('mccms')
         users_db = database('users')
         __query = mccms_db.construct_lucene_query({'status' : 'new'})
-        mccms_tickets = mccms_db.full_text_search('search', __query, page=0, limit=1)
+        mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
         non_gen_contact_authors = set()
         authors_tickets_dict = dict()
         for ticket in mccms_tickets:
             yield '\nProcessing ticket %s' % (ticket['prepid'])
-            authors_history = set() #set to avoid the processing of one author more than one time 
-            for author in ticket['history']:
-                author_email = author['updater']['author_email']
-                if author_email in authors_history:
-                    continue
+            mccm_ticket = mccm(json_input=ticket) 
+            authors = mccm_ticket.get_actors(what='author_email')
+            for author_email in authors:
                 if author_email in authors_tickets_dict:
-                    author_tickets_dict[author_email].append(ticket['prepid'])
+                    authors_tickets_dict[author_email].append(ticket['prepid'])
                 elif author_email not in non_gen_contact_authors:
                     __role_query = users_db.construct_lucene_query({'email' : author_email})
                     result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role')
@@ -415,7 +413,6 @@ class MccMReminderGenContacts(RESTResource):
                         authors_tickets_dict[author_email] = [ticket['prepid']]
                     else:
                         non_gen_contact_authors.add(author_email)
-                authors_history.add(author_email)
                 yield '.'
         subject_part1 = 'Gentle reminder on %s '
         subject_part2 = ' to be operated by you'
