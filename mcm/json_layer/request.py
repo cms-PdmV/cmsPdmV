@@ -1797,7 +1797,7 @@ done
 
         for chain in self.get_attribute("member_of_chain"):
             __chain = crdb.get(chain)
-            print(__chain)
+
             ##check if request is not last step of chain
             if __chain["chain_type"] == "TaskChain":
                 return False
