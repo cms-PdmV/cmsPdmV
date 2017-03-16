@@ -444,24 +444,6 @@ class RequestSubmitter(Handler):
                     injected_requests = [l.split()[-1] for l in output.split('\n') if
                                          l.startswith('Injected workflow:')]
 
-                    ## lovelly list creation
-                    objects_to_invalidate = [
-                            {"_id": inv_req, "object": inv_req, "type": "request",
-                            "status": "new", "prepid": self.prepid}
-                            for inv_req in injected_requests]
-
-                    if objects_to_invalidate:
-                        self.inject_logger.info(
-                            "Some of the workflows had to be invalidated: {0}".format(
-                                    objects_to_invalidate))
-
-                        invalidation = database('invalidation')
-                        saved = invalidation.save_all(objects_to_invalidate)
-                        if not saved:
-                            self.injection_error('Could not save the invalidations {0}'.format(
-                                    objects_to_invalidate), req)
-
-                        return False
                     ## another great structure
                     added_requests = [
                             {'name': app_req, 'content': {'pdmv_prep_id': self.prepid}}
@@ -687,24 +669,6 @@ class ChainRequestInjector(Handler):
                 if not injected_requests:
                     self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
                             output, error), mcm_rs)
-
-                    return False
-
-                ## yet again...
-                objects_to_invalidate = [
-                        {"_id": inv_req, "object": inv_req, "type": "request",
-                        "status": "new", "prepid": self.prepid}
-                        for inv_req in injected_requests]
-
-                if objects_to_invalidate:
-                    self.logger.error("Some requests %s need to be invalidated" % (
-                            objects_to_invalidate))
-
-                    invalidation = database('invalidation')
-                    saved = invalidation.save_all(objects_to_invalidate)
-                    if not saved:
-                        self.logger.error('Could not save the invalidations {0}'.format(
-                                objects_to_invalidate))
 
                     return False
 
