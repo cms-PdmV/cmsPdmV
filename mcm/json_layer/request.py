@@ -1755,14 +1755,14 @@ done
                             versioned[uniq_name] = {"version": curr_v[-2],
                                     "full_dataset": ds}
                     else:
-                        self.logger.log("collect_outputs didn't match anything for: %s" % (
+                        self.logger.info("collect_outputs didn't match anything for: %s" % (
                                 self.get_attribute("prepid")))
                 else:
                     ##If its a stepchain and request is in the middle:
                     #we just add dataset(-s)
                     curr_v = re.split('(.*)-v(.*)/', ds)
                     uniq_name = curr_v[1] + curr_v[-1]
-                    self.logger.log("Collecting output for stepChain request: %s" % (
+                    self.logger.info("Collecting output for stepChain request: %s" % (
                             self.get_attribute("prepid")))
 
                     if uniq_name in versioned:
