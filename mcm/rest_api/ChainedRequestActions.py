@@ -558,7 +558,7 @@ class TestChainedRequest(RESTResource):
         requires_validation = False
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request(rdb.get(rid))
-            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #at least one is root or possible root request
+            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #We dont care about non root request because they are not being used on chain run test
                 break
             requires_validation = True
             if mcm_r.get_attribute('status') != 'new' or mcm_r.get_attribute('approval') != 'none':

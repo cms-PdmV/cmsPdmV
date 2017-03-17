@@ -270,8 +270,7 @@ class ValidationHandler:
                 "Problem with SSH execution of command: %s" % (cmd)):
             return {}
         jobs_dict = {}
-        read = '864572237 rrivera DONE  8nh        lxplus022.c b63e83365d  *HLT-00038 Mar 15 12:42\n865074383 rrivera DONE  8nh        lxplus0051. b677372438  *Dv2-00633 Mar 16 17:28\n864947066 rrivera DONE  8nh        lxplus042.c b6f13f8deec *LHE-00618 Mar 16 12:03'
-        for line in read.split('\n'):#stdout.read().split('\n'):
+        for line in stdout.read().split('\n'):
             columns = line.split()
             num_columns = len(columns)
             if len(columns) < 9:
@@ -467,68 +466,11 @@ class ValidationHandler:
         if validation_handler.ssh_exec is None:
             sys.exit(-1)
         validation_handler.monitor_submmited_jobs()
-        #self.new_jobs = self.get_new_chain_prepids() #+ self.get_new_request_prepids()
-        #prepids_to_submit = validation_handler.get_prepids_to_submit()
-        #validation_handler.submit_jobs(prepids_to_submit)
-        #validation_handler.save_jobs()
+        self.new_jobs =  self.get_new_request_prepids() + self.get_new_chain_prepids()
+        prepids_to_submit = validation_handler.get_prepids_to_submit()
+        validation_handler.submit_jobs(prepids_to_submit)
+        validation_handler.save_jobs()
 
 if __name__ == "__main__":
     validation_handler = ValidationHandler()
     validation_handler.main()
-    """
-    request_db = database('requests')
-    campaigns_db = database('campaigns')
-    requests_list = []
-    campaigns_list = ["Cosmic62", "CosmicFall16PhaseIGS", "CosmicWinter15GS", "Fall13pLHE", "Fall13wmLHE", "HiFall15", "LowPU2010", "PhaseIFall16GS", "PhaseIFall16wmLHEGS", "PhaseIIFall16LHEGS82", "RUNIIFall15DR76Hongbo", "RunIISpring15PrePremix", "RunIISpring16wmLHEFSPremix", "RunIISummer15wmLHEGS", "RunIIWinter15pLHE", "RunIIWinter15wmLHE", "Summer11LegpLHE", "Summer11LegwmLHE", "Summer12GSEMShowerImproved", "Summer12PLHE", "Summer12WMLHE", "Summer12pLHE", "Summer13pLHE", "Summer13wmLHE", "Summer16Geant4102", "Summer16wmLHEGENOnly14TeV", "Upg2017Winter17GS", "UpgFall13pLHE", "UpgFall14pLHE", "antanas4", "pAWinter13", "pPb816Spring16wmLHEGS", "pp502Fall15wmLHEGS", "rootTest"]
-    print len(campaigns_list)
-    __query = request_db.construct_lucene_query(
-        {
-            'status': 'new',
-            'approval': 'validation'
-        }
-    )
-    query_result = request_db.full_text_search("search", __query, page=-1, include_fields='prepid')
-    requests_list += [record['prepid'] for record in query_result]
-    print requests_list[0]
-    for r in requests_list:
-        print r
-        mccm_request = request(request_db.get(r))
-        time.sleep(1)
-    #requests_list = requests_list[400:]
-    #print requests_list
-    for prepid in requests_list:
-        mccm_request = request_db.get(prepid)
-        mccm_request['approval'] = 'validation'
-        request_db.update(mccm_request)
-        time.sleep(1)
-    """
-    """
-    print 'hola'
-    chained_request_db = database('chained_requests')
-    requests_db = database('requests')
-    __query = chained_request_db.construct_lucene_query({'prepid' : '*'})
-    page = 8
-    while page < 250:
-        query_result = chained_request_db.full_text_search("search", __query, page=page, limit=500)
-        print len(query_result)
-        chain_list = query_result
-        for chain in chain_list:
-            requests = chain['chain'][chain['step']:]
-            root = False
-            no_root = False
-            for requestt in requests:
-                mcm_request = requests_db.get(requestt)
-                r = request(mcm_request)
-                if mcm_request['status'] == 'new' and mcm_request['approval'] == 'none':
-                    if r.is_root:
-                        root = True
-                    else:
-                        no_root = True
-                    if root and no_root:
-                        print chain
-                        print requestt
-                        exit()
-                else:
-                    print 'NO'
-        page += 1
-    """
