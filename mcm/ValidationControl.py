@@ -62,6 +62,7 @@ class ValidationHandler:
         stream_handler.setFormatter(error_formatter)
         self.logger.addHandler(stream_handler)
         self.logger.addHandler(file_handler)
+        self.logger.setLevel(logging.DEBUG)
 
     def get_new_chain_prepids(self):
         __query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
@@ -312,7 +313,6 @@ class ValidationHandler:
                 elif job_info[self.JOB_STATUS] in ['DONE', 'EXIT'] :
                     self.logger.info('Job %s for prepid %s is DONE or EXIT, processing it.....' % (job_id, prepid))
                     self.process_finished_job(prepid, doc_info)
-                    self.removeDirectory(self.test_directory_path + prepid)
                     remove_jobs.append(prepid)
                 else:
                     self.logger.info('The status for job %s (prepid: %s) is %s' % (job_id, prepid, job_info[self.JOB_STATUS]))
@@ -323,6 +323,7 @@ class ValidationHandler:
                 remove_jobs.append(prepid)
         for prepid in remove_jobs:
             self.submmited_jobs.pop(prepid)
+            self.removeDirectory(self.test_directory_path + prepid)
 
     def process_finished_job(self, prepid, doc_info):
         out_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.out'
@@ -396,7 +397,6 @@ class ValidationHandler:
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
     def removeDirectory(self, path):
-        return
         try:
             self.logger.info('Deleting the directory: %s' % path)
             shutil.rmtree(path)

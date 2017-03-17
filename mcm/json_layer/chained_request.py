@@ -980,7 +980,7 @@ class chained_request(json_base):
             ## If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
                 mcm_request.notify('%s failed for request %s' % (what,
-                        mcm_r.get_attribute('prepid')), message)
+                        mcm_request.get_attribute('prepid')), message)
                 continue
             notify = True
             if notify_one and notify_one != request_prepid:
