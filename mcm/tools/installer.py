@@ -12,12 +12,15 @@ class installer:
     """
     logger = logging.getLogger("mcm_error")
 
-    def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True):
+    def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True, is_abs_path=False):
 
         self.cleanup = clean_on_exit
 
         self.careOfExistingDirectory = care_on_existing
-        self.directory = self.build_location(sub_directory)
+        if is_abs_path:
+            self.directory = sub_directory
+        else:
+            self.directory = self.build_location(sub_directory)
         # check if directory is empty
         if not self.directory:
             self.logger.error('Data directory is not defined')
