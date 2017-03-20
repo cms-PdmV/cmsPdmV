@@ -17,6 +17,11 @@ from tools.locator import locator
 
 
 class ValidationHandler:
+    '''
+    A class that handles everything for chained requests and requests validations, this includes constructing the command, creating related files and directories,
+    monitoring the bjobs and getting the results to update the performance.
+    '''
+
     JOBS_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.txt'
     LOG_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.log'
     TEST_FILE_NAME = 'validation_run_test.sh'
@@ -160,7 +165,7 @@ class ValidationHandler:
         return True
 
     def create_test_file(self, to_write, run_test_path):
-        location = installer(run_test_path, care_on_existing=False, clean_on_exit=True, is_abs_path=True)
+        location = installer(run_test_path, care_on_existing=False, is_abs_path=True)
         test_file_path = run_test_path + '/' + self.TEST_FILE_NAME
         try:
             with open(test_file_path, 'w') as there:
