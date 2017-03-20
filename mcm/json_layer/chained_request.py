@@ -939,7 +939,7 @@ class chained_request(json_base):
         return self.flow_trial()
 
     def get_timeout_and_memory(self):
-        req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
+        req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
         rdb = database('requests')
         t=0
         max_memory = 0
@@ -958,8 +958,12 @@ class chained_request(json_base):
         return t*len(req_ids), max_memory
 
 
-    def get_setup(self, directory='', events=None, run=False, validation=False):
-        req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
+    def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
+        if scratch:
+            req_ids = self.get_attribute('chain')
+        else:
+            req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
+        rdb = database('requests')
         rdb = database('requests')
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):
@@ -971,7 +975,7 @@ class chained_request(json_base):
                 req.reload()
         return setup_file
 
-    def reset_requests(self, message, what = 'Chained validation run test', notify_one=None):
+    def reset_requests(self, message, what='Chained validation run test', notify_one=None):
         request_db = database('requests')
         for request_prepid in self.get_attribute('chain')[self.get_attribute('step'):]:
             mcm_request = request(request_db.get(request_prepid))

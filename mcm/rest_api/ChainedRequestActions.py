@@ -997,6 +997,11 @@ class GetSetupForChains(RESTResource):
         run = False
         valid = False
         directory = ''
+        __scratch = False
+
+        if 'scratch' in kwargs:
+            if kwargs["scratch"].lower() == 'true':
+                __scratch = True
         if self.opt == 'test' or self.opt == 'valid':
             run = True
         if self.opt == 'valid':
@@ -1009,7 +1014,7 @@ class GetSetupForChains(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return cr.get_setup(directory=directory, run=run, events=events,
-                validation=valid)
+                validation=valid, scratch=bool(__scratch))
 
 class TestOutputDSAlgo(RESTResource):
     def __init__(self, mode='setup'):

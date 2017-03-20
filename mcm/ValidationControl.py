@@ -17,7 +17,8 @@ from tools.locator import locator
 
 
 class ValidationHandler:
-    JOBS_FILE_NAME = 'validationJobs.txt'
+    JOBS_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.txt'
+    LOG_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.log'
     TEST_FILE_NAME = 'validation_run_test.sh'
     QUEUE_8NH = '8nh'
     QUEUE_1ND = '1nd' # fall back to the one day queue at worse
@@ -29,11 +30,11 @@ class ValidationHandler:
     request_db = database('requests')
     chained_request_db = database('chained_requests')
     CHAIN_REQUESTS = 'requests'
-    test_directory_path = installer.build_location('') + 'validation/'
     new_jobs = [] #could be a request id or chain id
     submmited_jobs = {} #could be a request id or chain id
     submmited_prepids_set = set()
-    script_location = '/home/datamanagement/dataManagement'#os.path.dirname(os.path.abspath(__file__))
+    test_directory_path = ''
+    data_script_path = ''
     def __init__(self):
         try:
             self.ssh_exec = ssh_executor()
@@ -45,16 +46,23 @@ class ValidationHandler:
             self.group = '/dev'
         else:
             self.group = '/prod'
+        self.setup_directories()
         self.get_submmited_prepids()
         self.batch_retry_timeout = settings().get_value('batch_retry_timeout')
         self.check_term_runlimit = settings().get_value('check_term_runlimit')
         self.setup_logger()
 
+    def setup_directories(self):
+        locator = installer('validation/tests', care_on_existing=False)
+        self.test_directory_path = locator.location()
+        self.data_script_path = self.test_directory_path[:-6] #remove tests/
     def setup_logger(self):
         self.logger = logging.getLogger('validationJobs')
-        error_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S')
-        file_handler = logging.FileHandler(self.script_location + '/validationJobs.log', 'a')
+        error_formatter = logging.Formatter(
+            fmt='[%(asctime)s][%(levelname)s]%(message)s',
+            datefmt='%d/%b/%Y:%H:%M:%S'
+        )
+        file_handler = logging.FileHandler(self.data_script_path + self.LOG_FILE_NAME, 'a')
         stream_handler = logging.StreamHandler()
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(error_formatter)
@@ -80,7 +88,7 @@ class ValidationHandler:
         return [record['prepid'] for record in query_result]
 
     def get_submmited_prepids(self):
-        full_path = self.script_location + '/' + self.JOBS_FILE_NAME
+        full_path = self.data_script_path + self.JOBS_FILE_NAME
         if not os.path.exists(full_path):
             self.submmited_jobs = {}
             return
@@ -88,7 +96,7 @@ class ValidationHandler:
             self.submmited_jobs = loads(file.read())
 
     def save_jobs(self):
-        full_path = self.script_location + '/' + self.JOBS_FILE_NAME
+        full_path = self.data_script_path + self.JOBS_FILE_NAME
         file = open(full_path, 'w+')
         file.write(dumps(self.submmited_jobs, indent=4))
         file.close()
@@ -262,7 +270,8 @@ class ValidationHandler:
                     self.submmited_jobs[prepid] = result_dict
             except Exception as e:
                 #Catch any unexpected exepction and keep going
-                self.logger.error("Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc()))
+                message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
+                self.report_error(prepid, message)
 
     def get_jobs_status(self):
         cmd = 'bjobs -noheader -a -g %s -WP' % (self.group)
