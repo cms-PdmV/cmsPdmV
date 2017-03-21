@@ -215,7 +215,6 @@ class GetQueueInfo(RESTResource):
         self.access_limit = access_rights.user
 
     def GET(self):
-        from tools.handlers import submit_pool, validation_pool
-        data = {"validation_len" : validation_pool.get_queue_length(),
-                "submission_len" : submit_pool.get_queue_length()}
+        from tools.handlers import submit_pool
+        data = {"submission_len" : submit_pool.get_queue_length()}
         return dumps(data)

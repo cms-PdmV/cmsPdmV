@@ -542,60 +542,76 @@ class TestChainedRequest(RESTResource):
 
         if not len(args):
             return dumps({"results" : False, "message" : "no argument provided"})
-
-        from tools.handlers import RunChainValid, validation_pool
-        ## now in the core of the api
-        runtest = RunChainValid(crid=args[0], lock=locker.lock(args[0]))
-
         crdb = database('chained_requests')
         rdb = database('requests')
         settingsDB = database('settings')
         mcm_cr = chained_request(crdb.get(args[0]))
         mcm_rs = []
         if settingsDB.get('validation_stop')['value'] == True:
-            return dumps({"results" : False,
-                    'message': ('validation jobs are halted to allow forthcoming mcm '
-                            'restart - try again later'),
-                    "prepid" : args[0]})
-
-        for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
-            mcm_r = request( rdb.get( rid ) )
-            if mcm_r.get_attribute('status') in ['approved','submitted','done']:
-                return dumps({"results" : False, "prepid" : args[0],
-                        "message" : "request %s is in status %s" % (
-                                rid, mcm_r.get_attribute('status'))})
-
+            return dumps(
+                {
+                    "results" : False,
+                    'message': ('validation jobs are halted to allow forthcoming mcm ''restart - try again later'),
+                    "prepid" : args[0]
+                }
+            )
+        requires_validation = False
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request(rdb.get(rid))
-            next = 'validation'
-            if not mcm_r.is_root:  next = 'approve'
+            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #We dont care about non root request because they are not being used on chain run test
+                break
+            requires_validation = True
+            if mcm_r.get_attribute('status') != 'new' or mcm_r.get_attribute('approval') != 'none':
+                return dumps(
+                    {
+                        "results" : False,
+                        "prepid" : args[0],
+                        "message" : "request %s is in status %s, approval: %s" % (rid, mcm_r.get_attribute('status'), mcm_r.get_attribute('approval'))
+                    }
+                )
             try:
-                if mcm_r.get_attribute('approval')  == 'none':
-                    ## no need to try and move it along if already further than that
-                    getattr(mcm_r,'ok_to_move_to_approval_%s' % next)(for_chain=True)
-                    mcm_r.update_history({'action' : 'approve', 'step' : next})
-                    mcm_r.set_attribute('approval', next)
-                    mcm_r.reload()
-                else:
-                    pass
-                    ## fail this for the moment. there is no way to handle this yet
-                    #text="It is not supported for the moment to test a chain of requests which are partially not new. Please contact an administrator"
-                    #runtest.reset_all( text  , notify_one = rid )
-                    #return dumps({"results" : False, "message" : text, "prepid" : args[0]})
-
+                getattr(mcm_r,'ok_to_move_to_approval_validation')(for_chain=True)
+                mcm_r.update_history({'action' : 'approve', 'step' : 'validation'})
+                mcm_r.set_attribute('approval', 'validation')
+                mcm_r.reload()
                 text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
-                mcm_r.notify('Approval %s in chain %s for request %s' % (next,
+                mcm_r.notify('Approval %s in chain %s for request %s' % ('validation',
                         mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid')),
                         text, accumulate=True)
-
             except Exception as e:
-                runtest.reset_all(str(e), notify_one=rid)
-                return dumps({"results" : False, "message" : str(e),"prepid" : args[0]})
-
-        validation_pool.add_task(runtest.internal_run)
-        #runtest.start()
-        return dumps({"results" : True, "message" : "run test started","prepid" : args[0]})
+                mcm_cr.reset_requests(str(e), notify_one=rid)
+                return dumps(
+                    {
+                        "results" : False,
+                        "message" : str(e),
+                        "prepid" : args[0]
+                    }
+                )
+        if not requires_validation:
+            return dumps(
+                {
+                    "results" : True,
+                    "message" : "No validation required",
+                    "prepid" : args[0]
+                }
+            )
+        mcm_cr.set_attribute('validate', 1)
+        if not crdb.update(mcm_cr.json()):
+            return dumps(
+                {
+                    "results" : False,
+                    "message" : "Failed while trying to update the document in DB",
+                    "prepid" : args[0]
+                }
+            )
+        return dumps(
+            {
+                "results" : True,
+                "message" : "run test will start soon",
+                "prepid" : args[0]
+            }
+        )
 
 class SoftResetChainedRequest(RESTResource):
     def __init__(self, mode='show'):
@@ -984,7 +1000,8 @@ class GetSetupForChains(RESTResource):
         __scratch = False
 
         if 'scratch' in kwargs:
-            __scratch = kwargs["scratch"]
+            if kwargs["scratch"].lower() == 'true':
+                __scratch = True
         if self.opt == 'test' or self.opt == 'valid':
             run = True
         if self.opt == 'valid':
@@ -997,7 +1014,7 @@ class GetSetupForChains(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return cr.get_setup(directory=directory, run=run, events=events,
-                validation=valid, scratch=__scratch)
+                validation=valid, scratch=bool(__scratch))
 
 class TestOutputDSAlgo(RESTResource):
     def __init__(self, mode='setup'):

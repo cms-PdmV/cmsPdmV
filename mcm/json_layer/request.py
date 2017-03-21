@@ -454,18 +454,8 @@ class request(json_base):
         if self.get_attribute('prepid') in by_pass:
             do_runtest = False
 
-        if do_runtest:
-            from tools.handlers import RuntestGenvalid, validation_pool
-            self.logger.info('Putting request %s: to validation queue' % (
-                    self.get_attribute('prepid')))
-
-            threaded_test = RuntestGenvalid(rid=str(self.get_attribute('prepid')))
-            validation_pool.add_task(threaded_test.internal_run)
-
-            self.logger.info('Request was put to queue. Queue len: %s' % (
-                    validation_pool.tasks.qsize()))
-
-        else:
+        # if do_runtest, it will be run by a jenkins job, look for ValidationControl.py in this repo
+        if not do_runtest:
             self.set_status()
 
         if message:
@@ -2331,7 +2321,6 @@ done
                             timing, total_event,
                             total_event_in),
                         accumulate=True)
-
                 self.set_attribute('time_event', timing)
                 to_be_saved = True
             if timing and timing < (timing_fraction * self.get_attribute('time_event')):
@@ -2346,7 +2335,6 @@ done
                             timing,
                             total_event,
                             total_event_in)
-
                     self.set_attribute('time_event', timing)
                     to_be_saved = True
                 else:

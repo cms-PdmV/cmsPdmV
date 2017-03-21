@@ -83,7 +83,8 @@ class chained_request(json_base):
         #'request_parameters':{} # json with user prefs #prune
         'last_status': 'new',
         'status': '',
-        'chain_type': 'TaskChain'
+        'chain_type': 'TaskChain',
+        'validate': 0 #indicates whether the chain should be submitted to validation
     }
 
     def __init__(self, json_input=None):
@@ -937,37 +938,60 @@ class chained_request(json_base):
     def inspect_done(self):
         return self.flow_trial()
 
-    def get_timeout(self, scratch=False):
-        if scratch:
-            req_ids = self.get_attribute('chain')
-        else:
-            req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
+    def get_timeout_and_memory(self):
+        req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
         rdb = database('requests')
         t=0
+        max_memory = 0
         for (index,req_id) in enumerate(req_ids):
             mcm_r = request(rdb.get(req_id))
-            if not mcm_r.is_root: continue
+            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #do it only for root or possible root request
+                break
             onet = mcm_r.get_timeout()
             if onet>t:
                 t=onet
+            current_memory = mcm_r.get_attribute("memory")
+            if current_memory > max_memory:
+                max_memory = current_memory
         #get the max and apply to all as a conservative estimation
         #this should probably be a bit more subtle
-        return t*len(req_ids)
+        return t*len(req_ids), max_memory
+
 
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')
         else:
-            req_ids = self.get_attribute('chain')[ self.get_attribute('step'):]
-
+            req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
+        rdb = database('requests')
         rdb = database('requests')
         setup_file = ''
         for (index,req_id) in enumerate(req_ids):
             req = request(rdb.get(req_id))
-            ev = events
-            if not ev and index!=0 and not req.is_root:
-                ev = -1
-            setup_file += req.get_setup_file(directory=directory, events=ev, run=run, do_valid=validation)
+            if not req.is_root and 'validation' not in req._json_base__status: #do it only for root or possible root request
+                break
+            setup_file += req.get_setup_file(directory=directory, events=events, run=run, do_valid=validation)
             if run and validation:
                 req.reload()
         return setup_file
+
+    def reset_requests(self, message, what='Chained validation run test', notify_one=None):
+        request_db = database('requests')
+        for request_prepid in self.get_attribute('chain')[self.get_attribute('step'):]:
+            mcm_request = request(request_db.get(request_prepid))
+            if not mcm_request.is_root and 'validation' not in mcm_request._json_base__status:
+                break
+            ## If somebody changed a request during validation, let's keep the changes
+            if mcm_request.get_attribute('status') != 'new':
+                mcm_request.notify('%s failed for request %s' % (what,
+                        mcm_request.get_attribute('prepid')), message)
+                continue
+            notify = True
+            if notify_one and notify_one != request_prepid:
+                notify = False
+            mcm_request.test_failure( message,
+                    what = what, rewind=True, with_notification=notify)
+        chained_requests_db = database('chained_requests')
+        self.set_attribute('validate', 0)
+        if not chained_requests_db.update(self.json()):
+            mcm_chained_request.notify('Chained validation run test', 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid'))
