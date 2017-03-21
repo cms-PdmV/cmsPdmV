@@ -2589,7 +2589,7 @@ done
             self.logger.info("Soft resetting request: %s " % (self.get_attribute('prepid')))
 
             #see if request in approved status & and the approval is above approved
-            if self.get_attribute('status') == 'approved' and self.get_attribute('approval') in ['submit']:
+            if self.get_attribute('status') in ['approved', 'submitted'] and self.get_attribute('approval') in ['submit']:
                 __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
                 __status_index = self._json_base__status.index(self.get_attribute('status'))
                 self.set_attribute('approval', self._json_base__approvalsteps[__approval_index-1])
@@ -2598,7 +2598,8 @@ done
                 self.logger.debug("status: %s approval: %s" % (self.get_attribute('status'),
                         self.get_attribute('approval')))
                 raise json_base.WrongStatusSequence(self.get_attribute('status'),
-                        self.get_attribute('approval'), "You cannot soft reset below submit/approved")
+                        self.get_attribute('approval'),
+                        "You cannot soft reset in status below submitted/approved")
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
