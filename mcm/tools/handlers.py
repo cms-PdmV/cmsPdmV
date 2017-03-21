@@ -560,8 +560,8 @@ class RequestApprover(Handler):
                 return
             output = stdout.read()
             error = stderr.read()
-            self.logger.info('output: %s' % output)
-            if error and not output:
+            self.logger.info('Wmapprove output: %s' % output)
+            if error:
                 self.logger.error('Error in wmapprove: %s' % (error))
         except Exception as e:
             self.logger.error(
