@@ -454,7 +454,7 @@ class request(json_base):
         if self.get_attribute('prepid') in by_pass:
             do_runtest = False
 
-        #if do_runtest, it will be run by a jenkins job, look for ValidationsHandler.py in this repo
+        # if do_runtest, it will be run by a jenkins job, look for ValidationControl.py in this repo
         if not do_runtest:
             self.set_status()
 
