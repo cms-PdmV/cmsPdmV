@@ -14,6 +14,7 @@ from tools.settings import settings
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from tools.locator import locator
+from itertools import izip
 
 
 class ValidationHandler:
@@ -67,14 +68,15 @@ class ValidationHandler:
             fmt='[%(asctime)s][%(levelname)s]%(message)s',
             datefmt='%d/%b/%Y:%H:%M:%S'
         )
-        file_handler = logging.FileHandler(self.data_script_path + self.LOG_FILE_NAME, 'a')
+        # The size of the log file increse very fast, should be ok with the records in jenkins and emails, if not, uncomment this
+        #file_handler = logging.FileHandler(self.data_script_path + self.LOG_FILE_NAME, 'a')
+        #file_handler.setLevel(logging.DEBUG)
+        #file_handler.setFormatter(error_formatter)
+        #self.logger.addHandler(file_handler)
         stream_handler = logging.StreamHandler()
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(error_formatter)
         stream_handler.setLevel(logging.DEBUG)
         stream_handler.setFormatter(error_formatter)
         self.logger.addHandler(stream_handler)
-        self.logger.addHandler(file_handler)
         self.logger.setLevel(logging.DEBUG)
 
     def get_new_chain_prepids(self):
