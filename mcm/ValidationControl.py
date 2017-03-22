@@ -41,6 +41,7 @@ class ValidationHandler:
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
+
     def __init__(self):
         try:
             self.ssh_exec = ssh_executor()
@@ -62,6 +63,7 @@ class ValidationHandler:
         locator = installer('validation/tests', care_on_existing=False)
         self.test_directory_path = locator.location()
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
+
     def setup_logger(self):
         self.logger = logging.getLogger('validationJobs')
         error_formatter = logging.Formatter(
@@ -183,7 +185,7 @@ class ValidationHandler:
         # check if the request should be validated as part of a chain
         for chain_prepid in mcm_request.get_attribute('member_of_chain'):
             mcm_chain = chained_request(self.chained_request_db.get(chain_prepid))
-            if mcm_chain.get_attribute('validate'):
+            if mcm_chain.get_attribute('validate') and prepid in mcm_chain.get_attribute('chain')[mcm_chain.get_attribute('step'):]:
                 return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         to_write = mcm_request.get_setup_file(run_test_path, run=True, do_valid=True)
