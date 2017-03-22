@@ -942,11 +942,13 @@ class chained_request(json_base):
         req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
         rdb = database('requests')
         t=0
+        requests_to_validate = 0
         max_memory = 0
         for (index,req_id) in enumerate(req_ids):
             mcm_r = request(rdb.get(req_id))
             if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #do it only for root or possible root request
                 break
+            requests_to_validate += 1
             onet = mcm_r.get_timeout()
             if onet>t:
                 t=onet
@@ -955,7 +957,7 @@ class chained_request(json_base):
                 max_memory = current_memory
         #get the max and apply to all as a conservative estimation
         #this should probably be a bit more subtle
-        return t*len(req_ids), max_memory
+        return t*requests_to_validate, max_memory
 
 
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
