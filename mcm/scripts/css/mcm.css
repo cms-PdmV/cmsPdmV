@@ -27,6 +27,11 @@ body {
     overflow-y:scroll;
 }
 
+.well.batch-info{
+    overflow-y: scroll;
+    height: 300px;
+}
+
 #help {
     position: fixed;
     left: 10px;
