@@ -118,7 +118,7 @@ class ValidationHandler:
         self.submmited_prepids_set = set(submmited_prepids_list)
         return list(new_prepids_set - self.submmited_prepids_set)
 
-    def read_file_from_afs(self, path, trials_time_out=1):
+    def read_file_from_afs(self, path, trials_time_out=5):
         cmd = 'cat %s' % path
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         out = ""
@@ -351,7 +351,6 @@ class ValidationHandler:
     def process_finished_job(self, prepid, doc_info):
         out_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.out'
         error_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.err'
-        job_out = ''
         job_out, job_error_out = self.read_file_from_afs(out_path)
         was_exited = False
         for line in job_out.split('\n'):
@@ -373,7 +372,7 @@ class ValidationHandler:
     def process_finished_chain_failed(self, prepid, job_out, job_error_out, error_out, was_exited, out_path):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         if not was_exited:
-            message = "We could get %s, but it does not look properly formatted. \n %s \n %s \n Error out: %s" % (
+            message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: %s" % (
                 out_path, job_out, job_error_out, error_out)
         else:
             message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s" % (prepid, job_out, error_out)
