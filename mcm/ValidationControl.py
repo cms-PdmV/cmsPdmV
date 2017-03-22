@@ -41,6 +41,7 @@ class ValidationHandler:
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
+
     def __init__(self):
         try:
             self.ssh_exec = ssh_executor()
@@ -62,6 +63,7 @@ class ValidationHandler:
         locator = installer('validation/tests', care_on_existing=False)
         self.test_directory_path = locator.location()
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
+
     def setup_logger(self):
         self.logger = logging.getLogger('validationJobs')
         error_formatter = logging.Formatter(
@@ -118,7 +120,7 @@ class ValidationHandler:
         self.submmited_prepids_set = set(submmited_prepids_list)
         return list(new_prepids_set - self.submmited_prepids_set)
 
-    def read_file_from_afs(self, path, trials_time_out=1):
+    def read_file_from_afs(self, path, trials_time_out=5):
         cmd = 'cat %s' % path
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         out = ""
@@ -180,6 +182,11 @@ class ValidationHandler:
 
     def submit_request(self, prepid, run_test_path):
         mcm_request = request(self.request_db.get(prepid))
+        # check if the request should be validated as part of a chain
+        for chain_prepid in mcm_request.get_attribute('member_of_chain'):
+            mcm_chain = chained_request(self.chained_request_db.get(chain_prepid))
+            if mcm_chain.get_attribute('validate') and prepid in mcm_chain.get_attribute('chain')[mcm_chain.get_attribute('step'):]:
+                return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         to_write = mcm_request.get_setup_file(run_test_path, run=True, do_valid=True)
         if not self.create_test_file(to_write, run_test_path):
@@ -246,7 +253,7 @@ class ValidationHandler:
                 break
             status = mcm_request.get_attribute('status')
             approval = mcm_request.get_attribute('approval')
-            if status != 'new' or approval != 'none':
+            if status != 'new' or approval != 'validation':
                 message = "The request %s of chain %s is in status: %s approval: %s" % (request_prepid, prepid, status, approval)
                 self.logger.error(message)
                 mcm_chained_request.reset_requests(message)
@@ -271,6 +278,8 @@ class ValidationHandler:
             try:
                 if 'chain' in prepid:
                     result_dict = self.submit_chain(prepid, test_path)
+                    if len(result_dict):
+                        self.submmited_prepids_set.update(result_dict[self.CHAIN_REQUESTS].iterkeys())
                 else:
                     result_dict = self.submit_request(prepid, test_path)
                 if len(result_dict):
@@ -319,7 +328,7 @@ class ValidationHandler:
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
                 job_id = doc_info[self.JOB_ID]
-                if job_id not in jobs_dict and not prepid == 'EXO-RunIIWinter15wmLHE-01221':
+                if job_id not in jobs_dict:
                     self.report_error(prepid, 'Unable to find information about job: %s' % job_id)
                     remove_jobs.append(prepid)
                     continue
@@ -344,7 +353,6 @@ class ValidationHandler:
     def process_finished_job(self, prepid, doc_info):
         out_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.out'
         error_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.err'
-        job_out = ''
         job_out, job_error_out = self.read_file_from_afs(out_path)
         was_exited = False
         for line in job_out.split('\n'):
@@ -366,7 +374,7 @@ class ValidationHandler:
     def process_finished_chain_failed(self, prepid, job_out, job_error_out, error_out, was_exited, out_path):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         if not was_exited:
-            message = "We could get %s, but it does not look properly formatted. \n %s \n %s \n Error out: %s" % (
+            message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: %s" % (
                 out_path, job_out, job_error_out, error_out)
         else:
             message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s" % (prepid, job_out, error_out)
