@@ -180,6 +180,11 @@ class ValidationHandler:
 
     def submit_request(self, prepid, run_test_path):
         mcm_request = request(self.request_db.get(prepid))
+        # check if the request should be validated as part of a chain
+        for chain_prepid in mcm_request.get_attribute('member_of_chain'):
+            mcm_chain = chained_request(self.chained_request_db.get(chain_prepid))
+            if mcm_chain.get_attribute('validate'):
+                return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         to_write = mcm_request.get_setup_file(run_test_path, run=True, do_valid=True)
         if not self.create_test_file(to_write, run_test_path):
@@ -246,7 +251,7 @@ class ValidationHandler:
                 break
             status = mcm_request.get_attribute('status')
             approval = mcm_request.get_attribute('approval')
-            if status != 'new' or approval != 'none':
+            if status != 'new' or approval != 'validation':
                 message = "The request %s of chain %s is in status: %s approval: %s" % (request_prepid, prepid, status, approval)
                 self.logger.error(message)
                 mcm_chained_request.reset_requests(message)
@@ -271,6 +276,8 @@ class ValidationHandler:
             try:
                 if 'chain' in prepid:
                     result_dict = self.submit_chain(prepid, test_path)
+                    if len(result_dict):
+                        self.submmited_prepids_set.update(result_dict[self.CHAIN_REQUESTS].iterkeys())
                 else:
                     result_dict = self.submit_request(prepid, test_path)
                 if len(result_dict):
@@ -319,7 +326,7 @@ class ValidationHandler:
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
                 job_id = doc_info[self.JOB_ID]
-                if job_id not in jobs_dict and not prepid == 'EXO-RunIIWinter15wmLHE-01221':
+                if job_id not in jobs_dict:
                     self.report_error(prepid, 'Unable to find information about job: %s' % job_id)
                     remove_jobs.append(prepid)
                     continue
