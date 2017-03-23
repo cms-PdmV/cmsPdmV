@@ -84,18 +84,36 @@ class json_base:
                 #    if key not in self.__schema:
                 #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
 
-    def reload(self):
+    def reload(self, save_current=True):
         """
-        Updates or creates document in database with name db_name
-        and reloads the object with info from database (new revision)
+        Save (if specified) and reloads the object with info from database (new revision)
         """
+        if save_current:
+            if not self.save():
+                return False
+        db = self.get_database()
+        if db is None:
+            return False
+        with locker.lock(self.get_attribute('_id')):
+            self.__init__(db.get(self.get_attribute('_id')))
+            return True
+
+    def get_database(self):
         try:
             if self.__class__.__name__ =="batch":
-                db = database(self.__class__.__name__ + "es")
+                return database(self.__class__.__name__ + "es")
             else:
-                db = database(self.__class__.__name__ + "s")
+                return database(self.__class__.__name__ + "s")
         except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
             self.logger.error("Problem with database creation:\n{0}".format(ex))
+            return None
+
+    def save(self):
+        """
+        Updates or creates document in database with name db_name
+        """
+        db = self.get_database()
+        if db is None:
             return False
         with locker.lock(self.get_attribute('_id')):
             if not db.document_exists(self.get_attribute('_id')):
@@ -104,8 +122,7 @@ class json_base:
                 saved = db.update(self.json())
             if not saved:
                 return False
-            self.__init__(db.get(self.get_attribute('_id')))
-            return True
+        return True
 
     def overwrite(self, json_input):
         """
