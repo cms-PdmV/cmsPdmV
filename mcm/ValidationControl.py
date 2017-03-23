@@ -410,11 +410,13 @@ class ValidationHandler:
                         what='Chain validation run test',
                         rewind=True
                 )
+        mcm_chained_request.reload(save_current=False) # setting new requests status change the chain object
         mcm_chained_request.set_attribute('validate', 0)
         if not self.chained_request_db.update(mcm_chained_request.json()):
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % prepid
             self.logger.error(message)
             mcm_chained_request.notify('Chained validation run test', message)
+            return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
     def removeDirectory(self, path):
@@ -454,6 +456,7 @@ class ValidationHandler:
                 what='Validation run test',
                 rewind=True
             )
+            return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
     def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path=''):
