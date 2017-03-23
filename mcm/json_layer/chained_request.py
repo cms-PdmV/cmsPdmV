@@ -977,12 +977,14 @@ class chained_request(json_base):
                 req.reload()
         return setup_file
 
-    def reset_requests(self, message, what='Chained validation run test', notify_one=None):
+    def reset_requests(self, message, what='Chained validation run test', notify_one=None, except_requests=[]):
         request_db = database('requests')
         for request_prepid in self.get_attribute('chain')[self.get_attribute('step'):]:
             mcm_request = request(request_db.get(request_prepid))
             if not mcm_request.is_root and 'validation' not in mcm_request._json_base__status:
                 break
+            if request_prepid in except_requests:
+                continue
             ## If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
                 mcm_request.notify('%s failed for request %s' % (what,

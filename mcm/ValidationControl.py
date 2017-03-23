@@ -227,20 +227,17 @@ class ValidationHandler:
 
     def submit_chain(self, prepid, run_test_path):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
-        requests_to_reset = []
+        except_requests = []
         reset = False
-        existing_request = ''
         #If a request of a chain was singly submmited to validation and then somebody reseted it, we will find it here
         for request_prepid in mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step'):]:
             if request_prepid in self.submmited_prepids_set:
-                existing_request = request_prepid
+                except_requests.append(request_prepid)
                 reset = True
-            else:
-                requests_to_reset.append(request_prepid)
         if reset:
-            message = "Request %s of the chain is already in validation" % existing_request
+            message = "Requests %s of the chain %s are already in validation" % (except_requests, prepid)
             self.logger.error(message)
-            mcm_chained_request.reset_requests(message, notify_one=existing_request)
+            mcm_chained_request.reset_requests(message, except_requests=except_requests)
             return {}
         to_write = mcm_chained_request.get_setup(directory=run_test_path, run=True, validation= True)
         if not self.create_test_file(to_write, run_test_path):
