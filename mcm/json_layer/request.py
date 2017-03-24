@@ -586,8 +586,8 @@ class request(json_base):
                 text=str(collisions)
                 self.logger.info("Possible collisions prepid: %s" % (similar['prepid']))
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                        'There is an expected output dataset naming collision with %s' % (
-                                text))
+                        'Output dataset naming collision with %s. Similar id: %s' % (
+                                text, similar['prepid']))
 
         moveon_with_single_submit=True ## for the case of chain request submission
         is_the_current_one=False
