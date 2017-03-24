@@ -43,6 +43,11 @@ class ValidationHandler:
     data_script_path = ''
 
     def __init__(self):
+        self.setup_directories()
+        self.setup_logger()
+        self.get_submmited_prepids()
+        self.batch_retry_timeout = settings().get_value('batch_retry_timeout')
+        self.check_term_runlimit = settings().get_value('check_term_runlimit')
         try:
             self.ssh_exec = ssh_executor()
         except Exception as e:
@@ -53,11 +58,6 @@ class ValidationHandler:
             self.group = '/dev'
         else:
             self.group = '/prod'
-        self.setup_directories()
-        self.get_submmited_prepids()
-        self.batch_retry_timeout = settings().get_value('batch_retry_timeout')
-        self.check_term_runlimit = settings().get_value('check_term_runlimit')
-        self.setup_logger()
 
     def setup_directories(self):
         locator = installer('validation/tests', care_on_existing=False)
