@@ -135,7 +135,7 @@
                   <li>
                     <a href="chained_requests?prepid={{chain}}" target="_self">{{chain}}</a>
                   </li>
-                  <ul ng-repeat="request in requests">
+                  <ul ng-repeat="request in requests track by $index">
                     <li>
                       <a href="requests?prepid={{request}}" target="_self">{{request}}</a>
                       <a ng-click="approve_gen_request(request)" ng-href='#' rel="tooltip" title="Next step">
@@ -144,6 +144,7 @@
                     </li>
                   </ul>
                 </ul>
+                <input type="button" class="btn" ng-click="approve_all_requests(mccm_info.prepid)" ng-show="get_requests_size(mccm_info.generated_chains)" value="Approve all requests" align="left"/>
               </div>
       	      <div ng-switch-default>
     		        {{mccm_info[data.db_name]}}
