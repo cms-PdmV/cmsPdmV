@@ -136,14 +136,49 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
-    $scope.approve_gen_request = function(prepid){
-      $http({method:'GET', url:'restapi/requests/approve/'+prepid}).success(function(data,status){
-        if (data.results){
-          alert("Everything went fine");
+    $scope.approve_all_requests = function(mccm_prepid){
+      var requests = '';
+      for (index in $scope.result){
+        if ($scope.result[index].prepid == mccm_prepid){
+          var generated_chains = $scope.result[index].generated_chains
+          for (var chain in generated_chains){
+            for (index_requests in generated_chains[chain]){
+              requests +=  generated_chains[chain][index_requests] + ",";
+            }
+          }
+          break;
         }
-        else{
-          alert(data.message);
+      }
+      if (requests != ''){
+        requests = requests.slice(0, -1);
+        $scope.approve_gen_request(requests);
+      }
+    };
+
+    $scope.get_requests_size = function(dict){
+      var size = 0;
+      for (var chain in dict){
+        size += dict[chain].length;
+      }
+      return size;
+    };
+
+    $scope.approve_gen_request = function(prepids){
+      $http({method:'GET', url:'restapi/requests/approve/' + prepids}).success(function(data,status){
+        if (!$scope.isArray(data)){
+          data = [data];
         }
+        alert_text = "";
+        for (index in data){
+          alert_text += data[index].prepid + ":\n";
+          if (data[index].results){
+            alert_text += "Everything went fine\n";
+          }
+          else{
+            alert_text += data[index].message + "\n";
+          }
+        }
+        alert(alert_text);
       }).error(function(data,status){
         alert("Something went wrong");
       });
