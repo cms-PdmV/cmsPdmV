@@ -110,18 +110,31 @@ class BatchAnnouncer(RESTResource):
                     "Batch {0} has on-going submissions.".format(bid), "prepid" : bid}
 
         b = batch(bdb.get(bid))
-        r = b.announce(message)
         workflows = ''
         for dictionary in b.get_attribute('requests'):
             workflows += dictionary['name'] + ','
         workflows = workflows[:-1]
+        r = ''
+        result = {}
         if workflows != '':
             approver = RequestApprover(bid, workflows)
-            submit_pool.add_task(approver.internal_run)
-        if r:
-            return {"results":bdb.update(b.json()) , "message" : r , "prepid" : bid}
+            result = approver.internal_run()
+            if(result['results']):
+                r = b.announce(message)
         else:
-            return {"results":False , "prepid" : bid}
+            r = b.announce(message)
+        if r:
+            return {
+                "results":bdb.update(b.json()),
+                "message" : r,
+                "prepid" : bid
+            }
+        else:
+            return {
+                "results":False,
+                "prepid" : bid,
+                "message": result['message'] if 'message' in result and not r else r
+            }
 
 class AnnounceBatch(BatchAnnouncer):
     def __init__(self):
