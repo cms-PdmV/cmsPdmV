@@ -15,6 +15,7 @@ from tools.locator import locator
 from tools.locker import locker, semaphore_events
 from tools.settings import settings
 from couchdb_layer.mcm_database import database
+from tools.communicator import communicator
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
@@ -293,23 +294,55 @@ class RequestApprover(Handler):
         command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
         return command
 
+    def send_email_failure(self, output, error):
+        com = communicator()
+        users_db = database('users')
+        query = users_db.construct_lucene_query({'role' : 'production_manager'})
+        production_managers = users_db.full_text_search('search', query, page=-1)
+        subject = "There was an error while trying to approve workflows"
+        text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
+        com.sendMail(
+            map(lambda u: u['email'], production_managers),
+            subject,
+            text
+        )
+
     def internal_run(self):
         command = self.make_command()
         executor = ssh_executor(server='vocms081.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
-            _, stdout, stderr = executor.execute(command)
-            if not stdout and not stderr:
-                self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
-                return
-            output = stdout.read()
-            error = stderr.read()
-            self.logger.info('Wmapprove output: %s' % output)
-            if error:
-                self.logger.error('Error in wmapprove: %s' % (error))
+            trails = 1
+            while trails < 3:
+                self.logger.info("Wmapprove trail number: %s" % trails)
+                _, stdout, stderr = executor.execute(command)
+                if not stdout and not stderr:
+                    self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
+                    return
+                output = stdout.read()
+                error = stderr.read()
+                self.logger.info('Wmapprove output: %s' % output)
+                if not error and 'Something went wrong' not in output:
+                    break
+                time.sleep(3)
+                trails += 1
+            if error or 'Something went wrong' in output:
+                message = 'Error in wmapprove: %s' % (output if 'Something went wrong' in output else error)
+                self.logger.error(message)
+                self.send_email_failure(output, error)
+                return {
+                    'results': False,
+                    'message': message
+                }
         except Exception as e:
-            self.logger.error(
-                'Error while approving requests, batch id: %s, message: %s' % (self.batch_id, str(e)))
+            message = 'Error while approving requests, batch id: %s, message: %s' % (self.batch_id, str(e))
+            self.logger.error(message)
+            self.send_email_failure('', message)
+            return {
+                'results': False,
+                'message': message
+            }
+        return {'results': True}
 
 class ChainRequestInjector(Handler):
     def __init__(self, **kwargs):
@@ -387,7 +420,7 @@ class ChainRequestInjector(Handler):
                     uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
                     if not uploader.internal_run():
                         mcm_cr.notify(
-                            'Configuration upload failed', 
+                            'Configuration upload failed',
                             "There was a problem uploading the configuration for request %s"  % (request_prepid)
                         )
                         self.logger.error('Problem with uploading the configuration for request %s' % (request_prepid))
