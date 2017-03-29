@@ -40,11 +40,11 @@ class Worker(Thread):
                 self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
             except Exception, e:
-                self.logger.error("Exception in %s thread: %s Traceback:\n%s" % (
+                self.logger.error("Exception in '%s' thread: %s Traceback:\n%s" % (
                         self.worker_name, str(e), traceback.format_exc()))
 
+            finally:
                 self.tasks.task_done() ## do we want to mark task_done if it crashed?
-            self.tasks.task_done()
 
 class ThreadPool:
     """Pool of threads consuming tasks from a queue"""
