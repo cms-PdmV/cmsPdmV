@@ -120,7 +120,7 @@ class ValidationHandler:
         self.submmited_prepids_set = set(submmited_prepids_list)
         return list(new_prepids_set - self.submmited_prepids_set)
 
-    def read_file_from_afs(self, path, trials_time_out=5):
+    def read_file_from_afs(self, path, trials_time_out=3):
         cmd = 'cat %s' % path
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         out = ""
@@ -128,12 +128,12 @@ class ValidationHandler:
         if stdout:
             out=stdout.read()
             err=stderr.read()
-        trials = 0
+        trials = 1
         # wait for afs to synchronize the output file
         while ( (not stdin and not stdout and not stderr) or err) and trials < trials_time_out:
             time.sleep(self.batch_retry_timeout)
             trials += 1
-            self.logger.info('Trying to get %s for the %s time' % (path, trials+1))
+            self.logger.info('Trying to get %s for the %s time' % (path, trials))
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
             if stdout:
                 out=stdout.read()
@@ -319,14 +319,13 @@ class ValidationHandler:
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
-        if not len(jobs_dict):
-            return
         remove_jobs = []
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
                 job_id = doc_info[self.JOB_ID]
                 if job_id not in jobs_dict:
-                    self.report_error(prepid, 'Unable to find information about job: %s' % job_id)
+                    self.logger.info('Unable to find information about job: %s trying to process it...' % job_id)
+                    self.process_finished_job(prepid, doc_info)
                     remove_jobs.append(prepid)
                     continue
                 job_info = jobs_dict[job_id]
@@ -463,7 +462,7 @@ class ValidationHandler:
         mcm_request = request(self.request_db.get(prepid))
         # need to provide all the information back
         if not was_exited:
-            no_success_message = "We could get %s, but it does not look properly formatted. \n %s \n %s \n Error out: %s" % (
+            no_success_message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: %s" % (
                 out_path, job_out, job_error_out, error_out)
         elif self.check_term_runlimit and "TERM_RUNLIMIT" in job_out:
             no_success_message = "LSF job was terminated after reaching run time limit.\n\n"
