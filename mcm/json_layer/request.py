@@ -97,7 +97,10 @@ class request(json_base):
         cdb = database('campaigns')
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
             if cdb.document_exists(json_input['member_of_campaign']):
-                if cdb.get(json_input['member_of_campaign'])['root'] > 0:  # when is not root
+                __camp = cdb.get(json_input['member_of_campaign'])
+                self._json_base__schema['memory'] = __camp['memory']
+
+                if __camp['root'] > 0:  # when is not root
                     self._json_base__approvalsteps = ['none', 'approve', 'submit']
                     self._json_base__status = ['new', 'approved', 'submitted', 'done']
                 else:

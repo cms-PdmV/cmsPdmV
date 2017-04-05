@@ -210,6 +210,8 @@ class CloneRequest(RequestRESTResource):
 
     def clone_request(self, pid, data={}):
         db = database(self.db_name)
+        cdb = database("campaigns")
+
         if db.document_exists(pid):
             new_json = db.get(pid)
             if new_json['flown_with']:
@@ -221,6 +223,8 @@ class CloneRequest(RequestRESTResource):
                 to_wipe.extend( ['cmssw_release','energy','sequences'] )
 
             new_json.update(data)
+            ##set the memory of new request to that of future member_of_campaign
+            new_json['memory'] = cdb.get(new_json['member_of_campaign'])['memory']
             new_json['generator_parameters'] = new_json['generator_parameters'][-1:]
             new_json['generator_parameters'][0]['version'] = 0
             ## remove some of the parameters to get then fresh from a new request.
