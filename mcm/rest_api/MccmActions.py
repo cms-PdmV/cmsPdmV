@@ -7,6 +7,9 @@ from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from json_layer.user import user
+from json_layer.chained_campaign import chained_campaign
+from json_layer.chained_request import chained_request
+from json_layer.request import request
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
@@ -224,8 +227,6 @@ class GetEditableMccmFields(RESTResource):
 class GenerateChains(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
-        from ActionsActions import SetAction
-        self.setter = SetAction()
 
     def GET(self, *args):
         """
@@ -278,7 +279,7 @@ class GenerateChains(RESTResource):
                     "results" : False,
                     "message" : "No requests selected"}
 
-        aids = []
+        request_prepids = []
         for r in mcm_m.get_attribute('requests'):
             if type(r) == list:
                 if len(r) > 2:
@@ -295,49 +296,51 @@ class GenerateChains(RESTResource):
                             "results" : False,
                             "message" : "inconsistent range of ids %s -> %s" % (r[0], r[1])}
 
-                aids.extend(map(lambda s : "%s-%s-%05d" % (pwg1, campaign1, s),
+                request_prepids.extend(map(lambda s : "%s-%s-%05d" % (pwg1, campaign1, s),
                         range(serial1, serial2+1)))
 
             else:
-                aids.append(r)
+                request_prepids.append(r)
 
-        if len(aids) != len(list(set(aids))):
+        if len(request_prepids) != len(set(request_prepids)):
             return {"prepid" : mid,
                     "results" : False,
                     "message" : "There are duplicate actions in the ticket"}
 
         ccdb = database('chained_campaigns')
-        ccs = []
+        chained_campaigns = []
         for cc in mcm_m.get_attribute('chains'):
-            if cc.startswith('chain'):
-                __query = ccdb.construct_lucene_query({'prepid' : cc})
-            else:
-                __query = ccdb.construct_lucene_query({'alias' : cc})
-            ccs.extend(ccdb.full_text_search('search', __query, page=-1))
+            __query = ccdb.construct_lucene_query({
+                    'prepid' : cc,
+                    'alias': cc
+                }, boolean_operator="OR"
+            )
+            query_result = ccdb.full_text_search('search', __query, page=-1)
+            chained_campaigns.extend(map(lambda cc : chained_campaign(cc), query_result))
         ## collect the name of the campaigns it can belong to
-        ccs = list(set(map(lambda cc : cc['campaigns'][0][0], ccs)))
+        ccs = list(set(map(lambda cc : cc.get_attribute('campaigns')[0][0], chained_campaigns)))
         if len(ccs)!=1:
             return {"prepid":mid,
                     "results" : False,
                     "message" : "inconsistent list of chains %s, leading to different root campaigns %s" % (mcm_m.get_attribute('chains'), ccs)}
 
         allowed_campaign = ccs[0]
-        for aid in aids:
-            mcm_r = rdb.get(aid)
+        for request_prepid in request_prepids:
+            mcm_r = rdb.get(request_prepid)
             if mcm_r['member_of_campaign'] != allowed_campaign:
                 return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is not from the allowed root campaign %s" % (aid, allowed_campaign)}
+                        "message" : "A request (%s) is not from the allowed root campaign %s" % (request_prepid, allowed_campaign)}
 
             if mcm_r['status'] == 'new' and mcm_r['approval'] == 'validation':
                 return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is being validated." % (aid)}
+                        "message" : "A request (%s) is being validated." % (request_prepid)}
 
             if mcm_r['flown_with']:
                 return {"prepid" : mid,
                         "results" : False,
-                        "message" : "A request (%s) is in the middle of a chain already." % (aid)}
+                        "message" : "A request (%s) is in the middle of a chain already." % (request_prepid)}
 
         if not mcm_m.get_attribute('repetitions'):
             return {"prepid" : mid,
@@ -346,24 +349,14 @@ class GenerateChains(RESTResource):
                             mcm_m.get_attribute('repetitions'))}
 
         res = []
-        for aid in aids:
+        special = mcm_m.get_attribute('special')
+        for request_prepid in request_prepids:
+            self.logger.info("Generating all chained request for request %s" % request_prepid)
             for times in range(mcm_m.get_attribute('repetitions')):
-                for cc in mcm_m.get_attribute('chains'):
-                    b = mcm_m.get_attribute('block')
-                    s = None
-                    t = None
-                    special = mcm_m.get_attribute('special')
-                    if mcm_m.get_attribute('staged') != 0:
-                        s = mcm_m.get_attribute('staged')
-                    if mcm_m.get_attribute('threshold') != 0:
-                        t = mcm_m.get_attribute('threshold')
-
-                    res.append(self.setter.set_action(aid,
-                            cc, b, staged=s, threshold=t, reserve=reserve, special=special))
-
+                for mcm_chained_campaign in chained_campaigns:
+                    res.append(self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve, special=special))
                     ##for now we put a small delay to not crash index with a lot of action
-                    time.sleep(2)
-
+                    time.sleep(1)
         generated_chains = {}
         for el in res:
             if not el['results']:
@@ -371,17 +364,95 @@ class GenerateChains(RESTResource):
                     "prepid" : mid,
                     "results" : False,
                     "message" : el['message'],
-                    'chained_request_prepid': el['prepid']
+                    'chained_request_prepid': el['prepid'] if 'prepid' in el else ''
                 }
-            for chain, requests in el["generated_chains"].iteritems():
-                generated_chains[chain] = requests
+            generated_chains[el['prepid']] = el['generated_requests']
         self.logger.debug("just generated chains: %s" % (generated_chains))
         mcm_m.set_attribute("generated_chains", generated_chains)
         mcm_m.set_status()
         mdb.update(mcm_m.json())
-        return {"prepid" : mid,
+        return {
+                "prepid" : mid,
                 "results" : True,
-                "message" : res}
+                "message" : res
+        }
+
+    def generate_chained_requests(self, mccm_ticket, request_prepid, mcm_chained_campaign, reserve=False, with_notify=True, special=False):
+        try:
+            mcm_chained_campaign.reload(save_current=False)
+            generated_chained_request = chained_request(mcm_chained_campaign.generate_request(request_prepid))
+        except Exception as e:
+            message = "Unable to generate chained request for ticket %s request %s, message: " % (mccm_ticket.get_attribute('prepid'), request_prepid, str(e))
+            self.logger.error(message)
+            return {
+                "results": False,
+                "message": message
+            }
+        requests_db = database('requests')
+        self.overwrite_action_parameters_from_ticket(generated_chained_request, mccm_ticket)
+        mcm_request = request(json_input=requests_db.get(request_prepid))
+        generated_chained_request.set_attribute('last_status', mcm_request.get_attribute('status'))
+        if generated_chained_request.get_attribute('last_status') in ['submitted', 'done']:
+            generated_chained_request.set_attribute('status', 'processing')
+        if special:
+            generated_chained_request.set_attribute('approval', 'none')
+        new_chain_prepid = generated_chained_request.get_attribute('prepid')
+        if not generated_chained_request.reload():
+            return {
+                'results': False,
+                'message': 'Unable to save chained request %s' % new_chain_prepid
+            }
+        # update the history of chained campaign
+        mcm_chained_campaign.save()
+        # let the root request know that it is part of a chained request
+        self.logger.info('hola')
+        self.logger.info('%s' % mcm_request.get_attribute('member_of_chain'))
+        self.logger.info('%s' % new_chain_prepid)
+        chains = mcm_request.get_attribute('member_of_chain')
+        chains.append(new_chain_prepid)
+        chains.sort()
+        mcm_request.set_attribute('member_of_chain', list(set(chains)))
+        mcm_request.update_history({'action' : 'join chain', 'step' : new_chain_prepid})
+        if with_notify:
+            mcm_request.notify(
+                "Request %s joined chain" % mcm_request.get_attribute('prepid'),
+                "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid),
+                Nchild=0,
+                accumulate=True
+            )
+        mcm_request.save()
+        # do the reservation of the whole chain ?
+        generated_requests = []
+        if reserve:
+            results_dict = generated_chained_request.reserve(limit=reserve, save_requests=False)
+            if results_dict['results'] and 'generated_requests' in results_dict:
+                generated_requests = results_dict['generated_requests']
+                results_dict.pop('generated_requests')
+            else:
+                return {
+                    "results": False,
+                    "prepid": new_chain_prepid,
+                    "message": results_dict['message']
+                }
+        return {
+                "results":True,
+                "prepid": new_chain_prepid,
+                'generated_requests': generated_requests
+        }
+
+
+    def overwrite_action_parameters_from_ticket(self, generated_chained_request, mccm_ticket):
+        block = mccm_ticket.get_attribute('block')
+        staged = mccm_ticket.get_attribute('staged')
+        threshold = mccm_ticket.get_attribute('threshold')
+        action_parameters = generated_chained_request.get_attribute('action_parameters')
+        action_parameters.update(
+            {
+                'block_number' : block, # block is mandatory
+                'staged': staged if staged != 0 else action_parameters['staged'],
+                'threshold': threshold if threshold != 0 else action_parameters['threshold']
+            }
+        )
 
 class MccMReminderGenContacts(RESTResource):
     def __init__(self):
@@ -400,7 +471,7 @@ class MccMReminderGenContacts(RESTResource):
         authors_tickets_dict = dict()
         for ticket in mccms_tickets:
             yield '\nProcessing ticket %s' % (ticket['prepid'])
-            mccm_ticket = mccm(json_input=ticket) 
+            mccm_ticket = mccm(json_input=ticket)
             authors = mccm_ticket.get_actors(what='author_email')
             for author_email in authors:
                 if author_email in authors_tickets_dict:
@@ -459,7 +530,7 @@ class MccMReminderProdManagers(RESTResource):
         l_type = locator()
         com = communicator()
 
-        subject = 'Gentle reminder on %s tickets to be operated by you' % ( len( mccms)) 
+        subject = 'Gentle reminder on %s tickets to be operated by you' % ( len( mccms))
         message = '''\
 Dear Production Managers,
  please find below the details of %s opened MccM tickets that need to be operated.

@@ -12,10 +12,8 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
-from json_layer.action import action
 from tools.user_management import access_rights
 from tools.json import threaded_loads
-from rest_api.ActionsActions import GenerateChainedRequests
 
 
 class CreateChainedCampaign(RESTResource):
@@ -53,9 +51,6 @@ class CreateChainedCampaign(RESTResource):
         ccamp.update_history({'action' : 'created'})
         saved = db.save(ccamp.json())
 
-        # update actions db
-        self.update_actions(ccamp)
-
         # update campaigns db
         self.update_campaigns(ccamp)
 
@@ -76,24 +71,6 @@ class CreateChainedCampaign(RESTResource):
                     mcm_c['next'].sort()
                     cdb.update(mcm_c)
             next = c
-
-    # update the actions db to include the new chain
-    def update_actions(self, ccamp):
-        adb = database('actions')
-        cid = ccamp.get_attribute('prepid')
-        # get the initial campaigns
-        (root_camp,f) = ccamp.get_attribute('campaigns')[0]
-        #f == null
-        allacs = adb.query('member_of_campaign=='+cid)
-
-        # for each action
-        for ac in allacs:
-            # init action object
-            a = action(json_input=ac)
-            # calculate the available chains
-            a.find_chains()
-            # save to db
-            adb.update(a.json())
 
 class UpdateChainedCampaign(RESTResource):
         def __init__(self):
@@ -146,20 +123,8 @@ class DeleteChainedCampaign(RESTResource):
         if not self.delete_all_requests(ccid, force):
             return {"results" : False}
 
-        # update all relevant actions
-        self.update_actions(ccid)
         db = database(self.db_name)
         return {"results" : db.delete(ccid)}
-
-    def update_actions(self, cid):
-        # get all actions that contain cid in their chains
-        adb = database('actions')
-        actions = adb.query('chain=='+cid)
-        for a in actions:
-            if cid in a['chains']:
-                # delete the option of cid in each relevant action
-                del a['chains'][cid]
-                adb.update(a)
 
     def delete_all_requests(self, cid, force=False):
         rdb = database('chained_requests')
@@ -190,40 +155,6 @@ class GetChainedCampaign(RESTResource):
 
     def get_request(self, id):
         return {"results" : self.db.get(id)}
-
-class GenerateChainedRequests(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.production_manager
-
-    def GET(self, *args):
-        """
-        Generate the chained requests for a given chained campaign.
-        """
-
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results" : 'Error: No arguments were given'})
-        return dumps(self.generate_requests(args[0]))
-
-    def generate_requests(self, ccid):
-        ccdb = database('chained_campaigns')
-        adb = database('actions')
-        if not ccdb.document_exists(ccid):
-            return {"results" : False}
-
-        mcm_cc = chained_campaign( ccdb.get(ccid))
-        ## get the root campaign id
-        root_campaign = mcm_cc.get_attribute('campaigns')[0][0]
-
-        ## get all actions belonging to that root campaign
-        __query = adb.construct_lucene_query({'member_of_campaign' : root_campaign})
-        root_actions = adb.full_text_search('search', __query, page=-1)
-        res = []
-        generator = GenerateChainedRequests()
-        for a in root_actions:
-            res.append(generator.generate_request(a['prepid']))
-
-        return res
 
 class InspectChainedCampaignsRest(RESTResource):
     def __init__(self):
@@ -435,6 +366,30 @@ class SelectNewChainedCampaigns(RESTResource):
                 paths.append(newpath)
 
         return paths
+
+class ChainedCampaignsPriorityChange(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        self.chained_campaigns_db = database("chained_campaigns")
+
+    def POST(self):
+        fails = []
+        try:
+            chains = threaded_loads(cherrypy.request.body.read().strip())
+        except TypeError:
+            return dumps({"results": False, "message": "Couldn't read body of request"})
+        for chain in chains:
+            chain_prepid = chain['prepid']
+            mcm_chained_campaign = chained_campaign(self.chained_campaigns_db.get(chain_prepid))
+            mcm_chained_campaign.set_attribute('action_parameters', chain['action_parameters'])
+            if not mcm_chained_campaign.save():
+                message = 'Unable to save chained campaign %s' % chain_prepid
+                fails.append(message)
+                self.logger.error(message)
+        return dumps({
+            'results': True if len(fails) == 0 else False,
+            'message': fails
+        })
 
 class ListChainCampaignPrepids(RESTResource):
     def __init__(self):

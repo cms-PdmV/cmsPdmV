@@ -11,6 +11,7 @@ from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
 from tools.settings import settings
+from json import dumps
 
 class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):
@@ -84,7 +85,13 @@ class chained_request(json_base):
         'last_status': 'new',
         'status': '',
         'chain_type': 'TaskChain',
-        'validate': 0 #indicates whether the chain should be submitted to validation
+        'validate': 0, #indicates whether the chain should be submitted to validation
+        'action_parameters': {
+            'block_number': 0,
+            'staged': 0,
+            'threshold': 0,
+            'flag': True
+        }
     }
 
     def __init__(self, json_input=None):
@@ -391,7 +398,6 @@ class chained_request(json_base):
         ccdb = database('chained_campaigns')
         crdb = database('chained_requests')
         fdb = database('flows')
-        adb = database('actions')
         sdb = database('settings')
 
         l_type=locator()
@@ -440,9 +446,9 @@ class chained_request(json_base):
                                                      current_request.get_attribute('status'),
                                                      allowed_request_statuses)
 
-        original_action_id = self.get_attribute('chain')[0]
+        root_request_id = self.get_attribute('chain')[0]
 
-        original_action_item = self.retrieve_original_action_item(adb, original_action_id)
+        action_parameters = self.get_attribute('action_parameters')
 
         ## what is the campaign to go to next and with which flow
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
@@ -524,7 +530,7 @@ class chained_request(json_base):
                 allowed_request_statuses = ['done']
                 ## determine if this is a root -> non-root transition to potentially apply staged number
                 at_a_transition=(current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
-                if ('staged' in original_action_item or 'threshold' in original_action_item) and at_a_transition:
+                if (action_parameters['staged'] != 0 or action_parameters['threshold'] != 0) and at_a_transition:
                     allowed_request_statuses.append('submitted')
                 ##check status
                 if not current_request.get_attribute('status') in allowed_request_statuses:
@@ -537,11 +543,11 @@ class chained_request(json_base):
                             self.get_attribute('prepid')))
 
                     # at a root -> non-root transition only does the staged/threshold functions !
-                    if 'staged' in original_action_item:
-                        next_total_events = int(original_action_item['staged'])
+                    if action_parameters['staged'] != 0:
+                        next_total_events = int(action_parameters['staged'])
                         completed_events_to_pass = next_total_events
-                    if 'threshold' in original_action_item:
-                        next_total_events = int(current_request.get_attribute('total_events') * float(original_action_item['threshold'] / 100.))
+                    if action_parameters['threshold'] != 0:
+                        next_total_events = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
                         completed_events_to_pass = next_total_events
 
 
@@ -591,7 +597,7 @@ class chained_request(json_base):
             ## remove <pwg>-chain_ and the -serial number, replacing _ with a .
             toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
             ## make sure they get ordered by prepid
-            __query = crdb.construct_lucene_query({'root_request' : original_action_id})
+            __query = crdb.construct_lucene_query({'root_request' : root_request_id})
             ##do we really need to sort them?
             related_crs = sorted(crdb.full_text_search('search', __query, page=-1), key=lambda cr : cr['prepid'])
 
@@ -617,7 +623,7 @@ class chained_request(json_base):
                 if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
                     continue
                 truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
-                self.logger.error('to match : %s , this one %s' % (toMatch, truncated))
+                self.logger.info('to match : %s , this one %s' % (toMatch, truncated))
                 if truncated == toMatch:
                     #we found a chained request that starts with all same steps
                     mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
@@ -744,8 +750,8 @@ class chained_request(json_base):
                     'Could not save the new request %s' % (
                             next_request.get_attribute('prepid')))
 
-        ## inspect priority
-        self.set_priority(original_action_item['block_number'])
+        # inspect priority Do we want to override priority of a request when we flow to next step?
+        self.set_priority(action_parameters['block_number'])
         if not reserve:
             # sync last status
             self.set_attribute('last_status', next_request.get_attribute('status'))
@@ -792,31 +798,6 @@ class chained_request(json_base):
             'result': True,
             'generated_request': next_request.get_attribute('prepid')
         }
-
-    def retrieve_original_action_item(self, adb, original_action_id=None):
-        if not original_action_id:
-            original_action_id = self.get_attribute('chain')[0]
-
-        if not adb.document_exists(original_action_id):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'the chained request spawned from %s which does not exist' % original_action_id)
-        ## retrieve what is the action the chained request started with
-        original_action = adb.get(original_action_id)
-        original_action_item = original_action['chains'][self.get_attribute('member_of_campaign')]['chains']
-        if not self.get_attribute('prepid') in original_action_item:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'has no valid action in %s' %  original_action_id)
-
-        original_action_item = original_action_item[self.get_attribute('prepid')]
-        if 'flag' not in original_action_item:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The action %s is malformated' %  original_action_id)
-        if not original_action_item['flag']:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The action is disabled')
-        if not 'block_number' in original_action_item or not original_action_item['block_number']:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                                                         'The action has no valid block number')
-        return original_action_item
 
 
     def toggle_last_request(self):

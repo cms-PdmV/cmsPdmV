@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+  <head>
+        <base href="/mcm2/">
+        <title>Priority change page McM</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+
+        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+
+        <!--[IF IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+          </script>
+        <![endif]-->
+        <![if !IE]>
+          <script type="text/javascript">
+            var testApp = angular.module('testApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+          </script>
+        <![endif]>
+        <script src="scripts/main_controller.js"></script>
+        <script src="scripts/priority_change_controller.js"></script>
+  </head>
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
+    <div ng-include="'HTML/navbar_template.html'"></div>
+    <div class="container">
+      <tabs>
+        <pane heading="Requests" active="tabsettings.requests.active">
+          <div class="control-group">
+            <label style="display: inline;">Prepid:</label>
+            <span class="input-append">
+              <span class="add-on">*</span>
+              <input type="text" ng-model="form_fields.request_prepid" type="text" class="input-large">
+              <span class="add-on">*</span>
+            </span>
+            </br>
+            </br>
+            <label style="display: inline;">Tags:</label>
+            <input type="text" style="margin-left: 10px;" ng-model="form_fields.request_tag" typeahead="tag for tag in preload_tags($viewValue)" type="text" class="input-large">
+          </div>
+        </pane>
+        <pane heading="Chained requests" active="tabsettings.chained_requests.active">
+          <div class="control-group">
+            <label style="display: inline;">Prepid:</label>
+            <span class="input-append">
+              <span class="add-on">*</span>
+              <input type="text" ng-model="form_fields.chained_request_prepid" type="text" class="input-large">
+              <span class="add-on">*</span>
+            </span>
+          </div>
+        </pane>
+        <pane heading="Chained campaigns" active="tabsettings.chained_campaigns.active">
+          <div class="control-group">
+            <label style="display: inline;">Prepid:</label>
+            <span class="input-append">
+              <span class="add-on">*</span>
+              <input type="text" ng-model="form_fields.chained_campaign_prepid" type="text" class="input-large">
+              <span class="add-on">*</span>
+            </span>
+          </div>
+        </pane>
+      </tabs>
+      </br>
+      <button style="margin-left: 900px" ng-click="search_start()" class="btn btn-medium">Search</button>
+      </br>
+      </br>
+    </div> <!--end of container-->
+    <table class="table table-bordered table-stripped">
+      <thead>
+        <tr>
+          <th>
+            <button ng-click="select_all()" class="btn btn-medium">{{select_btn}}</button>
+          </th>
+          <th>
+            {{selected_pane}}
+          </th>
+          <th>
+            <div style="margin-bottom: -12px;">
+              Global
+              <div style="display: inline-block;" ng-if="selected_pane == 'Chained requests' || selected_pane == 'Chained campaigns'">
+                <label class="priority-param">Flag:</label>
+                <input ng-change="global_change('flag')" type="checkbox" ng-model="global_action_parameters.flag" class="ng-pristine ng-valid ng-not-empty ng-touched">
+                <label class="priority-param">Staged:</label>
+                <input ng-change="global_change('staged')" type="number" style="width: 50px;" ng-model="global_action_parameters.staged" class="ng-valid ng-touched ng-not-empty ng-dirty ng-valid-number">
+                <label class="priority-param">Threshold:</label>
+                <span class="input-append">
+                  <input ng-change="global_change('threshold')" type="number" style="width: 50px;" ng-model="global_action_parameters.threshold" class="ng-valid ng-not-empty ng-dirty ng-valid-number ng-touched">
+                  <span class="add-on">%</span>
+                </span>
+              </div>
+              <label class="priority-param">Block:</label>
+              <select ng-change="global_change('block_number')" class="input-mini ng-pristine ng-valid ng-empty ng-touched" ng-model="global_action_parameters.block_number" ng-options="key for key in [1,2,3,4,5,6]">
+                <option value="?" selected="selected"></option>
+                <option label="1" value="number:1">1</option>
+                <option label="2" value="number:2">2</option>
+                <option label="3" value="number:3">3</option>
+                <option label="4" value="number:4">4</option>
+                <option label="5" value="number:5">5</option>
+                <option label="6" value="number:6">6</option>
+              </select>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <!--<tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" ng-show="showingAction(data['member_of_campaign'])" >-->
+        <tr ng-repeat="object in objects_in_page | orderBy:sort.column: sort.descending | filter: filt">
+          <td>
+            <input type="checkbox" ng-click="update_selected_objects($index)" ng-checked="object.selected"/>
+          </td>
+          <td>
+            <a title="Show {{object.prepid}}" style="cursor: pointer;" ng-click="redirect(object.prepid)" rel="tooltip" title="Show " target="_self">{{object.prepid}}<i class="icon-align-right"></i></a>
+          </td>
+          <td>
+            <div ng-if="selected_pane == 'Requests'">
+              <label class="priority-param">Block:</label>
+              <select ng-if="selected_pane == 'Requests'" class="input-mini ng-pristine ng-valid ng-empty ng-touched" ng-model="object.priority" ng-options="key for key in [1,2,3,4,5,6]">
+                  <option value="?" selected="selected"></option>
+                  <option label="1" value="number:1">1</option>
+                  <option label="2" value="number:2">2</option>
+                  <option label="3" value="number:3">3</option>
+                  <option label="4" value="number:4">4</option>
+                  <option label="5" value="number:5">5</option>
+                  <option label="6" value="number:6">6</option>
+              </select>
+            </div>
+            <div ng-if="selected_pane == 'Chained requests' || selected_pane == 'Chained campaigns'">
+              <label class="priority-param">Flag:</label>
+              <input type="checkbox" ng-model="object.action_parameters.flag" class="ng-pristine ng-valid ng-not-empty ng-touched">
+              <label class="priority-param">Staged:</label>
+              <input type="number" style="width: 50px;" ng-model="object.action_parameters.staged" class="ng-valid ng-touched ng-not-empty ng-dirty ng-valid-number">
+              <label class="priority-param">Threshold:</label>
+              <span class="input-append">
+                <input type="number" style="width: 50px;" ng-model="object.action_parameters.threshold" class="ng-valid ng-not-empty ng-dirty ng-valid-number ng-touched">
+                <span class="add-on">%</span>
+              </span>
+              <label class="priority-param">Block:</label>
+              <select class="input-mini ng-pristine ng-valid ng-empty ng-touched" ng-model="object.action_parameters.block_number" ng-options="key for key in [1,2,3,4,5,6]">
+                <option value="?" selected="selected"></option>
+                <option label="1" value="number:1">1</option>
+                <option label="2" value="number:2">2</option>
+                <option label="3" value="number:3">3</option>
+                <option label="4" value="number:4">4</option>
+                <option label="5" value="number:5">5</option>
+                <option label="6" value="number:6">6</option>
+              </select>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="row-fluid custom-footer-priority">
+      <div style="width: inherit;" class="span5 pagination pagination-right" >
+      <div class="span2" style="margin-left: 500px;">
+        <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+      </div>
+      <button style="margin-bottom: 10px;" ng-click="submit()" class="btn btn-medium">Submit</button>
+        <ul>
+          <li ng-if="page>0">
+            <a ng-click="previous_page()" ng-href="#">Prev</a>
+          </li>
+          <li ng-if="do_next_page">
+            <a ng-click="next_page()" ng-href="#">Next</a>
+          </li>
+          <li>
+            <a>#{{page}}</a>
+          </li>
+          <li>
+            <select ng-model="limit" ng-options="key for key in [20, 50, 100]" style="width: 60px;" ng-change="search_start()"></select>
+          </li>
+        </ul>
+      </div>
+    </div>
+    </span>
+  </body>
+</html>
