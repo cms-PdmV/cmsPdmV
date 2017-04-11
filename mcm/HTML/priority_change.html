@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
-        <base href="/mcm2/">
+        <base href="/mcm/">
         <title>Priority change page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
@@ -104,7 +104,6 @@
         </tr>
       </thead>
       <tbody>
-        <!--<tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" ng-show="showingAction(data['member_of_campaign'])" >-->
         <tr ng-repeat="object in objects_in_page | orderBy:sort.column: sort.descending | filter: filt">
           <td>
             <input type="checkbox" ng-click="update_selected_objects($index)" ng-checked="object.selected"/>

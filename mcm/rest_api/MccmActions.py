@@ -405,9 +405,6 @@ class GenerateChains(RESTResource):
         # update the history of chained campaign
         mcm_chained_campaign.save()
         # let the root request know that it is part of a chained request
-        self.logger.info('hola')
-        self.logger.info('%s' % mcm_request.get_attribute('member_of_chain'))
-        self.logger.info('%s' % new_chain_prepid)
         chains = mcm_request.get_attribute('member_of_chain')
         chains.append(new_chain_prepid)
         chains.sort()

@@ -11,7 +11,6 @@ from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
 from tools.settings import settings
-from json import dumps
 
 class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):

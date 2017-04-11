@@ -151,7 +151,10 @@ class DeleteChainedRequest(RESTResource):
             mcm_r.update_history({'action':'leave','step':crid})
             mcm_r_s.append( mcm_r )
         if mcm_cr.get_attribute('action_parameters')['flag']:
-            return {"results":False,"message" : "the action %s for %s is not disabled"%(mcm_a.get_attribute('prepid'), crid)}
+            return {
+                "results":False,
+                "message" : "the action for %s is not disabled"%(crid)
+            }
         ## then save all changes
         for mcm_r in mcm_r_s:
             if not rdb.update( mcm_r.json()):
