@@ -126,19 +126,30 @@ class request(json_base):
         ## call the base
         json_base.set_status(self, step, with_notification)
         ## and set the last_status of each chained_request I am member of, last
+        from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
             if crdb.document_exists(inchain):
-                from json_layer.chained_request import chained_request
-
                 chain = chained_request(crdb.get(inchain))
                 a_change = False
                 a_change += chain.set_last_status(self.get_attribute('status'))
                 a_change += chain.set_processing_status(self.get_attribute('prepid'),
                         self.get_attribute('status'))
-
                 if a_change:
                     crdb.save(chain.json())
+        if self._json_base__status[step] in ['new', 'done']:
+            self.remove_from_forcecomplete()
+
+    def remove_from_forcecomplete(self):
+        settingsDB = database('settings')
+        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+        prepid = self.get_attribute('prepid')
+        if prepid not in forcecomplete_list['value']:
+            return
+        self.logger.info("Deleting a request %s from forcecomplete" % (prepid))
+        forcecomplete_list['value'].remove(prepid)
+        if not settingsDB.update(forcecomplete_list):
+            self.logger.error('Failed to save forcecomplete to DB while removing %s from list' % prepid)
 
     def get_editable(self):
         editable = {}
