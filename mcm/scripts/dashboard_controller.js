@@ -3,7 +3,7 @@ angular.module('testApp').controller('resultsCtrl',
   function resultsCtrl($scope, $http, $location, $window){
 
     $scope.update = [];
-    $scope.bjobsOptions = {bjobsOutput:"", bjobsGroup: groupName()};
+    $scope.bjobsOptions = {bjobsOutput:""};
     $scope.turn_off_button_clicked = false;
     $scope.clear_rest_button_clicked = false;
     $scope.tabsettings={
@@ -36,13 +36,6 @@ angular.module('testApp').controller('resultsCtrl',
     }else{
       $scope.dbName = $location.search()["db_name"];
     }
-
-    function groupName(){
-      if($scope.isDevMachine())
-        return " -g dev";
-      else
-        return " -g prod"
-    };
 
     function removeEmptyString(dict){
       var output_array = [];

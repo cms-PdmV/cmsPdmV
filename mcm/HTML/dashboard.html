@@ -31,21 +31,13 @@
           <div class="row-fluid"><div class="offset4"><h2>Batch information</h2></div></div>
             <div class="row-fluid">
               <div class="btn-group">
-                <button type="button" class="btn btn-inverse btn-mini disabled">bjobs </button>
+                <button type="button" class="btn btn-inverse btn-mini disabled">condor clusters </button>
                 <button type="button" class="btn btn-mini active" ng-model="bjobsOptions.bjobsOutput" btn-radio="''">Default output</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -l'" btn-checkbox-false="''">-l</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -w'" btn-checkbox-false="''">-w</button>
                 <!--<button type="button" class="btn btn-mini" ng-show="isDevMachine();" ng-model="bjobsOptions.bjobsDev" btn-checkbox btn-checkbox-true="' -J *-dev'" btn-checkbox-false="''">-J *-dev</button>-->
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsAll" btn-checkbox btn-checkbox-true="' -a'" btn-checkbox-false="''">-a</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsPending" btn-checkbox btn-checkbox-true="' -p'" btn-checkbox-false="''">-p</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsDone" btn-checkbox btn-checkbox-true="' -d'" btn-checkbox-false="''">-d</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsRunning" btn-checkbox btn-checkbox-true="' -r'" btn-checkbox-false="''">-r</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsSuspended" btn-checkbox btn-checkbox-true="' -s'" btn-checkbox-false="''">-s</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WL'" btn-checkbox-false="''">-WL</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WF'" btn-checkbox-false="''">-WF</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.bjobsOutput" btn-checkbox btn-checkbox-true="' -WP'" btn-checkbox-false="''">-WP</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.hold" btn-checkbox btn-checkbox-true="' -hold'" btn-checkbox-false="''">-hold</button>
+                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.long" btn-checkbox btn-checkbox-true="' -long'" btn-checkbox-false="''">-long</button>
               </div>
-              <a ng-click="getBjobsData()" rel="tooltip" title="Manually refresh bjobs output" >
+              <a ng-click="getBjobsData()" rel="tooltip" title="Manually refresh clusters output" >
                 <i class="icon-refresh"></i>
               </a>
             </div>

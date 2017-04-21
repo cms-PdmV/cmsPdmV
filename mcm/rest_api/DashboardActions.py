@@ -19,7 +19,7 @@ class GetBjobs(RESTResource):
 
     def GET(self, *args):
         """
-        Get bjobs information regarding the batch jobs
+        Get bjobs information regarding the condor clusters
         """
         ssh_exec = ssh_executor()
         try:
@@ -27,20 +27,15 @@ class GetBjobs(RESTResource):
             out = stdout.read()
             err = stderr.read()
             if err:
-                if "No job found in job group" in err:  # so the shown string is consistent with production
-                    return dumps({"results": 'No unfinished job found'})
                 return dumps({"results": err})
             return dumps({"results": out})
         finally:
             ssh_exec.close_executor()
 
     def create_command(self, options):
-        bcmd = 'bjobs'
+        bcmd = 'condor_q'
         for opt in options:
-            if '-g' in opt:
-                bcmd += ' -g ' + '/' + '/'.join(opt.split()[1:])
-            else:
-                bcmd += opt
+            bcmd += opt
         return bcmd
 
 
