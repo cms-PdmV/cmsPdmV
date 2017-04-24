@@ -249,7 +249,6 @@ class json_base(object):
 
 
     def approve(self, step=-1, to_approval=None):
-        self.logger.info('hola2 %s' % step)
         if 'approval' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 
