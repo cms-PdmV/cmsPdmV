@@ -2156,7 +2156,8 @@ done
 
         memory = None
         timing = None
-        timing_method = settings().get_value('timing_method')
+        timing_dict = {}
+        timing_methods = settings().get_value('timing_method')
 # Here be dragons
 
         file_size = None
@@ -2164,18 +2165,28 @@ done
             for summary in item.getElementsByTagName("PerformanceSummary"):
                 for perf in summary.getElementsByTagName("Metric"):
                     name = perf.getAttribute('Name')
-                    if name == 'AvgEventTime' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                    if name == 'AvgEventCPU' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                    if name == 'TotalJobCPU' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                        timing = timing / total_event_in
+                    if name == 'AvgEventTime' and name in timing_methods:
+                        timing_dict['legacy'] = self.get_core_num() * float(perf.getAttribute('Value'))
+                    if name == 'AvgEventCPU' and name in timing_methods:
+                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
+                    if name == 'TotalJobCPU' and name in timing_methods:
+                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
+                        timing_dict['legacy'] = timing_dict['legacy'] / total_event_in
+                    if name == 'EventThroughput' and name in timing_methods:
+                        ##new timing method as discussed here:
+                        # https://github.com/cms-PdmV/cmsPdmV/issues/868
+                        timing_dict['current'] = 1/float(perf.getAttribute('Value'))
+
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float(perf.getAttribute('Value')) * 1024. # MegaBytes -> kBytes
                         file_size = int(file_size / total_event)
                     if name == 'PeakValueRss':
                         memory = float(perf.getAttribute('Value'))
+
+        if 'current' in timing_dict:
+            timing = timing_dict['current']
+        else:
+            timing = timing_dict['legacy']
 
         efficiency = float(total_event) / total_event_in_valid
         efficiency_error = efficiency * sqrt(1. / total_event + 1. / total_event_in_valid)
