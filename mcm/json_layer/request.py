@@ -2714,3 +2714,15 @@ done
                 return int(num_cores) * int(evts_per_lumi["singlecore"])
         else: ##TO-DO what if singlecore is deleted from dict?
             return evts_per_lumi["singlecore"]
+
+    def get_core_num(self):
+        self.logger.info("calling get_core_num for:%s" % (self.get_attribute('prepid')))
+        num = 1
+        for seq in self.get_attribute('sequences'):
+            local_num = 0
+            if 'nThreads' in seq:
+                local_num = seq['nThreads']
+            if local_num > num:
+                num = local_num
+
+        return int(num)

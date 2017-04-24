@@ -938,12 +938,13 @@ class chained_request(json_base):
     def inspect_done(self):
         return self.flow_trial()
 
-    def get_timeout_and_memory(self):
+    def get_timeout_memory_threads(self):
         req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
         rdb = database('requests')
         t=0
         requests_to_validate = 0
         max_memory = 0
+        max_threads = 1
         for (index,req_id) in enumerate(req_ids):
             mcm_r = request(rdb.get(req_id))
             if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #do it only for root or possible root request
@@ -955,9 +956,12 @@ class chained_request(json_base):
             current_memory = mcm_r.get_attribute("memory")
             if current_memory > max_memory:
                 max_memory = current_memory
+            threads = mcm_r.get_core_num()
+            if threads > max_threads:
+                max_threads = threads
         #get the max and apply to all as a conservative estimation
         #this should probably be a bit more subtle
-        return t*requests_to_validate, max_memory
+        return t*requests_to_validate, max_memory, max_threads
 
 
     def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False):
