@@ -122,6 +122,26 @@ class request(json_base):
         self.validate()
         self.get_current_user_role_level()
 
+    def approve(self, step=-1, to_approval=None):
+        super(request, self).approve(step, to_approval)
+        step = self.get_attribute('approval')
+        result = True
+        ## is it allowed to move on
+        if step == "validation":
+            result = self.ok_to_move_to_approval_validation()
+        elif step == "define":
+            result = self.ok_to_move_to_approval_define()
+        elif step == "approve":
+            result = self.ok_to_move_to_approval_approve()
+        elif step == "submit":
+            result = self.ok_to_move_to_approval_submit()
+        self.notify(
+            'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid')),
+            self.textified(),
+            accumulate=True
+        )
+        return result
+
     def set_status(self, step=-1, with_notification=False, to_status=None):
         ## call the base
         json_base.set_status(self, step, with_notification)

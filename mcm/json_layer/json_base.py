@@ -11,7 +11,7 @@ from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from copy import deepcopy
 
-class json_base:
+class json_base(object):
     __json = {}
     __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
     __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
@@ -281,20 +281,6 @@ class json_base:
         ## move the approval field along, so that in the history, it comes before the status change
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action': 'approve', 'step': self.__json['approval']})
-
-        ## is it allowed to move on
-        fcn = 'ok_to_move_to_approval_%s' % (self.__approvalsteps[next_step])
-        if hasattr(self, fcn):
-            ## that function should through if not approvable
-            __ret = getattr(self, fcn)()
-            self.notify('Approval %s for %s %s' % (self.__approvalsteps[next_step],
-                                                   self.__class__.__name__,
-                                                   self.get_attribute('prepid')),
-                        self.textified(),
-                        accumulate=True
-            )
-            if __ret:
-                return __ret
 
     def textified(self):
         return 'no body'
