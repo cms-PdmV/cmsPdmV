@@ -4,6 +4,8 @@ import shutil
 import time
 import traceback
 import logging
+import math
+
 from json import loads
 from json import dumps
 
@@ -25,11 +27,8 @@ class ValidationHandler:
 
     JOBS_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.txt'
     LOG_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.log'
-    TEST_FILE_NAME = 'validation_run_test.sh'
-    QUEUE_8NH = '8nh'
-    QUEUE_1ND = '1nd' # fall back to the one day queue at worse
-    JOB_STATUS = 'status'
-    JOB_PERCENTAGE = 'percentage'
+    TEST_FILE_NAME = '%s_run_test.sh'
+    CONDOR_FILE_NAME = 'cluster.sub'
     JOB_ID = 'job_id'
     DOC_REV = '_rev'
     DOC_VALIDATION = 'validation'
@@ -83,7 +82,7 @@ class ValidationHandler:
 
     def get_new_chain_prepids(self):
         __query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
-        query_result = self.chained_request_db.full_text_search("search", __query, page=0, limit=10, include_fields='prepid')
+        query_result = self.chained_request_db.full_text_search("search", __query, page=-1, include_fields='prepid')
         return [record['prepid'] for record in query_result]
 
     def get_new_request_prepids(self):
@@ -146,39 +145,42 @@ class ValidationHandler:
 
         return out, err
 
-    def build_submission_command(self, prepid, run_test_path, timeout, memory):
-        timeout = int(timeout / 60.)
-        queue = self.QUEUE_1ND if (timeout / 3600. ) > 8. else self.QUEUE_8NH
-        memory = str(memory*1000) #we convert from MB to KB for batch
-        cmd = 'bsub -J ' + prepid
-        cmd += ' -g ' + self.group
-        cmd += ' -q ' + queue
-        cmd += ' -cwd ' + run_test_path
-        cmd += ' -W %s'%  timeout
-        run_test_path += '/' + self.TEST_FILE_NAME
-        cmd += ' -eo ' + run_test_path + '.err'
-        cmd += ' -oo ' + run_test_path + '.out'
-        cmd += ' -M ' + memory
-        cmd += ' bash ' + run_test_path
-        return cmd
-
     def check_ssh_outputs(self, stdin, stdout, stderr, fail_message):
         if not stdin and not stdout and not stderr:
             self.logger.error(fail_message)
             return False
         return True
 
-    def create_test_file(self, to_write, run_test_path):
+    def create_test_file(self, to_write, run_test_path, file_name):
         location = installer(run_test_path, care_on_existing=False, is_abs_path=True)
-        test_file_path = run_test_path + '/' + self.TEST_FILE_NAME
+        test_file_path = run_test_path + '/' + file_name
         try:
             with open(test_file_path, 'w') as there:
                 there.write(to_write)
             return True
         except Exception as e:
-            self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (run_test_path, str(e), traceback.format_exc()))
+            self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
+    def create_htcondor_config_file(self, run_test_path, file_name, timeout, memory, threads):
+        to_write = ''
+        validation_file = run_test_path + '/' + file_name
+        to_write += 'universe = vanilla\n'
+        to_write += 'executable = %s\n' % validation_file
+        to_write += 'output = %s.out\n' % validation_file
+        to_write += 'error = %s.err\n' % validation_file
+        to_write += 'log = %s.log\n' % validation_file
+        to_write += '+MaxRuntime = %s\n' % timeout
+        to_write += 'RequestCpus = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
+        to_write += 'queue'
+        config_file_path = run_test_path + '/' + self.CONDOR_FILE_NAME
+        try:
+            with open(config_file_path, 'w') as config:
+                config.write(to_write)
+            return True
+        except Exception as e:
+            self.logger.error('There was a problem while creating the config file: %s message: %s \ntraceback %s' % (config_file_path, str(e), traceback.format_exc()))
+            return False
 
     def submit_request(self, prepid, run_test_path):
         mcm_request = request(self.request_db.get(prepid))
@@ -189,7 +191,8 @@ class ValidationHandler:
                 return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         to_write = mcm_request.get_setup_file(run_test_path, run=True, do_valid=True)
-        if not self.create_test_file(to_write, run_test_path):
+        file_name = self.TEST_FILE_NAME % prepid
+        if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
             mcm_request.test_failure(
                 message='There was a problem while creating the file for prepid: %s' % (mcm_request.get_attribute('prepid')),
@@ -199,7 +202,9 @@ class ValidationHandler:
             return {}
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
-        job_info = self.execute_command_submission(prepid, run_test_path, timeout, memory)
+        threads = mcm_request.get_core_num()
+        self.create_htcondor_config_file(run_test_path, file_name, timeout, memory, threads)
+        job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
             return {}
@@ -207,8 +212,8 @@ class ValidationHandler:
         job_info[self.DOC_VALIDATION] = mcm_request.get_attribute(self.DOC_VALIDATION) #this field change when calling request.get_setup_file, to be propagated in case of success
         return job_info
 
-    def execute_command_submission(self, prepid, run_test_path, timeout, memory):
-        cmd = self.build_submission_command(prepid, run_test_path, timeout, memory)
+    def execute_command_submission(self, prepid, run_test_path):
+        cmd = 'condor_submit ' + run_test_path + '/' + self.CONDOR_FILE_NAME
         self.logger.info('Executing submission command: \n%s' % cmd)
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
         message_ssh = "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)
@@ -218,12 +223,12 @@ class ValidationHandler:
         out = stdout.read()
         errors = stderr.read()
         self.logger.info(out)
-        if 'Job not submitted' in errors:
+        if 'submitted to cluster' not in out:
             message = 'Job submission failed for request: %s \nerror output:\n %s' % (prepid, errors)
             self.logger.error(message)
             return {'error': message}
-        job_id = out.split()[1]
-        return {self.JOB_ID: job_id[1:-1]} #remove < >
+        job_id = out.split()[7]
+        return {self.JOB_ID: job_id[:-1]} #remove .
 
     def submit_chain(self, prepid, run_test_path):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
@@ -240,7 +245,8 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message, except_requests=except_requests)
             return {}
         to_write = mcm_chained_request.get_setup(directory=run_test_path, run=True, validation= True)
-        if not self.create_test_file(to_write, run_test_path):
+        file_name = self.TEST_FILE_NAME % prepid
+        if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_chained_request.reset_requests('There was a problem while creating the file for prepid: %s' % (mcm_chained_request.get_attribute('prepid')))
             return {}
         requests_in_chain = {}
@@ -261,8 +267,9 @@ class ValidationHandler:
             self.logger.info(message)
             mcm_chained_request.reset_requests(message)
             return {}
-        timeout, memory = mcm_chained_request.get_timeout_and_memory()
-        job_info = self.execute_command_submission(prepid, run_test_path, timeout, memory)
+        timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
+        self.create_htcondor_config_file(run_test_path, file_name, timeout, memory, threads)
+        job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])
             return {}
@@ -284,24 +291,34 @@ class ValidationHandler:
             except Exception as e:
                 #Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
-                self.report_error(prepid, message)
+                try:
+                    self.report_error(prepid, message)
+                except Exception as e:
+                    self.logger.error('Error while reporting failure message: %s\ntraceback %s' % (str(e), traceback.format_exc()))
 
     def get_jobs_status(self):
-        cmd = 'bjobs -noheader -a -g %s -WP' % (self.group)
+        cmd = 'condor_q'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
             return {}
         jobs_dict = {}
-        for line in stdout.read().split('\n'):
+        lines = stdout.read().split('\n')
+        lines = lines[4:-3]
+        for line in lines:
             columns = line.split()
             num_columns = len(columns)
             if len(columns) < 9:
                 continue
-            jobs_dict[columns[0]] = {
-                self.JOB_STATUS: columns[2],
-                self.JOB_PERCENTAGE: '-' if num_columns == 10 else columns[10]
-            }
+            job_id = columns[9][:-2] # remove .0
+            status = ''
+            if columns[5] == '1':
+                status = 'DONE'
+            elif columns[6] == '1':
+                status = 'RUN'
+            elif columns[7] == '1':
+                status = 'IDLE'
+            jobs_dict[job_id] = status
         return jobs_dict
 
     def report_error(self, prepid, message):
@@ -323,20 +340,13 @@ class ValidationHandler:
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
                 job_id = doc_info[self.JOB_ID]
-                if job_id not in jobs_dict:
-                    self.logger.info('Unable to find information about job: %s trying to process it...' % job_id)
+                if job_id not in jobs_dict or jobs_dict[job_id] in ['DONE', '']:
+                    self.logger.info('Job %s for prepid %s is DONE, processing it.....' % (job_id, prepid))
                     self.process_finished_job(prepid, doc_info)
                     remove_jobs.append(prepid)
                     continue
-                job_info = jobs_dict[job_id]
-                if job_info[self.JOB_STATUS] == 'RUN':
-                    self.logger.info('Job %s for prepid %s is running, %%Complete: %s' % (job_id, prepid, job_info[self.JOB_PERCENTAGE]))
-                elif job_info[self.JOB_STATUS] in ['DONE', 'EXIT'] :
-                    self.logger.info('Job %s for prepid %s is DONE or EXIT, processing it.....' % (job_id, prepid))
-                    self.process_finished_job(prepid, doc_info)
-                    remove_jobs.append(prepid)
-                else:
-                    self.logger.info('The status for job %s (prepid: %s) is %s' % (job_id, prepid, job_info[self.JOB_STATUS]))
+                elif jobs_dict[job_id] in ['RUN', 'IDLE']:
+                    self.logger.info('Job %s for prepid %s status: %s' % (job_id ,prepid, jobs_dict[job_id]))
             except Exception as e:
                 #Catch any unexpected exception and keep going
                 message = "Unexpected exception while monitoring job for prepid %s message: %s \ntraceback: %s" % (prepid, str(e), traceback.format_exc())
@@ -347,33 +357,34 @@ class ValidationHandler:
             self.removeDirectory(self.test_directory_path + prepid)
 
     def process_finished_job(self, prepid, doc_info):
-        out_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.out'
-        error_path = self.test_directory_path + prepid + '/' + self.TEST_FILE_NAME + '.err'
+        file_name = self.TEST_FILE_NAME % prepid
+        out_path = self.test_directory_path + prepid + '/' + file_name + '.out'
+        error_path = self.test_directory_path + prepid + '/' + file_name + '.err'
+        log_path = self.test_directory_path + prepid + '/' + file_name + '.log'
         job_out, job_error_out = self.read_file_from_afs(out_path)
+        log_out, log_error_out = self.read_file_from_afs(log_path)
         was_exited = False
-        for line in job_out.split('\n'):
-            if 'Successfully completed.' in line:
-                if 'chain' in prepid:
-                    self.process_finished_chain_success(prepid, doc_info)
-                else:
-                    self.process_finished_request_success(prepid, doc_info, job_out)
-                return
-            elif 'Exited with' in line:
-                was_exited = True
-                break
+        if 'return value 0' in log_out:
+            if 'chain' in prepid:
+                self.process_finished_chain_success(prepid, doc_info)
+            else:
+                self.process_finished_request_success(prepid, doc_info, job_out)
+            return
+        elif 'return value' in log_out:
+            was_exited = True
         error_out, _ = self.read_file_from_afs(error_path, trials_time_out=1)
         if 'chain' in prepid:
-            self.process_finished_chain_failed(prepid, job_out, job_error_out, error_out, was_exited, out_path)
+            self.process_finished_chain_failed(prepid, job_out, job_error_out, error_out, was_exited, out_path, log_out)
         else:
-            self.process_finished_request_failed(prepid, job_out, error_out, was_exited, job_error_out, out_path)
+            self.process_finished_request_failed(prepid, job_out, error_out, was_exited, job_error_out, out_path, log_out)
 
-    def process_finished_chain_failed(self, prepid, job_out, job_error_out, error_out, was_exited, out_path):
+    def process_finished_chain_failed(self, prepid, job_out, job_error_out, error_out, was_exited, out_path, log_out):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         if not was_exited:
-            message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: %s" % (
-                out_path, job_out, job_error_out, error_out)
+            message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: \n%s \n Log out:\n %s" % (
+                out_path, job_out, job_error_out, error_out, log_out)
         else:
-            message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s" % (prepid, job_out, error_out)
+            message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s \n Log out: \n%s" % (prepid, job_out, error_out, log_out)
         self.logger.error(message)
         mcm_chained_request.reset_requests(message)
 
@@ -458,26 +469,15 @@ class ValidationHandler:
             return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
-    def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path=''):
+    def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path='', log_out=''):
         mcm_request = request(self.request_db.get(prepid))
         # need to provide all the information back
         if not was_exited:
-            no_success_message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: %s" % (
-                out_path, job_out, job_error_out, error_out)
-        elif self.check_term_runlimit and "TERM_RUNLIMIT" in job_out:
-            no_success_message = "LSF job was terminated after reaching run time limit.\n\n"
-            no_success_message += "Average CPU time per event specified for request was {0} seconds. \n\n".format(
-                mcm_request.get_attribute("time_event")
-            )
-            additional_message = "Time report not found in LSF job."
-            split_log = error_out.split('\n')
-            for l_id, line in izip(reversed(xrange(len(split_log))), reversed(split_log)):
-                if "TimeReport>" in line:
-                    additional_message = "\n".join(split_log[l_id:l_id + 12])
-            no_success_message += additional_message
+            no_success_message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: \n%s \n Log out: \n%s" % (
+                out_path, job_out, job_error_out, error_out, log_out)
         else:
-            no_success_message = '\t %s.out \n%s\n\t %s.err \n%s\n ' % (self.TEST_FILE_NAME,
-                    job_out, self.TEST_FILE_NAME, error_out)
+            file_name = self.TEST_FILE_NAME % prepid
+            no_success_message = '\t Job out: \n%s\n\t Error out: \n%s\n Log out: \n%s ' % (job_out, error_out, log_out)
         self.logger.error(no_success_message)
         mcm_request.test_failure(
             message=no_success_message,
