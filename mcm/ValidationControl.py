@@ -162,13 +162,13 @@ class ValidationHandler:
             return False
 
     def create_htcondor_config_file(self, run_test_path, file_name, timeout, memory, threads):
-        to_write = ''
         validation_file = run_test_path + '/' + file_name
-        to_write += 'universe = vanilla\n'
-        to_write += 'executable = %s\n' % validation_file
-        to_write += 'output = %s.out\n' % validation_file
-        to_write += 'error = %s.err\n' % validation_file
-        to_write += 'log = %s.log\n' % validation_file
+        to_write =  'universe    = vanilla\n'
+        to_write += 'environment = HOME=/afs/cern.ch/user/p/pdmvserv'
+        to_write += 'executable  = %s\n' % validation_file
+        to_write += 'output      = %s.out\n' % validation_file
+        to_write += 'error       = %s.err\n' % validation_file
+        to_write += 'log         = %s.log\n' % validation_file
         to_write += '+MaxRuntime = %s\n' % timeout
         to_write += 'RequestCpus = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
