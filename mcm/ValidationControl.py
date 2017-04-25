@@ -141,7 +141,6 @@ class ValidationHandler:
         if trials >= trials_time_out:
             self.logger.error('%s could not be retrieved after %s tries in interval of %s s' % (
                     path, trials, self.batch_retry_timeout))
-            return '',''
 
         return out, err
 
@@ -362,17 +361,17 @@ class ValidationHandler:
         error_path = self.test_directory_path + prepid + '/' + file_name + '.err'
         log_path = self.test_directory_path + prepid + '/' + file_name + '.log'
         job_out, job_error_out = self.read_file_from_afs(out_path)
-        log_out, log_error_out = self.read_file_from_afs(log_path)
+        error_out, _ = self.read_file_from_afs(error_path, trials_time_out=1)
+        log_out, _ = self.read_file_from_afs(log_path)
         was_exited = False
         if 'return value 0' in log_out:
             if 'chain' in prepid:
-                self.process_finished_chain_success(prepid, doc_info)
+                self.process_finished_chain_success(prepid, doc_info, job_out, error_out, log_out)
             else:
-                self.process_finished_request_success(prepid, doc_info, job_out)
+                self.process_finished_request_success(prepid, doc_info, job_out, error_out, log_out)
             return
         elif 'return value' in log_out:
             was_exited = True
-        error_out, _ = self.read_file_from_afs(error_path, trials_time_out=1)
         if 'chain' in prepid:
             self.process_finished_chain_failed(prepid, job_out, job_error_out, error_out, was_exited, out_path, log_out)
         else:
@@ -388,7 +387,7 @@ class ValidationHandler:
         self.logger.error(message)
         mcm_chained_request.reset_requests(message)
 
-    def process_finished_chain_success(self, prepid, doc_info):
+    def process_finished_chain_success(self, prepid, doc_info, job_out, error_out, log_out):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         requests_in_chain = []
         for request_prepid, doc_rev in doc_info[self.CHAIN_REQUESTS].iteritems():
@@ -402,7 +401,13 @@ class ValidationHandler:
             if success:
                 success, error = mcm_request.pickup_all_performance(path)
                 if not success:
-                    message = 'Error while picking up all the performance for request %s of chain %s: \n %s' % (request_prepid, prepid, error)
+                    message = 'Error while picking up all the performance for request %s of chain %s: \n Error:\n%s\n Job out:\n%s\n Error out: \n%s\n Log out: \n%s\n' % (
+                        request_prepid,
+                        prepid, error,
+                        job_out,
+                        error_out,
+                        log_out
+                    )
             if not success:
                 self.logger.error(message)
                 mcm_chained_request.reset_requests(message, notify_one=request_prepid)
@@ -436,7 +441,7 @@ class ValidationHandler:
         except Exception as ex:
             self.logger.error('Could not delete directory "%s". Reason: %s \ntraceback: %s' % (path, ex, traceback.format_exc()))
 
-    def process_finished_request_success(self, prepid, doc_info, job_out):
+    def process_finished_request_success(self, prepid, doc_info, job_out, error_out, log_out):
         mcm_request = request(self.request_db.get(prepid))
         doc_revision = doc_info[self.DOC_REV]
         doc_validation = doc_info[self.DOC_VALIDATION]
@@ -452,8 +457,8 @@ class ValidationHandler:
         path = self.test_directory_path + prepid + '/'
         (is_success, error) = mcm_request.pickup_all_performance(path)
         if not is_success:
-            self.logger.error('Error while picking up all the performance: \n %s' % error)
-            self.process_finished_request_failed(prepid, job_out, error)
+            error = 'Error:\n%s\n Error out:\n%s\n' % (error, error_out)
+            self.process_finished_request_failed(prepid, job_out, error, log_out=log_out)
             return
         mcm_request.set_status(with_notification=True)
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
