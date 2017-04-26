@@ -123,7 +123,7 @@ class request(json_base):
         self.get_current_user_role_level()
 
     def approve(self, step=-1, to_approval=None):
-        super(request, self).approve(step, to_approval)
+        json_base.approve(self, step, to_approval)
         step = self.get_attribute('approval')
         result = True
         ## is it allowed to move on

@@ -11,7 +11,7 @@ from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from copy import deepcopy
 
-class json_base(object):
+class json_base:
     __json = {}
     __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
     __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
@@ -129,13 +129,8 @@ class json_base(object):
         Update the document with the input, regardless of revision clash.
         This has to be used to much care
         """
-        try:
-            if self.__class__.__name__ =="batch":
-                db = database(self.__class__.__name__ + "es")
-            else:
-                db = database(self.__class__.__name__ + "s")
-        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
-            self.logger.error("Problem with database creation:\n{0}".format(ex))
+        db = self.get_database()
+        if db is None:
             return False
         with locker.lock(self.get_attribute('_id')):
             if not db.document_exists(self.get_attribute('_id')):
