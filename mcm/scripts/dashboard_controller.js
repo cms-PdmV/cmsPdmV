@@ -3,7 +3,7 @@ angular.module('testApp').controller('resultsCtrl',
   function resultsCtrl($scope, $http, $location, $window){
 
     $scope.update = [];
-    $scope.bjobsOptions = {bjobsOutput:""};
+    $scope.bjobsOptions = {bjobsOutput:"", bjobsWide:" -wide"};
     $scope.turn_off_button_clicked = false;
     $scope.clear_rest_button_clicked = false;
     $scope.tabsettings={
