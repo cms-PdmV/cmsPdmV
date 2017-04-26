@@ -287,16 +287,20 @@ class ValidationHandler:
                     result_dict = self.submit_request(prepid, test_path)
                 if len(result_dict):
                     self.submmited_jobs[prepid] = result_dict
+                else:
+                    self.removeDirectory(test_path)
             except Exception as e:
                 #Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
                 try:
                     self.report_error(prepid, message)
+                    self.removeDirectory(test_path)
                 except Exception as e:
                     self.logger.error('Error while reporting failure message: %s\ntraceback %s' % (str(e), traceback.format_exc()))
+                    self.removeDirectory(test_path)
 
     def get_jobs_status(self):
-        cmd = 'condor_q'
+        cmd = 'condor_q -wide'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
@@ -309,7 +313,7 @@ class ValidationHandler:
             num_columns = len(columns)
             if len(columns) < 9:
                 continue
-            job_id = columns[9][:-2] # remove .0
+            job_id = columns[len(columns)-1][:-2] # remove .0
             status = ''
             if columns[5] == '1':
                 status = 'DONE'
