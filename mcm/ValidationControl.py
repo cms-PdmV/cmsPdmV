@@ -365,7 +365,7 @@ class ValidationHandler:
         error_path = self.test_directory_path + prepid + '/' + file_name + '.err'
         log_path = self.test_directory_path + prepid + '/' + file_name + '.log'
         job_out, job_error_out = self.read_file_from_afs(out_path)
-        error_out, _ = self.read_file_from_afs(error_path, trials_time_out=1)
+        error_out, _ = self.read_file_from_afs(error_path, trials_time_out=2)
         log_out, _ = self.read_file_from_afs(log_path)
         was_exited = False
         if 'return value 0' in log_out:
