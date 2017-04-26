@@ -164,7 +164,7 @@ class ValidationHandler:
     def create_htcondor_config_file(self, run_test_path, file_name, timeout, memory, threads):
         validation_file = run_test_path + '/' + file_name
         to_write =  'universe    = vanilla\n'
-        to_write += 'environment = HOME=/afs/cern.ch/user/p/pdmvserv'
+        to_write += 'environment = HOME=/afs/cern.ch/user/p/pdmvserv\n'
         to_write += 'executable  = %s\n' % validation_file
         to_write += 'output      = %s.out\n' % validation_file
         to_write += 'error       = %s.err\n' % validation_file
