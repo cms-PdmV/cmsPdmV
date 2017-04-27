@@ -13,6 +13,7 @@ from couchdb_layer.mcm_database import database
 from tools.installer import installer
 from tools.ssh_executor import ssh_executor
 from tools.settings import settings
+from tools.communicator import communicator
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from tools.locator import locator
@@ -507,3 +508,5 @@ class ValidationHandler:
 if __name__ == "__main__":
     validation_handler = ValidationHandler()
     validation_handler.main()
+    com = communicator()
+    com.flush(0)
