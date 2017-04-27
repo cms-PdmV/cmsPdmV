@@ -1106,6 +1106,7 @@ class request(json_base):
                 res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
                 res += 'grep "AvgEventCPU" %s \n' % runtest_xml_file
                 res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
+                res += 'grep "EventThroughput" %s \n' % runtest_xml_file
 
 
             #try create a flash runtest
