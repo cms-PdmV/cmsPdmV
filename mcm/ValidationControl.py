@@ -161,16 +161,17 @@ class ValidationHandler:
             self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
-    def create_htcondor_config_file(self, run_test_path, file_name, timeout, memory, threads):
-        validation_file = run_test_path + '/' + file_name
-        to_write =  'universe    = vanilla\n'
-        to_write += 'environment = HOME=/afs/cern.ch/user/p/pdmvserv\n'
-        to_write += 'executable  = %s\n' % validation_file
-        to_write += 'output      = %s.out\n' % validation_file
-        to_write += 'error       = %s.err\n' % validation_file
-        to_write += 'log         = %s.log\n' % validation_file
-        to_write += '+MaxRuntime = %s\n' % timeout
-        to_write += 'RequestCpus = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
+    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads):
+        file_name = self.TEST_FILE_NAME % prepid
+        to_write =  'universe              = vanilla\n'
+        to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
+        to_write += 'executable            = %s\n' % file_name
+        to_write += 'output                = %s.out\n' % file_name
+        to_write += 'error                 = %s.err\n' % file_name
+        to_write += 'log                   = %s.log\n' % file_name
+        to_write += 'transfer_output_files = %s_rt.xml\n' % prepid
+        to_write += '+MaxRuntime           = %s\n' % timeout
+        to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
         config_file_path = run_test_path + '/' + self.CONDOR_FILE_NAME
         try:
@@ -189,7 +190,7 @@ class ValidationHandler:
             if mcm_chain.get_attribute('validate') and prepid in mcm_chain.get_attribute('chain')[mcm_chain.get_attribute('step'):]:
                 return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
-        to_write = mcm_request.get_setup_file(run_test_path, run=True, do_valid=True)
+        to_write = mcm_request.get_setup_file(run=True, do_valid=True, for_validation=True)
         file_name = self.TEST_FILE_NAME % prepid
         if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
@@ -202,7 +203,7 @@ class ValidationHandler:
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
         threads = mcm_request.get_core_num()
-        self.create_htcondor_config_file(run_test_path, file_name, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
@@ -212,7 +213,7 @@ class ValidationHandler:
         return job_info
 
     def execute_command_submission(self, prepid, run_test_path):
-        cmd = 'condor_submit ' + run_test_path + '/' + self.CONDOR_FILE_NAME
+        cmd = 'cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
         self.logger.info('Executing submission command: \n%s' % cmd)
         stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
         message_ssh = "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)
@@ -243,7 +244,7 @@ class ValidationHandler:
             self.logger.error(message)
             mcm_chained_request.reset_requests(message, except_requests=except_requests)
             return {}
-        to_write = mcm_chained_request.get_setup(directory=run_test_path, run=True, validation= True)
+        to_write = mcm_chained_request.get_setup(run=True, validation= True, for_validation=True)
         file_name = self.TEST_FILE_NAME % prepid
         if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_chained_request.reset_requests('There was a problem while creating the file for prepid: %s' % (mcm_chained_request.get_attribute('prepid')))
@@ -267,7 +268,7 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message)
             return {}
         timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
-        self.create_htcondor_config_file(run_test_path, file_name, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])

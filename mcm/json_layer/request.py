@@ -1012,14 +1012,14 @@ class request(json_base):
 
         return makeRel
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False):
+    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
         #run is for adding cmsRun
         #do_valid id for adding the file upload
 
         l_type = locator()
         infile = '#!/bin/bash\n'
 
-        if directory:
+        if directory or for_validation:
             infile += self.make_release()
         else:
             infile += self.make_release()
@@ -1158,7 +1158,7 @@ done
 
         ## if there was a release setup, jsut remove it
         #not in dev
-        if directory and not l_type.isDev():
+        if (directory or for_validation) and not l_type.isDev():
             infile += 'rm -rf %s' % ( self.get_attribute('cmssw_release') )
 
         return infile
