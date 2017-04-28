@@ -1873,35 +1873,6 @@ class ForceCompleteMethods(RESTResource):
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(forcecomplete_list['value'], indent=4)
 
-    def DELETE(self, *args):
-        """
-        Delete a request from forcecomplete list
-        """
-        if not args:
-            self.logger.error('No arguments were given to delete forcecomplete')
-            return dumps({"results": False})
-
-        pid = args[0]
-        settingsDB = database('settings')
-
-        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
-
-        if pid not in forcecomplete_list['value']:
-            message = 'Request not in forcecomplete list'
-            return dumps({"prepid": pid, "results": False, 'message': message})
-
-        self.logger.info("Deleting a request%s from forcecomplete" % (pid))
-        forcecomplete_list['value'].remove(pid)
-        ret = settingsDB.update(forcecomplete_list)
-
-        if ret:
-            message = "Successfully removed request form forcecomplete"
-            return dumps({"prepid": pid, "results": True,
-                'message': message})
-        else:
-            message = 'Failed to save forcecomplete to DB'
-            return dumps({"prepid": pid, "results": False, 'message': message})
-
 class RequestsPriorityChange(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager

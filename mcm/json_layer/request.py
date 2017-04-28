@@ -126,19 +126,30 @@ class request(json_base):
         ## call the base
         json_base.set_status(self, step, with_notification)
         ## and set the last_status of each chained_request I am member of, last
+        from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
             if crdb.document_exists(inchain):
-                from json_layer.chained_request import chained_request
-
                 chain = chained_request(crdb.get(inchain))
                 a_change = False
                 a_change += chain.set_last_status(self.get_attribute('status'))
                 a_change += chain.set_processing_status(self.get_attribute('prepid'),
                         self.get_attribute('status'))
-
                 if a_change:
                     crdb.save(chain.json())
+        if self._json_base__status[step] in ['new', 'done']:
+            self.remove_from_forcecomplete()
+
+    def remove_from_forcecomplete(self):
+        settingsDB = database('settings')
+        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+        prepid = self.get_attribute('prepid')
+        if prepid not in forcecomplete_list['value']:
+            return
+        self.logger.info("Deleting a request %s from forcecomplete" % (prepid))
+        forcecomplete_list['value'].remove(prepid)
+        if not settingsDB.update(forcecomplete_list):
+            self.logger.error('Failed to save forcecomplete to DB while removing %s from list' % prepid)
 
     def get_editable(self):
         editable = {}
@@ -980,14 +991,14 @@ class request(json_base):
 
         return makeRel
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False):
+    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
         #run is for adding cmsRun
         #do_valid id for adding the file upload
 
         l_type = locator()
         infile = '#!/bin/bash\n'
 
-        if directory:
+        if directory or for_validation:
             infile += self.make_release()
         else:
             infile += self.make_release()
@@ -1074,6 +1085,7 @@ class request(json_base):
                 res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
                 res += 'grep "AvgEventCPU" %s \n' % runtest_xml_file
                 res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
+                res += 'grep "EventThroughput" %s \n' % runtest_xml_file
 
 
             #try create a flash runtest
@@ -1125,7 +1137,7 @@ done
 
         ## if there was a release setup, jsut remove it
         #not in dev
-        if directory and not l_type.isDev():
+        if (directory or for_validation) and not l_type.isDev():
             infile += 'rm -rf %s' % ( self.get_attribute('cmssw_release') )
 
         return infile
@@ -2132,7 +2144,8 @@ done
 
         memory = None
         timing = None
-        timing_method = settings().get_value('timing_method')
+        timing_dict = {}
+        timing_methods = settings().get_value('timing_method')
 # Here be dragons
 
         file_size = None
@@ -2140,18 +2153,28 @@ done
             for summary in item.getElementsByTagName("PerformanceSummary"):
                 for perf in summary.getElementsByTagName("Metric"):
                     name = perf.getAttribute('Name')
-                    if name == 'AvgEventTime' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                    if name == 'AvgEventCPU' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                    if name == 'TotalJobCPU' and name == timing_method:
-                        timing = float(perf.getAttribute('Value'))
-                        timing = timing / total_event_in
+                    if name == 'AvgEventTime' and name in timing_methods:
+                        timing_dict['legacy'] = self.get_core_num() * float(perf.getAttribute('Value'))
+                    if name == 'AvgEventCPU' and name in timing_methods:
+                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
+                    if name == 'TotalJobCPU' and name in timing_methods:
+                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
+                        timing_dict['legacy'] = timing_dict['legacy'] / total_event_in
+                    if name == 'EventThroughput' and name in timing_methods:
+                        ##new timing method as discussed here:
+                        # https://github.com/cms-PdmV/cmsPdmV/issues/868
+                        timing_dict['current'] = 1/float(perf.getAttribute('Value'))
+
                     if name == 'Timing-tstoragefile-write-totalMegabytes':
                         file_size = float(perf.getAttribute('Value')) * 1024. # MegaBytes -> kBytes
                         file_size = int(file_size / total_event)
                     if name == 'PeakValueRss':
                         memory = float(perf.getAttribute('Value'))
+
+        if 'current' in timing_dict:
+            timing = timing_dict['current']
+        else:
+            timing = timing_dict['legacy']
 
         efficiency = float(total_event) / total_event_in_valid
         efficiency_error = efficiency * sqrt(1. / total_event + 1. / total_event_in_valid)
@@ -2690,3 +2713,15 @@ done
                 return int(num_cores) * int(evts_per_lumi["singlecore"])
         else: ##TO-DO what if singlecore is deleted from dict?
             return evts_per_lumi["singlecore"]
+
+    def get_core_num(self):
+        self.logger.info("calling get_core_num for:%s" % (self.get_attribute('prepid')))
+        num = 1
+        for seq in self.get_attribute('sequences'):
+            local_num = 0
+            if 'nThreads' in seq:
+                local_num = seq['nThreads']
+            if local_num > num:
+                num = local_num
+
+        return int(num)

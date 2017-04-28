@@ -919,7 +919,6 @@ class TaskChainDict(RESTResource):
 
         wma = {
             "RequestType" : "TaskChain",
-            "inputMode" : "couchDB",
             "Group" : "ppd",
             "Requestor": "pdmvserv",
             "TaskChain" : 0,
