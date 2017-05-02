@@ -65,21 +65,11 @@ class ValidationHandler:
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
 
     def setup_logger(self):
-        self.logger = logging.getLogger('validationJobs')
-        error_formatter = logging.Formatter(
-            fmt='[%(asctime)s][%(levelname)s]%(message)s',
-            datefmt='%d/%b/%Y:%H:%M:%S'
+        logging.basicConfig(level=logging.DEBUG,
+                    format='[%(asctime)s][%(levelname)s]%(message)s',
+                    datefmt='%d/%b/%Y:%H:%M:%S'
         )
-        # The size of the log file increse very fast, should be ok with the records in jenkins and emails, if not, uncomment this
-        #file_handler = logging.FileHandler(self.data_script_path + self.LOG_FILE_NAME, 'a')
-        #file_handler.setLevel(logging.DEBUG)
-        #file_handler.setFormatter(error_formatter)
-        #self.logger.addHandler(file_handler)
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(error_formatter)
-        self.logger.addHandler(stream_handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger('validationJobs')
 
     def get_new_chain_prepids(self):
         __query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
@@ -361,6 +351,26 @@ class ValidationHandler:
             self.submmited_jobs.pop(prepid)
             self.removeDirectory(self.test_directory_path + prepid)
 
+    def parse_error_out(self, error_out):
+        lines = error_out.split('\n')
+        parsed_lines = ''
+        previous_line = ''
+        events_log_start = False
+        for line in lines:
+            if 'Begin processing the' in line:
+                if not events_log_start:
+                    parsed_lines += line + '\n'
+                    parsed_lines += '....\n'
+                    events_log_start = True
+                previous_line = line
+            elif events_log_start:
+                parsed_lines += previous_line + '\n'
+                parsed_lines += line + '\n'
+                events_log_start = False
+            else:
+                parsed_lines += line + '\n'
+        return parsed_lines
+
     def process_finished_job(self, prepid, doc_info):
         file_name = self.TEST_FILE_NAME % prepid
         out_path = self.test_directory_path + prepid + '/' + file_name + '.out'
@@ -368,6 +378,7 @@ class ValidationHandler:
         log_path = self.test_directory_path + prepid + '/' + file_name + '.log'
         job_out, job_error_out = self.read_file_from_afs(out_path)
         error_out, _ = self.read_file_from_afs(error_path, trials_time_out=2)
+        error_out = self.parse_error_out(error_out)
         log_out, _ = self.read_file_from_afs(log_path)
         was_exited = False
         if 'return value 0' in log_out:
@@ -390,7 +401,6 @@ class ValidationHandler:
                 out_path, job_out, job_error_out, error_out, log_out)
         else:
             message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s \n Log out: \n%s" % (prepid, job_out, error_out, log_out)
-        self.logger.error(message)
         mcm_chained_request.reset_requests(message)
 
     def process_finished_chain_success(self, prepid, doc_info, job_out, error_out, log_out):
@@ -415,7 +425,6 @@ class ValidationHandler:
                         log_out
                     )
             if not success:
-                self.logger.error(message)
                 mcm_chained_request.reset_requests(message, notify_one=request_prepid)
                 return
             requests_in_chain.append(mcm_request)
@@ -489,7 +498,6 @@ class ValidationHandler:
         else:
             file_name = self.TEST_FILE_NAME % prepid
             no_success_message = '\t Job out: \n%s\n\t Error out: \n%s\n Log out: \n%s ' % (job_out, error_out, log_out)
-        self.logger.error(no_success_message)
         mcm_request.test_failure(
             message=no_success_message,
             what='Validation run test',
