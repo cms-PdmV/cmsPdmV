@@ -103,12 +103,9 @@ class request_to_wmcontrol:
             command += ' --events-per-lumi %s' % ( events_per_lumi / max_forward_eff )
             command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
+
         elif wmagent_type == 'MonteCarloFromGEN':
-            # calculate eff dev
-            command += ' --filter-eff %s' % ( mcm_r.get_efficiency() )
-
             command += ' --input-ds %s' % (mcm_r.get_attribute('input_dataset'))
-
             command += ' --primary-dataset %s' % (mcm_r.get_attribute('dataset_name'))
 
             if mcm_r.get_attribute('block_white_list'):
