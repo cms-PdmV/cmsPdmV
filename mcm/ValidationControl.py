@@ -161,6 +161,7 @@ class ValidationHandler:
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
         to_write += 'transfer_output_files = %s_rt.xml\n' % prepid
+        to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode == 13)\n' #remove the job if .xml transfer failed (expected reason: it wasn't generated)
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
@@ -292,26 +293,24 @@ class ValidationHandler:
                     self.removeDirectory(test_path)
 
     def get_jobs_status(self):
-        cmd = 'condor_q -wide'
+        cmd = 'condor_q -format "%d " ClusterId -format "%d\n" JobStatus'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
             return {}
         jobs_dict = {}
         lines = stdout.read().split('\n')
-        lines = lines[4:-3]
         for line in lines:
             columns = line.split()
-            num_columns = len(columns)
-            if len(columns) < 9:
-                continue
-            job_id = columns[len(columns)-1][:-2] # remove .0
+            if not len(columns):
+                break
+            job_id = columns[0]
             status = ''
-            if columns[5] == '1':
+            if columns[1] == '4':
                 status = 'DONE'
-            elif columns[6] == '1':
+            elif columns[1] == '2':
                 status = 'RUN'
-            elif columns[7] == '1':
+            elif columns[1] == '1':
                 status = 'IDLE'
             jobs_dict[job_id] = status
         return jobs_dict
