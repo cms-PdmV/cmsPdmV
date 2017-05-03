@@ -814,7 +814,7 @@ class request(json_base):
         return '%s%s' % (command, cmsDriverOptions)
 
     def transfer_from(self, camp):
-        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset']
+        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset', 'memory']
         for k in keys_to_transfer:
             try:
                 if camp.get_attribute(k):
