@@ -113,8 +113,6 @@ class request_to_wmcontrol:
             if mcm_r.get_attribute('block_black_list'):
                 command += ' --blocks_black "' + ','.join(mcm_r.get_attribute('block_black_list')) + '"'
 
-            command += ' --number-events %s' % (mcm_r.get_attribute('total_events'))
-
         elif wmagent_type == 'LHEStepZero':
             max_forward_eff = mcm_r.get_forward_efficiency()
             events_per_lumi = mcm_r.get_events_per_lumi(n_cores)
