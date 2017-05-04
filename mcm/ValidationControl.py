@@ -65,7 +65,7 @@ class ValidationHandler:
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
 
     def setup_logger(self):
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s][%(levelname)s]%(message)s',
                     datefmt='%d/%b/%Y:%H:%M:%S'
         )
