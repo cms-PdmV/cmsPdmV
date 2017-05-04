@@ -154,7 +154,11 @@ class ValidationHandler:
             self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
-    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads):
+    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files):
+        transfer_output_files = ''
+        for file in transfer_files:
+            transfer_output_files += '%s_rt.xml, ' % file
+        transfer_output_files = transfer_output_files[:-2] #remove ', '
         file_name = self.TEST_FILE_NAME % prepid
         to_write =  'universe              = vanilla\n'
         to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
@@ -162,7 +166,7 @@ class ValidationHandler:
         to_write += 'output                = %s.out\n' % file_name
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
-        to_write += 'transfer_output_files = %s_rt.xml\n' % prepid
+        to_write += 'transfer_output_files = %s\n' % transfer_output_files
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode == 13)\n' #remove the job if .xml transfer failed (expected reason: it wasn't generated)
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
@@ -197,7 +201,7 @@ class ValidationHandler:
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
         threads = mcm_request.get_core_num()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, [prepid])
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
@@ -263,7 +267,7 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message)
             return {}
         timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, list(requests_in_chain.iterkeys()))
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])
