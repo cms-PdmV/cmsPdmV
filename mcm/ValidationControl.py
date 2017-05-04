@@ -297,7 +297,7 @@ class ValidationHandler:
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
-            return {}
+            return None
         jobs_dict = {}
         lines = stdout.read().split('\n')
         for line in lines:
@@ -330,6 +330,8 @@ class ValidationHandler:
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
+        if jobs_dict is None:
+            return
         remove_jobs = []
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
