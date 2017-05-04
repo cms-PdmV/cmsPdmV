@@ -41,6 +41,8 @@ class ValidationHandler:
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
+    is_condor_working = True
+    submission_failures_condor = 0
 
     def __init__(self):
         self.setup_directories()
@@ -216,6 +218,7 @@ class ValidationHandler:
         errors = stderr.read()
         self.logger.info(out)
         if 'submitted to cluster' not in out:
+            self.submission_failures_condor += 1
             message = 'Job submission failed for request: %s \nerror output:\n %s' % (prepid, errors)
             self.logger.error(message)
             return {'error': message}
@@ -282,6 +285,9 @@ class ValidationHandler:
                     self.submmited_jobs[prepid] = result_dict
                 else:
                     self.removeDirectory(test_path)
+                    if self.submission_failures_condor >= 5:
+                        self.logger.error('Stopping submissions due to multiple submission failures!!')
+                        return
             except Exception as e:
                 #Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
@@ -297,9 +303,15 @@ class ValidationHandler:
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
+            self.is_condor_working = False
+            return None
+        out = stdout.read()
+        if 'Failed' in out or 'Failed' in stderr.read(): #message when condor fails: -- Failed to fetch ads from: <128.142.194.115:9618?a.....
+            self.is_condor_working = False
+            self.logger.error("Htcondor is failing, stopping everything!")
             return None
         jobs_dict = {}
-        lines = stdout.read().split('\n')
+        lines = out.split('\n')
         for line in lines:
             columns = line.split()
             if not len(columns):
@@ -506,13 +518,15 @@ class ValidationHandler:
         )
 
     def main(self):
-        if validation_handler.ssh_exec is None:
+        if self.ssh_exec is None:
             sys.exit(-1)
-        validation_handler.monitor_submmited_jobs()
+        self.monitor_submmited_jobs()
+        if not self.is_condor_working:
+            return
         self.new_jobs =  self.get_new_request_prepids() + self.get_new_chain_prepids()
-        prepids_to_submit = validation_handler.get_prepids_to_submit()
-        validation_handler.submit_jobs(prepids_to_submit)
-        validation_handler.save_jobs()
+        prepids_to_submit = self.get_prepids_to_submit()
+        self.submit_jobs(prepids_to_submit)
+        self.save_jobs()
 
 if __name__ == "__main__":
     validation_handler = ValidationHandler()
