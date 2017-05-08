@@ -310,7 +310,8 @@ class ValidationHandler:
             self.is_condor_working = False
             return None
         out = stdout.read()
-        if 'Failed' in out or 'Failed' in stderr.read(): #message when condor fails: -- Failed to fetch ads from: <128.142.194.115:9618?a.....
+        error_out = stderr.read()
+        if 'Failed' in out or 'Failed' in error_out or 'error' in out or 'error' in error_out:
             self.is_condor_working = False
             self.logger.error("Htcondor is failing, stopping everything!")
             return None
