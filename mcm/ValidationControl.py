@@ -41,6 +41,8 @@ class ValidationHandler:
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
+    is_condor_working = True
+    submission_failures_condor = 0
 
     def __init__(self):
         self.setup_directories()
@@ -65,7 +67,7 @@ class ValidationHandler:
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
 
     def setup_logger(self):
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s][%(levelname)s]%(message)s',
                     datefmt='%d/%b/%Y:%H:%M:%S'
         )
@@ -152,7 +154,11 @@ class ValidationHandler:
             self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
-    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads):
+    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files):
+        transfer_output_files = ''
+        for file in transfer_files:
+            transfer_output_files += '%s_rt.xml, ' % file
+        transfer_output_files = transfer_output_files[:-2] #remove ', '
         file_name = self.TEST_FILE_NAME % prepid
         to_write =  'universe              = vanilla\n'
         to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
@@ -160,7 +166,7 @@ class ValidationHandler:
         to_write += 'output                = %s.out\n' % file_name
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
-        to_write += 'transfer_output_files = %s_rt.xml\n' % prepid
+        to_write += 'transfer_output_files = %s\n' % transfer_output_files
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode == 13)\n' #remove the job if .xml transfer failed (expected reason: it wasn't generated)
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
@@ -195,7 +201,7 @@ class ValidationHandler:
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
         threads = mcm_request.get_core_num()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, [prepid])
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
@@ -216,6 +222,7 @@ class ValidationHandler:
         errors = stderr.read()
         self.logger.info(out)
         if 'submitted to cluster' not in out:
+            self.submission_failures_condor += 1
             message = 'Job submission failed for request: %s \nerror output:\n %s' % (prepid, errors)
             self.logger.error(message)
             return {'error': message}
@@ -260,7 +267,7 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message)
             return {}
         timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, list(requests_in_chain.iterkeys()))
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])
@@ -282,6 +289,9 @@ class ValidationHandler:
                     self.submmited_jobs[prepid] = result_dict
                 else:
                     self.removeDirectory(test_path)
+                    if self.submission_failures_condor >= 5:
+                        self.logger.error('Stopping submissions due to multiple submission failures!!')
+                        return
             except Exception as e:
                 #Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
@@ -297,9 +307,16 @@ class ValidationHandler:
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
-            return {}
+            self.is_condor_working = False
+            return None
+        out = stdout.read()
+        error_out = stderr.read()
+        if 'Failed' in out or 'Failed' in error_out or 'error' in out or 'error' in error_out:
+            self.is_condor_working = False
+            self.logger.error("Htcondor is failing, stopping everything!")
+            return None
         jobs_dict = {}
-        lines = stdout.read().split('\n')
+        lines = out.split('\n')
         for line in lines:
             columns = line.split()
             if not len(columns):
@@ -330,6 +347,8 @@ class ValidationHandler:
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
+        if jobs_dict is None:
+            return
         remove_jobs = []
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
@@ -504,13 +523,15 @@ class ValidationHandler:
         )
 
     def main(self):
-        if validation_handler.ssh_exec is None:
+        if self.ssh_exec is None:
             sys.exit(-1)
-        validation_handler.monitor_submmited_jobs()
+        self.monitor_submmited_jobs()
+        if not self.is_condor_working:
+            return
         self.new_jobs =  self.get_new_request_prepids() + self.get_new_chain_prepids()
-        prepids_to_submit = validation_handler.get_prepids_to_submit()
-        validation_handler.submit_jobs(prepids_to_submit)
-        validation_handler.save_jobs()
+        prepids_to_submit = self.get_prepids_to_submit()
+        self.submit_jobs(prepids_to_submit)
+        self.save_jobs()
 
 if __name__ == "__main__":
     validation_handler = ValidationHandler()
