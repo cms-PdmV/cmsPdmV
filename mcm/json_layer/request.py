@@ -2178,7 +2178,7 @@ done
                 for perf in summary.getElementsByTagName("Metric"):
                     name = perf.getAttribute('Name')
                     if name == 'AvgEventTime' and name in timing_methods:
-                        timing_dict['legacy'] = self.get_core_num() * float(perf.getAttribute('Value'))
+                        timing_dict['legacy'] = float(perf.getAttribute('Value')) / self.get_core_num()
                     if name == 'AvgEventCPU' and name in timing_methods:
                         timing_dict['legacy'] = float(perf.getAttribute('Value'))
                     if name == 'TotalJobCPU' and name in timing_methods:
