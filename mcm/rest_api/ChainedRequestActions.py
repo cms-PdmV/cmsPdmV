@@ -570,7 +570,7 @@ class TestChainedRequest(RESTResource):
                     }
                 )
             try:
-                getattr(mcm_r,'ok_to_move_to_approval_validation')(for_chain=True)
+                mcm_r.ok_to_move_to_approval_validation(for_chain=True)
                 mcm_r.update_history({'action' : 'approve', 'step' : 'validation'})
                 mcm_r.set_attribute('approval', 'validation')
                 mcm_r.reload()

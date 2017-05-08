@@ -129,13 +129,8 @@ class json_base:
         Update the document with the input, regardless of revision clash.
         This has to be used to much care
         """
-        try:
-            if self.__class__.__name__ =="batch":
-                db = database(self.__class__.__name__ + "es")
-            else:
-                db = database(self.__class__.__name__ + "s")
-        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
-            self.logger.error("Problem with database creation:\n{0}".format(ex))
+        db = self.get_database()
+        if db is None:
             return False
         with locker.lock(self.get_attribute('_id')):
             if not db.document_exists(self.get_attribute('_id')):
@@ -281,20 +276,6 @@ class json_base:
         ## move the approval field along, so that in the history, it comes before the status change
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action': 'approve', 'step': self.__json['approval']})
-
-        ## is it allowed to move on
-        fcn = 'ok_to_move_to_approval_%s' % (self.__approvalsteps[next_step])
-        if hasattr(self, fcn):
-            ## that function should through if not approvable
-            __ret = getattr(self, fcn)()
-            self.notify('Approval %s for %s %s' % (self.__approvalsteps[next_step],
-                                                   self.__class__.__name__,
-                                                   self.get_attribute('prepid')),
-                        self.textified(),
-                        accumulate=True
-            )
-            if __ret:
-                return __ret
 
     def textified(self):
         return 'no body'
