@@ -303,20 +303,19 @@ class ValidationHandler:
                     self.removeDirectory(test_path)
 
     def get_jobs_status(self):
-        cmd = 'condor_q -format "%d " ClusterId -format "%d\n" JobStatus'
+        cmd = 'condor_q -af:h ClusterId JobStatus'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
             self.is_condor_working = False
             return None
-        out = stdout.read()
-        error_out = stderr.read()
-        if 'Failed' in out or 'Failed' in error_out or 'error' in out or 'error' in error_out:
+        lines = stdout.read().split('\n')
+        if not len(lines) or 'ClusterId JobStatus' not in lines[0]:
             self.is_condor_working = False
             self.logger.error("Htcondor is failing, stopping everything!")
             return None
         jobs_dict = {}
-        lines = out.split('\n')
+        lines = lines[1:] #remove headings
         for line in lines:
             columns = line.split()
             if not len(columns):
