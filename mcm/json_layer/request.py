@@ -1757,6 +1757,8 @@ done
             those = wma['content']['pdmv_dataset_list']
 
             for ds in those:
+                ##TO-DO: we might not need to check if its middle of StepChain
+                ## if Stepchain allows to save intermediate outputs
                 if not self.is_in_middleof_stepchain():
                     ##we do all the DS-PS/TIER checks for the requests and last Step
                     if re.match(re_to_match, ds) or skip_check:
@@ -1821,6 +1823,8 @@ done
                 valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
         return (valid,counted)
 
+    ##TO-DO: we might not need to check if its middle of StepChain
+    ## if Stepchain allows to save intermediate outputs
     def is_in_middleof_stepchain(self):
         crdb = database("chained_requests")
 
@@ -1861,10 +1865,13 @@ done
                     tiers_expected = self.get_tiers()
                     collected = self.collect_outputs(mcm_rr, tiers_expected,
                             self.get_processing_strings(), self.get_attribute("dataset_name"),
-                            self.get_attribute("member_of_campaign"))
+                            self.get_attribute("member_of_campaign"),
+                            skip_check=self.get_attribute("keep_output").count(True) == 0)
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
-                    if not len(collected):
+                    if (not len(collected) and
+                        self.get_attribute("keep_output").count(True) > 0):
+
                         not_good.update({
                                 'message' : 'No output dataset have been recognized'})
                         saved = db.save(self.json())
@@ -1873,9 +1880,13 @@ done
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
-                    valid,counted = self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
+                    valid, counted = self.collect_status_and_completed_events(mcm_rr,
+                            ds_for_accounting)
+                    ##TO-DO: we might not need to check if its middle of StepChain
+                    ## if Stepchain allows to save intermediate outputs
+                    if (not self.is_in_middleof_stepchain()
+                        and self.get_attribute("keep_output").count(True) > 0):
 
-                    if not self.is_in_middleof_stepchain():
                         self.set_attribute('output_dataset', collected)
                         self.set_attribute('completed_events', counted)
 
@@ -1897,10 +1908,16 @@ done
 
                     ##in case completed_evets is 0 and request is not StepChain
                     ##we should not change the status as it could show potential issue in production
-                    if self.get_attribute('completed_events') <= 0 and not self.is_in_middleof_stepchain():
+                    ##TO-DO: we might not need to check if its middle of StepChain
+                    ## if Stepchain allows to save intermediate outputs
+                    if (self.get_attribute('completed_events') <= 0 and
+                          not self.is_in_middleof_stepchain()
+                          and self.get_attribute("keep_output").count(True) > 0):
+
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
-                                wma_r['content']['pdmv_dataset_name'])})
+                                    wma_r['content']['pdmv_dataset_name'])})
+
                         saved = db.save(self.json())
                         return not_good
 
