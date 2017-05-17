@@ -10,7 +10,6 @@ from collections import defaultdict
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from RequestPrepId import RequestPrepId
-from BatchPrepId import BatchPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
@@ -1880,10 +1879,8 @@ class GetInjectCommand(RESTResource):
             self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(args[0]))
             return dumps({"results": False, 'message': 'Error: request with id {0} does not exist'.format(args[0])})
         req = request(db.get(args[0]))
-        batch_name = BatchPrepId().next_id(req.json(), create_batch=False)
         cherrypy.response.headers['Content-Type'] = 'text/plain'
-
-        return req.prepare_submit_command(batch_name)
+        return req.prepare_submit_command()
 
 
 class GetUniqueValues(RESTResource):
@@ -2032,3 +2029,68 @@ class Reserve_and_ApproveChain(RESTResource):
             self.logger.error("Failed to approve requests in ReserveAndApprove")
             return {"results": False,
                     "message": str(ex)}
+
+class TaskChainRequestDict(RESTResource):
+    """
+    Provide the taskchain dictionnary for uploading to request manager
+    """
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def GET(self, *args, **argv):
+        if not len(args):
+            return dumps({})
+
+        arg0 = args[0]
+        requests_db = database('requests')
+        settings_db = database('settings')
+        mcm_request = request(requests_db.get(arg0))
+        task_name = 'task_' + arg0
+        request_type = mcm_request.get_wmagent_type()
+
+        if request_type in ['MonteCarlo', 'LHEStepZero']:
+            task_dicts = mcm_request.request_to_tasks(True, False)
+        elif request_type in ['MonteCarloFromGEN', 'ReDigi']:
+            task_dicts = mcm_request.request_to_tasks(False, False)
+
+        wma = {
+            "RequestType" : "TaskChain",
+            "Group" : "ppd",
+            "Requestor": "pdmvserv",
+            "TaskChain" : 0,
+            "ProcessingVersion": 1,
+            "RequestPriority" : 0,
+            ##we default to 1 in multicore global
+            "Multicore" : 1
+        }
+
+        if not len(task_dicts):
+            return dumps({})
+        #Dict customization
+        if mcm_request.get_attribute('priority') > wma['RequestPriority']:
+            wma['RequestPriority'] = mcm_request.get_attribute('priority')
+
+        if request_type in ['MonteCarloFromGEN', 'ReDigi']:
+            wma['InputDataset'] = task_dicts[0]['InputDataset']
+            if mcm_request.get_attribute('block_white_list'):
+                wma['BlockWhitelist'] = '"' + ','.join(mcm_request.get_attribute('block_white_list')) + '"'
+            if mcm_request.get_attribute('block_black_list'):
+                wma['BlockWhitelist'] = '"' + ','.join(mcm_request.get_attribute('block_black_list')) + '"'
+
+        task_counter = 1
+        for task in task_dicts:
+            for key in task.keys():
+                if key.endswith('_'):
+                    task.pop(key)
+            wma['Task%d'%task_counter] = task
+            task_counter += 1
+        wma['TaskChain'] = task_counter-1
+        for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
+            wma[item] = wma['Task%d'% wma['TaskChain']][item]
+        wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
+        wma['ProcessingString'] = wma['Task1']['ProcessingString']
+        wma['Campaign'] = wma['Task1']['Campaign']
+        wma['PrepID'] = task_name
+        wma['RequestString'] = wma['PrepID']
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return dumps(wma, indent=4)

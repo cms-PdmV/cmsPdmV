@@ -9,7 +9,6 @@ from threading import Thread, Lock
 from Queue import Queue
 
 from tools.installer import installer
-from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
@@ -135,7 +134,7 @@ class RequestSubmitter(Handler):
                 {'handle': self.prepid})
 
     def injection_error(self, message, req):
-        self.inject_logger.info(message)
+        self.logger.info(message)
         if req:
             req.test_failure(message, what='Request injection')
 
@@ -171,8 +170,8 @@ class RequestSubmitter(Handler):
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 executor = ssh_executor(server='vocms081.cern.ch')
                 try:
-                    cmd = req.prepare_submit_command(batch_name)
-                    self.inject_logger.info("Command being used for injecting request {0}: {1}".format(
+                    cmd = req.prepare_submit_command()
+                    self.logger.info("Command being used for injecting request {0}: {1}".format(
                             self.prepid, cmd))
 
                     _, stdout, stderr = executor.execute(cmd)
@@ -183,6 +182,8 @@ class RequestSubmitter(Handler):
                         return False
                     output = stdout.read()
                     error = stderr.read()
+                    self.logger.info(output)
+                    self.logger.info(error)
                     if error and not output: # money on the table that it will break as well?
                         self.injection_error('Error in wmcontrol: {0}'.format(error), req)
                         return False
@@ -223,7 +224,7 @@ class RequestSubmitter(Handler):
 
                         return False
                     for added_req in added_requests:
-                        self.inject_logger.info('Request {0} sent to {1}'.format(
+                        self.logger.info('Request {0} sent to {1}'.format(
                             added_req['name'], batch_name))
 
                     return True
@@ -364,10 +365,12 @@ class ChainRequestInjector(Handler):
         if mcm_r:
             cmd += mcm_r.make_release()
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         there = ''
+        testful = ''
         if l_type.isDev():
+            testful = '_testful'
             there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s:${PATH}\n' % testful
         cmd += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
         return cmd
 

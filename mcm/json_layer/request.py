@@ -1035,7 +1035,6 @@ class request(json_base):
     def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
         #run is for adding cmsRun
         #do_valid id for adding the file upload
-
         l_type = locator()
         infile = '#!/bin/bash\n'
 
@@ -2739,12 +2738,20 @@ done
             for i in to_release:
                 locker.release(i)
 
-    def prepare_submit_command(self, batch_name):
-        from tools.request_to_wma import request_to_wmcontrol
-
-        batch_number = batch_name.split("-")[-1]
-        cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
-        return cmd
+    def prepare_submit_command(self):
+        l_type = locator()
+        command = 'cd %s \n' % (l_type.workLocation())
+        command += self.make_release()
+        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        test_params = ''
+        testful = ''
+        if l_type.isDev():
+            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+            testful = '_testful'
+        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s:${PATH}\n' % testful
+        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        command += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/requests/get_dict/%s %s \n'%(l_type.baseurl(), self.get_attribute('prepid'), test_params)
+        return command
 
     def get_events_per_lumi(self, num_cores):
         cdb = database('campaigns')
@@ -2769,3 +2776,110 @@ done
                 num = local_num
 
         return int(num)
+
+    def get_list_of_steps(self, in_string):
+        if isinstance(in_string, basestring):
+            ##in case sequence is defined as string -> legacy support
+            return [el.split(":")[0] for el in in_string.split(",")]
+        else:
+            return [el.split(":")[0] for el in in_string]
+
+    @staticmethod
+    def do_datatier_selection(possible_inputs, __prev_outputs):
+            ##we check for every possible tier in prioritised possible inputs
+            ## we iterate on all generated unique previous outputs
+            ## if its a match -> we return
+
+            __in_taskName = ""
+            __in_InputModule = ""
+            for possible in possible_inputs:
+                 for taskName, tier in reversed(__prev_outputs):
+                    for t in tier:
+                        if t == possible:
+                            return "%soutput" % (t), taskName
+            ##return empty values if nothing found
+            return "", ""
+
+    def request_to_tasks(self,base,depend):
+        tasks = []
+        settings_db = database('settings')
+        __DT_prio = settings_db.get('datatier_input')["value"]
+        for sequence_index in range(len(self.get_attribute('sequences'))):
+            task_dict = {"TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
+                       "KeepOutput" : True,
+                       "ConfigCacheID" : None,
+                       "GlobalTag" : self.get_attribute('sequences')[sequence_index]['conditions'],
+                       "CMSSWVersion" : self.get_attribute('cmssw_release'),
+                       "ScramArch": self.get_scram_arch(),
+                       "PrimaryDataset" : self.get_attribute('dataset_name'),
+                       "AcquisitionEra" : self.get_attribute('member_of_campaign'),
+                       "Campaign" : self.get_attribute('member_of_campaign'),
+                       "ProcessingString" : self.get_processing_string(sequence_index),
+                       "TimePerEvent" : self.get_attribute("time_event"),
+                       "SizePerEvent" : self.get_attribute('size_event'),
+                       "Memory" : self.get_attribute('memory'),
+                       "FilterEfficiency" : self.get_efficiency(),
+                       "PrepID" : self.get_attribute('prepid')
+                       }
+            ##check if we have multicore an it's not an empty string
+            if 'nThreads' in self.get_attribute('sequences')[sequence_index] and self.get_attribute('sequences')[sequence_index]['nThreads']:
+                task_dict["Multicore"] = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+            __list_of_steps = self.get_list_of_steps(self.get_attribute('sequences')[sequence_index]['step'])
+            if len(self.get_attribute('config_id')) > sequence_index:
+                task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
+            if len(self.get_attribute('keep_output')) > sequence_index:
+                task_dict["KeepOutput"] = self.get_attribute('keep_output')[sequence_index]
+            if self.get_attribute('pileup_dataset_name').strip():
+                task_dict["MCPileup"] = self.get_attribute('pileup_dataset_name')
+            ##due to discussion in https://github.com/dmwm/WMCore/issues/7398
+            if self.get_attribute('version') > 0:
+                task_dict["ProcessingVersion"] = self.get_attribute('version')
+            if sequence_index == 0:
+                if base:
+                    task_dict.update({"SplittingAlgo"  : "EventBased",
+                                      "RequestNumEvents" : self.get_attribute('total_events'),
+                                      "Seeding" : "AutomaticSeeding",
+                                      "EventsPerLumi" : self.get_events_per_lumi(task_dict.get("Multicore", None)),
+                                      "LheInputFiles" : self.get_attribute('mcdb_id') > 0
+                                      })
+                    ## temporary work-around for request manager not creating enough jobs
+                    ## https://github.com/dmwm/WMCore/issues/5336
+                    ## inflate requestnumevents by the efficiency to create enough output
+                    max_forward_eff = self.get_forward_efficiency()
+                    task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"] #should stay nevertheless as it's in wmcontrol for now
+                    task_dict["EventsPerLumi"] /= max_forward_eff #this does not take its own efficiency
+                else:
+                    if depend:
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                          "InputFromOutputModule" : None,
+                                          "InputTask" : None})
+                    else:
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                          "InputDataset" : self.get_attribute('input_dataset'),
+                                          "RequestNumEvents" : self.get_attribute("total_events")})
+            else:
+                ##here we select the appropriate DATATier from previous step
+                # in case -step tier1,tier2,tier3 and
+                __curr_first_step = __list_of_steps[0]
+                __prev_tiers = [(tasks[-1]["TaskName"], tasks[-1]["_output_tiers_"])]
+                tModule = tName = ""
+                if __curr_first_step in __DT_prio:
+                    ##if 1st step is defined in DataTier priority dictionary
+                    self.logger.debug("do_datatier_selection input:\n%s %s" % (__DT_prio[__curr_first_step], __prev_tiers))
+                    tModule, tName = request.do_datatier_selection(__DT_prio[__curr_first_step], __prev_tiers)
+                if tModule != "" and tName != "":
+                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                            "InputFromOutputModule" : tModule,
+                            "InputTask" : tName})
+                else:
+                    ##fallback solution
+                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                            "InputFromOutputModule" : tasks[-1]['output_'],
+                            "InputTask" : tasks[-1]['TaskName']})
+            task_dict['_first_step_'] = __list_of_steps[0]
+            task_dict['_output_tiers_'] = self.get_attribute('sequences')[sequence_index]["eventcontent"]
+            task_dict['output_'] = "%soutput" % (self.get_attribute('sequences')[sequence_index]['eventcontent'][0])
+            task_dict['priority_'] = self.get_attribute('priority')
+            task_dict['request_type_'] = self.get_wmagent_type()
+            tasks.append(task_dict)
+        return tasks
