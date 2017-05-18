@@ -134,7 +134,7 @@ class RequestSubmitter(Handler):
                 {'handle': self.prepid})
 
     def injection_error(self, message, req):
-        self.logger.info(message)
+        self.inject_logger.info(message)
         if req:
             req.test_failure(message, what='Request injection')
 
@@ -171,7 +171,7 @@ class RequestSubmitter(Handler):
                 executor = ssh_executor(server='vocms081.cern.ch')
                 try:
                     cmd = req.prepare_submit_command()
-                    self.logger.info("Command being used for injecting request {0}: {1}".format(
+                    self.inject_logger.info("Command being used for injecting request {0}: {1}".format(
                             self.prepid, cmd))
 
                     _, stdout, stderr = executor.execute(cmd)
@@ -182,8 +182,6 @@ class RequestSubmitter(Handler):
                         return False
                     output = stdout.read()
                     error = stderr.read()
-                    self.logger.info(output)
-                    self.logger.info(error)
                     if error and not output: # money on the table that it will break as well?
                         self.injection_error('Error in wmcontrol: {0}'.format(error), req)
                         return False
@@ -224,7 +222,7 @@ class RequestSubmitter(Handler):
 
                         return False
                     for added_req in added_requests:
-                        self.logger.info('Request {0} sent to {1}'.format(
+                        self.inject_logger.info('Request {0} sent to {1}'.format(
                             added_req['name'], batch_name))
 
                     return True
