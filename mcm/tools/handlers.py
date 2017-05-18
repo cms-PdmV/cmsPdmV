@@ -9,7 +9,6 @@ from threading import Thread, Lock
 from Queue import Queue
 
 from tools.installer import installer
-from tools.request_to_wma import request_to_wmcontrol
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
@@ -171,7 +170,7 @@ class RequestSubmitter(Handler):
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 executor = ssh_executor(server='vocms081.cern.ch')
                 try:
-                    cmd = req.prepare_submit_command(batch_name)
+                    cmd = req.prepare_submit_command()
                     self.inject_logger.info("Command being used for injecting request {0}: {1}".format(
                             self.prepid, cmd))
 
@@ -364,10 +363,10 @@ class ChainRequestInjector(Handler):
         if mcm_r:
             cmd += mcm_r.make_release()
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         there = ''
         if l_type.isDev():
             there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         cmd += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
         return cmd
 
