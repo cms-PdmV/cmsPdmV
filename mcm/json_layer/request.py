@@ -2731,11 +2731,9 @@ done
         command += self.make_release()
         command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
-        testful = ''
         if l_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-            testful = '_testful'
-        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s:${PATH}\n' % testful
+        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         command += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/requests/get_dict/%s %s \n'%(l_type.baseurl(), self.get_attribute('prepid'), test_params)
         return command

@@ -364,11 +364,9 @@ class ChainRequestInjector(Handler):
             cmd += mcm_r.make_release()
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         there = ''
-        testful = ''
         if l_type.isDev():
-            testful = '_testful'
             there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s:${PATH}\n' % testful
+        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         cmd += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
         return cmd
 
