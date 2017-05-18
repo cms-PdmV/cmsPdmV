@@ -723,22 +723,6 @@ class TaskChainDict(RESTResource):
             ##return empty values if nothing found
             return "", ""
 
-        def get_chain_type(chain_type, wma_dict):
-            __keeps_output = []
-            __chain = "TaskChain"
-            ##get keep_output values for all the chains
-            for el in range(wma_dict["TaskChain"]):
-                __keeps_output.append(wma_dict["Task%s" % (el+1)]["KeepOutput"])
-
-            ##check if we keep only the last output
-            if __keeps_output.count(True) == 1 and __keeps_output[-1] == True:
-                __chain = "StepChain"
-
-            if __chain == "StepChain" and chain_type == "StepChain":
-                return  "StepChain"
-            else:
-                return "TaskChain"
-
         def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
             ##replace Task -> Step in inside dictionaries
             for task_num in range(wma_dict["TaskChain"]):
@@ -980,12 +964,11 @@ class TaskChainDict(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
 
-        if get_chain_type("StepChain" if __chains_type.count("StepChain") == len(__chains_type) else "TaskChain"
-            , wma) == "TaskChain":
-            return dumps(wma, indent=4)
-        else:
+        if __chains_type.count("StepChain") == len(__chains_type):
             return dumps(tranform_to_step_chain(wma, __total_time_evt, __total_size_evt),
                     indent=4)
+        else:
+            return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self, mode='setup'):
