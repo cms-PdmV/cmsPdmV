@@ -185,8 +185,15 @@ class RequestSubmitter(Handler):
                     if error and not output: # money on the table that it will break as well?
                         self.injection_error('Error in wmcontrol: {0}'.format(error), req)
                         return False
+
                     injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                         l.startswith('Injected workflow:')]
+                            l.startswith('Injected workflow:')]
+
+                    if not injected_requests:
+                        self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s'%(
+                                output, error), req)
+
+                        return False
 
                     ## another great structure
                     added_requests = [
