@@ -698,29 +698,17 @@ class TaskChainDict(RESTResource):
 
         __DT_prio = settingsDB.get('datatier_input')["value"]
 
-        def get_chain_type(chain_type, wma_dict):
-            __keeps_output = []
-            __chain = "TaskChain"
-            ##get keep_output values for all the chains
-            for el in range(wma_dict["TaskChain"]):
-                __keeps_output.append(wma_dict["Task%s" % (el+1)]["KeepOutput"])
-
-            ##check if we keep only the last output
-            if __keeps_output.count(True) == 1 and __keeps_output[-1] == True:
-                __chain = "StepChain"
-
-            if __chain == "StepChain" and chain_type == "StepChain":
-                return  "StepChain"
-            else:
-                return "TaskChain"
-
-        def tranform_to_step_chain(wma_dict):
+        def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
             ##replace Task -> Step in inside dictionaries
             for task_num in range(wma_dict["TaskChain"]):
                 for elem in wma_dict["Task%s" % (task_num+1)]:
                     if "Task" in elem:
                         wma_dict["Task%s" % (task_num+1)][
                         elem.replace("Task", "Step")] = wma_dict["Task%s" % (task_num+1)].pop(elem)
+
+                ##we later add the global fields
+                del(wma_dict["Task%s" % (task_num+1)]["TimePerEvent"])
+                del(wma_dict["Task%s" % (task_num+1)]["SizePerEvent"])
 
             ##we do same replacement on top level
             for el in wma_dict:
@@ -731,6 +719,11 @@ class TaskChainDict(RESTResource):
                     wma_dict[el.replace("Task", "Step")] = wma_dict.pop(el)
 
             wma_dict["RequestType"] = "StepChain"
+
+            ##as of 2017-05 StepChain needs these as sum of internal Tasks
+            wma_dict["TimePerEvent"] = total_time_evt
+            wma_dict["SizePerEvent"] = total_size_evt
+
             return wma_dict
 
         if not crdb.document_exists(arg0):
@@ -750,6 +743,8 @@ class TaskChainDict(RESTResource):
 
         tasktree = {}
         ignore_status = False
+        __total_time_evt = 0
+        __total_size_evt = 0
 
         if 'scratch' in argv:
             ignore_status = True
@@ -781,6 +776,9 @@ class TaskChainDict(RESTResource):
                     tasktree[r]['next'].append( mcm_cr['chain'][ir + 1])
 
                 tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
+                ##if request is added to tasktree, we save global sums for StepChains
+                __total_time_evt += mcm_r.get_attribute("time_event")
+                __total_size_evt += mcm_r.get_attribute("size_event")
 
         for (r, item) in tasktree.items():
             ##here we should generate unique list of steps+output tiers
@@ -848,11 +846,11 @@ class TaskChainDict(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
 
-        if get_chain_type("StepChain" if __chains_type.count("StepChain") == len(__chains_type) else "TaskChain"
-            , wma) == "TaskChain":
-            return dumps(wma, indent=4)
+        if __chains_type.count("StepChain") == len(__chains_type):
+            return dumps(tranform_to_step_chain(wma, __total_time_evt, __total_size_evt),
+                    indent=4)
         else:
-            return dumps(tranform_to_step_chain(wma), indent=4)
+            return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self, mode='setup'):
