@@ -1668,13 +1668,19 @@ done
                 completed = 0
                 # above how much change do we update : 5%
 
-            if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
+            if (float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events'))
+                and self.get_attribute("keep_output").count(True) > 0):
+
                 self.set_attribute('completed_events', completed)
                 changes_happen = True
+
             ##we check if output_dataset managed to change.
             ## ussually when request is assigned, but no evts are generated
             # we check for done status so we wouldn't be updating old requests with changed infrastructure
-            if (__curr_output != collected) and (self.get_attribute('status') != 'done'):
+            # also we change it only if we keep any output in request
+            if ((__curr_output != collected) and (self.get_attribute('status') != 'done')
+                and self.get_attribute("keep_output").count(True) > 0):
+
                 self.logger.info("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
                 self.set_attribute('output_dataset', collected)
                 changes_happen = True
@@ -1744,7 +1750,9 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
+    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp,
+            skip_check=False):
+
         re_to_match = re.compile("/%s/%s(.*)-v(.*)/" % (prime_ds, camp))
         collected = []
         versioned = {}
@@ -1757,45 +1765,23 @@ done
             those = wma['content']['pdmv_dataset_list']
 
             for ds in those:
-                ##TO-DO: we might not need to check if its middle of StepChain
-                ## if Stepchain allows to save intermediate outputs
-                if not self.is_in_middleof_stepchain():
-                    ##we do all the DS-PS/TIER checks for the requests and last Step
-                    if re.match(re_to_match, ds) or skip_check:
-                        ###get current version
-                        #0th element is empty string of first /
-                        #1st is datset+process_string
-                        #2nd is version number
-                        #3rd is datatier
-                        curr_v = re.split('(.*)-v(.*)/', ds)
-                        #Do some checks
-                        if not self.is_in_middleof_stepchain():
-                            if not curr_v[-1] in tiers_expected and not skip_check:
-                                continue
-                            if not skip_check:
-                                if not ds.split('/')[-2].split('-')[-2] in proc_strings:
-                                    ##most likely there is a fake/wrong dataset
-                                    continue
-                        #find and save the max version for the dataset
-                        uniq_name = curr_v[1] + curr_v[-1]
-                        if uniq_name in versioned:
-                            if curr_v[-2] > versioned[uniq_name]["version"]:
-                                versioned[uniq_name] = {"version": curr_v[-2],
-                                        "full_dataset": ds}
-                        else:
-                            versioned[uniq_name] = {"version": curr_v[-2],
-                                    "full_dataset": ds}
-                    else:
-                        self.logger.info("collect_outputs didn't match anything for: %s" % (
-                                self.get_attribute("prepid")))
-                else:
-                    ##If its a stepchain and request is in the middle:
-                    #we just add dataset(-s)
+                ##we do all the DS-PS/TIER checks for the requests and last Step
+                if re.match(re_to_match, ds) or skip_check:
+                    ###get current version
+                    #0th element is empty string of first /
+                    #1st is datset+process_string
+                    #2nd is version number
+                    #3rd is datatier
                     curr_v = re.split('(.*)-v(.*)/', ds)
+                    #Do some checks
+                    if not curr_v[-1] in tiers_expected and not skip_check:
+                        continue
+                    if not skip_check:
+                        if not ds.split('/')[-2].split('-')[-2] in proc_strings:
+                            ##most likely there is a fake/wrong dataset
+                            continue
+                    #find and save the max version for the dataset
                     uniq_name = curr_v[1] + curr_v[-1]
-                    self.logger.info("Collecting output for stepChain request: %s" % (
-                            self.get_attribute("prepid")))
-
                     if uniq_name in versioned:
                         if curr_v[-2] > versioned[uniq_name]["version"]:
                             versioned[uniq_name] = {"version": curr_v[-2],
@@ -1803,6 +1789,9 @@ done
                     else:
                         versioned[uniq_name] = {"version": curr_v[-2],
                                 "full_dataset": ds}
+                else:
+                    self.logger.info("collect_outputs didn't match anything for: %s" % (
+                            self.get_attribute("prepid")))
 
         collected = [versioned[el]["full_dataset"] for el in versioned]
         collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
@@ -1822,24 +1811,6 @@ done
                 counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
                 valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
         return (valid,counted)
-
-    ##TO-DO: we might not need to check if its middle of StepChain
-    ## if Stepchain allows to save intermediate outputs
-    def is_in_middleof_stepchain(self):
-        crdb = database("chained_requests")
-
-        for chain in self.get_attribute("member_of_chain"):
-            __chain = crdb.get(chain)
-
-            ##check if request is not last step of chain
-            if __chain["chain_type"] == "TaskChain":
-                return False
-
-            last_in_chain = __chain["chain"].index(self.get_attribute("prepid")) == len(__chain["chain"])
-            if not last_in_chain and len(self.get_tiers()) != 0:
-                return False
-        return True
-
 
     def inspect_submitted(self, force):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1882,11 +1853,9 @@ done
                     ## find its statistics
                     valid, counted = self.collect_status_and_completed_events(mcm_rr,
                             ds_for_accounting)
-                    ##TO-DO: we might not need to check if its middle of StepChain
-                    ## if Stepchain allows to save intermediate outputs
-                    if (not self.is_in_middleof_stepchain()
-                        and self.get_attribute("keep_output").count(True) > 0):
 
+                    ##we register output and events only if request keeps output.
+                    if self.get_attribute("keep_output").count(True) > 0:
                         self.set_attribute('output_dataset', collected)
                         self.set_attribute('completed_events', counted)
 
@@ -1906,13 +1875,10 @@ done
                             saved = db.save(self.json())
                             return not_good
 
-                    ##in case completed_evets is 0 and request is not StepChain
-                    ##we should not change the status as it could show potential issue in production
-                    ##TO-DO: we might not need to check if its middle of StepChain
-                    ## if Stepchain allows to save intermediate outputs
-                    if (self.get_attribute('completed_events') <= 0 and
-                          not self.is_in_middleof_stepchain()
-                          and self.get_attribute("keep_output").count(True) > 0):
+                    ##in case it keeps any output and produced 0 events
+                    # means something is wrong in production
+                    if (self.get_attribute('completed_events') <= 0
+                            and self.get_attribute("keep_output").count(True) > 0):
 
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
