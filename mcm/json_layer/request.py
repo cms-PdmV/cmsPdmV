@@ -1120,12 +1120,16 @@ class request(json_base):
 
                 if events>=0 : res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
-                res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
-                res += 'grep "PeakValueRss" %s \n' % runtest_xml_file
                 res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
-                res += 'grep "AvgEventCPU" %s \n' % runtest_xml_file
-                res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
+                res += 'if [ $? -eq 0 ]; then\n'
+                res += '  var1=$(grep "AvgEventTime" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
+                res += '  bc -l <<< "scale=4; $var1/%s"\n'  % (self.get_core_num())
+                res += 'fi\n'
                 res += 'grep "EventThroughput" %s \n' % runtest_xml_file
+                res += 'if [ $? -eq 0 ]; then\n'
+                res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
+                res += '  bc -l <<< "scale=4; 1/$var1"\n'
+                res += 'fi\n'
 
 
             #try create a flash runtest
