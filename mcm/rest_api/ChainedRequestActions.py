@@ -140,6 +140,9 @@ class DeleteChainedRequest(RESTResource):
             #                                                                                                                             mcm_a.get_attribute('prepid'))}
             in_chains = mcm_r.get_attribute('member_of_chain')
             in_chains.remove( crid )
+            self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
+                    mcm_cr.get_attribute("prepid"), req.get_attribute('prepid')))
+
             mcm_r.set_attribute('member_of_chain', in_chains)
             if i==0:
                 # the root is the action id

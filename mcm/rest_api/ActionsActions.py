@@ -255,6 +255,9 @@ class GenerateChainedRequests(RESTResource):
                 inchains = req.get_attribute('member_of_chain')
                 inchains.append(new_cr['prepid'])
                 inchains.sort()
+                self.logger.debug("Adding ActionsAction member_of_chain: %s to request: %s" % (
+                        new_cr['prepid'], req.get_attribute('prepid')))
+
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 req.update_history({'action' : 'join chain', 'step' : new_cr['prepid']})
                 if with_notify:
