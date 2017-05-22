@@ -182,6 +182,9 @@ class RequestSubmitter(Handler):
                         return False
                     output = stdout.read()
                     error = stderr.read()
+                    self.injection_error(output, None)
+                    self.injection_error(error, None)
+
                     if error and not output: # money on the table that it will break as well?
                         self.injection_error('Error in wmcontrol: {0}'.format(error), req)
                         return False
