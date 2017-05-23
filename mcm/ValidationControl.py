@@ -155,7 +155,7 @@ class ValidationHandler:
             return False
 
     def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files):
-        transfer_output_files = ', '.join(transfer_files)
+        transfer_output_files = '_rt.xml, '.join(transfer_files)
         file_name = self.TEST_FILE_NAME % prepid
         to_write =  'universe              = vanilla\n'
         to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
