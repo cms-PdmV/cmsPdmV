@@ -68,7 +68,7 @@ class request(json_base):
         'member_of_chain': [],
         'member_of_campaign': '',
         'flown_with': '',
-        'time_event': float(-1),
+        'time_event': [float(-1)],
         'size_event': -1,
         'memory': 2300, ## the default until now
         #'nameorfragment':'',
@@ -305,7 +305,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'There should be at least one generator mentioned in the request')
 
-        if self.get_attribute('time_event') <= 0 or self.get_attribute('size_event') <= 0:
+        if self.negative_total_events() or self.get_attribute('size_event') <= 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'The time per event or size per event are invalid: negative or null')
 
@@ -582,7 +582,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'This request does not spawn from any valid action')
 
-        if self.get_attribute('size_event') <= 0 or self.get_attribute('time_event') <= 0:
+        if self.get_attribute('size_event') <= 0 or self.negative_total_events():
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'The time (%s) or size per event (%s) is inappropriate' % (
                     self.get_attribute('time_event'), self.get_attribute('size_event')))
@@ -2024,7 +2024,7 @@ done
         ## if by default it is not possible to run a test => 0 events in
         if self.get_n_for_test( self.target_for_test(), adjust=False)==0:
             ## adjust the timeout for 10 events !
-            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_attribute('time_event')
+            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_sum_total_events()
         return (fraction,timeout)
 
     def get_timeout(self):
@@ -2067,7 +2067,7 @@ done
         events = self.get_n_unfold_efficiency(target)
 
         #=> estimate how long it will take
-        total_test_time = float(self.get_attribute('time_event')) * events
+        total_test_time = self.get_sum_total_events() * events
         if adjust:
             fraction, timeout = self.get_timeout_for_runtest()
         else:
@@ -2079,8 +2079,8 @@ done
         self.logger.info('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            if self.get_attribute('time_event'):
-                events = timeout / float(self.get_attribute('time_event'))
+            if self.get_sum_total_events():
+                events = timeout / self.get_sum_total_events()
                 self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
                     events, fraction, settings().get_value('batch_timeout') ))
             else:
@@ -2121,6 +2121,7 @@ done
         (success,report) = self.pickup_performance(directory, 'eff')
         return (success,report)
     def pickup_performance(self, directory, what):
+        ##TO-DO: update performance for multiple steps requests
         whatToArgs={'eff' : 'gv',
                     'perf' : 'rt'}
         try:
@@ -2339,9 +2340,9 @@ done
             timing_fraction = settings().get_value('timing_fraction')
             timing_threshold = settings().get_value('timing_threshold')
             timing_n_limit = settings().get_value('timing_n_limit')
-            if timing and timing > self.get_attribute('time_event'):
+            if timing and timing > self.get_sum_total_events():
                 ## timing under-estimated
-                if timing * timing_fraction > self.get_attribute('time_event'):
+                if timing * timing_fraction > self.get_sum_total_events():
                     ## notify if more than 20% discrepancy found !
                     self.notify(
                         'Runtest for %s: time per event under-estimate.' % (
@@ -2349,13 +2350,14 @@ done
                         ('For the request %s, time/event=%s was given, %s was measured'
                         ' and set to the request from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing, total_event,
                             total_event_in),
                         accumulate=True)
-                self.set_attribute('time_event', timing)
+
+                self.set_attribute('time_event', [timing])
                 to_be_saved = True
-            if timing and timing < (timing_fraction * self.get_attribute('time_event')):
+            if timing and timing < (timing_fraction * self.get_sum_total_events()):
                 ## timing over-estimated
                 ## warn if over-estimated by more than 10%
                 subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
@@ -2363,17 +2365,18 @@ done
                     message = ('For the request %s, time/event=%s was given, %s was'
                         ' measured and set to the request from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing,
                             total_event,
                             total_event_in)
-                    self.set_attribute('time_event', timing)
+
+                    self.set_attribute('time_event', [timing])
                     to_be_saved = True
                 else:
                     message = ('For the request %s, time/event=%s was given, %s was'
                         ' measured from %s events (ran %s). Not within %d%%.') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing,
                             total_event,
                             total_event_in,
@@ -2800,7 +2803,7 @@ done
                        "AcquisitionEra" : self.get_attribute('member_of_campaign'),
                        "Campaign" : self.get_attribute('member_of_campaign'),
                        "ProcessingString" : self.get_processing_string(sequence_index),
-                       "TimePerEvent" : self.get_attribute("time_event"),
+                       "TimePerEvent" : self.get_attribute("time_event")[sequence_index],
                        "SizePerEvent" : self.get_attribute('size_event'),
                        "Memory" : self.get_attribute('memory'),
                        "FilterEfficiency" : self.get_efficiency(),
@@ -2868,3 +2871,17 @@ done
             task_dict['request_type_'] = self.get_wmagent_type()
             tasks.append(task_dict)
         return tasks
+
+    def get_sum_total_events(self):
+        """
+        return sum of total_events for request
+        """
+
+        return sum(self.get_attribute("time_event"))
+
+    def negative_total_events(self):
+        """
+        return True if there is a negative value in time_event list
+        """
+
+        return any(n < 0 for n in self.get_attribute("time_event"))
