@@ -141,7 +141,7 @@ class DeleteChainedRequest(RESTResource):
             in_chains = mcm_r.get_attribute('member_of_chain')
             in_chains.remove( crid )
             self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
-                    mcm_cr.get_attribute("prepid"), req.get_attribute('prepid')))
+                    mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
 
             mcm_r.set_attribute('member_of_chain', in_chains)
             if i==0:
@@ -780,7 +780,7 @@ class TaskChainDict(RESTResource):
 
                 tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
                 ##if request is added to tasktree, we save global sums for StepChains
-                __total_time_evt += mcm_r.get_attribute("time_event")
+                __total_time_evt += mcm_r.get_sum_total_events()
                 __total_size_evt += mcm_r.get_attribute("size_event")
 
         for (r, item) in tasktree.items():
