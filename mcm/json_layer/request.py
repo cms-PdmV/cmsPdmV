@@ -587,10 +587,17 @@ class request(json_base):
                     'The time (%s) or size per event (%s) is inappropriate' % (
                     self.get_attribute('time_event'), self.get_attribute('size_event')))
 
+        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                'Number of time_event entries: %s are different from number of sequences: %s' %(
+                    len(self.get_attribute("time_event")),
+                    len(self.get_attribute("sequences"))))
+
         if self.get_scram_arch() == None:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'The architecture is invalid, probably has the release %s being deprecated' % (
                         self.get_attribute('cmssw_release')))
+
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
