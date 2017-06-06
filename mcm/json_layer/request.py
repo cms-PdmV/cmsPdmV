@@ -1800,7 +1800,10 @@ done
                             self.get_attribute("prepid")))
 
         collected = [versioned[el]["full_dataset"] for el in versioned]
-        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        if len(tiers_expected) > 0 :
+            ##check if we actually need sorting, and we did kept output
+            collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+
         return collected
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
