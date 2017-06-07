@@ -45,14 +45,14 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.search_requests = function(){
       var prepid = "*";
-      var tag = "*";
+      var tag = "";
       if ($scope.form_fields.request_prepid && $scope.form_fields.request_prepid.trim() != ""){
         prepid = "*" + $scope.form_fields.request_prepid + "*";
       }
       if ($scope.form_fields.request_tag && $scope.form_fields.request_tag.trim() != ""){
-        tag = "*" + $scope.form_fields.request_tag + "*";
+        tag = "&tags=*" + $scope.form_fields.request_tag + "*";
       }
-      var promise = $http.get("search/?db_name=requests&page=" + $scope.page + "&limit=" + $scope.limit + "&include_fields=prepid,priority&prepid=" + prepid + "&tags=" + tag);
+      var promise = $http.get("search/?db_name=requests&page=" + $scope.page + "&limit=" + $scope.limit + "&include_fields=prepid,priority&prepid=" + prepid + tag);
         return promise.then(function(data){
           $scope.objects_in_page = data.data.results;
           $scope.do_next_page = $scope.objects_in_page.length < $scope.limit ? false: true;
