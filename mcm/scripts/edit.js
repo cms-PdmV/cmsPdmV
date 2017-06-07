@@ -61,6 +61,7 @@ angular.module('testApp').controller('ModalDemoCtrl',
         if($scope.dbName == "requests") {
           $scope.drivers.push(data.sequence);
           $scope.result.sequences.push(data.sequence);
+          $scope.result.time_event.push(-1);
         } else {
           if(!define_name) {
             $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
@@ -377,6 +378,7 @@ testApp.directive("sequenceEdit", function($http){
       };
       scope.removeSequence = function(elem){
         scope.result.sequences.splice(elem, 1); //remove the value from original sequences
+        scope.result.time_event.splice(elem, 1); //remove the value from original time_event list
         scope.drivers.splice(elem, 1);
       };
       scope.removeSubSequence = function(key, name){
@@ -688,6 +690,57 @@ testApp.directive("listEdit", function(){
         scope.analysis_data.push(scope.new_analysis_id);
         scope.add_analysis_id = false;
         scope.new_analysis_id = "";
+      };
+    }
+  }
+});
+
+testApp.directive("timeEventEdit", function(){
+  return {
+    replace: false,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <ul>'+
+    '   <li ng-repeat="elem in time_event track by $index">'+
+    '     <input type="number" ng-model="elem" class="input-xxsmall" style="width: 90px;"></input>'+
+    '     <a class="label label-info" rel="tooltip" title="seconds">s</a>'+
+    '     <a ng-click="remove($index)" ng-href="#">'+
+    '       <i class="icon-remove-sign"></i>'+
+    '     </a>'+
+    '   </li>'+
+    '  </ul>'+
+    '  <div style="margin-left: 7px;">'+
+    '    <a ng-click="add_time_event =! add_time_event;" ng-href="#">'+
+    '      <i class="icon-plus" ng-hide="add_time_event"></i>'+
+    '      <i class="icon-minus" ng-show="add_time_event"></i>'+
+    '    </a>'+
+    '    <input type="number" ng-model="new_time_event" ng-show="add_time_event" class="input-xxsmall" style="width: 90px;"></inputs>'+
+    '    <a ng-click="pushNewTimeEvent()" ng-show="add_time_event" ng-href="#">'+
+    '      <i class="icon-plus-sign"></i>'+
+    '    </a>'+
+    '  </div>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.time_event = ctrl.$viewValue;
+        scope.new_time_event = -1;
+        scope.columnName = scope.$eval(attr.column);
+      };
+
+      scope.remove = function(index){
+        scope.time_event.splice(index, 1);
+      };
+
+      scope.pushNewTimeEvent = function(){
+        if (scope.new_time_event > 0) {
+          scope.time_event.push(parseFloat(scope.new_time_event));
+        }
+        scope.add_time_event = false;
+        scope.new_time_event = -1;
       };
     }
   }

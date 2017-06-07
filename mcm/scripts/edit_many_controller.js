@@ -95,6 +95,9 @@ angular.module('testApp').controller('resultsCtrl',
               sequence["eventcontent"] = sequence["eventcontent"].split(",");
             }
           });
+          _.each($scope.result["time_event"], function(value, key){
+            $scope.result["time_event"][key] = parseFloat(value);
+          });
          $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
           break;
         case "campaigns":

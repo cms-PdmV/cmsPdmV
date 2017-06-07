@@ -41,6 +41,8 @@ class ValidationHandler:
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
+    is_condor_working = True
+    submission_failures_condor = 0
 
     def __init__(self):
         self.setup_directories()
@@ -65,21 +67,11 @@ class ValidationHandler:
         self.data_script_path = self.test_directory_path[:-6] #remove tests/
 
     def setup_logger(self):
-        self.logger = logging.getLogger('validationJobs')
-        error_formatter = logging.Formatter(
-            fmt='[%(asctime)s][%(levelname)s]%(message)s',
-            datefmt='%d/%b/%Y:%H:%M:%S'
+        logging.basicConfig(level=logging.INFO,
+                    format='[%(asctime)s][%(levelname)s]%(message)s',
+                    datefmt='%d/%b/%Y:%H:%M:%S'
         )
-        # The size of the log file increse very fast, should be ok with the records in jenkins and emails, if not, uncomment this
-        #file_handler = logging.FileHandler(self.data_script_path + self.LOG_FILE_NAME, 'a')
-        #file_handler.setLevel(logging.DEBUG)
-        #file_handler.setFormatter(error_formatter)
-        #self.logger.addHandler(file_handler)
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(error_formatter)
-        self.logger.addHandler(stream_handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger('validationJobs')
 
     def get_new_chain_prepids(self):
         __query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
@@ -162,7 +154,9 @@ class ValidationHandler:
             self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
-    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads):
+    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files):
+        transfer_output_files = '_rt.xml, '.join(transfer_files)
+        transfer_output_files += '_rt.xml'
         file_name = self.TEST_FILE_NAME % prepid
         to_write =  'universe              = vanilla\n'
         to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
@@ -170,7 +164,8 @@ class ValidationHandler:
         to_write += 'output                = %s.out\n' % file_name
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
-        to_write += 'transfer_output_files = %s_rt.xml\n' % prepid
+        to_write += 'transfer_output_files = %s\n' % transfer_output_files
+        to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode == 13)\n' #remove the job if .xml transfer failed (expected reason: it wasn't generated)
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
@@ -204,7 +199,7 @@ class ValidationHandler:
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
         threads = mcm_request.get_core_num()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, [prepid])
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
@@ -225,6 +220,7 @@ class ValidationHandler:
         errors = stderr.read()
         self.logger.info(out)
         if 'submitted to cluster' not in out:
+            self.submission_failures_condor += 1
             message = 'Job submission failed for request: %s \nerror output:\n %s' % (prepid, errors)
             self.logger.error(message)
             return {'error': message}
@@ -269,7 +265,7 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message)
             return {}
         timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, list(requests_in_chain.iterkeys()))
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])
@@ -291,6 +287,9 @@ class ValidationHandler:
                     self.submmited_jobs[prepid] = result_dict
                 else:
                     self.removeDirectory(test_path)
+                    if self.submission_failures_condor >= 5:
+                        self.logger.error('Stopping submissions due to multiple submission failures!!')
+                        return
             except Exception as e:
                 #Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
@@ -302,26 +301,30 @@ class ValidationHandler:
                     self.removeDirectory(test_path)
 
     def get_jobs_status(self):
-        cmd = 'condor_q -wide'
+        cmd = 'condor_q -af:h ClusterId JobStatus'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
-            return {}
-        jobs_dict = {}
+            self.is_condor_working = False
+            return None
         lines = stdout.read().split('\n')
-        lines = lines[4:-3]
+        if not len(lines) or 'ClusterId JobStatus' not in lines[0]:
+            self.is_condor_working = False
+            self.logger.error("Htcondor is failing, stopping everything!")
+            return None
+        jobs_dict = {}
+        lines = lines[1:] #remove headings
         for line in lines:
             columns = line.split()
-            num_columns = len(columns)
-            if len(columns) < 9:
-                continue
-            job_id = columns[len(columns)-1][:-2] # remove .0
+            if not len(columns):
+                break
+            job_id = columns[0]
             status = ''
-            if columns[5] == '1':
+            if columns[1] == '4':
                 status = 'DONE'
-            elif columns[6] == '1':
+            elif columns[1] == '2':
                 status = 'RUN'
-            elif columns[7] == '1':
+            elif columns[1] == '1':
                 status = 'IDLE'
             jobs_dict[job_id] = status
         return jobs_dict
@@ -341,6 +344,8 @@ class ValidationHandler:
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
+        if jobs_dict is None:
+            return
         remove_jobs = []
         for prepid, doc_info in self.submmited_jobs.iteritems():
             try:
@@ -361,6 +366,26 @@ class ValidationHandler:
             self.submmited_jobs.pop(prepid)
             self.removeDirectory(self.test_directory_path + prepid)
 
+    def parse_error_out(self, error_out):
+        lines = error_out.split('\n')
+        parsed_lines = ''
+        previous_line = ''
+        events_log_start = False
+        for line in lines:
+            if 'Begin processing the' in line:
+                if not events_log_start:
+                    parsed_lines += line + '\n'
+                    parsed_lines += '....\n'
+                    events_log_start = True
+                previous_line = line
+            elif events_log_start:
+                parsed_lines += previous_line + '\n'
+                parsed_lines += line + '\n'
+                events_log_start = False
+            else:
+                parsed_lines += line + '\n'
+        return parsed_lines
+
     def process_finished_job(self, prepid, doc_info):
         file_name = self.TEST_FILE_NAME % prepid
         out_path = self.test_directory_path + prepid + '/' + file_name + '.out'
@@ -368,6 +393,7 @@ class ValidationHandler:
         log_path = self.test_directory_path + prepid + '/' + file_name + '.log'
         job_out, job_error_out = self.read_file_from_afs(out_path)
         error_out, _ = self.read_file_from_afs(error_path, trials_time_out=2)
+        error_out = self.parse_error_out(error_out)
         log_out, _ = self.read_file_from_afs(log_path)
         was_exited = False
         if 'return value 0' in log_out:
@@ -390,7 +416,6 @@ class ValidationHandler:
                 out_path, job_out, job_error_out, error_out, log_out)
         else:
             message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s \n Log out: \n%s" % (prepid, job_out, error_out, log_out)
-        self.logger.error(message)
         mcm_chained_request.reset_requests(message)
 
     def process_finished_chain_success(self, prepid, doc_info, job_out, error_out, log_out):
@@ -415,7 +440,6 @@ class ValidationHandler:
                         log_out
                     )
             if not success:
-                self.logger.error(message)
                 mcm_chained_request.reset_requests(message, notify_one=request_prepid)
                 return
             requests_in_chain.append(mcm_request)
@@ -489,7 +513,6 @@ class ValidationHandler:
         else:
             file_name = self.TEST_FILE_NAME % prepid
             no_success_message = '\t Job out: \n%s\n\t Error out: \n%s\n Log out: \n%s ' % (job_out, error_out, log_out)
-        self.logger.error(no_success_message)
         mcm_request.test_failure(
             message=no_success_message,
             what='Validation run test',
@@ -497,13 +520,15 @@ class ValidationHandler:
         )
 
     def main(self):
-        if validation_handler.ssh_exec is None:
+        if self.ssh_exec is None:
             sys.exit(-1)
-        validation_handler.monitor_submmited_jobs()
+        self.monitor_submmited_jobs()
+        if not self.is_condor_working:
+            return
         self.new_jobs =  self.get_new_request_prepids() + self.get_new_chain_prepids()
-        prepids_to_submit = validation_handler.get_prepids_to_submit()
-        validation_handler.submit_jobs(prepids_to_submit)
-        validation_handler.save_jobs()
+        prepids_to_submit = self.get_prepids_to_submit()
+        self.submit_jobs(prepids_to_submit)
+        self.save_jobs()
 
 if __name__ == "__main__":
     validation_handler = ValidationHandler()

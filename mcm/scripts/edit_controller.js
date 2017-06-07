@@ -152,7 +152,9 @@ angular.module('testApp').controller('resultCtrl',
               sequence["eventcontent"] = sequence["eventcontent"].split(",");
             }
           });
-          $scope.result["time_event"] = parseFloat($scope.result["time_event"]);
+          _.each($scope.result["time_event"], function(value, key){
+            $scope.result["time_event"][key] = parseFloat(value);
+          });
           $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
           $scope.result["memory"] = parseFloat($scope.result["memory"]);
           $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});

@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, MultiSearch
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import RequestsPriorityChange, ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
 from rest_api.ChainedRequestActions import ChainedRequestsPriorityChange, CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList, RemoveFromForceFlowList
@@ -167,7 +167,7 @@ root.public.restapi.chained_requests.get_setup = GetSetupForChains()
 root.public.restapi.chained_requests.get_test = GetSetupForChains(mode='test')
 root.public.restapi.chained_requests.get_valid = GetSetupForChains(mode='valid')
 root.public.restapi.chained_requests.get_dict = TaskChainDict()
-
+root.public.restapi.requests.get_dict = TaskChainRequestDict()
 
 # REST API - root.restapi.[db name].[action]
 # dwells on : /restapi/[db_name]/[action]

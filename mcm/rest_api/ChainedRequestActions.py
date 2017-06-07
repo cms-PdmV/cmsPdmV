@@ -11,7 +11,6 @@ from ChainedRequestPrepId import ChainedRequestPrepId
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
-from json_layer.batch import batch
 from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from tools.json import threaded_loads
@@ -140,6 +139,9 @@ class DeleteChainedRequest(RESTResource):
             #                                                                                                                             mcm_a.get_attribute('prepid'))}
             in_chains = mcm_r.get_attribute('member_of_chain')
             in_chains.remove( crid )
+            self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
+                    mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
+
             mcm_r.set_attribute('member_of_chain', in_chains)
             if i==0:
                 if len(in_chains)==0 and mcm_r.get_attribute('status')!='new':
@@ -561,7 +563,7 @@ class TestChainedRequest(RESTResource):
                     }
                 )
             try:
-                getattr(mcm_r,'ok_to_move_to_approval_validation')(for_chain=True)
+                mcm_r.ok_to_move_to_approval_validation(for_chain=True)
                 mcm_r.update_history({'action' : 'approve', 'step' : 'validation'})
                 mcm_r.set_attribute('approval', 'validation')
                 mcm_r.reload()
@@ -690,53 +692,17 @@ class TaskChainDict(RESTResource):
 
         __DT_prio = settingsDB.get('datatier_input')["value"]
 
-        def get_list_of_steps(in_string):
-            if isinstance(in_string, basestring):
-                ##in case sequence is defined as string -> legacy support
-                return [el.split(":")[0] for el in in_string.split(",")]
-            else:
-                return [el.split(":")[0] for el in in_string]
-
-        def do_datatier_selection(possible_inputs, __prev_outputs):
-            ##we check for every possible tier in prioritised possible inputs
-            ## we iterate on all generated unique previous outputs
-            ## if its a match -> we return
-            self.logger.debug("do_datatier_selection input:\n%s %s" % (
-                possible_inputs, __prev_outputs))
-
-            __in_taskName = ""
-            __in_InputModule = ""
-            for possible in possible_inputs:
-                 for taskName, tier in reversed(__prev_outputs):
-                    for t in tier:
-                        if t == possible:
-                            return "%soutput" % (t), taskName
-            ##return empty values if nothing found
-            return "", ""
-
-        def get_chain_type(chain_type, wma_dict):
-            __keeps_output = []
-            __chain = "TaskChain"
-            ##get keep_output values for all the chains
-            for el in range(wma_dict["TaskChain"]):
-                __keeps_output.append(wma_dict["Task%s" % (el+1)]["KeepOutput"])
-
-            ##check if we keep only the last output
-            if __keeps_output.count(True) == 1 and __keeps_output[-1] == True:
-                __chain = "StepChain"
-
-            if __chain == "StepChain" and chain_type == "StepChain":
-                return  "StepChain"
-            else:
-                return "TaskChain"
-
-        def tranform_to_step_chain(wma_dict):
+        def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
             ##replace Task -> Step in inside dictionaries
             for task_num in range(wma_dict["TaskChain"]):
                 for elem in wma_dict["Task%s" % (task_num+1)]:
                     if "Task" in elem:
                         wma_dict["Task%s" % (task_num+1)][
                         elem.replace("Task", "Step")] = wma_dict["Task%s" % (task_num+1)].pop(elem)
+
+                ##we later add the global fields
+                del(wma_dict["Task%s" % (task_num+1)]["TimePerEvent"])
+                del(wma_dict["Task%s" % (task_num+1)]["SizePerEvent"])
 
             ##we do same replacement on top level
             for el in wma_dict:
@@ -747,100 +713,12 @@ class TaskChainDict(RESTResource):
                     wma_dict[el.replace("Task", "Step")] = wma_dict.pop(el)
 
             wma_dict["RequestType"] = "StepChain"
+
+            ##as of 2017-05 StepChain needs these as sum of internal Tasks
+            wma_dict["TimePerEvent"] = total_time_evt
+            wma_dict["SizePerEvent"] = total_size_evt
+
             return wma_dict
-
-        def request_to_tasks(r,base,depend):
-            ts = []
-            for si in range(len(r.get_attribute('sequences'))):
-                task_dict = {"TaskName": "%s_%d" % (r.get_attribute('prepid'), si),
-                           "KeepOutput" : True,
-                           "ConfigCacheID" : None,
-                           "GlobalTag" : r.get_attribute('sequences')[si]['conditions'],
-                           "CMSSWVersion" : r.get_attribute('cmssw_release'),
-                           "ScramArch": r.get_scram_arch(),
-                           "PrimaryDataset" : r.get_attribute('dataset_name'),
-                           "AcquisitionEra" : r.get_attribute('member_of_campaign'),
-                           "Campaign" : r.get_attribute('member_of_campaign'),
-                           "ProcessingString" : r.get_processing_string(si),
-                           "TimePerEvent" : r.get_attribute("time_event"),
-                           "SizePerEvent" : r.get_attribute('size_event'),
-                           "Memory" : r.get_attribute('memory'),
-                           "FilterEfficiency" : r.get_efficiency(),
-                           "PrepID" : r.get_attribute('prepid')
-                           }
-                ##check if we have multicore an it's not an empty string
-                if 'nThreads' in r.get_attribute('sequences')[si] and r.get_attribute('sequences')[si]['nThreads']:
-                    task_dict["Multicore"] = int(r.get_attribute('sequences')[si]['nThreads'])
-
-                __list_of_steps = get_list_of_steps(r.get_attribute('sequences')[si]['step'])
-
-                if len(r.get_attribute('config_id')) > si:
-                    task_dict["ConfigCacheID"] = r.get_attribute('config_id')[si]
-
-                if len(r.get_attribute('keep_output')) > si:
-                    task_dict["KeepOutput"] = r.get_attribute('keep_output')[si]
-
-                if r.get_attribute('pileup_dataset_name'):
-                    task_dict["MCPileup"] = r.get_attribute('pileup_dataset_name')
-                ##due to discussion in https://github.com/dmwm/WMCore/issues/7398
-                if r.get_attribute('version') > 0:
-                    task_dict["ProcessingVersion"] = r.get_attribute('version')
-
-                if si == 0:
-                    if base:
-                        task_dict.update({"SplittingAlgo"  : "EventBased",
-                                          "RequestNumEvents" : r.get_attribute('total_events'),
-                                          "Seeding" : "AutomaticSeeding",
-                                          "EventsPerLumi" : r.get_events_per_lumi(task_dict.get("Multicore", None)),
-                                          "LheInputFiles" : r.get_attribute('mcdb_id') > 0
-                                          })
-
-                        ## temporary work-around for request manager not creating enough jobs
-                        ## https://github.com/dmwm/WMCore/issues/5336
-                        ## inflate requestnumevents by the efficiency to create enough output
-                        max_forward_eff = r.get_forward_efficiency()
-                        task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"] #should stay nevertheless as it's in wmcontrol for now
-                        task_dict["EventsPerLumi"] /= max_forward_eff #this does not take its own efficiency
-
-                    else:
-                        if depend:
-                            task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                              "InputFromOutputModule" : None,
-                                              "InputTask" : None})
-                        else:
-                            task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                              "InputDataset" : r.get_attribute('input_dataset'),
-                                              "RequestNumEvents" : r.get_attribute("total_events")})
-                else:
-                    ##here we select the appropriate DATATier from previous step
-                    # in case -step tier1,tier2,tier3 and
-                    __curr_first_step = __list_of_steps[0]
-                    __prev_tiers = [(ts[-1]["TaskName"], ts[-1]["_output_tiers_"])]
-                    tModule = tName = ""
-
-                    if __curr_first_step in __DT_prio:
-                        ##if 1st step is defined in DataTier priority dictionary
-                        tModule, tName = do_datatier_selection(
-                                __DT_prio[__curr_first_step], __prev_tiers)
-
-                    if tModule != "" and tName != "":
-                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                "InputFromOutputModule" : tModule,
-                                "InputTask" : tName})
-                    else:
-                        ##fallback solution
-                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
-                                "InputFromOutputModule" : ts[-1]['output_'],
-                                "InputTask" : ts[-1]['TaskName']})
-
-                task_dict['_first_step_'] = __list_of_steps[0]
-                task_dict['_output_tiers_'] = r.get_attribute('sequences')[si]["eventcontent"]
-                task_dict['output_'] = "%soutput" % (r.get_attribute('sequences')[si]['eventcontent'][0])
-                task_dict['priority_'] = r.get_attribute('priority')
-                task_dict['request_type_'] = r.get_wmagent_type()
-                ts.append(task_dict)
-
-            return ts
 
         if not crdb.document_exists(arg0):
             ## it's a request actually, pick up all chains containing it
@@ -859,6 +737,8 @@ class TaskChainDict(RESTResource):
 
         tasktree = {}
         ignore_status = False
+        __total_time_evt = 0
+        __total_size_evt = 0
 
         if 'scratch' in argv:
             ignore_status = True
@@ -889,7 +769,10 @@ class TaskChainDict(RESTResource):
                 if ir < (len(mcm_cr['chain']) - 1):
                     tasktree[r]['next'].append( mcm_cr['chain'][ir + 1])
 
-                tasktree[r]['dict'] = request_to_tasks( mcm_r, base, depend)
+                tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
+                ##if request is added to tasktree, we save global sums for StepChains
+                __total_time_evt += mcm_r.get_sum_total_events()
+                __total_size_evt += mcm_r.get_attribute("size_event")
 
         for (r, item) in tasktree.items():
             ##here we should generate unique list of steps+output tiers
@@ -907,7 +790,7 @@ class TaskChainDict(RESTResource):
                 tModule = tName = ""
                 if __input_tier in __DT_prio:
                     ##in case there is a possible DataTier in global_dict
-                    tModule, tName = do_datatier_selection(__DT_prio[__input_tier], __uniq_tiers)
+                    tModule, tName = request.do_datatier_selection(__DT_prio[__input_tier], __uniq_tiers)
 
                 if tModule != "" and tName != "":
                     tasktree[n]['dict'][0].update({"InputFromOutputModule" : tModule,
@@ -957,11 +840,11 @@ class TaskChainDict(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
 
-        if get_chain_type("StepChain" if __chains_type.count("StepChain") == len(__chains_type) else "TaskChain"
-            , wma) == "TaskChain":
-            return dumps(wma, indent=4)
+        if __chains_type.count("StepChain") == len(__chains_type):
+            return dumps(tranform_to_step_chain(wma, __total_time_evt, __total_size_evt),
+                    indent=4)
         else:
-            return dumps(tranform_to_step_chain(wma), indent=4)
+            return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self, mode='setup'):

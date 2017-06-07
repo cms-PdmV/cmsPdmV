@@ -275,7 +275,11 @@ class chained_request(json_base):
         with locker.lock(req.get_attribute('prepid')):
             chain = req.get_attribute("member_of_chain")
             chain.append(self.get_attribute('_id'))
+            self.logger.debug("Adding chain_req member_of_chain: %s to request: %s" % (
+                    self.get_attribute("prepid"), req.get_attribute('prepid')))
+
             req.set_attribute("member_of_chain", chain)
+
         loc = locator()
         req.notify("Request {0} joined chain".format(req.get_attribute('prepid')),
                    "Request {0} has successfully joined chain {1}\n\n{2}\n".format(

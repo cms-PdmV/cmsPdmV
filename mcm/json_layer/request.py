@@ -68,7 +68,7 @@ class request(json_base):
         'member_of_chain': [],
         'member_of_campaign': '',
         'flown_with': '',
-        'time_event': float(-1),
+        'time_event': [float(-1)],
         'size_event': -1,
         'memory': 2300, ## the default until now
         #'nameorfragment':'',
@@ -121,6 +121,26 @@ class request(json_base):
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
+
+    def approve(self, step=-1, to_approval=None):
+        json_base.approve(self, step, to_approval)
+        step = self.get_attribute('approval')
+        result = True
+        ## is it allowed to move on
+        if step == "validation":
+            result = self.ok_to_move_to_approval_validation()
+        elif step == "define":
+            result = self.ok_to_move_to_approval_define()
+        elif step == "approve":
+            result = self.ok_to_move_to_approval_approve()
+        elif step == "submit":
+            result = self.ok_to_move_to_approval_submit()
+        self.notify(
+            'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid')),
+            self.textified(),
+            accumulate=True
+        )
+        return result
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         ## call the base
@@ -285,7 +305,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'There should be at least one generator mentioned in the request')
 
-        if self.get_attribute('time_event') <= 0 or self.get_attribute('size_event') <= 0:
+        if self.negative_total_events() or self.get_attribute('size_event') <= 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'The time per event or size per event are invalid: negative or null')
 
@@ -561,15 +581,22 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'This request does not spawn from any valid action')
 
-        if self.get_attribute('size_event') <= 0 or self.get_attribute('time_event') <= 0:
+        if self.get_attribute('size_event') <= 0 or self.negative_total_events():
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'The time (%s) or size per event (%s) is inappropriate' % (
                     self.get_attribute('time_event'), self.get_attribute('size_event')))
+
+        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
+                'Number of time_event entries: %s are different from number of sequences: %s' %(
+                    len(self.get_attribute("time_event")),
+                    len(self.get_attribute("sequences"))))
 
         if self.get_scram_arch() == None:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'The architecture is invalid, probably has the release %s being deprecated' % (
                         self.get_attribute('cmssw_release')))
+
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
@@ -793,7 +820,7 @@ class request(json_base):
         return '%s%s' % (command, cmsDriverOptions)
 
     def transfer_from(self, camp):
-        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset']
+        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset', 'memory']
         for k in keys_to_transfer:
             try:
                 if camp.get_attribute(k):
@@ -994,7 +1021,6 @@ class request(json_base):
     def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
         #run is for adding cmsRun
         #do_valid id for adding the file upload
-
         l_type = locator()
         infile = '#!/bin/bash\n'
 
@@ -1080,12 +1106,16 @@ class request(json_base):
 
                 if events>=0 : res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
-                res += 'grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
-                res += 'grep "PeakValueRss" %s \n' % runtest_xml_file
                 res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
-                res += 'grep "AvgEventCPU" %s \n' % runtest_xml_file
-                res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
+                res += 'if [ $? -eq 0 ]; then\n'
+                res += '  var1=$(grep "AvgEventTime" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
+                res += '  bc -l <<< "scale=4; $var1/%s"\n'  % (self.get_core_num())
+                res += 'fi\n'
                 res += 'grep "EventThroughput" %s \n' % runtest_xml_file
+                res += 'if [ $? -eq 0 ]; then\n'
+                res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
+                res += '  bc -l <<< "scale=4; 1/$var1"\n'
+                res += 'fi\n'
 
 
             #try create a flash runtest
@@ -1620,13 +1650,19 @@ done
                 completed = 0
                 # above how much change do we update : 5%
 
-            if float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')):
+            if (float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events'))
+                and self.get_attribute("keep_output").count(True) > 0):
+
                 self.set_attribute('completed_events', completed)
                 changes_happen = True
+
             ##we check if output_dataset managed to change.
             ## ussually when request is assigned, but no evts are generated
             # we check for done status so we wouldn't be updating old requests with changed infrastructure
-            if (__curr_output != collected) and (self.get_attribute('status') != 'done'):
+            # also we change it only if we keep any output in request
+            if ((__curr_output != collected) and (self.get_attribute('status') != 'done')
+                and self.get_attribute("keep_output").count(True) > 0):
+
                 self.logger.info("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
                 self.set_attribute('output_dataset', collected)
                 changes_happen = True
@@ -1696,7 +1732,9 @@ done
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
+    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp,
+            skip_check=False):
+
         re_to_match = re.compile("/%s/%s(.*)-v(.*)/" % (prime_ds, camp))
         collected = []
         versioned = {}
@@ -1709,43 +1747,23 @@ done
             those = wma['content']['pdmv_dataset_list']
 
             for ds in those:
-                if not self.is_in_middleof_stepchain():
-                    ##we do all the DS-PS/TIER checks for the requests and last Step
-                    if re.match(re_to_match, ds) or skip_check:
-                        ###get current version
-                        #0th element is empty string of first /
-                        #1st is datset+process_string
-                        #2nd is version number
-                        #3rd is datatier
-                        curr_v = re.split('(.*)-v(.*)/', ds)
-                        #Do some checks
-                        if not self.is_in_middleof_stepchain():
-                            if not curr_v[-1] in tiers_expected and not skip_check:
-                                continue
-                            if not skip_check:
-                                if not ds.split('/')[-2].split('-')[-2] in proc_strings:
-                                    ##most likely there is a fake/wrong dataset
-                                    continue
-                        #find and save the max version for the dataset
-                        uniq_name = curr_v[1] + curr_v[-1]
-                        if uniq_name in versioned:
-                            if curr_v[-2] > versioned[uniq_name]["version"]:
-                                versioned[uniq_name] = {"version": curr_v[-2],
-                                        "full_dataset": ds}
-                        else:
-                            versioned[uniq_name] = {"version": curr_v[-2],
-                                    "full_dataset": ds}
-                    else:
-                        self.logger.info("collect_outputs didn't match anything for: %s" % (
-                                self.get_attribute("prepid")))
-                else:
-                    ##If its a stepchain and request is in the middle:
-                    #we just add dataset(-s)
+                ##we do all the DS-PS/TIER checks for the requests and last Step
+                if re.match(re_to_match, ds) or skip_check:
+                    ###get current version
+                    #0th element is empty string of first /
+                    #1st is datset+process_string
+                    #2nd is version number
+                    #3rd is datatier
                     curr_v = re.split('(.*)-v(.*)/', ds)
+                    #Do some checks
+                    if not curr_v[-1] in tiers_expected and not skip_check:
+                        continue
+                    if not skip_check:
+                        if not ds.split('/')[-2].split('-')[-2] in proc_strings:
+                            ##most likely there is a fake/wrong dataset
+                            continue
+                    #find and save the max version for the dataset
                     uniq_name = curr_v[1] + curr_v[-1]
-                    self.logger.info("Collecting output for stepChain request: %s" % (
-                            self.get_attribute("prepid")))
-
                     if uniq_name in versioned:
                         if curr_v[-2] > versioned[uniq_name]["version"]:
                             versioned[uniq_name] = {"version": curr_v[-2],
@@ -1753,9 +1771,15 @@ done
                     else:
                         versioned[uniq_name] = {"version": curr_v[-2],
                                 "full_dataset": ds}
+                else:
+                    self.logger.info("collect_outputs didn't match anything for: %s" % (
+                            self.get_attribute("prepid")))
 
         collected = [versioned[el]["full_dataset"] for el in versioned]
-        collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        if len(tiers_expected) > 1:
+            ##check if we actually need sorting, and we did kept output
+            collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+
         return collected
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
@@ -1772,22 +1796,6 @@ done
                 counted = max(counted, wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_evts_in_DAS'] + wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_open_evts_in_DAS'])
                 valid *= (wma['content']['pdmv_dataset_statuses'][ds_for_accounting]['pdmv_status_in_DAS']=='VALID')
         return (valid,counted)
-
-    def is_in_middleof_stepchain(self):
-        crdb = database("chained_requests")
-
-        for chain in self.get_attribute("member_of_chain"):
-            __chain = crdb.get(chain)
-
-            ##check if request is not last step of chain
-            if __chain["chain_type"] == "TaskChain":
-                return False
-
-            last_in_chain = __chain["chain"].index(self.get_attribute("prepid")) == len(__chain["chain"])
-            if not last_in_chain and len(self.get_tiers()) != 0:
-                return False
-        return True
-
 
     def inspect_submitted(self, force):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
@@ -1813,10 +1821,13 @@ done
                     tiers_expected = self.get_tiers()
                     collected = self.collect_outputs(mcm_rr, tiers_expected,
                             self.get_processing_strings(), self.get_attribute("dataset_name"),
-                            self.get_attribute("member_of_campaign"))
+                            self.get_attribute("member_of_campaign"),
+                            skip_check=self.get_attribute("keep_output").count(True) == 0)
 
                     ## collected as the correct order : in first place, there is what needs to be considered for accounting
-                    if not len(collected):
+                    if (not len(collected) and
+                        self.get_attribute("keep_output").count(True) > 0):
+
                         not_good.update({
                                 'message' : 'No output dataset have been recognized'})
                         saved = db.save(self.json())
@@ -1825,9 +1836,11 @@ done
                     ## then pick up the first expected
                     ds_for_accounting = collected[0]
                     ## find its statistics
-                    valid,counted = self.collect_status_and_completed_events(mcm_rr, ds_for_accounting)
+                    valid, counted = self.collect_status_and_completed_events(mcm_rr,
+                            ds_for_accounting)
 
-                    if not self.is_in_middleof_stepchain():
+                    ##we register output and events only if request keeps output.
+                    if self.get_attribute("keep_output").count(True) > 0:
                         self.set_attribute('output_dataset', collected)
                         self.set_attribute('completed_events', counted)
 
@@ -1847,12 +1860,15 @@ done
                             saved = db.save(self.json())
                             return not_good
 
-                    ##in case completed_evets is 0 and request is not StepChain
-                    ##we should not change the status as it could show potential issue in production
-                    if self.get_attribute('completed_events') <= 0 and not self.is_in_middleof_stepchain():
+                    ##in case it keeps any output and produced 0 events
+                    # means something is wrong in production
+                    if (self.get_attribute('completed_events') <= 0
+                            and self.get_attribute("keep_output").count(True) > 0):
+
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
-                                wma_r['content']['pdmv_dataset_name'])})
+                                    wma_r['content']['pdmv_dataset_name'])})
+
                         saved = db.save(self.json())
                         return not_good
 
@@ -1994,7 +2010,7 @@ done
         ## if by default it is not possible to run a test => 0 events in
         if self.get_n_for_test( self.target_for_test(), adjust=False)==0:
             ## adjust the timeout for 10 events !
-            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_attribute('time_event')
+            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_sum_total_events()
         return (fraction,timeout)
 
     def get_timeout(self):
@@ -2037,7 +2053,7 @@ done
         events = self.get_n_unfold_efficiency(target)
 
         #=> estimate how long it will take
-        total_test_time = float(self.get_attribute('time_event')) * events
+        total_test_time = self.get_sum_total_events() * events
         if adjust:
             fraction, timeout = self.get_timeout_for_runtest()
         else:
@@ -2049,8 +2065,8 @@ done
         self.logger.info('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            if self.get_attribute('time_event'):
-                events = timeout / float(self.get_attribute('time_event'))
+            if self.get_sum_total_events():
+                events = timeout / self.get_sum_total_events()
                 self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
                     events, fraction, settings().get_value('batch_timeout') ))
             else:
@@ -2091,6 +2107,7 @@ done
         (success,report) = self.pickup_performance(directory, 'eff')
         return (success,report)
     def pickup_performance(self, directory, what):
+        ##TO-DO: update performance for multiple steps requests
         whatToArgs={'eff' : 'gv',
                     'perf' : 'rt'}
         try:
@@ -2154,7 +2171,7 @@ done
                 for perf in summary.getElementsByTagName("Metric"):
                     name = perf.getAttribute('Name')
                     if name == 'AvgEventTime' and name in timing_methods:
-                        timing_dict['legacy'] = self.get_core_num() * float(perf.getAttribute('Value'))
+                        timing_dict['legacy'] = float(perf.getAttribute('Value')) / self.get_core_num()
                     if name == 'AvgEventCPU' and name in timing_methods:
                         timing_dict['legacy'] = float(perf.getAttribute('Value'))
                     if name == 'TotalJobCPU' and name in timing_methods:
@@ -2309,9 +2326,9 @@ done
             timing_fraction = settings().get_value('timing_fraction')
             timing_threshold = settings().get_value('timing_threshold')
             timing_n_limit = settings().get_value('timing_n_limit')
-            if timing and timing > self.get_attribute('time_event'):
+            if timing and timing > self.get_sum_total_events():
                 ## timing under-estimated
-                if timing * timing_fraction > self.get_attribute('time_event'):
+                if timing * timing_fraction > self.get_sum_total_events():
                     ## notify if more than 20% discrepancy found !
                     self.notify(
                         'Runtest for %s: time per event under-estimate.' % (
@@ -2319,13 +2336,14 @@ done
                         ('For the request %s, time/event=%s was given, %s was measured'
                         ' and set to the request from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing, total_event,
                             total_event_in),
                         accumulate=True)
-                self.set_attribute('time_event', timing)
+
+                self.set_attribute('time_event', [timing])
                 to_be_saved = True
-            if timing and timing < (timing_fraction * self.get_attribute('time_event')):
+            if timing and timing < (timing_fraction * self.get_sum_total_events()):
                 ## timing over-estimated
                 ## warn if over-estimated by more than 10%
                 subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
@@ -2333,17 +2351,18 @@ done
                     message = ('For the request %s, time/event=%s was given, %s was'
                         ' measured and set to the request from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing,
                             total_event,
                             total_event_in)
-                    self.set_attribute('time_event', timing)
+
+                    self.set_attribute('time_event', [timing])
                     to_be_saved = True
                 else:
                     message = ('For the request %s, time/event=%s was given, %s was'
                         ' measured from %s events (ran %s). Not within %d%%.') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('time_event'),
+                            self.get_sum_total_events(),
                             timing,
                             total_event,
                             total_event_in,
@@ -2695,12 +2714,18 @@ done
             for i in to_release:
                 locker.release(i)
 
-    def prepare_submit_command(self, batch_name):
-        from tools.request_to_wma import request_to_wmcontrol
-
-        batch_number = batch_name.split("-")[-1]
-        cmd = request_to_wmcontrol().get_command(self, batch_number, to_execute=True)
-        return cmd
+    def prepare_submit_command(self):
+        l_type = locator()
+        command = 'cd %s \n' % (l_type.workLocation())
+        command += self.make_release()
+        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        test_params = ''
+        if l_type.isDev():
+            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        command += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/requests/get_dict/%s %s \n'%(l_type.baseurl(), self.get_attribute('prepid'), test_params)
+        return command
 
     def get_events_per_lumi(self, num_cores):
         cdb = database('campaigns')
@@ -2725,3 +2750,124 @@ done
                 num = local_num
 
         return int(num)
+
+    def get_list_of_steps(self, in_string):
+        if isinstance(in_string, basestring):
+            ##in case sequence is defined as string -> legacy support
+            return [el.split(":")[0] for el in in_string.split(",")]
+        else:
+            return [el.split(":")[0] for el in in_string]
+
+    @staticmethod
+    def do_datatier_selection(possible_inputs, __prev_outputs):
+            ##we check for every possible tier in prioritised possible inputs
+            ## we iterate on all generated unique previous outputs
+            ## if its a match -> we return
+
+            __in_taskName = ""
+            __in_InputModule = ""
+            for possible in possible_inputs:
+                 for taskName, tier in reversed(__prev_outputs):
+                    for t in tier:
+                        if t == possible:
+                            return "%soutput" % (t), taskName
+            ##return empty values if nothing found
+            return "", ""
+
+    def request_to_tasks(self,base,depend):
+        tasks = []
+        settings_db = database('settings')
+        __DT_prio = settings_db.get('datatier_input')["value"]
+        for sequence_index in range(len(self.get_attribute('sequences'))):
+            task_dict = {"TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
+                       "KeepOutput" : True,
+                       "ConfigCacheID" : None,
+                       "GlobalTag" : self.get_attribute('sequences')[sequence_index]['conditions'],
+                       "CMSSWVersion" : self.get_attribute('cmssw_release'),
+                       "ScramArch": self.get_scram_arch(),
+                       "PrimaryDataset" : self.get_attribute('dataset_name'),
+                       "AcquisitionEra" : self.get_attribute('member_of_campaign'),
+                       "Campaign" : self.get_attribute('member_of_campaign'),
+                       "ProcessingString" : self.get_processing_string(sequence_index),
+                       "TimePerEvent" : self.get_attribute("time_event")[sequence_index],
+                       "SizePerEvent" : self.get_attribute('size_event'),
+                       "Memory" : self.get_attribute('memory'),
+                       "FilterEfficiency" : self.get_efficiency(),
+                       "PrepID" : self.get_attribute('prepid')
+                       }
+            ##check if we have multicore an it's not an empty string
+            if 'nThreads' in self.get_attribute('sequences')[sequence_index] and self.get_attribute('sequences')[sequence_index]['nThreads']:
+                task_dict["Multicore"] = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+            __list_of_steps = self.get_list_of_steps(self.get_attribute('sequences')[sequence_index]['step'])
+            if len(self.get_attribute('config_id')) > sequence_index:
+                task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
+            if len(self.get_attribute('keep_output')) > sequence_index:
+                task_dict["KeepOutput"] = self.get_attribute('keep_output')[sequence_index]
+            if self.get_attribute('pileup_dataset_name').strip():
+                task_dict["MCPileup"] = self.get_attribute('pileup_dataset_name')
+            ##due to discussion in https://github.com/dmwm/WMCore/issues/7398
+            if self.get_attribute('version') > 0:
+                task_dict["ProcessingVersion"] = self.get_attribute('version')
+            if sequence_index == 0:
+                if base:
+                    task_dict.update({"SplittingAlgo"  : "EventBased",
+                                      "RequestNumEvents" : self.get_attribute('total_events'),
+                                      "Seeding" : "AutomaticSeeding",
+                                      "EventsPerLumi" : self.get_events_per_lumi(task_dict.get("Multicore", None)),
+                                      "LheInputFiles" : self.get_attribute('mcdb_id') > 0
+                                      })
+                    ## temporary work-around for request manager not creating enough jobs
+                    ## https://github.com/dmwm/WMCore/issues/5336
+                    ## inflate requestnumevents by the efficiency to create enough output
+                    max_forward_eff = self.get_forward_efficiency()
+                    task_dict["EventsPerLumi"] /= task_dict["FilterEfficiency"] #should stay nevertheless as it's in wmcontrol for now
+                    task_dict["EventsPerLumi"] /= max_forward_eff #this does not take its own efficiency
+                else:
+                    if depend:
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                          "InputFromOutputModule" : None,
+                                          "InputTask" : None})
+                    else:
+                        task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                                          "InputDataset" : self.get_attribute('input_dataset'),
+                                          "RequestNumEvents" : self.get_attribute("total_events")})
+            else:
+                ##here we select the appropriate DATATier from previous step
+                # in case -step tier1,tier2,tier3 and
+                __curr_first_step = __list_of_steps[0]
+                __prev_tiers = [(tasks[-1]["TaskName"], tasks[-1]["_output_tiers_"])]
+                tModule = tName = ""
+                if __curr_first_step in __DT_prio:
+                    ##if 1st step is defined in DataTier priority dictionary
+                    self.logger.debug("do_datatier_selection input:\n%s %s" % (__DT_prio[__curr_first_step], __prev_tiers))
+                    tModule, tName = request.do_datatier_selection(__DT_prio[__curr_first_step], __prev_tiers)
+                if tModule != "" and tName != "":
+                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                            "InputFromOutputModule" : tModule,
+                            "InputTask" : tName})
+                else:
+                    ##fallback solution
+                    task_dict.update({"SplittingAlgo"  : "EventAwareLumiBased",
+                            "InputFromOutputModule" : tasks[-1]['output_'],
+                            "InputTask" : tasks[-1]['TaskName']})
+            task_dict['_first_step_'] = __list_of_steps[0]
+            task_dict['_output_tiers_'] = self.get_attribute('sequences')[sequence_index]["eventcontent"]
+            task_dict['output_'] = "%soutput" % (self.get_attribute('sequences')[sequence_index]['eventcontent'][0])
+            task_dict['priority_'] = self.get_attribute('priority')
+            task_dict['request_type_'] = self.get_wmagent_type()
+            tasks.append(task_dict)
+        return tasks
+
+    def get_sum_total_events(self):
+        """
+        return sum of total_events for request
+        """
+
+        return sum(self.get_attribute("time_event"))
+
+    def negative_total_events(self):
+        """
+        return True if there is a negative value in time_event list
+        """
+
+        return any(n < 0 for n in self.get_attribute("time_event"))
