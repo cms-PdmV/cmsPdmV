@@ -1,6 +1,6 @@
 angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window',
-  function resultsCtrl($scope, $http, $location, $window){
+  ['$scope', '$http', '$location', '$window', '$modal',
+  function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.defaults = [
       {text:'Prepid', select:true, db_name:'prepid'},
       {text:'Actions', select:true, db_name:''},
@@ -100,6 +100,7 @@ angular.module('testApp').controller('resultsCtrl',
       $http({method:'GET', url:'restapi/mccms/cancel/'+ mccm_id}).success(function(data,status){
         if (data.results){
           alert("Ticket canceled");
+          $scope.getData();
         }else{
           alert(data.message);
         }
@@ -112,6 +113,7 @@ angular.module('testApp').controller('resultsCtrl',
       $http({method:'DELETE', url:'restapi/mccms/delete/'+ mccm_id}).success(function(data,status){
         if (data.results){
           alert("Ticket deleted");
+          $scope.getData();
         }else{
           alert(data.message);
         }
@@ -121,8 +123,6 @@ angular.module('testApp').controller('resultsCtrl',
     };
 
     $scope.generate = function(mccm_id, opt){
-      console.log(mccm_id);
-
       var promise= $http.get("restapi/mccms/generate/"+mccm_id+opt);
       promise.then(function(data){
         if (data.data.results){
@@ -212,12 +212,36 @@ angular.module('testApp').controller('resultsCtrl',
         return "";
       }
     };
-  }
-]);
-angular.module('testApp').controller('ModalDemoCtrl',
-  ['$scope', '$http', '$modal',
-  function ModalDemoCtrl($scope, $http, $modal) {
-    $scope.open = function () {
+
+    $scope.open_isSureModal = function(action, prepid){
+      var isSure = $modal.open({
+         templateUrl: 'isSureModal.html',
+          controller: ModalIsSureCtrl,
+          resolve: {
+              prepid: function() {
+                  return prepid;
+              },
+              action: function() {
+                  return action;
+              }
+          }
+      });
+
+      isSure.result.then(function(){
+        switch (action){
+            case "cancel":
+                $scope.cancel(prepid);
+                break;
+            case "delete":
+                $scope.remove(prepid);
+                break;
+            default:
+                break;
+        }
+      });
+    };
+
+    $scope.openCreateModal = function () {
       var promise = $http.get("restapi/users/get_pwg/"+$scope.user.name);
       promise.then(function(data){
         var pwgs = data.data.results;
@@ -235,8 +259,7 @@ angular.module('testApp').controller('ModalDemoCtrl',
       });
     };
 
-  var CreateMccmModalInstance = function($scope, $modalInstance, $window, $http, pwgs) {
-
+    var CreateMccmModalInstance = function($scope, $modalInstance, $window, $http, pwgs) {
       $scope.mccms = {
         pwgs: pwgs,
         selectedPwg: pwgs[0]
