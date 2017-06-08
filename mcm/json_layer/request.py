@@ -2891,7 +2891,7 @@ done
 
     def negative_total_events(self):
         """
-        return True if there is a negative value in time_event list
+        return True if there is a negative or zero value in time_event list
         """
 
-        return any(n < 0 for n in self.get_attribute("time_event"))
+        return any(n <= 0 for n in self.get_attribute("time_event"))
