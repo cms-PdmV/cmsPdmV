@@ -2625,6 +2625,8 @@ done
             if self.get_attribute('status') in ['approved', 'submitted'] and self.get_attribute('approval') in ['submit']:
                 __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
                 __status_index = self._json_base__status.index(self.get_attribute('status'))
+                if self.get_attribute('status') == 'submitted':
+                    __status_index -= 1
                 self.set_attribute('approval', self._json_base__approvalsteps[__approval_index-1])
                 self.set_status(step=__status_index, with_notification=True)
             else:
