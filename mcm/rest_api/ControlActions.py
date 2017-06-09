@@ -36,10 +36,7 @@ class RenewCertificate(RESTResource):
 
     def create_command(self, machine):
             # crab setup
-            if machine == "pdmvserv-test.cern.ch": ##for SLC5 we need to source LCG script - from 2015 FEB. BROKEN
-                command = 'source /afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh ; source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
-            else:
-                command = 'source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.sh \n'
+            command = 'source /cvmfs/cms.cern.ch/crab3/crab.sh \n'
             # certificate
             command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert 2> /dev/null \n'
             command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/personal/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/personal/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert 2> /dev/null \n'
