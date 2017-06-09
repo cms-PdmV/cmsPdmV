@@ -572,7 +572,6 @@ class request(json_base):
         if self.get_attribute('status') != 'approved':
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit')
 
-        #if not self.is_action_root():
         if not len(self.get_attribute('member_of_chain')):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'This request is not part of any chain yet')
@@ -699,40 +698,20 @@ class request(json_base):
                 return {"prepid": self.get_attribute('prepid'), "results": False,
                             "message": "The request was not submitted"}
 
-
-    def is_action_root(self):
-        action_db = database('actions')
-        if action_db.document_exists(self.get_attribute('prepid')):
-            return True
-        return False
-
     def has_at_least_an_action(self):
-        at_least_an_action = False
         crdb = database('chained_requests')
-        adb = database('actions')
         for in_chain_id in self.get_attribute('member_of_chain'):
             if not crdb.document_exists(in_chain_id):
                 self.logger.error(
                     'for %s there is a chain inconsistency with %s' % (
-                            self.get_attribute('prepid'), in_chain_id))
-
+                            self.get_attribute('prepid'), in_chain_id
+                    )
+                )
                 return False
-
             in_chain = crdb.get(in_chain_id)
-            original_action = adb.get(in_chain['chain'][0])
-            my_action_item = original_action['chains'][in_chain['member_of_campaign']]
-            ## old convention
-            if 'flag' in my_action_item and my_action_item['flag'] == True:
-                at_least_an_action = True
-                break
-                ## new convention
-            if type(my_action_item['chains']) == dict:
-                for (cr, content) in my_action_item['chains'].items():
-                    if content['flag']:
-                        at_least_an_action = True
-                        break
-
-        return at_least_an_action
+            if in_chain['action_parameters']['flag']:
+                return True
+        return False
 
 
     def retrieve_fragment(self, name=None, get=True):
@@ -1240,9 +1219,7 @@ done
                     return False
                 output_text = stdout.read()
                 error_text = stderr.read()
-
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
-                changed = False
                 try:
                     __out = loads(output_text)
                     for el in __out["result"]:
@@ -1253,13 +1230,12 @@ done
                             ##let's pray that the key is always reqmgr_name
                             if el[__id].upper() == "OK":
                                 self.logger.debug("Change of priority succeeded")
-                                changed = True
                             else:
-                                changed = False
+                                return False
 
                 except Exception as ex:
                     self.logger.error("Failed parsing wmpriotiry output: %s" % (str(ex)))
-
+                    return False
             return self.modify_priority(new_priority)
 
     def get_valid_and_n(self):

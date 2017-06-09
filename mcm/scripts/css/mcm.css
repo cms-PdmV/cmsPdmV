@@ -12,6 +12,13 @@ body {
     bottom: 0;
 }
 
+.custom-footer-priority{
+    background: white; 
+    height: 70px; 
+    position: fixed; 
+    bottom: 0;
+}
+
 .table th.text-right, .table td.text-right {
     text-align: right;
 }
@@ -20,6 +27,11 @@ body {
     display: inline-block;
     margin-bottom: 0px;
     margin-right: 5px;
+}
+
+.priority-param{
+    display: inline;
+    margin-left: 20px;
 }
 
 .typeahead{

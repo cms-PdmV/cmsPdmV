@@ -13,7 +13,6 @@ from RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
-from json_layer.action import action
 from json_layer.campaign import campaign
 from json_layer.user import user
 from tools.locator import locator
@@ -23,6 +22,7 @@ from tools.settings import settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.json import threaded_loads
+from tools.priority import priority
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -43,59 +43,6 @@ class RequestRESTResource(RESTResource):
             mcm_req.set_options(can_save=False)
 
         return camp
-
-    ## duplicate version to be centralized in a unique class
-    def add_action(self, mcm_req, camp, force=False):
-        # Check to see if the request is a root request
-        #camp = mcm_req.get_attribute('member_of_campaign')
-
-        #if not cdb.document_exists(camp):
-        #    return dumps({"results":'Error: Campaign '+str(camp)+' does not exist.'})
-
-        # get campaign
-        #self.c = cdb.get(camp)
-        adb = database('actions')
-        rootness = camp.get_attribute('root')
-        mcdbid = int(mcm_req.get_attribute('mcdb_id'))
-        inputds = mcm_req.get_attribute('input_dataset')
-        if (not force) and (rootness == 1 or rootness == -1 and mcdbid > -1):
-            ## c['root'] == 1
-            ##            :: not a possible root --> no action in the table
-            ## c['root'] == -1 and mcdb > -1
-            ##            ::a possible root and mcdbid=0 (import from WMLHE) or mcdbid>0 (imported from PLHE) --> no action on the table
-            if adb.document_exists(mcm_req.get_attribute('prepid')):
-                ## check that there was no already inserted actions, and remove it in that case
-
-                ##check that it empty !!!
-                mcm_a = adb.get(mcm_req.get_attribute('prepid'))
-                for (cc,c) in mcm_a['chains'].items():
-                    if 'flag' in c and c['flag']:
-                        raise Exception("The action item that corresponds to %s is set within %s"%( mcm_req.get_attribute('prepid'), cc))
-                    if 'chains' in c:
-                        for cr in c['chains']:
-                            raise Exception("The action item that corresponds to %s has a chained request %s attached within %s"%(  mcm_req.get_attribute('prepid'), cr, cc))
-
-                adb.delete(mcm_req.get_attribute('prepid'))
-            return
-
-        # check to see if the action already exists
-        if not adb.document_exists(mcm_req.get_attribute('prepid')):
-            # add a new action
-            #a= action('automatic')
-            a = action()
-            a.set_attribute('prepid', mcm_req.get_attribute('prepid'))
-            a.set_attribute('_id', a.get_attribute('prepid'))
-            a.set_attribute('dataset_name', mcm_req.get_attribute('dataset_name'))
-            a.set_attribute('member_of_campaign', mcm_req.get_attribute('member_of_campaign'))
-            a.find_chains()
-            self.logger.info('Adding an action for %s' % (mcm_req.get_attribute('prepid')))
-            adb.save(a.json())
-        else:
-            a = action(adb.get(mcm_req.get_attribute('prepid')))
-            if a.get_attribute('dataset_name') != mcm_req.get_attribute('dataset_name'):
-                a.set_attribute('dataset_name', mcm_req.get_attribute('dataset_name'))
-                self.logger.info('Updating an action for %s' % (mcm_req.get_attribute('prepid')))
-                adb.save(a.json())
 
     def import_request(self, data, db, label='created', step=None):
 
@@ -176,12 +123,6 @@ class RequestRESTResource(RESTResource):
             if not db.update(mcm_req.json()):
                 self.logger.error('Could not update request in database')
                 return {"results": False}
-
-        # add an action to the action_db
-        try:
-            self.add_action(mcm_req, camp)
-        except Exception as ex:
-            return {"results": False, "prepid": mcm_req.get_attribute('_id'), "message" : "It was not possible to set the action because %s"%(str(ex))}
         return {"results": True, "prepid": mcm_req.get_attribute('_id')}
 
 
@@ -315,18 +256,6 @@ class UpdateRequest(RequestRESTResource):
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
-        if len(mcm_req.get_attribute('history')) and 'action' in mcm_req.get_attribute('history')[0] and \
-                        mcm_req.get_attribute('history')[0]['action'] == 'migrated':
-            self.logger.info(
-                'Not changing the actions for %s as it has been migrated' % (mcm_req.get_attribute('prepid')))
-            pass
-        else:
-            # check on the action
-            camp = self.set_campaign(mcm_req)
-            if not camp:
-                return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
-            self.add_action(mcm_req, camp)
-
         # update history
         if self.with_trace:
             mcm_req.update_history({'action': 'update'})
@@ -453,15 +382,10 @@ class MigrateRequest(RequestRESTResource):
                         collected.extend(those)
                 collected = list(set(collected))
                 mcm_r.set_attribute('output_dataset', collected)
-
             saved = db.save(mcm_r.json())
-
-            ## force to add an action on those requests
-            #it might be that later on, upon update of the request that the action get deleted
             if camp.get_attribute('root') <= 0:
                 if not self.set_campaign(mcm_req):
                     return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
-                self.add_action(mcm_req, camp, force=True)
         else:
             html = '<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
                 pid,
@@ -624,7 +548,6 @@ class DeleteRequest(RESTResource):
     def delete_request(self, pid):
         db = database(self.db_name)
         crdb = database('chained_requests')
-        adb = database('actions')
         mcm_r = request(db.get(pid))
 
         if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
@@ -637,50 +560,37 @@ class DeleteRequest(RESTResource):
             return {"prepid": pid, "results": False,
                     "message": "Not possible to delete a request (%s) in status %s" % (
                             pid, mcm_r.get_attribute('status'))}
-
+        if mcm_r.has_at_least_an_action():
+            return {
+                "prepid": pid,
+                "results": False,
+                "message": "Not possible to delete a request (%s) that is part of a valid chain" % (pid)
+            }
         in_chains = mcm_r.get_attribute('member_of_chain')
         for in_chain in in_chains:
             mcm_cr = chained_request(crdb.get(in_chain))
-            try:
-                action_item = mcm_cr.retrieve_original_action_item(adb)
-                ## this is a valid action item
+            if mcm_cr.get_attribute('chain')[-1] != pid:
+                ## the pid is not the last of the chain
                 return {"prepid": pid, "results": False,
-                        "message": "Not possible to delete a request (%s) that is part of a valid chain (%s)" % (
+                        "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
                                 pid, in_chain)}
 
-            except:
-                ## this is not a valid action item
-                # further check
-                if mcm_cr.get_attribute('chain')[-1] != pid:
-                    ## the pid is not the last of the chain
-                    return {"prepid": pid, "results": False,
-                            "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
-                                    pid, in_chain)}
+            if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index(pid):
+                ## we are currently processing that request
+                return {"prepid": pid, "results": False,
+                        "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
+                                    pid, mcm_cr.get_attribute('step'), in_chain)}
 
-                if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index(pid):
-                    ## we are currently processing that request
-                    return {"prepid": pid, "results": False,
-                            "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
-                                        pid, mcm_cr.get_attribute('step'), in_chain)}
-
-                ## found a chain that deserves the request to be pop-ep out from the end
-                new_chain = mcm_cr.get_attribute('chain')
-                new_chain.remove(pid)
-                mcm_cr.set_attribute('chain', new_chain)
-                mcm_cr.update_history({'action': 'remove request', 'step': pid})
-                mcm_cr.reload()
-
-        # delete actions !
-        self.delete_action(pid)
+            ## found a chain that deserves the request to be pop-ep out from the end
+            new_chain = mcm_cr.get_attribute('chain')
+            new_chain.remove(pid)
+            mcm_cr.set_attribute('chain', new_chain)
+            mcm_cr.update_history({'action': 'remove request', 'step': pid})
+            mcm_cr.reload()
 
         # delete chained requests !
         #self.delete_chained_requests(self,pid):
         return {"prepid": pid, "results": db.delete(pid)}
-
-    def delete_action(self, pid):
-        adb = database('actions')
-        if adb.document_exists(pid):
-            adb.delete(pid)
 
     def delete_chained_requests(self, pid):
         crdb = database('chained_requests')
@@ -1277,22 +1187,11 @@ class RequestLister():
 
     def get_objects(self, all_ids, retrieve_db):
         all_objects = []
-        added_actions = []
         if len(all_ids) and retrieve_db:
             for oid in all_ids:
                 if retrieve_db.document_exists(oid):
                     all_objects.append(retrieve_db.get(oid))
-                else:
-                    if retrieve_db.db_name == 'actions': ##try retrieve action doc for root request
-                        crdb = database('chained_requests') #if the action ID doesn't exist
-                        __query = crdb.construct_lucene_query({'contains' : oid})
-                        for req in crdb.full_text_search('search', __query, page=-1):
-                            if not req['chain'][0] in added_actions:
-                                if retrieve_db.document_exists(req['chain'][0]):
-                                    all_objects.append(retrieve_db.get(req['chain'][0])) ##we add a root request
-                                    added_actions.append(req['chain'][0])
-
-        self.logger.error("Got %s ids identified" % (len(all_objects)))
+        self.logger.info("Got %s ids identified" % (len(all_objects)))
         return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
@@ -1319,7 +1218,7 @@ class RequestLister():
             return dsn
 
     def get_list_of_ids(self, odb):
-        self.logger.error("Got a file from uploading")
+        self.logger.info("Got a file from uploading")
         data = threaded_loads(cherrypy.request.body.read().strip())
         text = data['contents']
 
@@ -1373,17 +1272,6 @@ class RequestLister():
                         serial_end = int(id_end.split('-')[-1]) + 1
                         for serial in range(serial_start, serial_end):
                             all_ids.append('-'.join(id_start.split('-')[0:2] + ['%05d' % serial]))
-
-                ##if is actionDB and doesn't exist -> check for root request
-                if word != "->":  # and load its action for single requests in files
-                    added_actions = []
-                    if odb.db_name == 'actions' and an_id == None:
-                        crdb = database('chained_requests')
-                        __query2 = crdb.construct_lucene_query({'contains' : word})
-                        for req in crdb.full_text_search('search', __query2, page=-1):
-                            if not req['chain'][0] in added_actions:
-                                all_ids.append(req['chain'][0]) ##we add a root request
-                                added_actions.append(req['chain'][0])
 
         for (possible_campaign, possible_dsn) in all_dsn.items():
             #self.logger.error("Found those dsn to look for %s"%(possible_dsn))
@@ -1981,6 +1869,29 @@ class ForceCompleteMethods(RESTResource):
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(forcecomplete_list['value'], indent=4)
+
+class RequestsPriorityChange(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        self.requests_db = database("requests")
+
+    def POST(self):
+        fails = []
+        try:
+            requests = threaded_loads(cherrypy.request.body.read().strip())
+        except TypeError:
+            return dumps({"results": False, "message": "Couldn't read body of request"})
+        for request_dict in requests:
+            request_prepid = request_dict['prepid']
+            mcm_request = request(self.requests_db.get(request_prepid))
+            if not mcm_request.change_priority(priority().priority(request_dict['priority'])):
+                message = 'Unable to set new priority in request %s' % request_prepid
+                fails.append(message)
+                self.logger.error(message)
+        return dumps({
+            'results': True if len(fails) == 0 else False,
+            'message': fails
+        })
 
 class Reserve_and_ApproveChain(RESTResource):
     def __init__(self):

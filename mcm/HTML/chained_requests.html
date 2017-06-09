@@ -147,7 +147,6 @@
               <div ng-switch-when="Chain">
                 <a ng-href='requests?member_of_chain={{data.prepid}}' rel="tooltip" title="Show request in chain {{data.prepid}}" target="_self"><i class="icon-folder-open"></i></a>
                 <span ng-repeat="chain in data[value.db_name]">
-                  <a ng-show="$index==0" ng-href='actions?prepid={{chain}}&starts={{chain.split("-")[1]}}' rel="tooltip" title="Show action for {{chain}}" target="_self"><i class="icon-qrcode"></i></a>
                   <a ng-show="$index==0" ng-href='mccms?contains={{chain}}' rel="tooltip" title="Show mccms for {{chain}}" target="_self"><i class="icon-tasks"></i></a>
                   <a ng-href='requests?prepid={{chain}}&page=0' rel="tooltip" title="Show request {{chain}}" target="_self">{{chain}}<i class="icon-folder-open"></i></a>
                   <a ng-show="$index==0" ng-href='chained_requests?root_request={{data[value.db_name][0]}}&page=0' rel="tooltip" title="Show chained request starting with {{data[value.db_name][0]}}" target="_self"><i class='icon-indent-left'></i></a>

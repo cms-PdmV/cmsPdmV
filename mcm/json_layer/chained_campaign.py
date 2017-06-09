@@ -31,7 +31,12 @@ class chained_campaign(json_base):
         'campaigns': [], # list of lists [camp_id, flow]
         #'description': '',
         'notes': '',
-        'action_parameters': {},
+        'action_parameters': {
+            'block_number': 0,
+            'staged': 0,
+            'threshold': 0,
+            'flag': True
+        },
         #'www': '',
         'history': [],
         'valid': True
@@ -126,8 +131,9 @@ class chained_campaign(json_base):
         # set values
         creq.set_attribute('pwg',  pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
-
-
+        creq.set_attribute('action_parameters', self.get_attribute('action_parameters'))
+        # By default flag should be true
+        creq.get_attribute('action_parameters')['flag'] = True
         if not creq.get_attribute('prepid'):
             raise ValueError('Prepid returned was None')
 

@@ -9,7 +9,6 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
 from json_layer.flow import flow
-from json_layer.action import action
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 
@@ -38,23 +37,6 @@ class FlowRESTResource(RESTResource):
 
         # return the tuple
         return to_be_created, to_be_removed
-
-    def update_actions(self, c):
-        self.logger.info('Updating actions...')
-        adb = database('actions')
-
-        # find all actions that belong to a campaign
-        __query = adb.construct_lucene_query({'member_of_campaign' : c})
-        allacs = adb.full_text_search('search', __query, page =-1)
-
-        # for each action
-        for ac in allacs:
-            # init action object
-            a = action(json_input=ac)
-            # calculate the available chains
-            a.find_chains()
-            # save to db
-            adb.update(a.json())
 
     def set_default_request_parameters(self, nc, cdb, f):
         # add a skeleton of the sequences of the next (landing) campaign
