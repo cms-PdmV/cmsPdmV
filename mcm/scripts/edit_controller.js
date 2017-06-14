@@ -304,6 +304,44 @@ angular.module('testApp').controller('resultCtrl',
   }
 ]);
 
+testApp.directive("customActionParameters", function($http, $rootScope){
+  return {
+    require: 'ngModel',
+    replace: true,
+    restrict: 'E',
+    template:
+    '<div>'+
+    '   <h6 style="display: inline;">Block number:</h6>' +
+    '   <select class="input-mini ng-pristine ng-valid ng-empty ng-touched" ng-model="action_parameters.block_number" ng-options="key for key in [1,2,3,4,5,6]">' +
+    '   <option value="?" selected="selected"></option>' +
+    '     <option label="1" value="number:1">1</option>' +
+    '     <option label="2" value="number:2">2</option>' +
+    '     <option label="3" value="number:3">3</option>' +
+    '     <option label="4" value="number:4">4</option>' +
+    '     <option label="5" value="number:5">5</option>' +
+    '     <option label="6" value="number:6">6</option>' +
+    '   </select>' +
+    '   <br></br>' +
+    '   <h6 style="display: inline;">Staged:</h6>' +
+    '   <input type="number" style="width: 50px;" ng-model="action_parameters.staged" class="ng-valid ng-touched ng-not-empty ng-dirty ng-valid-number">' +
+    '   <br></br>' +
+    '   <h6 style="display: inline;">Threshold:</h6>' +
+    '   <span class="input-append">' +
+    '     <input type="number" style="width: 50px;" ng-model="action_parameters.threshold" class="ng-valid ng-not-empty ng-dirty ng-valid-number ng-touched">' +
+    '     <span class="add-on">%</span>' +
+    '   </span>' +
+    '   <br></br>' +
+    '   <h6 style="display: inline;">Flag:</h6>' +
+    '   <input type="checkbox" ng-model="action_parameters.flag" class="ng-pristine ng-valid ng-not-empty ng-touched">' +
+    '</div>',
+    link: function (scope, element, attr, ctrl) {
+      ctrl.$render = function(){
+        scope.action_parameters = ctrl.$viewValue;
+      };
+    }
+  }
+});
+
 testApp.directive("customRequestsEdit", function($http, $rootScope){
   return {
     require: 'ngModel',
@@ -494,11 +532,10 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         }
         if (scope.chain_data.length != 0 && $rootScope.root_campaign == "")
         {
-          var split = scope.chain_data[0].split('_');
-          if(split.length < 2){
-            scope.getPrepIdFromAlias(scope.chain_data[0]);
-          }else{
+          if(scope.chain_data[0].startsWith("chain_")){
             $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
+          }else{
+            scope.getPrepIdFromAlias(scope.chain_data[0]);
           }
         }
         $rootScope.chain_list_length = scope.chain_data.length;

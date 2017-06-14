@@ -1,11 +1,10 @@
 from rest_api.ControlActions import Search, MultiSearch
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
-from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign,  GenerateChainedRequests as chained_generate_requests, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
-from rest_api.ChainedRequestActions import CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList, RemoveFromForceFlowList
+from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
+from rest_api.ChainedRequestActions import ChainedRequestsPriorityChange, CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList, RemoveFromForceFlowList
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
-from rest_api.ActionsActions import GetAction,  SelectChain,  DeSelectChain,  GenerateChainedRequests,  DetectChains,  GenerateAllChainedRequests, CreateAction, UpdateAction, UpdateMultipleActions, ActionsFromFile, SetAction
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
@@ -56,8 +55,8 @@ def chained_campaigns_html( *args, **kwargs):
 def chained_requests_html( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','chained_requests.html'))
 @cherrypy.expose
-def actions_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','actions.html'))
+def priority_change_html( *args, **kwargs):
+    return open(os.path.join(file_location,'HTML','priority_change.html'))
 @cherrypy.expose
 def index( *args, **kwargs):
     return open(os.path.join(file_location,'HTML','index.html'))
@@ -119,7 +118,7 @@ root.requests = requests_html
 root.flows = flows_html
 root.edit = edit_html
 root.create = create_html
-root.actions = actions_html
+root.priority_change = priority_change_html
 root.getDefaultSequences = getDefaultSequences
 root.injectAndLog = injectAndLog
 root.users = users
@@ -230,6 +229,7 @@ root.restapi.requests.unique_values = GetUniqueValues()
 root.restapi.requests.add_forcecomplete = PutToForceComplete()
 root.restapi.requests.forcecomplete = ForceCompleteMethods()
 root.restapi.requests.reserveandapprove = Reserve_and_ApproveChain()
+root.restapi.requests.priority_change = RequestsPriorityChange()
 
 # REST Campaign Actions
 root.restapi.campaigns.save = CreateCampaign()
@@ -250,11 +250,11 @@ root.restapi.chained_campaigns.save = CreateChainedCampaign()
 root.restapi.chained_campaigns.delete = DeleteChainedCampaign()
 root.restapi.chained_campaigns.get = GetChainedCampaign()
 root.restapi.chained_campaigns.update = UpdateChainedCampaign()
-root.restapi.chained_campaigns.generate_chained_requests = chained_generate_requests()
 root.restapi.chained_campaigns.inspect = InspectChainedRequests()
 root.restapi.chained_campaigns.inspectall = InspectChainedCampaigns()
 root.restapi.chained_campaigns.select = SelectNewChainedCampaigns()
 root.restapi.chained_campaigns.search_view = ListChainCampaignPrepids()
+root.restapi.chained_campaigns.priority_change = ChainedCampaignsPriorityChange()
 
 # REST Chained Request Actions
 root.restapi.chained_requests.request_chainid = ChainedRequestPrepId()
@@ -277,19 +277,7 @@ root.restapi.chained_requests.force_done = ForceChainReqToDone()
 root.restapi.chained_requests.back_forcedone = ForceStatusDoneToProcessing()
 root.restapi.chained_requests.force_flow = ToForceFlowList()
 root.restapi.chained_requests.remove_force_flow = RemoveFromForceFlowList()
-
-# REST Actions
-root.restapi.actions.save = CreateAction()
-root.restapi.actions.update = UpdateAction()
-root.restapi.actions.get = GetAction()
-root.restapi.actions.set = SetAction()
-root.restapi.actions.select = SelectChain()
-root.restapi.actions.deselect = DeSelectChain()
-root.restapi.actions.generate_chained_requests = GenerateChainedRequests()
-root.restapi.actions.detect_chains = DetectChains()
-root.restapi.actions.generate_all_chained_requests = GenerateAllChainedRequests()
-root.restapi.actions.update_multiple = UpdateMultipleActions()
-root.restapi.actions.listwithfile = ActionsFromFile()
+root.restapi.chained_requests.priority_change = ChainedRequestsPriorityChange()
 
 # REST Flow Actions
 root.restapi.flows.get = GetFlow()

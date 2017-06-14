@@ -11,7 +11,6 @@ from ChainedRequestPrepId import ChainedRequestPrepId
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
-from json_layer.action import action
 from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from tools.json import threaded_loads
@@ -102,7 +101,8 @@ class UpdateChainedRequest(RESTResource):
         self.logger.info('wtf %s'%(str(req.get_attribute('approval'))))
         # update history
         req.update_history({'action': 'update'})
-
+        new_priority = req.get_attribute('action_parameters')['block_number']
+        req.set_priority(new_priority)
         return self.save_request(req)
 
     def save_request(self, req):
@@ -126,7 +126,6 @@ class DeleteChainedRequest(RESTResource):
 
         crdb = database('chained_requests')
         rdb = database('requests')
-        adb = database('actions')
         mcm_cr = chained_request(crdb.get(crid))
         mcm_a = None
         ## get all objects
@@ -145,8 +144,6 @@ class DeleteChainedRequest(RESTResource):
 
             mcm_r.set_attribute('member_of_chain', in_chains)
             if i==0:
-                # the root is the action id
-                mcm_a = action(adb.get(rid))
                 if len(in_chains)==0 and mcm_r.get_attribute('status')!='new':
                     return {"results":False, "message" : "the request %s, not in status new, at the root of the chain will not be chained anymore"% rid}
             else:
@@ -155,17 +152,11 @@ class DeleteChainedRequest(RESTResource):
 
             mcm_r.update_history({'action':'leave','step':crid})
             mcm_r_s.append( mcm_r )
-
-        ## check if possible to get rid of it !
-        # action for the chain is disabled
-        chains = mcm_a.get_chains( mcm_cr.get_attribute('member_of_campaign'))
-        if chains[crid]['flag']:
-            return {"results":False,"message" : "the action %s for %s is not disabled"%(mcm_a.get_attribute('prepid'), crid)}
-        #take it out
-        mcm_a.remove_chain(  mcm_cr.get_attribute('member_of_campaign'), mcm_cr.get_attribute('prepid') )
-
-        if not adb.update( mcm_a.json()):
-            return {"results":False,"message" : "Could not save action "+ mcm_a.get_attribute('prepid')}
+        if mcm_cr.get_attribute('action_parameters')['flag']:
+            return {
+                "results":False,
+                "message" : "the action for %s is not disabled"%(crid)
+            }
         ## then save all changes
         for mcm_r in mcm_r_s:
             if not rdb.update( mcm_r.json()):
@@ -1031,6 +1022,36 @@ class ToForceFlowList(RESTResource):
         ret = self.sdb.update(forceflow_list)
 
         return dumps(res)
+
+class ChainedRequestsPriorityChange(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.production_manager
+        self.chained_requests_db = database("chained_requests")
+
+    def POST(self):
+        fails = []
+        try:
+            chains = threaded_loads(cherrypy.request.body.read().strip())
+        except TypeError:
+            return dumps({"results": False, "message": "Couldn't read body of request"})
+        for chain in chains:
+            chain_prepid = chain['prepid']
+            mcm_chained_request = chained_request(self.chained_requests_db.get(chain_prepid))
+            action_parameters = chain['action_parameters']
+            if not mcm_chained_request.set_priority(action_parameters['block_number']):
+                message = 'Unable to set new priority in request %s' % chain_prepid
+                fails.append(message)
+                self.logger.error(message)
+            else:
+                mcm_chained_request.set_attribute('action_parameters', action_parameters)
+                if not mcm_chained_request.save():
+                    message = 'Unable to save chained request %s' % chain_prepid
+                    fails.append(message)
+                    self.logger.error(message)
+        return dumps({
+            'results': True if len(fails) == 0 else False,
+            'message': fails
+        })
 
 class RemoveFromForceFlowList(RESTResource):
     def __init__(self):

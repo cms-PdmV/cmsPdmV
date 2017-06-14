@@ -458,7 +458,7 @@ class database:
         term = term.replace('\\', r'\\')   # escape \ first
         return "".join([nextStr for nextStr in self.escapedSeq(term)])
 
-    def construct_lucene_query(self, query):
+    def construct_lucene_query(self, query, boolean_operator="AND"):
         """
         constructs key:value dictionary to couchDB lucene query
         """
@@ -469,14 +469,14 @@ class database:
                     constructed_query += param + ':' + self.escapeLuceneArg(el.replace(" ", "+"))
                     if ind != len(query[param]) - 1:
                         ##we are not adding AND in the end of partially constructed query
-                        constructed_query += "+AND+"
+                        constructed_query += "+%s+" % boolean_operator
             else:
                 query[param] = query[param].replace(" ", "+")
                 constructed_query += param + ':' + self.escapeLuceneArg(query[param])
             if constructed_query != "":
-                constructed_query += '+AND+'
+                constructed_query += '+%s+' % boolean_operator
         ##we remove the +AND+ in the end of query
-        return constructed_query[:-5]
+        return constructed_query[:-(len(boolean_operator) + 2)]
 
     def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields=''):
         """
