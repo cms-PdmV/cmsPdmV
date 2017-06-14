@@ -532,11 +532,10 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         }
         if (scope.chain_data.length != 0 && $rootScope.root_campaign == "")
         {
-          var split = scope.chain_data[0].split('_');
-          if(split.length < 2){
-            scope.getPrepIdFromAlias(scope.chain_data[0]);
-          }else{
+          if(scope.chain_data[0].startsWith("chain_")){
             $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
+          }else{
+            scope.getPrepIdFromAlias(scope.chain_data[0]);
           }
         }
         $rootScope.chain_list_length = scope.chain_data.length;
