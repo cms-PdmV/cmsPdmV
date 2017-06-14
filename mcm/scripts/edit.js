@@ -704,7 +704,7 @@ testApp.directive("timeEventEdit", function(){
     '<div>'+
     '  <ul>'+
     '   <li ng-repeat="elem in time_event track by $index">'+
-    '     <input type="number" ng-model="elem" class="input-xxsmall" style="width: 90px;"></input>'+
+    '     <input type="number" ng-model="time_event[$index]" class="input-xxsmall" style="width: 90px;"></input>'+
     '     <a class="label label-info" rel="tooltip" title="seconds">s</a>'+
     '     <a ng-click="remove($index)" ng-href="#">'+
     '       <i class="icon-remove-sign"></i>'+
