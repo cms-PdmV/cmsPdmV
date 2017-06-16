@@ -274,9 +274,12 @@ class chained_request(json_base):
     def request_join(self, req):
         with locker.lock(req.get_attribute('prepid')):
             chain = req.get_attribute("member_of_chain")
-            chain.append(self.get_attribute('_id'))
-            self.logger.debug("Adding chain_req member_of_chain: %s to request: %s" % (
+            if self.get_attribute('_id') not in chain:
+                chain.append(self.get_attribute('_id'))
+                self.logger.debug("Adding chain_req member_of_chain: %s to request: %s" % (
                     self.get_attribute("prepid"), req.get_attribute('prepid')))
+            else:
+                return False
 
             req.set_attribute("member_of_chain", chain)
 
