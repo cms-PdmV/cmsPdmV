@@ -52,6 +52,65 @@ class UpdateMccm(RESTResource):
             return dumps({'results': False, 'message': 'Failed to update an mccm from API. Reason: %s' % (
                     str(ex))})
 
+    def get_request_list(self, request_list):
+        new_request_list = []
+        for req in request_list:
+            if isinstance(req, list):
+                if len(req) == 1:
+                    new_request_list.append(r[0])
+                elif len(req) == 2:
+                    start = int(req[0].split('-')[2])
+                    split = req[1].split('-')
+                    end = int(split[2])
+                    placeholder = split[0] + '-' + split[1] + '-'
+                    while(start <= end):
+                        current = str(start)
+                        current = '0' * (5 - len(current)) + current
+                        new_request_list.append(placeholder + current)
+                        start += 1
+            else:
+                new_request_list.append(req)
+        return new_request_list
+
+    def is_there_difference(self, previous_requests, new_requests):
+        frequency = {}
+        for req in previous_requests:
+            if req in frequency:
+                frequency[req] += 1
+            else:
+                frequency[req] = 1
+        for req in new_requests:
+            if req not in frequency or frequency[req] == 0:
+                return True
+            else:
+                frequency[req] -= 1
+        for value in frequency.itervalues():
+            if value != 0:
+                return True
+        return False
+
+    def update_total_events(self, previous_version, new_version):
+        previous_requests = self.get_request_list(previous_version.get_attribute('requests'))
+        new_requests = self.get_request_list(new_version.get_attribute('requests'))
+        if not self.is_there_difference(previous_requests, new_requests):
+            return
+        self.logger.info("Found difference in requests, calculating events....")
+        requests_db = database('requests')
+        index = 0
+        fetched_requests = []
+        while len(new_requests) > index:
+            query = requests_db.construct_lucene_query({'prepid': new_requests[index:index+100]}, boolean_operator='OR')
+            fetched_requests += requests_db.full_text_search("search", query, page=-1, limit=100)
+            index += 100
+        fetched_requests_dict = {}
+        for req in fetched_requests:
+            fetched_requests_dict[req['prepid']] = req['total_events'] if 'total_events' in req else 0
+        events = 0
+        for req in new_requests:
+            events += fetched_requests_dict[req] if req in fetched_requests_dict else 0
+        new_version.set_attribute('total_events', events)
+
+
     def update(self, body):
         data = threaded_loads(body)
         if '_rev' not in data:
@@ -84,8 +143,7 @@ class UpdateMccm(RESTResource):
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
         self.logger.info('Updating mccm %s...' % (new_version.get_attribute('prepid')))
-
-
+        self.update_total_events(previous_version, new_version)
         # update history
         new_version.update_history({'action': 'update'})
         return {"results": db.update(new_version.json())}

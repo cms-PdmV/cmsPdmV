@@ -25,7 +25,8 @@ class mccm(json_base):
         'size': 0,
         'status': 'new',
         'special': False,
-        'generated_chains': {}
+        'generated_chains': {},
+        'total_events': 0 #Sum of request events in ticket not considering repetitions nor chains
     }
 
     _json_base__approvalsteps = ['none', 'approved']
