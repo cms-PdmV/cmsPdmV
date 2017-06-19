@@ -51,7 +51,7 @@ angular.module('testApp').controller('resultCtrl',
         $scope.not_editable_list = ["Username", "Role"];
         break;
       case "mccms":
-        $scope.not_editable_list = ["Prepid", "Pwg"];
+        $scope.not_editable_list = ["Prepid", "Pwg", "Total events"];
         var promise = $http.get("restapi/mccms/editable/"+$scope.prepid)
         promise.then(function(data){
           $scope.parseEditableObject(data.data.results);
