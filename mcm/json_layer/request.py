@@ -11,6 +11,7 @@ import time
 import logging
 from math import sqrt
 from json import loads
+from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
@@ -1739,6 +1740,11 @@ done
         collected = []
         versioned = {}
 
+        ##make tiers and their priority hash_map to have O(1)
+        tiers_hash_map = {}
+        for t in tiers_expected:
+            tiers_hash_map[t] = tiers_expected.index(t)
+
         for wma in mcm_rr:
             if not 'content' in wma:
                 continue
@@ -1764,23 +1770,30 @@ done
                             continue
                     #find and save the max version for the dataset
                     uniq_name = curr_v[1] + curr_v[-1]
+
+                    ##tier priority from has map, or max length if priority is not existing
+                    if ds.split("/")[-1] not in tiers_hash_map:
+                        tier_priority = len(tiers_hash_map)
+                    else:
+                        tier_priority = tiers_hash_map[(ds.split('/')[-1])]
+
                     if uniq_name in versioned:
                         if curr_v[-2] > versioned[uniq_name]["version"]:
                             versioned[uniq_name] = {"version": curr_v[-2],
-                                    "full_dataset": ds}
+                                    "full_dataset": ds, "priority": tier_priority}
                     else:
                         versioned[uniq_name] = {"version": curr_v[-2],
-                                "full_dataset": ds}
+                                "full_dataset": ds, "priority": tier_priority}
                 else:
                     self.logger.info("collect_outputs didn't match anything for: %s" % (
                             self.get_attribute("prepid")))
 
-        collected = [versioned[el]["full_dataset"] for el in versioned]
-        if len(tiers_expected) > 1:
-            ##check if we actually need sorting, and we did kept output
-            collected = sorted(collected, lambda d1,d2 : cmp(tiers_expected.index(d1.split('/')[-1]), tiers_expected.index(d2.split('/')[-1])))
+        collected = [(versioned[el]["full_dataset"], versioned[el]["priority"]) for el in versioned]
+        ##sort by tier priority. 1st element is taken for events calculation
+        collected.sort(key=itemgetter(1))
 
-        return collected
+        ##return only list of sorted datasets
+        return [el[0] for el in collected]
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
         counted = 0
