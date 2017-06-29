@@ -2,6 +2,7 @@
 
 import cherrypy
 import time
+import traceback
 
 from json import dumps
 from couchdb_layer.mcm_database import database
@@ -344,11 +345,18 @@ class CampaignsRESTResource(RESTResource):
 
             for r in rlist:
                 mcm_r = request(r)
-                if mcm_r:
-                    res.append(mcm_r.inspect())
-                else:
-                    res.append({"prepid": r, "results":False,
-                            'message' : '%s does not exist' % (r)})
+                try:
+                    if mcm_r:
+                        res.append(mcm_r.inspect())
+                    else:
+                        res.append({"prepid": r, "results":False,
+                                'message' : '%s does not exist' % (r)})
+                except Exception as e:
+                    subject = "Exception while inspecting request "
+                    message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
+                    self.logger.error(subject + message)
+                    mcm_r.notify(subject, message, accumulate=True)
+
 
             time.sleep(2)
 

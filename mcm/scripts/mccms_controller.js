@@ -49,7 +49,14 @@ angular.module('testApp').controller('resultsCtrl',
       var promise = $http.get("search?db_name="+$scope.dbName+query+"&get_raw");
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       promise.then(function(data){
-        $scope.result = _.pluck(data.data.rows, 'doc');
+        $scope.processFetchedData(data);
+      },function(){
+         alert("Error getting information");
+      });
+    };
+
+    $scope.processFetchedData = function (data){
+      $scope.result = _.pluck(data.data.rows, 'doc');
         $scope.result_status = data.status;
         $scope.got_results = true;
         if ($scope.result.length != 0){
@@ -81,11 +88,8 @@ angular.module('testApp').controller('resultsCtrl',
             });
           }
         }
-          $scope.selectionReady = true;
-      },function(){
-         alert("Error getting information");
-      });
-    };
+      $scope.selectionReady = true;
+    }
 
     $scope.$watch(function() {
        var loc_dict = $location.search();
@@ -162,6 +166,17 @@ angular.module('testApp').controller('resultsCtrl',
       }
       return size;
     };
+
+    $scope.is_generated_chains_empty = function(dict){
+      for (var chain in dict){
+        return true;
+      }
+      return false;
+    };
+
+    $scope.redirect_chained_request = function(ticket_prepid){
+      window.location = "chained_requests?from_ticket=" + ticket_prepid;
+    }
 
     $scope.approve_gen_request = function(prepids){
       $http({method:'GET', url:'restapi/requests/approve/' + prepids}).success(function(data,status){

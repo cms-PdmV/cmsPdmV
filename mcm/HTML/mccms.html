@@ -145,6 +145,7 @@
                   </ul>
                 </ul>
                 <input type="button" class="btn" ng-click="approve_all_requests(mccm_info.prepid)" ng-show="get_requests_size(mccm_info.generated_chains)" value="Approve all requests" align="left"/>
+                <input type="button" class="btn" ng-click="redirect_chained_request(mccm_info.prepid)" ng-show="is_generated_chains_empty(mccm_info.generated_chains)" value="Show chains" align="left"/>
               </div>
       	      <div ng-switch-default>
     		        {{mccm_info[data.db_name]}}

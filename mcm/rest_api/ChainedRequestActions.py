@@ -414,6 +414,7 @@ class ApproveRequest(RESTResource):
             return {"prepid":rid, "results":False ,
                 'message': 'unable to save the updated chained request'}
 
+
 class InspectChain(RESTResource):
     def __init__(self):
         self.acces_limit = 3
@@ -673,6 +674,42 @@ class InjectChainedRequest(RESTResource):
             return dumps({"results" : True,
                     "message" : "chain submission for %s will be forked unless same request is being handled already" % pid,
                     "prepid" : pid})
+
+class ChainsFromTicket(RESTResource):
+    """
+        Get all the generated chains from a ticket
+    """
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def GET(self, **argv):
+        if not 'ticket' in argv:
+            return dumps({})
+        page = 0
+        limit = 20
+        if 'page' in argv:
+            page = int(argv['page'])
+            argv.pop('page')
+        if 'limit' in argv:
+            limit = int(argv['limit'])
+            argv.pop('limit')
+        ticket_prepid = argv['ticket']
+        chained_requests_db = database('chained_requests')
+        mccms_db = database('mccms')
+        mccm_query = mccms_db.construct_lucene_query({'prepid' : ticket_prepid})
+        result = mccms_db.full_text_search("search", mccm_query, page=-1)
+        if len(result) == 0:
+            self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
+            return dumps({})
+        self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
+        generated_chains = list(result[0]['generated_chains'].iterkeys())
+        chained_request_list = []
+        index = 0
+        while index < len(generated_chains):
+            chained_request_query = chained_requests_db.construct_lucene_query({'prepid' : generated_chains[index:index+100]}, boolean_operator="OR")
+            chained_request_list += chained_requests_db.full_text_search("search", chained_request_query, page=page, limit=limit)
+            index += 100
+        return dumps(chained_request_list)
 
 class TaskChainDict(RESTResource):
     def __init__(self):
