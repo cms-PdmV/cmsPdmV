@@ -124,7 +124,7 @@
               </div>
               <div ng-switch-when="Chains">
                 <ul ng-repeat="el in mccm_info[data.db_name]">
-                  <li ng-switch="el.indexOf('_') == -1">
+                  <li ng-switch="el.indexOf('chain_') == -1">
                     <a ng-switch-when="true" ng-href="chained_campaigns?alias={{el}}" target="_self">{{el}}</a>
                     <a ng-switch-when="false" ng-href="chained_campaigns?prepid={{el}}" target="_self">{{el}}</a>
                   </li>
