@@ -500,6 +500,7 @@ class GenerateChains(RESTResource):
         block = mccm_ticket.get_attribute('block')
         staged = mccm_ticket.get_attribute('staged')
         threshold = mccm_ticket.get_attribute('threshold')
+        ret = generated_chained_request.set_priority(block)
         action_parameters = generated_chained_request.get_attribute('action_parameters')
         action_parameters.update(
             {
