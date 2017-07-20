@@ -12,7 +12,7 @@ from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole,
 from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutOnHoldInvalidation, PutHoldtoNewInvalidations
 from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
@@ -330,6 +330,7 @@ root.restapi.mccms.editable = GetEditableMccmFields()
 root.restapi.mccms.generate = GenerateChains()
 root.restapi.mccms.reminder = MccMReminderProdManagers()
 root.restapi.mccms.reminder_gen_contacts = MccMReminderGenContacts()
+root.restapi.mccms.update_total_events = CalculateTotalEvts()
 
 # REST settings Actions
 root.restapi.settings.get = GetSetting()
