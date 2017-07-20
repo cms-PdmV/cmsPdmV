@@ -93,3 +93,53 @@ class mccm(json_base):
         mccms_db = database('mccms')
         mccms_db.save(self.json())
 
+    def get_request_list(self, request_list):
+        """
+        convert list of requests and range of requests into list
+        """
+        new_request_list = []
+        for req in request_list:
+            if isinstance(req, list):
+                if len(req) == 1:
+                    new_request_list.append(r[0])
+                elif len(req) == 2:
+                    start = int(req[0].split('-')[2])
+                    split = req[1].split('-')
+                    end = int(split[2])
+                    placeholder = split[0] + '-' + split[1] + '-'
+                    while(start <= end):
+                        current = str(start)
+                        current = '0' * (5 - len(current)) + current
+                        new_request_list.append(placeholder + current)
+                        start += 1
+            else:
+                new_request_list.append(req)
+        return new_request_list
+
+    def update_total_events(self):
+        """
+        calculate total_evts for  request list
+        """
+
+        requests_db = database('requests')
+        index = 0
+        fetched_requests = []
+        new_requests = self.get_request_list(self.get_attribute("requests"))
+
+        while len(new_requests) > index:
+            query = requests_db.construct_lucene_query({'prepid':
+                    new_requests[index:index+100]}, boolean_operator='OR')
+
+            fetched_requests += requests_db.full_text_search("search", query,
+                    page=-1, limit=100)
+
+            index += 100
+
+        fetched_requests_dict = {}
+        for req in fetched_requests:
+            fetched_requests_dict[req['prepid']] = req['total_events'] if 'total_events' in req else 0
+        events = 0
+        for req in new_requests:
+            events += fetched_requests_dict[req] if req in fetched_requests_dict else 0
+
+        self.set_attribute('total_events', events)
