@@ -229,8 +229,6 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
-
-
     $scope.$watch(function () {
           var loc_dict = $location.search();
           return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];

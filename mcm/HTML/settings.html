@@ -74,7 +74,21 @@
               <div style="width:400px"><pre>{{settings_info[data.db_name]}} </pre></div>
             </div>
             <div ng-switch-when="Value">
-              <pre>{{settings_info[data.db_name]}}</pre>
+              <div ng-if="settings_info['prepid'] == 'list_of_forceflow'">
+                <ul ng-repeat="chain in settings_info[data.db_name] track by $index">
+                  <li>
+                    <a href="chained_requests?prepid={{chain}}" target="_self">{{chain}}</a>
+                  </li>
+                </ul>
+              </div>
+              <div ng-if="settings_info['prepid'] == 'list_of_forcecomplete'">
+                <ul ng-repeat="request in settings_info[data.db_name] track by $index">
+                  <li>
+                    <a href="requests?prepid={{request}}" target="_self">{{request}}</a>
+                  </li>
+                </ul>
+              </div>
+              <pre ng-show="['list_of_forceflow', 'list_of_forcecomplete'].indexOf(settings_info['prepid']) < 0">{{settings_info[data.db_name]}}</pre>
             </div>
             <div ng-switch-default>
               {{settings_info[data.db_name]}}
