@@ -228,6 +228,20 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
+    $scope.recalculate_evts = function(prepid){
+      var promise= $http.get("restapi/mccms/update_total_events/"+prepid);
+      promise.then(function(data){
+        if (data.data.results){
+          $scope.getData();
+        }
+        else{
+          alert(data.data.message);
+        }
+      },function(){
+        alert("Something went wrong");
+      });
+    };
+
     $scope.open_isSureModal = function(action, prepid){
       var isSure = $modal.open({
          templateUrl: 'isSureModal.html',

@@ -68,6 +68,7 @@
                 <a rel="tooltip" title="Cancel ticket {{mccm_info.prepid}}" ng-click="open_isSureModal('cancel', mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-thumbs-down"></i></a>
                 <a rel="tooltip" title="Generate chains for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
                 <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'/reserve')" ng-href="#" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
+                <a rel="tooltip" title="Recalculate total_events for {{mccm_info.prepid}}" ng-click="recalculate_evts(mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-filter"></i></a>
                 <a rel="tooltip" title="View all requests for {{mccm_info.prepid}}" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
               </div>
               <div ng-switch-when="Prepid">
