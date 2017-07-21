@@ -765,7 +765,14 @@ class chained_request(json_base):
             self.set_attribute('status', 'processing')
             # set to next step
             self.set_attribute('step', next_step)
-            self.update_history({'action': 'flow', 'step': next_request.get_attribute('prepid')})
+
+            if check_stats == False:
+                action = "force flow"
+            else:
+                action = "flow"
+
+            self.update_history({'action': action,
+                    'step': next_request.get_attribute('prepid')})
 
         if not reserve:
             notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
