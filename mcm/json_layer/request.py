@@ -1107,6 +1107,16 @@ class request(json_base):
 
                 if events>=0 : res += 'echo %d events were ran \n' % events
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
+                res += 'if [ $? -eq 0 ]; then\n'
+                res += '    grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
+                res += '    if [ $? -eq 0 ]; then\n'
+                res += '        events=$(grep "TotalEvents" %s | tail -1 | sed "s/.*>\(.*\)<.*/\\1/")\n' % runtest_xml_file
+                res += '        size=$(grep "Timing-tstoragefile-write-totalMegabytes" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % runtest_xml_file
+                res += '        if [ $events -gt 0 ]; then\n'
+                res += '            echo "Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"\n'
+                res += '        fi\n'
+                res += '    fi\n'
+                res += 'fi\n'
                 res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
                 res += 'if [ $? -eq 0 ]; then\n'
                 res += '  var1=$(grep "AvgEventTime" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
