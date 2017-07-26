@@ -526,6 +526,8 @@ class GetSetupForRequest(RESTResource):
             except request.IllegalAttributeName:
                 return dumps({"results": False})
             setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=n)
+            #delete certificate line
+            setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return setupText
         else:
