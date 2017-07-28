@@ -331,16 +331,19 @@ class ValidationHandler:
 
     def report_error(self, prepid, message):
         self.logger.error(message)
-        if 'chain' in  prepid:
-            mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
-            mcm_chained_request.reset_requests(message)
-        else:
-            mcm_request = request(self.request_db.get(prepid))
-            mcm_request.test_failure(
-                    message=message,
-                    what='Validation run test',
-                    rewind=True
-            )
+        try:
+            if 'chain' in  prepid:
+                mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
+                mcm_chained_request.reset_requests(message)
+            else:
+                mcm_request = request(self.request_db.get(prepid))
+                mcm_request.test_failure(
+                        message=message,
+                        what='Validation run test',
+                        rewind=True
+                )
+        except Exception as e:
+            self.logger.error("Exception while reporting an error for %s message: %s \ntraceback: %s" % (prepid, str(e), traceback.format_exc()))
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
@@ -362,6 +365,7 @@ class ValidationHandler:
                 message = "Unexpected exception while monitoring job for prepid %s message: %s \ntraceback: %s" % (prepid, str(e), traceback.format_exc())
                 self.report_error(prepid, message)
                 remove_jobs.append(prepid)
+
         for prepid in remove_jobs:
             self.submmited_jobs.pop(prepid)
             self.removeDirectory(self.test_directory_path + prepid)
