@@ -478,6 +478,54 @@ class database:
         ##we remove the +AND+ in the end of query
         return constructed_query[:-(len(boolean_operator) + 2)]
 
+    def construct_lucene_complex_query(self, query):
+        """
+        constructs key:value dictionary to couchDB lucene query
+        input Query format:
+        [
+            (param1, {
+                value: [val1,val2,val3],
+                join_list_with: 'OR',
+                open_parenthesis: True
+            }),
+            (param2, {
+                join_operator: 'OR',
+                value: 'val1',
+                close_parenthesis: True
+            }),
+            (param3, {
+                join_operator: 'AND',
+                value: [val1,val2,val3],
+                join_list_with: 'AND'
+            })
+        ]
+        Output: ((param1:val1+OR+param1:val2+OR+param1:val3)+OR+param2:val1)+AND+(param3:val1+AND+param3:val2+AND+param3:val3)
+        """
+        constructed_query = ""
+        boolean_operator = ""
+        for pair in query:
+            param = pair[0]
+            if constructed_query != "":
+                boolean_operator = pair[1]['join_operator'] if 'join_operator' in pair[1] else 'AND'
+                constructed_query += '+%s+' % boolean_operator
+            open_parenthesis = '(' if 'open_parenthesis' in pair[1] and pair[1]['open_parenthesis'] else ''
+            constructed_query += open_parenthesis
+            value = pair[1]['value']
+            if isinstance(value, list):
+                join_list_with = pair[1]['join_list_with'] if 'join_list_with' in pair[1] else 'OR'
+                constructed_query += '('
+                for ind, el in enumerate(value):
+                    constructed_query += param + ':' + self.escapeLuceneArg(el.replace(" ", "+"))
+                    if ind != len(value) - 1:
+                        constructed_query += "+%s+" % join_list_with
+                constructed_query += ')'
+            else:
+                value = value.replace(" ", "+")
+                constructed_query += param + ':' + self.escapeLuceneArg(value)
+            close_parenthesis = ')' if 'close_parenthesis' in pair[1] and pair[1]['close_parenthesis'] else ''
+            constructed_query += close_parenthesis
+        return constructed_query
+
     def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields=''):
         """
         queries loadView method with lucene interface for full text search

@@ -1347,14 +1347,11 @@ class StalledReminder(RESTResource):
 
             if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
                 reminded+=1
-                __query2 = bdb.construct_lucene_query({'contains' : r['prepid'],
-                        'status' : 'announced'})
-
-                __query3 = bdb.construct_lucene_query({'contains' : r['prepid'],
-                        'status' : 'hold'})
-
+                __query2 = bdb.construct_lucene_complex_query([
+                    ('contains', {'value': r['prepid']}),
+                    ('status', {'value': ['announced', 'hold']})
+                ])
                 bs = bdb.full_text_search('search', __query2, page=-1)
-                bs.extend(bdb.full_text_search('search', __query3, page=-1))
                 ## take the last one ?
                 in_batch = 'NoBatch'
                 if len (bs):

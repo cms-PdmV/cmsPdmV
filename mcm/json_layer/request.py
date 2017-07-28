@@ -2587,16 +2587,19 @@ done
         ##do not increase version if not in an announced batch
         bdb = database('batches')
         if increase_revision:
-            for req in req_to_invalidate:
+            index = 0
+            fetched_batches = []
+            while len(req_to_invalidate) > index:
                 # find the batch it is in
-                __query = bdb.construct_lucene_query({'contains' : req})
-                bs = bdb.full_text_search('search', __query, page=-1)
-                for b in bs:
-                    mcm_b = batch(b)
-                    if not mcm_b.get_attribute('status') in ['done', 'announced']:
-                        increase_revision = False
-                        ## we could be done checking, but we'll move along to remove the requests from all existing non announced batches
-                        mcm_b.remove_request(self.get_attribute('prepid'))
+                __query = bdb.construct_lucene_query({'contains' : req_to_invalidate[index:index+100]}, boolean_operator='OR')
+                fetched_batches += bdb.full_text_search('search', __query, page=-1)
+                index += 100
+            for b in fetched_batches:
+                mcm_b = batch(b)
+                if not mcm_b.get_attribute('status') in ['done', 'announced']:
+                    increase_revision = False
+                    ## we could be done checking, but we'll move along to remove the requests from all existing non announced batches
+                    mcm_b.remove_request(self.get_attribute('prepid'))
 
         ## aditionnal value to reset
         self.set_attribute('completed_events', 0)

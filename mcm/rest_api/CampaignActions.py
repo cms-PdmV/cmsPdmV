@@ -332,17 +332,14 @@ class CampaignsRESTResource(RESTResource):
         clist = list(set(cid.rsplit(',')))
         res = []
         rdb = database('requests')
-        for c in clist:
-
-            ## this query needs to be modified if we want to
-            ## also inspect the request for submit !
-            rlist = []
-            for in_status in in_statuses:
-                __query = rdb.construct_lucene_query({'member_of_campaign' : c,
-                        'status' : in_status})
-
-                rlist.extend(rdb.full_text_search('search', __query, page=-1))
-
+        index = 0
+        while len(clist) > index:
+            query = rdb.construct_lucene_complex_query([
+                ('member_of_campaign', {'value': clist[index:index+60]}),
+                ('status', {'value': in_statuses})
+            ])
+            rlist = rdb.full_text_search('search', query, page=-1)
+            index += 60
             for r in rlist:
                 mcm_r = request(r)
                 try:
@@ -356,10 +353,7 @@ class CampaignsRESTResource(RESTResource):
                     message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
                     self.logger.error(subject + message)
                     mcm_r.notify(subject, message, accumulate=True)
-
-
             time.sleep(2)
-
         if len(res) > 1:
             return res
         elif len(res):

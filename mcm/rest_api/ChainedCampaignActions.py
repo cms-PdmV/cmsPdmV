@@ -174,15 +174,18 @@ class InspectChainedCampaignsRest(RESTResource):
         self.running = True
         crdb = database('chained_requests')
         try:
-            for ccid in ccids.split(','):
-                __query = crdb.construct_lucene_query({'member_of_campaign' : ccid,
-                        'last_status' : 'done', 'status' : 'processing'})
-
-                crlist = crdb.full_text_search('search', __query, page=-1)
-
+            ccids = ccids.split(',')
+            index = 0
+            while len(ccids) > index:
+                query = crdb.construct_lucene_complex_query([
+                    ('member_of_campaign', {'value': ccids[index:index+50]}),
+                    ('last_status', {'value': 'done'}),
+                    ('status', {'value': 'processing'})
+                ])
+                crlist = crdb.full_text_search('search', query, page=-1)
                 ##we yield len of cr_list so we would know how much data later on we processed
-                yield dumps({'prepid': ccid, 'cr_len': len(crlist)}, indent=2)
-
+                yield dumps({'prepids': ccids[index:index+100], 'cr_len': len(crlist)}, indent=2)
+                index += 50
                 for cr in crlist:
                     time.sleep(0.5)
                     mcm_cr = chained_request(cr)
@@ -198,7 +201,7 @@ class InspectChainedCampaignsRest(RESTResource):
                     yield dumps(__inspect_ret, indent=8)
 
                 ##force slowing-down of inspect to not abuse the DB
-                time.sleep(2)
+                time.sleep(1)
 
             self.running = False
             self.logger.info("ChainedCampaigns inspection finished. running: %s" % self.running)
@@ -208,7 +211,7 @@ class InspectChainedCampaignsRest(RESTResource):
             self.logger.error("ChainedCampaigns inspection crashed. reason: %s" % str(ex))
 
             yield dumps({'message': 'crlist crashed: %s' % (str(ex)),
-                    'last_used_query' : __query})
+                    'last_used_query' : query})
 
 class InspectChainedRequests(InspectChainedCampaignsRest):
     def __init__(self):
