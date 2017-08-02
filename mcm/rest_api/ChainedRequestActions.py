@@ -703,12 +703,19 @@ class ChainsFromTicket(RESTResource):
             return dumps({})
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
         generated_chains = list(result[0]['generated_chains'].iterkeys())
+        generated_chains.sort()
+        start = page * limit
+        if start > len(generated_chains):
+            return dumps([])
+        end = start + limit
+        end = end if end <= len(generated_chains) else len(generated_chains)
         chained_request_list = []
-        index = 0
-        while index < len(generated_chains):
-            chained_request_query = chained_requests_db.construct_lucene_query({'prepid' : generated_chains[index:index+100]}, boolean_operator="OR")
-            chained_request_list += chained_requests_db.full_text_search("search", chained_request_query, page=page, limit=limit)
-            index += 100
+        while start < end:
+            fetch_till = start+20
+            fetch_till = end if fetch_till > end else fetch_till
+            chained_request_query = chained_requests_db.construct_lucene_query({'prepid' : generated_chains[start:fetch_till]}, boolean_operator="OR")
+            chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
+            start += 20
         return dumps(chained_request_list)
 
 class TaskChainDict(RESTResource):

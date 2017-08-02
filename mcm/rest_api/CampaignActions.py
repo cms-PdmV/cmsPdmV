@@ -335,11 +335,11 @@ class CampaignsRESTResource(RESTResource):
         index = 0
         while len(clist) > index:
             query = rdb.construct_lucene_complex_query([
-                ('member_of_campaign', {'value': clist[index:index+60]}),
+                ('member_of_campaign', {'value': clist[index:index+20]}),
                 ('status', {'value': in_statuses})
             ])
             rlist = rdb.full_text_search('search', query, page=-1)
-            index += 60
+            index += 20
             for r in rlist:
                 mcm_r = request(r)
                 try:

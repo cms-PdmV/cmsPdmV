@@ -178,14 +178,14 @@ class InspectChainedCampaignsRest(RESTResource):
             index = 0
             while len(ccids) > index:
                 query = crdb.construct_lucene_complex_query([
-                    ('member_of_campaign', {'value': ccids[index:index+50]}),
+                    ('member_of_campaign', {'value': ccids[index:index+20]}),
                     ('last_status', {'value': 'done'}),
                     ('status', {'value': 'processing'})
                 ])
                 crlist = crdb.full_text_search('search', query, page=-1)
                 ##we yield len of cr_list so we would know how much data later on we processed
-                yield dumps({'prepids': ccids[index:index+100], 'cr_len': len(crlist)}, indent=2)
-                index += 50
+                yield dumps({'prepids': ccids[index:index+20], 'cr_len': len(crlist)}, indent=2)
+                index += 20
                 for cr in crlist:
                     time.sleep(0.5)
                     mcm_cr = chained_request(cr)

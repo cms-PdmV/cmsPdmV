@@ -128,12 +128,12 @@ class mccm(json_base):
 
         while len(new_requests) > index:
             query = requests_db.construct_lucene_query({'prepid':
-                    new_requests[index:index+100]}, boolean_operator='OR')
+                    new_requests[index:index+20]}, boolean_operator='OR')
 
             fetched_requests += requests_db.full_text_search("search", query,
-                    page=-1, limit=100)
+                    page=-1)
 
-            index += 100
+            index += 20
 
         fetched_requests_dict = {}
         for req in fetched_requests:
