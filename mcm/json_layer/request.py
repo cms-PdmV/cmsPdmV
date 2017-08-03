@@ -514,6 +514,7 @@ class request(json_base):
 
     def ok_to_move_to_approval_approve(self, for_chain=False):
         max_user_level = 1
+        PRIMARY_DS_regex = '^[a-zA-Z][a-zA-Z0-9\-_]*$'
         if for_chain:
             max_user_level = 0
 
@@ -528,6 +529,10 @@ class request(json_base):
         else:
             if self.get_attribute('status') != 'new':
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve')
+
+        if re.match(PRIMARY_DS_regex, self.get_attribute('dataset_name')) is None:
+                raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
+                        'Dataset name name contains illegal characters')
 
         crdb = database('chained_requests')
         rdb = database('requests')
