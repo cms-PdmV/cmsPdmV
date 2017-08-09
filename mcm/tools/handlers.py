@@ -412,27 +412,29 @@ class ChainRequestInjector(Handler):
                 for request_prepid in chain:
                     mcm_rs.append(request(rdb.get(request_prepid)))
                     if self.check_approval and mcm_rs[-1].get_attribute('approval') != 'submit':
-                        self.logger.error('requests %s is in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                        message = 'requests %s is in "%s"/"%s" status/approval, requires "approved"/"submit"' % (
                                 request_prepid, mcm_rs[-1].get_attribute('status'),
-                                mcm_rs[-1].get_attribute('approval')))
-
+                                mcm_rs[-1].get_attribute('approval')
+                        )
+                        self.logger.error(message)
+                        mcm_cr.notify('%s injection failed' % mcm_cr.get_attribute('prepid'), message)
                         return False
 
                     if mcm_rs[-1].get_attribute('status') != 'approved':
                         ## change the return format to percolate the error message
-                        self.logger.error('requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"'%(
+                        message = 'requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"' % (
                                 request_prepid, mcm_rs[-1].get_attribute('status'),
-                                mcm_rs[-1].get_attribute('approval')))
-
+                                mcm_rs[-1].get_attribute('approval')
+                        )
+                        self.logger.error(message)
+                        mcm_cr.notify('%s injection failed' % mcm_cr.get_attribute('prepid'), message)
                         return False
 
                     uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
                     if not uploader.internal_run():
-                        mcm_cr.notify(
-                            'Configuration upload failed',
-                            "There was a problem uploading the configuration for request %s"  % (request_prepid)
-                        )
-                        self.logger.error('Problem with uploading the configuration for request %s' % (request_prepid))
+                        message = 'Problem with uploading the configuration for request %s' % (request_prepid)
+                        mcm_cr.notify('Configuration upload failed', message)
+                        self.logger.error(message)
                         return False
 
             mcm_r = mcm_rs[-1]
