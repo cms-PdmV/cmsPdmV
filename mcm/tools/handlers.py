@@ -399,8 +399,10 @@ class ChainRequestInjector(Handler):
                 batch_type = 'Task_' + mcm_r['member_of_campaign']
             else:
                 mcm_crs = [crdb.get( self.prepid )]
-                task_name = self.prepid
-                batch_type = mcm_crs[-1]['member_of_campaign']
+                current_step_prepid = mcm_crs[0]['chain'][mcm_crs[0]['step']]
+                mcm_request = rdb.get(current_step_prepid)
+                task_name = 'task_' + current_step_prepid
+                batch_type = 'Task_' + mcm_request['member_of_campaign']
 
             if len(mcm_crs)==0:
                 return False
