@@ -1038,6 +1038,7 @@ class ToForceFlowList(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
         self.sdb = database('settings')
+        self.cdb = database('chained_requests')
 
     def GET(self, *args, **kwargs):
         """
@@ -1051,6 +1052,7 @@ class ToForceFlowList(RESTResource):
         else:
             rlist = [args[0]]
         res = []
+        __updated = False
 
         forceflow_list = self.sdb.get("list_of_forceflow")
         ##TO-DO check if prepid exists!
@@ -1058,12 +1060,17 @@ class ToForceFlowList(RESTResource):
         for el in rlist:
             if el not in forceflow_list["value"]:
                 forceflow_list["value"].append(el)
+                chain_req = chained_request(self.cdb.get(el))
+                chain_req.update_history({'action': 'add_to_forceflow'})
+                self.cdb.save(chain_req.json())
                 res.append({"prepid": el, 'results': True, 'message': 'OK'})
+                __updated = True
             else:
                 res.append({"prepid": el, 'results': False, 'message': 'Chained request already in forceflow list'})
 
         ##TO-DO check the update return value
-        ret = self.sdb.update(forceflow_list)
+        if __updated:
+            ret = self.sdb.update(forceflow_list)
 
         return dumps(res)
 
