@@ -654,6 +654,12 @@ class chained_request(json_base):
             request.transfer( current_request, next_request)
             ##set total_events accordingly to current request.
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else  current_request.get_attribute("total_events")
+
+            ## if case we have action parameters they overwrite the total_events
+            if action_parameters['staged'] != 0:
+                next_total_evts = int(action_parameters['staged'])
+            if action_parameters['threshold'] != 0:
+                next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
             self.request_join(next_request)
 
@@ -688,6 +694,12 @@ class chained_request(json_base):
             request.transfer(current_request, next_request)
             ##set total_events accordingly to current request.
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else  current_request.get_attribute("total_events")
+
+            ## if case we have action parameters they overwrite the total_events
+            if action_parameters['staged'] != 0:
+                next_total_evts = int(action_parameters['staged'])
+            if action_parameters['threshold'] != 0:
+                next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
             self.request_join(next_request)
         else:
