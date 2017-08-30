@@ -383,8 +383,9 @@ class json_base:
             dest.append(settings().get_value('hypernews_test'))
 
         #be sure to not have duplicates
-        dest = list(set(dest))
-
+        dest = set(dest)
+        exclude_emails = set(settings().get_value('exclude_from_notify'))
+        dest = list(dest - exclude_emails)
         if not len(dest):
             dest.append(settings().get_value('service_account'))
             subject += '. And no destination was set'
