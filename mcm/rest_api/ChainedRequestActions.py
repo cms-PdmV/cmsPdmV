@@ -816,7 +816,7 @@ class TaskChainDict(RESTResource):
                 tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
                 ##if request is added to tasktree, we save global sums for StepChains
                 __total_time_evt += mcm_r.get_sum_total_events()
-                __total_size_evt += mcm_r.get_attribute("size_event")
+                __total_size_evt += sum(mcm_r.get_attribute("size_event"))
 
         for (r, item) in tasktree.items():
             ##here we should generate unique list of steps+output tiers

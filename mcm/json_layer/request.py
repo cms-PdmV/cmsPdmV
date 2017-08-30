@@ -70,7 +70,7 @@ class request(json_base):
         'member_of_campaign': '',
         'flown_with': '',
         'time_event': [float(-1)],
-        'size_event': -1,
+        'size_event': [-1],
         'memory': 2300, ## the default until now
         #'nameorfragment':'',
         'name_of_fragment': '',
@@ -306,7 +306,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'There should be at least one generator mentioned in the request')
 
-        if self.negative_total_events() or self.get_attribute('size_event') <= 0:
+        if self.any_negative_events("time_event") or self.any_negative_events("size_event") <= 0:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'The time per event or size per event are invalid: negative or null')
 
@@ -534,6 +534,18 @@ class request(json_base):
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                         'Dataset name name contains illegal characters')
 
+        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
+                'Number of time_event entries: %s are different from number of sequences: %s' %(
+                    len(self.get_attribute("time_event")),
+                    len(self.get_attribute("sequences"))))
+
+        if len(self.get_attribute('size_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
+                'Number of size_event entries: %s are different from number of sequences: %s' %(
+                    len(self.get_attribute("size_event")),
+                    len(self.get_attribute("sequences"))))
+
         crdb = database('chained_requests')
         rdb = database('requests')
         for cr in self.get_attribute('member_of_chain'):
@@ -587,16 +599,11 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'This request does not spawn from any valid action')
 
-        if self.get_attribute('size_event') <= 0 or self.negative_total_events():
+        if self.any_negative_events("time_event") or self.any_negative_events("size_event"):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
                     'The time (%s) or size per event (%s) is inappropriate' % (
                     self.get_attribute('time_event'), self.get_attribute('size_event')))
 
-        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
-                'Number of time_event entries: %s are different from number of sequences: %s' %(
-                    len(self.get_attribute("time_event")),
-                    len(self.get_attribute("sequences"))))
 
         if self.get_scram_arch() == None:
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit',
@@ -2401,9 +2408,9 @@ done
                 self.notify(subject, message, accumulate=True)
 
             ## size check
-            if file_size and file_size > self.get_attribute('size_event'):
+            if file_size and file_size > sum(self.get_attribute('size_event')):
                 ## size under-estimated
-                if file_size * 0.90 > self.get_attribute('size_event'):
+                if file_size * 0.90 > sum(self.get_attribute('size_event')):
                     ## notify if more than 10% discrepancy found !
                     self.notify(
                         'Runtest for %s: size per event under-estimate.' % (
@@ -2411,12 +2418,12 @@ done
                         ('For the request %s, size/event=%s was given, %s was'
                         ' measured from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
-                            self.get_attribute('size_event'),
+                            sum(self.get_attribute('size_event')),
                             file_size,
                             total_event,
                             total_event_in),
                         accumulate=True)
-                self.set_attribute('size_event', file_size)
+                self.set_attribute('size_event', [file_size])
                 to_be_saved = True
 
             if file_size and file_size < int(0.90 * self.get_attribute('size_event')):
@@ -2428,13 +2435,13 @@ done
                     ('For the request %s, size/event=%s was given, %s was'
                     ' measured from %s events (ran %s).') % (
                         self.get_attribute('prepid'),
-                        self.get_attribute('size_event'),
+                        sum(self.get_attribute('size_event')),
                         file_size,
                         total_event,
                         total_event_in),
                     accumulate=True)
                 ## correct the value from the runtest.
-                self.set_attribute('size_event', file_size)
+                self.set_attribute('size_event', [file_size])
                 to_be_saved = True
 
             if memory and memory > self.get_attribute('memory'):
@@ -2823,7 +2830,7 @@ done
                        "Campaign" : self.get_attribute('member_of_campaign'),
                        "ProcessingString" : self.get_processing_string(sequence_index),
                        "TimePerEvent" : self.get_attribute("time_event")[sequence_index],
-                       "SizePerEvent" : self.get_attribute('size_event'),
+                       "SizePerEvent" : self.get_attribute('size_event')[sequence_index],
                        "Memory" : self.get_attribute('memory'),
                        "FilterEfficiency" : self.get_efficiency(),
                        "PrepID" : self.get_attribute('prepid')
@@ -2898,9 +2905,9 @@ done
 
         return sum(self.get_attribute("time_event"))
 
-    def negative_total_events(self):
+    def any_negative_events(self, field):
         """
-        return True if there is a negative or zero value in time_event list
+        return True if there is a negative or zero value in time_event/size_event list
         """
 
-        return any(n <= 0 for n in self.get_attribute("time_event"))
+        return any(n <= 0 for n in self.get_attribute(field))

@@ -62,6 +62,7 @@ angular.module('testApp').controller('ModalDemoCtrl',
           $scope.drivers.push(data.sequence);
           $scope.result.sequences.push(data.sequence);
           $scope.result.time_event.push(-1);
+          $scope.result.size_event.push(-1);
         } else {
           if(!define_name) {
             $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
@@ -379,6 +380,7 @@ testApp.directive("sequenceEdit", function($http){
       scope.removeSequence = function(elem){
         scope.result.sequences.splice(elem, 1); //remove the value from original sequences
         scope.result.time_event.splice(elem, 1); //remove the value from original time_event list
+        scope.result.size_event.splice(elem, 1); //remove the value from original size_event list
         scope.drivers.splice(elem, 1);
       };
       scope.removeSubSequence = function(key, name){
@@ -741,6 +743,57 @@ testApp.directive("timeEventEdit", function(){
         }
         scope.add_time_event = false;
         scope.new_time_event = -1;
+      };
+    }
+  }
+});
+
+testApp.directive("sizeEventEdit", function(){
+  return {
+    replace: false,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <ul>'+
+    '   <li ng-repeat="elem in size_event track by $index">'+
+    '     <input type="number" ng-model="size_event[$index]" class="input-xxsmall" style="width: 90px;"></input>'+
+    '     <a class="label label-info" rel="tooltip" title="seconds">kB</a>'+
+    '     <a ng-click="remove($index)" ng-href="#">'+
+    '       <i class="icon-remove-sign"></i>'+
+    '     </a>'+
+    '   </li>'+
+    '  </ul>'+
+    '  <div style="margin-left: 7px;">'+
+    '    <a ng-click="add_size_event =! add_size_event;" ng-href="#">'+
+    '      <i class="icon-plus" ng-hide="add_size_event"></i>'+
+    '      <i class="icon-minus" ng-show="add_size_event"></i>'+
+    '    </a>'+
+    '    <input type="number" ng-model="new_size_event" ng-show="add_size_event" class="input-xxsmall" style="width: 90px;"></inputs>'+
+    '    <a ng-click="pushNewSizeEvent()" ng-show="add_size_event" ng-href="#">'+
+    '      <i class="icon-plus-sign"></i>'+
+    '    </a>'+
+    '  </div>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.size_event = ctrl.$viewValue;
+        scope.new_size_event = -1;
+        scope.columnName = scope.$eval(attr.column);
+      };
+
+      scope.remove = function(index){
+        scope.size_event.splice(index, 1);
+      };
+
+      scope.pushNewSizeEvent = function(){
+        if (scope.new_size_event > 0) {
+          scope.size_event.push(parseFloat(scope.new_size_event));
+        }
+        scope.add_size_event = false;
+        scope.new_size_event = -1;
       };
     }
   }

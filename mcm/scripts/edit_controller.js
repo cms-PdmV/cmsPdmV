@@ -155,7 +155,9 @@ angular.module('testApp').controller('resultCtrl',
           _.each($scope.result["time_event"], function(value, key){
             $scope.result["time_event"][key] = parseFloat(value);
           });
-          $scope.result["size_event"] = parseFloat($scope.result["size_event"]);
+          _.each($scope.result["size_event"], function(value, key){
+            $scope.result["size_event"][key] = parseFloat(value);
+          });
           $scope.result["memory"] = parseFloat($scope.result["memory"]);
           $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
           break;
