@@ -808,7 +808,7 @@ class TaskChainDict(RESTResource):
                 if not r in tasktree:
                     tasktree[r] = {'next' : [], 'dict' : [], 'rank' : ir}
 
-                base = (ir == 0) ## there is only one that needs to start from scratch
+                base = ir == 0 and mcm_r.get_wmagent_type() in ['MonteCarlo', 'LHEStepZero']
                 depend = (ir > starting_point) ## all the ones later than the starting point depend on a previous task
                 if ir < (len(mcm_cr['chain']) - 1):
                     tasktree[r]['next'].append( mcm_cr['chain'][ir + 1])
