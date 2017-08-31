@@ -2426,7 +2426,7 @@ done
                 self.set_attribute('size_event', [file_size])
                 to_be_saved = True
 
-            if file_size and file_size < int(0.90 * self.get_attribute('size_event')):
+            if file_size and file_size < int(0.90 * sum(self.get_attribute('size_event'))):
                 ## size over-estimated
                 ## warn if over-estimated by more than 10%
                 self.notify(
