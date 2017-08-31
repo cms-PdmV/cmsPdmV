@@ -306,7 +306,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'There should be at least one generator mentioned in the request')
 
-        if self.any_negative_events("time_event") or self.any_negative_events("size_event") <= 0:
+        if self.any_negative_events("time_event") or self.any_negative_events("size_event"):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
                     'The time per event or size per event are invalid: negative or null')
 
