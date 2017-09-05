@@ -546,6 +546,18 @@ class request(json_base):
                     len(self.get_attribute("size_event")),
                     len(self.get_attribute("sequences"))))
 
+        ##Check if there are new/announced invalidations for request before approving it.
+        ##So we would not submit same request to computing until previous is fully reset/invalidated
+        idb = database("invalidations")
+        __invalidations_query = idb.construct_lucene_query({"prepid": self.get_attribute("prepid")})
+        self.logger.debug("len invalidations list %s" % (len(__invalidations_query)))
+        res = idb.full_text_search("search", __invalidations_query, page=-1)
+        for el in res:
+            if el["status"] in ["new", "announced"]:
+                raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
+                'There are unacknowledged invalidations for request: %s' % (
+                    self.get_attribute("prepid")))
+
         crdb = database('chained_requests')
         rdb = database('requests')
         for cr in self.get_attribute('member_of_chain'):
