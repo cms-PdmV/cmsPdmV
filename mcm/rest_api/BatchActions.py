@@ -6,6 +6,7 @@ from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request
+from json_layer.notification import notification
 from tools.locker import semaphore_events
 from tools.settings import settings
 from tools.locator import locator
@@ -344,7 +345,15 @@ class NotifyBatch(RESTResource):
         else:
             result = single_batch.notify(subject, message, who=to_who, sender=None)
             self.logger.info('result if False : %s' % result)
-
+        notification.create_notification(
+                subject,
+                message,
+                group=notification.BATCHES,
+                target_role='production_manager',
+                action_objects=[single_batch.get_attribute('prepid')],
+                object_type='batches',
+                base_object=single_batch
+        )
         single_batch.update_history({'action':'notify', 'step' : message})
         single_batch.reload()
 

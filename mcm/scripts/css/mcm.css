@@ -19,6 +19,122 @@ body {
     bottom: 0;
 }
 
+.circle {
+    width: 25px;
+    height: 21px;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    border-radius: 50%;
+    background: red;
+    position: relative;
+    left: 17px;
+    bottom: 46px;
+}
+
+.notification-dropdown{
+    position: absolute;
+    left: -200px;
+    top: 45px;
+    width: 400px;
+    height: 500px;
+    overflow-y: scroll;
+    border-radius: 10px;
+}
+
+.notification i{
+    position: absolute;
+    top: 53px;
+    right: 5px;
+}
+
+.notification i:hover{
+    background-color: #b3b3ff;
+}
+
+.notification{
+    position: relative;
+    text-align: left;
+    border-bottom-style: ridge;
+    width: 100%;
+}
+
+.notification h5{
+    font-size: 0.83em;
+    font-style: italic;
+    width: 320px;
+    color: black;
+    left: 50px;
+    height: 55px;
+    position: relative;
+}
+
+.notification-overlay {
+    height: 0;
+    width: 100%;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0, 0.8);
+    overflow-x: hidden;
+    transition: 0.5s;
+    text-align: center;
+}
+
+.notification-overlay .closebtn {
+    position: absolute;
+    top: 20px;
+    right: 45px;
+    font-size: 60px;
+}
+
+.notification-eye{
+    width: 25px;
+    position: absolute;
+    left: 10px;
+    top: 53px;
+    position: relative;
+}
+
+.notification-date {
+    color: black;
+    position: absolute;
+    bottom: -3px;
+    left: 50px;
+    font-size: 10px
+}
+
+.notification-group{
+    border-bottom-style: outset;
+    text-align: center;
+    background-color: #e6e6ff;
+    cursor: pointer;
+}
+
+.notification-group h3 {
+    display: inline;
+}
+
+.notification-header:hover{
+    background-color: #b3b3ff;
+}
+
+
+.notification-groups {
+    width: 390px;
+    background-color: #333;
+    overflow: auto;
+    white-space: nowrap;
+    margin-top: 9px;
+    border-radius: 10px;
+    height: 43px;
+}
+
+div.notification-groups:hover {
+    overflow-x:scroll;
+}
+
 .table th.text-right, .table td.text-right {
     text-align: right;
 }
