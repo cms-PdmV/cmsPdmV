@@ -84,7 +84,7 @@
           <div class="notification-overlay" ng-style="{ 'height': overlay_height }">
             <a href="javascript:void(0)" class="closebtn" ng-click="overlay_height = '0%';">&times;</a>
             <h3 style="color: white; overflow-y: scroll;">{{overlay_title}}</h3>
-            <h5 style="color: white; overflow-y: scroll; text-align: left;">{{overlay_message}}</h5>
+            <pre class="overlay-text">{{overlay_message}}</pre>
           </div>
           <span style=" position: absolute; right: -16px; cursor: pointer;" ng-click="displayNotifications();">
               <img style="width: 30px" src="scripts/img/notification_icon.png"></img>
@@ -94,17 +94,17 @@
           </span>
           <div class="notification-dropdown" ng-show="display_notifications">
             <div class="notification-group" ng-repeat="group in sorted_groups" >
-                <div ng-click="fetchNotifications(group);" class="notification-header">
-                  <h3>{{group + ' (' + notification_numbers[group] + ')'}}</h3>
+                <div ng-click="showGroup(group);" class="notification-header">
+                  <h3>{{group.split('_').join(' ') + ' (' + notification_numbers[group] + ')'}}</h3>
                 </div>
-                <div class="notification" ng-show="notifications[group].is_selected" ng-repeat="notification in notifications[group].notifications" ng-style="notification.seen ? {} : { 'background-color': '#a6a6a6' }" ng-click="showNotification(notification, group);">
+                <div class="notification" ng-show="notifications[group].is_selected" ng-repeat="notification in notifications[group].notifications" ng-style="notification.seen ? {} : { 'background-color': '#B0D0D3' }" ng-click="showNotification(notification, group);">
                   <img class="notification-eye" ng-if="notification.seen" src="scripts/img/seen.png"></img>
                   <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
                   <h5>{{notification.title}}</h5>
                   <span class="notification-date">{{notification.created_at}}</span>
                   <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id)" class="icon-chevron-right action-arrow"></i>
                 </div>
-                <div ng-if="notifications[group].more_to_fetch" style="background-color: white;" ng-click="fetchNotifications(group);">
+                <div ng-if="notifications[group].more_to_fetch && notifications[group].is_selected" style="background-color: white;" ng-click="fetchNotifications(group);">
                     <i class="icon-chevron-down"></i>
                 </div>
             </div>

@@ -162,7 +162,7 @@ class request(json_base):
             notification.create_notification(
                 title,
                 self.textified(),
-                group='Requests in ' + new_status,
+                group='Requests_in_' + new_status,
                 action_objects=[self.get_attribute('prepid')],
                 object_type='requests',
                 base_object=self

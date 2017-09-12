@@ -3,7 +3,7 @@ angular.module('testApp').controller('notificator',
   ['$scope', '$http', '$location', '$window',
   function notificator($scope, $http, $location, $window){
     $scope.show_notifications = false;
-    $scope.unseen = 0;
+    $scope.unseen = -1;
     $scope.notification_numbers = {};
     $scope.notifications = {};
     $scope.sorted_groups = [];
@@ -16,6 +16,9 @@ angular.module('testApp').controller('notificator',
       var promise = $http.get("restapi/notifications/check");
       promise.then(function(data) {
             $scope.notification_numbers = data.data;
+            if ($scope.unseen !== -1 && $scope.unseen < $scope.notification_numbers.unseen){
+              $scope.playAudio();
+            }
             $scope.unseen = $scope.notification_numbers.unseen;
             delete $scope.notification_numbers.unseen;
             $scope.sorted_groups = Object.keys($scope.notification_numbers).sort();
@@ -24,19 +27,25 @@ angular.module('testApp').controller('notificator',
         });
     }
 
+    $scope.playAudio = function() {
+        var audio = new Audio('scripts/notif.mp3');
+        audio.play();
+    };
+
     $scope.showActions = function(object_type, notification_id){
       window.location = object_type + "?from_notification=" + notification_id;
     }
 
-    $scope.fetchNotifications = function(group){
-      var page = 0;
+    $scope.showGroup = function(group){
       if($scope.notifications.hasOwnProperty(group)){
         $scope.notifications[group]['is_selected'] = !$scope.notifications[group]['is_selected'];
-        if(!$scope.notifications[group]['more_to_fetch']){
-          return;
-        }
-        page = $scope.notifications[group].page;
+      } else{
+        $scope.fetchNotifications(group);
       }
+    }
+
+    $scope.fetchNotifications = function(group){
+      var page = $scope.notifications.hasOwnProperty(group) ? $scope.notifications[group].page : 0;
       var groupAux = group == 'All' ? '*' : group
       var promise = $http.get("restapi/notifications/fetch?page=" + page + "&group=" + groupAux);
       promise.then(function(data) {

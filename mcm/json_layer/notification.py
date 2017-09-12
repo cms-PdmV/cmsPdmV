@@ -9,10 +9,10 @@ from couchdb_layer.mcm_database import database
 class notification(json_base):
     #Groups
     BATCHES = 'Batches'
-    CHAINED_REQUESTS = 'Chained requests'
-    REQUEST_APPROVALS = 'Request approvals'
+    CHAINED_REQUESTS = 'Chained_requests'
+    REQUEST_APPROVALS = 'Request_approvals'
     #Requests in (all request status)
-    REQUEST_OPERATIONS = 'Request operations'
+    REQUEST_OPERATIONS = 'Request_operations'
     REMINDERS = "Reminders"
     USERS = "Users"
 

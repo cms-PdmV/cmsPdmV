@@ -13,10 +13,17 @@ body {
 }
 
 .custom-footer-priority{
-    background: white; 
-    height: 70px; 
-    position: fixed; 
+    background: white;
+    height: 70px;
+    position: fixed;
     bottom: 0;
+}
+
+.overlay-text{
+    color: white;
+    background-color: transparent;
+    overflow-y: scroll;
+    text-align: left;
 }
 
 .circle {
@@ -48,7 +55,7 @@ body {
 }
 
 .notification i:hover{
-    background-color: #b3b3ff;
+    background-color: #324A5F;
 }
 
 .notification{
@@ -56,6 +63,7 @@ body {
     text-align: left;
     border-bottom-style: ridge;
     width: 100%;
+    border-bottom-color: #63CCCA;
 }
 
 .notification h5{
@@ -108,16 +116,18 @@ body {
 .notification-group{
     border-bottom-style: outset;
     text-align: center;
-    background-color: #e6e6ff;
+    background-color: #FAFAFA;
     cursor: pointer;
+    border-bottom-color: #63CCCA;
 }
 
 .notification-group h3 {
     display: inline;
+    color: #397367;
 }
 
 .notification-header:hover{
-    background-color: #b3b3ff;
+    background-color: #324A5F;
 }
 
 

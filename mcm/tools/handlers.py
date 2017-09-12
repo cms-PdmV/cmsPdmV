@@ -18,6 +18,7 @@ from tools.communicator import communicator
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
+from json_layer.notification import notification
 from rest_api.BatchPrepId import BatchPrepId
 from tools.logger import InjectionLogAdapter
 
@@ -310,6 +311,12 @@ class RequestApprover(Handler):
         production_managers = users_db.full_text_search('search', query, page=-1)
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
+        notification.create_notification(
+            subject,
+            text,
+            group=notification.REQUEST_OPERATIONS,
+            target_role="production_manager"
+        )
         com.sendMail(
             map(lambda u: u['email'], production_managers),
             subject,
@@ -419,7 +426,16 @@ class ChainRequestInjector(Handler):
                                 mcm_rs[-1].get_attribute('approval')
                         )
                         self.logger.error(message)
-                        mcm_cr.notify('%s injection failed' % mcm_cr.get_attribute('prepid'), message)
+                        subject = '%s injection failed' % mcm_cr.get_attribute('prepid')
+                        notification.create_notification(
+                            subject,
+                            message,
+                            group=notification.CHAINED_REQUESTS,
+                            action_objects=[mcm_cr.get_attribute('prepid')],
+                            object_type='chained_requests',
+                            base_object=mcm_cr
+                        )
+                        mcm_cr.notify(subject, message)
                         return False
 
                     if mcm_rs[-1].get_attribute('status') != 'approved':
@@ -429,12 +445,29 @@ class ChainRequestInjector(Handler):
                                 mcm_rs[-1].get_attribute('approval')
                         )
                         self.logger.error(message)
-                        mcm_cr.notify('%s injection failed' % mcm_cr.get_attribute('prepid'), message)
+                        subject = '%s injection failed' % mcm_cr.get_attribute('prepid')
+                        notification.create_notification(
+                            subject,
+                            message,
+                            group=notification.CHAINED_REQUESTS,
+                            action_objects=[mcm_cr.get_attribute('prepid')],
+                            object_type='chained_requests',
+                            base_object=mcm_cr
+                        )
+                        mcm_cr.notify(subject, message)
                         return False
 
                     uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
                     if not uploader.internal_run():
                         message = 'Problem with uploading the configuration for request %s' % (request_prepid)
+                        notification.create_notification(
+                            'Configuration upload failed',
+                            message,
+                            group=notification.CHAINED_REQUESTS,
+                            action_objects=[mcm_cr.get_attribute('prepid')],
+                            object_type='chained_requests',
+                            base_object=mcm_cr
+                        )
                         mcm_cr.notify('Configuration upload failed', message)
                         self.logger.error(message)
                         return False
@@ -513,8 +546,16 @@ class ChainRequestInjector(Handler):
                     mcm_cr.update_history({'action' : 'inject','step': batch_name})
                     mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain'))-1)
                     mcm_cr.set_attribute('status','processing')
-                    mcm_cr.notify('Injection succeeded for %s' % mcm_cr.get_attribute('prepid'),
-                                  message)
+                    subject = 'Injection succeeded for %s' % mcm_cr.get_attribute('prepid')
+                    notification.create_notification(
+                            subject,
+                            message,
+                            group=notification.CHAINED_REQUESTS,
+                            action_objects=[mcm_cr.get_attribute('prepid')],
+                            object_type='chained_requests',
+                            base_object=mcm_cr
+                    )
+                    mcm_cr.notify(subject, message)
 
                     mcm_cr.reload()
 
