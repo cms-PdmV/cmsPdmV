@@ -24,7 +24,6 @@ class notification(json_base):
         'target_role': '',
         'action_objects': [],
         'object_type': '',
-        'seen': 0,
         'created_at': '',
         'group': ''
     }
