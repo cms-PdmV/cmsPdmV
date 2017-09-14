@@ -186,6 +186,22 @@ angular.module('testApp').controller('resultCtrl',
         case "mccms":
           $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function(tok){return tok.value});
           break;
+        case "flows":
+          _.each($scope.result["request_parameters"]["sequences"], function(sequence){
+            _.each(sequence, function(elem){
+              if (_.has( elem, "datatier")){
+                if(_.isString(elem["datatier"])){
+                  elem["datatier"] = elem["datatier"].split(",");
+                }
+              }
+              if (_.has(elem, "eventcontent")){
+                if(_.isString(elem["eventcontent"])){
+                  elem["eventcontent"] = elem["eventcontent"].split(",");
+                }
+              }
+            });
+          });
+          break;
         default:
           break;
       }
