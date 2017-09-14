@@ -7,6 +7,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
+from json_layer.notification import notification
 from RestAPIMethod import RESTResource
 from json_layer.action import action
 from tools.json import threaded_loads
@@ -261,9 +262,17 @@ class GenerateChainedRequests(RESTResource):
                 req.set_attribute('member_of_chain',list(set(inchains)))
                 req.update_history({'action' : 'join chain', 'step' : new_cr['prepid']})
                 if with_notify:
-                    req.notify("Request {0} joined chain".format(req.get_attribute('prepid')),
-                            "Request {0} has successfully joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid']),
-                            Nchild=0, accumulate=True)
+                    subject = "Request {0} joined chain".format(req.get_attribute('prepid'))
+                    message = "Request {0} has successfully joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid'])
+                    notification.create_notification(
+                        subject,
+                        message,
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[req.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=req
+                    )
+                    req.notify(subject, message, Nchild=0, accumulate=True)
 
                 mcm_a.update_history({'action' : 'add', 'step' : new_cr['prepid']})
                 rdb.update(req.json())

@@ -5,6 +5,7 @@ from json_layer.json_base import json_base
 from tools.user_management import authenticator
 from tools.locator import locator
 from tools.settings import settings
+from json_layer.notification import notification
 
 class batch(json_base):
 
@@ -152,6 +153,15 @@ class batch(json_base):
         #    sender = auth.get_random_product_manager_email()
 
         #current_message_id = self.get_attribute('message_id')
+        notification.create_notification(
+            subject,
+            message,
+            group=notification.BATCHES,
+            target_role='production_manager',
+            action_objects=[self.get_attribute('prepid')],
+            object_type='batches',
+            base_object=self
+        )
         returned_id = self.notify(subject,
                                   message,
                                   who=to_who)#,

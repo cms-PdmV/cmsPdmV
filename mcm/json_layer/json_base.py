@@ -280,7 +280,7 @@ class json_base:
     def textified(self):
         return 'no body'
 
-    def set_status(self, step=-1, with_notification=False, to_status=None):
+    def set_status(self, step=-1, to_status=None):
         if 'status' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 
@@ -309,12 +309,6 @@ class json_base:
 
         if self.__json['status'] == self.__status[next_step]:
             return
-
-        if with_notification:
-            self.notify(
-                'Status changed for request %s to %s' % (self.get_attribute('prepid'), self.__status[next_step]),
-                self.textified(),
-                accumulate=True)
 
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action': 'set status', 'step': self.__json['status']})
@@ -374,7 +368,7 @@ class json_base:
         dest = map(lambda i: i, who)
         if actors:
             #add the actors to the object
-            dest.extend(self.get_actors(what='author_email',Nchild=Nchild))
+            dest.extend(self.get_actors(what='author_email'),Nchild=Nchild)
         if service:
             #let the service know at any time
             dest.append(settings().get_value('service_account'))

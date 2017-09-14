@@ -11,7 +11,8 @@ class user(json_base):
         'pwg': [],
         'fullname': '',
         'history': [],
-        'notes': ''
+        'notes': '',
+        'seen_notifications': []
     }
 
     def __init__(self, json_input=None):

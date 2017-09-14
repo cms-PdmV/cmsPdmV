@@ -10,6 +10,7 @@ from json_layer.user import user
 from json_layer.chained_campaign import chained_campaign
 from json_layer.chained_request import chained_request
 from json_layer.request import request
+from json_layer.notification import notification
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
@@ -433,9 +434,19 @@ class GenerateChains(RESTResource):
         mcm_request.set_attribute('member_of_chain', list(set(chains)))
         mcm_request.update_history({'action' : 'join chain', 'step' : new_chain_prepid})
         if with_notify:
+            subject = "Request %s joined chain" % mcm_request.get_attribute('prepid')
+            message = "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid)
+            notification.create_notification(
+                subject,
+                message,
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[mcm_request.get_attribute('prepid')],
+                object_type='requests',
+                base_object=mcm_request
+            )
             mcm_request.notify(
-                "Request %s joined chain" % mcm_request.get_attribute('prepid'),
-                "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid),
+                subject,
+                message,
                 Nchild=0,
                 accumulate=True
             )
@@ -489,6 +500,7 @@ class MccMReminderGenContacts(RESTResource):
         mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
         non_gen_contact_authors = set()
         authors_tickets_dict = dict()
+        emails_prepids = dict()
         for ticket in mccms_tickets:
             yield '\nProcessing ticket %s' % (ticket['prepid'])
             mccm_ticket = mccm(json_input=ticket)
@@ -498,10 +510,11 @@ class MccMReminderGenContacts(RESTResource):
                     authors_tickets_dict[author_email].append(ticket['prepid'])
                 elif author_email not in non_gen_contact_authors:
                     __role_query = users_db.construct_lucene_query({'email' : author_email})
-                    result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role')
+                    result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role,prepid')
                     time.sleep(0.5) #we don't want to crash DB with a lot of single queries
                     if result and result[0]['role'] == 'generator_contact':
                         authors_tickets_dict[author_email] = [ticket['prepid']]
+                        emails_prepids[author_email] = result[0]['prepid']
                     else:
                         non_gen_contact_authors.add(author_email)
                 yield '.'
@@ -520,6 +533,14 @@ class MccMReminderGenContacts(RESTResource):
                 yield '.'
             full_message += '\n'
             subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
+            notification.create_notification(
+                subject,
+                full_message,
+                group=notification.REMINDERS,
+                action_objects=ticket_prepids,
+                object_type='mccms',
+                targets=[emails_prepids[author_email]]
+            )
             mail_communicator.sendMail([author_email], subject, full_message)
             yield '\nEmail sent to %s\n' % (author_email)
 
@@ -556,15 +577,24 @@ Dear Production Managers,
  please find below the details of %s opened MccM tickets that need to be operated.
 
 ''' % (len(mccms))
-
+        mccm_prepids = []
         for mccm in mccms:
-            message += 'Ticket : %s (block %s)\n'%( mccm['prepid'], mccm['block'] )
-            message += ' %smccms?prepid=%s \n\n' % (l_type.baseurl(), mccm['prepid'])
-
+            prepid = mccm['prepid']
+            message += 'Ticket : %s (block %s)\n'%( prepid, mccm['block'] )
+            message += ' %smccms?prepid=%s \n\n' % (l_type.baseurl(), prepid)
+            mccm_prepids.append(prepid)
         message += '\n'
 
         to_who = [settings().get_value('service_account')]
         to_who.extend( map( lambda u : u['email'], udb.query(query="role==production_manager", page_num=-1)))
+        notification.create_notification(
+            subject,
+            message,
+            group=notification.REMINDERS,
+            action_objects=mccm_prepids,
+            object_type='mccms',
+            target_role='production_manager'
+        )
         com.sendMail(to_who,
                      subject,
                      message)

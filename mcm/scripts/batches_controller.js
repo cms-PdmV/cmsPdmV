@@ -48,19 +48,46 @@ angular.module('testApp').controller('resultsCtrl',
     });
 
     $scope.getData = function(){
-      var query = "";
-      _.each($location.search(), function(value,key){
-        if (key!= 'shown' && key != 'fields'){
-          query += "&"+key+"="+value;
-        }
-      });
-
+      if($location.search()["from_notification"]){
+        notification = $location.search()["from_notification"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
+      }else if($location.search()["from_notification_group"]){
+          group = $location.search()["from_notification_group"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
+      }else{
+        var query = "";
+        _.each($location.search(), function(value,key){
+          if (key!= 'shown' && key != 'fields'){
+            query += "&"+key+"="+value;
+          }
+        });
+        var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
+      }
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       promise.then(function(data){
         $scope.result_status = data.status;
         $scope.got_results = true;
-        $scope.result = _.pluck(data.data.rows, 'doc');
+        if (data.data.rows === undefined){
+            $scope.result = data.data;
+        }else{
+            $scope.result = _.pluck(data.data.rows, 'doc');
+        }
         if ($scope.result.length != 0){
           columns = _.keys($scope.result[0]);
           rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
