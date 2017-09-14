@@ -93,6 +93,54 @@ class SaveSeen(RESTResource):
         self.logger.info("Saved seen for notification %s" % notification_id)
         return dumps({"results": users_db.save(user_json)})
 
+class FetchGroupActionObjects(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def GET(self, **kwargs):
+        """
+        Get group action objects from notification
+        """
+        if 'group' not in kwargs:
+            return dumps({})
+        group = kwargs['group']
+        page = 0
+        limit = 20
+        if 'page' in kwargs:
+            page = int(kwargs['page'])
+        if 'limit' in kwargs:
+            limit = int(kwargs['limit'])
+        user_p = user_pack()
+        username = user_p.get_username()
+        role = self.authenticator.get_user_role(username, email=user_p.get_email())
+        notifications_db = database('notifications')
+        query = notifications_db.construct_lucene_complex_query([
+                ('target_role', {'value': role}),
+                ('targets', {'value': username, 'join_operator': 'OR'}),
+                ('group', {'value': group, 'join_operator': 'AND'})
+        ])
+        notifications = notifications_db.full_text_search('search', query)
+        action_objects = []
+        object_type = ''
+        for notif in notifications:
+            action_objects += notif['action_objects']
+            if object_type == '' and notif['object_type'] != '':
+                object_type = notif['object_type']
+        if object_type == '' or len(action_objects) < 1:
+            return dumps({})
+        index = page * limit
+        db = database(object_type)
+        action_objects_results = []
+        while(index < len(action_objects) and len(action_objects_results) < limit):
+            fetch = limit - len(action_objects_results)
+            fetch = fetch if fetch < 20 else 20
+            query = db.construct_lucene_query({'prepid': action_objects[index:fetch]}, boolean_operator="OR")
+            action_objects_results += db.full_text_search('search', query)
+            index += 20
+        self.logger.info("Fetched group action objects for group %s" % group)
+        return dumps(action_objects_results)
+
+
 class FetchActionObjects(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
@@ -113,14 +161,14 @@ class FetchActionObjects(RESTResource):
         notifications_db = database('notifications')
         mcm_notification = notification(notifications_db.get(notification_id))
         db = database(mcm_notification.get_attribute("object_type"))
-        index = 0
+        index = page * limit
         action_objects = mcm_notification.get_attribute("action_objects")
         action_objects_results = []
         while(index < len(action_objects) and len(action_objects_results) < limit):
             fetch = limit - len(action_objects_results)
             fetch = fetch if fetch < 20 else 20
             query = db.construct_lucene_query({'prepid': action_objects[index:fetch]}, boolean_operator="OR")
-            action_objects_results += db.full_text_search('search', query, page=page, limit=limit)
+            action_objects_results += db.full_text_search('search', query)
             index += 20
         self.logger.info("Fetched action objects for notifications %s" % notification_id)
         return dumps(action_objects_results)

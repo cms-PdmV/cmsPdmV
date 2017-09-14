@@ -11,6 +11,19 @@ angular.module('testApp').controller('notificator',
     $scope.overlay_height = "0%";
     $scope.overlay_title = "";
     $scope.overlay_message = "";
+    $scope.group_object = {
+      'Batches' : 'batches',
+      'Chained_requests' : 'chained_requests',
+      'Request_approvals' : 'requests',
+      'Request_operations' : 'requests',
+      'Requests_in_approved' : 'requests',
+      'Requests_in_defined' : 'requests',
+      'Requests_in_done' : 'requests',
+      'Requests_in_new' : 'requests',
+      'Requests_in_submitted' : 'requests',
+      'Requests_in_validation' : 'requests',
+      'Users' : 'users'
+    }
 
     $scope.checkNotifications = function(){
       var promise = $http.get("restapi/notifications/check");
@@ -32,8 +45,10 @@ angular.module('testApp').controller('notificator',
         audio.play();
     };
 
-    $scope.showActions = function(object_type, notification_id){
+    $scope.showActions = function(object_type, notification_id, $event){
+      $scope.saveSeenNotification(notification_id);
       window.location = object_type + "?from_notification=" + notification_id;
+      $event.stopPropagation();
     }
 
     $scope.showGroup = function(group){
@@ -88,6 +103,11 @@ angular.module('testApp').controller('notificator',
       $scope.overlay_height = '100%';
       $scope.overlay_message = notification.message;
       $scope.overlay_title = notification.title;
+    }
+
+    $scope.showGroupActions = function(group, $event){
+      window.location = $scope.group_object[group] + "?from_notification_group=" + group;
+      $event.stopPropagation();
     }
 
     $scope.displayNotifications = function(){

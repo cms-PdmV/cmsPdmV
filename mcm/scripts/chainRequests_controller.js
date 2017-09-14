@@ -210,6 +210,17 @@ angular.module('testApp').controller('resultsCtrl',
             limit = 20
           }
           parameters = "restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit;
+        }else if($location.search()["from_notification_group"]){
+          group = $location.search()["from_notification_group"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          parameters = "restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit;
         }else if ($location.search()["from_ticket"]){
           ticket = $location.search()["from_ticket"];
           page = $location.search()["page"]

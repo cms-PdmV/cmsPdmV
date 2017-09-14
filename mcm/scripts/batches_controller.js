@@ -59,6 +59,17 @@ angular.module('testApp').controller('resultsCtrl',
             limit = 20
           }
           var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
+      }else if($location.search()["from_notification_group"]){
+          group = $location.search()["from_notification_group"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
       }else{
         var query = "";
         _.each($location.search(), function(value,key){
