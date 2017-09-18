@@ -130,6 +130,24 @@ body {
     background-color: #324A5F;
 }
 
+#mySidenav a {
+    position: absolute;
+    top: 47px;
+    transition: 0.3s;
+    padding: 12px;
+    width: 300px;
+    text-decoration: none;
+    font-size: 20px;
+    color: white;
+    border-radius: 10px 0px 0px 10px;
+}
+
+.notification-search-bar{
+    position: absolute;
+    top: 6px;
+    left: 33px;
+    width: 270px;
+}
 
 .notification-groups {
     width: 390px;

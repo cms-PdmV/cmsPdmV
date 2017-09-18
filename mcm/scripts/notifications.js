@@ -11,6 +11,11 @@ angular.module('testApp').controller('notificator',
     $scope.overlay_height = "0%";
     $scope.overlay_title = "";
     $scope.overlay_message = "";
+    $scope.search_text = "";
+    $scope.searched_notifications = [];
+    $scope.search_on = false;
+    $scope.search_page = 0;
+    $scope.search_items_left = false;
     $scope.group_object = {
       'Batches' : 'batches',
       'Chained_requests' : 'chained_requests',
@@ -38,6 +43,35 @@ angular.module('testApp').controller('notificator',
         }, function() {
             alert("Error checking notifications");
         });
+    }
+
+    $scope.fetchSearch = function(){
+      var promise = $http.get("restapi/notifications/search?search=" + $scope.search_text.trim() + '&page=' + $scope.search_page);
+      promise.then(function(data) {
+            $scope.searched_notifications = $scope.searched_notifications.concat(data.data);
+            if(data.data.length < 10){
+              $scope.search_items_left = false;
+            } else{
+              $scope.search_items_left = true;
+            }
+        }, function() {
+            alert("Error searching notifications");
+        });
+    }
+
+    $scope.search = function(){
+      if($scope.search_text === '' || !$scope.search_on){
+        return;
+      }
+      $scope.search_page = 0;
+      $scope.searched_notifications = [];
+      $scope.fetchSearch();
+    }
+
+
+    $scope.continueSearch = function(){
+      $scope.search_page += 1;
+      $scope.fetchSearch();
     }
 
     $scope.playAudio = function() {
@@ -87,7 +121,7 @@ angular.module('testApp').controller('notificator',
       });
     }
 
-    $scope.showNotification = function(notification, group){
+    $scope.showNotification = function(notification){
       if(!notification.seen){
         notification.seen = true;
         $scope.saveSeenNotification(notification._id);

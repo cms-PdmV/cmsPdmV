@@ -140,6 +140,36 @@ class FetchGroupActionObjects(RESTResource):
         self.logger.info("Fetched group action objects for group %s" % group)
         return dumps(action_objects_results)
 
+class Search(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.user
+
+    def GET(self, **kwargs):
+        """
+        Search text in title and message fields
+        """
+        if 'search' not in kwargs:
+            return dumps({})
+        search = '*' + kwargs['search'] + '*'
+        page = 0
+        limit = 10
+        if 'page' in kwargs:
+            page = int(kwargs['page'])
+        if 'limit' in kwargs:
+            limit = int(kwargs['limit'])
+        user_p = user_pack()
+        username = user_p.get_username()
+        role = self.authenticator.get_user_role(username, email=user_p.get_email())
+        notifications_db = database('notifications')
+        query = notifications_db.construct_lucene_complex_query([
+                ('target_role', {'value': role}),
+                ('targets', {'value': username, 'join_operator': 'OR'}),
+                ('action_objects', {'value': search, 'join_operator': 'AND', 'open_parenthesis': True}),
+                ('title', {'value': search, 'join_operator': 'OR', 'close_parenthesis': True})
+        ])
+        notifications = notifications_db.full_text_search('search', query, page=page, limit=10, sort="\_id")
+        self.logger.info("Searched text %s in notifications" % search)
+        return dumps(notifications)
 
 class FetchActionObjects(RESTResource):
     def __init__(self):
