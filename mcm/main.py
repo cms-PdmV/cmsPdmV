@@ -16,7 +16,7 @@ from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, Ca
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
-from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, Search
+from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications
 
 from json_layer.sequence import sequence #to get campaign sequences
 from tools.settings import settings
@@ -357,7 +357,7 @@ root.restapi.notifications.fetch = FetchNotifications()
 root.restapi.notifications.seen = SaveSeen()
 root.restapi.notifications.fetch_actions = FetchActionObjects()
 root.restapi.notifications.fetch_group_actions = FetchGroupActionObjects()
-root.restapi.notifications.search = Search()
+root.restapi.notifications.search = SearchNotifications()
 
 ##Define loggers
 

@@ -140,7 +140,7 @@ class FetchGroupActionObjects(RESTResource):
         self.logger.info("Fetched group action objects for group %s" % group)
         return dumps(action_objects_results)
 
-class Search(RESTResource):
+class SearchNotifications(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
 
