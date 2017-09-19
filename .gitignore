@@ -8,3 +8,7 @@ logs/
 WMCore/
 mcm/scripts/build/*
 mcm/node_modules/*
+node-v8.5.0-linux-x64/
+.npm/
+.config/
+package-lock.json
