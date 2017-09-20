@@ -29,6 +29,12 @@ class NotificationRESTResource(RESTResource):
             index += 20
         return action_objects_results
 
+    def set_seen(self, notifications):
+        users_db = database("users")
+        seen_notifications = set(users_db.get(self.username)['seen_notifications'])
+        for notif in notifications:
+            notif['seen'] = notif['_id'] in seen_notifications
+
 
 class CheckNotifications(NotificationRESTResource):
     def __init__(self):
@@ -82,10 +88,7 @@ class FetchNotifications(NotificationRESTResource):
                 ('group', {'value': group, 'join_operator': 'AND'})
         ])
         notifications = notifications_db.full_text_search('search', query, page=page, limit=10, sort="\_id")
-        users_db = database("users")
-        seen_notifications = set(users_db.get(self.username)['seen_notifications'])
-        for notif in notifications:
-            notif['seen'] = notif['_id'] in seen_notifications
+        self.set_seen(notifications)
         self.logger.info("Fetched notifications")
         return dumps({'notifications': notifications})
 
@@ -171,6 +174,7 @@ class SearchNotifications(NotificationRESTResource):
                 ('title', {'value': search, 'join_operator': 'OR', 'close_parenthesis': True})
         ])
         notifications = notifications_db.full_text_search('search', query, page=page, limit=10, sort="\_id")
+        self.set_seen(notifications)
         self.logger.info("Searched text %s in notifications" % search)
         return dumps(notifications)
 
