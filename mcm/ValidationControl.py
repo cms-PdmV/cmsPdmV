@@ -165,7 +165,7 @@ class ValidationHandler:
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
         to_write += 'transfer_output_files = %s\n' % transfer_output_files
-        to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode == 13)\n' #remove the job if .xml transfer failed (expected reason: it wasn't generated)
+        to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)\n'
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
