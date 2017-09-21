@@ -79,8 +79,10 @@ angular.module('testApp').controller('notificator',
         audio.play();
     };
 
-    $scope.showActions = function(object_type, notification_id, $event){
-      $scope.saveSeenNotification(notification_id);
+    $scope.showActions = function(object_type, notification_id, seen, $event){
+      if(!seen){
+        $scope.saveSeenNotification(notification_id);
+      }
       window.location = object_type + "?from_notification=" + notification_id;
       $event.stopPropagation();
     }

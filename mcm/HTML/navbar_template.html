@@ -109,7 +109,7 @@
                   <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
                   <h5>{{notification.title}}</h5>
                   <span class="notification-date">{{notification.created_at}}</span>
-                  <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, $event)" class="icon-chevron-right action-arrow"></i>
+                  <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
                 </div>
                 <div ng-if="notifications[group].more_to_fetch && notifications[group].is_selected" style="background-color: white;" ng-click="fetchNotifications(group);">
                     <i class="icon-chevron-down"></i>
@@ -120,7 +120,7 @@
               <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
               <h5>{{notification.title}}</h5>
               <span class="notification-date">{{notification.created_at}}</span>
-              <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, $event)" class="icon-chevron-right action-arrow"></i>
+              <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
             </div>
             <div style="text-align: center; cursor: pointer;" ng-if="search_on && search_items_left" style="background-color: white;" ng-click="continueSearch();">
                     <i class="icon-chevron-down"></i>
