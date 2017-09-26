@@ -93,9 +93,9 @@
               </div>
           </span>
           <div id="mySidenav" class="sidenav" ng-show="display_notifications">
-            <a href="#" ng-style="{ 'left': search_on ? -520 : -233, 'background-color': '#63CCCA' }" ng-mouseover="search_on = true" ng-init="search_on = false">
-              <i ng-click="search_on = false" ng-class="!search_on ? 'icon-search' : 'icon-chevron-right'"></i>
-              <input ng-change="search()" ng-model-options="{debounce:1000}" type="text" class="notification-search-bar" name="input" ng-model="search_text">
+            <a href="#" ng-style="{ 'left': search_on ? -520 : -233, 'background-color': '#63CCCA' }" ng-click="search_on = !search_on" ng-init="search_on = false">
+              <i ng-class="!search_on ? 'icon-search' : 'icon-chevron-right'"></i>
+              <input ng-change="search()" ng-model-options="{debounce:1000}" ng-click="search_on = false" type="text" class="notification-search-bar" name="input" ng-model="search_text">
             </a>
           </div>
           <div class="notification-dropdown" ng-show="display_notifications" ng-style="!search_on ? {} : { 'background-color': '#FAFAFA' }">

@@ -34,9 +34,6 @@ angular.module('testApp').controller('notificator',
       var promise = $http.get("restapi/notifications/check");
       promise.then(function(data) {
             $scope.notification_numbers = data.data;
-            if ($scope.unseen !== -1 && $scope.unseen < $scope.notification_numbers.unseen){
-              $scope.playAudio();
-            }
             $scope.unseen = $scope.notification_numbers.unseen;
             delete $scope.notification_numbers.unseen;
             $scope.sorted_groups = Object.keys($scope.notification_numbers).sort();
@@ -73,11 +70,6 @@ angular.module('testApp').controller('notificator',
       $scope.search_page += 1;
       $scope.fetchSearch();
     }
-
-    $scope.playAudio = function() {
-        var audio = new Audio('scripts/notif.mp3');
-        audio.play();
-    };
 
     $scope.showActions = function(object_type, notification_id, seen, $event){
       if(!seen){
