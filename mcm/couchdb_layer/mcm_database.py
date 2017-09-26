@@ -526,7 +526,7 @@ class database:
             constructed_query += close_parenthesis
         return constructed_query
 
-    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields=''):
+    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields='', sort=''):
         """
         queries loadView method with lucene interface for full text search
         """
@@ -543,6 +543,8 @@ class database:
                 }
                 if include_fields != '':
                     options['include_fields'] = include_fields
+                if sort != '':
+                    options['sort'] = sort
                 data = self.db.FtiSearch(url, options=options, get_raw=get_raw) #we sort ascending by doc._id field
                 break
             except Exception as ex:

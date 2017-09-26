@@ -80,6 +80,53 @@
         <li>
           <a ng-href='users?prepid={{user.name}}' target="_blank">{{user.name}} : {{user.role}} </a>
         </li>
+        <li ng-controller="notificator">
+          <div class="notification-overlay" ng-style="{ 'height': overlay_height }">
+            <a href="javascript:void(0)" class="closebtn" ng-click="overlay_height = '0%';">&times;</a>
+            <h3 style="color: white; overflow-y: scroll;">{{overlay_title}}</h3>
+            <pre class="overlay-text">{{overlay_message}}</pre>
+          </div>
+          <span style=" position: absolute; right: -16px; cursor: pointer;" ng-click="displayNotifications();">
+              <img style="width: 30px" src="scripts/img/notification_icon.png"></img>
+              <div class="circle" ng-show="notification_numbers.All > 0">
+                <h5 style="color: white; width: 25px; text-align: center;" id="notification_number">{{unseen > 99 ? '99+' : unseen}}</h5>
+              </div>
+          </span>
+          <div id="mySidenav" class="sidenav" ng-show="display_notifications">
+            <a href="#" ng-style="{ 'left': search_on ? -520 : -233, 'background-color': '#63CCCA' }" ng-mouseover="search_on = true" ng-init="search_on = false">
+              <i ng-click="search_on = false" ng-class="!search_on ? 'icon-search' : 'icon-chevron-right'"></i>
+              <input ng-change="search()" ng-model-options="{debounce:1000}" type="text" class="notification-search-bar" name="input" ng-model="search_text">
+            </a>
+          </div>
+          <div class="notification-dropdown" ng-show="display_notifications" ng-style="!search_on ? {} : { 'background-color': '#FAFAFA' }">
+            <div ng-if="!search_on" class="notification-group" ng-repeat="group in sorted_groups" >
+                <div ng-click="showGroup(group);" class="notification-header">
+                  <h3>{{group.split('_').join(' ') + ' (' + notification_numbers[group] + ')'}}</h3>
+                  <i ng-if="group_object.hasOwnProperty(group)" ng-click="showGroupActions(group, $event);" class="icon-chevron-right action-arrow"></i>
+                </div>
+                <div class="notification" ng-show="notifications[group].is_selected" ng-repeat="notification in notifications[group].notifications" ng-style="notification.seen ? {} : { 'background-color': '#B0D0D3' }" ng-click="showNotification(notification);">
+                  <img class="notification-eye" ng-if="notification.seen" src="scripts/img/seen.png"></img>
+                  <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
+                  <h5>{{notification.title}}</h5>
+                  <span class="notification-date">{{notification.created_at}}</span>
+                  <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
+                </div>
+                <div ng-if="notifications[group].more_to_fetch && notifications[group].is_selected" style="background-color: white;" ng-click="fetchNotifications(group);">
+                    <i class="icon-chevron-down"></i>
+                </div>
+            </div>
+            <div class="notification" ng-if="search_on" ng-repeat="notification in searched_notifications" ng-style="notification.seen ? {} : { 'background-color': '#B0D0D3' }" ng-click="showNotification(notification);">
+              <img class="notification-eye" ng-if="notification.seen" src="scripts/img/seen.png"></img>
+              <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
+              <h5>{{notification.title}}</h5>
+              <span class="notification-date">{{notification.created_at}}</span>
+              <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
+            </div>
+            <div style="text-align: center; cursor: pointer;" ng-if="search_on && search_items_left" style="background-color: white;" ng-click="continueSearch();">
+                    <i class="icon-chevron-down"></i>
+            </div>
+          </div>
+        </li>
       </ul>
     </ul>
   </div>
@@ -112,4 +159,5 @@
     <button class="btn btn-success" ng-click="no()">No</button>
   </div> <!--end of modal footer-->
 </script>
+
 <!-- END of isSure MODAL-->

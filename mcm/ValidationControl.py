@@ -15,6 +15,7 @@ from tools.ssh_executor import ssh_executor
 from tools.settings import settings
 from tools.communicator import communicator
 from json_layer.request import request
+from json_layer.notification import notification
 from json_layer.chained_request import chained_request
 from tools.locator import locator
 from itertools import izip
@@ -464,6 +465,14 @@ class ValidationHandler:
         if not self.chained_request_db.update(mcm_chained_request.json()):
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % prepid
             self.logger.error(message)
+            notification.create_notification(
+                'Chained validation run test',
+                message,
+                group=notification.CHAINED_REQUESTS,
+                action_objects=[mcm_chained_request.get_attribute('prepid')],
+                object_type='chained_requests',
+                base_object=mcm_chained_request
+            )
             mcm_chained_request.notify('Chained validation run test', message)
             return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)

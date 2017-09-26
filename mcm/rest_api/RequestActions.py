@@ -15,6 +15,7 @@ from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
 from json_layer.campaign import campaign
 from json_layer.user import user
+from json_layer.notification import notification
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
@@ -1061,10 +1062,17 @@ class NotifyUser(RESTResource):
 
             req = request(rdb.get(pid))
             # notify the actors of the request
-
-            req.notify('Communication about request %s' % pid,
-                       '%s \n\n %srequests?prepid=%s\n' % (message,
-                                l_type.baseurl(), pid), accumulate=True)
+            subject = 'Communication about request %s' % pid
+            message = '%s \n\n %srequests?prepid=%s\n' % (message, l_type.baseurl(), pid)
+            notification.create_notification(
+                subject,
+                message,
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[req.get_attribute('prepid')],
+                object_type='requests',
+                base_object=req
+            )
+            req.notify(subject, message, accumulate=True)
 
             # update history with "notification"
             req.update_history({'action': 'notify', 'step': message})
@@ -1331,6 +1339,7 @@ class StalledReminder(RESTResource):
         text="The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n"%( time_since, time_remaining, below_completed)
         reminded=0
         by_batch=defaultdict(list)
+        request_prepids = []
         for r in rs:
             date_s = filter( lambda h : 'step' in h and h['step']=='submitted', r['history'])[-1]['updater']['submission_date']
             date= time.mktime( time.strptime(date_s, "%Y-%m-%d-%H-%M"))
@@ -1371,6 +1380,7 @@ class StalledReminder(RESTResource):
                                                                                                                                    wma_status,
                                                                                                                                    r['priority'])
                 by_batch[in_batch].append(line)
+                request_prepids.append(r['prepid'])
         l_type = locator()
         for (b,lines) in by_batch.items():
             text+="In batch %s:\n"%b
@@ -1390,8 +1400,16 @@ class StalledReminder(RESTResource):
         people_list = production_managers + gen_conveners
 
         subject = "Gentle reminder of %d requests that appear stalled"%(reminded)
-
         if reminded!=0:
+            notification.create_notification(
+                subject,
+                text,
+                group=notification.REMINDERS,
+                action_objects=request_prepids,
+                object_type='requests',
+                targets=map(lambda u: u['prepid'], production_managers),
+                target_role='generator_convener'
+            )
             com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
                          subject, text)
 
@@ -1493,11 +1511,16 @@ class RequestsReminder(RESTResource):
             if len(ids_for_production_managers):
                 __query2 = udb.construct_lucene_query({'role' : 'production_manager'})
                 production_managers = udb.full_text_search('search', __query2, page=-1)
-                message = 'A few request that needs to be submitted \n\n'
+                message = 'A few requests that needs to be submitted \n\n'
                 message += prepare_text_for(ids_for_production_managers, 'approved')
-                com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')],
-                             'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers)),
-                             message)
+                subject = 'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers))
+                notification.create_notification(
+                    subject,
+                    message,
+                    group=notification.REMINDERS,
+                    target_role='production_manager'
+                )
+                com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')], subject, message)
 
         if not what or 'gen_conveners' in what or 'generator_convener' in what:
         ## send the reminder to generator conveners
@@ -1509,9 +1532,14 @@ class RequestsReminder(RESTResource):
                 gen_conveners = udb.full_text_search('search', __query3, page=-1)
                 message = 'A few requests need your approvals \n\n'
                 message += prepare_text_for(ids_for_gen_conveners, 'defined')
-                com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')],
-                             'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners)),
-                             message)
+                subject = 'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners))
+                notification.create_notification(
+                    subject,
+                    message,
+                    group=notification.REMINDERS,
+                    target_role='generator_convener'
+                )
+                com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')], subject, message)
 
         if not what or 'gen_contact' in what or 'generator_contact' in what:
             all_ids = set()
@@ -1607,11 +1635,14 @@ class RequestsReminder(RESTResource):
                         name = contact
                         if mcm_u['fullname']:
                             name = mcm_u['fullname']
-                        com.sendMail(
-                            to_who,
-                            'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name),
-                            message
+                        subject = 'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name)
+                        notification.create_notification(
+                            subject,
+                            message,
+                            group=notification.REMINDERS,
+                            targets=[contact]
                         )
+                        com.sendMail(to_who, subject, message)
                         yield '.'
 
 
