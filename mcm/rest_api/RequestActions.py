@@ -1809,16 +1809,14 @@ class GetUniqueValues(RESTResource):
         if not args:
             self.logger.error('GetUniqueValues: No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.get_unique_values(args[0], kwargs))
+        return threaded_loads(self.get_unique_values(args[0], kwargs), loads=False)
 
     def get_unique_values(self, field_name, kwargs):
         db = database('requests')
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        data = db.raw_view_query(view_doc="unique", view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
-        unique_list = [str(elem["key"]) for elem in data]
-        return {"results": unique_list}
+        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
 
 class PutToForceComplete(RESTResource):
 

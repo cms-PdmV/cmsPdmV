@@ -583,6 +583,16 @@ class database:
             self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
             return {}
 
+    def raw_view_query_uniques(self, view_name, options={}, cache=True):
+        result = self.raw_view_query("unique", view_name, options, cache)
+        if "results" in result:
+            return result
+        parsedResult = {"results": [str(elem["key"]) for elem in result]}
+        cache_id = "_design/unique/_view/%s" % (view_name)
+        if cache:
+            self.__save_to_cache(cache_id, parsedResult)
+        return parsedResult
+
     def update_sequence(self, options={}):
         result = self.db.UpdateSequence()
         return result
