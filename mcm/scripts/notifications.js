@@ -142,12 +142,8 @@ angular.module('testApp').controller('notificator',
       $scope.display_notifications = !$scope.display_notifications;
       if(!$scope.display_notifications){
         $scope.notifications = {};
-        $scope.check_timer = setInterval($scope.checkNotifications, 60000);
-      } else{
-        clearInterval($scope.check_timer);
       }
     }
     $scope.checkNotifications();
-    $scope.check_timer = setInterval($scope.checkNotifications, 60000);
   }
 ]);
