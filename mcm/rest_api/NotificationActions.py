@@ -31,7 +31,8 @@ class NotificationRESTResource(RESTResource):
 
     def set_seen(self, notifications):
         users_db = database("users")
-        seen_notifications = set(users_db.get(self.username)['seen_notifications'])
+        user_json = users_db.get(self.username)
+        seen_notifications = set(user_json['seen_notifications'] if 'seen_notifications' in user_json else [])
         for notif in notifications:
             notif['seen'] = notif['_id'] in seen_notifications
 
@@ -52,7 +53,10 @@ class CheckNotifications(NotificationRESTResource):
         }, boolean_operator='OR')
         notifications = notifications_db.full_text_search('search', query, page=-1)
         users_db = database("users")
-        seen_notifications = set(users_db.get(self.username)['seen_notifications'])
+        json_user = users_db.get(self.username)
+        if 'seen_notifications' not in json_user:
+            return dumps({'All': 0, 'unseen': 0})
+        seen_notifications = set(json_user['seen_notifications'])
         frequency = {}
         unseen_counter = 0
         for notif in notifications:
@@ -107,6 +111,8 @@ class SaveSeen(NotificationRESTResource):
             return dumps({"results": False, "message": "Couldn't read body of request"})
         users_db = database('users')
         user_json = users_db.get(self.username)
+        if 'seen_notifications' not in user_json:
+            return dumps({"results": False, "message": "Seen notifications not in user document"})
         user_json['seen_notifications'].append(notification_id)
         self.logger.info("Saved seen for notification %s" % notification_id)
         return dumps({"results": users_db.save(user_json)})
