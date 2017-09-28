@@ -267,6 +267,7 @@ class GenerateChainedRequests(RESTResource):
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[req.get_attribute('prepid')],
                         object_type='requests',

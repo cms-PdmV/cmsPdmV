@@ -141,6 +141,7 @@ class request(json_base):
         notification(
             subject,
             self.textified(),
+            [],
             group=notification.REQUEST_APPROVALS,
             action_objects=[self.get_attribute('prepid')],
             object_type='requests',
@@ -162,6 +163,7 @@ class request(json_base):
             notification(
                 title,
                 self.textified(),
+                [],
                 group='Requests_in_' + new_status,
                 action_objects=[self.get_attribute('prepid')],
                 object_type='requests',
@@ -1552,6 +1554,7 @@ done
             notification(
                 subject,
                 message,
+                [],
                 group=notification.REQUEST_OPERATIONS,
                 action_objects=[self.get_attribute('prepid')],
                 object_type='requests',
@@ -2329,6 +2332,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2354,6 +2358,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2385,6 +2390,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2428,6 +2434,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2454,6 +2461,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2492,6 +2500,7 @@ done
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
                     object_type='requests',
@@ -2516,6 +2525,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',
@@ -2540,6 +2550,7 @@ done
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
                     object_type='requests',
@@ -2568,6 +2579,7 @@ done
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='requests',

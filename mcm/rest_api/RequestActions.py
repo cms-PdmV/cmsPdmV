@@ -1067,6 +1067,7 @@ class NotifyUser(RESTResource):
             notification(
                 subject,
                 message,
+                [],
                 group=notification.REQUEST_OPERATIONS,
                 action_objects=[req.get_attribute('prepid')],
                 object_type='requests',
@@ -1404,10 +1405,10 @@ class StalledReminder(RESTResource):
             notification(
                 subject,
                 text,
+                map(lambda u: u['prepid'], production_managers),
                 group=notification.REMINDERS,
                 action_objects=request_prepids,
                 object_type='requests',
-                targets=map(lambda u: u['prepid'], production_managers),
                 target_role='generator_convener'
             )
             com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
@@ -1517,6 +1518,7 @@ class RequestsReminder(RESTResource):
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.REMINDERS,
                     target_role='production_manager'
                 )
@@ -1536,6 +1538,7 @@ class RequestsReminder(RESTResource):
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.REMINDERS,
                     target_role='generator_convener'
                 )
@@ -1639,8 +1642,8 @@ class RequestsReminder(RESTResource):
                         notification(
                             subject,
                             message,
+                            [contact],
                             group=notification.REMINDERS,
-                            targets=[contact]
                         )
                         com.sendMail(to_who, subject, message)
                         yield '.'

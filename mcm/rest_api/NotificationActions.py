@@ -203,7 +203,7 @@ class FetchActionObjects(NotificationRESTResource):
         if 'limit' in kwargs:
             limit = int(kwargs['limit'])
         notifications_db = database('notifications')
-        mcm_notification = notification(notifications_db.get(notification_id))
-        action_objects_results = self.fetch_action_objects(mcm_notification.get_attribute("action_objects"), mcm_notification.get_attribute("object_type"), page, limit)
+        mcm_notification = notifications_db.get(notification_id)
+        action_objects_results = self.fetch_action_objects(mcm_notification["action_objects"], mcm_notification["object_type"], page, limit)
         self.logger.info("Fetched action objects for notification %s" % notification_id)
         return dumps(action_objects_results)

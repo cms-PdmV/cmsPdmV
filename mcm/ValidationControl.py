@@ -468,6 +468,7 @@ class ValidationHandler:
             notification(
                 'Chained validation run test',
                 message,
+                [],
                 group=notification.CHAINED_REQUESTS,
                 action_objects=[mcm_chained_request.get_attribute('prepid')],
                 object_type='chained_requests',

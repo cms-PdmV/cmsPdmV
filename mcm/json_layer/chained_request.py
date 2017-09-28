@@ -292,6 +292,7 @@ class chained_request(json_base):
         notification(
             subject,
             message,
+            [],
             group=notification.CHAINED_REQUESTS,
             action_objects=[self.get_attribute('prepid')],
             object_type='chained_requests',
@@ -586,6 +587,7 @@ class chained_request(json_base):
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.CHAINED_REQUESTS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='chained_requests',
@@ -825,6 +827,7 @@ class chained_request(json_base):
             notification(
                         notification_subject,
                         notification_text,
+                        [],
                         group=notification.CHAINED_REQUESTS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='chained_requests',
@@ -843,6 +846,7 @@ class chained_request(json_base):
             notification(
                         notification_subject,
                         notification_text,
+                        [],
                         group=notification.CHAINED_REQUESTS,
                         action_objects=[self.get_attribute('prepid')],
                         object_type='chained_requests',
@@ -1038,6 +1042,7 @@ class chained_request(json_base):
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.CHAINED_REQUESTS,
                     action_objects=[self.get_attribute('prepid')],
                     object_type='chained_requests',
@@ -1058,6 +1063,7 @@ class chained_request(json_base):
             notification(
                 subject,
                 message,
+                [],
                 group=notification.CHAINED_REQUESTS,
                 action_objects=[self.get_attribute('prepid')],
                 object_type='chained_requests',

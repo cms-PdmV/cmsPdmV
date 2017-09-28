@@ -439,6 +439,7 @@ class GenerateChains(RESTResource):
             notification(
                 subject,
                 message,
+                [],
                 group=notification.REQUEST_OPERATIONS,
                 action_objects=[mcm_request.get_attribute('prepid')],
                 object_type='requests',
@@ -536,10 +537,10 @@ class MccMReminderGenContacts(RESTResource):
             notification(
                 subject,
                 full_message,
+                [emails_prepids[author_email]],
                 group=notification.REMINDERS,
                 action_objects=ticket_prepids,
-                object_type='mccms',
-                targets=[emails_prepids[author_email]]
+                object_type='mccms'
             )
             mail_communicator.sendMail([author_email], subject, full_message)
             yield '\nEmail sent to %s\n' % (author_email)
@@ -590,6 +591,7 @@ Dear Production Managers,
         notification(
             subject,
             message,
+            [],
             group=notification.REMINDERS,
             action_objects=mccm_prepids,
             object_type='mccms',

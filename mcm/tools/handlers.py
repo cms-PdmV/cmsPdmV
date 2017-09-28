@@ -314,6 +314,7 @@ class RequestApprover(Handler):
         notification(
             subject,
             text,
+            [],
             group=notification.REQUEST_OPERATIONS,
             target_role="production_manager"
         )
@@ -430,6 +431,7 @@ class ChainRequestInjector(Handler):
                         notification(
                             subject,
                             message,
+                            [],
                             group=notification.CHAINED_REQUESTS,
                             action_objects=[mcm_cr.get_attribute('prepid')],
                             object_type='chained_requests',
@@ -449,6 +451,7 @@ class ChainRequestInjector(Handler):
                         notification(
                             subject,
                             message,
+                            [],
                             group=notification.CHAINED_REQUESTS,
                             action_objects=[mcm_cr.get_attribute('prepid')],
                             object_type='chained_requests',
@@ -463,6 +466,7 @@ class ChainRequestInjector(Handler):
                         notification(
                             'Configuration upload failed',
                             message,
+                            [],
                             group=notification.CHAINED_REQUESTS,
                             action_objects=[mcm_cr.get_attribute('prepid')],
                             object_type='chained_requests',
@@ -550,6 +554,7 @@ class ChainRequestInjector(Handler):
                     notification(
                             subject,
                             message,
+                            [],
                             group=notification.CHAINED_REQUESTS,
                             action_objects=[mcm_cr.get_attribute('prepid')],
                             object_type='chained_requests',

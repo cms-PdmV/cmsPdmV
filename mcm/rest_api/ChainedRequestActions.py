@@ -168,6 +168,7 @@ class DeleteChainedRequest(RESTResource):
                 notification(
                     subject,
                     message,
+                    [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[mcm_r.get_attribute('prepid')],
                     object_type='requests',
@@ -583,6 +584,7 @@ class TestChainedRequest(RESTResource):
                 notification(
                     subject,
                     text,
+                    [],
                     group=notification.REQUEST_APPROVALS,
                     action_objects=[mcm_r.get_attribute('prepid')],
                     object_type='requests',

@@ -356,6 +356,7 @@ class CampaignsRESTResource(RESTResource):
                     notification(
                         subject,
                         message,
+                        [],
                         group=notification.REQUEST_OPERATIONS,
                         action_objects=[mcm_r.get_attribute('prepid')],
                         object_type='requests',

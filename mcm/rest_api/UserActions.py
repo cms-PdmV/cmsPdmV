@@ -159,6 +159,7 @@ class AskRole(RESTResource):
         notification(
             subject,
             message,
+            [],
             group=notification.USERS,
             action_objects=[mcm_u.get_attribute('prepid')],
             object_type='users',

@@ -348,6 +348,7 @@ class NotifyBatch(RESTResource):
         notification(
                 subject,
                 message,
+                [],
                 group=notification.BATCHES,
                 target_role='production_manager',
                 action_objects=[single_batch.get_attribute('prepid')],

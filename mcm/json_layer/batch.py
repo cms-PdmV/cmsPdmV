@@ -156,6 +156,7 @@ class batch(json_base):
         notification(
             subject,
             message,
+            [],
             group=notification.BATCHES,
             target_role='production_manager',
             action_objects=[self.get_attribute('prepid')],
