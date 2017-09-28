@@ -28,14 +28,6 @@ class notification(json_base):
         'group': ''
     }
 
-    def __init__(self, json_input):
-        json_input = json_input if json_input else {}
-
-        # update self according to json_input
-        self.update(json_input)
-        self.__json = self._json_base__json
-        self.validate()
-
     def __init__(self, title, message, targets=[], target_role='', action_objects=[], object_type='', group='', base_object=None):
         if base_object is not None:
             targets.extend(base_object.get_actors())
