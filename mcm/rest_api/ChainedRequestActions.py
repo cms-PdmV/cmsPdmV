@@ -165,7 +165,7 @@ class DeleteChainedRequest(RESTResource):
             else:
                 subject = "Request {0} left chain".format( mcm_r.get_attribute('prepid'))
                 message = "Request {0} has successfuly left chain {1}".format(mcm_r.get_attribute('prepid'), crid)
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.REQUEST_OPERATIONS,
@@ -580,7 +580,7 @@ class TestChainedRequest(RESTResource):
                 text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
                 subject = 'Approval %s in chain %s for request %s' % ('validation', mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid'))
-                notification.create_notification(
+                notification(
                     subject,
                     text,
                     group=notification.REQUEST_APPROVALS,

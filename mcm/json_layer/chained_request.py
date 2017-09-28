@@ -289,7 +289,7 @@ class chained_request(json_base):
         message = "Request {0} has successfully joined chain {1}\n\n{2}\n".format(
                             req.get_attribute('prepid'), self.get_attribute('_id'),
                             "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))]))
-        notification.create_notification(
+        notification(
             subject,
             message,
             group=notification.CHAINED_REQUESTS,
@@ -583,7 +583,7 @@ class chained_request(json_base):
                             self.get_attribute('prepid')
                     )
                     subject = 'Flowing %s with not enough statistics'%( current_request.get_attribute('prepid'))
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.CHAINED_REQUESTS,
@@ -822,7 +822,7 @@ class chained_request(json_base):
                 l_type.baseurl(),
                 next_request.get_attribute('prepid')
             )
-            notification.create_notification(
+            notification(
                         notification_subject,
                         notification_text,
                         group=notification.CHAINED_REQUESTS,
@@ -840,7 +840,7 @@ class chained_request(json_base):
                 l_type.baseurl(), current_request.get_attribute('prepid'),
                 l_type.baseurl(), next_request.get_attribute('prepid'),
                 )
-            notification.create_notification(
+            notification(
                         notification_subject,
                         notification_text,
                         group=notification.CHAINED_REQUESTS,
@@ -1035,7 +1035,7 @@ class chained_request(json_base):
             ## If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
                 subject = '%s failed for request %s' % (what, mcm_request.get_attribute('prepid'))
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.CHAINED_REQUESTS,
@@ -1055,7 +1055,7 @@ class chained_request(json_base):
         if not chained_requests_db.update(self.json()):
             subject = 'Chained validation run test'
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid')
-            notification.create_notification(
+            notification(
                 subject,
                 message,
                 group=notification.CHAINED_REQUESTS,

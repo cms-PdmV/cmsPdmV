@@ -1064,7 +1064,7 @@ class NotifyUser(RESTResource):
             # notify the actors of the request
             subject = 'Communication about request %s' % pid
             message = '%s \n\n %srequests?prepid=%s\n' % (message, l_type.baseurl(), pid)
-            notification.create_notification(
+            notification(
                 subject,
                 message,
                 group=notification.REQUEST_OPERATIONS,
@@ -1401,7 +1401,7 @@ class StalledReminder(RESTResource):
 
         subject = "Gentle reminder of %d requests that appear stalled"%(reminded)
         if reminded!=0:
-            notification.create_notification(
+            notification(
                 subject,
                 text,
                 group=notification.REMINDERS,
@@ -1514,7 +1514,7 @@ class RequestsReminder(RESTResource):
                 message = 'A few requests that needs to be submitted \n\n'
                 message += prepare_text_for(ids_for_production_managers, 'approved')
                 subject = 'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers))
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.REMINDERS,
@@ -1533,7 +1533,7 @@ class RequestsReminder(RESTResource):
                 message = 'A few requests need your approvals \n\n'
                 message += prepare_text_for(ids_for_gen_conveners, 'defined')
                 subject = 'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners))
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.REMINDERS,
@@ -1636,7 +1636,7 @@ class RequestsReminder(RESTResource):
                         if mcm_u['fullname']:
                             name = mcm_u['fullname']
                         subject = 'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name)
-                        notification.create_notification(
+                        notification(
                             subject,
                             message,
                             group=notification.REMINDERS,

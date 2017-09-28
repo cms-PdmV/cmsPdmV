@@ -153,7 +153,7 @@ class batch(json_base):
         #    sender = auth.get_random_product_manager_email()
 
         #current_message_id = self.get_attribute('message_id')
-        notification.create_notification(
+        notification(
             subject,
             message,
             group=notification.BATCHES,

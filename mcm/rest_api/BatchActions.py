@@ -345,7 +345,7 @@ class NotifyBatch(RESTResource):
         else:
             result = single_batch.notify(subject, message, who=to_who, sender=None)
             self.logger.info('result if False : %s' % result)
-        notification.create_notification(
+        notification(
                 subject,
                 message,
                 group=notification.BATCHES,

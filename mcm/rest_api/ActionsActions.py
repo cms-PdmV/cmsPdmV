@@ -264,7 +264,7 @@ class GenerateChainedRequests(RESTResource):
                 if with_notify:
                     subject = "Request {0} joined chain".format(req.get_attribute('prepid'))
                     message = "Request {0} has successfully joined chain {1}".format(req.get_attribute('prepid'), new_cr['prepid'])
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,

@@ -138,7 +138,7 @@ class request(json_base):
         elif step == "submit":
             result = self.ok_to_move_to_approval_submit()
         subject = 'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid'))
-        notification.create_notification(
+        notification(
             subject,
             self.textified(),
             group=notification.REQUEST_APPROVALS,
@@ -159,7 +159,7 @@ class request(json_base):
         new_status = self.get_attribute('status')
         title = 'Status changed for request %s to %s' % (self.get_attribute('prepid'), new_status)
         if with_notification:
-            notification.create_notification(
+            notification(
                 title,
                 self.textified(),
                 group='Requests_in_' + new_status,
@@ -1549,7 +1549,7 @@ done
         self.update_history({'action': 'failed'})
         if with_notification:
             subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
-            notification.create_notification(
+            notification(
                 subject,
                 message,
                 group=notification.REQUEST_OPERATIONS,
@@ -2326,7 +2326,7 @@ done
                             total_event_in_valid,
                             total_event)
                     subject = 'Runtest for %s: efficiencies has improved.' % (self.get_attribute('prepid'))
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2351,7 +2351,7 @@ done
                             total_event_in_valid,
                             total_event)
                     subject = 'Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid'))
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2382,7 +2382,7 @@ done
                             total_event_in_valid,
                             total_event)
                     subject = 'Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid'))
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2425,7 +2425,7 @@ done
                             total_event_in,
                             total_event
                         )
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2451,7 +2451,7 @@ done
                             timing, total_event,
                             total_event_in
                         )
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2489,7 +2489,7 @@ done
                             timing_fraction*100)
                     ## we should fail these requests because of wrong timing by >10% !
                     raise Exception(message)
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.REQUEST_OPERATIONS,
@@ -2513,7 +2513,7 @@ done
                             total_event,
                             total_event_in
                         )
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
@@ -2537,7 +2537,7 @@ done
                         total_event,
                         total_event_in
                     )
-                notification.create_notification(
+                notification(
                     subject,
                     message,
                     group=notification.REQUEST_OPERATIONS,
@@ -2565,7 +2565,7 @@ done
                             total_event,
                             total_event_in
                         )
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,

@@ -465,7 +465,7 @@ class ValidationHandler:
         if not self.chained_request_db.update(mcm_chained_request.json()):
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % prepid
             self.logger.error(message)
-            notification.create_notification(
+            notification(
                 'Chained validation run test',
                 message,
                 group=notification.CHAINED_REQUESTS,

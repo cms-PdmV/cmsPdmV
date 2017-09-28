@@ -28,7 +28,7 @@ class notification(json_base):
         'group': ''
     }
 
-    def __init__(self, json_input=None):
+    def __init__(self, json_input):
         json_input = json_input if json_input else {}
 
         # update self according to json_input
@@ -36,11 +36,9 @@ class notification(json_base):
         self.__json = self._json_base__json
         self.validate()
 
-    @staticmethod
-    def create_notification(title, message, targets=[], target_role='', action_objects=[], object_type='', group='', base_object=None):
+    def __init__(self, title, message, targets=[], target_role='', action_objects=[], object_type='', group='', base_object=None):
         if base_object is not None:
             targets.extend(base_object.get_actors())
-        targets.append('rriveram')
         targets = list(set(targets))
         json_input = deepcopy(notification._json_base__schema)
         json_input.pop('_id')
@@ -53,7 +51,5 @@ class notification(json_base):
         json_input['group'] = group
         json_input['created_at'] = str(datetime.now()).split('.')[0]
         notification_db = database('notifications')
-        result = notification_db.save(json_input)
-        if result and base_object is not None:
-            base_object.logger.error('Failed to save notification: \n' + dumps(json_input))
-        return result
+        if not notification_db.save(json_input):
+            self.logger.error('Failed to save notification: \n' + dumps(json_input))

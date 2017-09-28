@@ -436,7 +436,7 @@ class GenerateChains(RESTResource):
         if with_notify:
             subject = "Request %s joined chain" % mcm_request.get_attribute('prepid')
             message = "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid)
-            notification.create_notification(
+            notification(
                 subject,
                 message,
                 group=notification.REQUEST_OPERATIONS,
@@ -533,7 +533,7 @@ class MccMReminderGenContacts(RESTResource):
                 yield '.'
             full_message += '\n'
             subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
-            notification.create_notification(
+            notification(
                 subject,
                 full_message,
                 group=notification.REMINDERS,
@@ -587,7 +587,7 @@ Dear Production Managers,
 
         to_who = [settings().get_value('service_account')]
         to_who.extend( map( lambda u : u['email'], udb.query(query="role==production_manager", page_num=-1)))
-        notification.create_notification(
+        notification(
             subject,
             message,
             group=notification.REMINDERS,

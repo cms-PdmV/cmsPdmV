@@ -156,7 +156,7 @@ class AskRole(RESTResource):
             l_type.baseurl(),
             mcm_u.get_attribute('username')
         )
-        notification.create_notification(
+        notification(
             subject,
             message,
             group=notification.USERS,

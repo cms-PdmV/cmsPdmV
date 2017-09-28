@@ -353,7 +353,7 @@ class CampaignsRESTResource(RESTResource):
                     subject = "Exception while inspecting request "
                     message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
                     self.logger.error(subject + message)
-                    notification.create_notification(
+                    notification(
                         subject,
                         message,
                         group=notification.REQUEST_OPERATIONS,
