@@ -29,14 +29,15 @@ class notification(json_base):
     }
 
     def __init__(self, title, message, targets=[], target_role='', action_objects=[], object_type='', group='', base_object=None):
+        targets_copy = deepcopy(targets)
         if base_object is not None:
-            targets.extend(base_object.get_actors())
-        targets = list(set(targets))
+            targets_copy.extend(base_object.get_actors())
+        targets_copy = list(set(targets_copy))
         json_input = deepcopy(notification._json_base__schema)
         json_input.pop('_id')
         json_input['message'] = message
         json_input['title'] = title
-        json_input['targets'] = targets
+        json_input['targets'] = targets_copy
         json_input['target_role'] = target_role
         json_input['action_objects'] = action_objects
         json_input['object_type'] = object_type
