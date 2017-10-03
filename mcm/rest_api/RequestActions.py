@@ -1399,13 +1399,12 @@ class StalledReminder(RESTResource):
         production_managers = udb.full_text_search('search', __query4, page=-1)
         gen_conveners = udb.full_text_search('search', __query5, page=-1)
         people_list = production_managers + gen_conveners
-
         subject = "Gentle reminder of %d requests that appear stalled"%(reminded)
         if reminded!=0:
             notification(
                 subject,
                 text,
-                map(lambda u: u['prepid'], production_managers),
+                map(lambda u: u['username'], production_managers),
                 group=notification.REMINDERS,
                 action_objects=request_prepids,
                 object_type='requests',
