@@ -4,7 +4,7 @@ import cherrypy
 import traceback
 import time
 import urllib2
-from json import dumps
+from json import dumps, loads
 from collections import defaultdict
 
 from couchdb_layer.mcm_database import database
@@ -22,7 +22,6 @@ from tools.locker import locker
 from tools.settings import settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
-from tools.json import threaded_loads
 from tools.priority import priority
 
 class RequestRESTResource(RESTResource):
@@ -51,7 +50,7 @@ class RequestRESTResource(RESTResource):
             return {"results": False, 'message': 'could not save object with a revision number in the object'}
 
         try:
-            #mcm_req = request(json_input=threaded_loads(data))
+            #mcm_req = request(json_input=loads(data))
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName as ex:
             return {"results": False, "message": str(ex)}
@@ -145,7 +144,7 @@ class CloneRequest(RequestRESTResource):
         """
         Make a clone with specific requirements
         """
-        data = threaded_loads(cherrypy.request.body.read().strip())
+        data = loads(cherrypy.request.body.read().strip())
         pid = data['prepid']
         return dumps(self.clone_request(pid, data))
 
@@ -187,7 +186,7 @@ class ImportRequest(RequestRESTResource):
         Saving a new request from a given dictionnary
         """
         db = database(self.db_name)
-        return dumps(self.import_request(threaded_loads(cherrypy.request.body.read().strip()), db))
+        return dumps(self.import_request(loads(cherrypy.request.body.read().strip()), db))
 
 
 class UpdateRequest(RequestRESTResource):
@@ -211,7 +210,7 @@ class UpdateRequest(RequestRESTResource):
             return {'results': False, 'message': 'Failed to update a request from API %s' % trace}
 
     def update_request(self, data):
-        data = threaded_loads(data)
+        data = loads(data)
         db = database(self.db_name)
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
@@ -1045,7 +1044,7 @@ class NotifyUser(RESTResource):
         """
         Sends the prodived posted text to the user registered to a list of requests request
         """
-        data = threaded_loads(cherrypy.request.body.read().strip())
+        data = loads(cherrypy.request.body.read().strip())
         # read a message from data
         message = data['message']
         l_type = locator()
@@ -1230,7 +1229,7 @@ class RequestLister():
 
     def get_list_of_ids(self, odb):
         self.logger.info("Got a file from uploading")
-        data = threaded_loads(cherrypy.request.body.read().strip())
+        data = loads(cherrypy.request.body.read().strip())
         text = data['contents']
 
         all_ids = []
@@ -1659,7 +1658,7 @@ class UpdateMany(RequestRESTResource):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
-        return dumps(self.update_many(threaded_loads(cherrypy.request.body.read().strip())))
+        return dumps(self.update_many(loads(cherrypy.request.body.read().strip())))
 
     def update_many(self, data):
         list_of_prepids = data["prepids"]
@@ -1710,7 +1709,7 @@ class GetAllRevisions(RequestRESTResource):
         http_request.add_header('Content-Type', 'text/plain')
         http_request.get_method = lambda : 'GET'
         result = self.opener.open(http_request)
-        revision_data = threaded_loads(result.read())
+        revision_data = loads(result.read())
         for revision in revision_data["_revs_info"]:
             if revision["status"] == "available":
                 single_request = urllib2.Request(single_rev_url+revision["rev"])
@@ -1718,7 +1717,7 @@ class GetAllRevisions(RequestRESTResource):
                 single_request.get_method = lambda : 'GET'
                 single_result = self.opener.open(single_request)
                 single_doc = single_result.read()
-                list_of_revs.append(threaded_loads(single_doc))
+                list_of_revs.append(loads(single_doc))
         self.logger.info('Getting all revisions for: %s' % doc_id)
         return {"results": list_of_revs}
 
@@ -1812,7 +1811,7 @@ class GetUniqueValues(RESTResource):
         if not args:
             self.logger.error('GetUniqueValues: No arguments were given')
             return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return threaded_loads(self.get_unique_values(args[0], kwargs), loads=False)
+        return dumps(self.get_unique_values(args[0], kwargs))
 
     def get_unique_values(self, field_name, kwargs):
         db = database('requests')
@@ -1830,7 +1829,7 @@ class PutToForceComplete(RESTResource):
         """
         Put a request to a force complete list
         """
-        data = threaded_loads(cherrypy.request.body.read().strip())
+        data = loads(cherrypy.request.body.read().strip())
         pid = data['prepid']
 
         reqDB = database('requests')
@@ -1909,7 +1908,7 @@ class RequestsPriorityChange(RESTResource):
     def POST(self):
         fails = []
         try:
-            requests = threaded_loads(cherrypy.request.body.read().strip())
+            requests = loads(cherrypy.request.body.read().strip())
         except TypeError:
             return dumps({"results": False, "message": "Couldn't read body of request"})
         for request_dict in requests:

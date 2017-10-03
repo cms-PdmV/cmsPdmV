@@ -3,14 +3,14 @@
 import cherrypy
 import traceback
 
-from json import dumps
+from json import dumps, loads
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
 from json_layer.flow import flow
 from tools.user_management import access_rights
-from tools.json import threaded_loads
+
 
 class FlowRESTResource(RESTResource):
     def __init__(self):
@@ -157,7 +157,7 @@ class CreateFlow(FlowRESTResource):
     def create_flow(self, jsdata):
         cdb = database('campaigns')
         db = database(self.db_name)
-        data = threaded_loads(jsdata)
+        data = loads(jsdata)
         if '_rev' in data:
             return {"results": 'Cannot create a flow with _rev'}
         try:
@@ -222,7 +222,7 @@ class UpdateFlow(FlowRESTResource):
 
         cdb = database('campaigns')
         db = database(self.db_name)
-        data = threaded_loads(jsdata)
+        data = loads(jsdata)
         if not '_rev' in data:
             return {"results": "Cannot update without _rev"}
         try:

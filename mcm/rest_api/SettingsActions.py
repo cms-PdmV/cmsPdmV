@@ -1,13 +1,13 @@
 import cherrypy
 
-from json import dumps
+from json import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.setting import setting
 from tools.settings import settings
 from tools.user_management import access_rights
-from tools.json import threaded_loads
+
 
 class GetSetting(RESTResource):
     def __init__(self):
@@ -47,7 +47,7 @@ class SaveSetting(RESTResource):
             return dumps({'results': False, 'message': 'Failed to update a setting from API'})
 
     def update(self, body):
-        data = threaded_loads(body)
+        data = loads(body)
         db = database('settings')
         if '_rev' in data:
             return {"results": False, 'message': 'could save an object with revision'}
@@ -81,7 +81,7 @@ class UpdateSetting(RESTResource):
             return dumps({'results': False, 'message': 'Failed to update a setting from API'})
 
     def update(self, body):
-        data = threaded_loads(body)
+        data = loads(body)
         db = database('settings')
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)

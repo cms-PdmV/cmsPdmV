@@ -2,13 +2,13 @@
 
 import cherrypy
 
-from json import dumps
+from json import dumps, loads
 
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.notification import notification
 from tools.user_management import user_pack, roles, access_rights
-from tools.json import threaded_loads
+
 
 class NotificationRESTResource(RESTResource):
     def __init__(self):
@@ -106,7 +106,7 @@ class SaveSeen(NotificationRESTResource):
         """
         SaveSeen.__init__(self)
         try:
-             notification_id = threaded_loads(cherrypy.request.body.read().strip())['notification_id']
+             notification_id = loads(cherrypy.request.body.read().strip())['notification_id']
         except TypeError:
             return dumps({"results": False, "message": "Couldn't read body of request"})
         users_db = database('users')

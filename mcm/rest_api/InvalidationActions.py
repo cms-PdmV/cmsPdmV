@@ -2,7 +2,7 @@
 
 import itertools
 
-from json import dumps
+from json import dumps, loads
 from cherrypy import request
 
 from RestAPIMethod import RESTResource
@@ -12,7 +12,7 @@ from tools.locator import locator
 from json_layer.invalidation import invalidation
 from tools.settings import settings
 from tools.user_management import access_rights
-from tools.json import threaded_loads
+
 
 
 class Invalidate(RESTResource):
@@ -162,7 +162,7 @@ class AnnounceInvalidations(RESTResource):
         """
         Announce selected invalidations to Data OPS
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.body.read().strip())
         self.logger.info("invaldations input: %s" % (input_data))
         if len(input_data) > 0:
             return self.announce(input_data)
@@ -197,7 +197,7 @@ class ClearInvalidations(RESTResource):
         """
         Clear selected invalidations without announcing
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.body.read().strip())
         if len(input_data) > 0:
             return self.clear(input_data)
         else:
@@ -259,7 +259,7 @@ class PutOnHoldInvalidation(RESTResource):
         """
         Put single invalidation on hold so DS would not be invalidated
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.body.read().strip())
         if not len(input_data):
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
         self.logger.info("Putting invalidation on HOLD. input: %s" % (input_data))
@@ -290,7 +290,7 @@ class PutHoldtoNewInvalidations(RESTResource):
         """
         Move HOLD invalidations back to status new
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.body.read().strip())
         if not len(input_data):
             return dumps({"results": False, "message": 'Error: No arguments were given.'})
 

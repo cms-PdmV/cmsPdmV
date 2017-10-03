@@ -1,6 +1,6 @@
 import time
-import json
-from tools.json import threaded_loads
+from json import dumps, loads
+
 import urllib
 import urllib2
 from tools.locator import locator
@@ -28,7 +28,7 @@ class Database():
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
-            request = urllib2.Request(self.__dburl + url, data=json.dumps(data))
+            request = urllib2.Request(self.__dburl + url, data=dumps(data))
         request.get_method = lambda: method
         for key in headers:
             request.add_header(key, headers[key])
@@ -41,7 +41,7 @@ class Database():
         stringfied = dict()
         for p in params:
             if not isinstance(params[p], str):
-                stringfied[p] = json.dumps(params[p])
+                stringfied[p] = dumps(params[p])
             else:
                 stringfied[p] = params[p]
         return urllib.urlencode(stringfied)
@@ -56,7 +56,7 @@ class Database():
         else:
             db_request = self.construct_request("%s/%s?rev=%s" %(self.__dbname, doc_id, rev))
         data = self.opener.open(db_request)
-        return threaded_loads(data.read())
+        return loads(data.read())
 
     def loadView(self, viewname, options=None, get_raw=False):
         """
@@ -68,7 +68,7 @@ class Database():
             #db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, urllib.urlencode(options).replace('%27','%22')))
             db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
-        return data.read() if get_raw else threaded_loads(data.read())
+        return data.read() if get_raw else loads(data.read())
 
     def commitOne(self, doc):
         """
@@ -76,7 +76,7 @@ class Database():
         """
         db_request = self.construct_request("%s" % self.__dbname, method='POST', data=doc)
         retval = self.opener.open(db_request)
-        return threaded_loads(retval.read())
+        return loads(retval.read())
 
     def delete_doc(self, id, rev=None):
         """
@@ -109,7 +109,7 @@ class Database():
         db_request = self.construct_request("%s/_bulk_docs/" %(self.__dbname), method='POST', data=doc)
         retval = self.opener.open(db_request)
         self.reset_queue()
-        return threaded_loads(retval)
+        return loads(retval)
 
     def documentExists(self, id, rev=None):
         """
@@ -133,7 +133,7 @@ class Database():
             options["key"] = '"'+str(options["key"])+'"'
         db_request = self.construct_request("_fti/local/%s/%s&%s" %(self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
-        return data.read() if get_raw else threaded_loads(data.read())
+        return data.read() if get_raw else loads(data.read())
 
     def UpdateSequence(self, options=None):
         """
@@ -144,4 +144,4 @@ class Database():
         options["_info"] = True
         db_request = self.construct_request("%s?%s" %(self.__dbname, self.to_json_query(options)))
         data = self.opener.open(db_request)
-        return threaded_loads(data.read())["update_seq"]
+        return loads(data.read())["update_seq"]

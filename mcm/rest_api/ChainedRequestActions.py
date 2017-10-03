@@ -3,7 +3,7 @@
 import cherrypy
 import traceback
 
-from json import dumps
+from json import dumps, loads
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -14,7 +14,7 @@ from json_layer.request import request
 from json_layer.mccm import mccm
 from json_layer.notification import notification
 from tools.user_management import access_rights
-from tools.json import threaded_loads
+
 from tools.locker import locker
 from tools.settings import settings
 
@@ -31,7 +31,7 @@ class CreateChainedRequest(RESTResource):
 
     def import_request(self, data):
         db = database(self.db_name)
-        json_input=threaded_loads(data)
+        json_input=loads(data)
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return {"results":False}
@@ -89,7 +89,7 @@ class UpdateChainedRequest(RESTResource):
 
     def update_request(self, data):
         try:
-            req = chained_request(json_input=threaded_loads(data))
+            req = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName as ex:
             return {"results":False}
 
@@ -259,7 +259,7 @@ class FlowToNextStep(RESTResource):
 
     def flow2(self,  data):
         try:
-            vdata = threaded_loads(data)
+            vdata = loads(data)
         except ValueError as ex:
             self.logger.error('Could not start flowing to next step. Reason: %s' % (ex))
             return {"results":str(ex)}
@@ -1098,7 +1098,7 @@ class ChainedRequestsPriorityChange(RESTResource):
     def POST(self):
         fails = []
         try:
-            chains = threaded_loads(cherrypy.request.body.read().strip())
+            chains = loads(cherrypy.request.body.read().strip())
         except TypeError:
             return dumps({"results": False, "message": "Couldn't read body of request"})
         for chain in chains:

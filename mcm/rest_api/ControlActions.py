@@ -1,5 +1,4 @@
 import cherrypy
-import simplejson
 
 from collections import defaultdict
 
@@ -7,8 +6,8 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 from tools.settings import settings
-from simplejson import dumps
-from tools.json import threaded_loads
+from json import dumps, loads
+
 from tools.locker import locker
 from tools.communicator import communicator
 from couchdb_layer.mcm_database import database
@@ -225,7 +224,7 @@ class MultiSearch(Search):
 
     def POST(self):
         try:
-            search_dicts = threaded_loads(cherrypy.request.body.read().strip())
+            search_dicts = loads(cherrypy.request.body.read().strip())
         except TypeError:
             return dumps({"results": False, "message": "Couldn't read body of request"})
         limit = 20

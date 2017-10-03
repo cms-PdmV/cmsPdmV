@@ -2,7 +2,7 @@
 
 import cherrypy
 
-from json import dumps
+from json import dumps, loads
 
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
@@ -12,7 +12,7 @@ from tools.locator import locator
 from json_layer.user import user
 from json_layer.notification import notification
 from tools.user_management import user_pack, roles, access_rights
-from tools.json import threaded_loads
+
 
 
 class GetUserRole(RESTResource):
@@ -106,7 +106,7 @@ class SaveUser(RESTResource):
         """
 
         db = database(self.db_name)
-        data = threaded_loads(cherrypy.request.body.read().strip())
+        data = loads(cherrypy.request.body.read().strip())
         new_user = user(data)
         self.logger.debug("is trying to update entry for %s" % (new_user.get_attribute('username')))
         if '_rev' in data:
@@ -284,7 +284,7 @@ class NotifyPWG(RESTResource):
 
     def notify(self, body):
         db = database('users')
-        data = threaded_loads(body)
+        data = loads(body)
         list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
         com = communicator()
         com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
