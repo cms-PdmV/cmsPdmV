@@ -6,7 +6,7 @@ var HotReloader = new webpack.HotModuleReplacementPlugin();
 
 var buildEntryPoint = function(entryPoint){
   return [
-    'webpack-dev-server/client?http://localhost:3000',
+    'webpack-dev-server/client?https://0.0.0.0:3000',
     'webpack/hot/only-dev-server',
     entryPoint
   ]
@@ -22,14 +22,13 @@ var buildHTMLPlugin = function(filename){
 }
 
 module.exports = [{
-    devtool: 'source-map',
+    devtool: '#eval-source-map',
     entry: {
       settings:  ['./scripts2/settings.js'],
       news:  ['./scripts2/news.js']
     },
     output: {
         path: path.resolve(__dirname, '/scripts3'),
-        publicPath: '/',
         filename: '[name].js'
     },
     module: {
@@ -54,16 +53,23 @@ module.exports = [{
     },
     plugins: [ buildHTMLPlugin("settings"),
                buildHTMLPlugin("news"),
-              HotReloader],
+              HotReloader,
+              new webpack.DefinePlugin({
+      'API_URL': "'https://cms-pdmv-dev.cern.ch/mcm/'"})],
 
-    devServer: {
-      contentBase: __dirname + '/scripts2',
-      disableHostCheck : true,
-      historyApiFallback: true,
-      noInfo: false,
-    },
+  resolve: {
+    alias: {
+      'vue$': 'vue/dist/vue.esm.js'
+    }
+  },
+  devServer: {
+    contentBase: __dirname + '/scripts2',
+    disableHostCheck : true,
+    historyApiFallback: true,
+    noInfo: false,
+  },
 
-    performance: {
-      hints: false
-    },
+  performance: {
+    hints: false
+  }
 }];

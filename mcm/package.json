@@ -1,17 +1,21 @@
 {
   "scripts": {
-    "start": "webpack-dev-server --public 128.142.134.158:8080 --port 8080 --hot --host 0.0.0.0 --config webpack.config.js"
+    "start": "webpack-dev-server --public vocms085.cern.ch:8080 --hot --host 128.142.134.158 --config webpack.config.js --https"
   },
   "devDependencies": {
     "babel-core": "^6.0.0",
     "babel-loader": "^6.0.0",
-    "html-webpack-plugin": "^1.6.2",
     "grunt": "^1.0.1",
     "grunt-contrib-concat": "^1.0.1",
+    "html-webpack-plugin": "^1.6.2",
     "vue": "^2.4.4",
     "vue-loader": "^12.1.0",
     "vue-template-compiler": "^2.3.3",
     "webpack": "^2.6.1",
     "webpack-dev-server": "^2.4.5"
+  },
+  "dependencies": {
+    "vue-material": "^0.7.5",
+    "vuex": "^2.4.1"
   }
 }
