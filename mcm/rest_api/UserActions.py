@@ -10,6 +10,7 @@ from tools.settings import settings
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.user import user
+from json_layer.notification import notification
 from tools.user_management import user_pack, roles, access_rights
 from tools.json import threaded_loads
 
@@ -149,12 +150,22 @@ class AskRole(RESTResource):
         to_who.append( user_p.get_email() )
         com = communicator()
         l_type = locator()
-        com.sendMail(to_who,
-                      'Increase role for user %s' % mcm_u.get_attribute('fullname'),
-                      'Please increase the role of the user %s to the next level.\n\n%susers?prepid=%s' % ( mcm_u.get_attribute('username'),
-                                                                                                            l_type.baseurl(),
-                                                                                                            mcm_u.get_attribute('username')
-                                                                                                            ))
+        subject = 'Increase role for user %s' % mcm_u.get_attribute('fullname')
+        message = 'Please increase the role of the user %s to the next level.\n\n%susers?prepid=%s' % (
+            mcm_u.get_attribute('username'),
+            l_type.baseurl(),
+            mcm_u.get_attribute('username')
+        )
+        notification(
+            subject,
+            message,
+            [],
+            group=notification.USERS,
+            action_objects=[mcm_u.get_attribute('prepid')],
+            object_type='users',
+            target_role='production_manager'
+        )
+        com.sendMail(to_who, subject, message)
 
         return dumps({"results" : True, "message" : "user %s in for %s" %( mcm_u.get_attribute('username'), current)})
 

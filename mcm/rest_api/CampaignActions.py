@@ -11,6 +11,7 @@ from json_layer.campaign import campaign
 from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
+from json_layer.notification import notification
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 
@@ -352,6 +353,15 @@ class CampaignsRESTResource(RESTResource):
                     subject = "Exception while inspecting request "
                     message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
                     self.logger.error(subject + message)
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[mcm_r.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=mcm_r
+                    )
                     mcm_r.notify(subject, message, accumulate=True)
             time.sleep(2)
         if len(res) > 1:

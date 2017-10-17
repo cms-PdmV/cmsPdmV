@@ -526,7 +526,7 @@ class database:
             constructed_query += close_parenthesis
         return constructed_query
 
-    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields=''):
+    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields='', sort=''):
         """
         queries loadView method with lucene interface for full text search
         """
@@ -543,6 +543,8 @@ class database:
                 }
                 if include_fields != '':
                     options['include_fields'] = include_fields
+                if sort != '':
+                    options['sort'] = sort
                 data = self.db.FtiSearch(url, options=options, get_raw=get_raw) #we sort ascending by doc._id field
                 break
             except Exception as ex:
@@ -580,6 +582,16 @@ class database:
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
             return {}
+
+    def raw_view_query_uniques(self, view_name, options={}, cache=True):
+        result = self.raw_view_query("unique", view_name, options, cache)
+        if "results" in result:
+            return result
+        parsedResult = {"results": [str(elem["key"]) for elem in result]}
+        cache_id = "_design/unique/_view/%s" % (view_name)
+        if cache:
+            self.__save_to_cache(cache_id, parsedResult)
+        return parsedResult
 
     def update_sequence(self, options={}):
         result = self.db.UpdateSequence()

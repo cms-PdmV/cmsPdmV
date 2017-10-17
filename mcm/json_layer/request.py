@@ -20,6 +20,7 @@ from json_layer.flow import flow
 from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
+from json_layer.notification import notification
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
@@ -136,8 +137,18 @@ class request(json_base):
             result = self.ok_to_move_to_approval_approve()
         elif step == "submit":
             result = self.ok_to_move_to_approval_submit()
+        subject = 'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid'))
+        notification(
+            subject,
+            self.textified(),
+            [],
+            group=notification.REQUEST_APPROVALS,
+            action_objects=[self.get_attribute('prepid')],
+            object_type='requests',
+            base_object=self
+        )
         self.notify(
-            'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid')),
+            subject,
             self.textified(),
             accumulate=True
         )
@@ -145,7 +156,24 @@ class request(json_base):
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         ## call the base
-        json_base.set_status(self, step, with_notification)
+        json_base.set_status(self, step)
+        new_status = self.get_attribute('status')
+        title = 'Status changed for request %s to %s' % (self.get_attribute('prepid'), new_status)
+        if with_notification:
+            notification(
+                title,
+                self.textified(),
+                [],
+                group='Requests_in_' + new_status,
+                action_objects=[self.get_attribute('prepid')],
+                object_type='requests',
+                base_object=self
+            )
+            self.notify(
+                title,
+                self.textified(),
+                accumulate=True
+            )
         ## and set the last_status of each chained_request I am member of, last
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
@@ -153,9 +181,9 @@ class request(json_base):
             if crdb.document_exists(inchain):
                 chain = chained_request(crdb.get(inchain))
                 a_change = False
-                a_change += chain.set_last_status(self.get_attribute('status'))
+                a_change += chain.set_last_status(new_status)
                 a_change += chain.set_processing_status(self.get_attribute('prepid'),
-                        self.get_attribute('status'))
+                        new_status)
                 if a_change:
                     crdb.save(chain.json())
         if self._json_base__status[step] in ['new', 'done']:
@@ -1522,7 +1550,17 @@ done
             self.approve(0)
         self.update_history({'action': 'failed'})
         if with_notification:
-            self.notify('%s failed for request %s' % (what, self.get_attribute('prepid')), message)
+            subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[self.get_attribute('prepid')],
+                object_type='requests',
+                base_object=self
+            )
+            self.notify(subject, message)
         self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
@@ -2290,9 +2328,17 @@ done
                             efficiency_error,
                             total_event_in_valid,
                             total_event)
-                    self.notify(
-                        'Runtest for %s: efficiencies has improved.' % (
-                            self.get_attribute('prepid')), message, accumulate=True)
+                    subject = 'Runtest for %s: efficiencies has improved.' % (self.get_attribute('prepid'))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
                 elif efficiency == 0.:
                     ## the efficiency, although we have ran events is exactly zero ! 
                     ## should have failed a few lines above anyways
@@ -2308,8 +2354,17 @@ done
                             efficiency,
                             total_event_in_valid,
                             total_event)
-                    self.notify('Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid')),
-                                message, accumulate=True)
+                    subject = 'Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid'))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
                     #raise Exception(message)
                 #elif __eff_check > efficiency_fraction:
                 elif __eff_check > __eff_relative_error:
@@ -2331,8 +2386,17 @@ done
                             efficiency_error,
                             total_event_in_valid,
                             total_event)
-                    self.notify('Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid')),
-                                message, accumulate=True)
+                    subject = 'Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid'))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
                     raise Exception(message)
 
         elif what == 'perf':
@@ -2349,9 +2413,8 @@ done
                     (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2)
                 __eff_error = 2*sqrt((rough_efficiency_error/rough_efficiency)**2 + _eff_ratio_error**2)
                 if __eff_check > __eff_error:
-                    self.notify('Runtest for %s: efficiency seems incorrect from rough estimate.' % (
-                        self.get_attribute('prepid')),
-                        ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                    subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (self.get_attribute('prepid'))
+                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
                         ' the mcm validation test measured %.4f +/- %.4f\n'
                         '(there were %s trial events, of which %s passed the filter/matching),'
                         ' which has a smaller relative error.\n'
@@ -2366,8 +2429,18 @@ done
                             rough_efficiency,
                             rough_efficiency_error,
                             total_event_in,
-                            total_event),
-                    accumulate=True)
+                            total_event
+                        )
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
 
             ## timing checks
             timing_fraction = settings().get_value('timing_fraction')
@@ -2377,16 +2450,24 @@ done
                 ## timing under-estimated
                 if timing * timing_fraction > self.get_sum_total_events():
                     ## notify if more than 20% discrepancy found !
-                    self.notify(
-                        'Runtest for %s: time per event under-estimate.' % (
-                            self.get_attribute('prepid')),
-                        ('For the request %s, time/event=%s was given, %s was measured'
+                    subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
+                    message = ('For the request %s, time/event=%s was given, %s was measured'
                         ' and set to the request from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
                             self.get_sum_total_events(),
                             timing, total_event,
-                            total_event_in),
-                        accumulate=True)
+                            total_event_in
+                        )
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
 
                 self.set_attribute('time_event', [timing])
                 to_be_saved = True
@@ -2416,7 +2497,15 @@ done
                             timing_fraction*100)
                     ## we should fail these requests because of wrong timing by >10% !
                     raise Exception(message)
-
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self
+                )
                 self.notify(subject, message, accumulate=True)
 
             ## size check
@@ -2424,34 +2513,50 @@ done
                 ## size under-estimated
                 if file_size * 0.90 > sum(self.get_attribute('size_event')):
                     ## notify if more than 10% discrepancy found !
-                    self.notify(
-                        'Runtest for %s: size per event under-estimate.' % (
-                            self.get_attribute('prepid')),
-                        ('For the request %s, size/event=%s was given, %s was'
+                    subject = 'Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid'))
+                    message = ('For the request %s, size/event=%s was given, %s was'
                         ' measured from %s events (ran %s).') % (
                             self.get_attribute('prepid'),
                             sum(self.get_attribute('size_event')),
                             file_size,
                             total_event,
-                            total_event_in),
-                        accumulate=True)
+                            total_event_in
+                        )
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
                 self.set_attribute('size_event', [file_size])
                 to_be_saved = True
 
             if file_size and file_size < int(0.90 * sum(self.get_attribute('size_event'))):
                 ## size over-estimated
                 ## warn if over-estimated by more than 10%
-                self.notify(
-                    'Runtest for %s: size per event over-estimate.' % (
-                        self.get_attribute('prepid')),
-                    ('For the request %s, size/event=%s was given, %s was'
+                subject = 'Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid'))
+                message = ('For the request %s, size/event=%s was given, %s was'
                     ' measured from %s events (ran %s).') % (
                         self.get_attribute('prepid'),
                         sum(self.get_attribute('size_event')),
                         file_size,
                         total_event,
-                        total_event_in),
-                    accumulate=True)
+                        total_event_in
+                    )
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self
+                )
+                self.notify(subject, message, accumulate=True)
                 ## correct the value from the runtest.
                 self.set_attribute('size_event', [file_size])
                 to_be_saved = True
@@ -2462,18 +2567,25 @@ done
                 if memory > 4000:
                     self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
                             self.get_attribute('prepid'), safe_margin, memory))
-
-                    self.notify(
-                        'Runtest for %s: memory over-usage' % (
-                            self.get_attribute('prepid')),
-                        ('For the request %s, the memory usage is found to be large.'
+                    subject = 'Runtest for %s: memory over-usage' % (self.get_attribute('prepid'))
+                    message = ('For the request %s, the memory usage is found to be large.'
                         ' Requiring %s MB measured from %s events (ran %s). Setting'
                         ' to high memory queue') % (
                             self.get_attribute('prepid'),
                             memory,
                             total_event,
-                            total_event_in),
-                    accumulate=True)
+                            total_event_in
+                        )
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self
+                    )
+                    self.notify(subject, message, accumulate=True)
                     #truncate to 4G, or catch it in ->define step ?
                 self.set_attribute('memory', memory)
                 to_be_saved = True

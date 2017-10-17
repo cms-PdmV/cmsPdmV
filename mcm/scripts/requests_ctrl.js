@@ -259,6 +259,28 @@ angular.module('testApp').controller('resultsCtrl',
       {
         $scope.requests_defaults.splice(1, 1, {text:'Revision', select:true, db_name:'_rev'});
         var promise = $http.get("restapi/"+$scope.dbName+"/all_revs/"+$location.search()['prepid']);
+      } else if($location.search()["from_notification"]){
+          notification = $location.search()["from_notification"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
+      }else if($location.search()["from_notification_group"]){
+          group = $location.search()["from_notification_group"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
       }else{
           var query = ""
           _.each($location.search(), function(value,key){
@@ -270,7 +292,11 @@ angular.module('testApp').controller('resultsCtrl',
           var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       }
       promise.then(function(data){
-        $scope.result = !get_raw ? data.data.results : _.pluck(data.data.rows, 'doc');
+        if (data.data.rows === undefined){
+            $scope.result = data.data;
+        }else{
+            $scope.result = _.pluck(data.data.rows, 'doc');
+        }
         $scope.result_status = data.status;
         $scope.got_results = true;
         if ($scope.result === undefined ){

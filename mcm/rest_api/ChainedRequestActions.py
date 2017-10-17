@@ -12,6 +12,7 @@ from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from json_layer.request import request
 from json_layer.mccm import mccm
+from json_layer.notification import notification
 from tools.user_management import access_rights
 from tools.json import threaded_loads
 from tools.locker import locker
@@ -162,9 +163,18 @@ class DeleteChainedRequest(RESTResource):
             if not rdb.update( mcm_r.json()):
                 return {"results":False,"message" : "Could not save request "+ mcm_r.get_attribute('prepid')}
             else:
-                mcm_r.notify("Request {0} left chain".format( mcm_r.get_attribute('prepid')),
-                             "Request {0} has successfuly left chain {1}".format(
-                                    mcm_r.get_attribute('prepid'), crid))
+                subject = "Request {0} left chain".format( mcm_r.get_attribute('prepid'))
+                message = "Request {0} has successfuly left chain {1}".format(mcm_r.get_attribute('prepid'), crid)
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[mcm_r.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=mcm_r
+                )
+                mcm_r.notify(subject, message)
 
         return {"results": crdb.delete(crid)}
 
@@ -570,9 +580,17 @@ class TestChainedRequest(RESTResource):
                 mcm_r.reload()
                 text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
-                mcm_r.notify('Approval %s in chain %s for request %s' % ('validation',
-                        mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid')),
-                        text, accumulate=True)
+                subject = 'Approval %s in chain %s for request %s' % ('validation', mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid'))
+                notification(
+                    subject,
+                    text,
+                    [],
+                    group=notification.REQUEST_APPROVALS,
+                    action_objects=[mcm_r.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=mcm_r
+                )
+                mcm_r.notify(subject, text, accumulate=True)
             except Exception as e:
                 mcm_cr.reset_requests(str(e), notify_one=rid)
                 return dumps(
@@ -689,10 +707,8 @@ class ChainsFromTicket(RESTResource):
         limit = 20
         if 'page' in argv:
             page = int(argv['page'])
-            argv.pop('page')
         if 'limit' in argv:
             limit = int(argv['limit'])
-            argv.pop('limit')
         ticket_prepid = argv['ticket']
         chained_requests_db = database('chained_requests')
         mccms_db = database('mccms')

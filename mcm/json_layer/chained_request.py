@@ -4,6 +4,7 @@ import time
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
+from json_layer.notification import notification
 from json_layer.mccm import mccm
 from flow import flow
 from couchdb_layer.mcm_database import database
@@ -284,10 +285,21 @@ class chained_request(json_base):
             req.set_attribute("member_of_chain", chain)
 
         loc = locator()
-        req.notify("Request {0} joined chain".format(req.get_attribute('prepid')),
-                   "Request {0} has successfully joined chain {1}\n\n{2}\n".format(
+        subject = "Request {0} joined chain".format(req.get_attribute('prepid'))
+        message = "Request {0} has successfully joined chain {1}\n\n{2}\n".format(
                             req.get_attribute('prepid'), self.get_attribute('_id'),
-                            "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])),
+                            "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))]))
+        notification(
+            subject,
+            message,
+            [],
+            group=notification.CHAINED_REQUESTS,
+            action_objects=[self.get_attribute('prepid')],
+            object_type='chained_requests',
+            base_object=self
+        )
+        req.notify(subject,
+                   message,
                    accumulate=True)
 
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
@@ -559,8 +571,7 @@ class chained_request(json_base):
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if notify_on_fail:
-                    current_request.notify('Flowing %s with not enough statistics'%( current_request.get_attribute('prepid')),
-                                           'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s '%( 
+                    message = 'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s '%( 
                             current_request.get_attribute('prepid'),
                             current_request.get_attribute('completed_events'),
                             completed_events_to_pass,
@@ -571,7 +582,19 @@ class chained_request(json_base):
                             current_request.get_attribute('prepid'),
                             l_type.baseurl(),
                             self.get_attribute('prepid')
-                            ),
+                    )
+                    subject = 'Flowing %s with not enough statistics'%( current_request.get_attribute('prepid'))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.CHAINED_REQUESTS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='chained_requests',
+                        base_object=self
+                    )
+                    current_request.notify(subject,
+                                           message,
                                            accumulate=True)
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
                                                              'The number of events completed (%s) is not enough for the requirement (%s)'%(current_request.get_attribute('completed_events'), completed_events_to_pass))
@@ -801,6 +824,15 @@ class chained_request(json_base):
                 l_type.baseurl(),
                 next_request.get_attribute('prepid')
             )
+            notification(
+                        notification_subject,
+                        notification_text,
+                        [],
+                        group=notification.CHAINED_REQUESTS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='chained_requests',
+                        base_object=self
+            )
             current_request.notify(notification_subject, notification_text, accumulate=True)
         else:
             notification_subject = 'Reservation of request {0}'.format(next_request.get_attribute('prepid'))
@@ -811,6 +843,15 @@ class chained_request(json_base):
                 l_type.baseurl(), current_request.get_attribute('prepid'),
                 l_type.baseurl(), next_request.get_attribute('prepid'),
                 )
+            notification(
+                        notification_subject,
+                        notification_text,
+                        [],
+                        group=notification.CHAINED_REQUESTS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='chained_requests',
+                        base_object=self
+            )
             next_request.notify(notification_subject, notification_text, accumulate=True)
 
         #we remove the chain_req id from force_flow list if it's in there
@@ -997,8 +1038,17 @@ class chained_request(json_base):
                 continue
             ## If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
-                mcm_request.notify('%s failed for request %s' % (what,
-                        mcm_request.get_attribute('prepid')), message)
+                subject = '%s failed for request %s' % (what, mcm_request.get_attribute('prepid'))
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.CHAINED_REQUESTS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='chained_requests',
+                    base_object=self
+                )
+                mcm_request.notify(subject, message)
                 continue
             notify = True
             if notify_one and notify_one != request_prepid:
@@ -1008,4 +1058,15 @@ class chained_request(json_base):
         chained_requests_db = database('chained_requests')
         self.set_attribute('validate', 0)
         if not chained_requests_db.update(self.json()):
-            mcm_chained_request.notify('Chained validation run test', 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid'))
+            subject = 'Chained validation run test'
+            message = 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid')
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.CHAINED_REQUESTS,
+                action_objects=[self.get_attribute('prepid')],
+                object_type='chained_requests',
+                base_object=self
+            )
+            mcm_chained_request.notify(subject, message)
