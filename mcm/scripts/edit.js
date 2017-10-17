@@ -706,14 +706,14 @@ testApp.directive("timeEventEdit", function(){
     '<div>'+
     '  <ul>'+
     '   <li ng-repeat="elem in time_event track by $index">'+
-    '     <input type="number" ng-model="time_event[$index]" class="input-xxsmall" style="width: 90px;"></input>'+
+    '     <input type="number" ng-model="time_event[$index]" class="input-xxsmall" style="width: 90px;" ng-disabled="not_editable_list.indexOf(\'Time event\')!=-1"></input>'+
     '     <a class="label label-info" rel="tooltip" title="seconds">s</a>'+
-    '     <a ng-click="remove($index)" ng-href="#">'+
+    '     <a ng-click="remove($index)" ng-href="#" ng-hide="not_editable_list.indexOf(\'Time event\')!=-1">'+
     '       <i class="icon-remove-sign"></i>'+
     '     </a>'+
     '   </li>'+
     '  </ul>'+
-    '  <div style="margin-left: 7px;">'+
+    '  <div style="margin-left: 7px;" ng-hide="not_editable_list.indexOf(\'Time event\')!=-1">'+
     '    <a ng-click="add_time_event =! add_time_event;" ng-href="#">'+
     '      <i class="icon-plus" ng-hide="add_time_event"></i>'+
     '      <i class="icon-minus" ng-show="add_time_event"></i>'+
@@ -757,14 +757,14 @@ testApp.directive("sizeEventEdit", function(){
     '<div>'+
     '  <ul>'+
     '   <li ng-repeat="elem in size_event track by $index">'+
-    '     <input type="number" ng-model="size_event[$index]" class="input-xxsmall" style="width: 90px;"></input>'+
-    '     <a class="label label-info" rel="tooltip" title="seconds">kB</a>'+
-    '     <a ng-click="remove($index)" ng-href="#">'+
+    '     <input type="number" ng-model="size_event[$index]" class="input-xxsmall" style="width: 90px;" ng-disabled="not_editable_list.indexOf(\'Size event\')!=-1"></input>'+
+    '     <a class="label label-info" rel="tooltip" title="kiloBytes">kB</a>'+
+    '     <a ng-click="remove($index)" ng-href="#" ng-hide="not_editable_list.indexOf(\'Size event\')!=-1">'+
     '       <i class="icon-remove-sign"></i>'+
     '     </a>'+
     '   </li>'+
     '  </ul>'+
-    '  <div style="margin-left: 7px;">'+
+    '  <div style="margin-left: 7px;" ng-hide="not_editable_list.indexOf(\'Size event\')!=-1">'+
     '    <a ng-click="add_size_event =! add_size_event;" ng-href="#">'+
     '      <i class="icon-plus" ng-hide="add_size_event"></i>'+
     '      <i class="icon-minus" ng-show="add_size_event"></i>'+
