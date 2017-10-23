@@ -14,34 +14,6 @@ from tools.settings import settings
 from tools.user_management import access_rights
 
 
-
-class Invalidate(RESTResource):
-
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def GET(self, *args):
-        """
-        Operate the invalidation of a given document
-        """
-        if not len(args):
-            return dumps({'results': False, 'message': 'not id has been provided'})
-
-        docid = args[0]
-        invalidations = database('invalidations')
-        if not invalidations.document_exists(docid):
-            return dumps({'results': False, 'message': '%s does not exists' % docid})
-
-        invalid = invalidation(invalidations.get(docid))
-        if invalid.get_attribute('type') in ['request', 'dataset']:
-            return dumps({'results': False,
-                          'message': 'Not implemented to invalidate {0}s'.format(
-                                    invalid.get_attribute('type'))})
-
-        else:
-            return dumps({'results': False, 'message': 'Type {0} not recognized'.format(
-                        invalid.get_attribute('type'))})
-
 class SetStatus(RESTResource):
 
     def __init__(self):

@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-import cherrypy
 import logging
 
 from tools.user_management import access_rights, roles
-from tools.user_management import authenticator as auth_obj, user_pack
-from tools.locator import locator
-from tools.locker import locker
+from tools.user_management import authenticator, user_pack
+from flask_restful import Resource
+from flask import request, abort
 
-class RESTResource(object):
-    authenticator = auth_obj(limit=access_rights.production_manager)
 
+class RESTResource(Resource):
     logger = logging.getLogger("mcm_error")
     access_limit = None
     access_user = []
+    call_counters = {}
 
     limit_per_method = {
         'GET': access_rights.user,
@@ -24,45 +23,33 @@ class RESTResource(object):
     def __init__(self, content=''):
         self.content = content
 
-    @cherrypy.expose
-    def default(self, *vpath, **params):
-
-        method = getattr(self, cherrypy.request.method, None)
-        if not method:
-            raise cherrypy.HTTPError(405, "Method not implemented.")
-
+    def before_request(self):
         if self.access_limit is not None:
             self.logger.info('Setting access limit to access_rights.%s (%s)' % (roles[self.access_limit], self.access_limit))
-            self.authenticator.set_limit(self.access_limit)
-        elif cherrypy.request.method in self.limit_per_method:
-            self.authenticator.set_limit(self.limit_per_method[cherrypy.request.method])
-        else:
-            raise cherrypy.HTTPError(403, 'You cannot access this page with method %s' % cherrypy.request.method )
-
+        elif request.method in self.limit_per_method:
+            self.access_limit = self.limit_per_method[request.method]
         user_p = user_pack()
-
-        l_type = locator()
         if not user_p.get_username():
-            #meaning we are going public, only allow GET.
-            #if cherrypy.request.method != 'GET' or not l_type.isDev():
-            #	raise cherrypy.HTTPError(403, 'User credentials were not provided.')
-            if not 'public' in str(cherrypy.url()):
-                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(cherrypy.request.headers), str(cherrypy.url()) ))
+            # meaning we are going public, only allow GET.
+            if 'public' not in request.path:
+                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(request.headers), str(request.path) ))
         else:
-            if not self.authenticator.can_access(user_p.get_username()):
+            if not authenticator.can_access(user_p.get_username(), self.access_limit):
                 if user_p.get_username() in self.access_user:
                     self.logger.error('User %s allowed to get through'% user_p.get_username())
                 else:
-                    raise cherrypy.HTTPError(403, 'You cannot access this page, the limit for the page is {0} ({1})'.format(
-                            roles[self.authenticator.get_limit()], self.authenticator.get_limit()))
+                    abort(403)
+
+    def count_call(self):
+        pass
         # counter for calls
-        with locker.lock("rest-call-counter"):
-            key = method.im_class.__name__ + method.__name__
-            try:
-                RESTResource.counter[key] += 1
-            except KeyError:
-                RESTResource.counter[key] = 0
-        return method(*vpath, **params)
+        # method = getattr(self, request.method, None)
+        # with locker.lock("rest-call-counter"):
+        #    key = method.im_class.__name__ + method.__name__
+        #    try:
+        #        RESTResource.call_counters[key] += 1
+        #    except KeyError:
+        #        RESTResource.call_counters[key] = 0
 
     def GET(self):
         pass
@@ -96,45 +83,28 @@ class RESTResourceIndex(RESTResource):
                                      'Delete a request from the d<th>GET Doc string</th>atabase and that\'s it ')]}
         else:
             self.data = data
+        self.before_request()
 
-    def GET(self):
+    def get(self):
         """
-		Returns the documentation of the resource
-		"""
+        Returns the documentation of the resource
+        """
         return self.index()
 
     def index(self):
         self.res = '<h1>REST API for McM<h2>'
         methods = ['GET', 'PUT', 'POST', 'DELETE']
-        #self.res += "<table border='1'><thead><tr><th>Method</th><th>Function name</th><th>Function info</th>"+''.join( map(lambda s : '<th>%s method info</th><th>Access level</th>'%(s),methods))+"</tr></thead><tbody>"
         self.res += "<table border='1'><thead><tr><th>Path</th><th>Function name</th>" + ''.join(
             map(lambda s: '<th>%s method info</th><th>Access level</th><th>Calls counter</th>' % (s), methods)) + "</tr></thead><tbody>"
-        #for method in self.data:
-        #	self.res += "<li><b>"+method+"</b><br><table style:'width:100%'>"
-        #	self.res += "<thead><td>Name</td><td>Parameters</td><td>Description</td></thead>"
-        #	for r in self.data[method]:
-        #		self.res += "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td></tr>"
-        #	self.res += "</table><\/li>"
-        #self.res += "</ul>"
-        #self.res += "<br>".join(self.__dict__.keys())
-
-        #self.res += "<ul>"
         keys = self.__dict__.keys()
         keys.sort()
+        print keys
         for key in keys:
             o = getattr(self, key)
-
-            #for m in methods:
-            #	if hasattr(o,m):
-            #		self.res +=' '+m
             self.res += "<tr>"
             if hasattr(o, 'access_limit'):
                 self.res += "<td><a href=%s/><b>%s</b></a></td>" % (key, key)
                 self.res += ' <td>%s</td>' % (o.__class__.__name__)
-                #if o.__class__.__doc__:
-                #self.res +=' <td> %s</td>'%(o.__class__.__doc__)
-                #else:
-                #	 self.res +=' <td><b>To be documented</b></td>'
                 limit = None
                 if o.access_limit is not None:
                     limit = o.access_limit
@@ -144,28 +114,19 @@ class RESTResourceIndex(RESTResource):
                             self.res += '<td>%s</td>' % (getattr(o, m).__doc__)
                         else:
                             self.res += '<td><b>To be documented</b></td>'
-                            #self.res +='<td>%s</td>'%(o.__class__.__dict__)
                         if limit is not None:
                             self.res += '<td align=center>+%s</td>' % (roles[limit])
                         else:
                             self.res += '<td align=center>%s</td>' % (roles[self.limit_per_method[m]])
                         try:
                             c_key = o.__class__.__name__ + m
-                            c = RESTResource.counter[c_key]
+                            c = RESTResource.call_counters[c_key]
                         except KeyError:
                             c = 0
                         self.res += '<td align=center>{0}</td>'.format(c)
                     else:
-                        #self.res +='<td><small>N/A</small> </td><td> <small>N/A</small> </td>'
                         self.res += '<td>&nbsp;</small> </td><td>&nbsp;</td><td>&nbsp;</small> </td>'
-                        #self.res += "<td>"
-                        #if o.access_limit:
-                        #	 self.res +=' + %s'%( o.access_limit )
-                        #else:
-                        #self.res +=' %s'%( o.authenticator.get_limit())
-                        #	 self.res +=' %s '% ( self.limit_per_method [m])
-                        #self.res += "</td></tr>"
                 self.res += "</tr>"
 
         self.res += "</tbody></table>"
-        return self.res
+        return self.res, {'Content-Type': 'text/plain'}

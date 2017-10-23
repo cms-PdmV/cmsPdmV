@@ -11,15 +11,17 @@ from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.user import user
 from json_layer.notification import notification
-from tools.user_management import user_pack, roles, access_rights
+from tools.user_management import user_pack, roles, access_rights, authenticator
 
 
 
 class GetUserRole(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
 
-    def GET(self):
+    def get(self):
         """
         Retrieve the role (string) of the current user
         """
@@ -27,7 +29,7 @@ class GetUserRole(RESTResource):
 
     def get_user_role(self):
         user_p = user_pack()
-        role_index, role = self.authenticator.get_user_role_index(user_p.get_username(), email=user_p.get_email())
+        role_index, role = authenticator.get_user_role_index(user_p.get_username(), email=user_p.get_email())
         return {'username': user_p.get_username(), 'role': role, 'role_index': role_index}
 
 
@@ -47,26 +49,27 @@ class GetAllRoles(RESTResource):
 
 class GetUserPWG(RESTResource):
     def __init__(self):
-        self.db_name = 'users'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, user_id=None):
         """
         Retrieve the pwg of the provided user
         """
         ## this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
 
         all_pwgs = settings().get_value('pwg')
-        db = database(self.db_name)
+        db = database('users')
 
         all_pwgs.sort()
-        if len(args) == 0:
-            return dumps({"results": all_pwgs})
-        user_name = args[0]
+        if user_id is not None:
+            return {"results": all_pwgs}
+        user_name = user_id
         if db.document_exists(user_name):
-            mcm_user = user(db.get(args[0]))
-            return dumps({"results": mcm_user.get_pwgs()})
+            mcm_user = user(db.get(user_id))
+            return {"results": mcm_user.get_pwgs()}
         else:
-            return dumps({"results": []})
+            return {"results": []}
 
 class GetAllUsers(RESTResource):
     def __init__(self):

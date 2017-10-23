@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import cherrypy
+import flask
 import time
 import traceback
 
-from json import dumps, loads
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
@@ -13,17 +12,20 @@ from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
+from json import loads
 
 
 class CreateCampaign(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Create a request with the provided json content
         """
-        return dumps(self.create_campaign(cherrypy.request.body.read().strip()))
+        return self.create_campaign(flask.request.data)
 
     def create_campaign(self, data):
         db = database('campaigns')
@@ -32,8 +34,6 @@ class CreateCampaign(RESTResource):
         except campaign.IllegalAttributeName as ex:
             return {"results":False}
 
-        #id = RequestPrepId().generate_prepid(self.json['pwg'], self.json['member_of_campaign'])
-        #self.json['prepid'] = loads(id)['prepid']
         if not camp_mcm.get_attribute('prepid'):
             self.logger.error('Invalid prepid: Prepid returned None')
             return {"results":False}
@@ -72,18 +72,20 @@ class CreateCampaign(RESTResource):
 class UpdateCampaign(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Update the content of a campaign data with the provided information
         """
-        return dumps(self.update_campaign(cherrypy.request.body.read().strip()))
+        return self.update_campaign(loads(flask.request.data))
 
     def update_campaign(self, data):
         if not '_rev' in data:
             return {"results":False, 'message': 'There is no previous revision provided'}
         try:
-            camp_mcm = campaign(json_input=loads(data))
+            camp_mcm = campaign(json_input=data)
         except campaign.IllegalAttributeName as ex:
             return {"results":False}
 
@@ -122,14 +124,15 @@ class UpdateCampaign(RESTResource):
 class DeleteCampaign(RESTResource):
     def __init__(self):
         self.db_name = 'campaigns'
+        self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def DELETE(self, *args):
+    def delete(self, campaign_id):
         """
         Delete a campaign
         """
-        if not args:
-            return dumps({"results":False})
-        return dumps(self.delete_request(args[0]))
+        return self.delete_request(campaign_id)
 
     def delete_request(self, cid):
         db = database(self.db_name)
@@ -185,66 +188,44 @@ class DeleteCampaign(RESTResource):
 class GetCampaign(RESTResource):
     def __init__(self):
         self.db_name = 'campaigns'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, campaign_id):
         """
         Retrive the json content of a campaign attributes
         """
-        if not args:
-            self.logger.error("No Arguments were given")
-            return dumps({"results":'Error: No arguments were given'})
-        return dumps(self.get_request(args[0]))
+        return self.get_request(campaign_id)
 
     def get_request(self, data):
         db = database(self.db_name)
         return {"results": db.get(prepid=data)}
 
-class GetAllCampaigns(RESTResource):
-    def __init__(self):
-        self.db_name = 'campaigns'
-
-    def GET(self, *args):
-        """
-        Get the json content of all campaigns in McM
-        """
-        return dumps(self.get_all())
-
-    def get_all(self):
-        db = database(self.db_name)
-        return {"results":db.raw_query("prepid")}
-
-class ToggleCampaign(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.production_manager
-
-    def GET(self,  *args):
-        """
-        Move the campaign approval to the other state
-        """
-        if not args:
-            return dumps({"results":'Error: No arguments were given'})
-        return dumps(self.toggle_campaign(args[0]))
-
-    def toggle_campaign(self,  rid):
-        db = database('campaigns')
-        if not db.document_exists(rid):
-            return {"results":'Error: The given campaign id does not exist.'}
-        camp = campaign(json_input=db.get(rid))
-        camp.toggle_approval()
-
-        return {"results":db.update(camp.json())}
+# class GetAllCampaigns(RESTResource):
+#     def __init__(self):
+#         self.db_name = 'campaigns'
+#
+#     def GET(self, *args):
+#         """
+#         Get the json content of all campaigns in McM
+#         """
+#         return dumps(self.get_all())
+#
+#     def get_all(self):
+#         db = database(self.db_name)
+#         return {"results":db.raw_query("prepid")}
 
 class ToggleCampaignStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self,  *args):
+    def get(self, campaign_id):
         """
         Move the campaign status to the next state
         """
-        if not args:
-            return dumps({"results":'Error: No arguments were given'})
-        return dumps(self.toggle_campaign(args[0]))
+        return self.toggle_campaign(campaign_id)
 
     def toggle_campaign(self,  rid):
         db = database('campaigns')
@@ -265,17 +246,14 @@ class ToggleCampaignStatus(RESTResource):
 class ApproveCampaign(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self,  *args):
+    def get(self, campaign_ids, index=-1):
         """
         Move campaign or provided list of campaigns ids to the next approval (/ids) or to the specified index (/ids/index)
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results":'Error: No arguments were given'})
-        if len(args) < 2:
-            return dumps(self.multiple_toggle(args[0]))
-        return dumps(self.multiple_toggle(args[0],  args[1]))
+        return self.multiple_toggle(campaign_ids, index)
 
     def multiple_toggle(self, rid, val=-1):
         if ',' in rid:
@@ -301,17 +279,15 @@ class ApproveCampaign(RESTResource):
 
 class GetCmsDriverForCampaign(RESTResource):
     def __init__(self):
-        self.db_name = 'campaigns'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, campaign_id):
         """
         Retrieve the list of cmsDriver commands for a given campaign id
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results":'Error: No arguments were given.'})
-        db = database(self.db_name)
-        return dumps(self.get_cmsDriver(db.get(prepid=args[0])))
+        db = database('campaigns')
+        return self.get_cmsDriver(db.get(prepid=campaign_id))
 
     def get_cmsDriver(self, data):
         try:
@@ -374,42 +350,43 @@ class CampaignsRESTResource(RESTResource):
 class ListAllCampaigns(CampaignsRESTResource):
     def __init__(self):
         CampaignsRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self):
         """
         Retrieve the list of all existing campaigns
         """
-        return dumps({"results": self.listAll()})
+        return {"results": self.listAll()}
 
 
 class InspectRequests(CampaignsRESTResource):
     def __init__(self):
         CampaignsRESTResource.__init__(self)
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, campaign_id):
         """
         Inspect the campaign or coma separated list of campaigns for completed requests
         """
-        if not args:
-            return dumps({"results":'Error: No arguments were given'})
-        return dumps(self.multiple_inspect(args[0]))
+        return self.multiple_inspect(campaign_id)
 
 class InspectCampaigns(CampaignsRESTResource):
     def __init__(self):
         CampaignsRESTResource.__init__(self)
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, group):
         """
         Inspect all the campaigns in McM for completed requests. Requires /all
         """
-        if not args:
-            return dumps({"results":'Error: No arguments were given'})
-        if args[0] != 'all':
-            return dumps({"results":'Error: Incorrect argument provided'})
-
+        if group != 'all':
+            return {"results":'Error: Incorrect argument provided'}
         c_list = self.listAll()
         from random import shuffle
         shuffle(c_list)
-        return dumps(self.multiple_inspect(','.join(c_list)))
+        return self.multiple_inspect(','.join(c_list))

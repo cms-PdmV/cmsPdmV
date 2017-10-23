@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import cherrypy
+import flask
 import traceback
 import time
 import urllib2
@@ -492,46 +493,43 @@ class GetFragmentForRequest(RESTResource):
         return fragmentText
 
 class GetSetupForRequest(RESTResource):
-    def __init__(self, mode='setup'):
+    def __init__(self):
         self.db_name = 'requests'
-        self.opt = mode
-        if self.opt not in ['setup','test','valid']:
-            raise Exception("Cannot create this resource with mode %s"% self.opt)
-        if self.opt=='valid':
+        if 'setup' in flask.request.path:
+            self.opt = 'setup'
+        elif 'test' in flask.request.path:
+            self.opt = 'test'
+        elif 'valid' in flask.request.path:
+            self.opt = 'valid'
             self.access_limit = access_rights.administrator
+        else:
+            raise Exception("Cannot create this resource with mode %s"% self.opt)
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, prepid, events=None):
         """
-      Retrieve the script necessary to setup and test a given request
-      """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given.'})
-        pid = args[0]
-        n = None
-        if len(args) > 1:
-            n = int(args[1])
-
+            Retrieve the script necessary to setup and test a given request
+        """
         run=False
         do_valid=False
         if self.opt=='test' or self.opt=='valid':
             run=True
         if self.opt=='valid':
             do_valid=True
-
         db = database(self.db_name)
-        if db.document_exists(pid):
+        if db.document_exists(prepid):
             try:
-                mcm_req = request(db.get(pid))
+                mcm_req = request(db.get(prepid))
             except request.IllegalAttributeName:
                 return dumps({"results": False})
-            setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=n)
+            setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=events)
             #delete certificate line
             setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
             cherrypy.response.headers['Content-Type'] = 'text/plain'
             return setupText
         else:
-            return dumps({"results": False, "message": "%s does not exist" % pid})
+            return dumps({"results": False, "message": "%s does not exist" % prepid})
 
 class DeleteRequest(RESTResource):
     def __init__(self):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import cherrypy
+import flask
 import traceback
 
 from json import dumps, loads
@@ -147,12 +147,14 @@ class FlowRESTResource(RESTResource):
 class CreateFlow(FlowRESTResource):
     def __init__(self):
         FlowRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
 
-    def PUT(self, *args, **kwargs):
+    def put(self):
         """
         Create a flow from the provided json content
         """
-        return dumps(self.create_flow(cherrypy.request.body.read().strip()))
+        return self.create_flow(flask.request.data)
 
     def create_flow(self, jsdata):
         cdb = database('campaigns')
@@ -211,12 +213,14 @@ class CreateFlow(FlowRESTResource):
 class UpdateFlow(FlowRESTResource):
     def __init__(self):
         FlowRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Update a flow with the provided content
         """
-        return dumps(self.update_flow(cherrypy.request.body.read().strip()))
+        return self.update_flow(flask.request.data)
 
     def update_flow(self, jsdata):
 
@@ -263,14 +267,14 @@ class UpdateFlow(FlowRESTResource):
 class DeleteFlow(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
+        self.before_request()
+        self.count_call()
 
-    def DELETE(self, *args):
+    def delete(self, flow_id):
         """
         Delete a flow and all related objects
         """
-        if not args:
-            return dumps({"results": 'Error: No Arguments were provided.'})
-        return dumps(self.delete_flow(args[0]))
+        return self.delete_flow(flow_id)
 
     def delete_flow(self, fid):
 
@@ -340,15 +344,14 @@ class DeleteFlow(RESTResource):
 class GetFlow(RESTResource):
     def __init__(self):
         self.db_name = 'flows'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, flow_id):
         """
         Retrieve the json content of a given flow id
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": {}})
-        return dumps(self.get_request(args[0]))
+        return self.get_request(flow_id)
 
     def get_request(self, data):
         db = database(self.db_name)
@@ -358,20 +361,17 @@ class GetFlow(RESTResource):
 class ApproveFlow(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, flow_ids, step=-1):
         """
         Move the given flow id to the next approval /flow_id , or the provided index /flow_id/index
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-        if len(args) == 1:
-            return dumps(self.multiple_approve(args[0]))
-        return dumps(self.multiple_approve(args[0], int(args[1])))
+        return self.multiple_approve(flow_ids, step)
 
 
-    def multiple_approve(self, rid, val=-1):
+    def multiple_approve(self, rid, val):
         if ',' in rid:
             rlist = rid.rsplit(',')
             res = []

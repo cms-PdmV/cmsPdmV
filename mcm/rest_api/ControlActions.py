@@ -1,4 +1,4 @@
-import cherrypy
+import flask
 
 from collections import defaultdict
 
@@ -17,8 +17,10 @@ from tools.locator import locator
 class RenewCertificate(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self):
         """
         Renew certificates on our request upload/injection machines
         """
@@ -42,81 +44,85 @@ class RenewCertificate(RESTResource):
             return command
 
 
-class ChangeVerbosity(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def GET(self, *args):
-        """
-        Change verbosity of logger
-        """
-        if not args:
-            return dumps({"results": False, "message": "No new verbosity given"})
-        try:
-            lvl = int(args[0])
-        except ValueError:
-            return dumps({"results": False, "message": "New verbosity was not an integer"})
-
-        if settings().set_value('log_verbosity', lvl):
-            ##TO-DO:
-            # do we really need this?
-            self.logger.info("We want to set log verbosity to: %s" % (lvl))
-            #self.logger.set_verbosity(lvl)
-        else:
-            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
-        return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})
-
-
-class TurnOffServer(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def GET(self, *args):
-        """
-        Turn off server.
-        """
-        self.logger.info("Shutting down the server")
-        cherrypy.engine.exit()
+#class ChangeVerbosity(RESTResource):
+#    def __init__(self):
+#        self.access_limit = access_rights.administrator
+#
+#    def GET(self, *args):
+#        """
+#        Change verbosity of logger
+#        """
+#        if not args:
+#            return dumps({"results": False, "message": "No new verbosity given"})
+#        try:
+#            lvl = int(args[0])
+#        except ValueError:
+#            return dumps({"results": False, "message": "New verbosity was not an integer"})
+#
+#        if settings().set_value('log_verbosity', lvl):
+#            ##TO-DO:
+#            # do we really need this?
+#            self.logger.info("We want to set log verbosity to: %s" % (lvl))
+#            #self.logger.set_verbosity(lvl)
+#        else:
+#            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
+#        return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})
 
 
-class ResetRESTCounters(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.administrator
+#class TurnOffServer(RESTResource):
+#    def __init__(self):
+#        self.access_limit = access_rights.administrator
+#
+#    def GET(self, *args):
+#        """
+#        Turn off server.
+#        """
+#        self.logger.info("Shutting down the server")
+#        cherrypy.engine.exit()
 
-    def GET(self, *args):
-        """
-        Reset counters
-        """
-        res = {}
-        with locker.lock("rest-call-counter"):
-            for arg in args:
-                if arg in RESTResource:
-                    RESTResource.counter[arg] = 0
-                    res[arg] = True
-                else:
-                    res[arg] = False
-            if not args:
-                for key in RESTResource.counter:
-                    RESTResource.counter[key] = 0
-                    res[key] = True
-            return dumps(res)
+
+#class ResetRESTCounters(RESTResource):
+#    def __init__(self):
+#        self.access_limit = access_rights.administrator
+#
+#    def GET(self, *args):
+#        """
+#        Reset counters
+#        """
+#        res = {}
+#        with locker.lock("rest-call-counter"):
+#            for arg in args:
+#                if arg in RESTResource:
+#                    RESTResource.counter[arg] = 0
+#                    res[arg] = True
+#                else:
+#                    res[arg] = False
+#            if not args:
+#                for key in RESTResource.counter:
+#                    RESTResource.counter[key] = 0
+#                    res[key] = True
+#            return dumps(res)
 
 class Communicate(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, message_number=0):
         """
         Trigger the accumulated communications from McM, optionally above /N messages
         """
-        N=0
-        if len(args):
-            N=args[0]
         com = communicator()
-        res=com.flush(N)
+        res=com.flush(message_number)
+        return {'results':True, 'subject' : res}
 
-        return dumps({'results':True, 'subject' : res})
-
+def output_text(data, code, headers=None):
+    """Makes a Flask response with a plain text encoded body"""
+    print 'hola'
+    resp = flask.make_response(data, code)
+    resp.headers.extend(headers or {})
+    return resp
 
 class Search(RESTResource):
     """
@@ -125,6 +131,7 @@ class Search(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
         self.casting = defaultdict(lambda: defaultdict(lambda: ""))
         self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))
         import json_layer
@@ -141,7 +148,8 @@ class Search(RESTResource):
                     if type(schema[schema_key]) in [int, float]:
                         self.casting[key_name][schema_key] = "<" + type(schema[schema_key]).__name__ + ">"
 
-    def GET(self, **args):
+    def get(self):
+        args = flask.request.args.to_dict()
         db_name = 'requests'
         page = 0
         limit = 20
@@ -163,7 +171,11 @@ class Search(RESTResource):
             include_fields = args['include_fields']
             args.pop('include_fields')
         res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
-        return res if get_raw else dumps({"results": res})
+        if get_raw:
+            self.representations = {'text/plain': output_text}
+            return res
+        else:
+            return {"results": res}
 
     def search(self, args, db_name, page=-1, limit=0, get_raw=False, include_fields=''):
         odb = database(db_name)
@@ -222,11 +234,8 @@ class MultiSearch(Search):
                 previous.append(search['search'][search['use_previous_as']])
             search['search'][search['use_previous_as']] = "(" + "+OR+".join(previous) + ")"
 
-    def POST(self):
-        try:
-            search_dicts = loads(cherrypy.request.body.read().strip())
-        except TypeError:
-            return dumps({"results": False, "message": "Couldn't read body of request"})
+    def post(self):
+        search_dicts = loads(flask.request.data)
         limit = 20
         page = 0
         if 'limit' in search_dicts:
@@ -272,4 +281,4 @@ class MultiSearch(Search):
                 res.extend(partial_result)
             if current_len >= skip+limit:
                 break
-        return dumps({"results": res[-subskip:len(res)-subskip+limit] if page != -1 else res})
+        return {"results": res[-subskip:len(res)-subskip+limit] if page != -1 else res}

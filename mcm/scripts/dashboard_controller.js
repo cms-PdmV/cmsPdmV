@@ -81,7 +81,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.getBjobsData = function(){
       var bjobs_options_array = removeEmptyString($scope.bjobsOptions);
-      var bjobs_options = bjobs_options_array.join("/");
+      var bjobs_options = bjobs_options_array.join(",");
       var promise = $http.get("restapi/dashboard/get_bjobs/" + bjobs_options.toString());
       promise.then(function(data, status){
         $scope.update["success"] = true;
