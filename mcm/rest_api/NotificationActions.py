@@ -30,11 +30,8 @@ class NotificationRESTResource(RESTResource):
         return action_objects_results
 
     def set_seen(self, notifications):
-        users_db = database("users")
-        user_json = users_db.get(self.username)
-        seen_notifications = set(user_json['seen_notifications'] if 'seen_notifications' in user_json else [])
         for notif in notifications:
-            notif['seen'] = notif['_id'] in seen_notifications
+            notif['seen'] = self.username in notif['seen_by']
 
 
 class CheckNotifications(NotificationRESTResource):
@@ -47,28 +44,10 @@ class CheckNotifications(NotificationRESTResource):
         """
         CheckNotifications.__init__(self)
         notifications_db = database('notifications')
-        query = notifications_db.construct_lucene_query({
-            'target_role' : self.role,
-            'targets' : self.username,
-        }, boolean_operator='OR')
-        notifications = notifications_db.full_text_search('search', query, page=-1)
-        users_db = database("users")
-        json_user = users_db.get(self.username)
-        if 'seen_notifications' not in json_user:
-            return dumps({'All': 0, 'unseen': 0})
-        seen_notifications = set(json_user['seen_notifications'])
-        frequency = {}
-        unseen_counter = 0
-        for notif in notifications:
-            if notif['group'] in frequency:
-                frequency[notif['group']] += 1
-            else:
-                frequency[notif['group']] = 1
-            if notif['_id'] not in seen_notifications:
-                unseen_counter += 1
-        frequency['All'] = len(notifications)
-        frequency['unseen'] = unseen_counter
-        return dumps(frequency)
+        stats = notifications_db.get('notification_stats')['stats']
+        if self.username in stats:
+            return dumps(stats[self.username])
+        return dumps({'All': 0, 'unseen': 0})
 
 class FetchNotifications(NotificationRESTResource):
     def __init__(self):
@@ -109,13 +88,20 @@ class SaveSeen(NotificationRESTResource):
              notification_id = threaded_loads(cherrypy.request.body.read().strip())['notification_id']
         except TypeError:
             return dumps({"results": False, "message": "Couldn't read body of request"})
-        users_db = database('users')
-        user_json = users_db.get(self.username)
-        if 'seen_notifications' not in user_json:
-            return dumps({"results": False, "message": "Seen notifications not in user document"})
-        user_json['seen_notifications'].append(notification_id)
-        self.logger.info("Saved seen for notification %s" % notification_id)
-        return dumps({"results": users_db.save(user_json)})
+        notifications_db = database('notifications')
+        notif = notifications_db.get(notification_id)
+        notif['seen_by'].append(self.username)
+        if not notifications_db.save(notif):
+            message = "Failed to save seen for notification: %s" % notification_id
+            self.logger.error(message)
+            return dumps({"results": False, "message": message})
+        stats = notifications_db.get('notification_stats')
+        stats['stats'][self.username]['unseen'] -= 1
+        if not notifications_db.save(stats):
+            message = "Failed to save notification stats"
+            self.logger.error(message)
+            return dumps({"results": False, "message": message})
+        return dumps({"results": True})
 
 class FetchGroupActionObjects(NotificationRESTResource):
     def __init__(self):
