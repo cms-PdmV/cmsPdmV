@@ -1,4 +1,4 @@
-import cherrypy
+import flask
 import time
 
 from json import dumps, loads
@@ -19,21 +19,21 @@ from tools.user_management import access_rights
 
 
 class GetMccm(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, mccm_id):
         """
         Retreive the dictionnary for a given mccm
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": {}})
-        return dumps(self.get_doc(args[0]))
+        return self.get_doc(mccm_id)
 
-    def get_doc(self, data):
+    def get_doc(self, mccm_id):
         db = database('mccms')
-        if not db.document_exists(data):
+        if not db.document_exists(mccm_id):
             return {"results": {}}
-        mccm_doc = db.get(prepid=data)
+        mccm_doc = db.get(prepid=mccm_id)
 
         return {"results": mccm_doc}
 
@@ -41,17 +41,19 @@ class GetMccm(RESTResource):
 class UpdateMccm(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Updating an existing mccm with an updated dictionary
         """
         try:
-            return dumps(self.update(cherrypy.request.body.read().strip()))
+            return self.update(flask.request.data.strip())
         except Exception as ex:
             self.logger.error('Failed to update an mccm from API. Reason: %s' % (str(ex)))
-            return dumps({'results': False, 'message': 'Failed to update an mccm from API. Reason: %s' % (
-                    str(ex))})
+            return {'results': False, 'message': 'Failed to update an mccm from API. Reason: %s' % (
+                    str(ex))}
 
     def is_there_difference(self, previous_requests, new_requests):
         frequency = {}
@@ -120,49 +122,51 @@ class CreateMccm(RESTResource):
         self.access_limit = access_rights.generator_contact
         sdb = database('settings')
         self.possible_pwgs = sdb.get("pwg")["value"]
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Create the mccm with the provided json content
         """
         try:
-            mccm_d = mccm(loads(cherrypy.request.body.read().strip()))
+            mccm_d = mccm(loads(flask.request.data.strip()))
         except Exception as e:
             self.logger.error(mccm_d.json())
             self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(
                     e))
 
-            return dumps({"results": False,
+            return {"results": False,
                     "message": "Something went wrong with loading the mccm data:\n {0}".format(
-                            e)})
+                            e)}
 
         if not mccm_d.get_attribute('prepid'):
             self.logger.error('Non-existent prepid')
-            return dumps({"results": False, "message": "The mccm ticket has no id!"})
+            return {"results": False, "message": "The mccm ticket has no id!"}
 
         if mccm_d.get_attribute("pwg") not in self.possible_pwgs:
             self.logger.error('Trying to create Mccm with non-existant PWG: %s' % (
                     mccm_d.get_attribute("pwg")))
 
-            return dumps({"results": False,
-                    "message": "The mccm ticket has non-existant PWG!"})
+            return {"results": False,
+                    "message": "The mccm ticket has non-existant PWG!"}
 
         db = database('mccms')
         # need to complete the prepid
         if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'):
             mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg'), db))
         elif db.document_exists(mccm_d.get_attribute('prepid')):
-            return dumps({"results": False,
+            return {"results": False,
                     "message": "Mccm document {0} already exists".format(
-                            mccm_d.get_attribute('prepid'))})
+                            mccm_d.get_attribute('prepid'))}
 
         mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
         mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
         mccm_d.update_history({'action': 'created'})
         self.logger.info('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
 
-        return dumps({"results": db.save(mccm_d.json()),
-                "prepid": mccm_d.get_attribute('prepid')})
+        return {"results": db.save(mccm_d.json()),
+                "prepid": mccm_d.get_attribute('prepid')}
 
 
     def fill_id(self, pwg, db):
@@ -180,65 +184,64 @@ class CreateMccm(RESTResource):
 class CancelMccm(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def GET(self,  *args):
+    def get(self, mccm_id):
         """
         Cancel the MccM ticket provided in argument. Does not delete it but put the status as cancelled.
         """
-        if not args:
-            return dumps({"results": False, "message": "No id given to cancel."})
-
         db = database('mccms')
         udb = database('users')
 
-        mcm_mccm = mccm(db.get(args[0]))
+        mcm_mccm = mccm(db.get(mccm_id))
         curr_user = user(udb.get(mcm_mccm.current_user))
 
-        self.logger.info("Canceling an mccm: %s" % (args[0]))
+        self.logger.info("Canceling an mccm: %s" % (mccm_id))
 
         if mcm_mccm.get_attribute('status') == 'done':
             self.logger.info("You cannot cancel 'done' mccm ticket")
-            return dumps({"results": False, "message": "Cannot cancel done tickets"})
+            return {"results": False, "message": "Cannot cancel done tickets"}
 
         if not mcm_mccm.get_attribute("pwg") in curr_user.get_pwgs():
             self.logger.info("User's PWGs: %s doesnt include ticket's PWG: %s" % (
                     curr_user.get_pwgs(), mcm_mccm.get_attribute("pwg")))
 
-            return dumps({"results": False, "message": "You cannot cancel ticket with different PWG than yours"})
+            return {"results": False, "message": "You cannot cancel ticket with different PWG than yours"}
 
         mcm_mccm.set_attribute('status','cancelled')
         mcm_mccm.update_history({'action': 'cancelled'})
         saved = db.update(mcm_mccm.json())
         if saved:
-            return dumps({"results": True})
+            return {"results": True}
         else:
-            return dumps({"results": False, "message": "Could not save the ticket to be cancelled."})
+            return {"results": False, "message": "Could not save the ticket to be cancelled."}
 
 class DeleteMccm(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def DELETE(self, *args):
-        if not args:
-            return dumps({"results": False, "message": "No id given to delete."})
+    def delete(self, mccm_id):
         db = database('mccms')
-        mcm_mccm = db.get( args[0] )
+        mcm_mccm = db.get(mccm_id)
         if mcm_mccm['status'] == 'done':
             return dumps({"results": False, "message" : "Cannot delete a ticket that is done"})
-        return dumps({"results": db.delete(args[0])})
+        return {"results": db.delete(mccm_id)}
 
 
 class GetEditableMccmFields(RESTResource):
 
     def __init__(self):
         self.db_name = 'mccms'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, mccm_id):
         """
         Retrieve the fields that are currently editable for a given mccm
         """
-        if not args:
-            self.logger.error('Mccm/GetEditable: No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-        return dumps(self.get_editable(args[0]))
+        return self.get_editable(mccm_id)
 
     def get_editable(self, prepid):
         db = database(self.db_name)
@@ -250,30 +253,29 @@ class GetEditableMccmFields(RESTResource):
 class GenerateChains(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, mccm_id, reserve_input='', limit_campaign_id=''):
         """
         Operate the chaining for a given MccM document id
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-        mid = args[0]
         reserve = False
-        if len(args) > 1:
-            reserve = (args[1]=='reserve')
-            if len(args) > 2:
-                reserve = args[2]
+        if reserve_input == 'reserve':
+            reserve = True
+            if limit_campaign_id != '':
+                reserve = limit_campaign_id
 
-        lock = locker.lock(mid)
+        lock = locker.lock(mccm_id)
         if lock.acquire(blocking=False):
             try:
-                res= self.generate(mid, reserve)
+                res= self.generate(mccm_id, reserve)
             finally:
                 lock.release()
-            return dumps(res)
+            return res
         else:
-            return dumps({"results" : False,
-                    "message" : "%s is already being operated on" % mid})
+            return {"results" : False,
+                    "message" : "%s is already being operated on" % mccm_id}
 
     def generate(self, mid, reserve=False):
         mdb = database('mccms')
@@ -489,68 +491,74 @@ class GenerateChains(RESTResource):
 class MccMReminderGenContacts(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
-        self._cp_config = {'response.stream': True}
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self):
         """
         Send a reminder to all generator contacts that have tickets with status equal to new
         """
-        mccms_db = database('mccms')
-        users_db = database('users')
-        __query = mccms_db.construct_lucene_query({'status' : 'new'})
-        mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
-        non_gen_contact_authors = set()
-        authors_tickets_dict = dict()
-        emails_prepids = dict()
-        for ticket in mccms_tickets:
-            yield '\nProcessing ticket %s' % (ticket['prepid'])
-            mccm_ticket = mccm(json_input=ticket)
-            authors = mccm_ticket.get_actors(what='author_email')
-            for author_email in authors:
-                if author_email in authors_tickets_dict:
-                    authors_tickets_dict[author_email].append(ticket['prepid'])
-                elif author_email not in non_gen_contact_authors:
-                    __role_query = users_db.construct_lucene_query({'email' : author_email})
-                    result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role,prepid')
-                    time.sleep(0.5) #we don't want to crash DB with a lot of single queries
-                    if result and result[0]['role'] == 'generator_contact':
-                        authors_tickets_dict[author_email] = [ticket['prepid']]
-                        emails_prepids[author_email] = result[0]['prepid']
-                    else:
-                        non_gen_contact_authors.add(author_email)
-                yield '.'
-        subject_part1 = 'Gentle reminder on %s '
-        subject_part2 = ' to be operated by you'
-        message_part1 = 'Dear GEN Contact, \nPlease find below the details of %s MccM '
-        message_part2 = ' in status "new". Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n'
-        base_url = locator().baseurl()
-        mail_communicator = communicator()
-        for author_email, ticket_prepids in authors_tickets_dict.iteritems():
-            num_tickets = len(ticket_prepids)
-            full_message = (message_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + message_part2
-            for ticket_prepid in ticket_prepids:
-                full_message += 'Ticket: %s \n' % (ticket_prepid)
-                full_message += '%smccms?prepid=%s \n\n' % (base_url, ticket_prepid)
-                yield '.'
-            full_message += '\n'
-            subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
-            notification(
-                subject,
-                full_message,
-                [emails_prepids[author_email]],
-                group=notification.REMINDERS,
-                action_objects=ticket_prepids,
-                object_type='mccms'
-            )
-            mail_communicator.sendMail([author_email], subject, full_message)
-            yield '\nEmail sent to %s\n' % (author_email)
+        def streaming_function():
+            mccms_db = database('mccms')
+            users_db = database('users')
+            __query = mccms_db.construct_lucene_query({'status' : 'new'})
+            mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
+            non_gen_contact_authors = set()
+            authors_tickets_dict = dict()
+            emails_prepids = dict()
+            for ticket in mccms_tickets:
+                yield '\nProcessing ticket %s' % (ticket['prepid'])
+                mccm_ticket = mccm(json_input=ticket)
+                authors = mccm_ticket.get_actors(what='author_email')
+                for author_email in authors:
+                    if author_email in authors_tickets_dict:
+                        authors_tickets_dict[author_email].append(ticket['prepid'])
+                    elif author_email not in non_gen_contact_authors:
+                        __role_query = users_db.construct_lucene_query({'email' : author_email})
+                        result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role,prepid')
+                        time.sleep(0.5) #we don't want to crash DB with a lot of single queries
+                        if result and result[0]['role'] == 'generator_contact':
+                            authors_tickets_dict[author_email] = [ticket['prepid']]
+                            emails_prepids[author_email] = result[0]['prepid']
+                        else:
+                            non_gen_contact_authors.add(author_email)
+                    yield '.'
+            subject_part1 = 'Gentle reminder on %s '
+            subject_part2 = ' to be operated by you'
+            message_part1 = 'Dear GEN Contact, \nPlease find below the details of %s MccM '
+            message_part2 = ' in status "new". Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n'
+            base_url = locator().baseurl()
+            mail_communicator = communicator()
+            for author_email, ticket_prepids in authors_tickets_dict.iteritems():
+                num_tickets = len(ticket_prepids)
+                full_message = (message_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + message_part2
+                for ticket_prepid in ticket_prepids:
+                    full_message += 'Ticket: %s \n' % (ticket_prepid)
+                    full_message += '%smccms?prepid=%s \n\n' % (base_url, ticket_prepid)
+                    yield '.'
+                full_message += '\n'
+                subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
+                notification(
+                    subject,
+                    full_message,
+                    [emails_prepids[author_email]],
+                    group=notification.REMINDERS,
+                    action_objects=ticket_prepids,
+                    object_type='mccms'
+                )
+                mail_communicator.sendMail([author_email], subject, full_message)
+                yield '\nEmail sent to %s\n' % (author_email)
+
+        return flask.Response(flask.stream_with_context(streaming_function()))
 
 
 class MccMReminderProdManagers(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, block_threshold=0):
         """
         Send a reminder to the production managers for existing opened mccm documents
         """
@@ -560,14 +568,10 @@ class MccMReminderProdManagers(RESTResource):
         __query = mdb.construct_lucene_query({'status' : 'new'})
         mccms = mdb.full_text_search('search', __query, page=-1)
 
-        block_threshold = 0
-        if len(args):
-            block_threshold = int(args[0])
-
         mccms = filter( lambda m : m['block'] <= block_threshold, mccms)
         mccms = sorted( mccms, key = lambda m : m['block'])
         if len(mccms)==0:
-            return dumps({"results": True,"message": "nothing to remind of at level %s, %s"% (block_threshold, mccms)})
+            return {"results": True,"message": "nothing to remind of at level %s, %s"% (block_threshold, mccms)}
 
         l_type = locator()
         com = communicator()
@@ -601,74 +605,29 @@ Dear Production Managers,
                      subject,
                      message)
 
-        return dumps({"results" : True, "message" : map( lambda m : m['prepid'], mccms)})
+        return {"results" : True, "message" : map( lambda m : m['prepid'], mccms)}
 
-class MccMDisplay(RESTResource):
-    def __init__(self):
-        pass
-
-    def GET(self, *args):
-        """
-        Twiki display of mccm ticket for a given meeting date and /pwg optional
-        """
-        mdb = database('mccms')
-        date = args[0]
-        pwgs=None
-
-        if len(args)>1:
-            pwgs=args[1].split(',')
-
-        to_be_shown= ['prepid','notes','deadline','requests','chains','repetitions']
-        l_type=locator()
-
-        __query = mdb.construct_lucene_query({'meeting' : date})
-        mdocs = mdb.full_text_search('search', __query, page=-1)
-        if pwgs:
-            text="---++ MccM Tickets for %s : %s \n"%( date, ', '.join(pwgs) )
-            for pwg in pwgs:
-                mdocs_pwg = filter ( lambda m : m['pwg']==pwg, mdocs)
-                text+="---+++ Tickets for %s \n" %pwg
-                text+="[[%smccms?meeting=%s&pwg=%s][link to McM]]\n"%( l_type.baseurl(), date, pwg)
-                for t in mdocs_pwg:
-                    text+="   * "
-                    for item in to_be_shown:
-                        if item in t:
-                            text+="%s "% t[item]
-                    text+='\n'
-        else:
-            text="---++ MccM Tickets for %s \n<br>"%( date )
-            text+="[[%smccms?meeting=%s][link to McM]]\n"%( l_type.baseurl(), date )
-            for t in mdocs:
-                text+="   * "
-                for item in to_be_shown:
-                    if item in t:
-                        text+="%s "% t[item]
-                text+='\n'
-
-        return text
 
 class CalculateTotalEvts(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, mccm_id):
         """
         Force to recalculate total_events for ticket
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": {}})
-
         db = database('mccms')
 
-        if not db.document_exists(args[0]):
+        if not db.document_exists(mccm_id):
             return {"results": {}}
 
-        mccm_doc = mccm(db.get(prepid=args[0]))
+        mccm_doc = mccm(db.get(prepid=mccm_id))
         mccm_doc.update_total_events()
 
         saved = db.update(mccm_doc.json())
         if saved:
-            return dumps({"results": True})
+            return {"results": True}
         else:
-            return dumps({"results": False, "message": "Could not save the ticket to be cancelled."})
+            return {"results": False, "message": "Could not save the ticket to be cancelled."}

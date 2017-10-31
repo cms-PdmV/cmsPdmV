@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-import datetime
 
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
@@ -78,8 +77,8 @@ class GetRevision(RESTResource):
 
 
 class GetStartTime(RESTResource):
-    def __init__(self):
-        self.time = datetime.datetime.now().strftime("%c")
+    def __init__(self, start_time):
+        self.time = start_time
         self.before_request()
         self.count_call()
 

@@ -1,26 +1,24 @@
-import cherrypy
-
-from json import dumps, loads
+from json import loads
 
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.setting import setting
 from tools.settings import settings
 from tools.user_management import access_rights
+from flask import request
 
 
 class GetSetting(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, setting_id):
         """
         Retrieve dictionary regarding given setting
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": {}})
-        return dumps(self.get_setting(args[0]))
+        return self.get_setting(setting_id)
 
     def get_setting(self, data):
         db = database('settings')
@@ -34,17 +32,19 @@ class GetSetting(RESTResource):
 class SaveSetting(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Save a new setting
         """
         try:
-            res = self.update(cherrypy.request.body.read().strip())
-            return dumps(res)
+            res = self.update(request.data.strip())
+            return res
         except Exception as ex:
             self.logger.error('Failed to update a setting from API. Reason: %s' % (str(ex)))
-            return dumps({'results': False, 'message': 'Failed to update a setting from API'})
+            return {'results': False, 'message': 'Failed to update a setting from API'}
 
     def update(self, body):
         data = loads(body)
@@ -68,17 +68,19 @@ class SaveSetting(RESTResource):
 class UpdateSetting(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Updating an existing setting with an updated dictionary
         """
         try:
-            res = self.update(cherrypy.request.body.read().strip())
-            return dumps(res)
+            res = self.update(request.data.strip())
+            return res
         except:
             self.logger.error('Failed to update a setting from API')
-            return dumps({'results': False, 'message': 'Failed to update a setting from API'})
+            return {'results': False, 'message': 'Failed to update a setting from API'}
 
     def update(self, body):
         data = loads(body)

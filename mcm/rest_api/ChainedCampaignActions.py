@@ -238,7 +238,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
             return {"results" : 'Already running inspection'}
 
         #force pretify output in browser for multiple lines
-        #cherrypy.response.headers['Content-Type'] = 'text/plain'
+        self.representations = {'text/plain': self.output_text}
         ccid_list = self.listAll()
         shuffle(ccid_list)
         return flask.Response(flask.stream_with_context(self.multiple_inspect(','.join(ccid_list))))

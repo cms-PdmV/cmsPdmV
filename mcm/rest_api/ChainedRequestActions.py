@@ -374,7 +374,7 @@ class RewindToPreviousStep(RESTResource):
                 "prepid" : crid}
 
 
-class ApproveRequest(RESTResource):
+class ApproveChainedRequest(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
         self.before_request()
@@ -543,13 +543,11 @@ class TestChainedRequest(RESTResource):
         mcm_cr = chained_request(crdb.get(chained_request_id))
         mcm_rs = []
         if settingsDB.get('validation_stop')['value'] == True:
-            return dumps(
-                {
+            return {
                     "results" : False,
                     'message': ('validation jobs are halted to allow forthcoming mcm ''restart - try again later'),
                     "prepid" : chained_request_id
-                }
-            )
+            }
         requires_validation = False
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request(rdb.get(rid))
@@ -659,7 +657,7 @@ class InjectChainedRequest(RESTResource):
         thread = ChainRequestInjector(prepid=chained_request_id, lock=locker.lock(chained_request_id), queue_lock=_q_lock,
                 check_approval=False)
         if self.mode == 'show':
-            cherrypy.response.headers['Content-Type'] = 'text/plain'
+            self.representations = {'text/plain': self.output_text}
             return thread.make_command()
         else:
             submit_pool.add_task(thread.internal_run)
@@ -693,13 +691,13 @@ class ChainsFromTicket(RESTResource):
         result = mccms_db.full_text_search("search", mccm_query, page=-1)
         if len(result) == 0:
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
-            return dumps({})
+            return {}
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
         generated_chains = list(result[0]['generated_chains'].iterkeys())
         generated_chains.sort()
         start = page * limit
         if start > len(generated_chains):
-            return dumps([])
+            return []
         end = start + limit
         end = end if end <= len(generated_chains) else len(generated_chains)
         chained_request_list = []
@@ -720,6 +718,7 @@ class TaskChainDict(RESTResource):
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('scratch', type=str)
         self.parser.add_argument('upto', type=int)
+        self.representations = {'text/plain': self.output_text}
 
     def get(self, chained_request_id):
         """
@@ -731,6 +730,8 @@ class TaskChainDict(RESTResource):
         settingsDB = database('settings')
 
         __DT_prio = settingsDB.get('datatier_input')["value"]
+
+        print chained_request_id
 
         def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
             ##replace Task -> Step in inside dictionaries
@@ -866,7 +867,7 @@ class TaskChainDict(RESTResource):
         wma['TaskChain'] = task-1
 
         if wma['TaskChain'] == 0:
-            return {}
+            return dumps({})
 
         for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
             wma[item] = wma['Task%d'% wma['TaskChain']][item]
@@ -879,10 +880,9 @@ class TaskChainDict(RESTResource):
         wma['RequestString'] = wma['PrepID']
 
         if __chains_type.count("StepChain") == len(__chains_type):
-            return tranform_to_step_chain(wma, __total_time_evt, __total_size_evt)
+            return dumps(tranform_to_step_chain(wma, __total_time_evt, __total_size_evt), indent=4)
         else:
-            return wma
-
+            return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
     def __init__(self):
@@ -901,6 +901,7 @@ class GetSetupForChains(RESTResource):
         self.parser.add_argument('events', type=int)
         self.parser.add_argument('scratch', type=str, default='')
         self.parser.add_argument('directory', type=str, default='')
+        self.representations = {'text/plain': self.output_text}
 
     def get(self, chained_request_id):
         kwargs = self.parser.parse_args()

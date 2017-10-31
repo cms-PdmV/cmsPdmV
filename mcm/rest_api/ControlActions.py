@@ -117,13 +117,6 @@ class Communicate(RESTResource):
         res=com.flush(message_number)
         return {'results':True, 'subject' : res}
 
-def output_text(data, code, headers=None):
-    """Makes a Flask response with a plain text encoded body"""
-    print 'hola'
-    resp = flask.make_response(data, code)
-    resp.headers.extend(headers or {})
-    return resp
-
 class Search(RESTResource):
     """
     Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
@@ -172,7 +165,7 @@ class Search(RESTResource):
             args.pop('include_fields')
         res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
         if get_raw:
-            self.representations = {'text/plain': output_text}
+            self.representations = {'text/plain': self.output_text}
             return res
         else:
             return {"results": res}

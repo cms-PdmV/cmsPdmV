@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-
-import cherrypy
 import flask
 import traceback
 import time
@@ -24,6 +22,7 @@ from tools.settings import settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
+from flask_restful import reqparse
 
 class RequestRESTResource(RESTResource):
     def __init__(self):
@@ -130,24 +129,23 @@ class RequestRESTResource(RESTResource):
 class CloneRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
         #self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Make a clone with no special requirement
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given.'})
-        return dumps(self.clone_request(args[0]))
+        return self.clone_request(request_id)
 
-    def PUT(self):
+    def put(self):
         """
         Make a clone with specific requirements
         """
-        data = loads(cherrypy.request.body.read().strip())
+        data = loads(flask.request.data.strip())
         pid = data['prepid']
-        return dumps(self.clone_request(pid, data))
+        return self.clone_request(pid, data)
 
     def clone_request(self, pid, data={}):
         db = database(self.db_name)
@@ -180,29 +178,33 @@ class CloneRequest(RequestRESTResource):
 class ImportRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
         #self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
-    def PUT(self):
+    def put(self):
         """
         Saving a new request from a given dictionnary
         """
         db = database(self.db_name)
-        return dumps(self.import_request(loads(cherrypy.request.body.read().strip()), db))
+        return self.import_request(loads(flask.request.data.strip()), db)
 
 
 class UpdateRequest(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Updating an existing request with an updated dictionary
         """
-        return dumps(self.update())
+        return self.update()
 
     def update(self):
         try:
-            res = self.update_request(cherrypy.request.body.read().strip())
+            res = self.update_request(flask.request.data.strip())
             return res
         except Exception as e:
             #trace = traceback.format_exc()
@@ -275,155 +277,158 @@ class ManageRequest(UpdateRequest):
         UpdateRequest.__init__(self)
         self.access_limit = access_rights.administrator
         self.with_trace = False
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Updating an existing request with an updated dictionnary, leaving no trace in history, for admin only
         """
-        return dumps(self.update())
+        return self.update()
 
 
-class MigratePage(RequestRESTResource):
-    def __init__(self):
-        RequestRESTResource.__init__(self)
+#class MigratePage(RequestRESTResource):
+#    def __init__(self):
+#        RequestRESTResource.__init__(self)
+#        self.before_request()
+#        self.count_call()
+#
+#    def get(self):
+#        """
+#        Provides a page to migrate requests from prep
+#        """
+#        if not args:
+#            self.logger.error('No arguments were given')
+#            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+#        prep_campaign = args[0]
+#        html = '<html><body>This is the migration page for %s' % prep_campaign
+#        html += '</body></html>'
+#        return html
 
-    def GET(self, *args):
-        """
-        Provides a page to migrate requests from prep
-        """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": False, "message": 'Error: No arguments were given.'})
-        prep_campaign = args[0]
-        html = '<html><body>This is the migration page for %s' % prep_campaign
-        html += '</body></html>'
-        return html
 
-
-class MigrateRequest(RequestRESTResource):
-    """
-    Self contained PREP->McM migration class
-    """
-
-    def __init__(self):
-        RequestRESTResource.__init__(self)
-
-    def GET(self, *args):
-        """
-        Imports am existing request from prep (id provided) to an already existing campaign in McM
-        """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": False, "message": 'Error: No arguments were given.'})
-        res = self.migrate_from_prep(args[0])
-        return dumps(res) if isinstance(res, dict) else res
-
-    def migrate_from_prep(self, pid):
-
-        ## get the campaign name
-        prep_campaign = pid.split('-')[1]
-        mcm_campaign = prep_campaign.replace('_', '')
-
-        cdb = database('campaigns')
-        db = database(self.db_name)
-
-        if not cdb.document_exists(mcm_campaign):
-            return {"results": False, "message": 'no campaign %s exists in McM to migrate %s' % (mcm_campaign, pid)}
-        camp = campaign(cdb.get(mcm_campaign))
-
-        from sync.get_request import prep_scraper
-
-        prep = prep_scraper()
-        mcm_requests = prep.get(pid)
-        if not len(mcm_requests):
-            return {"results": False, "message": "no conversions for prepid %s" % pid}
-        mcm_request = mcm_requests[0]
-        try:
-            mcm_req = mcm_r = request(mcm_request)
-        except:
-            return {"results": False, "message": "json does not cast into request type <br> %s" % mcm_request}
-
-        ## make the sequences right ? NO, because that cast also the conditions ...
-        #mcm_r.build_cmsDrivers(cast=-1)
-        #mcm_r.build_cmsDrivers(cast=1)
-
-        if mcm_r.get_attribute('mcdb_id') > 0 and mcm_r.get_attribute('status') not in ['submitted', 'done']:
-            return {"results": False,
-                          "message": "A request which will require a step0 (%s) cannot be migrated in status %s, requires submitted or done" % (
-                              mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))}
-
-        mcm_r.update_history({'action': 'migrated'})
-        if not db.document_exists(mcm_r.get_attribute('prepid')):
-            mcm_r.get_stats(override_id=pid)
-
-            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in [
-                'done']: #['done','submitted']:
-                # no requests provided, the request should fail migration. 
-                # I have put fake docs in stats so that it never happens
-                return {"results": False, "message": "Could not find an entry in the stats DB for prepid %s" % pid}
-
-            # set the completed events properly
-            if mcm_r.get_attribute('status') == 'done' and len(
-                    mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events') <= 0:
-                mcm_r.set_attribute('completed_events',
-                                    mcm_r.get_attribute('reqmgr_name')[-1]['content']['pdmv_evts_in_DAS'])
-                collected=[]
-                for wma in reversed(mcm_r.get_attribute('reqmgr_name')):
-                    if not 'pdmv_dataset_list' in wma['content']: continue
-                    those = wma['content']['pdmv_dataset_list']
-                    goodone=True
-                    if len(collected):
-                        for ds in those:
-                            (_,dsn,proc,tier)=ds.split('/')
-                            for goodds in collected:
-                                (_,gdsn,gproc,gtier)=goodds.split('/')
-                                if dsn!=gdsn or gproc!=proc:
-                                    goodone=False
-                    if goodone:
-                        collected.extend(those)
-                collected = list(set(collected))
-                mcm_r.set_attribute('output_dataset', collected)
-            saved = db.save(mcm_r.json())
-            if camp.get_attribute('root') <= 0:
-                if not self.set_campaign(mcm_req):
-                    return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
-        else:
-            html = '<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
-                pid,
-                pid,
-                mcm_r.get_attribute('prepid'),
-                mcm_r.get_attribute('prepid'))
-            return html
-            #return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
-
-        if saved:
-            html = '<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
-                pid,
-                pid,
-                mcm_r.get_attribute('prepid'),
-                mcm_r.get_attribute('prepid'))
-            return html
-            #return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
-        else:
-            return {"results": saved, "message": "could not save converted prepid %s in McM" % pid}
-
-            #return dumps({"results":True,"message":"not implemented"})
+#class MigrateRequest(RequestRESTResource):
+#    """
+#    Self contained PREP->McM migration class
+#    """
+#
+#    def __init__(self):
+#        RequestRESTResource.__init__(self)
+#
+#    def GET(self, *args):
+#        """
+#        Imports am existing request from prep (id provided) to an already existing campaign in McM
+#        """
+#        if not args:
+#            self.logger.error('No arguments were given')
+#            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+#        res = self.migrate_from_prep(args[0])
+#        return dumps(res) if isinstance(res, dict) else res
+#
+#    def migrate_from_prep(self, pid):
+#
+#        ## get the campaign name
+#        prep_campaign = pid.split('-')[1]
+#        mcm_campaign = prep_campaign.replace('_', '')
+#
+#        cdb = database('campaigns')
+#        db = database(self.db_name)
+#
+#        if not cdb.document_exists(mcm_campaign):
+#            return {"results": False, "message": 'no campaign %s exists in McM to migrate %s' % (mcm_campaign, pid)}
+#        camp = campaign(cdb.get(mcm_campaign))
+#
+#        from sync.get_request import prep_scraper
+#
+#        prep = prep_scraper()
+#        mcm_requests = prep.get(pid)
+#        if not len(mcm_requests):
+#            return {"results": False, "message": "no conversions for prepid %s" % pid}
+#        mcm_request = mcm_requests[0]
+#        try:
+#            mcm_req = mcm_r = request(mcm_request)
+#        except:
+#            return {"results": False, "message": "json does not cast into request type <br> %s" % mcm_request}
+#
+#        ## make the sequences right ? NO, because that cast also the conditions ...
+#        #mcm_r.build_cmsDrivers(cast=-1)
+#        #mcm_r.build_cmsDrivers(cast=1)
+#
+#        if mcm_r.get_attribute('mcdb_id') > 0 and mcm_r.get_attribute('status') not in ['submitted', 'done']:
+#            return {"results": False,
+#                          "message": "A request which will require a step0 (%s) cannot be migrated in status %s, requires submitted or done" % (
+#                              mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))}
+#
+#        mcm_r.update_history({'action': 'migrated'})
+#        if not db.document_exists(mcm_r.get_attribute('prepid')):
+#            mcm_r.get_stats(override_id=pid)
+#
+#            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in [
+#                'done']: #['done','submitted']:
+#                # no requests provided, the request should fail migration. 
+#                # I have put fake docs in stats so that it never happens
+#                return {"results": False, "message": "Could not find an entry in the stats DB for prepid %s" % pid}
+#
+#            # set the completed events properly
+#            if mcm_r.get_attribute('status') == 'done' and len(
+#                    mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events') <= 0:
+#                mcm_r.set_attribute('completed_events',
+#                                    mcm_r.get_attribute('reqmgr_name')[-1]['content']['pdmv_evts_in_DAS'])
+#                collected=[]
+#                for wma in reversed(mcm_r.get_attribute('reqmgr_name')):
+#                    if not 'pdmv_dataset_list' in wma['content']: continue
+#                    those = wma['content']['pdmv_dataset_list']
+#                    goodone=True
+#                    if len(collected):
+#                        for ds in those:
+#                            (_,dsn,proc,tier)=ds.split('/')
+#                            for goodds in collected:
+#                                (_,gdsn,gproc,gtier)=goodds.split('/')
+#                                if dsn!=gdsn or gproc!=proc:
+#                                    goodone=False
+#                    if goodone:
+#                        collected.extend(those)
+#                collected = list(set(collected))
+#                mcm_r.set_attribute('output_dataset', collected)
+#            saved = db.save(mcm_r.json())
+#            if camp.get_attribute('root') <= 0:
+#                if not self.set_campaign(mcm_req):
+#                    return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
+#        else:
+#            html = '<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
+#                pid,
+#                pid,
+#                mcm_r.get_attribute('prepid'),
+#                mcm_r.get_attribute('prepid'))
+#            return html
+#            #return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
+#
+#        if saved:
+#            html = '<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
+#                pid,
+#                pid,
+#                mcm_r.get_attribute('prepid'),
+#                mcm_r.get_attribute('prepid'))
+#            return html
+#            #return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
+#        else:
+#            return {"results": saved, "message": "could not save converted prepid %s in McM" % pid}
+#
+#            #return dumps({"results":True,"message":"not implemented"})
 
 
 class GetCmsDriverForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
         self.json = {}
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Retrieve the cmsDriver commands for a given request
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given.'})
         db = database(self.db_name)
-        return dumps(self.get_cmsDriver(db.get(prepid=args[0])))
+        return self.get_cmsDriver(db.get(prepid=request_id))
 
     def get_cmsDriver(self, data):
         try:
@@ -439,16 +444,15 @@ class OptionResetForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids):
         """
         Reset the options for request
         """
         rdb = database(self.db_name)
-        if not args:
-            self.logger.error('No ids given to option reset of request')
-            return dumps({"results": False, "message": "Provide comma-separated ids for option reset!"})
-        req_ids = args[0].split(',')
+        req_ids = request_ids.split(',')
         res = {}
         for req_id in req_ids:
             req = request(rdb.get(req_id))
@@ -458,29 +462,27 @@ class OptionResetForRequest(RESTResource):
                 continue
             req.set_options()
             res[req_id] = True
-        return dumps({"results": res})
+        return {"results": res}
 
 
 class GetFragmentForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
       Retrieve the fragment as stored for a given request
       """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given.'})
-
         ##TO-DO: do we need it? We should keep it fow backward compatibility
         v = False
         if len(args) > 1:
             v = True
 
         db = database(self.db_name)
-        res = self.get_fragment(db.get(prepid=args[0]), v)
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        res = self.get_fragment(db.get(prepid=request_id), v)
         return dumps(res) if isinstance(res, dict) else res
 
     def get_fragment(self, data, view):
@@ -506,6 +508,7 @@ class GetSetupForRequest(RESTResource):
             raise Exception("Cannot create this resource with mode %s"% self.opt)
         self.before_request()
         self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
     def get(self, prepid, events=None):
         """
@@ -526,24 +529,22 @@ class GetSetupForRequest(RESTResource):
             setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=events)
             #delete certificate line
             setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
-            cherrypy.response.headers['Content-Type'] = 'text/plain'
             return setupText
         else:
-            return dumps({"results": False, "message": "%s does not exist" % prepid})
+            return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
 
 class DeleteRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def DELETE(self, *args):
+    def delete(self, request_id):
         """
         Simply delete a request
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": False})
-        return dumps(self.delete_request(args[0]))
+        return self.delete_request(request_id)
 
     def delete_request(self, pid):
         db = database(self.db_name)
@@ -601,15 +602,14 @@ class DeleteRequest(RESTResource):
 
 class GetRequestByDataset(RESTResource):
     def __init__(self):
-        pass
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, dataset):
         """
         retrieve the dictionnary of a request, based on the output dataset specified
         """
-        if not args:
-            return dumps({"results": {}})
-        datasetname = '/'+'/'.join(args).replace('*','')
+        datasetname = '/'+ dataset.replace('*','')
         rdb = database('requests')
         __query = rdb.construct_lucene_query({'produce' : datasetname})
         r = rdb.full_text_search('search', __query, page=-1)
@@ -622,49 +622,49 @@ class GetRequestByDataset(RESTResource):
 class GetRequestOutput(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, prepid, is_chain=''):
         """
         Retrieve the list of datasets from a give request
         """
         ## how to structure better the output ? using a dict ?
-        main_arg = args[0]
-        res = { main_arg : []}
+        res = { prepid : []}
         rdb = database('requests')
 
-        if len(args) > 1 and args[1] == 'chain':
+        if is_chain == 'chain':
             collect = []
             crdb = database('chained_requests')
-            __query = crdb.construct_lucene_query({'contains' : main_arg})
+            __query = crdb.construct_lucene_query({'contains' : prepid})
             for cr in crdb.full_text_search('search', __query, page=-1):
                 for r in reversed(cr['chain']):
                     if not r in collect:
                         collect.append(r)
         else:
-            collect = [main_arg]
+            collect = [prepid]
 
         for rid in collect:
             mcm_r = rdb.get(rid)
             if len(mcm_r['reqmgr_name']):
                 if 'pdmv_dataset_list' in mcm_r['reqmgr_name'][-1]['content']:
-                    res[main_arg].extend( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'] )
+                    res[prepid].extend( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'] )
                 else:
-                    res[main_arg].append( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'] )
+                    res[prepid].append( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'] )
 
-        return dumps(res)
+        return res
 
 class GetRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Retreive the dictionnary for a given request
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": {}})
-        return dumps(self.get_request(args[0]))
+        return self.get_request(request_id)
 
     def get_request(self, data):
         db = database(self.db_name)
@@ -678,16 +678,15 @@ class GetRequest(RESTResource):
 
 
 class ApproveRequest(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id, step=-1):
         """
         Approve to the next step, or specified index the given request or coma separated list of requests
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-        if len(args) == 1:
-            return dumps(self.multiple_approve(args[0]))
-        return dumps(self.multiple_approve(args[0], int(args[1])))
+        return self.multiple_approve(request_id, step)
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
@@ -738,30 +737,30 @@ class ApproveRequest(RESTResource):
 
 
 class ResetRequestApproval(ApproveRequest):
-    def __init__(self,hard=True):
+    def __init__(self):
         ApproveRequest.__init__(self)
         self.access_limit = access_rights.generator_contact
-        self.hard = hard
+        self.hard = 'soft_reset' not in flask.request.path
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Reste both approval and status to their initial state.
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-        return dumps(self.multiple_approve(args[0], 0, self.hard))
+        return self.multiple_approve(request_id, 0, self.hard)
 
 
 class GetStatus(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids):
         """
         Get the status of the coma separated request id.
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-
-        return dumps(self.multiple_status(args[0]))
+        return self.multiple_status(request_ids)
 
     def multiple_status(self, rid):
         if ',' in rid:
@@ -798,19 +797,14 @@ class GetStatus(RESTResource):
 class InspectStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids, force=""):
         """
         Triggers the internal inspection of the status of a request or coma separated list of request
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-
-        force = False
-        if len(args) > 1 and args[1] == "force":
-            force = True
-
-        return dumps(self.multiple_inspect(args[0], force))
+        return self.multiple_inspect(request_ids, force == "force")
 
     def multiple_inspect(self, rid, force_req):
         rlist = rid.rsplit(',')
@@ -846,13 +840,13 @@ class InspectStatus(RESTResource):
 class UpdateStats(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
-    def GET(self, *args):
+        self.before_request()
+        self.count_call()
+
+    def get(self, request_id):
         """
         Triggers the forced update of the stats page for the given request id
         """
-        if not len(args):
-            return dumps({"results" : False, "message" : "no argument was provided"})
-        rid = args[0]
         refresh_stats = True
         if len(args) > 1 and args[1] == "no_refresh":
             refresh_stats = False
@@ -863,36 +857,34 @@ class UpdateStats(RESTResource):
             force = True
 
         rdb = database('requests')
-        if not rdb.document_exists(rid):
-            return dumps({"prepid" : rid, "results": False,
-                    "message" : '%s does not exist' % rid})
+        if not rdb.document_exists(request_id):
+            return {"prepid" : request_id, "results": False,
+                    "message" : '%s does not exist' % request_id}
 
-        mcm_r = request(rdb.get(rid))
+        mcm_r = request(rdb.get(request_id))
         if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
             mcm_r.reload()
-            return dumps({"prepid" : rid, "results": True})
+            return {"prepid" : request_id, "results": True}
         else:
             if force:
                 mcm_r.reload()
-                return dumps({"prepid" : rid, "results": False,
-                        "message" : "no apparent changes, but request was foced to reload"})
+                return {"prepid" : request_id, "results": False,
+                        "message" : "no apparent changes, but request was foced to reload"}
             else:
-                return dumps({"prepid" : rid, "results": False,
-                        "message" : "no apparent changes"})
+                return {"prepid" : request_id, "results": False,
+                        "message" : "no apparent changes"}
 
 class SetStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids, step=-1):
         """
         Perform the change of status to the next (/ids) or to the specified index (/ids/index)
         """
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-        if len(args) < 2:
-            return dumps(self.multiple_status(args[0]))
-        return dumps(self.multiple_status(args[0], int(args[1])))
+        return self.multiple_status(request_ids, step)
 
     def multiple_status(self, rid, val=-1):
         if ',' in rid:
@@ -926,39 +918,37 @@ class TestRequest(RESTResource):
     ## a rest api to make a creation test of a request
     def __init__(self):
         self.counter = 0
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         this is test for admins only
         """
-
-        if not args:
-            return dumps({"results": 'Error: No arguments were given'})
-
         rdb = database('requests')
 
-        mcm_r = request( rdb.get(args[0]))
+        mcm_r = request( rdb.get(request_id))
 
         outs = mcm_r.get_outputs()
 
-        return dumps(outs)
+        return outs
 
-class UploadConfig(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.production_manager
-
-    def GET(self, *args, **kwargs):
-        """
-        Upload the configuration
-        """
-        rn = args[0]
-        server = 'vocms081.cern.ch'
-        if "server" in kwargs:
-            server = kwargs["server"]
-        from tools.handlers import ConfigMakerAndUploader, submit_pool
-        from tools.locker import locker
-        load = ConfigMakerAndUploader(prepid=args[0], server=server, lock=locker.lock(args[0]))
-        submit_pool.add_task(load.internal_run)
+#class UploadConfig(RESTResource):
+#    def __init__(self):
+#        self.access_limit = access_rights.production_manager
+#
+#    def GET(self, *args, **kwargs):
+#        """
+#        Upload the configuration
+#        """
+#        rn = args[0]
+#        server = 'vocms081.cern.ch'
+#        if "server" in kwargs:
+#            server = kwargs["server"]
+#        from tools.handlers import ConfigMakerAndUploader, submit_pool
+#        from tools.locker import locker
+#        load = ConfigMakerAndUploader(prepid=args[0], server=server, lock=locker.lock(args[0]))
+#        submit_pool.add_task(load.internal_run)
 
 class InjectRequest(RESTResource):
 
@@ -966,16 +956,14 @@ class InjectRequest(RESTResource):
         # set user access to administrator
         self.db_name = 'requests'
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids):
         """
         Perform the thread preparation, injection of a request, or coma separated list of requests.
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-
-        ids = args[0].split(',')
+        ids = request_ids.split(',')
         res = []
         for r_id in ids:
             self.logger.info('Forking the injection of request {0} '.format(r_id))
@@ -990,21 +978,20 @@ class InjectRequest(RESTResource):
             res.append({"prepid": r_id, "results": True,
                         "message": "The request {0} will be forked unless same request is being handled already".format(r_id)})
 
-        return dumps(res)
+        return res
 
 
 class GetEditable(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Retreive the fields that are currently editable for a given request id
         """
-        if not args:
-            self.logger.error('Request/GetEditable: No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-        return dumps(self.get_editable(args[0]))
+        return self.get_editable(request_id)
 
     def get_editable(self, prepid):
         db = database(self.db_name)
@@ -1016,16 +1003,14 @@ class GetEditable(RESTResource):
 class GetDefaultGenParams(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Simply get the schema for the generator parameters object in request.
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-
-        return dumps(self.get_default_params(args[0]))
+        return self.get_default_params(request_id)
 
     def get_default_params(self, prepid):
         db = database(self.db_name)
@@ -1037,12 +1022,14 @@ class GetDefaultGenParams(RESTResource):
 class NotifyUser(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Sends the prodived posted text to the user registered to a list of requests request
         """
-        data = loads(cherrypy.request.body.read().strip())
+        data = loads(flask.request.data.strip())
         # read a message from data
         message = data['message']
         l_type = locator()
@@ -1055,7 +1042,7 @@ class NotifyUser(RESTResource):
                 results.append({"prepid": pid, "results": False,
                         "message": "%s does not exist" % pid})
 
-                return dumps(results)
+                return results
 
             req = request(rdb.get(pid))
             # notify the actors of the request
@@ -1078,24 +1065,24 @@ class NotifyUser(RESTResource):
                 results.append({"prepid": pid, "results": False,
                         "message": "Could not save %s" % pid})
 
-                return dumps(results)
+                return results
 
             results.append({"prepid": pid, "results": True,
                     "message": "Notification send for %s" % pid})
 
-        return dumps(results)
+        return results
 
 
 class RegisterUser(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_ids):
         """
         Any person with cern credential can register to a request or a list of requests
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.multiple_register(args[0]))
+        return self.multiple_register(request_ids)
 
     def multiple_register(self, rid):
         if ',' in rid:
@@ -1129,17 +1116,15 @@ class RegisterUser(RESTResource):
 
 
 class GetActors(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id, what=None):
         """
         Provide the list of user registered and actors to a given request
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        if len(args) > 1:
-            return dumps(self.show_user(args[0], args[1]))
-        return dumps(self.show_user(args[0]))
+        return self.show_user(request_id, what)
 
     def show_user(self, pid, what=None):
         rdb = database('requests')
@@ -1153,8 +1138,10 @@ class GetActors(RESTResource):
 class SearchableRequest(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self):
         """
         Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
         """
@@ -1163,31 +1150,33 @@ class SearchableRequest(RESTResource):
                              'member_of_chain', 'pwg', 'process_string', 'mcdb_id', 'prepid', 'flown_with',
                              'member_of_campaign','tags']:
             searchable[key] = []
-        return dumps(searchable)
+        return searchable
 
 
-class RequestPerformance(RESTResource):
-    def __init__(self):
-        self.access_limit = access_rights.generator_contact
-
-    def PUT(self, *args):
-        """
-        Upload performance report .xml : retrieve size_event and time_event
-        """
-        import xml.dom.minidom
-        xml_doc = cherrypy.request.body.read().strip()
-        xml_data = xml.dom.minidom.parseString(xml_doc)
-        pfn = xml_data.documentElement.getElementsByTagName("PFN")[-1].lastChild.data
-        what='perf'
-        if '_genvalid' in pfn:
-            what='eff'
-        rid=pfn.replace('file:','').replace('.root','').replace('_genvalid','')
-        rdb = database('requests')
-        mcm_r = request( rdb.get( rid ) )
-        update = mcm_r.update_performance( xml_doc, what)
-
-        mcm_r.reload()
-        return str(update)
+#class RequestPerformance(RESTResource):
+#    def __init__(self):
+#        self.access_limit = access_rights.generator_contact
+#        self.before_request()
+#        self.count_call()
+#
+#    def PUT(self, *args):
+#        """
+#        Upload performance report .xml : retrieve size_event and time_event
+#        """
+#        import xml.dom.minidom
+#        xml_doc = cherrypy.request.body.read().strip()
+#        xml_data = xml.dom.minidom.parseString(xml_doc)
+#        pfn = xml_data.documentElement.getElementsByTagName("PFN")[-1].lastChild.data
+#        what='perf'
+#        if '_genvalid' in pfn:
+#            what='eff'
+#        rid=pfn.replace('file:','').replace('.root','').replace('_genvalid','')
+#        rdb = database('requests')
+#        mcm_r = request( rdb.get( rid ) )
+#        update = mcm_r.update_performance( xml_doc, what)
+#
+#        mcm_r.reload()
+#        return str(update)
 
 class RequestLister():
     def __init__(self):
@@ -1227,7 +1216,7 @@ class RequestLister():
 
     def get_list_of_ids(self, odb):
         self.logger.info("Got a file from uploading")
-        data = loads(cherrypy.request.body.read().strip())
+        data = loads(flask.request.data.strip())
         text = data['contents']
 
         all_ids = []
@@ -1300,34 +1289,28 @@ class RequestsFromFile(RequestLister, RESTResource):
     def __init__(self):
         RequestLister.__init__(self)
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
 
-    def PUT(self, *args):
+    def put(self):
         """
         Parse the posted text document for request id and request ranges for display of requests
         """
         rdb = database('requests')
         all_ids = self.get_list_of_ids(rdb)
-        return dumps(self.get_objects(all_ids, rdb))
+        return self.get_objects(all_ids, rdb)
 
 
 class StalledReminder(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, time_since=15, time_remaining=15, below_completed=100.0):
         """
         Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
         """
-        time_since=15
-        time_remaining=15
-        below_completed=float(100.)
-        if len(args)>0:
-            time_since=int(args[0])
-        if len(args)>1:
-            time_remaining=int(args[1])
-        if len(args)>2:
-            below_completed=float(args[2])
-
         rdb = database('requests')
         bdb = database('batches')
         statsDB = database('stats',url='http://vocms084.cern.ch:5984/')
@@ -1414,22 +1397,20 @@ class StalledReminder(RESTResource):
 class RequestsReminder(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
-        self._cp_config = {'response.stream': True}
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self, *args):
+    def get(self, what=None, who=None):
         """
         Goes through all requests and send reminder to whom is concerned. /production_manager for things to be submitted. /generator_convener for things to be approved. /generator_contact for things to be looked at by /generator_contact/contact (if specified)
         """
-        what = None
-        who = None
-        if len(args):
-            #we have been passed parameters
-            what = args[0].split(',')
+        if what is not None:
+            what = what.split(',')
             if 'all' in what:
                 what = None
-
-            if len(args) >= 2:
-                who = args[1].split(',')
+        if who is not None:
+            who = who.split(',')
 
         udb = database('users')
         rdb = database('requests')
@@ -1494,169 +1475,170 @@ class RequestsReminder(RESTResource):
             return message
 
         def is_in_chain(r):
-            if len(r['member_of_chain']) != 0:
-                return True
-            else:
-                return False
+            return len(r['member_of_chain']) != 0
 
+        def streaming_function():
+            if not what or 'production_manager' in what:
+                ## send the reminder to the production managers
+                ids_for_production_managers = get_all_in_status('approved', extracheck=is_in_chain)
+                for c in ids_for_production_managers:
+                    res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
 
-        if not what or 'production_manager' in what:
-            ## send the reminder to the production managers
-            ids_for_production_managers = get_all_in_status('approved', extracheck=is_in_chain)
-            for c in ids_for_production_managers:
-                res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
+                if len(ids_for_production_managers):
+                    __query2 = udb.construct_lucene_query({'role' : 'production_manager'})
+                    production_managers = udb.full_text_search('search', __query2, page=-1)
+                    message = 'A few requests that needs to be submitted \n\n'
+                    message += prepare_text_for(ids_for_production_managers, 'approved')
+                    subject = 'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REMINDERS,
+                        target_role='production_manager'
+                    )
+                    com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')], subject, message)
 
-            if len(ids_for_production_managers):
-                __query2 = udb.construct_lucene_query({'role' : 'production_manager'})
-                production_managers = udb.full_text_search('search', __query2, page=-1)
-                message = 'A few requests that needs to be submitted \n\n'
-                message += prepare_text_for(ids_for_production_managers, 'approved')
-                subject = 'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers))
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REMINDERS,
-                    target_role='production_manager'
-                )
-                com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')], subject, message)
+            if not what or 'gen_conveners' in what or 'generator_convener' in what:
+            ## send the reminder to generator conveners
+                ids_for_gen_conveners = get_all_in_status('defined')
+                for c in ids_for_gen_conveners:
+                    res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
+                if len(ids_for_gen_conveners):
+                    __query3 = udb.construct_lucene_query({'role' : 'generator_convener'})
+                    gen_conveners = udb.full_text_search('search', __query3, page=-1)
+                    message = 'A few requests need your approvals \n\n'
+                    message += prepare_text_for(ids_for_gen_conveners, 'defined')
+                    subject = 'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners))
+                    notification(
+                        subject,
+                        message,
+                        [],
+                        group=notification.REMINDERS,
+                        target_role='generator_convener'
+                    )
+                    com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')], subject, message)
 
-        if not what or 'gen_conveners' in what or 'generator_convener' in what:
-        ## send the reminder to generator conveners
-            ids_for_gen_conveners = get_all_in_status('defined')
-            for c in ids_for_gen_conveners:
-                res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
-            if len(ids_for_gen_conveners):
-                __query3 = udb.construct_lucene_query({'role' : 'generator_convener'})
-                gen_conveners = udb.full_text_search('search', __query3, page=-1)
-                message = 'A few requests need your approvals \n\n'
-                message += prepare_text_for(ids_for_gen_conveners, 'defined')
-                subject = 'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners))
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REMINDERS,
-                    target_role='generator_convener'
-                )
-                com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')], subject, message)
-
-        if not what or 'gen_contact' in what or 'generator_contact' in what:
-            all_ids = set()
-            ## remind the gen contact about requests that are:
-            ##   - in status new, and have been flown
-            ##__query4 = rdb.construct_lucene_query({'status' : 'new'})
-            __query5 = rdb.construct_lucene_query({'status' : 'validation'})
-            ###mcm_rs = rdb.full_text_search('search', __query4, page=-1)
-            mcm_rs = []
-            mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
-            for mcm_r in mcm_rs:
-                c = mcm_r['member_of_campaign']
-                request_id = mcm_r['prepid']
-                if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
-                fw = mcm_r['flown_with']
-                # to get a remind only on request that are in a chain (including flown by construction)
-                if len(mcm_r['member_of_chain']) == 0: continue
-                # to get a remind only on request that are being necessary to move forward : being the request being processed in at least a chain.
-                on_going = False
-                yield '.'
-                for in_chain in mcm_r['member_of_chain']:
-                    mcm_chained_request = chained_request( crdb.get( in_chain ) )
-                    try:
-                        if mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step')] == request_id:
-                            on_going = True
-                            break
-                    except Exception as e:
-                        self.logger.error('Step not in chain: %s request: %s' % (mcm_chained_request.get_attribute('prepid'), request_id))
-                        yield dumps(
-                            {
-                                'error': 'step not in chain',
-                                'chain': mcm_chained_request.get_attribute('prepid'),
-                                'request': request_id
-                            },
-                            indent=2
-                        )
-                    time.sleep(0.5) #we don't want to crash DB with a lot of single queries
+            if not what or 'gen_contact' in what or 'generator_contact' in what:
+                all_ids = set()
+                ## remind the gen contact about requests that are:
+                ##   - in status new, and have been flown
+                ##__query4 = rdb.construct_lucene_query({'status' : 'new'})
+                __query5 = rdb.construct_lucene_query({'status' : 'validation'})
+                ###mcm_rs = rdb.full_text_search('search', __query4, page=-1)
+                mcm_rs = []
+                mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
+                for mcm_r in mcm_rs:
+                    c = mcm_r['member_of_campaign']
+                    request_id = mcm_r['prepid']
+                    if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
+                    fw = mcm_r['flown_with']
+                    # to get a remind only on request that are in a chain (including flown by construction)
+                    if len(mcm_r['member_of_chain']) == 0: continue
+                    # to get a remind only on request that are being necessary to move forward : being the request being processed in at least a chain.
+                    on_going = False
                     yield '.'
-                if not on_going: continue
-                try:
-                    all_involved = request(mcm_r).get_actors()
-                except Exception as e:
-                    yield dumps('request is not in db %s' %(mcm_r))
-                for contact in all_involved:
-                    if not contact in ids_for_users:
-                        ids_for_users[contact]={}
-
-                    if not c in ids_for_users[contact]:
-                        ids_for_users[contact][c] = set()
-                    ids_for_users[contact][c].add( request_id )
-                    yield '.'
-
-            #then remove the non generator
-            __query6 = udb.construct_lucene_query({'role' : 'generator_contact'})
-            gen_contacts = map(lambda u : u['username'], udb.full_text_search('search', __query6, page=-1))
-            for contact in ids_for_users.keys():
-                if who and not contact in who:
-                    ids_for_users.pop( contact )
-                    continue
-                if contact not in gen_contacts:
-                    # not a contact
-                    ids_for_users.pop( contact )
-                    continue
-                yield '.'
-                for c in ids_for_users[contact].keys():
-                    if not len(ids_for_users[contact][c]):
-                        ids_for_users[contact].pop(c)
-                    else:
-                        ids_for_users[contact][c] = sorted( ids_for_users[contact][c] )
-                    yield '.'
-                    #for serialization only in dumps
-                    #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
-
-                #if there is nothing left. remove
-                if not len(ids_for_users[contact].keys()):
-                    ids_for_users.pop( contact )
-                    continue
-
-            if len(ids_for_users):
-                for (contact, campaigns_and_ids) in ids_for_users.items():
-                    for c in campaigns_and_ids:
-                        all_ids.update(campaigns_and_ids[c])
-                        yield dumps({'prepid': c}, indent=2)
-                    mcm_u = udb.get( contact )
-                    if len(campaigns_and_ids):
-                        message = 'Few requests need your action \n\n'
-                        message += prepare_text_for(campaigns_and_ids, '')
-                        to_who = [settings().get_value('service_account')]
-                        if l_type.isDev():
-                            message += '\nto %s' % (mcm_u['email'])
-                        else:
-                            to_who.append(mcm_u['email'])
-                        name = contact
-                        if mcm_u['fullname']:
-                            name = mcm_u['fullname']
-                        subject = 'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name)
-                        notification(
-                            subject,
-                            message,
-                            [contact],
-                            group=notification.REMINDERS,
-                        )
-                        com.sendMail(to_who, subject, message)
+                    for in_chain in mcm_r['member_of_chain']:
+                        mcm_chained_request = chained_request( crdb.get( in_chain ) )
+                        try:
+                            if mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step')] == request_id:
+                                on_going = True
+                                break
+                        except Exception as e:
+                            self.logger.error('Step not in chain: %s request: %s' % (mcm_chained_request.get_attribute('prepid'), request_id))
+                            yield dumps(
+                                {
+                                    'error': 'step not in chain',
+                                    'chain': mcm_chained_request.get_attribute('prepid'),
+                                    'request': request_id
+                                },
+                                indent=2
+                            )
+                        time.sleep(0.5) #we don't want to crash DB with a lot of single queries
                         yield '.'
+                    if not on_going: continue
+                    try:
+                        all_involved = request(mcm_r).get_actors()
+                    except Exception as e:
+                        yield dumps('request is not in db %s' %(mcm_r))
+                    for contact in all_involved:
+                        if not contact in ids_for_users:
+                            ids_for_users[contact]={}
+
+                        if not c in ids_for_users[contact]:
+                            ids_for_users[contact][c] = set()
+                        ids_for_users[contact][c].add( request_id )
+                        yield '.'
+
+                #then remove the non generator
+                __query6 = udb.construct_lucene_query({'role' : 'generator_contact'})
+                gen_contacts = map(lambda u : u['username'], udb.full_text_search('search', __query6, page=-1))
+                for contact in ids_for_users.keys():
+                    if who and not contact in who:
+                        ids_for_users.pop( contact )
+                        continue
+                    if contact not in gen_contacts:
+                        # not a contact
+                        ids_for_users.pop( contact )
+                        continue
+                    yield '.'
+                    for c in ids_for_users[contact].keys():
+                        if not len(ids_for_users[contact][c]):
+                            ids_for_users[contact].pop(c)
+                        else:
+                            ids_for_users[contact][c] = sorted( ids_for_users[contact][c] )
+                        yield '.'
+                        #for serialization only in dumps
+                        #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
+
+                    #if there is nothing left. remove
+                    if not len(ids_for_users[contact].keys()):
+                        ids_for_users.pop( contact )
+                        continue
+
+                if len(ids_for_users):
+                    for (contact, campaigns_and_ids) in ids_for_users.items():
+                        for c in campaigns_and_ids:
+                            all_ids.update(campaigns_and_ids[c])
+                            yield dumps({'prepid': c}, indent=2)
+                        mcm_u = udb.get( contact )
+                        if len(campaigns_and_ids):
+                            message = 'Few requests need your action \n\n'
+                            message += prepare_text_for(campaigns_and_ids, '')
+                            to_who = [settings().get_value('service_account')]
+                            if l_type.isDev():
+                                message += '\nto %s' % (mcm_u['email'])
+                            else:
+                                to_who.append(mcm_u['email'])
+                            name = contact
+                            if mcm_u['fullname']:
+                                name = mcm_u['fullname']
+                            subject = 'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name)
+                            notification(
+                                subject,
+                                message,
+                                [contact],
+                                group=notification.REMINDERS,
+                            )
+                            com.sendMail(to_who, subject, message)
+                            yield '.'
+
+        return flask.Response(flask.stream_with_context(streaming_function()))
 
 
 class UpdateMany(RequestRESTResource):
     def __init__(self):
         self.db_name = 'requests'
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
         self.updateSingle = UpdateRequest()
 
-    def PUT(self):
+    def put(self):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
-        return dumps(self.update_many(loads(cherrypy.request.body.read().strip())))
+        return self.update_many(loads(flask.request.data.strip()))
 
     def update_many(self, data):
         list_of_prepids = data["prepids"]
@@ -1685,18 +1667,17 @@ class UpdateMany(RequestRESTResource):
 class GetAllRevisions(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
         self.db_url = locator().dbLocation()
         self.opener = urllib2.build_opener(urllib2.HTTPHandler)
         self.db_name = 'requests'
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Getting All AVAILABLE revisions for request document
         """
-        if not args:
-            self.logger.error('GetAllRevisions: No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.get_all_revs(args[0]))
+        return self.get_all_revs(request_id)
 
     def get_all_revs(self, prepid):
         list_of_revs = []
@@ -1723,28 +1704,25 @@ class GetAllRevisions(RequestRESTResource):
 class ListRequestPrepids(RequestRESTResource):
     def __init__(self):
         RequestRESTResource.__init__(self)
+        self.before_request()
+        self.count_call()
         self.db_name = 'requests'
         self.db = database('requests')
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('requestPrepId', type=str, default='*')
+        self.parser.add_argument('memberOfCampaign', type=str, default='*')
+        self.parser.add_argument('limit', type=int, default=10)
 
-    def GET(self, **args):
+    def get(self):
         """
         List all prepids by given options
         """
-        if not args:
-            self.logger.error(' No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.get_prepids(args))
+        return self.get_prepids()
 
-    def get_prepids(self, options):
-        limit = 10
-        prepid = '*'
-        member_of_campaign = '*'
-        if 'limit' in options:
-            limit = options['limit']
-        if 'requestPrepId' in options:
-            prepid = options['requestPrepId'] + '*'
-        if 'memberOfCampaign' in options:
-            member_of_campaign = options['memberOfCampaign']
+    def get_prepids(self):
+        kwargs = self.parser.parse_args()
+        prepid = '*' if kwargs['requestPrepId'] == '*' else kwargs['requestPrepId'] + '*'
+        member_of_campaign = '*' if kwargs['memberOfCampaign'] == '*' else kwargs['memberOfCampaign'] + '*'
         request_db = database('requests')
         __query = request_db.construct_lucene_query(
             {
@@ -1752,30 +1730,29 @@ class ListRequestPrepids(RequestRESTResource):
                 'member_of_campaign': member_of_campaign
             }
         )
-        query_result = request_db.full_text_search("search", __query, page=0, limit=limit, include_fields='prepid')
+        query_result = request_db.full_text_search("search", __query, page=0, limit=kwargs['limit'], include_fields='prepid')
         self.logger.info('Searching requests id with options: %s' % (options))
         results = [record['prepid'] for record in query_result]
-        return dumps({"results": results})
+        return {"results": results}
 
 
 class GetUploadCommand(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self, *args):
+    def get(self):
         """
         Get command used to upload configurations for given request.
         """
-        if not len(args):
-            self.logger.error('GetUploadCommand: No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
         db = database("requests")
-        if not db.document_exists(args[0]):
-            self.logger.error('GetUploadCommand: request with id {0} does not exist'.format(args[0]))
-            return dumps({"results": False, 'message': 'Error: request with id {0} does not exist'.format(args[0])})
-        req = request(db.get(args[0]))
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        if not db.document_exists(request_id):
+            self.logger.error('GetUploadCommand: request with id {0} does not exist'.format(request_id))
+            return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
+        req = request(db.get(request_id))
 
         return req.prepare_and_upload_config(execute=False)
 
@@ -1784,34 +1761,35 @@ class GetInjectCommand(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self, *args):
+    def get(self, request_id):
         """
         Get command used to inject given request.
         """
-        if not len(args):
-            self.logger.error('GetInjectCommand: No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
         db = database("requests")
-        if not db.document_exists(args[0]):
-            self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(args[0]))
-            return dumps({"results": False, 'message': 'Error: request with id {0} does not exist'.format(args[0])})
-        req = request(db.get(args[0]))
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        if not db.document_exists(request_id):
+            self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(request_id))
+            return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
+        req = request(db.get(request_id))
         return req.prepare_submit_command()
 
 
 class GetUniqueValues(RESTResource):
-    def GET(self, *args, **kwargs):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, field_name):
         """
         Get unique values for navigation by field_name
         """
-        if not args:
-            self.logger.error('GetUniqueValues: No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.get_unique_values(args[0], kwargs))
+        return self.get_unique_values(field_name)
 
-    def get_unique_values(self, field_name, kwargs):
+    def get_unique_values(self, field_name):
+        kwargs = flask.request.args.to_dict()
         db = database('requests')
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
@@ -1822,12 +1800,14 @@ class PutToForceComplete(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Put a request to a force complete list
         """
-        data = loads(cherrypy.request.body.read().strip())
+        data = loads(flask.request.data.strip())
         pid = data['prepid']
 
         reqDB = database('requests')
@@ -1845,7 +1825,7 @@ class PutToForceComplete(RESTResource):
         if req.get_attribute('status') != 'submitted':
             self.logger.info('%s is not submitted for forcecompletion' % (pid))
             message = 'Cannot add a request which is not submitted'
-            return dumps({"prepid": pid, "results": False, 'message': message})
+            return {"prepid": pid, "results": False, 'message': message}
 
         # we want users to close only theirs PWGs
         if not req.get_attribute("pwg") in curr_user.get_pwgs():
@@ -1855,17 +1835,17 @@ class PutToForceComplete(RESTResource):
             message = "User's PWG:%s is doesnt have requests PWG:%s" % (
                     ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
 
-            return dumps({"prepid": pid, "results": False, 'message': message})
+            return {"prepid": pid, "results": False, 'message': message}
         #check if request if at least 50% complete
         if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5:
             self.logger.info('%s is below 50percent completion' % (pid))
             message = 'Request is below 50 percent completion'
-            return dumps({"prepid": pid, "results": False, 'message': message})
+            return {"prepid": pid, "results": False, 'message': message}
 
         if pid in forcecomplete_list['value']:
             self.logger.info('%s already in forcecompletion' % (pid))
             message = 'Request already in forcecomplete list'
-            return dumps({"prepid": pid, "results": False, 'message': message})
+            return {"prepid": pid, "results": False, 'message': message}
 
         forcecomplete_list['value'].append(pid)
         ret = settingsDB.update(forcecomplete_list)
@@ -1877,17 +1857,20 @@ class PutToForceComplete(RESTResource):
         else:
             self.logger.error('%s failed to save forcecomplete in settings DB' % (pid))
             message = 'Failed to save forcecomplete to DB'
-            return dumps({"prepid": pid, "results": False, 'message': message})
+            return {"prepid": pid, "results": False, 'message': message}
 
-        return dumps({"prepid": pid, "results": True,
-                'message' :'Successfully added request to force complete list'})
+        return {"prepid": pid, "results": True,
+                'message' :'Successfully added request to force complete list'}
 
 class ForceCompleteMethods(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.before_request()
+        self.count_call()
         self.access_user = settings().get_value('allowed_to_acknowledge')
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self):
+    def get(self):
         """
         Get a list of workflows for force complete
         """
@@ -1895,20 +1878,21 @@ class ForceCompleteMethods(RESTResource):
 
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
 
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(forcecomplete_list['value'], indent=4)
 
 class RequestsPriorityChange(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
         self.requests_db = database("requests")
 
-    def POST(self):
+    def post(self):
         fails = []
         try:
-            requests = loads(cherrypy.request.body.read().strip())
+            requests = loads(flask.request.data.strip())
         except TypeError:
-            return dumps({"results": False, "message": "Couldn't read body of request"})
+            return {"results": False, "message": "Couldn't read body of request"}
         for request_dict in requests:
             request_prepid = request_dict['prepid']
             mcm_request = request(self.requests_db.get(request_prepid))
@@ -1916,27 +1900,26 @@ class RequestsPriorityChange(RESTResource):
                 message = 'Unable to set new priority in request %s' % request_prepid
                 fails.append(message)
                 self.logger.error(message)
-        return dumps({
+        return {
             'results': True if len(fails) == 0 else False,
             'message': fails
-        })
+        }
 
 class Reserve_and_ApproveChain(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
         self.cdb = database("chained_requests")
         self.rdb = database("requests")
 
-    def GET(self, *args):
+    def get(self, chain_id):
         """
         Get chained_request object:
             1) reserve it to the end
             2) approve newly reserved requests
         """
-        if not args:
-            self.logger.error('GetUniqueValues: No arguments were given')
-            return dumps({"results": False, 'message': 'Error: No arguments were given'})
-        return dumps(self.reserve_and_approve(args[0]))
+        return self.reserve_and_approve(chain_id)
 
     def reserve_and_approve(self, chain_id):
         self.logger.debug("Trying to reverse and approve chain: %s" % (chain_id))
@@ -1975,16 +1958,15 @@ class TaskChainRequestDict(RESTResource):
     """
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
-    def GET(self, *args, **argv):
-        if not len(args):
-            return dumps({})
-
-        arg0 = args[0]
+    def get(self, request_id):
         requests_db = database('requests')
         settings_db = database('settings')
-        mcm_request = request(requests_db.get(arg0))
-        task_name = 'task_' + arg0
+        mcm_request = request(requests_db.get(request_id))
+        task_name = 'task_' + request_id
         request_type = mcm_request.get_wmagent_type()
 
         if request_type in ['MonteCarlo', 'LHEStepZero']:
@@ -2031,5 +2013,4 @@ class TaskChainRequestDict(RESTResource):
         wma['Campaign'] = wma['Task1']['Campaign']
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
-        cherrypy.response.headers['Content-Type'] = 'text/plain'
         return dumps(wma, indent=4)
