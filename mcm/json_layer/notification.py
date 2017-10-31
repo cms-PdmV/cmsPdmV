@@ -41,6 +41,7 @@ class notification(json_base):
         json_input['action_objects'] = action_objects
         json_input['object_type'] = object_type
         json_input['group'] = group
+        json_input['seen_by'] = []
         json_input['created_at'] = str(datetime.now()).split('.')[0]
         notification_db = database('notifications')
         if not notification_db.save(json_input):
