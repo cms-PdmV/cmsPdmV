@@ -1157,7 +1157,9 @@ class request(json_base):
                 res += 'cmsRun -e -j %s %s || exit $? ; \n' % (
                         runtest_xml_file, configuration_names[-1])
 
-                if events>=0 : res += 'echo %d events were ran \n' % events
+                if events >= 0:
+                    res += 'echo %d events were ran \n' % events
+
                 res += 'grep "TotalEvents" %s \n' % runtest_xml_file
                 res += 'if [ $? -eq 0 ]; then\n'
                 res += '    grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
@@ -1179,54 +1181,18 @@ class request(json_base):
                 res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
                 res += '  bc -l <<< "scale=4; 1/$var1"\n'
                 res += 'fi\n'
+                #TO-DO:
+                # 1) add parsing  for CPU efficiency
+                # 2) add efficiency calc(?)
 
-
-            #try create a flash runtest
-            if 'lhe:' in cmsd and run and self.get_attribute('mcdb_id') > 0:
-                affordable_nevents = settings().get_value('n_per_lhe_test')
-                max_tests = settings().get_value('max_lhe_test')
-                skip_some = ''
-                test_i = 0
-                do_wait_for_me = False
-                __cond = self.get_attribute("sequences")[0]['conditions']
-                while affordable_nevents * test_i < self.get_attribute('total_events') and (max_tests<0 or test_i < max_tests):
-                    res += 'cmsDriver.py lhetest --filein lhe:%s:%s --mc  --conditions %s -n %s --python lhetest_%s.py --step NONE --no_exec --no_output\n' % (
-                            self.get_attribute('mcdb_id'), affordable_nevents * test_i,
-                            __cond, affordable_nevents, test_i)
-
-                    res += 'cmsRun lhetest_%s.py & \n' % ( test_i )
-                    #prepare for next test job
-                    test_i += 1
-                    do_wait_for_me = True
-                """
-                res += 'cmsDriver.py lhetest --filein lhe:%s --mc --conditions auto:startup -n -1 --python lhetest_%s.py --step NONE --no_exec --no_output \n'%( self.get_attribute('mcdb_id'))
-                res += 'cmsRun lhetest.py || exit $? ; \n'
-                """
-                wait_for_me = '''\
-
-for job in `jobs -p` ; do
-    wait $job || exit $? ;
-done
-            '''
-                if do_wait_for_me:
-                    res += wait_for_me
-                #infile += res
             cmsd_list += res + '\n'
-
             previous += 1
-
-        (i, c) = self.get_genvalid_setup(directory, run)
-        infile += i
-        cmsd_list += c
 
         infile += '\nscram b\n'
         infile += 'cd ../../\n'
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
-
-        if run and do_valid and self.genvalid_driver:
-            infile += self.harverting_upload
 
         ## if there was a release setup, jsut remove it
         #not in dev
@@ -1317,158 +1283,6 @@ done
             yes_to_valid = False
 
         return (yes_to_valid,n_to_valid)
-
-    def get_genvalid_setup(self, directory, run):
-        cmsd_list = ""
-        infile = ""
-
-        ############################################################################
-        #### HERE starts a big chunk that should be moved somewhere else than here
-        ## gen valid configs
-        self.genvalid_driver = None
-        valid_sequence = None
-        (yes_to_valid, n_to_valid) = self.get_valid_and_n()
-        l_type = locator()
-
-        if not yes_to_valid:
-            return ("", "")
-
-        # to be refined using the information of the campaign
-        firstSequence = self.get_attribute('sequences')[0]
-        firstStep = firstSequence['step'][0]
-
-        dump_python = ''
-        genvalid_request = request(self.json())
-
-        if firstStep == 'GEN':
-            gen_valid = settings().get_value('gen_valid')
-            if not gen_valid:
-                return ("", "")
-
-            cmsd_list += '\n\n'
-            valid_sequence = sequence(firstSequence)
-            valid_sequence.set_attribute('step', ['GEN', 'VALIDATION:genvalid_all'])
-            valid_sequence.set_attribute('eventcontent', ['DQM'])
-            valid_sequence.set_attribute('datatier', ['DQM'])
-            ## forfeit customisation until they are made fail-safe
-            valid_sequence.set_attribute('customise', '')
-
-        elif firstStep in ['LHE', 'NONE']:
-            cmsd_list += '\n\n'
-            valid_sequence = sequence(firstSequence)
-            ## when integrated properly
-            if firstStep == 'LHE':
-                wlhe_valid = settings().get_value('wlhe_valid')
-                if not wlhe_valid:
-                    return ("", "")
-                if len(firstSequence['step']) > 1:
-                    secondStep = firstSequence['step'][1]
-                else:
-                    secondStep = None
-                if secondStep == "GEN": ##when LHE,GENSIM request we don't need
-                    valid_sequence.set_attribute('step', [firstStep, #USER attribute
-                        'GEN', 'VALIDATION:genvalid_all'])
-                else:
-                    valid_sequence.set_attribute('step', [firstStep,
-                        'USER:GeneratorInterface/LHEInterface/wlhe2HepMCConverter_cff.generator',
-                        'GEN', 'VALIDATION:genvalid_all'])
-            else:
-                lhe_valid = settings().get_value('lhe_valid')
-                if not lhe_valid:
-                    return "", ""
-                    #genvalid_request.set_attribute('name_of_fragment', 'GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff')
-                #valid_sequence.set_attribute( 'step', ['GEN','VALIDATION:genvalid_all'])
-                valid_sequence.set_attribute('step',
-                                             ['USER:GeneratorInterface/LHEInterface/lhe2HepMCConverter_cff.generator',
-                                              'GEN', 'VALIDATION:genvalid_all'])
-            valid_sequence.set_attribute('eventcontent', ['DQM'])
-            valid_sequence.set_attribute('datatier', ['DQM'])
-            dump_python = '--dump_python' ### only there until it gets fully integrated in all releases
-        if valid_sequence:
-            self.setup_harvesting(directory, run)
-
-            ## until we have full integration in the release
-            genvalig_config = settings().get_value('genvalid_config')
-            cmsd_list += genvalig_config
-            #cmsd_list +='addpkg GeneratorInterface/LHEInterface 2> /dev/null \n'
-            #cmsd_list +='curl -s http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py?revision=HEAD -o GeneratorInterface/LHEInterface/python/lhe2HepMCConverter_cff.py \n'
-            #cmsd_list +='\nscram b -j5 \n'
-
-            genvalid_request.set_attribute('sequences', [valid_sequence.json()])
-
-            genvalid_python_file = os.path.join(directory, '{0}_genvalid.py'.format(self.get_attribute('prepid')))
-
-            self.genvalid_driver = '%s --fileout file:%s_genvalid.root --mc -n %d --python_filename %s %s --no_exec || exit $? ;\n' % (
-                genvalid_request.build_cmsDriver(0),
-                self.get_attribute('prepid'),
-                int(n_to_valid),
-                genvalid_python_file,
-                dump_python)
-            if run:
-                genvalid_xml_file = os.path.join(directory, "%s_gv.xml" % (self.get_attribute('prepid')))
-
-                self.genvalid_driver += 'cmsRun -e -j %s %s || exit $? ; \n' % (genvalid_xml_file, genvalid_python_file)
-                self.genvalid_driver += 'echo %d events were ran \n' % ( n_to_valid )
-                self.genvalid_driver += 'grep "TotalEvents" %s \n' % genvalid_xml_file
-                ## put back the perf report to McM ! wil modify the request object while operating on it.
-                # and therefore the saving of the request will fail ...
-                #self.genvalid_driver += 'curl -k --cookie /afs/cern.ch/user/v/vlimant/private/dev-cookie.txt https://cms-pdmv-dev.cern.ch/mcm/restapi/requests/perf_report/%s/eff -H "Content-Type: application/xml" -X PUT --data "@%s%s_gv.xml" \n' %(self.get_attribute('prepid'), directory, self.get_attribute('prepid'))
-
-            cmsd_list += self.genvalid_driver + '\n'
-            cmsd_list += self.harvesting_driver + '\n'
-
-        ##that's the end of the part for gen-valid that should be somewhere else
-        ############################################################################
-        return infile, cmsd_list
-
-    def setup_harvesting(self, directory, run):
-        genvalid_harvesting_python_file = os.path.join(directory,
-                "{0}_genvalid_harvesting.py".format(self.get_attribute('prepid')))
-
-        get_a_GT = 'auto:startup'
-        for s in self.get_attribute('sequences'):
-            if 'conditions' in s:
-                get_a_GT = s['conditions']
-                break
-        self.harvesting_driver = 'cmsDriver.py step2 --filein file:%s_genvalid.root --conditions %s --mc -s HARVESTING:genHarvesting --harvesting AtJobEnd --python_filename %s --no_exec || exit $? ; \n' % (
-                self.get_attribute('prepid'), get_a_GT, genvalid_harvesting_python_file)
-
-        if run:
-            self.harvesting_driver += 'cmsRun %s || exit $? ; \n' % genvalid_harvesting_python_file
-
-        dqm_dataset = '/RelVal%s/%s-%s_%s-genvalid-v%s/DQM' % (self.get_attribute('dataset_name'),
-                self.get_attribute('cmssw_release'), self.get_attribute('member_of_campaign'),
-                self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
-                self.get_attribute('version'))
-
-        dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s_%s-%s-genvalid-v%s__DQM.root' % (
-                self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'),
-                self.get_attribute('member_of_campaign'),
-                self.get_attribute('sequences')[0]['conditions'].replace('::All', ''),
-                self.get_attribute('version'))
-
-        where = 'https://cmsweb.cern.ch/dqm/relval'
-        l_type = locator()
-        if l_type.isDev():
-            where = 'https://cmsweb-testbed.cern.ch/dqm/relval'
-
-        self.harverting_upload = ''
-        self.harverting_upload += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s \n' % ( dqm_file )
-        self.harverting_upload += 'curl -L -s https://raw.github.com/rovere/dqmgui/master/bin/visDQMUpload -o visDQMUpload ;\n'
-        self.harverting_upload += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert ;\n'
-        self.harverting_upload += 'python visDQMUpload %s %s &> %s || exit $? ; \n' % (
-            where, dqm_file, os.path.join(directory, "dqm_upload_%s.log" % self.get_attribute('prepid')))
-
-
-        ##then the url back to the validation sample in the gui !!!
-        val = self.get_attribute('validation')
-        ### please do not put dqm gui url inside, but outside in java view ...
-        """
-        val+=', %s'%( dqm_dataset )
-        """
-        val['dqm'] = dqm_dataset
-        self.set_attribute('validation', val)
-
 
     def get_first_output(self):
         eventcontentlist = []
@@ -2187,26 +2001,264 @@ done
         return hash_id
 
     def pickup_all_performance(self, directory):
-        (success,report) = self.pickup_performance(directory, 'perf')
-        if not success: return (success,report)
-        (success,report) = self.pickup_performance(directory, 'eff')
-        return (success,report)
+        return self.pickup_performance(directory, 'perf')
+
     def pickup_performance(self, directory, what):
-        ##TO-DO: update performance for multiple steps requests
-        whatToArgs={'eff' : 'gv',
-                    'perf' : 'rt'}
+        whatToArgs = {'perf' : 'rt'}
+
         try:
             xml = directory + '%s_%s.xml' %( self.get_attribute('prepid'), whatToArgs[what])
             if os.path.exists(xml):
                 self.update_performance(open(xml).read(), what)
             return (True,"")
+
         except Exception as e:
-            #trace=str(e)
             trace = traceback.format_exc()
             self.logger.error('Failed to get %s reports for %s \n %s' % (what,
                     self.get_attribute('prepid'), trace))
 
             return (False, trace)
+
+    def check_gen_efficiency(self, geninfo, events_ran, events_produced):
+        rough_efficiency = float(events_produced) / events_ran
+        rough_efficiency_error = rough_efficiency * sqrt(1. / events_produced + 1. / events_ran)
+
+        set_efficiency = self.get_efficiency()
+        ##TO-DO: check efficiency error based on discussion on premccm
+        ##error = sqrt(match * match + filter_eff * filter_eff)
+
+        ##we check if set efficiency is below 50% of set efficiency
+        subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (
+                self.get_attribute('prepid'))
+
+        if rough_efficiency > 1:
+            message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                ' the mcm validation test measured %.4f +/- %.4f\n'
+                ' Efficiency cannot be more than 1.\n') % (
+                        self.get_attribute('prepid'),
+                        'filter_efficiency',
+                        geninfo['filter_efficiency'],
+                        geninfo['filter_efficiency_error'],
+                        'match_efficiency',
+                        geninfo['match_efficiency'],
+                        geninfo['match_efficiency_error'],
+                        rough_efficiency,
+                        rough_efficiency_error)
+
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+        if (rough_efficiency / 0.5 <= set_efficiency):
+            message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                    ' the mcm validation test measured %.4f +/- %.4f\n'
+                    '(there were %s trial events, of which %s passed the filter/matching),'
+                    ' which has a smaller relative error.\n'
+                    'Please check and reset the request if necessary.') % (
+                            self.get_attribute('prepid'),
+                            'filter_efficiency',
+                            geninfo['filter_efficiency'],
+                            geninfo['filter_efficiency_error'],
+                            'match_efficiency',
+                            geninfo['match_efficiency'],
+                            geninfo['match_efficiency_error'],
+                            rough_efficiency,
+                            rough_efficiency_error,
+                            events_ran,
+                            events_produced)
+
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+        ##TO-DO: else we should set the fine tuned efficiency!
+
+    def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
+        timing_threshold = settings().get_value('timing_threshold')
+        timing_n_limit = settings().get_value('timing_n_limit')
+
+        #check if we ran a meaninful number of events and that measured time_event is above threshold
+        #makes sense for really long events.
+        if evts_pass < timing_n_limit:
+            subject = 'Runtest for %s: too few events for estimate' % (self.get_attribute('prepid'))
+            message = ('For the request %s, time/event=%s was given.'
+                    ' Ran %s - too few to do accurate estimation') % (
+                            self.get_attribute('prepid'),
+                            self.get_sum_total_events(),
+                            evts_pass)
+
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+        #TO-DO: change the 0.2 to value from settings DB
+        if measured_time_evt <= self.get_sum_total_events() * (1 - 0.2):
+            subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
+            message = ('For the request %s, time/event=%s was given, %s was'
+                    ' measured and set to the request from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            self.get_sum_total_events(),
+                            measured_time_evt,
+                            evts_pass,
+                            evts_ran)
+
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.set_attribute('time_event', [measured_time_evt])
+            self.reload()
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+        elif measured_time_evt >= self.get_sum_total_events() * (1 + 0.2):
+            subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
+            message = ('For the request %s, time/event=%s was given, %s was'
+                    ' measured and set to the request from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            self.get_sum_total_events(),
+                            measured_time_evt,
+                            evts_pass,
+                            evts_ran)
+
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.set_attribute('time_event', [measured_time_evt])
+            self.reload()
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+        else:
+            #fine tune the value
+            self.logger.debug("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
+                    self.get_sum_total_events(), measured_time_evt, evts_pass))
+            self.set_attribute('time_event', [measured_time_evt])
+
+        #return False
+
+    def check_cpu_efficiency(self, cpu_time, total_time):
+        #check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
+        #<TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
+
+        __test_eff = cpu_time/(self.get_core_num()*total_time)
+        if  __test_eff < 0.4:
+            subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
+            message = ('For the request %s, with %s cores, CPU efficiency was %s < 0.4.'
+                    ' Setting number of cores to 1') % (
+                            self.get_attribute('prepid'),
+                            self.get_core_num(),
+                            __test_eff)
+
+            seq = self.get_attribute("sequences")
+            for el in seq:
+                el['nThreads'] = 1
+
+            self.set_attribute('sequences', seq)
+            self.reload()
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
+
+    def check_file_size(self, file_size):
+        ## size check
+        if file_size > int(1.1 * sum(self.get_attribute('size_event'))):
+            ## notify if more than 10% discrepancy found !
+            subject = 'Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid'))
+            message = ('For the request %s, size/event=%s was given, %s was'
+                    ' measured from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            sum(self.get_attribute('size_event')),
+                            file_size,
+                            total_event,
+                            total_event_in)
+
+            notification(subject,message,[],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+
+        self.set_attribute('size_event', [file_size])
+        self.reload()
+
+        if file_size < int(0.90 * sum(self.get_attribute('size_event'))):
+            ## size over-estimated
+            ## warn if over-estimated by more than 10%
+            subject = 'Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid'))
+            message = ('For the request %s, size/event=%s was given, %s was'
+                    ' measured from %s events (ran %s).') % (
+                            self.get_attribute('prepid'),
+                            sum(self.get_attribute('size_event')),
+                            file_size,
+                            total_event,
+                            total_event_in)
+
+            notification(subject,message,[],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            ## correct the value from the runtest.
+            self.set_attribute('size_event', [file_size])
+            self.reload()
+
+    def check_memory(self, memory):
+        if memory > self.get_attribute('memory'):
+            safe_margin = 1.05
+            memory *= safe_margin
+            if memory > 4000:
+                self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
+                        self.get_attribute('prepid'), safe_margin, memory))
+
+                subject = 'Runtest for %s: memory over-usage' % (self.get_attribute('prepid'))
+                message = ('For the request %s, the memory usage is found to be large.'
+                        ' Requiring %s MB measured from %s events (ran %s). Setting'
+                        ' to high memory queue') % (
+                                self.get_attribute('prepid'),
+                                memory,
+                                total_event,
+                                total_event_in)
+
+                notification(subject,message,[],
+                        group=notification.REQUEST_OPERATIONS,
+                        action_objects=[self.get_attribute('prepid')],
+                        object_type='requests',
+                        base_object=self)
+
+                self.notify(subject, message, accumulate=True)
+
+            self.set_attribute('memory', memory)
+            self.reload()
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test(self.target_for_test())
@@ -2228,24 +2280,19 @@ done
                 total_event_in_valid = events_read
                 break
 
-        if what == 'eff':
-            if total_event == 0 and total_event_in_valid != 0:
-                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s" % (
-                    self.get_attribute('prepid'), what, total_event, total_event_in_valid))
-                raise Exception(
-                    "The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request" % (
-                        total_event_in_valid ))
-        else:
-            if total_event == 0 and total_event_in != 0:
-                ##fail it !
-                self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s" % (
-                    self.get_attribute('prepid'), what, total_event, total_event_in))
-                raise Exception(
-                    "The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request" % (
-                        total_event_in ))
+        #check if we produced any events at all. If not there is no point for efficiency calc
+        if total_event == 0 and total_event_in != 0:
+            ##fail it !
+            self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s" % (
+                self.get_attribute('prepid'), what, total_event, total_event_in))
+            raise Exception(
+                "The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request" % (
+                    total_event_in ))
 
         memory = None
         timing = None
+        total_job_cpu = None
+        total_job_time = None
         timing_dict = {}
         timing_methods = settings().get_value('timing_method')
 # Here be dragons
@@ -2272,6 +2319,11 @@ done
                         file_size = int(file_size / total_event)
                     if name == 'PeakValueRss':
                         memory = float(perf.getAttribute('Value'))
+                    ##cpu efficiency valued
+                    if name == "TotalJobCPU":
+                        total_job_cpu = float(perf.getAttribute('Value'))
+                    if name == "TotalJobTime":
+                        total_job_time = float(perf.getAttribute('Value'))
 
         if 'current' in timing_dict:
             timing = timing_dict['current']
@@ -2285,315 +2337,21 @@ done
         if len(self.get_attribute('generator_parameters')):
             geninfo = generator_parameters( self.get_attribute('generator_parameters')[-1] ).json()
 
-        to_be_saved = False
-
         self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % (
             efficiency, efficiency_error, timing, file_size ))
 
-        if what == 'eff':
-            do_update = False
-            do_inform = False
-            if not geninfo:
-                do_update = True
+        self.check_gen_efficiency(geninfo, total_event_in, total_event)
+        self.check_time_event(total_event_in, total_event, timing)
+        self.check_cpu_efficiency(total_job_cpu, total_job_time)
 
-            if do_update:
-                self.update_generator_parameters()
-                to_be_saved = True
+        #some checks if we succeeded in parsing the values
+        if file_size:
+            self.check_file_size(file_size)
 
-            if geninfo and geninfo['filter_efficiency'] and geninfo['match_efficiency'] and efficiency:
-                _eff_ratio_error = sqrt(
-                    (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
-                    (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2)
-                if _eff_ratio_error > (efficiency_error / efficiency):
-                    do_infom = True  ##Inform user to update the efficiencies by himself
+        if memory:
+            self.check_memory(memory)
 
-            #efficiency_fraction = settings().get_value('efficiency_fraction')
-            if geninfo:
-                __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - efficiency) / efficiency
-                __eff_relative_error = 2*sqrt((efficiency_error/efficiency)**2 + _eff_ratio_error**2)
-                if do_inform:
-                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                        ' the mcm validation test measured %.4f +/- %.4f\n'
-                        '(there were %s trial events, of which %s passed the filter/matching),\n'
-                        ' which has a smaller relative error. Please set new values in the'
-                        ' request for efficiencies and errors.') % (
-                            self.get_attribute('prepid'),
-                            'filter_efficiency',
-                            geninfo['filter_efficiency'],
-                            geninfo['filter_efficiency_error'],
-                            'match_efficiency',
-                            geninfo['match_efficiency'],
-                            geninfo['match_efficiency_error'],
-                            efficiency,
-                            efficiency_error,
-                            total_event_in_valid,
-                            total_event)
-                    subject = 'Runtest for %s: efficiencies has improved.' % (self.get_attribute('prepid'))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-                elif efficiency == 0.:
-                    ## the efficiency, although we have ran events is exactly zero ! 
-                    ## should have failed a few lines above anyways
-                    message = ('For the request %s,\n%s=%s\n%s=%s were given;\n'
-                        '%.4f was measured from %s trial events, of which %s'
-                        ' passed the filter/matching.\nPlease check efficiencies'
-                        ' and reset the request if necessary.') % (
-                            self.get_attribute('prepid'),
-                            'filter_efficiency',
-                            geninfo['filter_efficiency'],
-                            'match_efficiency',
-                            geninfo['match_efficiency'],
-                            efficiency,
-                            total_event_in_valid,
-                            total_event)
-                    subject = 'Runtest for %s: efficiencies seems very wrong.' % ( self.get_attribute('prepid'))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-                    #raise Exception(message)
-                #elif __eff_check > efficiency_fraction:
-                elif __eff_check > __eff_relative_error:
-                    ## efficiency is wrong by more than 0.05=efficiency_fraction : notify.
-                    ## The indicated efficiency error is most likely too small or zero
-                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s'
-                        ' were given; %.4f  +/- %.4f was measured'
-                        ' from %s trial events, of which %s passed the filter/matching.\n'
-                        ' Please check efficiencies and reset the request'
-                        ' if necessary.') % (
-                            self.get_attribute('prepid'),
-                            'filter_efficiency',
-                            geninfo['filter_efficiency'],
-                            geninfo['filter_efficiency_error'],
-                            'match_efficiency',
-                            geninfo['match_efficiency'],
-                            geninfo['match_efficiency_error'],
-                            efficiency,
-                            efficiency_error,
-                            total_event_in_valid,
-                            total_event)
-                    subject = 'Runtest for %s: efficiencies seems incorrect.' % ( self.get_attribute('prepid'))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-                    raise Exception(message)
-
-        elif what == 'perf':
-            rough_efficiency = float(total_event) / total_event_in
-            rough_efficiency_error = rough_efficiency * sqrt(1. / total_event + 1. / total_event_in)
-
-            ## do a rough efficiency measurements anyways if the request is not valid enable
-            if geninfo and (
-                    not 'valid' in self.get_attribute('validation') or not self.get_attribute('validation')['valid']):
-                #efficiency_fraction = settings().get_value('efficiency_fraction')
-                __eff_check = abs(geninfo["filter_efficiency"] * geninfo["match_efficiency"] - rough_efficiency) / rough_efficiency
-                _eff_ratio_error = sqrt(
-                    (geninfo['filter_efficiency_error'] / geninfo['filter_efficiency'])**2+
-                    (geninfo['match_efficiency_error'] / geninfo['match_efficiency'])**2)
-                __eff_error = 2*sqrt((rough_efficiency_error/rough_efficiency)**2 + _eff_ratio_error**2)
-                if __eff_check > __eff_error:
-                    subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (self.get_attribute('prepid'))
-                    message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                        ' the mcm validation test measured %.4f +/- %.4f\n'
-                        '(there were %s trial events, of which %s passed the filter/matching),'
-                        ' which has a smaller relative error.\n'
-                        'Please check and reset the request if necessary.') % (
-                            self.get_attribute('prepid'),
-                            'filter_efficiency',
-                            geninfo['filter_efficiency'],
-                            geninfo['filter_efficiency_error'],
-                            'match_efficiency',
-                            geninfo['match_efficiency'],
-                            geninfo['match_efficiency_error'],
-                            rough_efficiency,
-                            rough_efficiency_error,
-                            total_event_in,
-                            total_event
-                        )
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-
-            ## timing checks
-            timing_fraction = settings().get_value('timing_fraction')
-            timing_threshold = settings().get_value('timing_threshold')
-            timing_n_limit = settings().get_value('timing_n_limit')
-            if timing and timing > self.get_sum_total_events():
-                ## timing under-estimated
-                if timing * timing_fraction > self.get_sum_total_events():
-                    ## notify if more than 20% discrepancy found !
-                    subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
-                    message = ('For the request %s, time/event=%s was given, %s was measured'
-                        ' and set to the request from %s events (ran %s).') % (
-                            self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
-                            timing, total_event,
-                            total_event_in
-                        )
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-
-                self.set_attribute('time_event', [timing])
-                to_be_saved = True
-            if timing and timing < (timing_fraction * self.get_sum_total_events()):
-                ## timing over-estimated
-                ## warn if over-estimated by more than 10%
-                subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
-                if total_event > timing_n_limit or timing < timing_threshold:
-                    message = ('For the request %s, time/event=%s was given, %s was'
-                        ' measured and set to the request from %s events (ran %s).') % (
-                            self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
-                            timing,
-                            total_event,
-                            total_event_in)
-
-                    self.set_attribute('time_event', [timing])
-                    to_be_saved = True
-                else:
-                    message = ('For the request %s, time/event=%s was given, %s was'
-                        ' measured from %s events (ran %s). Not within %d%%.') % (
-                            self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
-                            timing,
-                            total_event,
-                            total_event_in,
-                            timing_fraction*100)
-                    ## we should fail these requests because of wrong timing by >10% !
-                    raise Exception(message)
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=self
-                )
-                self.notify(subject, message, accumulate=True)
-
-            ## size check
-            if file_size and file_size > sum(self.get_attribute('size_event')):
-                ## size under-estimated
-                if file_size * 0.90 > sum(self.get_attribute('size_event')):
-                    ## notify if more than 10% discrepancy found !
-                    subject = 'Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid'))
-                    message = ('For the request %s, size/event=%s was given, %s was'
-                        ' measured from %s events (ran %s).') % (
-                            self.get_attribute('prepid'),
-                            sum(self.get_attribute('size_event')),
-                            file_size,
-                            total_event,
-                            total_event_in
-                        )
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-                self.set_attribute('size_event', [file_size])
-                to_be_saved = True
-
-            if file_size and file_size < int(0.90 * sum(self.get_attribute('size_event'))):
-                ## size over-estimated
-                ## warn if over-estimated by more than 10%
-                subject = 'Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid'))
-                message = ('For the request %s, size/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).') % (
-                        self.get_attribute('prepid'),
-                        sum(self.get_attribute('size_event')),
-                        file_size,
-                        total_event,
-                        total_event_in
-                    )
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=self
-                )
-                self.notify(subject, message, accumulate=True)
-                ## correct the value from the runtest.
-                self.set_attribute('size_event', [file_size])
-                to_be_saved = True
-
-            if memory and memory > self.get_attribute('memory'):
-                safe_margin = 1.05
-                memory *= safe_margin
-                if memory > 4000:
-                    self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
-                            self.get_attribute('prepid'), safe_margin, memory))
-                    subject = 'Runtest for %s: memory over-usage' % (self.get_attribute('prepid'))
-                    message = ('For the request %s, the memory usage is found to be large.'
-                        ' Requiring %s MB measured from %s events (ran %s). Setting'
-                        ' to high memory queue') % (
-                            self.get_attribute('prepid'),
-                            memory,
-                            total_event,
-                            total_event_in
-                        )
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=self
-                    )
-                    self.notify(subject, message, accumulate=True)
-                    #truncate to 4G, or catch it in ->define step ?
-                self.set_attribute('memory', memory)
-                to_be_saved = True
-
-        if to_be_saved:
-            self.update_history({'action': 'update', 'step': what})
-
-        return to_be_saved
+        self.update_history({'action': 'update', 'step': what})
 
     @staticmethod
     ## another copy/paste
