@@ -2170,12 +2170,12 @@ class request(json_base):
                             self.get_core_num(),
                             __test_eff)
 
-            seq = self.get_attribute("sequences")
-            for el in seq:
-                el['nThreads'] = 1
+            # seq = self.get_attribute("sequences")
+            # for el in seq:
+            #     el['nThreads'] = 1
 
-            self.set_attribute('sequences', seq)
-            self.reload()
+            # self.set_attribute('sequences', seq)
+            # self.reload()
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
