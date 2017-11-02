@@ -109,96 +109,16 @@ class GetLogs(RESTResource):
         return {"results": files_dates}
 
 
-#class TestConnection(RESTResource):
-#    ## a rest api to make a creation test of a request
-#    def __init__(self):
-#        self.counter = 0
-#
-#    def GET(self, *args):
-#        """
-#        this is test of connection through ssh to /node/iterations
-#        """
-#        sta=0
-#        sto=0
-#        spend=[]
-#        server=args[0]
-#        N=int(args[1])
-#        success=0
-#        fail=0
-#        for i in range(N):
-#            sta=time.time()
-#            connect = ssh_executor(server=server)
-#            try:
-#                _, stdout, stderr = connect.execute('ls $HOME')
-#                out = stdout.read()
-#                err = stderr.read()
-#                if ('private' in out and 'public' in out and 'PdmV' in out):
-#                    success+=1
-#                    self.logger.info("test: %s SUCCESS \n out:\n%s \n err:\n %s" % (i, out,err))
-#                else:
-#                    tail+=1
-#                    self.logger.info("test: %s failed \n out:\n%s \n err:\n %s" % (i, out,err))
-#            except:
-#                fail+=1
-#                self.logger.error("test: %s failed %s" % (i, traceback.format_exc()))
-#
-#            sto=time.time()
-#            spend.append( sto - sta )
-#
-#        mean = sum(spend) / len(spend)
-#        rms = sqrt(sum( map( lambda v : (v-mean)*(v-mean), spend)) / len(spend))
-#
-#        return dumps({"server" : server,
-#                      "trials" : N,
-#                      "time": spend,
-#                      "mean": mean,
-#                      "rms": rms,
-#                      "success" : success,
-#                      "fail" : fail,
-#                      "max" : max(spend),
-#                      "min": min(spend),
-#                      "total" : sum(spend)
-#                      })
+class GetLocksInfo(RESTResource):
+   def __init__(self):
+       self.access_limit = access_rights.administrator
+       self.before_request()
+       self.count_call()
 
-#class ListReleases(RESTResource):
-#    def __init__(self):
-#        pass
-#    def GET(self, *args):
-#        """
-#        Give out the list of releases that are being used through McM campaigns in optional status /status
-#        """
-#        status=None
-#        if len(args):
-#            status=args[0]
-#        cdb = database('campaigns')
-#
-#        if status:
-#            __query = cdb.construct_lucene_query({'status' : status})
-#            cs = cdb.full_text_search('search', __query, page=-1)
-#        else:
-#            cs = cdb.get_all()
-#
-#        releases_set=set()
-#        releases=defaultdict(lambda : list())
-#        for c in cs:
-#            if c['cmssw_release'] and not c['cmssw_release'] in releases[c['status']]:
-#                releases[c['status']].append(c['cmssw_release'])
-#                releases_set.add(c['cmssw_release'])
-#
-#
-#        ##extend to submitted requests, or chained requests that will get in the system ?
-#
-#        return dumps({"results" : releases, "set" : list(releases_set)})
-
-
-#class GetLocksInfo(RESTResource):
-#   def __init__(self):
-#       self.access_limit = access_rights.administrator
-
-#   def GET(self, *args):
-#       from tools.locker import locker
-#       data = {"RLocks" : locker.lock_dictionary, "Locks" : locker.thread_lock_dictionary}
-#       return dumps({"locks_len": len(data), "locks_data": str(data)})
+   def get(self):
+       from tools.locker import locker
+       data = {"RLocks" : locker.lock_dictionary, "Locks" : locker.thread_lock_dictionary}
+       return {"locks_len": len(data), "locks_data": str(data)}
 
 class GetQueueInfo(RESTResource):
     def __init__(self):

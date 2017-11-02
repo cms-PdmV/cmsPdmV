@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import cherrypy
-
 from collections import defaultdict
 from tools.locker import locker
 from tools.settings import settings
@@ -27,7 +25,7 @@ class user_pack:
     @staticmethod
     def get_request_header_dictionary():
         """
-        Parse cherrypy header and get what's in there
+        Parse flask request header and get what's in there
         """
         if not request.headers:
             return defaultdict(lambda: None)

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import sys
-import time
 import logging
 import os
 
@@ -21,7 +19,6 @@ class UserFilter(logging.Filter):
 
     def filter(self, record):
         from tools.user_management import user_pack
-
         email = user_pack().get_email()
         if email:
             record.user = email

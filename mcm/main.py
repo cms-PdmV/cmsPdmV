@@ -1,9 +1,9 @@
-from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate
+from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
-from rest_api.ChainedRequestActions import ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList
+from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
@@ -11,31 +11,30 @@ from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, NotifyPWG
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
+from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications
 
-from json_layer.sequence import sequence #to get campaign sequences
-from tools.settings import settings
+from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
 from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
-from flask import Flask, send_from_directory, make_response
+from flask import Flask, send_from_directory, request, g
+from multiprocessing import Process
 
+import signal
 import logging
 import logging.handlers
 import json
-import cherrypy
-import os
 import shelve
-import subprocess
-import imp
 import datetime
 
+RESTResource.counter = shelve.open('.mcm_rest_counter')
 start_time = datetime.datetime.now().strftime("%c")
 app = Flask(__name__)
+app.config.update(LOGGER_NAME="mcm_error")
 api = Api(app)
 app.url_map.strict_slashes = False
 
@@ -97,12 +96,6 @@ def edit_many_html():
 @app.route('/dashboard')
 def dashboard_html():
     return send_from_directory('HTML', 'dashboard.html')
-@app.route('/graph_painter')
-def graph_painter_html():
-    return send_from_directory('HTML', 'graph_painter.html')
-@app.route('/graph_representation')
-def graph_representation_html():
-    return send_from_directory('HTML', 'graph.html')
 @app.route('/scripts/<path:path>')
 def send_static(path):
     return send_from_directory('scripts', path)
@@ -134,7 +127,8 @@ api.add_resource(
     '/restapi/notifications',
     '/public',
     '/public/restapi',
-    '/public/restapi/requests'
+    '/public/restapi/requests',
+    '/public/restapi/chained_requests'
 )
 #
 ### create a restriction-free urls, with limited capabilities
@@ -160,7 +154,6 @@ api.add_resource(
     '/public/restapi/requests/output/<string:prepid>',
     '/public/restapi/requests/output/<string:prepid>/<string:is_chain>'
 )
-#api.add_resource(RESTResourceIndex, '/public/restapi/chained_requests')
 api.add_resource(
     GetSetupForChains,
     '/public/restapi/chained_requests/get_setup/<string:chained_request_id>',
@@ -177,8 +170,6 @@ api.add_resource(
     '/restapi/users/get_pwg',
     '/restapi/users/get_pwg/<string:user_id>'
 )
-#api.add_resource(GetAllRoles, '/restapi/users/get_all_roles')
-#api.add_resource(GetAllUsers, '/restapi/users/get_all_users')
 api.add_resource(AddRole, '/restapi/users/add_role')
 api.add_resource(AskRole, '/restapi/users/ask_role/<string:pwgs>')
 api.add_resource(ChangeRole, '/restapi/users/change_role/<string:user_id>/<string:action>')
@@ -188,7 +179,6 @@ api.add_resource(
     '/restapi/users/save',
     '/restapi/users/update'
 )
-#api.add_resource(FillFullNames, '/restapi/users/fill_full_names')
 api.add_resource(NotifyPWG, '/restapi/users/notify_pwg')
 #
 ## REST request actions
@@ -222,7 +212,6 @@ api.add_resource(
     '/restapi/requests/status/<string:request_ids>',
     '/restapi/requests/status/<string:request_ids>/<int:step>'
 )
-#api.add_resource(UploadConfig, '/restapi/requests/upload')
 api.add_resource(InjectRequest, '/restapi/requests/inject/<string:request_ids>')
 api.add_resource(
     ReadInjectionLog,
@@ -233,7 +222,6 @@ api.add_resource(GetEditable, '/restapi/requests/editable/<string:request_id>')
 api.add_resource(GetDefaultGenParams, '/restapi/requests/default_generator_params/<string:request_id>')
 api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
 api.add_resource(NotifyUser, '/restapi/requests/notify')
-#api.add_resource(MigrateRequest, '/restapi/requests/migrate')
 api.add_resource(
     InspectStatus,
     '/restapi/requests/inspect/<string:request_ids>',
@@ -256,7 +244,6 @@ api.add_resource(
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>'
 )
-#api.add_resource(RequestPerformance, '/restapi/requests/perf_report')
 api.add_resource(UpdateMany, '/restapi/requests/update_many')
 api.add_resource(GetAllRevisions, '/restapi/requests/all_revs/<string:request_id>')
 api.add_resource(ListRequestPrepids, '/restapi/requests/search_view')
@@ -279,10 +266,8 @@ api.add_resource(
     '/restapi/campaigns/approve/<string:campaign_ids>',
     '/restapi/campaigns/approve/<string:campaign_ids>/<int:index>'
 )
-#api.add_resource(GetAllCampaigns, '/restapi/campaigns/get_all')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campaign_id>')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
-#api.add_resource(MigratePage, '/restapi/campaigns/migrate')
 api.add_resource(ListAllCampaigns, '/restapi/campaigns/listall')
 api.add_resource(InspectRequests, '/restapi/campaigns/inspect/<string:campaign_id>')
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspectall/<string:group>')
@@ -299,12 +284,10 @@ api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 api.add_resource(InspectChainedRequests, '/restapi/chained_campaigns/inspect/<string:chained_campaign_ids>')
 api.add_resource(InspectChainedCampaigns, '/restapi/chained_campaigns/inspectall/<string:action>')
 api.add_resource(SelectNewChainedCampaigns, '/restapi/chained_campaigns/select/<string:flow_id>')
-#api.add_resource(ListChainCampaignPrepids, '/restapi/chained_campaigns/search_view')
 api.add_resource(ChainedCampaignsPriorityChange, '/restapi/chained_campaigns/priority_change')
 #
 ## REST Chained Request Actions
-#api.add_resource(ChainedRequestPrepId, '/restapi/chained_requests/request_chainid')
-#api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
+api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
 api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
 api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:chained_request_id>')
 api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:chained_request_id>')
@@ -322,7 +305,6 @@ api.add_resource(
     '/restapi/chained_requests/approve/<string:chained_request_id>/<int:step>'
 )
 api.add_resource(InspectChain, '/restapi/chained_requests/inspect/<string:chained_request_id>')
-#api.add_resource(GetConcatenatedHistory, '/restapi/chained_requests/fullhistory')
 api.add_resource(
     SearchableChainedRequest,
     '/restapi/chained_requests/searchable',
@@ -335,9 +317,8 @@ api.add_resource(
 )
 api.add_resource(SoftResetChainedRequest, '/restapi/chained_requests/soft_reset/<string:chained_request_id>')
 api.add_resource(TestChainedRequest, '/restapi/chained_requests/test/<string:chained_request_id>')
-#api.add_resource(TestOutputDSAlgo, '/restapi/chained_requests/test_ds_output')
-#api.add_resource(ForceChainReqToDone, '/restapi/chained_requests/force_done')
-#api.add_resource(ForceStatusDoneToProcessing, '/restapi/chained_requests/back_forcedone')
+api.add_resource(ForceChainReqToDone, '/restapi/chained_requests/force_done/<string:chained_request_ids>')
+api.add_resource(ForceStatusDoneToProcessing, '/restapi/chained_requests/back_forcedone/<string:chained_request_ids>')
 api.add_resource(ToForceFlowList, '/restapi/chained_requests/force_flow/<string:chained_request_ids>')
 api.add_resource(RemoveFromForceFlowList, '/restapi/chained_requests/remove_force_flow/<string:chained_request_ids>')
 api.add_resource(ChainedRequestsPriorityChange, '/restapi/chained_requests/priority_change')
@@ -366,10 +347,6 @@ api.add_resource(
 api.add_resource(ResetBatch, '/restapi/batches/reset/<string:batch_ids>')
 api.add_resource(HoldBatch, '/restapi/batches/hold/<string:batch_ids>')
 api.add_resource(NotifyBatch, '/restapi/batches/notify')
-#root.restapi.batches.save = SaveBatch()
-#root.restapi.batches.update = UpdateBatch()
-#root.restapi.batches.get_all_batches = GetAllBatches()
-#root.restapi.batches.redirect = GetIndex()
 #
 ## REST invalidation Actions
 api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
@@ -391,9 +368,7 @@ api.add_resource(GetLogs, '/restapi/dashboard/get_logs')
 api.add_resource(GetRevision, '/restapi/dashboard/get_revision')
 api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time', resource_class_kwargs={'start_time': start_time})
 api.add_resource(GetVerbosities, '/restapi/dashboard/get_verbosities')
-#api.add_resource(TestConnection, '/restapi/dashboard/get_connection')
-#api.add_resource(ListReleases, '/restapi/dashboard/get_releases')
-#api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
+api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
 api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
 #
 ## REST mccms Actions
@@ -429,9 +404,7 @@ api.add_resource(RemoveTag, '/restapi/tags/remove')
 #
 ## REST control Actions
 api.add_resource(RenewCertificate, '/restapi/control/renew_cert')
-#api.add_resource(ChangeVerbosity, '/restapi/control/set_verbosity')
-#api.add_resource(TurnOffServer, '/restapi/control/turn_off')
-#api.add_resource(ResetRESTCounters, '/restapi/control/reset_rest_counter')
+api.add_resource(ChangeVerbosity, '/restapi/control/set_verbosity/<int:level>')
 api.add_resource(
     Communicate,
     '/restapi/control/communicate',
@@ -446,4 +419,84 @@ api.add_resource(FetchActionObjects, '/restapi/notifications/fetch_actions')
 api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_actions')
 api.add_resource(SearchNotifications, '/restapi/notifications/search')
 
-app.run(debug=True, host='0.0.0.0', port=4443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt','/etc/pki/tls/private/localhost.key'))
+##Define loggers
+
+#ERROR log file
+error_logger = app.logger
+maxBytes = getattr(error_logger, "rot_maxBytes", 10000000)
+backupCount = getattr(error_logger, "rot_backupCount", 1000)
+fname = getattr(error_logger, "rot_error_file", "logs/error.log")
+
+logger = logging.getLogger()
+logger.setLevel(0)
+
+ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+
+usr_filt = UserFilter()
+ha.setFormatter(error_formatter)
+ha.addFilter(usr_filt)
+error_logger.addHandler(ha)
+
+# set up injection logger
+##due to LogAdapter empty space for message will be added inside of it
+inject_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+inject_logger = logging.getLogger("mcm_inject")
+hi = logging.FileHandler('logs/inject.log', 'a')
+hi.setFormatter(inject_formatter)
+inject_logger.addHandler(hi)
+
+#Access log file
+access_logger = logging.getLogger("access_log")
+fname = getattr(access_logger, "rot_access_file", "logs/access.log")
+h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+rest_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s',
+        datefmt='%d/%b/%Y:%H:%M:%S')
+
+mem_filt = MemoryFilter()
+h.setLevel(logging.DEBUG)
+h.setFormatter(rest_formatter)
+h.addFilter(usr_filt)
+h.addFilter(mem_filt)
+access_logger.addHandler(h)
+
+#Log accesses
+def after_this_request(f):
+    if not hasattr(g, 'after_request_callbacks'):
+        g.after_request_callbacks = []
+    g.after_request_callbacks.append(f)
+    return f
+
+@app.after_request
+def call_after_request_callbacks(response):
+    for callback in getattr(g, 'after_request_callbacks', ()):
+        callback(response)
+    return response
+
+@app.before_request
+def log_access():
+    message = "%s %s %s %s" % (request.method, request.path, "%s", request.headers['User-Agent'])
+    @after_this_request
+    def after_request(response):
+        g.message = g.message % response.status_code
+        access_logger.info(g.message)
+    g.message = message
+
+
+def run_flask():
+    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt','/etc/pki/tls/private/localhost.key'))
+
+#Execute this function when stopping flask
+def at_flask_exit(*args):
+    RESTResource.counter.close()
+    com = communicator()
+    com.flush(0)
+    server.terminate()
+
+signal.signal(signal.SIGTERM, at_flask_exit)
+
+# For somereason the process doesn't finish when you send a SIGTERM so we encapsulate the process in another one and we terminate it by hand
+server = Process(target=run_flask)
+server.start()

@@ -287,135 +287,6 @@ class ManageRequest(UpdateRequest):
         return self.update()
 
 
-#class MigratePage(RequestRESTResource):
-#    def __init__(self):
-#        RequestRESTResource.__init__(self)
-#        self.before_request()
-#        self.count_call()
-#
-#    def get(self):
-#        """
-#        Provides a page to migrate requests from prep
-#        """
-#        if not args:
-#            self.logger.error('No arguments were given')
-#            return dumps({"results": False, "message": 'Error: No arguments were given.'})
-#        prep_campaign = args[0]
-#        html = '<html><body>This is the migration page for %s' % prep_campaign
-#        html += '</body></html>'
-#        return html
-
-
-#class MigrateRequest(RequestRESTResource):
-#    """
-#    Self contained PREP->McM migration class
-#    """
-#
-#    def __init__(self):
-#        RequestRESTResource.__init__(self)
-#
-#    def GET(self, *args):
-#        """
-#        Imports am existing request from prep (id provided) to an already existing campaign in McM
-#        """
-#        if not args:
-#            self.logger.error('No arguments were given')
-#            return dumps({"results": False, "message": 'Error: No arguments were given.'})
-#        res = self.migrate_from_prep(args[0])
-#        return dumps(res) if isinstance(res, dict) else res
-#
-#    def migrate_from_prep(self, pid):
-#
-#        ## get the campaign name
-#        prep_campaign = pid.split('-')[1]
-#        mcm_campaign = prep_campaign.replace('_', '')
-#
-#        cdb = database('campaigns')
-#        db = database(self.db_name)
-#
-#        if not cdb.document_exists(mcm_campaign):
-#            return {"results": False, "message": 'no campaign %s exists in McM to migrate %s' % (mcm_campaign, pid)}
-#        camp = campaign(cdb.get(mcm_campaign))
-#
-#        from sync.get_request import prep_scraper
-#
-#        prep = prep_scraper()
-#        mcm_requests = prep.get(pid)
-#        if not len(mcm_requests):
-#            return {"results": False, "message": "no conversions for prepid %s" % pid}
-#        mcm_request = mcm_requests[0]
-#        try:
-#            mcm_req = mcm_r = request(mcm_request)
-#        except:
-#            return {"results": False, "message": "json does not cast into request type <br> %s" % mcm_request}
-#
-#        ## make the sequences right ? NO, because that cast also the conditions ...
-#        #mcm_r.build_cmsDrivers(cast=-1)
-#        #mcm_r.build_cmsDrivers(cast=1)
-#
-#        if mcm_r.get_attribute('mcdb_id') > 0 and mcm_r.get_attribute('status') not in ['submitted', 'done']:
-#            return {"results": False,
-#                          "message": "A request which will require a step0 (%s) cannot be migrated in status %s, requires submitted or done" % (
-#                              mcm_r.get_attribute('mcdb_id'), mcm_r.get_attribute('status'))}
-#
-#        mcm_r.update_history({'action': 'migrated'})
-#        if not db.document_exists(mcm_r.get_attribute('prepid')):
-#            mcm_r.get_stats(override_id=pid)
-#
-#            if not len(mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('status') in [
-#                'done']: #['done','submitted']:
-#                # no requests provided, the request should fail migration. 
-#                # I have put fake docs in stats so that it never happens
-#                return {"results": False, "message": "Could not find an entry in the stats DB for prepid %s" % pid}
-#
-#            # set the completed events properly
-#            if mcm_r.get_attribute('status') == 'done' and len(
-#                    mcm_r.get_attribute('reqmgr_name')) and mcm_r.get_attribute('completed_events') <= 0:
-#                mcm_r.set_attribute('completed_events',
-#                                    mcm_r.get_attribute('reqmgr_name')[-1]['content']['pdmv_evts_in_DAS'])
-#                collected=[]
-#                for wma in reversed(mcm_r.get_attribute('reqmgr_name')):
-#                    if not 'pdmv_dataset_list' in wma['content']: continue
-#                    those = wma['content']['pdmv_dataset_list']
-#                    goodone=True
-#                    if len(collected):
-#                        for ds in those:
-#                            (_,dsn,proc,tier)=ds.split('/')
-#                            for goodds in collected:
-#                                (_,gdsn,gproc,gtier)=goodds.split('/')
-#                                if dsn!=gdsn or gproc!=proc:
-#                                    goodone=False
-#                    if goodone:
-#                        collected.extend(those)
-#                collected = list(set(collected))
-#                mcm_r.set_attribute('output_dataset', collected)
-#            saved = db.save(mcm_r.json())
-#            if camp.get_attribute('root') <= 0:
-#                if not self.set_campaign(mcm_req):
-#                    return {"results": 'Error: Campaign ' + mcm_req.get_attribute('member_of_campaign') + ' does not exist.'}
-#        else:
-#            html = '<html><body>Request from PREP ((<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) <b>already</b> in McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
-#                pid,
-#                pid,
-#                mcm_r.get_attribute('prepid'),
-#                mcm_r.get_attribute('prepid'))
-#            return html
-#            #return dumps({"results":False,"message":"prepid %s already exists as %s in McM"%(pid, mcm_r.get_attribute('prepid'))})
-#
-#        if saved:
-#            html = '<html><body>Request migrated from PREP (<a href="http://cms.cern.ch/iCMS/jsp/mcprod/admin/requestmanagement.jsp?code=%s" target="_blank">%s</a>) to McM (<a href="/mcm/requests?prepid=%s&page=0" target="_blank">%s</a>)</body></html>' % (
-#                pid,
-#                pid,
-#                mcm_r.get_attribute('prepid'),
-#                mcm_r.get_attribute('prepid'))
-#            return html
-#            #return dumps({"results":saved,"message":"Request migrated from PREP (%s) to McM (%s)"%(pid,mcm_r.get_attribute('prepid'))})
-#        else:
-#            return {"results": saved, "message": "could not save converted prepid %s in McM" % pid}
-#
-#            #return dumps({"results":True,"message":"not implemented"})
-
-
 class GetCmsDriverForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -933,23 +804,6 @@ class TestRequest(RESTResource):
 
         return outs
 
-#class UploadConfig(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.production_manager
-#
-#    def GET(self, *args, **kwargs):
-#        """
-#        Upload the configuration
-#        """
-#        rn = args[0]
-#        server = 'vocms081.cern.ch'
-#        if "server" in kwargs:
-#            server = kwargs["server"]
-#        from tools.handlers import ConfigMakerAndUploader, submit_pool
-#        from tools.locker import locker
-#        load = ConfigMakerAndUploader(prepid=args[0], server=server, lock=locker.lock(args[0]))
-#        submit_pool.add_task(load.internal_run)
-
 class InjectRequest(RESTResource):
 
     def __init__(self):
@@ -1151,32 +1005,6 @@ class SearchableRequest(RESTResource):
                              'member_of_campaign','tags']:
             searchable[key] = []
         return searchable
-
-
-#class RequestPerformance(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.generator_contact
-#        self.before_request()
-#        self.count_call()
-#
-#    def PUT(self, *args):
-#        """
-#        Upload performance report .xml : retrieve size_event and time_event
-#        """
-#        import xml.dom.minidom
-#        xml_doc = cherrypy.request.body.read().strip()
-#        xml_data = xml.dom.minidom.parseString(xml_doc)
-#        pfn = xml_data.documentElement.getElementsByTagName("PFN")[-1].lastChild.data
-#        what='perf'
-#        if '_genvalid' in pfn:
-#            what='eff'
-#        rid=pfn.replace('file:','').replace('.root','').replace('_genvalid','')
-#        rdb = database('requests')
-#        mcm_r = request( rdb.get( rid ) )
-#        update = mcm_r.update_performance( xml_doc, what)
-#
-#        mcm_r.reload()
-#        return str(update)
 
 class RequestLister():
     def __init__(self):

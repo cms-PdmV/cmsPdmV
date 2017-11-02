@@ -201,20 +201,6 @@ class GetCampaign(RESTResource):
         db = database(self.db_name)
         return {"results": db.get(prepid=data)}
 
-# class GetAllCampaigns(RESTResource):
-#     def __init__(self):
-#         self.db_name = 'campaigns'
-#
-#     def GET(self, *args):
-#         """
-#         Get the json content of all campaigns in McM
-#         """
-#         return dumps(self.get_all())
-#
-#     def get_all(self):
-#         db = database(self.db_name)
-#         return {"results":db.raw_query("prepid")}
-
 class ToggleCampaignStatus(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.production_manager

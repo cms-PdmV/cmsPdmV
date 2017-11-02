@@ -32,20 +32,6 @@ class GetUserRole(RESTResource):
         return {'username': user_p.get_username(), 'role': role, 'role_index': role_index}
 
 
-#class GetAllRoles(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.user
-#
-#    def GET(self):
-#        """
-#        Retrieve the list of possible roles
-#        """
-#        return dumps(self.get_All_roles())
-#
-#    def get_All_roles(self):
-#        return roles
-
-
 class GetUserPWG(RESTResource):
     def __init__(self):
         self.before_request()
@@ -68,20 +54,6 @@ class GetUserPWG(RESTResource):
             return {"results": mcm_user.get_pwgs()}
         else:
             return {"results": []}
-
-#class GetAllUsers(RESTResource):
-#    def __init__(self):
-#        self.db_name = 'users'
-#
-#    def GET(self):
-#        """
-#        Retrieve the db content for all users
-#        """
-#        return dumps(self.get_Users())
-#
-#    def get_Users(self):
-#        db = database(self.db_name)
-#        return {"results": db.get_all()}
 
 
 class GetUser(RESTResource):
@@ -243,33 +215,6 @@ class ChangeRole(RESTResource):
         Increase /1 or decrease /-1 the given user role by one unit of role
         """
         return self.change_role(user_id, action)
-
-
-#class FillFullNames(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.administrator
-#
-#    def GET(self, *args):
-#        """
-#        Goes through database and fills full names of all the users, who have not had it filled yet
-#        """
-#        db = database('users')
-#        users = db.get_all()
-#        results = []
-#        for u_d in users:
-#            u = user(u_d)
-#            if not u.get_attribute('fullname'):
-#                import subprocess
-#                import re
-#
-#                output = subprocess.Popen(
-#                    ["phonebook", "-t", "firstname", "-t", "surname", "--login", u.get_attribute('username')],
-#                    stdout=subprocess.PIPE)
-#                split_out = [x for x in re.split("[^a-zA-Z0-9_\-]", output.communicate()[0]) if x and x != "-"]
-#                fullname = " ".join(split_out)
-#                u.set_attribute('fullname', fullname)
-#                results.append((u.get_attribute('username'), db.save(u.json())))
-#        return dumps({"results": results})
 
 
 class NotifyPWG(RESTResource):

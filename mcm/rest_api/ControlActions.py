@@ -44,64 +44,24 @@ class RenewCertificate(RESTResource):
             return command
 
 
-#class ChangeVerbosity(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.administrator
-#
-#    def GET(self, *args):
-#        """
-#        Change verbosity of logger
-#        """
-#        if not args:
-#            return dumps({"results": False, "message": "No new verbosity given"})
-#        try:
-#            lvl = int(args[0])
-#        except ValueError:
-#            return dumps({"results": False, "message": "New verbosity was not an integer"})
-#
-#        if settings().set_value('log_verbosity', lvl):
-#            ##TO-DO:
-#            # do we really need this?
-#            self.logger.info("We want to set log verbosity to: %s" % (lvl))
-#            #self.logger.set_verbosity(lvl)
-#        else:
-#            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
-#        return dumps({"results": True, "message": "New verbosity for logger: {0}".format(lvl)})
+class ChangeVerbosity(RESTResource):
+    def __init__(self):
+        self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-
-#class TurnOffServer(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.administrator
-#
-#    def GET(self, *args):
-#        """
-#        Turn off server.
-#        """
-#        self.logger.info("Shutting down the server")
-#        cherrypy.engine.exit()
-
-
-#class ResetRESTCounters(RESTResource):
-#    def __init__(self):
-#        self.access_limit = access_rights.administrator
-#
-#    def GET(self, *args):
-#        """
-#        Reset counters
-#        """
-#        res = {}
-#        with locker.lock("rest-call-counter"):
-#            for arg in args:
-#                if arg in RESTResource:
-#                    RESTResource.counter[arg] = 0
-#                    res[arg] = True
-#                else:
-#                    res[arg] = False
-#            if not args:
-#                for key in RESTResource.counter:
-#                    RESTResource.counter[key] = 0
-#                    res[key] = True
-#            return dumps(res)
+    def get(self, level):
+        """
+        Change verbosity of logger
+        """
+        if settings().set_value('log_verbosity', level):
+            ##TO-DO:
+            # do we really need this?
+            self.logger.info("We want to set log verbosity to: %s" % (level))
+            #self.logger.set_verbosity(level)
+        else:
+            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
+        return {"results": True, "message": "New verbosity for logger: {0}".format(level)}
 
 class Communicate(RESTResource):
     def __init__(self):
