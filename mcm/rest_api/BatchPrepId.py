@@ -1,10 +1,7 @@
 #!/usr/bin/env python
-
-from json import dumps
-
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
-from tools.locker import locker,semaphore_events
+from tools.locker import locker, semaphore_events
 from tools.settings import settings
 
 # generates the next valid prepid
