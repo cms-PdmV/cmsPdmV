@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from json import dumps
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.user_management import access_rights
@@ -9,19 +8,14 @@ class ReadInjectionLog(RESTResource):
     def __init__(self):
         self.logfile = 'logs/inject.log'
         self.db_name = 'requests'
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, request_id, lines=-1):
         """
         Retrieves the last injection log for a given request id
         """
-        if not args:
-            self.logger.error('No arguments were given')
-            return dumps({"results": 'Error: No arguments were given'})
-        pid = args[0]
-        nlines = -1
-        if len(args) > 1:
-            nlines = int(args[1])
-        return dumps(self.read_logs(pid, nlines))
+        return self.read_logs(request_id, lines)
 
     def read_logs(self, pid, nlines):
         db = database(self.db_name)
@@ -54,12 +48,14 @@ class ReadInjectionLog(RESTResource):
 class GetVerbosities(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.user
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self):
         """
         Get all the possible verbosities and currently chosen one
         """
         ##TO-DO
         #remove this method... no need to display log verbosity in dashboard
         verbosities = {0: "basic logging", 1: "error logging", 2: "error and info logging", 3: "full logging"}
-        return dumps({"results": (verbosities, self.logger.getEffectiveLevel())})
+        return {"results": (verbosities, self.logger.getEffectiveLevel())}

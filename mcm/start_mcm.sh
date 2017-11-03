@@ -26,5 +26,5 @@ fi
 echo "running grunt"
 node_modules/grunt/bin/grunt
 echo "started on: " `date`
-# start CherryPy
-python2.6 main.py
+# start Flask
+python2.6 main.py &> /dev/null

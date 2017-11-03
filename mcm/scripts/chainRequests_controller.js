@@ -503,7 +503,7 @@ angular.module('testApp').controller('resultsCtrl',
       // Add chain_req prepid to global list of chains to be force_flown
       var __url = "restapi/"+$scope.dbName+"/remove_force_flow/"+prepid
 
-      var promise = $http.get(__url);
+      var promise = $http.delete(__url);
       promise.then(function(data, status){
         $scope.parse_report(data.data, data.status);
       }, function(data){

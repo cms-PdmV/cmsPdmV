@@ -2,8 +2,8 @@
 
 import itertools
 
-from json import dumps
-from cherrypy import request
+from json import loads
+from flask import request
 
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
@@ -12,57 +12,7 @@ from tools.locator import locator
 from json_layer.invalidation import invalidation
 from tools.settings import settings
 from tools.user_management import access_rights
-from tools.json import threaded_loads
 
-
-class Invalidate(RESTResource):
-
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def GET(self, *args):
-        """
-        Operate the invalidation of a given document
-        """
-        if not len(args):
-            return dumps({'results': False, 'message': 'not id has been provided'})
-
-        docid = args[0]
-        invalidations = database('invalidations')
-        if not invalidations.document_exists(docid):
-            return dumps({'results': False, 'message': '%s does not exists' % docid})
-
-        invalid = invalidation(invalidations.get(docid))
-        if invalid.get_attribute('type') in ['request', 'dataset']:
-            return dumps({'results': False,
-                          'message': 'Not implemented to invalidate {0}s'.format(
-                                    invalid.get_attribute('type'))})
-
-        else:
-            return dumps({'results': False, 'message': 'Type {0} not recognized'.format(
-                        invalid.get_attribute('type'))})
-
-class SetStatus(RESTResource):
-
-    def __init__(self):
-        self.access_limit = access_rights.administrator
-
-    def GET(self, *args):
-        """
-        Set the status of an invalidation to the next status
-        """
-        if not len(args):
-            return dumps({'results': False, 'message': 'not id has been provided'})
-
-        docid = args[0]
-        invalidations = database('invalidations')
-        if not invalidations.document_exists(docid):
-            return dumps({'results': False, 'message': '%s does not exists' % (docid)})
-
-        invalid = invalidation(invalidations.get(docid))
-        invalid.set_status()
-        invalidations.update(invalid.json())
-        return dumps({'results': True})
 
 class Announcer():
 
@@ -123,15 +73,14 @@ class GetInvalidation(RESTResource):
 
     def __init__(self):
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, invalidation_id):
         """
         Retrieve the content of a given invalidation object
         """
-        if not args:
-            self.logger.error('No arguments were given.')
-            return dumps({"results": False})
-        return dumps(self.get_request(args[0]))
+        return self.get_request(invalidation_id)
 
     def get_request(self, object_name):
         db = database('invalidations')
@@ -139,35 +88,35 @@ class GetInvalidation(RESTResource):
 
 class DeleteInvalidation(RESTResource):
     def __init__(self):
-        self.db_name = 'invalidations'
         self.access_limit = access_rights.administrator
+        self.before_request()
+        self.count_call()
 
-    def DELETE(self, *args):
+    def delete(self, invalidation_id):
         """
         Delete selected invalidation from DB.
         """
-        if not args:
-            self.logger.error('Delete invalidations: no arguments were given')
-            return dumps({"results": False})
         db = database("invalidations")
-        self.logger.info('Deleting invalidation: %s' % (args[0]))
-        return dumps({"results": db.delete(args[0])})
+        self.logger.info('Deleting invalidation: %s' % (invalidation_id))
+        return {"results": db.delete(invalidation_id)}
 
 class AnnounceInvalidations(RESTResource):
     def __init__(self):
         self.db_name = 'invalidations'
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Announce selected invalidations to Data OPS
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.data)
         self.logger.info("invaldations input: %s" % (input_data))
         if len(input_data) > 0:
             return self.announce(input_data)
         else:
-            return dumps({"results":False, "message": "No elements selected"})
+            return {"results":False, "message": "No elements selected"}
 
     def announce(self, data):
         db = database(self.db_name)
@@ -185,23 +134,25 @@ class AnnounceInvalidations(RESTResource):
 
         announcer = Announcer()
         announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return dumps({"results":True, "ds_to_invalidate": __ds_list,
-                "requests_to_invalidate": __r_list})
+        return {"results":True, "ds_to_invalidate": __ds_list,
+                "requests_to_invalidate": __r_list}
 
 class ClearInvalidations(RESTResource):
     def __init__(self):
         self.db_name = "invalidations"
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Clear selected invalidations without announcing
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.data)
         if len(input_data) > 0:
             return self.clear(input_data)
         else:
-            return dumps({"results":False, "message": "No elements selected"})
+            return {"results":False, "message": "No elements selected"}
 
     def clear(self, data):
         db = database(self.db_name)
@@ -219,49 +170,50 @@ class ClearInvalidations(RESTResource):
 
         __clearer = Clearer()
         __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return dumps({"results":True, "ds_to_invalidate": __ds_list,
-                "requests_to_invalidate": __r_list})
+        return {"results":True, "ds_to_invalidate": __ds_list,
+                "requests_to_invalidate": __r_list}
 
 class AcknowledgeInvalidation(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
         self.access_user = settings().get_value('allowed_to_acknowledge')
+        self.before_request()
+        self.count_call()
 
-    def GET(self, *args):
+    def get(self, invalidation_id):
         """
         Acknowledge the invalidation. By just changeing its status
         """
         idb = database('invalidations')
-        if not len(args):
-            return dumps({"results": False, "message": 'Error: No arguments were given.'})
-
-        doc = idb.get(args[0])
+        doc = idb.get(invalidation_id)
         if not doc:
-            return dumps({"results": False, "message": 'Error: %s is not a doc id' % (
-                    args[0])})
+            return {"results": False, "message": 'Error: %s is not a doc id' % (
+                    invalidation_id)}
 
         doc["status"] = "acknowledged"
         saved = idb.save(doc)
         if saved:
-            return dumps({"results": True, "message": "Invalidation doc %s is acknowledged" % (
-                    args[0])})
+            return {"results": True, "message": "Invalidation doc %s is acknowledged" % (
+                    invalidation_id)}
 
         else:
-            return dumps({"results": False, "message" : "Could not save the change in %s" % (
-                    args[0])})
+            return {"results": False, "message" : "Could not save the change in %s" % (
+                    invalidation_id)}
 
 class PutOnHoldInvalidation(RESTResource):
     def __init__(self):
         self.db_name = "invalidations"
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Put single invalidation on hold so DS would not be invalidated
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.data)
         if not len(input_data):
-            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+            return {"results": False, "message": 'Error: No arguments were given.'}
         self.logger.info("Putting invalidation on HOLD. input: %s" % (input_data))
         db = database(self.db_name)
         res = []
@@ -279,20 +231,22 @@ class PutOnHoldInvalidation(RESTResource):
                 __msg = "%s dosn't exists in DB" % (el)
                 res.append({"object": el, "results" : False, "message" : __msg})
 
-        return dumps({"results" : res})
+        return {"results" : res}
 
 class PutHoldtoNewInvalidations(RESTResource):
     def __init__(self):
         self.db_name = "invalidations"
         self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
 
-    def PUT(self):
+    def put(self):
         """
         Move HOLD invalidations back to status new
         """
-        input_data = threaded_loads(request.body.read().strip())
+        input_data = loads(request.data)
         if not len(input_data):
-            return dumps({"results": False, "message": 'Error: No arguments were given.'})
+            return {"results": False, "message": 'Error: No arguments were given.'}
 
         self.logger.info("Putting invalidation from HOLD back to new. input: %s" % (input_data))
         db = database(self.db_name)
@@ -310,4 +264,4 @@ class PutHoldtoNewInvalidations(RESTResource):
             else:
                 __msg = __msg = "%s dosn't exists in DB" % (el)
                 res.append({"object" : el, "results" : False, "message" : __msg})
-        return dumps({"results" : res})
+        return {"results" : res}
