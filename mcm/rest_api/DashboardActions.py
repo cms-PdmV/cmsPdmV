@@ -29,7 +29,7 @@ class GetBjobs(RESTResource):
     def create_command(self, options):
         bcmd = 'condor_q'
         for opt in options.split(','):
-            bcmd += opt.strip()
+            bcmd += opt
         return bcmd
 
 
