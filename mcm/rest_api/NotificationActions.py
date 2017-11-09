@@ -63,12 +63,12 @@ class FetchNotifications(NotificationRESTResource):
         FetchNotifications.__init__(self)
         kwargs = self.parser.parse_args()
         notifications_db = database('notifications')
-        print kwargs
         query = notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
             ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
         ])
+
         notifications = notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
         self.set_seen(notifications)
         self.logger.info("Fetched notifications")

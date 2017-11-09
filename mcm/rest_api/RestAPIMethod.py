@@ -104,7 +104,7 @@ class RESTResourceIndex(RESTResource):
             map(lambda s: '<th>%s method info</th><th>Access level</th><th>Calls counter</th>' % (s), methods)) + "</tr></thead><tbody>"
         keys = self.__dict__.keys()
         keys.sort()
-        print keys
+
         for key in keys:
             o = getattr(self, key)
             self.res += "<tr>"

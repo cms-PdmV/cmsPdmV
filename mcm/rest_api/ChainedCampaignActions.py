@@ -136,7 +136,7 @@ class DeleteChainedCampaign(RESTResource):
                 rdb.delete(req['prepid'])
             return True
         except Exception as ex:
-            print str(ex)
+            self.logger.error("Failed to delete all requests. exception:%s" % (str(ex)))
             return False
 
 

@@ -309,8 +309,6 @@ class RewindToPreviousStep(RESTResource):
         Rewind the provided coma separated chained requests of one step.
         """
         res = []
-        print chained_request_ids
-        return {}
         crids = chained_request_ids.split(",")
         for crid in crids:
             res.append( self.rewind_one( crid ) )
@@ -694,8 +692,6 @@ class TaskChainDict(RESTResource):
         settingsDB = database('settings')
 
         __DT_prio = settingsDB.get('datatier_input')["value"]
-
-        print chained_request_id
 
         def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
             ##replace Task -> Step in inside dictionaries
