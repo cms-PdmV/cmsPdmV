@@ -2031,6 +2031,22 @@ class request(json_base):
         subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (
                 self.get_attribute('prepid'))
 
+        message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
+                ' the mcm validation test measured %.4f +/- %.4f\n'
+                '(there were %s trial events, of which %s passed the filter/matching).\n'
+                'Please check and reset the request if necessary.') % (
+                        self.get_attribute('prepid'),
+                        'filter_efficiency',
+                        geninfo['filter_efficiency'],
+                        geninfo['filter_efficiency_error'],
+                        'match_efficiency',
+                        geninfo['match_efficiency'],
+                        geninfo['match_efficiency_error'],
+                        rough_efficiency,
+                        rough_efficiency_error,
+                        events_ran,
+                        events_produced)
+
         if rough_efficiency > 1:
             message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
                 ' the mcm validation test measured %.4f +/- %.4f\n'
@@ -2054,24 +2070,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if (rough_efficiency / 0.5 <= set_efficiency):
-            message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                    ' the mcm validation test measured %.4f +/- %.4f\n'
-                    '(there were %s trial events, of which %s passed the filter/matching),'
-                    ' which has a smaller relative error.\n'
-                    'Please check and reset the request if necessary.') % (
-                            self.get_attribute('prepid'),
-                            'filter_efficiency',
-                            geninfo['filter_efficiency'],
-                            geninfo['filter_efficiency_error'],
-                            'match_efficiency',
-                            geninfo['match_efficiency'],
-                            geninfo['match_efficiency_error'],
-                            rough_efficiency,
-                            rough_efficiency_error,
-                            events_ran,
-                            events_produced)
-
+        if (rough_efficiency <= set_efficiency*0.5):
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
@@ -2081,7 +2080,15 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        ##TO-DO: else we should set the fine tuned efficiency!
+        if (rough_efficiency >= set_efficiency*1.5):
+            notification(subject, message, [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[self.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=self)
+
+            self.notify(subject, message, accumulate=True)
+            raise Exception(message)
 
     def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
         timing_threshold = settings().get_value('timing_threshold')
@@ -2170,6 +2177,7 @@ class request(json_base):
                             self.get_core_num(),
                             __test_eff)
 
+            ##we do not set the nThreads because we also need a process string in request to be set.
             # seq = self.get_attribute("sequences")
             # for el in seq:
             #     el['nThreads'] = 1
