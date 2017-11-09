@@ -343,14 +343,12 @@ class GetFragmentForRequest(RESTResource):
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
-    def get(self, request_id):
+    def get(self, request_id, version=None):
         """
       Retrieve the fragment as stored for a given request
       """
         ##TO-DO: do we need it? We should keep it fow backward compatibility
-        v = False
-        if len(args) > 1:
-            v = True
+        v = True if version else False
 
         db = database(self.db_name)
         res = self.get_fragment(db.get(prepid=request_id), v)
@@ -714,18 +712,16 @@ class UpdateStats(RESTResource):
         self.before_request()
         self.count_call()
 
-    def get(self, request_id):
+    def get(self, request_id, refresh=None, forced=None):
         """
         Triggers the forced update of the stats page for the given request id
         """
         refresh_stats = True
-        if len(args) > 1 and args[1] == "no_refresh":
+        if refresh == "no_refresh":
             refresh_stats = False
 
         # set forcing argument
-        force = False
-        if len(args) == 3 and args[2] == 'force':
-            force = True
+        force = True if forced == "force" else False
 
         rdb = database('requests')
         if not rdb.document_exists(request_id):

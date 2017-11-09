@@ -132,7 +132,11 @@ api.add_resource(
 )
 #
 ### create a restriction-free urls, with limited capabilities
-api.add_resource(GetFragmentForRequest, '/public/restapi/requests/get_fragment/<string:request_id>')
+api.add_resource(GetFragmentForRequest,
+        '/public/restapi/requests/get_fragment/<string:request_id>',
+        '/public/restapi/requests/get_fragment/<string:request_id>/<int:version>', #for legacy support
+        )
+
 api.add_resource(
     GetSetupForRequest,
     '/public/restapi/requests/get_test/<string:prepid>/<int:events>',
@@ -227,7 +231,11 @@ api.add_resource(
     '/restapi/requests/inspect/<string:request_ids>',
     '/restapi/requests/inspect/<string:request_ids>/<string:force>'
 )
-api.add_resource(UpdateStats, '/restapi/requests/update_stats/<string:request_id>')
+api.add_resource(UpdateStats,
+    '/restapi/requests/update_stats/<string:request_id>',
+    '/restapi/requests/update_stats/<string:request_id>/<string:refresh>',
+    '/restapi/requests/update_stats/<string:request_id>/<string:refresh>/<string:forced>')
+
 api.add_resource(RequestsFromFile, '/restapi/requests/listwithfile')
 api.add_resource(TestRequest, '/restapi/requests/test/<string:request_id>')
 api.add_resource(SearchableRequest, '/restapi/requests/searchable')
