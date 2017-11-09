@@ -5,7 +5,7 @@ from tools.locker import locker
 from tools.settings import settings
 from couchdb_layer.mcm_database import database
 from tools.enum import Enum
-from flask import request
+from flask import request, has_request_context
 
 class user_pack:
     """
@@ -27,7 +27,7 @@ class user_pack:
         """
         Parse flask request header and get what's in there
         """
-        if not request.headers:
+        if not has_request_context():
             return defaultdict(lambda: None)
         user_dict = defaultdict(lambda: None, [(key.lower().replace('-','_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.iteritems()])
         return user_dict
