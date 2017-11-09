@@ -1,374 +1,431 @@
-from rest_api.ControlActions import Search, MultiSearch
+from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, UploadConfig, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, MigrateRequest, MigratePage, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, RequestPerformance, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaign, ToggleCampaignStatus, ApproveCampaign, GetAllCampaigns, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
-from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns, ListChainCampaignPrepids
-from rest_api.ChainedRequestActions import ChainsFromTicket, ChainedRequestsPriorityChange, CreateChainedRequest, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep,  ApproveRequest as ApproveChainedRequest, InspectChain, RewindToPreviousStep, GetConcatenatedHistory, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, TestOutputDSAlgo, ForceChainReqToDone, ForceStatusDoneToProcessing, ToForceFlowList, RemoveFromForceFlowList
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns
+from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
+from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList
 from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
-from rest_api.UserActions import GetUserRole, GetAllRoles, GetAllUsers, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, FillFullNames, NotifyPWG
-from rest_api.BatchActions import HoldBatch, SaveBatch, UpdateBatch, GetBatch, GetAllBatches, AnnounceBatch, GetIndex, InspectBatches, ResetBatch, NotifyBatch
-from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutOnHoldInvalidation, PutHoldtoNewInvalidations
-from rest_api.DashboardActions import GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, TestConnection, ListReleases, GetLocksInfo, GetQueueInfo
+from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, NotifyPWG
+from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
+from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
+from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.ControlActions import RenewCertificate, ChangeVerbosity, TurnOffServer, ResetRESTCounters, Communicate
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications
 
-from json_layer.sequence import sequence #to get campaign sequences
-from tools.settings import settings
+from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
 from tools.logger import UserFilter, MemoryFilter
+from flask_restful import Api
+from flask import Flask, send_from_directory, request, g
+from multiprocessing import Process
 
+import signal
 import logging
 import logging.handlers
 import json
-import cherrypy
-import os
 import shelve
-import subprocess
-import imp
 import datetime
 
-file_location = os.path.dirname(__file__)
+RESTResource.counter = shelve.open('.mcm_rest_counter')
 start_time = datetime.datetime.now().strftime("%c")
+app = Flask(__name__)
+app.config.update(LOGGER_NAME="mcm_error")
+api = Api(app)
+app.url_map.strict_slashes = False
 
-###UPDATED METHODS##
-@cherrypy.expose
-def campaigns_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','campaigns.html'))
-@cherrypy.expose
-def requests_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','requests.html'))
-@cherrypy.expose
-def edit_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','edit.html'))
-@cherrypy.expose
-def flows_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','flows.html'))
-@cherrypy.expose
-def chained_campaigns_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','chained_campaigns.html'))
-@cherrypy.expose
-def chained_requests_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','chained_requests.html'))
-@cherrypy.expose
-def priority_change_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','priority_change.html'))
-@cherrypy.expose
-def index( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','index.html'))
-@cherrypy.expose
-def create_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','create.html'))
-@cherrypy.expose
-def injectAndLog( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','injectAndLog.html'))
-@cherrypy.expose
-def users( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','users.html'))
-@cherrypy.expose
-def batches( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','batches.html'))
-@cherrypy.expose
-def getDefaultSequences(*args, **kwargs):
+@app.route('/campaigns')
+def campaigns_html():
+    return send_from_directory('HTML', 'campaigns.html')
+@app.route('/requests')
+def requests_html():
+    return send_from_directory('HTML', 'requests.html')
+@app.route('/edit')
+def edit_html():
+    return send_from_directory('HTML', 'edit.html')
+@app.route('/flows')
+def flows_html():
+    return send_from_directory('HTML', 'flows.html')
+@app.route('/chained_campaigns')
+def chained_campaigns_html():
+    return send_from_directory('HTML', 'chained_campaigns.html')
+@app.route('/chained_requests')
+def chained_requests_html():
+    return send_from_directory('HTML', 'chained_requests.html')
+@app.route('/priority_change')
+def priority_change_html():
+    return send_from_directory('HTML', 'priority_change.html')
+@app.route('/')
+def index_html():
+    return send_from_directory('HTML', 'index.html')
+@app.route('/create')
+def create_html():
+    return send_from_directory('HTML', 'create.html')
+@app.route('/injectAndLog')
+def injectAndLog_html():
+    return send_from_directory('HTML', 'injectAndLog.html')
+@app.route('/users')
+def users_html():
+    return send_from_directory('HTML', 'users.html')
+@app.route('/batches')
+def batches_html():
+    return send_from_directory('HTML', 'batches.html')
+@app.route('/getDefaultSequences')
+def getDefaultSequences():
     tmpSeq = sequence()._json_base__schema
     return json.dumps(tmpSeq)
-@cherrypy.expose
-def injection_status( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','injection_status.html'))
-@cherrypy.expose
-def mccms_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','mccms.html'))
-@cherrypy.expose
-def settings_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','settings.html'))
-@cherrypy.expose
-def invalidations_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','invalidations.html'))
-@cherrypy.expose
-def edit_many_html( *args, **kwargs):
-    return open(os.path.join(file_location,'HTML','edit_many.html'))
+@app.route('/injection_status')
+def injection_status_html():
+    return send_from_directory('HTML', 'injection_status.html')
+@app.route('/mccms')
+def mccms_html():
+    return send_from_directory('HTML', 'mccms.html')
+@app.route('/settings')
+def settings_html():
+    return send_from_directory('HTML', 'settings.html')
+@app.route('/invalidations')
+def invalidations_html():
+    return send_from_directory('HTML', 'invalidations.html')
+@app.route('/edit_many')
+def edit_many_html():
+    return send_from_directory('HTML', 'edit_many.html')
+@app.route('/dashboard')
+def dashboard_html():
+    return send_from_directory('HTML', 'dashboard.html')
+@app.route('/scripts/<path:path>')
+def send_static(path):
+    return send_from_directory('scripts', path)
+@app.route('/HTML/<path:path>')
+def send_HTML(path):
+    return send_from_directory('HTML', path)
 
-
-@cherrypy.expose
-def dashboard_html(*args, **kwargs):
-    return open(os.path.join(file_location, 'HTML', 'dashboard.html'))
-@cherrypy.expose
-def graph_painter_html(*args, **kwargs):
-    return open(os.path.join(file_location, 'HTML', 'graph_painter.html'))
-
-@cherrypy.expose
-def graph_representation_html(*args, **kwargs):
-    return open(os.path.join(file_location, 'HTML', 'graph.html'))
-
-### END OF UPDATED METHODS###
-root = index
-
-# web apps (relevant to interface)
-root.search = Search()
-root.multi_search = MultiSearch()
-
-root.campaigns = campaigns_html
-root.chained_campaigns = chained_campaigns_html
-root.chained_requests = chained_requests_html
-root.requests = requests_html
-root.flows = flows_html
-root.edit = edit_html
-root.create = create_html
-root.priority_change = priority_change_html
-root.getDefaultSequences = getDefaultSequences
-root.injectAndLog = injectAndLog
-root.users = users
-root.batches = batches
-root.invalidations = invalidations_html
-root.injection_status = injection_status
-root.dashboard = dashboard_html
-root.edit_many = edit_many_html
-root.mccms = mccms_html
-root.settings = settings_html
-root.graph = graph_painter_html
-root.graph_representation = graph_representation_html
+api.add_resource(Search, '/search')
+api.add_resource(MultiSearch, '/multi_search')
 
 # REST API - RESTResourceIndex is the directory of available commands
-root.restapi = RESTResourceIndex()
-root.restapi.requests = RESTResourceIndex()
-root.restapi.campaigns = RESTResourceIndex()
-root.restapi.chained_requests = RESTResourceIndex()
-root.restapi.chained_campaigns = RESTResourceIndex()
-root.restapi.actions = RESTResourceIndex()
-root.restapi.flows = RESTResourceIndex()
-root.restapi.users = RESTResourceIndex()
-root.restapi.batches = RESTResourceIndex()
-root.restapi.invalidations = RESTResourceIndex()
-root.restapi.dashboard = RESTResourceIndex()
-root.restapi.mccms = RESTResourceIndex()
-root.restapi.settings = RESTResourceIndex()
-root.restapi.tags = RESTResourceIndex()
-root.restapi.control = RESTResourceIndex()
-root.restapi.notifications = RESTResourceIndex()
-
-## create a restriction-free urls, with limited capabilities
-root.public = RESTResourceIndex()
-root.public.restapi = RESTResourceIndex()
-root.public.restapi.requests = RESTResourceIndex()
-root.public.restapi.requests.get = GetRequest()
-root.public.restapi.requests.get_fragment = GetFragmentForRequest()
-root.public.restapi.requests.get_setup = GetSetupForRequest()
-root.public.restapi.requests.get_test = GetSetupForRequest(mode='test')
-root.public.restapi.requests.get_valid = GetSetupForRequest(mode='valid')
-root.public.restapi.requests.get_status = GetStatus()
-root.public.restapi.requests.get_actors = GetActors()
-root.public.restapi.requests.produces = GetRequestByDataset()
-root.public.restapi.requests.output = GetRequestOutput()
-root.public.restapi.chained_requests = RESTResourceIndex()
-root.public.restapi.chained_requests.get_setup = GetSetupForChains()
-root.public.restapi.chained_requests.get_test = GetSetupForChains(mode='test')
-root.public.restapi.chained_requests.get_valid = GetSetupForChains(mode='valid')
-root.public.restapi.chained_requests.get_dict = TaskChainDict()
-root.public.restapi.requests.get_dict = TaskChainRequestDict()
-
-# REST API - root.restapi.[db name].[action]
-# dwells on : /restapi/[db_name]/[action]
-
-# - 'save' actions require a JSON object through PUT requests
-# - 'delete' actions require a DELETE HTTP request
-# - 'update' actions require a JSON object with a CouchDB _rev defined through a PUT HTTP request
-# - 'get' actions are request through HTTP GET and return a json
-
-# REST User actions
-root.restapi.users.get_role = GetUserRole()
-root.restapi.users.get_pwg = GetUserPWG()
-root.restapi.users.get_all_roles = GetAllRoles()
-root.restapi.users.get_all_users = GetAllUsers()
-root.restapi.users.add_role = AddRole()
-root.restapi.users.ask_role = AskRole()
-root.restapi.users.change_role = ChangeRole()
-root.restapi.users.get = GetUser()
-root.restapi.users.save = SaveUser()
-root.restapi.users.update = SaveUser()
-root.restapi.users.fill_full_names = FillFullNames()
-root.restapi.users.notify_pwg = NotifyPWG()
-
-# REST request actions
-root.restapi.requests.save = ImportRequest()
-root.restapi.requests.update = UpdateRequest()
-root.restapi.requests.manage = ManageRequest()
-root.restapi.requests.delete = DeleteRequest()
-root.restapi.requests.clone = CloneRequest()
-root.restapi.requests.get = GetRequest()
-root.restapi.requests.get_cmsDrivers = GetCmsDriverForRequest()
-root.restapi.requests.approve = ApproveRequest()
-root.restapi.requests.reset = ResetRequestApproval()
-root.restapi.requests.soft_reset = ResetRequestApproval(hard=False)
-root.restapi.requests.status = SetStatus()
-root.restapi.requests.upload = UploadConfig()
-root.restapi.requests.inject = InjectRequest()
-root.restapi.requests.injectlog = ReadInjectionLog()
-root.restapi.requests.editable = GetEditable()
-root.restapi.requests.default_generator_params = GetDefaultGenParams()
-root.restapi.requests.register = RegisterUser()
-root.restapi.requests.notify = NotifyUser()
-root.restapi.requests.migrate = MigrateRequest()
-root.restapi.requests.inspect = InspectStatus()
-root.restapi.requests.update_stats = UpdateStats()
-root.restapi.requests.listwithfile = RequestsFromFile()
-root.restapi.requests.test = TestRequest()
-root.restapi.requests.searchable = SearchableRequest()
-root.restapi.requests.reminder = RequestsReminder()
-root.restapi.requests.stalled = StalledReminder()
-root.restapi.requests.perf_report = RequestPerformance()
-root.restapi.requests.update_many = UpdateMany()
-root.restapi.requests.all_revs = GetAllRevisions()
-root.restapi.requests.search_view = ListRequestPrepids()
-root.restapi.requests.option_reset = OptionResetForRequest()
-root.restapi.requests.get_inject = GetInjectCommand()
-root.restapi.requests.get_upload = GetUploadCommand()
-root.restapi.requests.unique_values = GetUniqueValues()
-root.restapi.requests.add_forcecomplete = PutToForceComplete()
-root.restapi.requests.forcecomplete = ForceCompleteMethods()
-root.restapi.requests.reserveandapprove = Reserve_and_ApproveChain()
-root.restapi.requests.priority_change = RequestsPriorityChange()
-
-# REST Campaign Actions
-root.restapi.campaigns.save = CreateCampaign()
-root.restapi.campaigns.update = UpdateCampaign()
-root.restapi.campaigns.delete = DeleteCampaign()
-root.restapi.campaigns.get = GetCampaign()
-root.restapi.campaigns.approve = ApproveCampaign()
-root.restapi.campaigns.get_all = GetAllCampaigns()
-root.restapi.campaigns.status = ToggleCampaignStatus()
-root.restapi.campaigns.get_cmsDrivers = GetCmsDriverForCampaign()
-root.restapi.campaigns.migrate = MigratePage()
-root.restapi.campaigns.listall = ListAllCampaigns()
-root.restapi.campaigns.inspect = InspectRequests()
-root.restapi.campaigns.inspectall = InspectCampaigns()
-
-# REST Chained Campaign Actions
-root.restapi.chained_campaigns.save = CreateChainedCampaign()
-root.restapi.chained_campaigns.delete = DeleteChainedCampaign()
-root.restapi.chained_campaigns.get = GetChainedCampaign()
-root.restapi.chained_campaigns.update = UpdateChainedCampaign()
-root.restapi.chained_campaigns.inspect = InspectChainedRequests()
-root.restapi.chained_campaigns.inspectall = InspectChainedCampaigns()
-root.restapi.chained_campaigns.select = SelectNewChainedCampaigns()
-root.restapi.chained_campaigns.search_view = ListChainCampaignPrepids()
-root.restapi.chained_campaigns.priority_change = ChainedCampaignsPriorityChange()
-
-# REST Chained Request Actions
-root.restapi.chained_requests.request_chainid = ChainedRequestPrepId()
-root.restapi.chained_requests.save = CreateChainedRequest()
-root.restapi.chained_requests.update = UpdateChainedRequest()
-root.restapi.chained_requests.delete = DeleteChainedRequest()
-root.restapi.chained_requests.get = GetChainedRequest()
-root.restapi.chained_requests.flow = FlowToNextStep()
-root.restapi.chained_requests.rewind = RewindToPreviousStep()
-root.restapi.chained_requests.approve = ApproveChainedRequest()
-root.restapi.chained_requests.inspect = InspectChain()
-root.restapi.chained_requests.fullhistory = GetConcatenatedHistory()
-root.restapi.chained_requests.searchable = SearchableChainedRequest()
-root.restapi.chained_requests.inject = InjectChainedRequest(mode='inject')
-root.restapi.chained_requests.soft_reset = SoftResetChainedRequest()
-root.restapi.chained_requests.get_inject = InjectChainedRequest(mode='show')
-root.restapi.chained_requests.test = TestChainedRequest()
-root.restapi.chained_requests.test_ds_output = TestOutputDSAlgo()
-root.restapi.chained_requests.force_done = ForceChainReqToDone()
-root.restapi.chained_requests.back_forcedone = ForceStatusDoneToProcessing()
-root.restapi.chained_requests.force_flow = ToForceFlowList()
-root.restapi.chained_requests.remove_force_flow = RemoveFromForceFlowList()
-root.restapi.chained_requests.priority_change = ChainedRequestsPriorityChange()
-root.restapi.chained_requests.from_ticket = ChainsFromTicket()
-
-# REST Flow Actions
-root.restapi.flows.get = GetFlow()
-root.restapi.flows.save = CreateFlow()
-root.restapi.flows.update = UpdateFlow()
-root.restapi.flows.delete = DeleteFlow()
-root.restapi.flows.approve = ApproveFlow()
-
-# REST Batches Actions
-root.restapi.batches.get = GetBatch()
-root.restapi.batches.save = SaveBatch()
-root.restapi.batches.update = UpdateBatch()
-root.restapi.batches.get_all_batches = GetAllBatches()
-root.restapi.batches.announce = AnnounceBatch()
-root.restapi.batches.redirect = GetIndex()
-root.restapi.batches.inspect = InspectBatches()
-root.restapi.batches.reset = ResetBatch()
-root.restapi.batches.hold = HoldBatch()
-root.restapi.batches.notify = NotifyBatch()
-
-# REST invalidation Actions
-root.restapi.invalidations.get = GetInvalidation()
-root.restapi.invalidations.delete = DeleteInvalidation()
-root.restapi.invalidations.announce = AnnounceInvalidations()
-root.restapi.invalidations.clear = ClearInvalidations()
-root.restapi.invalidations.acknowledge = AcknowledgeInvalidation()
-root.restapi.invalidations.new_to_hold = PutOnHoldInvalidation()
-root.restapi.invalidations.hold_to_new = PutHoldtoNewInvalidations()
-
-# REST dashboard Actions
-root.restapi.dashboard.get_bjobs = GetBjobs()
-root.restapi.dashboard.get_log_feed = GetLogFeed()
-root.restapi.dashboard.get_logs = GetLogs()
-root.restapi.dashboard.get_revision = GetRevision()
-root.restapi.dashboard.get_start_time = GetStartTime(start_time)
-root.restapi.dashboard.get_verbosities = GetVerbosities()
-root.restapi.dashboard.get_connection = TestConnection()
-root.restapi.dashboard.get_releases = ListReleases()
-root.restapi.dashboard.lock_info = GetLocksInfo()
-root.restapi.dashboard.queue_info = GetQueueInfo()
-
-# REST mccms Actions
-root.restapi.mccms.get = GetMccm()
-root.restapi.mccms.update = UpdateMccm()
-root.restapi.mccms.save = CreateMccm()
-root.restapi.mccms.delete = DeleteMccm()
-root.restapi.mccms.cancel = CancelMccm()
-root.restapi.mccms.editable = GetEditableMccmFields()
-root.restapi.mccms.generate = GenerateChains()
-root.restapi.mccms.reminder = MccMReminderProdManagers()
-root.restapi.mccms.reminder_gen_contacts = MccMReminderGenContacts()
-root.restapi.mccms.update_total_events = CalculateTotalEvts()
-
-# REST settings Actions
-root.restapi.settings.get = GetSetting()
-root.restapi.settings.update = UpdateSetting()
-root.restapi.settings.save = SaveSetting()
-
-# REST tags Actions
-root.restapi.tags.get_all = GetTags()
-root.restapi.tags.add = AddTag()
-root.restapi.tags.remove = RemoveTag()
-
-# REST control Actions
-root.restapi.control.renew_cert = RenewCertificate()
-root.restapi.control.set_verbosity = ChangeVerbosity()
-root.restapi.control.turn_off = TurnOffServer()
-root.restapi.control.reset_rest_counter = ResetRESTCounters()
-root.restapi.control.communicate = Communicate()
-
+api.add_resource(
+    RESTResourceIndex,
+    '/restapi',
+    '/restapi/requests',
+    '/restapi/campaigns',
+    '/restapi/chained_requests',
+    '/restapi/chained_campaigns',
+    '/restapi/actions',
+    '/restapi/flows',
+    '/restapi/users',
+    '/restapi/batches',
+    '/restapi/invalidations',
+    '/restapi/dashboard',
+    '/restapi/mccms',
+    '/restapi/settings',
+    '/restapi/tags',
+    '/restapi/control',
+    '/restapi/notifications',
+    '/public',
+    '/public/restapi',
+    '/public/restapi/requests',
+    '/public/restapi/chained_requests'
+)
+#
+### create a restriction-free urls, with limited capabilities
+api.add_resource(GetFragmentForRequest, '/public/restapi/requests/get_fragment/<string:request_id>')
+api.add_resource(
+    GetSetupForRequest,
+    '/public/restapi/requests/get_test/<string:prepid>/<int:events>',
+    '/public/restapi/requests/get_test/<string:prepid>',
+    '/public/restapi/requests/get_setup/<string:prepid>/<int:events>',
+    '/public/restapi/requests/get_setup/<string:prepid>',
+    '/public/restapi/requests/get_valid/<string:prepid>/<int:events>',
+    '/public/restapi/requests/get_valid/<string:prepid>'
+)
+api.add_resource(GetStatus, '/public/restapi/requests/get_status/<string:request_ids>')
+api.add_resource(
+    GetActors,
+    '/public/restapi/requests/get_actors/<string:request_id>',
+    '/public/restapi/requests/get_actors/<string:request_id>/<string:what>'
+)
+api.add_resource(GetRequestByDataset, '/public/restapi/requests/produces/<path:dataset>')
+api.add_resource(
+    GetRequestOutput,
+    '/public/restapi/requests/output/<string:prepid>',
+    '/public/restapi/requests/output/<string:prepid>/<string:is_chain>'
+)
+api.add_resource(
+    GetSetupForChains,
+    '/public/restapi/chained_requests/get_setup/<string:chained_request_id>',
+    '/public/restapi/chained_requests/get_test/<string:chained_request_id>',
+    '/public/restapi/chained_requests/get_valid/<string:chained_request_id>'
+)
+api.add_resource(TaskChainDict, '/public/restapi/chained_requests/get_dict/<string:chained_request_id>')
+api.add_resource(TaskChainRequestDict, '/public/restapi/requests/get_dict/<string:request_id>')
+#
+## REST User actions
+api.add_resource(GetUserRole, '/restapi/users/get_role')
+api.add_resource(
+    GetUserPWG,
+    '/restapi/users/get_pwg',
+    '/restapi/users/get_pwg/<string:user_id>'
+)
+api.add_resource(AddRole, '/restapi/users/add_role')
+api.add_resource(AskRole, '/restapi/users/ask_role/<string:pwgs>')
+api.add_resource(ChangeRole, '/restapi/users/change_role/<string:user_id>/<string:action>')
+api.add_resource(GetUser, '/restapi/users/get/<string:user_id>')
+api.add_resource(
+    SaveUser,
+    '/restapi/users/save',
+    '/restapi/users/update'
+)
+api.add_resource(NotifyPWG, '/restapi/users/notify_pwg')
+#
+## REST request actions
+api.add_resource(ImportRequest, '/restapi/requests/save')
+api.add_resource(UpdateRequest, '/restapi/requests/update')
+api.add_resource(ManageRequest, '/restapi/requests/manage')
+api.add_resource(DeleteRequest, '/restapi/requests/delete/<string:request_id>')
+api.add_resource(
+    CloneRequest,
+    '/restapi/requests/clone',
+    '/restapi/requests/clone/<string:request_id>'
+)
+api.add_resource(
+    GetRequest,
+    '/restapi/requests/get/<string:request_id>',
+    '/public/restapi/requests/get/<string:request_id>'
+)
+api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
+api.add_resource(
+    ApproveRequest,
+    '/restapi/requests/approve/<string:request_id>',
+    '/restapi/requests/approve/<string:request_id>/<int:step>'
+)
+api.add_resource(
+    ResetRequestApproval,
+    '/restapi/requests/reset/<string:request_id>',
+    '/restapi/requests/soft_reset/<string:request_id>'
+)
+api.add_resource(
+    SetStatus,
+    '/restapi/requests/status/<string:request_ids>',
+    '/restapi/requests/status/<string:request_ids>/<int:step>'
+)
+api.add_resource(InjectRequest, '/restapi/requests/inject/<string:request_ids>')
+api.add_resource(
+    ReadInjectionLog,
+    '/restapi/requests/injectlog/<string:request_id>',
+    '/restapi/requests/injectlog/<string:request_id>/<int:lines>'
+)
+api.add_resource(GetEditable, '/restapi/requests/editable/<string:request_id>')
+api.add_resource(GetDefaultGenParams, '/restapi/requests/default_generator_params/<string:request_id>')
+api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
+api.add_resource(NotifyUser, '/restapi/requests/notify')
+api.add_resource(
+    InspectStatus,
+    '/restapi/requests/inspect/<string:request_ids>',
+    '/restapi/requests/inspect/<string:request_ids>/<string:force>'
+)
+api.add_resource(UpdateStats, '/restapi/requests/update_stats/<string:request_id>')
+api.add_resource(RequestsFromFile, '/restapi/requests/listwithfile')
+api.add_resource(TestRequest, '/restapi/requests/test/<string:request_id>')
+api.add_resource(SearchableRequest, '/restapi/requests/searchable')
+api.add_resource(
+    RequestsReminder,
+    '/restapi/requests/reminder',
+    '/restapi/requests/reminder/<string:what>',
+    '/restapi/requests/reminder/<string:what>/<string:who>'
+)
+api.add_resource(
+    StalledReminder,
+    '/restapi/requests/stalled',
+    '/restapi/requests/stalled/<int:time_since>',
+    '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
+    '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>'
+)
+api.add_resource(UpdateMany, '/restapi/requests/update_many')
+api.add_resource(GetAllRevisions, '/restapi/requests/all_revs/<string:request_id>')
+api.add_resource(ListRequestPrepids, '/restapi/requests/search_view')
+api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:request_ids>')
+api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
+api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
+api.add_resource(GetUniqueValues, '/restapi/requests/unique_values/<string:field_name>')
+api.add_resource(PutToForceComplete, '/restapi/requests/add_forcecomplete')
+api.add_resource(ForceCompleteMethods, '/restapi/requests/forcecomplete')
+api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
+api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
+#
+## REST Campaign Actions
+api.add_resource(CreateCampaign, '/restapi/campaigns/save')
+api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
+api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:campaign_id>')
+api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:campaign_id>')
+api.add_resource(
+    ApproveCampaign,
+    '/restapi/campaigns/approve/<string:campaign_ids>',
+    '/restapi/campaigns/approve/<string:campaign_ids>/<int:index>'
+)
+api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campaign_id>')
+api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
+api.add_resource(ListAllCampaigns, '/restapi/campaigns/listall')
+api.add_resource(InspectRequests, '/restapi/campaigns/inspect/<string:campaign_id>')
+api.add_resource(InspectCampaigns, '/restapi/campaigns/inspectall/<string:group>')
+#
+## REST Chained Campaign Actions
+api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
+api.add_resource(
+    DeleteChainedCampaign,
+    '/restapi/chained_campaigns/delete/<string:chained_campaign_id>',
+    '/restapi/chained_campaigns/delete/<string:chained_campaign_id>/<string:force>'
+)
+api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:chained_campaign_id>')
+api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
+api.add_resource(InspectChainedRequests, '/restapi/chained_campaigns/inspect/<string:chained_campaign_ids>')
+api.add_resource(InspectChainedCampaigns, '/restapi/chained_campaigns/inspectall/<string:action>')
+api.add_resource(SelectNewChainedCampaigns, '/restapi/chained_campaigns/select/<string:flow_id>')
+api.add_resource(ChainedCampaignsPriorityChange, '/restapi/chained_campaigns/priority_change')
+#
+## REST Chained Request Actions
+api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
+api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
+api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:chained_request_id>')
+api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:chained_request_id>')
+api.add_resource(
+    FlowToNextStep,
+    '/restapi/chained_requests/flow',
+    '/restapi/chained_requests/flow/<string:chained_request_id>',
+    '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>',
+    '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>/<string:reserve_campaign>'
+)
+api.add_resource(RewindToPreviousStep, '/restapi/chained_requests/rewind/<string:chained_request_ids>')
+api.add_resource(
+    ApproveChainedRequest,
+    '/restapi/chained_requests/approve/<string:chained_request_id>',
+    '/restapi/chained_requests/approve/<string:chained_request_id>/<int:step>'
+)
+api.add_resource(InspectChain, '/restapi/chained_requests/inspect/<string:chained_request_id>')
+api.add_resource(
+    SearchableChainedRequest,
+    '/restapi/chained_requests/searchable',
+    '/restapi/chained_requests/searchable/<string:action>'
+)
+api.add_resource(
+    InjectChainedRequest,
+    '/restapi/chained_requests/inject/<string:chained_request_id>',
+    '/restapi/chained_requests/get_inject/<string:chained_request_id>'
+)
+api.add_resource(SoftResetChainedRequest, '/restapi/chained_requests/soft_reset/<string:chained_request_id>')
+api.add_resource(TestChainedRequest, '/restapi/chained_requests/test/<string:chained_request_id>')
+api.add_resource(ForceChainReqToDone, '/restapi/chained_requests/force_done/<string:chained_request_ids>')
+api.add_resource(ForceStatusDoneToProcessing, '/restapi/chained_requests/back_forcedone/<string:chained_request_ids>')
+api.add_resource(ToForceFlowList, '/restapi/chained_requests/force_flow/<string:chained_request_ids>')
+api.add_resource(RemoveFromForceFlowList, '/restapi/chained_requests/remove_force_flow/<string:chained_request_ids>')
+api.add_resource(ChainedRequestsPriorityChange, '/restapi/chained_requests/priority_change')
+api.add_resource(ChainsFromTicket, '/restapi/chained_requests/from_ticket')
+#
+## REST Flow Actions
+api.add_resource(GetFlow, '/restapi/flows/get/<string:flow_id>')
+api.add_resource(CreateFlow, '/restapi/flows/save')
+api.add_resource(UpdateFlow, '/restapi/flows/update')
+api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:flow_id>')
+api.add_resource(
+    ApproveFlow,
+    '/restapi/flows/approve/<string:flow_ids>',
+    '/restapi/flows/approve/<string:flow_ids>/<int:step>'
+)
+#
+## REST Batches Actions
+api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
+api.add_resource(AnnounceBatch, '/restapi/batches/announce')
+api.add_resource(
+    InspectBatches,
+    '/restapi/batches/inspect',
+    '/restapi/batches/inspect/<string:batch_id>/<int:n_to_go>',
+    '/restapi/batches/inspect/<string:batch_id>'
+)
+api.add_resource(ResetBatch, '/restapi/batches/reset/<string:batch_ids>')
+api.add_resource(HoldBatch, '/restapi/batches/hold/<string:batch_ids>')
+api.add_resource(NotifyBatch, '/restapi/batches/notify')
+#
+## REST invalidation Actions
+api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
+api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:invalidation_id>')
+api.add_resource(AnnounceInvalidations, '/restapi/invalidations/announce')
+api.add_resource(ClearInvalidations, '/restapi/invalidations/clear')
+api.add_resource(AcknowledgeInvalidation, '/restapi/invalidations/acknowledge/<string:invalidation_id>')
+api.add_resource(PutOnHoldInvalidation, '/restapi/invalidations/new_to_hold')
+api.add_resource(PutHoldtoNewInvalidations, '/restapi/invalidations/hold_to_new')
+#
+## REST dashboard Actions
+api.add_resource(GetBjobs, '/restapi/dashboard/get_bjobs/<string:options>')
+api.add_resource(
+    GetLogFeed,
+    '/restapi/dashboard/get_log_feed/<string:filename>',
+    '/restapi/dashboard/get_log_feed/<string:filename>/<int:lines>'
+)
+api.add_resource(GetLogs, '/restapi/dashboard/get_logs')
+api.add_resource(GetRevision, '/restapi/dashboard/get_revision')
+api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time', resource_class_kwargs={'start_time': start_time})
+api.add_resource(GetVerbosities, '/restapi/dashboard/get_verbosities')
+api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
+api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
+#
+## REST mccms Actions
+api.add_resource(GetMccm, '/restapi/mccms/get/<string:mccm_id>')
+api.add_resource(UpdateMccm, '/restapi/mccms/update')
+api.add_resource(CreateMccm, '/restapi/mccms/save')
+api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:mccm_id>')
+api.add_resource(CancelMccm, '/restapi/mccms/cancel/<string:mccm_id>')
+api.add_resource(GetEditableMccmFields, '/restapi/mccms/editable/<string:mccm_id>')
+api.add_resource(
+    GenerateChains,
+    '/restapi/mccms/generate/<string:mccm_id>/<string:reserve_input>/<string:limit_campaign_id>',
+    '/restapi/mccms/generate/<string:mccm_id>/<string:reserve_input>',
+    '/restapi/mccms/generate/<string:mccm_id>'
+)
+api.add_resource(
+    MccMReminderProdManagers,
+    '/restapi/mccms/reminder',
+    '/restapi/mccms/reminder/<int:block_threshold>'
+)
+api.add_resource(MccMReminderGenContacts, '/restapi/mccms/reminder_gen_contacts')
+api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string:mccm_id>')
+#
+## REST settings Actions
+api.add_resource(GetSetting, '/restapi/settings/get/<string:setting_id>')
+api.add_resource(UpdateSetting, '/restapi/settings/update')
+api.add_resource(SaveSetting, '/restapi/settings/save')
+#
+## REST tags Actions
+api.add_resource(GetTags, '/restapi/tags/get_all')
+api.add_resource(AddTag, '/restapi/tags/add')
+api.add_resource(RemoveTag, '/restapi/tags/remove')
+#
+## REST control Actions
+api.add_resource(RenewCertificate, '/restapi/control/renew_cert')
+api.add_resource(ChangeVerbosity, '/restapi/control/set_verbosity/<int:level>')
+api.add_resource(
+    Communicate,
+    '/restapi/control/communicate',
+    '/restapi/control/communicate/<string:message_number>'
+)
+#
 # REST notification Actions
-root.restapi.notifications.check = CheckNotifications()
-root.restapi.notifications.fetch = FetchNotifications()
-root.restapi.notifications.seen = SaveSeen()
-root.restapi.notifications.fetch_actions = FetchActionObjects()
-root.restapi.notifications.fetch_group_actions = FetchGroupActionObjects()
-root.restapi.notifications.search = SearchNotifications()
+api.add_resource(CheckNotifications, '/restapi/notifications/check')
+api.add_resource(FetchNotifications, '/restapi/notifications/fetch')
+api.add_resource(SaveSeen, '/restapi/notifications/seen')
+api.add_resource(FetchActionObjects, '/restapi/notifications/fetch_actions')
+api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_actions')
+api.add_resource(SearchNotifications, '/restapi/notifications/search')
 
 ##Define loggers
 
-log = cherrypy.log
-log.error_file = None
-log.access_file = None
-
 #ERROR log file
-maxBytes = getattr(log, "rot_maxBytes", 10000000)
-backupCount = getattr(log, "rot_backupCount", 1000)
-fname = getattr(log, "rot_error_file", "logs/error.log")
+error_logger = app.logger
+maxBytes = getattr(error_logger, "rot_maxBytes", 10000000)
+backupCount = getattr(error_logger, "rot_backupCount", 1000)
+fname = getattr(error_logger, "rot_error_file", "logs/error.log")
 
 logger = logging.getLogger()
 logger.setLevel(0)
@@ -380,8 +437,6 @@ error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] 
 usr_filt = UserFilter()
 ha.setFormatter(error_formatter)
 ha.addFilter(usr_filt)
-log.error_log.addHandler(ha)
-error_logger = logging.getLogger("mcm_error")
 error_logger.addHandler(ha)
 
 # set up injection logger
@@ -394,7 +449,8 @@ hi.setFormatter(inject_formatter)
 inject_logger.addHandler(hi)
 
 #Access log file
-fname = getattr(log, "rot_access_file", "logs/access.log")
+access_logger = logging.getLogger("access_log")
+fname = getattr(access_logger, "rot_access_file", "logs/access.log")
 h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
 rest_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s',
         datefmt='%d/%b/%Y:%H:%M:%S')
@@ -404,29 +460,43 @@ h.setLevel(logging.DEBUG)
 h.setFormatter(rest_formatter)
 h.addFilter(usr_filt)
 h.addFilter(mem_filt)
-log.access_log.addHandler(h)
+access_logger.addHandler(h)
 
-def start():
-    error_logger.info(".mcm_rest_counter persistence opening")
-    error_logger.info("CherryPy version:%s" % (cherrypy.__version__))
-    RESTResource.counter = shelve.open('.mcm_rest_counter')
+#Log accesses
+def after_this_request(f):
+    if not hasattr(g, 'after_request_callbacks'):
+        g.after_request_callbacks = []
+    g.after_request_callbacks.append(f)
+    return f
 
-def stop():
-    error_logger.info(".mcm_rest_counter persistence closing")
+@app.after_request
+def call_after_request_callbacks(response):
+    for callback in getattr(g, 'after_request_callbacks', ()):
+        callback(response)
+    return response
+
+@app.before_request
+def log_access():
+    message = "%s %s %s %s" % (request.method, request.path, "%s", request.headers['User-Agent'])
+    @after_this_request
+    def after_request(response):
+        g.message = g.message % response.status_code
+        access_logger.info(g.message)
+    g.message = message
+
+
+def run_flask():
+    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt','/etc/pki/tls/private/localhost.key'))
+
+#Execute this function when stopping flask
+def at_flask_exit(*args):
     RESTResource.counter.close()
-    error_logger.info("Flushing communications")
     com = communicator()
     com.flush(0)
+    server.terminate()
 
-def maintain():
-    if not cherrypy.engine.execv:
-        error_logger.info("going to maintenance")
-        subprocess.call("python2.6 main_tenance.py &", shell=True)
+signal.signal(signal.SIGTERM, at_flask_exit)
 
-cherrypy.engine.subscribe('start', start)
-cherrypy.engine.subscribe('stop', stop)
-cherrypy.engine.subscribe('exit', maintain)
-cherrypy.engine.signal_handler.handlers['SIGINT'] = cherrypy.engine.exit
-
-#START the engine
-cherrypy.quickstart(root, config='configuration/cherrypy.conf')
+# For somereason the process doesn't finish when you send a SIGTERM so we encapsulate the process in another one and we terminate it by hand
+server = Process(target=run_flask)
+server.start()

@@ -62,26 +62,13 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
-    $scope.turnOffServer = function() {
-      $scope.turn_off_button_clicked = true;
-      var promise = $http.get("restapi/control/turn_off");
-      promise.then(function(){
-        alert("Server turned off");
-          setTimeout(function(){$window.location.reload()}, 5000);
-      }, function(){
-        alert("Couldn't turn off server");
-            $scope.turn_off_button_clicked = false;
-          setTimeout(function(){$window.location.reload()}, 1000);
-      });
-    };
-
     $scope.openPage = function(address) {
       $window.open(address);
     };
 
     $scope.getBjobsData = function(){
       var bjobs_options_array = removeEmptyString($scope.bjobsOptions);
-      var bjobs_options = bjobs_options_array.join("/");
+      var bjobs_options = bjobs_options_array.join(",");
       var promise = $http.get("restapi/dashboard/get_bjobs/" + bjobs_options.toString());
       promise.then(function(data, status){
         $scope.update["success"] = true;
@@ -210,15 +197,6 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.logs.verbosity =  verbosities[selected_verb];
       }, function(data){
         alert("Error getting verbosity information: " +data.status);
-      });
-    };
-
-    $scope.verbositySelected = function(verbosity) {
-      $scope.logs.verbosity = $scope.logs.verbosities[verbosity];
-      var promise = $http.get("restapi/control/set_verbosity/" + verbosity);
-      promise.then(function(data){
-      }, function(data){
-        alert("Error setting verbosity: " +data.status);
       });
     };
 

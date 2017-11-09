@@ -1,25 +1,7 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
   <title>McM maintenance</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
-
-  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-
-  <!--[IF IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-    </script>
-  <![endif]-->
-  <![if !IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-    </script>
-  <![endif]>
-
-<script src="scripts/main_controller.js"></script>
-
 </head>
 <body ng-controller="mainCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
@@ -27,7 +9,6 @@
     <div align="middle">
       <h2>McM page is down to <font color="red">maintenance</font></h2>
       <p>We will be back as soon as possible.</p>
-      <button type="button" class="btn btn-success" ng-click="turnOnServer()" ng-disabled="turn_on_button_clicked">Turn on McM</button>
     </div>
   </div><!--End of container -->
 </body>
