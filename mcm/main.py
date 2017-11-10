@@ -506,5 +506,7 @@ def at_flask_exit(*args):
 signal.signal(signal.SIGTERM, at_flask_exit)
 
 # For somereason the process doesn't finish when you send a SIGTERM so we encapsulate the process in another one and we terminate it by hand
-server = Process(target=run_flask)
-server.start()
+#server = Process(target=run_flask)
+#server.start()
+if __name__ == '__main__':
+    run_flask()
