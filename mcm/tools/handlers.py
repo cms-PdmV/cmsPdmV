@@ -385,7 +385,7 @@ class ChainRequestInjector(Handler):
         if l_type.isDev():
             there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        cmd += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
+        cmd += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/chained_requests/get_dict/%s %s \n'%(l_type.baseurl(), self.prepid, there)
         return cmd
 
     def internal_run(self):

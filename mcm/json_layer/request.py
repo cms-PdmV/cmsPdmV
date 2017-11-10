@@ -2654,7 +2654,7 @@ class request(json_base):
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
         command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        command += 'wmcontrol.py --dont_approve --url-dict %s/public/restapi/requests/get_dict/%s %s \n'%(l_type.baseurl(), self.get_attribute('prepid'), test_params)
+        command += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/requests/get_dict/%s %s \n'%(l_type.baseurl(), self.get_attribute('prepid'), test_params)
         return command
 
     def get_events_per_lumi(self, num_cores):
