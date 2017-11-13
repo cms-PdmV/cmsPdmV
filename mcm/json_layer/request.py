@@ -2070,7 +2070,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if (rough_efficiency <= set_efficiency*0.5):
+        if (rough_efficiency <= set_efficiency * (1 - 0.5)):
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
@@ -2080,7 +2080,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if (rough_efficiency >= set_efficiency*1.5):
+        if (rough_efficiency >= set_efficiency * (1 + 0.5)):
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[self.get_attribute('prepid')],
@@ -2114,7 +2114,7 @@ class request(json_base):
             raise Exception(message)
 
         #TO-DO: change the 0.2 to value from settings DB
-        if measured_time_evt <= self.get_sum_total_events() * (1 - 0.2):
+        if (measured_time_evt <= self.get_sum_total_events() * (1 - 0.2)):
             subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured and set to the request from %s events (ran %s).') % (
@@ -2135,7 +2135,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        elif measured_time_evt >= self.get_sum_total_events() * (1 + 0.2):
+        elif (measured_time_evt >= self.get_sum_total_events() * (1 + 0.2)):
             subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured and set to the request from %s events (ran %s).') % (
@@ -2160,6 +2160,7 @@ class request(json_base):
             #fine tune the value
             self.logger.debug("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
                     self.get_sum_total_events(), measured_time_evt, evts_pass))
+
             self.set_attribute('time_event', [measured_time_evt])
 
         #return False
@@ -2349,8 +2350,8 @@ class request(json_base):
             efficiency, efficiency_error, timing, file_size ))
 
         self.check_gen_efficiency(geninfo, total_event_in, total_event)
-        self.check_time_event(total_event_in, total_event, timing)
         self.check_cpu_efficiency(total_job_cpu, total_job_time)
+        self.check_time_event(total_event_in, total_event, timing)
 
         #some checks if we succeeded in parsing the values
         if file_size:
