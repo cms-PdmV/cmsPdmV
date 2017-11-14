@@ -167,7 +167,10 @@ class RequestSubmitter(Handler):
             try:
                 okay, req = self.check_request()
                 if not okay: return False
-                batch_name = BatchPrepId().next_id(req.json())
+
+                batch_name = BatchPrepId().next_batch_id(req.get_attribute("member_of_campaign"),
+                        create_batch=True)
+
                 semaphore_events.increment(batch_name) # so it's not possible to announce while still injecting
                 executor = ssh_executor(server='vocms081.cern.ch')
                 try:

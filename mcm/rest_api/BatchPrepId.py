@@ -27,46 +27,41 @@ class BatchPrepId():
             flown_with="", create_batch=True):
 
         with locker.lock('batch name clashing protection'):
+            self.bdb.logger.debug("working on batch prepid")
             if flown_with:
                 batchName = flown_with+'_'+next_campaign
             else:
                 batchName = next_campaign
 
             #### doing the query by hand
-            res = self.bdb.get_all()
-            res_this = filter(lambda x: x['prepid'].split('-')[0] == batchName, res)
-            ## filter to have the ones of that family, that are NEW or on hold
-            res_new = filter(lambda x: x['status']=='new' or x['status']=='hold', res_this)
-
-            ## add limitation to version, extension and process string
-            res_new = filter(lambda x: x['version'] == version, res_new)
-            res_new = filter(lambda x: x['extension'] == extension, res_new)
-            res_new = filter(lambda x: x['process_string'] == process_string, res_new)
-
-            ## limit to a certain number of entry per batch : at name reservation time, so it does not work if one submitts more at a time
+            #res = self.bdb.get_all()
+            __query_options = {"endkey":'"%s-00001"' % (batchName),
+                    "startkey":'"%s-99999"' % (batchName),
+                    "descending":"true", "limit":99999}
             max_in_batch = settings().get_value('max_in_batch')
-            # for existing batches
-            res_new = filter(lambda x: len(x['requests']) <= max_in_batch, res_new)
-            # for dynamic allocation from locks
-            res_new = filter(lambda x: semaphore_events.count(x['prepid']) <= max_in_batch, res_new)
+            all_batches = self.bdb.raw_query("prepid", __query_options)
+            new_batch = True
 
-
-            ##get only the serial number of those
-            res_new = map(lambda x: int(x['prepid'].split('-')[-1]), res_new)
-
-            ##find out the next one
-            if not res_new:
-                ##no open batch of this kind
-                res_next = filter(lambda x: x['prepid'].split('-')[0].split('_')[-1] == next_campaign.split('_')[-1] , res)
-                if not res_next:
-                    ## not even a document with *_<campaign>-* existing: ---> creating a new family
-                    batchNumber = 1
-                else:
-                    ## pick up the last+1 serial number of *_<campaign>-*  family
-                    batchNumber = max(map(lambda x: int(x['prepid'].split('-')[-1]), res_next)) + 1
+            if len(all_batches) != 0:
+                ##we already have some existing batches, check for appending
+                for el in all_batches:
+                    #get a single batch
+                    batch = self.bdb.get(el["id"])
+                    if batch["status"] == "new" and len(batch["requests"]) < max_in_batch:
+                        #check if batch is not locked in other threads.
+                        if semaphore_events.count(batch['prepid']) < max_in_batch:
+                            ##we found a needed batch
+                            self.bdb.logger.debug("found a matching batch:%s" % (batch["prepid"]))
+                            batchNumber = int(batch["prepid"].split("-")[-1])
+                            new_batch = False
+                            break
+                if new_batch:
+                    ##we default to max batch and increment its number
+                    self.bdb.logger.debug("no new batch. incementing:%s +1" % (batch["prepid"]))
+                    batchNumber = int(all_batches[0]["id"].split("-")[-1]) + 1
             else:
-                ## pick up the last serial number of that family
-                batchNumber = max(res_new)
+                self.bdb.logger.debug("creating new batch:%s" % (batchName))
+                batchNumber = 1
 
             batchName += '-%05d' % (batchNumber)
 

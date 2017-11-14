@@ -1,5 +1,5 @@
 import time
-from json import dumps, loads
+from simplejson import dumps, loads
 
 import urllib
 import urllib2
