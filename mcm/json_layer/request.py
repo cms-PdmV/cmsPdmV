@@ -2019,13 +2019,10 @@ class request(json_base):
 
             return (False, trace)
 
-    def check_gen_efficiency(self, geninfo, events_ran, events_produced):
+    def check_gen_efficiency(self, geninfo, events_produced, events_ran):
         rough_efficiency = float(events_produced) / events_ran
         rough_efficiency_error = rough_efficiency * sqrt(1. / events_produced + 1. / events_ran)
-
         set_efficiency = self.get_efficiency()
-        ##TO-DO: check efficiency error based on discussion on premccm
-        ##error = sqrt(match * match + filter_eff * filter_eff)
 
         ##we check if set efficiency is below 50% of set efficiency
         subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (
@@ -2194,7 +2191,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-    def check_file_size(self, file_size):
+    def check_file_size(self, file_size, events_pass, events_ran):
         ## size check
         if file_size > int(1.1 * sum(self.get_attribute('size_event'))):
             ## notify if more than 10% discrepancy found !
@@ -2204,8 +2201,8 @@ class request(json_base):
                             self.get_attribute('prepid'),
                             sum(self.get_attribute('size_event')),
                             file_size,
-                            total_event,
-                            total_event_in)
+                            events_pass,
+                            events_ran)
 
             notification(subject,message,[],
                     group=notification.REQUEST_OPERATIONS,
@@ -2227,8 +2224,8 @@ class request(json_base):
                             self.get_attribute('prepid'),
                             sum(self.get_attribute('size_event')),
                             file_size,
-                            total_event,
-                            total_event_in)
+                            events_pass,
+                            events_ran)
 
             notification(subject,message,[],
                     group=notification.REQUEST_OPERATIONS,
@@ -2241,7 +2238,7 @@ class request(json_base):
             self.set_attribute('size_event', [file_size])
             self.reload()
 
-    def check_memory(self, memory):
+    def check_memory(self, memory, events_pass, events_ran):
         if memory > self.get_attribute('memory'):
             safe_margin = 1.05
             memory *= safe_margin
@@ -2255,8 +2252,8 @@ class request(json_base):
                         ' to high memory queue') % (
                                 self.get_attribute('prepid'),
                                 memory,
-                                total_event,
-                                total_event_in)
+                                events_pass,
+                                events_ran)
 
                 notification(subject,message,[],
                         group=notification.REQUEST_OPERATIONS,
@@ -2271,7 +2268,6 @@ class request(json_base):
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test(self.target_for_test())
-        total_event_in_valid = self.get_n_for_valid()
 
         xml_data = xml.dom.minidom.parseString(xml_doc)
 
@@ -2286,7 +2282,6 @@ class request(json_base):
                 if str(infile.getElementsByTagName("InputType")[0].lastChild.data) != 'primaryFiles': continue
                 events_read = int(float(infile.getElementsByTagName("EventsRead")[0].lastChild.data))
                 total_event_in = events_read
-                total_event_in_valid = events_read
                 break
 
         #check if we produced any events at all. If not there is no point for efficiency calc
@@ -2339,26 +2334,20 @@ class request(json_base):
         else:
             timing = timing_dict['legacy']
 
-        efficiency = float(total_event) / total_event_in_valid
-        efficiency_error = efficiency * sqrt(1. / total_event + 1. / total_event_in_valid)
-
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
             geninfo = generator_parameters( self.get_attribute('generator_parameters')[-1] ).json()
 
-        self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % (
-            efficiency, efficiency_error, timing, file_size ))
-
-        self.check_gen_efficiency(geninfo, total_event_in, total_event)
+        self.check_gen_efficiency(geninfo, total_event, total_event_in)
         self.check_cpu_efficiency(total_job_cpu, total_job_time)
-        self.check_time_event(total_event_in, total_event, timing)
+        self.check_time_event(total_event, total_event_in, timing)
 
         #some checks if we succeeded in parsing the values
         if file_size:
-            self.check_file_size(file_size)
+            self.check_file_size(file_size, total_event, total_event_in)
 
         if memory:
-            self.check_memory(memory)
+            self.check_memory(memory, total_event, total_event_in)
 
         self.update_history({'action': 'update', 'step': what})
 
