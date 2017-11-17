@@ -1919,26 +1919,8 @@ class request(json_base):
 
         ## to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
-        ## to get a contribution from validation is applicable
-        estimate_gv = 0.
-        (yes_to_valid,n) = self.get_valid_and_n()
-        if yes_to_valid:
-            time_per_test = settings().get_value('genvalid_time_event')
-            estimate_gv = time_per_test * n * self.get_efficiency()
 
-        ## to get a contribution from lhe test if applicable
-        estimate_lhe = 0.
-        if self.get_attribute('mcdb_id') > 0:
-            n_per_test = settings().get_value('n_per_lhe_test')
-            n_test = self.get_attribute('total_events') / n_per_test
-            max_n = settings().get_value('max_lhe_test')
-            time_per_test = settings().get_value('lhe_test_time_event')
-            if max_n >=0:
-                n_test = min(n_test, max_n)
-            estimate_lhe = n_test * (time_per_test * n_per_test)
-
-        return int(max((estimate_rt+estimate_gv+estimate_lhe) / fraction, default))
-        #return int((estimate_rt+estimate_gv+estimate_lhe) / fraction)
+        return int(max((estimate_rt) / fraction, default))
 
     def get_n_for_valid(self):
         n_to_valid = settings().get_value('min_n_to_valid')
