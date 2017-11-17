@@ -314,6 +314,11 @@ class request(json_base):
                     'The dataset name is invalid: either null string or containing %s' % (
                             ','.join(bad_characters)))
 
+        if len(self.get_attribute('dataset_name')) > 99:
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                    'Dataset name is too long: %s. Max 99 characters' % (
+                            len(self.get_attribute('dataset_name'))))
+
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
@@ -561,6 +566,11 @@ class request(json_base):
         if re.match(PRIMARY_DS_regex, self.get_attribute('dataset_name')) is None:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                         'Dataset name name contains illegal characters')
+
+        if len(self.get_attribute('dataset_name')) > 99:
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                    'Dataset name is too long: %s. Max 99 characters' % (
+                            len(self.get_attribute('dataset_name'))))
 
         if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
