@@ -10,7 +10,7 @@ import traceback
 import time
 import logging
 from math import sqrt
-from json import loads
+from simplejson import loads
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database

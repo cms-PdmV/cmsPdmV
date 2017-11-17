@@ -6,7 +6,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 from tools.settings import settings
-from json import dumps, loads
+from simplejson import dumps, loads
 
 from tools.locker import locker
 from tools.communicator import communicator

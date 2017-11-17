@@ -12,7 +12,7 @@ from tools.settings import settings
 from tools.locator import locator
 from tools.user_management import access_rights
 from tools.handlers import RequestApprover
-from json import loads
+from simplejson import loads
 
 
 class GetBatch(RESTResource):

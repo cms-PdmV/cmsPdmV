@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
-from json import dumps
+from simplejson import dumps
 
 from json_base import json_base
 from tools.settings import settings

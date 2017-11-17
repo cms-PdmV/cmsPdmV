@@ -12,7 +12,7 @@ from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
-from json import loads
+from simplejson import loads
 
 
 class CreateCampaign(RESTResource):

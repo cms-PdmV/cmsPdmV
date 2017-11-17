@@ -6,9 +6,7 @@ import traceback
 import logging
 import math
 
-from json import loads
-from json import dumps
-
+from simplejson import loads, dumps
 from couchdb_layer.mcm_database import database
 from tools.installer import installer
 from tools.ssh_executor import ssh_executor
@@ -18,7 +16,6 @@ from json_layer.request import request
 from json_layer.notification import notification
 from json_layer.chained_request import chained_request
 from tools.locator import locator
-from itertools import izip
 
 
 class ValidationHandler:
