@@ -1,4 +1,4 @@
-from json import dumps, loads
+from simplejson import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database

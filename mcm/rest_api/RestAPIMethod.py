@@ -57,18 +57,6 @@ class RESTResource(Resource):
         #    except KeyError:
         #        RESTResource.call_counters[key] = 0
 
-    def GET(self):
-        pass
-
-    def PUT(self):
-        pass
-
-    def POST(self):
-        pass
-
-    def DELETE(self):
-        pass
-
 
 class RESTResourceIndex(RESTResource):
     def __init__(self, data=None):

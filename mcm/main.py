@@ -22,12 +22,12 @@ from tools.communicator import communicator
 from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
-from multiprocessing import Process
+from simplejson import dumps
+
 
 import signal
 import logging
 import logging.handlers
-import json
 import shelve
 import datetime
 
@@ -77,7 +77,7 @@ def batches_html():
 @app.route('/getDefaultSequences')
 def getDefaultSequences():
     tmpSeq = sequence()._json_base__schema
-    return json.dumps(tmpSeq)
+    return dumps(tmpSeq)
 @app.route('/injection_status')
 def injection_status_html():
     return send_from_directory('HTML', 'injection_status.html')

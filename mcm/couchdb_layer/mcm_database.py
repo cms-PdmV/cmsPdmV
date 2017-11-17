@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import json
 import time
 import os
 import copy
 import ast
 import logging
 
+from simplejson import dumps
 from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *
@@ -175,7 +175,7 @@ class database:
                 # will be retaken at next get
                 self.__save_to_cache(doc['_id'], None)
             return self.save(doc)
-        self.logger.error('Failed to update document: %s' % (json.dumps(doc)))
+        self.logger.error('Failed to update document: %s' % (dumps(doc)))
         return False
 
     def update_all(self,  docs=[]):

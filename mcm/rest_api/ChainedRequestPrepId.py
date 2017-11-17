@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from json import dumps
+from simplejson import dumps
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
