@@ -469,6 +469,7 @@ h.setFormatter(rest_formatter)
 h.addFilter(usr_filt)
 h.addFilter(mem_filt)
 access_logger.addHandler(h)
+logging.getLogger('werkzeug').disabled = True
 
 #Log accesses
 def after_this_request(f):
