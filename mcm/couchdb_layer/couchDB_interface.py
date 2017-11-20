@@ -3,6 +3,7 @@ from simplejson import dumps, loads
 
 import urllib
 import urllib2
+import unicodedata
 from tools.locator import locator
 
 class Database():
@@ -34,16 +35,32 @@ class Database():
             request.add_header(key, headers[key])
         return request
 
+    def is_number(self, s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            pass
+
+        try:
+            unicodedata.numeric(s)
+            return True
+        except (TypeError, ValueError):
+            pass
+
+        return False
+
     def to_json_query(self, params):
         """
         converts object to properly encoded JSON in utf-8
         """
         stringfied = dict()
         for p in params:
-            if not isinstance(params[p], str):
-                stringfied[p] = dumps(params[p])
-            else:
+            if isinstance(params[p], str) or self.is_number(params[p]):
                 stringfied[p] = params[p]
+            else:
+                stringfied[p] = dumps(params[p])
+
         return urllib.urlencode(stringfied)
 
     def document(self, id, rev=None):
