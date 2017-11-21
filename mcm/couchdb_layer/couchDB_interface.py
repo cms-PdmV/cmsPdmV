@@ -3,7 +3,6 @@ from simplejson import dumps, loads
 
 import urllib
 import urllib2
-import unicodedata
 from tools.locator import locator
 
 class Database():
