@@ -22,12 +22,12 @@ from tools.communicator import communicator
 from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
-from multiprocessing import Process
+from simplejson import dumps
+
 
 import signal
 import logging
 import logging.handlers
-import json
 import shelve
 import datetime
 
@@ -77,7 +77,7 @@ def batches_html():
 @app.route('/getDefaultSequences')
 def getDefaultSequences():
     tmpSeq = sequence()._json_base__schema
-    return json.dumps(tmpSeq)
+    return dumps(tmpSeq)
 @app.route('/injection_status')
 def injection_status_html():
     return send_from_directory('HTML', 'injection_status.html')
@@ -469,6 +469,7 @@ h.setFormatter(rest_formatter)
 h.addFilter(usr_filt)
 h.addFilter(mem_filt)
 access_logger.addHandler(h)
+logging.getLogger('werkzeug').disabled = True
 
 #Log accesses
 def after_this_request(f):
@@ -485,7 +486,9 @@ def call_after_request_callbacks(response):
 
 @app.before_request
 def log_access():
-    message = "%s %s %s %s" % (request.method, request.path, "%s", request.headers['User-Agent'])
+    query = "?" + request.query_string if request.query_string else ""
+    full_url = request.path + query
+    message = "%s %s %s %s" % (request.method, full_url, "%s", request.headers['User-Agent'])
     @after_this_request
     def after_request(response):
         g.message = g.message % response.status_code
@@ -501,12 +504,7 @@ def at_flask_exit(*args):
     RESTResource.counter.close()
     com = communicator()
     com.flush(0)
-    server.terminate()
 
 signal.signal(signal.SIGTERM, at_flask_exit)
-
-# For somereason the process doesn't finish when you send a SIGTERM so we encapsulate the process in another one and we terminate it by hand
-#server = Process(target=run_flask)
-#server.start()
 if __name__ == '__main__':
     run_flask()

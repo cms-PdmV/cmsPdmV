@@ -3,7 +3,7 @@
 import flask
 import time
 
-from json import dumps, loads
+from simplejson import dumps, loads
 from random import shuffle
 
 from RestAPIMethod import RESTResource

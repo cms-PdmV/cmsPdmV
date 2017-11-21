@@ -33,34 +33,33 @@ class BatchPrepId():
             else:
                 batchName = next_campaign
 
-            #### doing the query by hand
-            #res = self.bdb.get_all()
+            ##find the max batch with similar name, descending guarantees that
+            #the returned one will be biggest
             __query_options = {"endkey":'"%s-00001"' % (batchName),
                     "startkey":'"%s-99999"' % (batchName),
-                    "descending":"true", "limit":99999}
+                    "descending":"true", "limit":1}
+
             max_in_batch = settings().get_value('max_in_batch')
-            all_batches = self.bdb.raw_query("prepid", __query_options)
+            top_batch = self.bdb.raw_query("prepid", __query_options)
             new_batch = True
 
-            if len(all_batches) != 0:
-                ##we already have some existing batches, check for appending
-                for el in all_batches:
-                    #get a single batch
-                    batch = self.bdb.get(el["id"])
-                    if batch["status"] == "new" and len(batch["requests"]) < max_in_batch:
-                        #check if batch is not locked in other threads.
-                        if semaphore_events.count(batch['prepid']) < max_in_batch:
-                            ##we found a needed batch
-                            self.bdb.logger.debug("found a matching batch:%s" % (batch["prepid"]))
-                            batchNumber = int(batch["prepid"].split("-")[-1])
-                            new_batch = False
-                            break
+            if len(top_batch) != 0:
+                ##we already have some existing batch, check if its fine for appending
+                #get a single batch
+                single_batch = self.bdb.get(top_batch[0]["id"])
+                if single_batch["status"] == "new":
+                    #check if batch is not locked in other threads.
+                    if len(single_batch["requests"]) + semaphore_events.count(single_batch['prepid']) < max_in_batch:
+                        ##we found a needed batch
+                        self.bdb.logger.debug("found a matching batch:%s" % (single_batch["prepid"]))
+                        batchNumber = int(single_batch["prepid"].split("-")[-1])
+                        new_batch = False
                 if new_batch:
                     ##we default to max batch and increment its number
-                    self.bdb.logger.debug("no new batch. incementing:%s +1" % (batch["prepid"]))
-                    batchNumber = int(all_batches[0]["id"].split("-")[-1]) + 1
+                    self.bdb.logger.debug("no new batch. incementing:%s +1" % (single_batch["prepid"]))
+                    batchNumber = int(top_batch[0]["id"].split("-")[-1]) + 1
             else:
-                self.bdb.logger.debug("creating new batch:%s" % (batchName))
+                self.bdb.logger.debug("starting new batch family:%s" % (batchName))
                 batchNumber = 1
 
             batchName += '-%05d' % (batchNumber)

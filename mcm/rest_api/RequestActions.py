@@ -3,7 +3,7 @@ import flask
 import traceback
 import time
 import urllib2
-from json import dumps, loads
+from simplejson import dumps, loads
 from collections import defaultdict
 
 from couchdb_layer.mcm_database import database

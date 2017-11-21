@@ -40,10 +40,11 @@ class Database():
         """
         stringfied = dict()
         for p in params:
-            if not isinstance(params[p], str):
-                stringfied[p] = dumps(params[p])
-            else:
+            if isinstance(params[p], str):
                 stringfied[p] = params[p]
+            else:
+                stringfied[p] = dumps(params[p])
+
         return urllib.urlencode(stringfied)
 
     def document(self, id, rev=None):

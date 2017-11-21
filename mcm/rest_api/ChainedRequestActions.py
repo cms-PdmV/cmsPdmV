@@ -2,7 +2,7 @@
 
 import flask
 
-from json import dumps, loads
+from simplejson import dumps, loads
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
@@ -772,7 +772,7 @@ class TaskChainDict(RESTResource):
 
                 tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
                 ##if request is added to tasktree, we save global sums for StepChains
-                __total_time_evt += mcm_r.get_sum_total_events()
+                __total_time_evt += mcm_r.get_sum_time_events()
                 __total_size_evt += sum(mcm_r.get_attribute("size_event"))
 
         for (r, item) in tasktree.items():

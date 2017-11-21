@@ -332,11 +332,11 @@ class json_base:
 
     def print_self(self):
         try:
-            import json
+            import simplejson
         except ImportError as ex:
             self.logger.error('Error: Could not import "json" module')
             print self.__json
-        print json.dumps(self.__json, indent=4)
+        print simplejson.dumps(self.__json, indent=4)
 
     def keys(self):
         return self.__schema.keys()

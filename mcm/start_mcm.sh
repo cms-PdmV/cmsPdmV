@@ -32,10 +32,6 @@ echo "running grunt"
 node_modules/grunt/bin/grunt
 echo "started on: " `date`
 # start Flask
-if [[ $1 != "dev" ]]
-then
-    python2.6 main.py &> /dev/null
-else
-    python2.6 main.py
-fi
+
+python2.6 main.py
 

@@ -10,7 +10,7 @@ import traceback
 import time
 import logging
 from math import sqrt
-from json import loads
+from simplejson import loads
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
@@ -314,6 +314,11 @@ class request(json_base):
                     'The dataset name is invalid: either null string or containing %s' % (
                             ','.join(bad_characters)))
 
+        if len(self.get_attribute('dataset_name')) > 99:
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                    'Dataset name is too long: %s. Max 99 characters' % (
+                            len(self.get_attribute('dataset_name'))))
+
         other_bad_characters = [' ','-']
         if self.get_attribute('process_string') and any(
             map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
@@ -561,6 +566,11 @@ class request(json_base):
         if re.match(PRIMARY_DS_regex, self.get_attribute('dataset_name')) is None:
                 raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
                         'Dataset name name contains illegal characters')
+
+        if len(self.get_attribute('dataset_name')) > 99:
+            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation',
+                    'Dataset name is too long: %s. Max 99 characters' % (
+                            len(self.get_attribute('dataset_name'))))
 
         if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
             raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve',
@@ -1181,9 +1191,11 @@ class request(json_base):
                 res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
                 res += '  bc -l <<< "scale=4; 1/$var1"\n'
                 res += 'fi\n'
+                res += 'echo CPU efficiency info:\n'
+                res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
+                res += 'grep "TotalJobTime" %s \n' % runtest_xml_file
                 #TO-DO:
-                # 1) add parsing  for CPU efficiency
-                # 2) add efficiency calc(?)
+                # 1) add efficiency calc(?)
 
             cmsd_list += res + '\n'
             previous += 1
@@ -1909,7 +1921,7 @@ class request(json_base):
         ## if by default it is not possible to run a test => 0 events in
         if self.get_n_for_test( self.target_for_test(), adjust=False)==0:
             ## adjust the timeout for 10 events !
-            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_sum_total_events()
+            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_sum_time_events()
         return (fraction,timeout)
 
     def get_timeout(self):
@@ -1917,26 +1929,8 @@ class request(json_base):
 
         ## to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
-        ## to get a contribution from validation is applicable
-        estimate_gv = 0.
-        (yes_to_valid,n) = self.get_valid_and_n()
-        if yes_to_valid:
-            time_per_test = settings().get_value('genvalid_time_event')
-            estimate_gv = time_per_test * n * self.get_efficiency()
 
-        ## to get a contribution from lhe test if applicable
-        estimate_lhe = 0.
-        if self.get_attribute('mcdb_id') > 0:
-            n_per_test = settings().get_value('n_per_lhe_test')
-            n_test = self.get_attribute('total_events') / n_per_test
-            max_n = settings().get_value('max_lhe_test')
-            time_per_test = settings().get_value('lhe_test_time_event')
-            if max_n >=0:
-                n_test = min(n_test, max_n)
-            estimate_lhe = n_test * (time_per_test * n_per_test)
-
-        return int(max((estimate_rt+estimate_gv+estimate_lhe) / fraction, default))
-        #return int((estimate_rt+estimate_gv+estimate_lhe) / fraction)
+        return int(max((estimate_rt) / fraction, default))
 
     def get_n_for_valid(self):
         n_to_valid = settings().get_value('min_n_to_valid')
@@ -1952,7 +1946,7 @@ class request(json_base):
         events = self.get_n_unfold_efficiency(target)
 
         #=> estimate how long it will take
-        total_test_time = self.get_sum_total_events() * events
+        total_test_time = self.get_sum_time_events() * events
         if adjust:
             fraction, timeout = self.get_timeout_for_runtest()
         else:
@@ -1964,8 +1958,8 @@ class request(json_base):
         self.logger.info('running %s means running for %s s, and timeout is %s' % ( events, total_test_time, timeout))
         if total_test_time > timeout:
             #reduce the n events for test to fit in 75% of the timeout
-            if self.get_sum_total_events():
-                events = timeout / self.get_sum_total_events()
+            if self.get_sum_time_events():
+                events = timeout / self.get_sum_time_events()
                 self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
                     events, fraction, settings().get_value('batch_timeout') ))
             else:
@@ -2019,13 +2013,10 @@ class request(json_base):
 
             return (False, trace)
 
-    def check_gen_efficiency(self, geninfo, events_ran, events_produced):
+    def check_gen_efficiency(self, geninfo, events_produced, events_ran):
         rough_efficiency = float(events_produced) / events_ran
         rough_efficiency_error = rough_efficiency * sqrt(1. / events_produced + 1. / events_ran)
-
         set_efficiency = self.get_efficiency()
-        ##TO-DO: check efficiency error based on discussion on premccm
-        ##error = sqrt(match * match + filter_eff * filter_eff)
 
         ##we check if set efficiency is below 50% of set efficiency
         subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (
@@ -2034,7 +2025,8 @@ class request(json_base):
         message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
                 ' the mcm validation test measured %.4f +/- %.4f\n'
                 '(there were %s trial events, of which %s passed the filter/matching).\n'
-                'Please check and reset the request if necessary.') % (
+                'Please check and reset the request if necessary.'
+                ' Not within 50%%.') % (
                         self.get_attribute('prepid'),
                         'filter_efficiency',
                         geninfo['filter_efficiency'],
@@ -2093,6 +2085,7 @@ class request(json_base):
     def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
         timing_threshold = settings().get_value('timing_threshold')
         timing_n_limit = settings().get_value('timing_n_limit')
+        timing_fraction = settings().get_value('timing_fraction')
 
         #check if we ran a meaninful number of events and that measured time_event is above threshold
         #makes sense for really long events.
@@ -2101,7 +2094,7 @@ class request(json_base):
             message = ('For the request %s, time/event=%s was given.'
                     ' Ran %s - too few to do accurate estimation') % (
                             self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
+                            self.get_sum_time_events(),
                             evts_pass)
 
             notification(subject, message, [],
@@ -2114,15 +2107,17 @@ class request(json_base):
             raise Exception(message)
 
         #TO-DO: change the 0.2 to value from settings DB
-        if (measured_time_evt <= self.get_sum_total_events() * (1 - 0.2)):
+        if (measured_time_evt <= self.get_sum_time_events() * (1 - timing_fraction)):
             subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
-                    ' measured and set to the request from %s events (ran %s).') % (
+                    ' measured and set to the request from %s events (ran %s).'
+                    ' Not within %d%%.') % (
                             self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
+                            self.get_sum_time_events(),
                             measured_time_evt,
                             evts_pass,
-                            evts_ran)
+                            evts_ran,
+                            timing_fraction*100)
 
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
@@ -2135,15 +2130,17 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        elif (measured_time_evt >= self.get_sum_total_events() * (1 + 0.2)):
+        elif (measured_time_evt >= self.get_sum_time_events() * (1 + timing_fraction)):
             subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
-                    ' measured and set to the request from %s events (ran %s).') % (
+                    ' measured and set to the request from %s events (ran %s).'
+                    ' Not within %d%%.') % (
                             self.get_attribute('prepid'),
-                            self.get_sum_total_events(),
+                            self.get_sum_time_events(),
                             measured_time_evt,
                             evts_pass,
-                            evts_ran)
+                            evts_ran,
+                            timing_fraction*100)
 
             notification(subject, message, [],
                     group=notification.REQUEST_OPERATIONS,
@@ -2159,7 +2156,7 @@ class request(json_base):
         else:
             #fine tune the value
             self.logger.debug("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
-                    self.get_sum_total_events(), measured_time_evt, evts_pass))
+                    self.get_sum_time_events(), measured_time_evt, evts_pass))
 
             self.set_attribute('time_event', [measured_time_evt])
 
@@ -2172,7 +2169,7 @@ class request(json_base):
         __test_eff = cpu_time/(self.get_core_num()*total_time)
         if  __test_eff < 0.4:
             subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, with %s cores, CPU efficiency was %s < 0.4.'
+            message = ('For the request %s, with %s cores, CPU efficiency %s < 0.4.'
                     ' Setting number of cores to 1') % (
                             self.get_attribute('prepid'),
                             self.get_core_num(),
@@ -2194,7 +2191,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-    def check_file_size(self, file_size):
+    def check_file_size(self, file_size, events_pass, events_ran):
         ## size check
         if file_size > int(1.1 * sum(self.get_attribute('size_event'))):
             ## notify if more than 10% discrepancy found !
@@ -2204,8 +2201,8 @@ class request(json_base):
                             self.get_attribute('prepid'),
                             sum(self.get_attribute('size_event')),
                             file_size,
-                            total_event,
-                            total_event_in)
+                            events_pass,
+                            events_ran)
 
             notification(subject,message,[],
                     group=notification.REQUEST_OPERATIONS,
@@ -2227,8 +2224,8 @@ class request(json_base):
                             self.get_attribute('prepid'),
                             sum(self.get_attribute('size_event')),
                             file_size,
-                            total_event,
-                            total_event_in)
+                            events_pass,
+                            events_ran)
 
             notification(subject,message,[],
                     group=notification.REQUEST_OPERATIONS,
@@ -2241,7 +2238,7 @@ class request(json_base):
             self.set_attribute('size_event', [file_size])
             self.reload()
 
-    def check_memory(self, memory):
+    def check_memory(self, memory, events_pass, events_ran):
         if memory > self.get_attribute('memory'):
             safe_margin = 1.05
             memory *= safe_margin
@@ -2255,8 +2252,8 @@ class request(json_base):
                         ' to high memory queue') % (
                                 self.get_attribute('prepid'),
                                 memory,
-                                total_event,
-                                total_event_in)
+                                events_pass,
+                                events_ran)
 
                 notification(subject,message,[],
                         group=notification.REQUEST_OPERATIONS,
@@ -2271,7 +2268,6 @@ class request(json_base):
 
     def update_performance(self, xml_doc, what):
         total_event_in = self.get_n_for_test(self.target_for_test())
-        total_event_in_valid = self.get_n_for_valid()
 
         xml_data = xml.dom.minidom.parseString(xml_doc)
 
@@ -2286,7 +2282,6 @@ class request(json_base):
                 if str(infile.getElementsByTagName("InputType")[0].lastChild.data) != 'primaryFiles': continue
                 events_read = int(float(infile.getElementsByTagName("EventsRead")[0].lastChild.data))
                 total_event_in = events_read
-                total_event_in_valid = events_read
                 break
 
         #check if we produced any events at all. If not there is no point for efficiency calc
@@ -2339,26 +2334,23 @@ class request(json_base):
         else:
             timing = timing_dict['legacy']
 
-        efficiency = float(total_event) / total_event_in_valid
-        efficiency_error = efficiency * sqrt(1. / total_event + 1. / total_event_in_valid)
+        self.logger.info("validation parsing values. events_passed:%s events_ran:%s total_job_cpu:%s total_job_time:%s" % (
+            total_event, total_event_in, total_job_cpu, total_job_time))
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
             geninfo = generator_parameters( self.get_attribute('generator_parameters')[-1] ).json()
 
-        self.logger.error("Calculated all eff: %s eff_err: %s timing: %s size: %s" % (
-            efficiency, efficiency_error, timing, file_size ))
-
-        self.check_gen_efficiency(geninfo, total_event_in, total_event)
+        self.check_gen_efficiency(geninfo, total_event, total_event_in)
         self.check_cpu_efficiency(total_job_cpu, total_job_time)
-        self.check_time_event(total_event_in, total_event, timing)
+        self.check_time_event(total_event, total_event_in, timing)
 
         #some checks if we succeeded in parsing the values
         if file_size:
-            self.check_file_size(file_size)
+            self.check_file_size(file_size, total_event, total_event_in)
 
         if memory:
-            self.check_memory(memory)
+            self.check_memory(memory, total_event, total_event_in)
 
         self.update_history({'action': 'update', 'step': what})
 
@@ -2789,9 +2781,9 @@ class request(json_base):
             tasks.append(task_dict)
         return tasks
 
-    def get_sum_total_events(self):
+    def get_sum_time_events(self):
         """
-        return sum of total_events for request
+        return sum of time_events for request
         """
 
         return sum(self.get_attribute("time_event"))

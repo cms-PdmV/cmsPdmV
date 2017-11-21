@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from json import dumps, loads
+from simplejson import dumps, loads
 from flask import request
 
 from RestAPIMethod import RESTResource
