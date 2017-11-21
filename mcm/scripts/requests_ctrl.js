@@ -43,7 +43,6 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
-
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "requests";
     }else{
@@ -1097,29 +1096,39 @@ testApp.directive("loadFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group navigation-form" bindonce="searchable" ng-repeat="(key, value) in searchable">'+
+    '    <span class="control-group navigation-form" bindonce="searchable" ng-repeat="key in searchable_fields">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    '      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
-    '      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" ng-click="search_change(key)" typeahead="state for state in value | filter: $viewValue | limitTo: 10">'+
-    '      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
+    '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
-    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
-    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(-1);" ng-disabled="is_prepid_in_url == undefined">Previous</button>,'+
-    '  <button type="button" class="btn btn-small" ng-click="goToNextPrepid(1);" ng-disabled="is_prepid_in_url == undefined">Next</button> request'+
+    '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '</div>'
     ,
     link: function(scope, element, attr)
     {
       scope.listfields = {};
       scope.showUrl = false;
-      scope.showOption = {};
       scope.is_prepid_in_url = $location.search()["prepid"];
       scope.test_values = [];
       scope.test_data = "";
+
+      scope.searchable_fields = [
+        'status',
+        'member_of_chain',
+        'prepid',
+        'extension',
+        'tags',
+        'energy',
+        'mcdb_id',
+        'flown_with',
+        'pwg',
+        'process_string',
+        'generators',
+        'member_of_campaign',
+        'approval',
+        'dataset_name'
+      ];
 
       scope.zeroPad = function(num, places){
         var zero = places - num.toString().length + 1;
@@ -1157,53 +1166,22 @@ testApp.directive("loadFields", function($http, $location){
         scope.getData();
       };
 
-      scope.toggleSelectOption = function(option){
-        scope.search_change(option);
-        if (scope.showOption[option])
-        {
-          scope.showOption[option] = false;
-        }else
-        {
-          scope.showOption[option] = true;
+      scope.loadSuggestions = function (fieldValue, fieldName) {
+        if (fieldValue == '') {
+          return {};
         }
-      };
 
-      scope.search_change = function(field_name )
-      {
-        if (scope.searchable[field_name].length == 0)
-        {
-          var promise = $http.get("restapi/"+scope.dbName+"/unique_values/"+field_name);
-          scope.loadingData = true;
-          promise.then(function(data){
-            scope.loadingData = false;
-            _.each(data.data.results, function(elem)
-            {
-              scope.searchable[field_name].push(elem);
-            });
-          }, function(data){
-            scope.loadingData = false;
-            alert("Error getting searchable fields: "+data.status);
-          });
-        }
-      };
+        var searchURL = "restapi/requests/unique_values/" + fieldName;
+        searchURL += "?limit=10&group=true";
+        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
 
-      scope.$watch('tabsettings.navigation.active', function(){
-        if (scope.tabsettings.navigation.active)
-        {
-          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
-          {
-          var promise = $http.get("restapi/"+scope.dbName+"/searchable");
-            scope.loadingData = true;
-            promise.then(function(data){
-              scope.loadingData = false;
-              scope.searchable = data.data;
-            }, function(data){
-              scope.loadingData = false;
-              alert("Error getting searchable fields: "+data.status);
-            });
-          }
-        }
-      });
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          return data.data.results;
+        }, function(data){
+          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+        });
+      };
     }
   }
 });
