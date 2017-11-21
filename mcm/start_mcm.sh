@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
-# get a continuous afs token
-source kinit.sh &
+if [[ $1 != "dev" ]]
+then
+    # get a continuous afs token
+    source kinit.sh &
+else
+    echo "DEV environment, will not run kinit.sh"
+fi
 
 
 # the current version
@@ -27,4 +32,10 @@ echo "running grunt"
 node_modules/grunt/bin/grunt
 echo "started on: " `date`
 # start Flask
-python2.6 main.py &> /dev/null
+if [[ $1 != "dev" ]]
+then
+    python2.6 main.py &> /dev/null
+else
+    python2.6 main.py
+fi
+
