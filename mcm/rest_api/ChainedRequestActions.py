@@ -1053,3 +1053,22 @@ class RemoveFromForceFlowList(RESTResource):
         ret = self.sdb.update(forceflow_list)
 
         return res
+
+class GetUniqueChainedRequestValues(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, field_name):
+        """
+        Get unique values for navigation by field_name
+        """
+        return self.get_unique_values(field_name)
+
+    def get_unique_values(self, field_name):
+        kwargs = flask.request.args.to_dict()
+        db = database('chained_requests')
+        if 'limit' in kwargs:
+            kwargs['limit'] = int(kwargs['limit'])
+        kwargs['group'] = True
+        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
