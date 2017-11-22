@@ -23,13 +23,14 @@ from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 from simplejson import dumps
-
+from urllib2 import unquote
 
 import signal
 import logging
 import logging.handlers
 import shelve
 import datetime
+
 
 RESTResource.counter = shelve.open('.mcm_rest_counter')
 start_time = datetime.datetime.now().strftime("%c")
@@ -487,7 +488,7 @@ def call_after_request_callbacks(response):
 @app.before_request
 def log_access():
     query = "?" + request.query_string if request.query_string else ""
-    full_url = request.path + query
+    full_url = request.path + unquote(query).decode('utf-8').encode('ascii','ignore')
     message = "%s %s %s %s" % (request.method, full_url, "%s", request.headers['User-Agent'])
     @after_this_request
     def after_request(response):
