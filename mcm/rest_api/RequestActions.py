@@ -1554,7 +1554,7 @@ class ListRequestPrepids(RequestRESTResource):
             }
         )
         query_result = request_db.full_text_search("search", __query, page=0, limit=kwargs['limit'], include_fields='prepid')
-        self.logger.info('Searching requests id with options: %s' % (options))
+        self.logger.info('Searching requests id with options: %s' % (kwargs))
         results = [record['prepid'] for record in query_result]
         return {"results": results}
 
