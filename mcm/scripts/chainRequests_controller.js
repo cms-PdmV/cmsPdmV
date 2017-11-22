@@ -565,25 +565,31 @@ testApp.directive("loadFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group navigation-form" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group navigation-form" ng-repeat="key in searchable_fields">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    //'      <select ng-model="listfields[key]">'+
-    //'        <option ng-repeat="elem in value">{{elem}}</option>'+
-    //'      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
-    //'      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
+    '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
     '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
-    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
-    '   <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
+    '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
     '</div>'
     ,
     link: function(scope, element, attr){
       scope.listfields = {};
       scope.showUrl = false;
       scope.showOption = {};
+
+      scope.searchable_fields = [
+        'approval',
+        'dataset_name',
+        'last_status',
+        'member_of_campaign',
+        'prepid',
+        'pwg',
+        'status',
+        'step'
+      ];
 
       scope.getSearch = function () {
         scope.listfields = {};
@@ -621,23 +627,22 @@ testApp.directive("loadFields", function($http, $location){
         });
         scope.getData();
       };
-      scope.$watch('tabsettings.navigation.active', function(){
-        if (scope.tabsettings.navigation.active)
-        {
-          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
-          {
-            var promise = $http.get("restapi/"+scope.dbName+"/searchable");
-            scope.loadingData = true;
-            promise.then(function(data){
-              scope.loadingData = false;
-              scope.searchable = data.data;
-            }, function(data){
-              scope.loadingData = false;
-              alert("Error getting searchable fields: "+data.status);
-            });
-          }
+      scope.loadSuggestions = function (fieldValue, fieldName) {
+        if (fieldValue == '') {
+          return {};
         }
-      },true);
+
+        var searchURL = "restapi/chained_requests/unique_values/" + fieldName;
+        searchURL += "?limit=10&group=true";
+        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
+
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          return data.data.results;
+        }, function(data){
+          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+        });
+      };
     }
   }
 });
@@ -648,23 +653,36 @@ testApp.directive("loadRequestsFields", function($http, $location){
     template:
     '<div>'+
     '  <form class="form-inline">'+
-    '    <span class="control-group navigation-form" ng-repeat="(key,value) in searchable">'+
+    '    <span class="control-group navigation-form" ng-repeat="key in searchable_fields">'+
     '      <label style="width:140px;">{{key}}</label>'+
-    //'      <select bindonce ng-options="elem for elem in value" ng-model="listfields[key]" ng-show="showOption[key]" style="width: 164px;">'+
-    //'      </select>'+
-    '      <input class="input-medium" type="text" ng-hide="showOption[key]" ng-model="listfields[key]" ng-click="search_change(key)" typeahead="state for state in value | filter: $viewValue | limitTo: 10" style="width: 185px;">'+
-    //'      <a class="btn btn-mini" ng-href="#" ng-click="toggleSelectOption(key)"><i class="icon-arrow-down"></i></a>'+
+    '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">'+
     '    </span>'+
     '  </form>'+
     '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>'+
-    // '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>'+
-    '  <img ng-show="loadingData" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>'+
     '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>'+
-    '</div>',
+    '</div>'
+    ,
     link: function (scope, element, attr) {
       scope.listfields = {};
       scope.showUrl = false;
       scope.showOption = {};
+
+      scope.searchable_fields = [
+        'status',
+        'member_of_chain',
+        'prepid',
+        'extension',
+        'tags',
+        'energy',
+        'mcdb_id',
+        'flown_with',
+        'pwg',
+        'process_string',
+        'generators',
+        'member_of_campaign',
+        'approval',
+        'dataset_name'
+      ];
 
       scope.cleanSearchUrl = function () {
         _.each($location.search(),function(elem,key){
@@ -693,41 +711,24 @@ testApp.directive("loadRequestsFields", function($http, $location){
           scope.showOption[option] = true;
         }
       };
-      scope.search_change = function(field_name )
-      {
-        if (scope.searchable[field_name].length == 0)
-        {
-          var promise = $http.get("restapi/requests/unique_values/"+field_name);
-          scope.loadingData = true;
-          promise.then(function(data){
-              scope.loadingData = false;
-              _.each(data.data.results, function(elem)
-                {
-                  scope.searchable[field_name].push(elem);
-                });
-            }, function(data){
-              scope.loadingData = false;
-              alert("Error getting searchable fields: "+data.status);
-            });
+      scope.loadSuggestions = function (fieldValue, fieldName) {
+        if (fieldValue == '') {
+          return {};
         }
+
+        var searchURL = "restapi/requests/unique_values/" + fieldName;
+        searchURL += "?limit=10&group=true";
+        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
+
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          return data.data.results;
+        }, function(data){
+          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+        });
+
+        return {};
       };
-      scope.$watch('tabsettings.navigation2.active', function(){
-        if (scope.tabsettings.navigation2.active)
-        {
-          if (!scope.searchable) //get searchable fields only if undefined -> save time for 2nd time open of pane
-          {
-            var promise = $http.get("restapi/requests/searchable");
-            scope.loadingData = true;
-            promise.then(function(data){
-              scope.loadingData = false;
-              scope.searchable = data.data;
-            }, function(data){
-              scope.loadingData = false;
-              alert("Error getting searchable fields: "+data.status);
-            });
-          }
-        }
-      },true);
     }
   }
 });
