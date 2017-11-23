@@ -1567,7 +1567,7 @@ class GetUploadCommand(RESTResource):
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
-    def get(self):
+    def get(self, request_id):
         """
         Get command used to upload configurations for given request.
         """
