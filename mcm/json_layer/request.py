@@ -2083,7 +2083,6 @@ class request(json_base):
             raise Exception(message)
 
     def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
-        timing_threshold = settings().get_value('timing_threshold')
         timing_n_limit = settings().get_value('timing_n_limit')
         timing_fraction = settings().get_value('timing_fraction')
 
