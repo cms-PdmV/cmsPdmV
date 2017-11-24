@@ -138,6 +138,20 @@ angular.module('testApp').controller('notificator',
       $event.stopPropagation();
     }
 
+    $scope.markGroupAsSeen = function(group, $event){
+      group = group == "All" ? "*" : group
+      $http({method:'POST', url:"restapi/notifications/mark_as_seen", data: {"group": group}}).success(function(data,status){
+        if(data.results){
+          alert("Notifications marked as seen")
+        } else {
+          alert("Error: " + data.message)
+        }
+      }).error(function(status){
+        alert("Error while trying to mark notifications as seen")
+      });
+      $event.stopPropagation();
+    }
+
     $scope.displayNotifications = function(){
       $scope.display_notifications = !$scope.display_notifications;
       if(!$scope.display_notifications){
