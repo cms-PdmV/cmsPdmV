@@ -10,7 +10,7 @@ from couchdb_layer.mcm_database import database
 from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
-from tools.settings import settings
+import tools.settings as settings
 
 class chained_request(json_base):
     class CampaignAlreadyInChainException(Exception):
@@ -530,7 +530,7 @@ class chained_request(json_base):
             current_request.get_stats()
             next_total_events=current_request.get_attribute('completed_events')
             ## get the original expected events and allow a margin of 5% less statistics
-            statistics_fraction = settings().get_value('statistics_fraction')
+            statistics_fraction = settings.get_value('statistics_fraction')
             current_eff_error = 1. - current_request.get_efficiency_error()
             statistics_fraction = min( statistics_fraction, current_eff_error )
             completed_events_to_pass = int(current_request.get_attribute('total_events') * statistics_fraction )

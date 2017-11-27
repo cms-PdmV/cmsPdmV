@@ -5,7 +5,7 @@ import traceback
 
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
-from tools.settings import settings
+import tools.settings as settings
 from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from copy import deepcopy
@@ -370,17 +370,17 @@ class json_base:
             dest.extend(self.get_actors(what='author_email',Nchild=Nchild))
         if service:
             #let the service know at any time
-            dest.append(settings().get_value('service_account'))
+            dest.append(settings.get_value('service_account'))
         if HN:
             ## back bone HN notification ?
-            dest.append(settings().get_value('hypernews_test'))
+            dest.append(settings.get_value('hypernews_test'))
 
         #be sure to not have duplicates
         dest = set(dest)
-        exclude_emails = set(settings().get_value('exclude_from_notify'))
+        exclude_emails = set(settings.get_value('exclude_from_notify'))
         dest = list(dest - exclude_emails)
         if not len(dest):
-            dest.append(settings().get_value('service_account'))
+            dest.append(settings.get_value('service_account'))
             subject += '. And no destination was set'
 
         sender = sender if sender else self.current_user_email
@@ -403,7 +403,7 @@ class json_base:
     def get_ds_input(self, __output_dataset, __seq):
         try:
             input_ds = ""
-            possible_dt_inputs = settings().get_value('datatier_input')
+            possible_dt_inputs = settings.get_value('datatier_input')
             ##we take sequence 1step datetier
             ## check if "step" is a string -> some DR requests has single step string with , in it...
             ## some DR requests has it.... most probably the generated ones

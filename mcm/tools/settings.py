@@ -1,41 +1,54 @@
 from couchdb_layer.mcm_database import database
 from tools.locker import locker
 
-class settings:
-    cache=dict()
+from werkzeug.contrib.cache import SimpleCache
 
-    def __init__(self):
-        self.__db = database('settings')
+# Cache timeout in seconds
+__CACHE_TIMEOUT = 60 * 60
 
-    def get(self, label):
-        with locker.lock(label):
-            if not label in self.cache:
-                setting = self.__db.get(label)
-                self.cache[label] = setting
-            return self.cache[label]
+__cache = SimpleCache()
+__db = database('settings')
 
-    def get_value(self, label):
-        return self.get(label)['value']
+print ("Settings")
 
-    def get_notes(self, label ):
-        return self.get(label)['notes']
+def get(label):
+    with locker.lock(label):
+        cache_key = 'settings_' + label
+        cached_value = __cache.get(cache_key)
+        if cached_value != None:
+            print('Found value for ' + cache_key)
+            return cached_value
+        setting = __db.get(label)
+        __cache.set(cache_key, setting, timeout = __CACHE_TIMEOUT)
+        return setting
 
-    def add(self, label, setting):
-        with locker.lock(label):
-            result = self.__db.save(setting)
-            if result:
-                self.cache[label] = setting
-            return result
+def get_value(label):
+    return get(label)['value']
 
-    def set_value(self, label, value):
-        with locker.lock(label):
-            setting = self.get(label)
-            setting['value'] = value
-            return self.set(label, setting)
+def get_notes(label):
+    return get(label)['notes']
 
-    def set(self, label, setting):
-        with locker.lock(label):
-            result = self.__db.update(setting)
-            if result:
-                self.cache[label] = self.__db.get(label)
-            return result
+def add(label, setting):
+    with locker.lock(label):
+        result = __db.save(setting)
+        if result:
+            cache_key = 'settings_' + label
+            __cache.set(cache_key, setting, timeout = __CACHE_TIMEOUT)
+        return result
+
+def set_value(label, value):
+    with locker.lock(label):
+        setting = get(label)
+        setting['value'] = value
+        return set(label, setting)
+
+def set(label, setting):
+    with locker.lock(label):
+        result = __db.update(setting)
+        if result:
+            # Maybe it's a better idea to cache the setting immediately instead
+            # getting it from database?
+            new_value = __db.get(label)
+            cache_key = 'settings_' + label
+            __cache.set(cache_key, new_value, timeout = __CACHE_TIMEOUT)
+        return result

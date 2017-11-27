@@ -12,7 +12,7 @@ from tools.installer import installer
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
-from tools.settings import settings
+import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
 from json_layer.request import request
@@ -77,7 +77,7 @@ class ThreadPool:
 
 ###END OF THREAD POOL##
 
-submit_pool = ThreadPool("submission", settings().get_value('threads_num_submission'))
+submit_pool = ThreadPool("submission", settings.get_value('threads_num_submission'))
 
 class Handler():
     """

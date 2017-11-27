@@ -8,7 +8,7 @@ from email.Utils import COMMASPACE, formatdate
 from email.utils import make_msgid
 from tools.locator import locator
 from collections import defaultdict
-from tools.settings import settings
+import tools.settings as settings
 from tools.locker import locker
 
 class communicator:
@@ -89,8 +89,8 @@ class communicator:
             msg['References'] = reply_msg_ID
 
         ### accumulate messages prior to sending emails
-        com__accumulate=settings().get_value('com_accumulate')
-        force_com_accumulate=settings().get_value('force_com_accumulate')
+        com__accumulate=settings.get_value('com_accumulate')
+        force_com_accumulate=settings.get_value('force_com_accumulate')
         if force_com_accumulate or (accumulate and com__accumulate):
             with locker.lock('accumulating_notifcations'):
                 # get a subject where the request name is taken out

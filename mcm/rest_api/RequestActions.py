@@ -18,7 +18,7 @@ from json_layer.notification import notification
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
-from tools.settings import settings
+import tools.settings as settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
@@ -1214,7 +1214,7 @@ class StalledReminder(RESTResource):
                 object_type='requests',
                 target_role='generator_convener'
             )
-            com.sendMail(map(lambda u: u['email'], people_list) + [settings().get_value('service_account')],
+            com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')],
                          subject, text)
 
 class RequestsReminder(RESTResource):
@@ -1320,7 +1320,7 @@ class RequestsReminder(RESTResource):
                         group=notification.REMINDERS,
                         target_role='production_manager'
                     )
-                    com.sendMail(map(lambda u: u['email'], production_managers) + [settings().get_value('service_account')], subject, message)
+                    com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_conveners' in what or 'generator_convener' in what:
             ## send the reminder to generator conveners
@@ -1340,7 +1340,7 @@ class RequestsReminder(RESTResource):
                         group=notification.REMINDERS,
                         target_role='generator_convener'
                     )
-                    com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings().get_value('service_account')], subject, message)
+                    com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
                 all_ids = set()
@@ -1428,7 +1428,7 @@ class RequestsReminder(RESTResource):
                         if len(campaigns_and_ids):
                             message = 'Few requests need your action \n\n'
                             message += prepare_text_for(campaigns_and_ids, '')
-                            to_who = [settings().get_value('service_account')]
+                            to_who = [settings.get_value('service_account')]
                             if l_type.isDev():
                                 message += '\nto %s' % (mcm_u['email'])
                             else:
@@ -1690,7 +1690,7 @@ class ForceCompleteMethods(RESTResource):
         self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
-        self.access_user = settings().get_value('allowed_to_acknowledge')
+        self.access_user = settings.get_value('allowed_to_acknowledge')
         self.representations = {'text/plain': self.output_text}
 
     def get(self):

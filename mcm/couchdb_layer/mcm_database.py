@@ -10,9 +10,15 @@ from simplejson import dumps
 from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *
+from tools.locker import locker
+
+from werkzeug.contrib.cache import SimpleCache
 
 class database:
     logger = logging.getLogger("mcm_error")
+    # Cache timeout in seconds
+    CACHE_TIMEOUT = 60 * 60
+    cache = SimpleCache()
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
@@ -58,19 +64,18 @@ class database:
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
 
-    cache_dictionary = defaultdict(lambda: None)
-
-    def __init__(self,  db_name='',url=None, cache=False):
+    def __init__(self,  db_name='',url=None, cache_enabled=False):
         host = os.environ['HOSTNAME']
         if url is None:
             url = locator().dbLocation()
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
-        self.cache = cache
+        self.cache_enabled = cache_enabled
         if self.db_name in ['campaigns','chained_campaigns']:
             ## force cache for those.
-            self.cache=True
+            self.cache_enabled=True
+
         try:
             self.db = Database(db_name, url=url)
         except ValueError as ex:
@@ -86,29 +91,32 @@ class database:
             return False
 
     def get(self,  prepid=''):
-        if self.cache:
-            result = self.__get_from_cache(prepid)
-            if result: return result
+
+        result = self.__get_from_cache(prepid)
+        if result: return result
 
         self.logger.info('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
         try:
             doc = self.db.document(id=prepid)
-            if self.cache:
-                self.__save_to_cache( prepid, doc)
+            self.__save_to_cache( prepid, doc)
             return doc
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return {}
 
     def __save_to_cache(self, key, value):
-        from tools.locker import locker
-        with locker.lock(key):
-            self.cache_dictionary[key]=value
+        if self.cache_enabled:
+            with locker.lock(key):
+                cache_key = 'mcm_database_' + key
+                self.cache.set(cache_key, value, timeout = self.CACHE_TIMEOUT)
 
     def __get_from_cache(self, key):
-        from tools.locker import locker
-        with locker.lock(key):
-            return self.cache_dictionary[key]
+        if self.cache_enabled:
+            with locker.lock(key):
+                cache_key = 'mcm_database_' + key
+                return self.cache.get(cache_key)
+        else:
+            return None
 
     def __document_exists(self,  doc):
         if not doc:
@@ -135,9 +143,7 @@ class database:
 
     def __id_exists(self,  prepid=''):
         try:
-            if self.cache and self.__get_from_cache(prepid) or self.db.documentExists(
-                    id=prepid):
-
+            if self.__get_from_cache(prepid) or self.db.documentExists(id=prepid):
                 return True
             self.logger.error('Document "%s" does not exist.' % (prepid))
             return False
@@ -158,8 +164,7 @@ class database:
         self.logger.info('Trying to delete document "%s"...' % (prepid))
         try:
             self.db.delete_doc(id=prepid)
-            if self.cache:
-                self.__save_to_cache(prepid, None)
+            self.__save_to_cache(prepid, None)
 
             return True
         except Exception as ex:
@@ -170,10 +175,9 @@ class database:
         if '_id' in doc:
             self.logger.info('Updating document "%s" in "%s"' % (doc['_id'], self.db_name))
         if self.__document_exists(doc):
-            if self.cache:
-                ##JR the revision in the cache is not the one in the DB at this point
-                # will be retaken at next get
-                self.__save_to_cache(doc['_id'], None)
+            ##JR the revision in the cache is not the one in the DB at this point
+            # will be retaken at next get
+            self.__save_to_cache(doc['_id'], None)
             return self.save(doc)
         self.logger.error('Failed to update document: %s' % (dumps(doc)))
         return False
@@ -577,8 +581,7 @@ class database:
 
             url = "_design/%s/_view/%s" % (view_doc, view_name)
             result = self.db.loadView(url, options)['rows']
-            if cache:
-                self.__save_to_cache(cache_id, result)
+            self.__save_to_cache(cache_id, result)
             return result
         except Exception as ex:
             self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
@@ -590,8 +593,7 @@ class database:
             return result
         parsedResult = {"results": [str(elem["key"]) for elem in result]}
         cache_id = "_design/unique/_view/%s" % (view_name)
-        if cache:
-            self.__save_to_cache(cache_id, parsedResult)
+        self.__save_to_cache(cache_id, parsedResult)
         return parsedResult
 
     def update_sequence(self, options={}):

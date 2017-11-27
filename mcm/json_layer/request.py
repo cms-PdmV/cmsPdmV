@@ -24,7 +24,7 @@ from json_layer.notification import notification
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
-from tools.settings import settings
+import tools.settings as settings
 from tools.locker import locker
 from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
@@ -217,7 +217,7 @@ class request(json_base):
                     editable[key] = False
 
             if self.current_user_level != 0: ## not a simple user
-                always_editable = settings().get_value('editable_request')
+                always_editable = settings.get_value('editable_request')
                 for key in always_editable:
                     editable[key] = True
             if self.current_user_level > 3: ## only for admins
@@ -227,7 +227,7 @@ class request(json_base):
             for key in self._json_base__schema:
                 editable[key] = True
             if self.current_user_level <= 3: ## only for not admins
-                not_editable = settings().get_value('not_editable_request')
+                not_editable = settings.get_value('not_editable_request')
                 for key in not_editable:
                     editable[key] = False
 
@@ -515,7 +515,7 @@ class request(json_base):
             return
 
         ## select to synchronize status and approval toggling, or run the validation/run test
-        validation_disable = settings().get_value('validation_disable')
+        validation_disable = settings.get_value('validation_disable')
         do_runtest = not validation_disable
 
         by_pass = settingsDB.get('validation_bypass')['value']
@@ -1054,7 +1054,7 @@ class request(json_base):
         release_to_find = self.get_attribute('cmssw_release')
         import xml.dom.minidom
 
-        release_announcement = settings().get_value('release_announcement')
+        release_announcement = settings.get_value('release_announcement')
         xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure %s ' % (
                 release_announcement )).read())
 
@@ -1290,7 +1290,7 @@ class request(json_base):
         else:
             yes_to_valid = False
 
-        bypass = settings().get_value('campaign_valid_bypass')
+        bypass = settings.get_value('campaign_valid_bypass')
         if self.get_attribute('member_of_campaign') in bypass:
             yes_to_valid = False
 
@@ -1714,7 +1714,7 @@ class request(json_base):
         changes_happen = self.get_stats()
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database('requests')
-        ignore_for_status = settings().get_value('ignore_for_status')
+        ignore_for_status = settings.get_value('ignore_for_status')
         if len(mcm_rr):
             wma_r = mcm_rr[-1] ## the one used to check the status
             # pick up the last request of type!='Resubmission'
@@ -1854,7 +1854,7 @@ class request(json_base):
 
     def target_for_test(self):
         #could reverse engineer the target
-        return settings().get_value('test_target')
+        return settings.get_value('test_target')
 
     def get_efficiency_error(self, relative=True):
         if not self.get_attribute('generator_parameters'):
@@ -1916,16 +1916,16 @@ class request(json_base):
         return int(target)
 
     def get_timeout_for_runtest(self):
-        fraction = settings().get_value('test_timeout_fraction')
-        timeout = settings().get_value('batch_timeout') * 60. * fraction
+        fraction = settings.get_value('test_timeout_fraction')
+        timeout = settings.get_value('batch_timeout') * 60. * fraction
         ## if by default it is not possible to run a test => 0 events in
         if self.get_n_for_test( self.target_for_test(), adjust=False)==0:
             ## adjust the timeout for 10 events !
-            timeout = self.get_n_unfold_efficiency( settings().get_value('test_target_fallback') ) * self.get_sum_time_events()
+            timeout = self.get_n_unfold_efficiency(settings.get_value('test_target_fallback') ) * self.get_sum_time_events()
         return (fraction,timeout)
 
     def get_timeout(self):
-        default = settings().get_value('batch_timeout') * 60.
+        default = settings.get_value('batch_timeout') * 60.
 
         ## to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
@@ -1933,7 +1933,7 @@ class request(json_base):
         return int(max((estimate_rt) / fraction, default))
 
     def get_n_for_valid(self):
-        n_to_valid = settings().get_value('min_n_to_valid')
+        n_to_valid = settings.get_value('min_n_to_valid')
         val_attributes = self.get_attribute('validation')
         if 'nEvents' in val_attributes:
             if val_attributes['nEvents'] > n_to_valid:
@@ -1950,8 +1950,8 @@ class request(json_base):
         if adjust:
             fraction, timeout = self.get_timeout_for_runtest()
         else:
-            fraction = settings().get_value('test_timeout_fraction')
-            timeout = settings().get_value('batch_timeout') * 60. * fraction
+            fraction = settings.get_value('test_timeout_fraction')
+            timeout = settings.get_value('batch_timeout') * 60. * fraction
 
         # check that it is not going to time-out
         ### either the batch test time-out is set accordingly, or we limit the events
@@ -1961,7 +1961,7 @@ class request(json_base):
             if self.get_sum_time_events():
                 events = timeout / self.get_sum_time_events()
                 self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
-                    events, fraction, settings().get_value('batch_timeout') ))
+                    events, fraction, settings.get_value('batch_timeout') ))
             else:
                 self.logger.error('time per event is set to 0 !')
 
@@ -2083,9 +2083,9 @@ class request(json_base):
             raise Exception(message)
 
     def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
-        timing_threshold = settings().get_value('timing_threshold')
-        timing_n_limit = settings().get_value('timing_n_limit')
-        timing_fraction = settings().get_value('timing_fraction')
+        timing_threshold = settings.get_value('timing_threshold')
+        timing_n_limit = settings.get_value('timing_n_limit')
+        timing_fraction = settings.get_value('timing_fraction')
 
         #check if we ran a meaninful number of events and that measured time_event is above threshold
         #makes sense for really long events.
@@ -2298,7 +2298,7 @@ class request(json_base):
         total_job_cpu = None
         total_job_time = None
         timing_dict = {}
-        timing_methods = settings().get_value('timing_method')
+        timing_methods = settings.get_value('timing_method')
 # Here be dragons
 
         file_size = None

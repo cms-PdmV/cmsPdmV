@@ -8,7 +8,7 @@ from json_layer.batch import batch
 from json_layer.request import request
 from json_layer.notification import notification
 from tools.locker import semaphore_events
-from tools.settings import settings
+import tools.settings as settings
 from tools.locator import locator
 from tools.user_management import access_rights
 from tools.handlers import RequestApprover
@@ -101,7 +101,7 @@ class InspectBatches(BatchAnnouncer):
         """
         bdb = database('batches')
         res = []
-        if settings().get_value('batch_announce'):
+        if settings.get_value('batch_announce'):
             __query = bdb.construct_lucene_query({'status': 'new'})
             new_batches = bdb.full_text_search('search', __query, page=-1)
             for new_batch in new_batches:
@@ -113,7 +113,7 @@ class InspectBatches(BatchAnnouncer):
         else:
             self.logger.info('Not announcing any batch')
 
-        if settings().get_value('batch_set_done'):
+        if settings.get_value('batch_set_done'):
             ## check on on-going batches
             rdb = database('requests')
             __query2 = bdb.construct_lucene_query({'status' : 'announced'})
@@ -251,12 +251,12 @@ class NotifyBatch(RESTResource):
 
     def notify_batch(self, batch_id, message_notes):
         message = message_notes
-        to_who = [settings().get_value('service_account')]
+        to_who = [settings.get_value('service_account')]
         l_type = locator()
         if l_type.isDev():
-            to_who.append(settings().get_value('hypernews_test'))
+            to_who.append(settings.get_value('hypernews_test'))
         else:
-            to_who.append(settings().get_value('dataops_announce'))
+            to_who.append(settings.get_value('dataops_announce'))
 
         single_batch = batch(self.bdb.get(batch_id))
         subject = single_batch.get_subject('[Notification]')

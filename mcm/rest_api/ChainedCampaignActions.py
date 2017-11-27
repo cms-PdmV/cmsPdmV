@@ -11,7 +11,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign
 from tools.user_management import access_rights
-from tools.settings import settings
+import tools.settings as settings
 
 
 class CreateChainedCampaign(RESTResource):
@@ -170,7 +170,7 @@ class InspectChainedCampaignsRest(RESTResource):
 
     def multiple_inspect(self, ccids):
 
-        settings().set_value('inspect_chained_campaigns_running', True)
+        settings.set_value('inspect_chained_campaigns_running', True)
         crdb = database('chained_requests')
         try:
             ccids = ccids.split(',')
@@ -208,7 +208,7 @@ class InspectChainedCampaignsRest(RESTResource):
             yield dumps({'message': 'crlist crashed: %s' % (str(ex)),
                     'last_used_query' : query})
         finally:
-            settings().set_value('inspect_chained_campaigns_running', False)
+            settings.set_value('inspect_chained_campaigns_running', False)
 
 
 class InspectChainedRequests(InspectChainedCampaignsRest):
@@ -232,7 +232,7 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
         """
         if action != 'all':
             return {"results" : 'Error: Incorrect argument provided'}
-        is_running = settings().get_value('inspect_chained_campaigns_running')
+        is_running = settings.get_value('inspect_chained_campaigns_running')
         self.logger.info('InspectChainedRequests is running: %s' % (is_running))
         if is_running:
             return {"results" : 'Already running inspection'}

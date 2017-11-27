@@ -10,7 +10,7 @@ from simplejson import loads, dumps
 from couchdb_layer.mcm_database import database
 from tools.installer import installer
 from tools.ssh_executor import ssh_executor
-from tools.settings import settings
+import tools.settings as settings
 from tools.communicator import communicator
 from json_layer.request import request
 from json_layer.notification import notification
@@ -46,8 +46,8 @@ class ValidationHandler:
         self.setup_directories()
         self.setup_logger()
         self.get_submmited_prepids()
-        self.batch_retry_timeout = settings().get_value('batch_retry_timeout')
-        self.check_term_runlimit = settings().get_value('check_term_runlimit')
+        self.batch_retry_timeout = settings.get_value('batch_retry_timeout')
+        self.check_term_runlimit = settings.get_value('check_term_runlimit')
         try:
             self.ssh_exec = ssh_executor()
         except Exception as e:

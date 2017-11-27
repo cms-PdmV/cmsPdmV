@@ -3,7 +3,7 @@ from simplejson import loads
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.setting import setting
-from tools.settings import settings
+import tools.settings as settings
 from tools.user_management import access_rights
 from flask import request
 
@@ -26,7 +26,7 @@ class GetSetting(RESTResource):
             self.logger.error('Setting for {0} does not exist'.format(data))
             return {"results": {}}
 
-        return {"results": settings().get(data)}
+        return {"results": settings.get(data)}
 
 
 class SaveSetting(RESTResource):
@@ -62,7 +62,7 @@ class SaveSetting(RESTResource):
 
         new_setting = setting(data)
 
-        return {"results": settings().add(new_setting.get_attribute('prepid'), new_setting.json())}
+        return {"results": settings.add(new_setting.get_attribute('prepid'), new_setting.json())}
 
 
 class UpdateSetting(RESTResource):
@@ -113,4 +113,4 @@ class UpdateSetting(RESTResource):
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
 
         self.logger.info('Updating setting %s...' % (new_version.get_attribute('prepid')))
-        return {"results": settings().set(new_version.get_attribute('prepid'), new_version.json())}
+        return {"results": settings.set(new_version.get_attribute('prepid'), new_version.json())}

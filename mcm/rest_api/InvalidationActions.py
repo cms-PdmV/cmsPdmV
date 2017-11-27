@@ -10,7 +10,7 @@ from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.invalidation import invalidation
-from tools.settings import settings
+import tools.settings as settings
 from tools.user_management import access_rights
 
 
@@ -38,11 +38,11 @@ class Announcer():
                 text += self.print_invalidations(ds_to_be_invalidated)
             text += '\nas a consequence of requests being reset.\n'
 
-            to_who = [settings().get_value('service_account')]
+            to_who = [settings.get_value('service_account')]
             if self.l_type.isDev():
-                to_who.append( settings().get_value('hypernews_test'))
+                to_who.append(settings.get_value('hypernews_test'))
             else:
-                to_who.append( settings().get_value('dataops_announce' ))
+                to_who.append(settings.get_value('dataops_announce' ))
 
             try:
                 elem = (r_to_be_rejected + ds_to_be_invalidated)[0]
@@ -176,7 +176,7 @@ class ClearInvalidations(RESTResource):
 class AcknowledgeInvalidation(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.administrator
-        self.access_user = settings().get_value('allowed_to_acknowledge')
+        self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
 
