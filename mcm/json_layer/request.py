@@ -2176,7 +2176,7 @@ class request(json_base):
         if  __test_eff < 0.4:
             subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
             message = ('For the request %s, with %s cores, CPU efficiency %s < 0.4.'
-                    ' Setting number of cores to 1') % (
+                    ' You should seting number of cores to 1 and process_string accordingly') % (
                             self.get_attribute('prepid'),
                             self.get_core_num(),
                             __test_eff)
