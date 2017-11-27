@@ -15,7 +15,7 @@ from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLog
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications
+from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
 
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
@@ -428,6 +428,7 @@ api.add_resource(SaveSeen, '/restapi/notifications/seen')
 api.add_resource(FetchActionObjects, '/restapi/notifications/fetch_actions')
 api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_actions')
 api.add_resource(SearchNotifications, '/restapi/notifications/search')
+api.add_resource(MarkAsSeen, '/restapi/notifications/mark_as_seen')
 
 ##Define loggers
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import logging
+
 from collections import defaultdict
 from tools.locker import locker
-from tools.settings import settings
 from couchdb_layer.mcm_database import database
 from tools.enum import Enum
 from flask import request, has_request_context
+from werkzeug.contrib.cache import SimpleCache
 
 class user_pack:
     """
@@ -59,41 +61,43 @@ access_rights = Enum(*roles)
 
 
 class authenticator:
+    logger = logging.getLogger("mcm_error")
 
     # roles list is a list of valid roles for a page
     __db = database('users')
-    __users_roles = dict()
-    __lookup_counter = defaultdict(int)
+    __users_roles_cache = SimpleCache()
+
+    # Cache timeout in seconds
+    CACHE_TIMEOUT = 30 * 60
 
     # get the roles that are registered to a specific username
     @classmethod
     def get_user_role(cls, username, email=None):
         with locker.lock(username):
-            if username not in cls.__users_roles:
-                if not cls.__db.document_exists(username):
-                    cls.__users_roles[username] = 'user'
-                else:
-                    user = cls.__db.get(username)
-                    if email and ('email' not in user or user['email'] != email):
-                        user['email'] = email
-                        cls.__db.update(user)
-                    role = None
-                    while not role:
-                        try:
-                            role = user['role']
-                        except:
-                            ## how to print an error from here ?
-                            user = cls.__db.get(username)
-                            pass
-                    cls.__users_roles[username] = user['role']
-            else:
-                if cls.__lookup_counter[username] == settings().get_value("user_cache_refresh_counter"):
-                    if cls.__db.document_exists(username):
-                        cls.__users_roles[username] = cls.__db.get(username)['role']
-                    cls.__lookup_counter[username] = 0
-                else:
-                    cls.__lookup_counter[username] += 1
-            return cls.__users_roles[username]
+            cache_key = 'authenticator_user_role_' + username
+            cached_value = cls.__users_roles_cache.get(cache_key)
+
+            if cached_value is not None:
+                print('Found value for ' + cache_key)
+                return cached_value
+            print('Did not find value for ' + cache_key)
+
+            user_role = 'user'
+            if cls.__db.document_exists(username):
+                user = cls.__db.get(username)
+
+                if email and ('email' not in user or user['email'] != email):
+                    user['email'] = email
+                    cls.__db.update(user)
+
+                try:
+                    user_role = user['role']
+                except:
+                    cls.logger.error('Error getting role for user "' + username + '". Will use default value "' + user_role + '"')
+
+            cls.__users_roles_cache.set(cache_key, user_role, timeout = cls.CACHE_TIMEOUT)
+
+            return user_role
 
     @classmethod
     def get_user_role_index(cls, username, email=None):

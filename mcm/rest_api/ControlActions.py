@@ -5,14 +5,13 @@ from collections import defaultdict
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
-from tools.settings import settings
+import tools.settings as settings
 from simplejson import dumps, loads
 
 from tools.locker import locker
 from tools.communicator import communicator
 from couchdb_layer.mcm_database import database
 from tools.locator import locator
-
 
 class RenewCertificate(RESTResource):
     def __init__(self):
@@ -54,7 +53,7 @@ class ChangeVerbosity(RESTResource):
         """
         Change verbosity of logger
         """
-        if settings().set_value('log_verbosity', level):
+        if settings.set_value('log_verbosity', level):
             ##TO-DO:
             # do we really need this?
             self.logger.info("We want to set log verbosity to: %s" % (level))

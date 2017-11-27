@@ -14,7 +14,7 @@ from json_layer.notification import notification
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
-from tools.settings import settings
+import tools.settings as settings
 from tools.user_management import access_rights
 
 
@@ -590,7 +590,7 @@ Dear Production Managers,
             mccm_prepids.append(prepid)
         message += '\n'
 
-        to_who = [settings().get_value('service_account')]
+        to_who = [settings.get_value('service_account')]
         to_who.extend( map( lambda u : u['email'], udb.query(query="role==production_manager", page_num=-1)))
         notification(
             subject,

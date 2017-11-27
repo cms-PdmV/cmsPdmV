@@ -3,7 +3,6 @@ from datetime import datetime
 from simplejson import dumps
 
 from json_base import json_base
-from tools.settings import settings
 from couchdb_layer.mcm_database import database
 
 class notification(json_base):

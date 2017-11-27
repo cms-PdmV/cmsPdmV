@@ -4,7 +4,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
 from tools.user_management import authenticator
 from tools.locator import locator
-from tools.settings import settings
+import tools.settings as settings
 from json_layer.notification import notification
 
 class batch(json_base):
@@ -142,11 +142,11 @@ class batch(json_base):
         self.get_current_user_role_level()
 
 
-        to_who = [settings().get_value('service_account')]
+        to_who = [settings.get_value('service_account')]
         if l_type.isDev():
-            to_who.append( settings().get_value('hypernews_test'))
+            to_who.append(settings.get_value('hypernews_test'))
         else:
-            to_who.append( settings().get_value('dataops_announce' ))
+            to_who.append(settings.get_value('dataops_announce'))
         #sender=None
         #if self.current_user_level != 3:
         #    auth = authenticator()

@@ -102,14 +102,15 @@
             <div ng-if="!search_on" class="notification-group" ng-repeat="group in sorted_groups" >
                 <div ng-click="showGroup(group);" class="notification-header">
                   <h3>{{group.split('_').join(' ') + ' (' + notification_numbers[group] + ')'}}</h3>
-                  <i ng-if="group_object.hasOwnProperty(group)" ng-click="showGroupActions(group, $event);" class="icon-chevron-right action-arrow"></i>
+                  <i ng-if="group_object.hasOwnProperty(group)" rel="tooltip" title="See all related objects" ng-click="showGroupActions(group, $event);" class="icon-chevron-right"></i>
+                  <i ng-click="markGroupAsSeen(group, $event);" rel="tooltip" title="Marked as seen" class="icon-eye-open"></i>
                 </div>
                 <div class="notification" ng-show="notifications[group].is_selected" ng-repeat="notification in notifications[group].notifications" ng-style="notification.seen ? {} : { 'background-color': '#B0D0D3' }" ng-click="showNotification(notification);">
                   <img class="notification-eye" ng-if="notification.seen" src="scripts/img/seen.png"></img>
                   <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
                   <h5>{{notification.title}}</h5>
                   <span class="notification-date">{{notification.created_at}}</span>
-                  <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
+                  <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" rel="tooltip" title="See all related objects" class="icon-chevron-right"></i>
                 </div>
                 <div ng-if="notifications[group].more_to_fetch && notifications[group].is_selected" style="background-color: white;" ng-click="fetchNotifications(group);">
                     <i class="icon-chevron-down"></i>
@@ -120,7 +121,7 @@
               <img class="notification-eye" ng-if="!notification.seen" src="scripts/img/unseen.png"></img>
               <h5>{{notification.title}}</h5>
               <span class="notification-date">{{notification.created_at}}</span>
-              <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" class="icon-chevron-right action-arrow"></i>
+              <i ng-if="notification.action_objects.length > 0" ng-click="showActions(notification.object_type, notification._id, notification.seen, $event)" rel="tooltip" title="See all related objects" class="icon-chevron-right"></i>
             </div>
             <div style="text-align: center; cursor: pointer;" ng-if="search_on && search_items_left" style="background-color: white;" ng-click="continueSearch();">
                     <i class="icon-chevron-down"></i>

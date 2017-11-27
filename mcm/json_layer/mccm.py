@@ -49,9 +49,9 @@ class mccm(json_base):
     @staticmethod
     def get_meeting_date():
         import datetime
-        from tools.settings import settings
+        import tools.settings as settings
         t = datetime.date.today()
-        meeting_day = int(settings().get_value('mccm_meeting_day'))
+        meeting_day = int(settings.get_value('mccm_meeting_day'))
         w = 0 if meeting_day>=t.weekday() else 1
         t = t + datetime.timedelta(days=meeting_day-t.weekday(), weeks=w)
         return t

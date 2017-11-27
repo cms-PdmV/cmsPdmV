@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
-from tools.settings import settings
+import tools.settings as settings
 from json_base import json_base
 from copy import deepcopy
 
 class sequence(json_base):
 
-    _json_base__schema = settings().get_value('cmsdriver_options')
+    _json_base__schema = settings.get_value('cmsdriver_options')
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
 
-        self._json_base__schema = settings().get_value('cmsdriver_options')
+        self._json_base__schema = settings.get_value('cmsdriver_options')
 
         ## how to get the options ?
         # in cmssw
