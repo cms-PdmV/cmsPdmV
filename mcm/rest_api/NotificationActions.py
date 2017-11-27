@@ -14,6 +14,7 @@ class NotificationRESTResource(RESTResource):
         self.role = authenticator.get_user_role(self.username, email=user_p.get_email())
         self.before_request()
         self.count_call()
+        self.notifications_db = database('notifications')
 
     def fetch_action_objects(self, action_objects, object_type, page, limit):
         db = database(object_type)
@@ -31,6 +32,17 @@ class NotificationRESTResource(RESTResource):
         for notif in notifications:
             notif['seen'] = self.username in notif['seen_by']
 
+    def substract_seens_in_stats(self, seens):
+        if seens <= 0:
+            return {"results": True}
+        stats = self.notifications_db.get('notification_stats')
+        stats['stats'][self.username]['unseen'] -= seens
+        if not self.notifications_db.save(stats):
+            message = "Failed to save notification stats"
+            self.logger.error(message)
+            return {"results": False, "message": message}
+        return {"results": True}
+
 
 class CheckNotifications(NotificationRESTResource):
 
@@ -42,8 +54,7 @@ class CheckNotifications(NotificationRESTResource):
         Check for new notifications
         """
         CheckNotifications.__init__(self)
-        notifications_db = database('notifications')
-        stats = notifications_db.get('notification_stats')['stats']
+        stats = self.notifications_db.get('notification_stats')['stats']
         if self.username in stats:
             return stats[self.username]
         return {'All': 0, 'unseen': 0}
@@ -62,14 +73,13 @@ class FetchNotifications(NotificationRESTResource):
         """
         FetchNotifications.__init__(self)
         kwargs = self.parser.parse_args()
-        notifications_db = database('notifications')
-        query = notifications_db.construct_lucene_complex_query([
+        query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
             ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
         ])
 
-        notifications = notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
+        notifications = self.notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
         self.set_seen(notifications)
         self.logger.info("Fetched notifications")
         return {'notifications': notifications}
@@ -88,20 +98,13 @@ class SaveSeen(NotificationRESTResource):
         """
         SaveSeen.__init__(self)
         kwargs = self.parser.parse_args()
-        notifications_db = database('notifications')
-        notif = notifications_db.get(kwargs['notification_id'])
+        notif = self.notifications_db.get(kwargs['notification_id'])
         notif['seen_by'].append(self.username)
-        if not notifications_db.save(notif):
+        if not self.notifications_db.save(notif):
             message = "Failed to save seen for notification: %s" % kwargs['notification_id']
             self.logger.error(message)
             return {"results": False, "message": message}
-        stats = notifications_db.get('notification_stats')
-        stats['stats'][self.username]['unseen'] -= 1
-        if not notifications_db.save(stats):
-            message = "Failed to save notification stats"
-            self.logger.error(message)
-            return {"results": False, "message": message}
-        return {"results": True}
+        return self.substract_seens_in_stats(1)
 
 class FetchGroupActionObjects(NotificationRESTResource):
 
@@ -118,13 +121,12 @@ class FetchGroupActionObjects(NotificationRESTResource):
         """
         FetchGroupActionObjects.__init__(self)
         kwargs = self.parser.parse_args()
-        notifications_db = database('notifications')
-        query = notifications_db.construct_lucene_complex_query([
+        query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
             ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
         ])
-        notifications = notifications_db.full_text_search('search', query)
+        notifications = self.notifications_db.full_text_search('search', query)
         action_objects = []
         object_type = ''
         for notif in notifications:
@@ -152,14 +154,13 @@ class SearchNotifications(NotificationRESTResource):
         SearchNotifications.__init__(self)
         kwargs = self.parser.parse_args()
         search = '*' + kwargs['search'] + '*'
-        notifications_db = database('notifications')
-        query = notifications_db.construct_lucene_complex_query([
+        query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
             ('action_objects', {'value': search, 'join_operator': 'AND', 'open_parenthesis': True}),
             ('title', {'value': search, 'join_operator': 'OR', 'close_parenthesis': True})
         ])
-        notifications = notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
+        notifications = self.notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
         self.set_seen(notifications)
         self.logger.info("Searched text %s in notifications" % search)
         return notifications
@@ -181,8 +182,46 @@ class FetchActionObjects(NotificationRESTResource):
         FetchActionObjects.__init__(self)
         kwargs = self.parser.parse_args()
         notification_id = kwargs['notification_id']
-        notifications_db = database('notifications')
-        mcm_notification = notifications_db.get(notification_id)
+        mcm_notification = self.notifications_db.get(notification_id)
         action_objects_results = self.fetch_action_objects(mcm_notification["action_objects"], mcm_notification["object_type"], kwargs['page'], kwargs['limit'])
         self.logger.info("Fetched action objects for notification %s" % notification_id)
         return action_objects_results
+
+
+class MarkAsSeen(NotificationRESTResource):
+
+    def __init__(self):
+        NotificationRESTResource.__init__(self)
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('group', type=str, required=True)
+
+    def post(self):
+        """
+        Fetch notifications of a specific group
+        """
+        MarkAsSeen.__init__(self)
+        kwargs = self.parser.parse_args()
+        query = self.notifications_db.construct_lucene_complex_query([
+            ('target_role', {'value': self.role}),
+            ('targets', {'value': self.username, 'join_operator': 'OR'}),
+            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
+        ])
+        page = 0
+        limit = 50
+        set_seen_counter = 0
+        while page == 0 or len(notifications) >= limit:
+            notifications = self.notifications_db.full_text_search('search', query, page=page, limit=limit)
+            for notif in notifications:
+                seen_by = set(notif["seen_by"])
+                if self.username in seen_by:
+                    continue
+                set_seen_counter += 1
+                seen_by.add(self.username)
+                notif["seen_by"] = list(seen_by)
+                if not self.notifications_db.save(notif):
+                    message = "Error saving seen for notification: %s" % notif["_id"]
+                    self.logger.error(message)
+                    self.substract_seens_in_stats(set_seen_counter)
+                    return {'results': False, 'message': "Error saving seen for notification: %s" % notif["_id"]}
+            page += 1
+        return self.substract_seens_in_stats(set_seen_counter)

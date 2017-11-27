@@ -499,9 +499,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         var campaign_name = $rootScope.root_campaign == "" ? '*' : $rootScope.root_campaign;
         var promise = $http.get("restapi/requests/search_view?limit=10&requestPrepId=" + viewValue + "&memberOfCampaign=" + campaign_name);
         return promise.then(function(data){
-          data = JSON.parse(data.data)
-          results = JSON.parse(data)
-          scope.possible_requests = results.results;
+          scope.possible_requests = data.data.results;
           return scope.possible_requests;
         }, function(data){
           alert("Error getting list of possible requests: " + data.data);
