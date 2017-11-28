@@ -453,7 +453,7 @@ class request(json_base):
                     'The request has a different number of steps than the campaigns it belong to')
 
         def in_there(seq1, seq2):
-            items_that_do_not_matter = ['conditions', 'datatier', 'eventcontent']
+            items_that_do_not_matter = ['conditions', 'datatier', 'eventcontent', 'nThreads']
             for (name, item) in seq1.json().items():
                 if name in items_that_do_not_matter:
                     #there are parameters which do not require specific processing string to be provided
