@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <table border='1'>
+    {% for function in data %}
+    <tr><td colspan="4"><h1>{{ function.function_name }}</h1></td></tr>
+    <tr><td>Endpoint</td><td colspan="3">{{ function.path }}</td></tr>
+    <tr><td>Method</td><td>Description</td><td>Access limit</td><td>Call counter</td></tr>
+    {% for method in function.methods %}
+    <tr><td>{{ method.name }}</td><td>{{ method.doc }}</td><td>{{ method.access_limit }}</td><td>{{ method.call_counter }}</td></tr>
+    {% endfor %}
+    {% endfor %}
+    </table>
+  </body>
+</html>
