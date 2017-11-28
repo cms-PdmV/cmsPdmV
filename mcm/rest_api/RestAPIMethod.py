@@ -54,7 +54,6 @@ class RESTResource(Resource):
         method = request.method
         with locker.lock("rest-call-counter"):
            key = self.__class__.__name__ + method
-           print(key)
            try:
                RESTResource.call_counters[key] += 1
            except KeyError:
@@ -92,29 +91,44 @@ class RESTResourceIndex(RESTResource):
         methods = ['GET', 'PUT', 'POST', 'DELETE']
         data = []
 
+        is_index = request.url_rule.rule in ['/restapi', '/public/restapi']
+
         for rule in current_app.url_map.iter_rules():
             func = current_app.view_functions.get(rule.endpoint)
             if not hasattr(func, 'view_class'):
                 # print('Rule ' + rule.rule + ' endpoint ' + rule.endpoint + ' has no view_class - SKIPPING')
                 continue
 
+            function_name = func.view_class.__name__
+
+            if is_index and function_name != RESTResourceIndex.__name__:
+                continue
+
+            if not rule.rule.startswith(request.url_rule.rule):
+                continue
+
+            if rule.rule == request.url_rule.rule:
+                # Do not include itself
+                continue
+
             function_dict = {}
 
             rule_escaped = cgi.escape(rule.rule)
-            function_name = func.view_class.__name__
+
             acc_limit = None
 
             if hasattr(func.view_class, 'access_limit'):
                 acc_limit = getattr(func.view_class, 'access_limit')
 
-            # print('Rule ' + rule.rule)
-            # print('Endpoint ' + rule.endpoint)
-            # print('Rule methods: ' + str(rule.methods))
-            # print('Class name ' + func.view_class.__name__)
-            # print('Access limit? ' + str(acc_limit))
-            # print('Module ' + func.view_class.__module__)
+            #print('Rule ' + rule.rule)
+            #print('Endpoint ' + rule.endpoint)
+            #print('Rule methods: ' + str(rule.methods))
+            #print('Class name ' + func.view_class.__name__)
+            #print('Access limit? ' + str(acc_limit))
+            #print('Module ' + func.view_class.__module__)
+            # print("\n\n")
 
-            function_dict['path'] = rule.rule
+            function_dict['path'] = (rule.rule)[1:]
             function_dict['function_name'] = function_name
 
             methods_list = []
@@ -124,9 +138,8 @@ class RESTResourceIndex(RESTResource):
                     method_dict['name'] = m
                     
                     method_doc = func.view_class.__dict__.get(m.lower()).__doc__
-                    if method_doc is None:
-                        method_doc = 'To be documented'
-                    method_dict['doc'] = method_doc
+                    if method_doc is not None:
+                        method_dict['doc'] = method_doc
 
                     if acc_limit is not None:
                         method_dict['access_limit'] = roles[acc_limit]
