@@ -15,8 +15,10 @@ import tools.settings as settings
 
 
 class CreateChainedCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -73,37 +75,39 @@ class CreateChainedCampaign(RESTResource):
 
 
 class UpdateChainedCampaign(RESTResource):
-        def __init__(self):
-            self.access_limit = access_rights.production_manager
-            self.before_request()
-            self.count_call()
 
-        def put(self):
-            """
-            Update the content of a chained campaign with the provided json content
-            """
-            return self.update_campaign(loads(flask.request.data))
+    access_limit = access_rights.production_manager
 
-        def update_campaign(self, data):
-            db = database('chained_campaigns')
-            if '_rev' not in data:
-                return {"results" : False}
-            try:
-                ccamp = chained_campaign(json_input=data)
-            except chained_campaign('').IllegalAttributeName as ex:
-                return {"results" : False}
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def put(self):
+        """
+        Update the content of a chained campaign with the provided json content
+        """
+        return self.update_campaign(loads(flask.request.data))
+
+    def update_campaign(self, data):
+        db = database('chained_campaigns')
+        if '_rev' not in data:
+            return {"results" : False}
+        try:
+            ccamp = chained_campaign(json_input=data)
+        except chained_campaign('').IllegalAttributeName as ex:
+            return {"results" : False}
 
 
-            if not ccamp.get_attribute("_id"):
-                self.logger.error('prepid returned was None')
-                return {"results":False}
+        if not ccamp.get_attribute("_id"):
+            self.logger.error('prepid returned was None')
+            return {"results":False}
 
-            self.logger.info('Updating chained_campaign %s ...' % (
-                    ccamp.get_attribute('_id')))
+        self.logger.info('Updating chained_campaign %s ...' % (
+                ccamp.get_attribute('_id')))
 
-            # update history
-            ccamp.update_history({'action' : 'updated'})
-            return {"results" : db.update(ccamp.json())}
+        # update history
+        ccamp.update_history({'action' : 'updated'})
+        return {"results" : db.update(ccamp.json())}
 
 
 class DeleteChainedCampaign(RESTResource):
@@ -157,8 +161,10 @@ class GetChainedCampaign(RESTResource):
 
 
 class InspectChainedCampaignsRest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -246,8 +252,9 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
 
 class SelectNewChainedCampaigns(RESTResource):
 
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.fdb = database('flows')
         self.cdb = database('campaigns')
         self.ccdb = database('chained_campaigns')
@@ -364,8 +371,10 @@ class SelectNewChainedCampaigns(RESTResource):
 
 
 class ChainedCampaignsPriorityChange(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.chained_campaigns_db = database("chained_campaigns")
         self.before_request()
         self.count_call()

@@ -13,9 +13,11 @@ from tools.user_management import access_rights
 
 
 class FlowRESTResource(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'flows'
-        self.access_limit = access_rights.production_manager
 
     # takes  a 2 lists and returns a tuple of what is present in the second and not in the first and
     # what was present in the first and not in the second
@@ -359,8 +361,10 @@ class GetFlow(RESTResource):
 
 
 class ApproveFlow(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 

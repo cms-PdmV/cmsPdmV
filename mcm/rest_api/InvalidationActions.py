@@ -71,8 +71,9 @@ class Clearer():
 
 class GetInvalidation(RESTResource):
 
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -87,8 +88,10 @@ class GetInvalidation(RESTResource):
         return {"results": db.get(object_name)}
 
 class DeleteInvalidation(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -101,9 +104,11 @@ class DeleteInvalidation(RESTResource):
         return {"results": db.delete(invalidation_id)}
 
 class AnnounceInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'invalidations'
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -138,9 +143,11 @@ class AnnounceInvalidations(RESTResource):
                 "requests_to_invalidate": __r_list}
 
 class ClearInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -174,8 +181,10 @@ class ClearInvalidations(RESTResource):
                 "requests_to_invalidate": __r_list}
 
 class AcknowledgeInvalidation(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
@@ -201,9 +210,11 @@ class AcknowledgeInvalidation(RESTResource):
                     invalidation_id)}
 
 class PutOnHoldInvalidation(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -234,9 +245,11 @@ class PutOnHoldInvalidation(RESTResource):
         return {"results" : res}
 
 class PutHoldtoNewInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 

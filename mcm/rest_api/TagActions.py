@@ -8,8 +8,10 @@ from flask import request
 
 
 class GetTags(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -22,8 +24,10 @@ class GetTags(RESTResource):
 
 
 class AddTag(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -40,8 +44,10 @@ class AddTag(RESTResource):
         return {"results": db.save(doc)}
 
 class RemoveTag(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 

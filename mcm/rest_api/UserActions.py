@@ -15,8 +15,10 @@ from tools.user_management import user_pack, roles, access_rights, authenticator
 
 
 class GetUserRole(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -71,9 +73,11 @@ class GetUser(RESTResource):
 
 
 class SaveUser(RESTResource):
+
+    access_limit = access_rights.generator_convener
+
     def __init__(self):
         self.db_name = 'users'
-        self.access_limit = access_rights.generator_convener
         self.before_request()
         self.count_call()
 
@@ -147,9 +151,11 @@ class AskRole(RESTResource):
 
 
 class AddRole(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
         self.db_name = 'users'
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -181,10 +187,12 @@ class AddRole(RESTResource):
 
 
 class ChangeRole(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'users'
         self.all_roles = roles
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -218,8 +226,10 @@ class ChangeRole(RESTResource):
 
 
 class NotifyPWG(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 

@@ -9,8 +9,10 @@ from flask import request
 
 
 class GetSetting(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -30,8 +32,10 @@ class GetSetting(RESTResource):
 
 
 class SaveSetting(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -66,8 +70,10 @@ class SaveSetting(RESTResource):
 
 
 class UpdateSetting(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 

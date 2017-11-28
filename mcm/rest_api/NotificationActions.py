@@ -7,8 +7,9 @@ from flask_restful import reqparse
 
 class NotificationRESTResource(RESTResource):
 
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         user_p = user_pack()
         self.username = user_p.get_username()
         self.role = authenticator.get_user_role(self.username, email=user_p.get_email())

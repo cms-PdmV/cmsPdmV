@@ -14,63 +14,67 @@ from flask_restful import reqparse
 from tools.locker import locker
 
 class CreateChainedRequest(RESTResource):
-   def __init__(self):
-       self.db_name = 'chained_requests'
-       self.access_limit = access_rights.administrator
-       self.before_request()
-       self.count_call()
 
-   def put(self):
-       """
-       Create a chained request from the provided json content
-       """
-       return self.import_request(flask.request.data.strip())
+    access_limit = access_rights.administrator
 
-   def import_request(self, data):
-       db = database(self.db_name)
-       json_input=loads(data)
-       if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
-           self.logger.error('Now pwg or member of campaign attribute for new chained request')
-           return {"results":False}
-       if 'prepid' in json_input:
-           req = chained_request(json_input)
-           cr_id = req.get_attribute('prepid')
-       else:
-           cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
-           if not cr_id:
-               return {"results":False}
-           req = chained_request(db.get(cr_id))
-       for key in json_input:
-           if key not in ['prepid', '_id', '_rev', 'history']:
-               req.set_attribute(key, json_input[key])
-       if not req.get_attribute('prepid'):
-           self.logger.error('prepid returned was None')
-           raise ValueError('Prepid returned was None')
-       self.logger.info('Created new chained_request %s' % cr_id)
-       # update history with the submission details
-       req.update_history({'action': 'created'})
-       return self.save_request(db, req)
-
-   def save_request(self, db, req):
-       if not db.document_exists(req.get_attribute('_id')):
-           if db.save(req.json()):
-               self.logger.info('new chained_request successfully saved.')
-               return {"results":True, "prepid": req.get_attribute('prepid')}
-           else:
-               self.logger.error('Could not save new chained_request to database')
-               return {"results":False}
-       else:
-           if db.update(req.json()):
-               self.logger.info('new chained_request successfully saved.')
-               return {"results":True, "prepid": req.get_attribute('prepid')}
-           else:
-               self.logger.error('Could not save new chained_request to database')
-               return {"results":False}
-
-class UpdateChainedRequest(RESTResource):
     def __init__(self):
         self.db_name = 'chained_requests'
-        self.access_limit = access_rights.production_manager
+        self.before_request()
+        self.count_call()
+
+    def put(self):
+        """
+        Create a chained request from the provided json content
+        """
+        return self.import_request(flask.request.data.strip())
+
+    def import_request(self, data):
+        db = database(self.db_name)
+        json_input=loads(data)
+        if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
+            self.logger.error('Now pwg or member of campaign attribute for new chained request')
+            return {"results":False}
+        if 'prepid' in json_input:
+            req = chained_request(json_input)
+            cr_id = req.get_attribute('prepid')
+        else:
+            cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
+            if not cr_id:
+                return {"results":False}
+            req = chained_request(db.get(cr_id))
+        for key in json_input:
+            if key not in ['prepid', '_id', '_rev', 'history']:
+                req.set_attribute(key, json_input[key])
+        if not req.get_attribute('prepid'):
+            self.logger.error('prepid returned was None')
+            raise ValueError('Prepid returned was None')
+        self.logger.info('Created new chained_request %s' % cr_id)
+        # update history with the submission details
+        req.update_history({'action': 'created'})
+        return self.save_request(db, req)
+
+    def save_request(self, db, req):
+        if not db.document_exists(req.get_attribute('_id')):
+            if db.save(req.json()):
+                self.logger.info('new chained_request successfully saved.')
+                return {"results":True, "prepid": req.get_attribute('prepid')}
+            else:
+                self.logger.error('Could not save new chained_request to database')
+                return {"results":False}
+        else:
+            if db.update(req.json()):
+                self.logger.info('new chained_request successfully saved.')
+                return {"results":True, "prepid": req.get_attribute('prepid')}
+            else:
+                self.logger.error('Could not save new chained_request to database')
+                return {"results":False}
+
+class UpdateChainedRequest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
+    def __init__(self):
+        self.db_name = 'chained_requests'
         self.before_request()
         self.count_call()
 
@@ -105,8 +109,10 @@ class UpdateChainedRequest(RESTResource):
 
 
 class DeleteChainedRequest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -201,8 +207,10 @@ class GetChainedRequest(RESTResource):
 # REST method that makes the chained request flow to the next
 # step of the chain
 class FlowToNextStep(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -299,8 +307,10 @@ class FlowToNextStep(RESTResource):
 
 
 class RewindToPreviousStep(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -369,8 +379,10 @@ class RewindToPreviousStep(RESTResource):
 
 
 class ApproveChainedRequest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -409,8 +421,10 @@ class ApproveChainedRequest(RESTResource):
 
 
 class InspectChain(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -438,8 +452,10 @@ class InspectChain(RESTResource):
 
 
 class SearchableChainedRequest(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -490,8 +506,10 @@ class SearchableChainedRequest(RESTResource):
 
 
 class TestChainedRequest(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -568,8 +586,10 @@ class TestChainedRequest(RESTResource):
 
 
 class SoftResetChainedRequest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self, mode='show'):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -598,8 +618,10 @@ class SoftResetChainedRequest(RESTResource):
 
 
 class InjectChainedRequest(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
         self.mode = 'show' if 'get_inject' in flask.request.path else 'inject'
@@ -633,8 +655,10 @@ class ChainsFromTicket(RESTResource):
     """
         Get all the generated chains from a ticket
     """
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
@@ -673,8 +697,10 @@ class ChainsFromTicket(RESTResource):
 
 
 class TaskChainDict(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
@@ -845,8 +871,10 @@ class TaskChainDict(RESTResource):
             return dumps(wma, indent=4)
 
 class GetSetupForChains(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         path = flask.request.path
         if 'setup' in path:
             self.opt = 'setup'
@@ -854,7 +882,7 @@ class GetSetupForChains(RESTResource):
             self.opt = 'test'
         else:
             self.opt = 'valid'
-            self.access_limit = access_rights.administrator
+            access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
@@ -884,44 +912,48 @@ class GetSetupForChains(RESTResource):
 
 
 class ForceChainReqToDone(RESTResource):
-   def __init__(self):
-       self.access_limit = access_rights.production_manager
-       self.crdb = database('chained_requests')
-       self.before_request()
-       self.count_call()
-       self.representations = {'text/plain': self.output_text}
 
-   def get(self, chained_request_ids):
-       """
-       Force chained_request to set status to done
-       """
-       if ',' in chained_request_ids:
-           rlist = chained_request_ids.rsplit(',')
-           res = []
-           for r in rlist:
-               res.append(self.force_status_done(r))
-           return res
-       else:
-           return [self.force_status_done(chained_request_ids)]
+    access_limit = access_rights.production_manager
 
-   def force_status_done(self, prepid):
-       if not self.crdb.document_exists(prepid):
-           return dumps({"results": False,
-                   "message": "Chained request with prepid {0} does not exist".format(prepid)})
-       cr = chained_request(self.crdb.get(prepid))
-       if not (cr.get_attribute("status") in ["done", "force_done"]):
-           cr.set_status(to_status="force_done")
-           self.logger.debug("forcing chain_req status to done. cr status:%s" %(
-                   cr.get_attribute("status")))
-           ret = self.crdb.save(cr.json())
-           return {'prepid': prepid, 'message': ret, 'results' : True}
-       else:
-           ret = "Chained request already in status done"
-           return {'prepid': prepid, 'message': ret, 'results': False}
+    def __init__(self):
+        self.crdb = database('chained_requests')
+        self.before_request()
+        self.count_call()
+        self.representations = {'text/plain': self.output_text}
+
+    def get(self, chained_request_ids):
+        """
+        Force chained_request to set status to done
+        """
+        if ',' in chained_request_ids:
+            rlist = chained_request_ids.rsplit(',')
+            res = []
+            for r in rlist:
+                res.append(self.force_status_done(r))
+            return res
+        else:
+            return [self.force_status_done(chained_request_ids)]
+
+    def force_status_done(self, prepid):
+        if not self.crdb.document_exists(prepid):
+            return dumps({"results": False,
+                    "message": "Chained request with prepid {0} does not exist".format(prepid)})
+        cr = chained_request(self.crdb.get(prepid))
+        if not (cr.get_attribute("status") in ["done", "force_done"]):
+            cr.set_status(to_status="force_done")
+            self.logger.debug("forcing chain_req status to done. cr status:%s" %(
+                    cr.get_attribute("status")))
+            ret = self.crdb.save(cr.json())
+            return {'prepid': prepid, 'message': ret, 'results' : True}
+        else:
+            ret = "Chained request already in status done"
+            return {'prepid': prepid, 'message': ret, 'results': False}
 
 class ForceStatusDoneToProcessing(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.crdb = database('chained_requests')
         self.before_request()
         self.count_call()
@@ -957,8 +989,10 @@ class ForceStatusDoneToProcessing(RESTResource):
 
 
 class ToForceFlowList(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.sdb = database('settings')
         self.cdb = database('chained_requests')
         self.before_request()
@@ -997,8 +1031,10 @@ class ToForceFlowList(RESTResource):
 
 
 class ChainedRequestsPriorityChange(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.chained_requests_db = database("chained_requests")
         self.before_request()
         self.count_call()
@@ -1025,8 +1061,10 @@ class ChainedRequestsPriorityChange(RESTResource):
         }
 
 class RemoveFromForceFlowList(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.sdb = database('settings')
         self.before_request()
         self.count_call()

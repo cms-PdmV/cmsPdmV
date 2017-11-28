@@ -16,8 +16,10 @@ from simplejson import loads
 
 
 class CreateCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -70,8 +72,10 @@ class CreateCampaign(RESTResource):
             cdb.save(dcc.json())
 
 class UpdateCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -122,9 +126,11 @@ class UpdateCampaign(RESTResource):
                 cdb.save(dcc.json())
 
 class DeleteCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'campaigns'
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -202,8 +208,10 @@ class GetCampaign(RESTResource):
         return {"results": db.get(prepid=data)}
 
 class ToggleCampaignStatus(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -230,8 +238,10 @@ class ToggleCampaignStatus(RESTResource):
             return {"results":False, "message": str(ex) }
 
 class ApproveCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -347,9 +357,11 @@ class ListAllCampaigns(CampaignsRESTResource):
 
 
 class InspectRequests(CampaignsRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -360,9 +372,11 @@ class InspectRequests(CampaignsRESTResource):
         return self.multiple_inspect(campaign_id)
 
 class InspectCampaigns(CampaignsRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 

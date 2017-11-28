@@ -39,8 +39,10 @@ class GetMccm(RESTResource):
 
 
 class UpdateMccm(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -118,8 +120,10 @@ class UpdateMccm(RESTResource):
 
 
 class CreateMccm(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         sdb = database('settings')
         self.possible_pwgs = sdb.get("pwg")["value"]
         self.before_request()
@@ -182,8 +186,10 @@ class CreateMccm(RESTResource):
             return final_mccm_id
 
 class CancelMccm(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -251,8 +257,10 @@ class GetEditableMccmFields(RESTResource):
 
 
 class GenerateChains(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -489,8 +497,10 @@ class GenerateChains(RESTResource):
         )
 
 class MccMReminderGenContacts(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -553,8 +563,10 @@ class MccMReminderGenContacts(RESTResource):
 
 
 class MccMReminderProdManagers(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -609,8 +621,10 @@ Dear Production Managers,
 
 
 class CalculateTotalEvts(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
