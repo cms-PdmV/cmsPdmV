@@ -1688,9 +1688,10 @@ class PutToForceComplete(RESTResource):
 class ForceCompleteMethods(RESTResource):
     def __init__(self):
         self.access_limit = access_rights.generator_contact
+        self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
-        self.access_user = settings.get_value('allowed_to_acknowledge')
+
         self.representations = {'text/plain': self.output_text}
 
     def get(self):
