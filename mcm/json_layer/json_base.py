@@ -19,9 +19,7 @@ class json_base:
 
     class WrongApprovalSequence(Exception):
         def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to approve %s in status %s. %s' % (approval,
-                    status, message)
-
+            self.text = 'It is illegale to approve %s in status %s. %s' % (approval, status, message)
             json_base.logger.error(self.text)
 
         def __str__(self):
@@ -29,9 +27,7 @@ class json_base:
 
     class WrongStatusSequence(Exception):
         def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to change status %s in approval %s. %s' % (status,
-                    approval, message)
-
+            self.text = 'It is illegale to change status %s in approval %s. %s' % (status, approval, message)
             json_base.logger.error(self.text)
 
         def __str__(self):
@@ -72,16 +68,16 @@ class json_base:
     def validate(self):
         if not self.__json:
             return
-            #looks for keys that are missing, from the schema requirement
+            # looks for keys that are missing, from the schema requirement
         for key in self.__schema:
             if key not in self.__json:
                 raise self.IllegalAttributeName(key)
 
-                ##JR: how to test exactness of information
-                #look for keys that are in extras to the schema requirement
-                #for key in self.__json:
-                #    if key not in self.__schema:
-                #        json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
+                # JR: how to test exactness of information
+                # look for keys that are in extras to the schema requirement
+                # for key in self.__json:
+                # if key not in self.__schema:
+                # json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
 
     def reload(self, save_current=True):
         """
@@ -99,7 +95,7 @@ class json_base:
 
     def get_database(self):
         try:
-            if self.__class__.__name__ =="batch":
+            if self.__class__.__name__ == "batch":
                 return database(self.__class__.__name__ + "es")
             else:
                 return database(self.__class__.__name__ + "s")
@@ -134,19 +130,18 @@ class json_base:
         with locker.lock(self.get_attribute('_id')):
             if not db.document_exists(self.get_attribute('_id')):
                 return False
-            ## reload the doc with db
+            # reload the doc with db
             t = db.get(self.get_attribute('_id'))
             self.__init__(t)
             if "_rev" in json_input:
-                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: %s" % (
-                        t["_rev"], json_input["_rev"]))
+                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: %s" % (t["_rev"], json_input["_rev"]))
 
             else:
                 self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: none" % (t["_rev"]))
 
-            ## add what was provided on top
-            self._json_base__json.update( json_input )
-            ## save back
+            # add what was provided on top
+            self._json_base__json.update(json_input)
+            # save back
             saved = db.update(self.json())
             if not saved:
                 return False
@@ -166,13 +161,13 @@ class json_base:
                             self._json_base__json[key] = json_input[key]
                         else:
                             self._json_base__json[key] = type(self._json_base__schema[key])(json_input[key])
-                    except:
-                        ## do through a bad exception here !
-                        #self._json_base__json[key] = json_input[key]
-                        raise Exception("%s of type %s does not match the schema type %s" %( key, 
-                                                                                             type(json_input[key]),
-                                                                                             type(self._json_base__schema[key]))
-                                        )
+                    except Exception:
+                        # do through a bad exception here !
+                        # self._json_base__json[key] = json_input[key]
+                        raise Exception("%s of type %s does not match the schema type %s" % (
+                            key,
+                            type(json_input[key]),
+                            type(self._json_base__schema[key])))
                 else:
                     self._json_base__json[key] = deepcopy(self._json_base__schema[key])
             if '_rev' in json_input:
@@ -180,9 +175,9 @@ class json_base:
 
     def update_history(self, history):
         hist = self.get_attribute('history')
-        ## in case there was an issue with the history initialisation
+        # in case there was an issue with the history initialisation
         if not hist:
-            hist=[]
+            hist = []
         if not history:
             return
 
@@ -192,10 +187,10 @@ class json_base:
         hist.append(history)
         self.set_attribute('history', hist)
 
-        ## there is really no need to update the version number here.
+        # there is really no need to update the version number here.
         # the version number is meant for when we have resubmission and stuff !
-        #if 'version' in self.__json:
-        #    self.set_attribute('version', int(self.get_attribute('version')) + 1)
+        # if 'version' in self.__json:
+        #     self.set_attribute('version', int(self.get_attribute('version')) + 1)
 
     def __get_submission_details(self):
         user_p = user_pack(db=True)
@@ -224,34 +219,31 @@ class json_base:
             self.current_user = updater
         self.current_user_email = updater_user['author_email']
         self.current_user_level, self.current_user_role = auth.get_user_role_index(updater)
-        #return self.current_user_level
 
     def get_actors(self, N=-1, what='author_username', Nchild=-1):
         actors = []
-        #that's a way of removing history ...
+        # that's a way of removing history ...
         ban = ['nnazirid', 'automatic']
         for (n, step) in enumerate(self.get_attribute('history')):
-            ## stop when asked
+            # stop when asked
             if N > 0 and N == n:
                 break
             try:
                 if not step['updater']['author_username'] in ban:
                     actors.append(step['updater'][what])
-            except:
+            except Exception:
                 pass
         return list(set(actors))
-
 
     def approve(self, step=-1, to_approval=None):
         if 'approval' not in self.__schema:
             raise NotImplementedError('Could not approve object %s' % (self.__json['_id']))
 
         if to_approval:
-            if not to_approval in self.__approvalsteps:
-                self.logger.error(
-                    'cannot set approval to %s because it is unknown %s allowed' % (to_approval, self.__approvalsteps))
+            if to_approval not in self.__approvalsteps:
+                self.logger.error('cannot set approval to %s because it is unknown %s allowed' % (to_approval, self.__approvalsteps))
             else:
-                #override step, whatever it is
+                # override step, whatever it is
                 step = self.__approvalsteps.index(to_approval)
 
         next_step = 0
@@ -263,16 +255,16 @@ class json_base:
         else:
             next_step = step
 
-        ## if at the end of the change
+        # if at the end of the change
         if next_step == len(self.__approvalsteps):
             raise self.IllegalApprovalStep(next_step)
 
-        ## already in the next step
+        # already in the next step
         if self.__json['approval'] == self.__approvalsteps[next_step]:
             return
-            #raise self.IllegalApprovalStep(self.__json['approval'])
+            # raise self.IllegalApprovalStep(self.__json['approval'])
 
-        ## move the approval field along, so that in the history, it comes before the status change
+        # move the approval field along, so that in the history, it comes before the status change
         self.__json['approval'] = self.__approvalsteps[next_step]
         self.update_history({'action': 'approve', 'step': self.__json['approval']})
 
@@ -285,25 +277,23 @@ class json_base:
 
         next_step = 0
         if to_status:
-            if not to_status in self.__status:
-                self.logger.error(
-                    'cannot set status to %s because it is unknown %s allowed' % (to_status, self.__status))
+            if to_status not in self.__status:
+                self.logger.error('cannot set status to %s because it is unknown %s allowed' % (to_status, self.__status))
             else:
-                #override step, whatever it is
+                # override step, whatever it is
                 step = self.__status.index(to_status)
 
-        if step < 0: # not specified: move to next logical status
+        if step < 0:  # not specified: move to next logical status
             lst = self.__json['status']
             next_step = self.__status.index(lst) + 1
-        elif step >= len(self.__status): # specified outside boundary
+        elif step >= len(self.__status):  # specified outside boundary
             raise self.IllegalStatusStep(step)
         else:
-            #specified
+            # specified
             next_step = step
 
         if next_step == len(self.__status):
-            self.logger.error(
-                'Updating to step %s means going to the last status or %s' % (next_step, str(self.__status)))
+            self.logger.error('Updating to step %s means going to the last status or %s' % (next_step, str(self.__status)))
             return
 
         if self.__json['status'] == self.__status[next_step]:
@@ -333,7 +323,7 @@ class json_base:
     def print_self(self):
         try:
             import simplejson
-        except ImportError as ex:
+        except ImportError:
             self.logger.error('Error: Could not import "json" module')
             print self.__json
         print simplejson.dumps(self.__json, indent=4)
@@ -359,23 +349,23 @@ class json_base:
                actors=True,
                service=True,
                HN=False,
-               sender = None,
+               sender=None,
                Nchild=-1,
                reply_msg_ID=None,
                accumulate=False):
 
         dest = map(lambda i: i, who)
         if actors:
-            #add the actors to the object
-            dest.extend(self.get_actors(what='author_email',Nchild=Nchild))
+            # add the actors to the object
+            dest.extend(self.get_actors(what='author_email', Nchild=Nchild))
         if service:
-            #let the service know at any time
+            # let the service know at any time
             dest.append(settings.get_value('service_account'))
         if HN:
-            ## back bone HN notification ?
+            # back bone HN notification ?
             dest.append(settings.get_value('hypernews_test'))
 
-        #be sure to not have duplicates
+        # be sure to not have duplicates
         dest = set(dest)
         exclude_emails = set(settings.get_value('exclude_from_notify'))
         dest = list(dest - exclude_emails)
@@ -384,8 +374,7 @@ class json_base:
             subject += '. And no destination was set'
 
         sender = sender if sender else self.current_user_email
-        self.logger.info('Notification %s from %s send to %s [acc:%s]' % (subject,
-                sender,', '.join(dest),accumulate))
+        self.logger.info('Notification %s from %s send to %s [acc:%s]' % (subject, sender, ', '.join(dest), accumulate))
 
         return self.com.sendMail(dest,
                                  subject,
@@ -404,9 +393,9 @@ class json_base:
         try:
             input_ds = ""
             possible_dt_inputs = settings.get_value('datatier_input')
-            ##we take sequence 1step datetier
-            ## check if "step" is a string -> some DR requests has single step string with , in it...
-            ## some DR requests has it.... most probably the generated ones
+            # we take sequence 1step datetier
+            # check if "step" is a string -> some DR requests has single step string with , in it...
+            # some DR requests has it.... most probably the generated ones
 
             if isinstance(__seq[0]["step"], basestring):
                 __step = __seq[0]["step"].split(",")[0].split(":")[0]
@@ -415,29 +404,29 @@ class json_base:
 
             if __step in possible_dt_inputs:
                 __possible_inputs = possible_dt_inputs[__step]
-                ## highest priority is first.. we should take acording output_ds
+                # highest priority is first.. we should take acording output_ds
                 __prev_output = __output_dataset
                 __prev_tiers = [el.split("/")[-1] for el in __prev_output]
 
                 for elem in __possible_inputs:
                     if elem in __prev_tiers:
                         input_ds = __prev_output[__prev_tiers.index(elem)]
-                        ##dirty stuff
+                        # dirty stuff
                         # self.logger.info("get_ds_input found a possible DS: %s" % (input_ds))
                         # self.logger.info("get_ds_input\t elem: %s __possible_inputs %s" % (elem, __possible_inputs))
                         break
             else:
-                ##if step is not defined in dictionary -> we default to previous logic
+                # if step is not defined in dictionary -> we default to previous logic
                 input_ds = __output_dataset[0]
-            ##if we didn't find anything in for loop above, fall back to previous
+            # if we didn't find anything in for loop above, fall back to previous
             if not input_ds:
                 if len(__output_dataset) > 0:
-                    ##in case the output_dataset is ""
+                    # in case the output_dataset is ""
                     input_ds = __output_dataset[0]
 
             self.logger.info("get_ds_input returns input_ds: %s" % (input_ds))
             return input_ds
-        except Exception as ex:
+        except Exception:
             self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
             return ""
 
@@ -448,8 +437,7 @@ class submission_details(json_base):
             'author_username': '',
             'author_name': '',
             'author_email': '',
-            'submission_date': '',
-        }
+            'submission_date': '',}
 
         # update self according to json_input
         self.update(json_input)

@@ -5,12 +5,13 @@ from simplejson import dumps
 from json_base import json_base
 from couchdb_layer.mcm_database import database
 
+
 class notification(json_base):
-    #Groups
+    # Groups
     BATCHES = 'Batches'
     CHAINED_REQUESTS = 'Chained_requests'
     REQUEST_APPROVALS = 'Request_approvals'
-    #Requests in (all request status)
+    # Requests in (all request status)
     REQUEST_OPERATIONS = 'Request_operations'
     REMINDERS = "Reminders"
     USERS = "Users"
