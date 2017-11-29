@@ -2,7 +2,6 @@
 
 import time
 import os
-import copy
 import ast
 import logging
 

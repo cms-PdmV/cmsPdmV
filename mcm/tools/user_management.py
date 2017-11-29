@@ -78,9 +78,7 @@ class authenticator:
             cached_value = cls.__users_roles_cache.get(cache_key)
 
             if cached_value is not None:
-                print('Found value for ' + cache_key)
                 return cached_value
-            print('Did not find value for ' + cache_key)
 
             user_role = 'user'
             if cls.__db.document_exists(username):

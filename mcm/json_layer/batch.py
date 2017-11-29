@@ -2,7 +2,6 @@ import re
 
 from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
-from tools.user_management import authenticator
 from tools.locator import locator
 import tools.settings as settings
 from json_layer.notification import notification
@@ -34,7 +33,6 @@ class batch(json_base):
 
     def remove_request(self, rid):
         b_requests = self.get_attribute('requests')
-        n_b= len(b_requests)
         b_requests = filter(lambda r : r['content']['pdmv_prep_id'] != rid, b_requests)
         self.set_attribute( 'requests', b_requests)
         self.reload()

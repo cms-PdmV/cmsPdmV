@@ -9,14 +9,11 @@ __CACHE_TIMEOUT = 60 * 60
 __cache = SimpleCache()
 __db = database('settings')
 
-print ("Settings")
-
 def get(label):
     with locker.lock(label):
         cache_key = 'settings_' + label
         cached_value = __cache.get(cache_key)
         if cached_value != None:
-            print('Found value for ' + cache_key)
             return cached_value
         setting = __db.get(label)
         __cache.set(cache_key, setting, timeout = __CACHE_TIMEOUT)
