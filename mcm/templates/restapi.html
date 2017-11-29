@@ -2,28 +2,37 @@
 <html>
   <head>
     <base href="/datamgt/">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <style>
-      table{width:100%;border-spacing:0;border:1px solid #ddd;border-collapse:collapse;}
-      td{padding: 4px;}
+      table{width:98%;margin-left:1%;margin-right:1%;border-spacing:0;border-collapse:collapse;}
+      td{padding:4px;border:1px solid #ddd;}
+      .no-border{border-top-color: white;border-left-color: white;border-right-color: white;padding-top:20px;padding-bottom:2px;}
+      h1{margin-left:1%;margin-right:1%;}
+      h5{margin-bottom:2px}
+      h6{margin-bottom:0}
     </style>
+    <title>{{ data.title }}</title>
   </head>
   <body>
-    <table border='1'>
-    {% for function in data %}
-    <tr><td colspan="4"><h3>{{ function.function_name }} (<a href="{{ function.path }}">{{ function.path }}</a>)</h3></td></tr>
-    <tr><td><b>Method</b></td><td><b>Description</b></td><td><b>Access limit</b></td><td><b>Calls</b></td></tr>
-    {% for method in function.methods %}
-    <tr>
-      <td>{{ method.name }}</td>
-      {% if method.doc %}
-      <td>{{ method.doc }}</td>
-      {% else %}
-      <td><i>To be documented</i></td>
+    <h1>{{ data.title }}</h1>
+    <table >
+    {% for function in data.functions %}
+      <tr><td colspan="4" class="no-border"><h5><a href="{{ function.path }}">{{ function.path }}</a></h5></td></tr>
+      {% if function.methods %}
+        <tr><td><b>Method</b></td><td><b>Description</b></td><td><b>Access limit</b></td><td><b>Calls</b></td></tr>
+        {% for method in function.methods %}
+          <tr>
+            <td>{{ method.name }}</td>
+            {% if method.doc %}
+              <td>{{ method.doc }}</td>
+            {% else %}
+              <td><i>To be documented</i></td>
+            {% endif %}
+            <td>{{ method.access_limit }}</td>
+            <td>{{ method.call_count }}</td>
+          </tr>
+        {% endfor %}
       {% endif %}
-      <td>{{ method.access_limit }}</td>
-      <td>{{ method.call_counter }}</td>
-    </tr>
-    {% endfor %}
     {% endfor %}
     </table>
   </body>

@@ -57,7 +57,7 @@ class RESTResource(Resource):
            try:
                RESTResource.call_counters[key] += 1
            except KeyError:
-               RESTResource.call_counters[key] = 0
+               RESTResource.call_counters[key] = 1
 
 
 class RESTResourceIndex(RESTResource):
@@ -89,9 +89,10 @@ class RESTResourceIndex(RESTResource):
 
     def index(self):
         methods = ['GET', 'PUT', 'POST', 'DELETE']
-        data = []
+        functions = []
 
-        is_index = request.url_rule.rule in ['/restapi', '/public/restapi']
+        current_rule = request.url_rule.rule
+        is_index = current_rule in ['/restapi', '/public', '/public/restapi']
 
         for rule in current_app.url_map.iter_rules():
             func = current_app.view_functions.get(rule.endpoint)
@@ -104,10 +105,10 @@ class RESTResourceIndex(RESTResource):
             if is_index and function_name != RESTResourceIndex.__name__:
                 continue
 
-            if not rule.rule.startswith(request.url_rule.rule):
+            if not rule.rule.startswith(current_rule):
                 continue
 
-            if rule.rule == request.url_rule.rule:
+            if rule.rule == current_rule:
                 # Do not include itself
                 continue
 
@@ -120,45 +121,45 @@ class RESTResourceIndex(RESTResource):
             if hasattr(func.view_class, 'access_limit'):
                 acc_limit = getattr(func.view_class, 'access_limit')
 
-            #print('Rule ' + rule.rule)
-            #print('Endpoint ' + rule.endpoint)
-            #print('Rule methods: ' + str(rule.methods))
-            #print('Class name ' + func.view_class.__name__)
-            #print('Access limit? ' + str(acc_limit))
-            #print('Module ' + func.view_class.__module__)
-            # print("\n\n")
-
             function_dict['path'] = (rule.rule)[1:]
-            function_dict['function_name'] = function_name
+            function_dict['name'] = function_name
 
             methods_list = []
             for m in methods:
-                if m in rule.methods:
-                    method_dict = {}
-                    method_dict['name'] = m
-                    
-                    method_doc = func.view_class.__dict__.get(m.lower()).__doc__
-                    if method_doc is not None:
-                        method_dict['doc'] = method_doc
+                if m not in rule.methods:
+                    # If rule does not have certain method - continue
+                    continue
 
-                    if acc_limit is not None:
-                        method_dict['access_limit'] = roles[acc_limit]
-                    else:
-                        method_dict['access_limit'] = roles[func.view_class.limit_per_method[m]]
+                if is_index:
+                    continue
 
-                    try:
-                        c_key = function_name + m
-                        c = RESTResource.call_counters[c_key]
-                    except KeyError:
-                        c = 0
+                method_dict = {}
+                method_dict['name'] = m
 
-                    method_dict['call_counter'] = '%d' % (c)
+                method_doc = func.view_class.__dict__.get(m.lower()).__doc__
+                if method_doc is not None:
+                    method_dict['doc'] = method_doc
 
-                    methods_list.append(method_dict)
+                if acc_limit is not None:
+                    method_dict['access_limit'] = roles[acc_limit]
+                else:
+                    method_dict['access_limit'] = roles[func.view_class.limit_per_method[m]]
+
+                try:
+                    call_count_key = function_name + m
+                    call_count = RESTResource.call_counters[call_count_key]
+                except KeyError:
+                    call_count = 0
+
+                method_dict['call_count'] = '%d' % (call_count)
+
+                methods_list.append(method_dict)
 
             function_dict['methods'] = methods_list
 
-            data.append(function_dict)
+            functions.append(function_dict)
 
-        # print(data)
+        data = {}
+        data['functions'] = functions
+        data['title'] = "Index for " + current_rule
         return self.output_text(render_template('restapi.html', data=data), 200, None)

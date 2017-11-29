@@ -652,9 +652,6 @@ class InjectChainedRequest(RESTResource):
 
 
 class ChainsFromTicket(RESTResource):
-    """
-        Get all the generated chains from a ticket
-    """
 
     access_limit = access_rights.user
 
@@ -667,6 +664,9 @@ class ChainsFromTicket(RESTResource):
         self.parser.add_argument('limit', type=int, default=20)
 
     def get(self):
+        """
+        Get all the generated chains from a ticket
+        """
         kwargs = self.parser.parse_args()
         page = kwargs['page']
         limit = kwargs['limit']
