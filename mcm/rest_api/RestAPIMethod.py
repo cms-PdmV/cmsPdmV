@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import logging
-import cgi
 
 from tools.user_management import access_rights, roles
 from tools.user_management import authenticator, user_pack
@@ -114,7 +113,7 @@ class RESTResourceIndex(RESTResource):
 
             function_dict = {}
 
-            rule_escaped = cgi.escape(rule.rule)
+            functions.append(function_dict)
 
             acc_limit = None
 
@@ -124,13 +123,13 @@ class RESTResourceIndex(RESTResource):
             function_dict['path'] = (rule.rule)[1:]
             function_dict['name'] = function_name
 
+            if is_index:
+                continue
+
             methods_list = []
             for m in methods:
                 if m not in rule.methods:
                     # If rule does not have certain method - continue
-                    continue
-
-                if is_index:
                     continue
 
                 method_dict = {}
@@ -156,8 +155,6 @@ class RESTResourceIndex(RESTResource):
                 methods_list.append(method_dict)
 
             function_dict['methods'] = methods_list
-
-            functions.append(function_dict)
 
         data = {}
         data['functions'] = functions
