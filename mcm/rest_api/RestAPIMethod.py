@@ -88,19 +88,18 @@ class RESTResourceIndex(RESTResource):
 
     def index(self):
         methods = ['GET', 'PUT', 'POST', 'DELETE']
-        functions = []
-
         current_rule = request.url_rule.rule
         is_index = current_rule in ['/restapi', '/public', '/public/restapi']
-
+        data = {}
+        data['title'] = "Index for " + current_rule
+        functions = []
+        data['functions'] = functions
         for rule in current_app.url_map.iter_rules():
             func = current_app.view_functions.get(rule.endpoint)
             if not hasattr(func, 'view_class'):
-                # print('Rule ' + rule.rule + ' endpoint ' + rule.endpoint + ' has no view_class - SKIPPING')
                 continue
 
             function_name = func.view_class.__name__
-
             if is_index and function_name != RESTResourceIndex.__name__:
                 continue
 
@@ -112,19 +111,15 @@ class RESTResourceIndex(RESTResource):
                 continue
 
             function_dict = {}
-
-            functions.append(function_dict)
-
-            acc_limit = None
-
-            if hasattr(func.view_class, 'access_limit'):
-                acc_limit = getattr(func.view_class, 'access_limit')
-
             function_dict['path'] = (rule.rule)[1:]
             function_dict['name'] = function_name
-
+            functions.append(function_dict)
             if is_index:
                 continue
+
+            acc_limit = None
+            if hasattr(func.view_class, 'access_limit'):
+                acc_limit = getattr(func.view_class, 'access_limit')
 
             methods_list = []
             for m in methods:
@@ -134,7 +129,6 @@ class RESTResourceIndex(RESTResource):
 
                 method_dict = {}
                 method_dict['name'] = m
-
                 method_doc = func.view_class.__dict__.get(m.lower()).__doc__
                 if method_doc is not None:
                     method_dict['doc'] = method_doc
@@ -151,12 +145,8 @@ class RESTResourceIndex(RESTResource):
                     call_count = 0
 
                 method_dict['call_count'] = '%d' % (call_count)
-
                 methods_list.append(method_dict)
 
             function_dict['methods'] = methods_list
 
-        data = {}
-        data['functions'] = functions
-        data['title'] = "Index for " + current_rule
         return self.output_text(render_template('restapi.html', data=data), 200, None)
