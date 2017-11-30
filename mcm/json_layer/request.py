@@ -2187,7 +2187,7 @@ class request(json_base):
 
         else:
             # fine tune the value
-            self.logger.debug("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
+            self.logger.info("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
                     self.get_sum_time_events(), measured_time_evt, evts_pass))
 
             self.set_attribute('time_event', [measured_time_evt])
