@@ -1,5 +1,4 @@
 import smtplib
-import os
 import logging
 
 from email.MIMEMultipart import MIMEMultipart
@@ -7,7 +6,6 @@ from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
 from email.utils import make_msgid
 from tools.locator import locator
-from collections import defaultdict
 import tools.settings as settings
 from tools.locker import locker
 

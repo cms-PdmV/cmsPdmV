@@ -3,7 +3,6 @@ import os
 import shutil
 
 from tools.locator import locator
-from rest_api.BatchPrepId import BatchPrepId
 
 class installer:
     """

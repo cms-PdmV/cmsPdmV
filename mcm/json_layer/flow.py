@@ -10,10 +10,8 @@ class flow(json_base):
         'next_campaign': '',
         'allowed_campaigns': [],
         'request_parameters': {},
-        #'description': '',
         'notes': '',
         'history': [],
-        #'label': '', ## something that one needs to add in the processing string ?
         'approval': ''
     }
 
@@ -24,12 +22,12 @@ class flow(json_base):
 
         self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
-        ##JR. would that function ? self.__approvalsteps = [ 'flow' , 'inject' ]
+        # JR. would that function ? self.__approvalsteps = [ 'flow' , 'inject' ]
         # update self according to json_input
         self.update(json_input)
         self.validate()
 
-    def add_allowed_campaign(self,  cid):
+    def add_allowed_campaign(self, cid):
         self.logger.info('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
 
         try:
@@ -55,21 +53,21 @@ class flow(json_base):
 
         # append and make persistent
         allowed.append(cid)
-        self.set_attribute('allowed_campaigns',  allowed)
+        self.set_attribute('allowed_campaigns', allowed)
 
         # update history
-        self.update_history({'action':'add allowed campaign', 'step':cid})
+        self.update_history({'action': 'add allowed campaign', 'step': cid})
 
         return True
 
-    def remove_allowed_campaign(self,  cid):
+    def remove_allowed_campaign(self, cid):
         allowed = self.get_attribute('allowed_campaigns')
         if cid not in allowed:
             raise self.CampaignDoesNotExistException(cid)
 
         # remove it and make persistent
         allowed.remove(cid)
-        self.set_attribute('allowed_campaigns',  allowed)
+        self.set_attribute('allowed_campaigns', allowed)
 
         # update history
-        self.update_history({'action':'remove allowed campaign', 'step':cid})
+        self.update_history({'action': 'remove allowed campaign', 'step': cid})

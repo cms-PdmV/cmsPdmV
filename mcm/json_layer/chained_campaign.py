@@ -8,15 +8,15 @@ from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 class chained_campaign(json_base):
     class CampaignDoesNotExistException(Exception):
-        def __init__(self,  campid):
+        def __init__(self, campid):
             self.c = str(campid)
-            chained_campaign.logger.error('Campaign %s does not exist' % (self.c) )
+            chained_campaign.logger.error('Campaign %s does not exist' % (self.c))
 
         def __str__(self):
-            return 'Error: Campaign ' +  self.c +  ' does not exist.'
+            return 'Error: Campaign ' + self.c + ' does not exist.'
 
     class FlowDoesNotExistException(Exception):
-        def __init__(self,  flowid):
+        def __init__(self, flowid):
             self.f = str(flowid)
             chained_campaign.logger.error('Flow %s does not exist' % (self.f))
 
@@ -27,9 +27,7 @@ class chained_campaign(json_base):
         '_id': '',
         'prepid': '',
         'alias': '',
-        #'energy': 0,
-        'campaigns': [], # list of lists [camp_id, flow]
-        #'description': '',
+        'campaigns': [],  # list of lists [camp_id, flow]
         'notes': '',
         'action_parameters': {
             'block_number': 0,
@@ -37,7 +35,6 @@ class chained_campaign(json_base):
             'threshold': 0,
             'flag': True
         },
-        #'www': '',
         'history': [],
         'valid': True
     }
@@ -53,23 +50,20 @@ class chained_campaign(json_base):
     def start(self):
         if self._json_base__json['valid']:
             return
-        self.update_history({'action':'start'})
-        self._json_base__json['valid']=True
+        self.update_history({'action': 'start'})
+        self._json_base__json['valid'] = True
 
     # stop() makes the chained campaign invisible to the actions page
     def stop(self):
         if not self._json_base__json['valid']:
             return
-        self.update_history({'action':'stop'})
-        self._json_base__json['valid']=False
+        self.update_history({'action': 'stop'})
+        self._json_base__json['valid'] = False
 
-    def add_campaign(self, campaign_id,  flow_name=None):
-        self.logger.info('Adding a new campaign %s to chained campaign %s' % (
-                campaign_id, self.get_attribute('_id')))
-
+    def add_campaign(self, campaign_id, flow_name=None):
+        self.logger.info('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id')))
         camp_db = database('campaigns')
         flow_db = database('flows')
-
         if not camp_db.document_exists(campaign_id):
             raise self.CampaignDoesNotExistException(campaign_id)
 
@@ -81,15 +75,13 @@ class chained_campaign(json_base):
         camps = self.get_attribute('campaigns')
         if not camps or camps is None:
             camps = []
-        camps.append([campaign_id,  flow_name])
+        camps.append([campaign_id, flow_name])
         self.set_attribute('campaigns', camps)
 
         return True
 
-    def remove_campaign(self,  cid):
-        self.logger.info('Removing campaign %s from chained_campaign %s' % (cid,
-                self.get_attribute('_id')))
-
+    def remove_campaign(self, cid):
+        self.logger.info('Removing campaign %s from chained_campaign %s' % (cid, self.get_attribute('_id')))
         camps = self.get_attribute('campaigns')
         new_camps = []
         if not camps or camps is None:
@@ -100,17 +92,15 @@ class chained_campaign(json_base):
                     continue
                 new_camps.append((c, f))
 
-        self.set_attribute('campaigns',  new_camps)
+        self.set_attribute('campaigns', new_camps)
 
     # create a chained request spawning from root_request_id
-    def generate_request(self,  root_request_id):
-        self.logger.info('Building a new chained_request for chained_campaign %s. Root request: %s' % (
-                self.get_attribute('_id'), root_request_id ))
-
+    def generate_request(self, root_request_id):
+        self.logger.info('Building a new chained_request for chained_campaign %s. Root request: %s' % (self.get_attribute('_id'), root_request_id))
         try:
             rdb = database('requests')
             crdb = database('chained_requests')
-        except database.DatabaseAccessError as ex:
+        except database.DatabaseAccessError:
             return {}
 
         # check to see if root request id exists
@@ -122,14 +112,13 @@ class chained_campaign(json_base):
         # parse request id
         tok = root_request_id.split('-')
         pwg = tok[0]
-        camp = tok[1]
         # generate new chain id
         cid = ChainedRequestPrepId().next_id(pwg, self.get_attribute('prepid'))
 
         creq = chained_request(crdb.get(cid))
 
         # set values
-        creq.set_attribute('pwg',  pwg)
+        creq.set_attribute('pwg', pwg)
         creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
         creq.set_attribute('action_parameters', self.get_attribute('action_parameters'))
         # By default flag should be true
@@ -144,20 +133,20 @@ class chained_campaign(json_base):
         creq.set_attribute("pwg", req["pwg"])
 
         # add root request to chain
-        creq.set_attribute('chain',  [root_request_id])
+        creq.set_attribute('chain', [root_request_id])
 
         # update history
-        creq.update_history({'action':'created'})
-        self.update_history({'action':'add request','step':creq.get_attribute('_id')})
+        creq.update_history({'action': 'created'})
+        self.update_history({'action': 'add request', 'step': creq.get_attribute('_id')})
 
         # save to database
         return creq.json()
 
-    def __remove_request_parameters(self,  rootid=None):
+    def __remove_request_parameters(self, rootid=None):
         ob = self.get_attribute('action_parameters')
         res = {}
         for key in ob:
             if key == rootid:
                 continue
             res[key] = ob[key]
-        self.set_attribute('action_parameters',  res)
+        self.set_attribute('action_parameters', res)

@@ -27,8 +27,7 @@ class user(json_base):
         return all accessible PWGs for the user
         """
         all_pwgs = settings.get_value('pwg')
-        if self.get_attribute('role') in ['production_manager',
-                'administrator', 'generator_convener']:
+        if self.get_attribute('role') in ['production_manager', 'administrator', 'generator_convener']:
 
             return all_pwgs
         else:

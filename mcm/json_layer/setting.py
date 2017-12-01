@@ -5,7 +5,7 @@ class setting(json_base):
     _json_base__schema = {
         '_id': '',
         'prepid': '',
-        'value': None, #so that it can be of any type
+        'value': None,  # so that it can be of any type
         'notes': '',
     }
 

@@ -1,9 +1,7 @@
-import time
 from simplejson import dumps, loads
 
 import urllib
 import urllib2
-from tools.locator import locator
 
 class Database():
     """

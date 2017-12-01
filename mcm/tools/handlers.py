@@ -1,14 +1,11 @@
-import os
 import time
 import traceback
 import logging
 
 from random import randint
-from itertools import izip
 from threading import Thread, Lock
 from Queue import Queue
 
-from tools.installer import installer
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events

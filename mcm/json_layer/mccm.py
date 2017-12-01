@@ -3,6 +3,7 @@
 from json_base import json_base
 from couchdb_layer.mcm_database import database
 
+
 class mccm(json_base):
 
     _json_base__schema = {
@@ -26,7 +27,7 @@ class mccm(json_base):
         'status': 'new',
         'special': False,
         'generated_chains': {},
-        'total_events': 0 #Sum of request events in ticket not considering repetitions nor chains
+        'total_events': 0  # Sum of request events in ticket not considering repetitions nor chains
     }
 
     _json_base__approvalsteps = ['none', 'approved']
@@ -37,8 +38,7 @@ class mccm(json_base):
         # update self according to json_input
         if 'repetitions' in json_input:
             if int(json_input['repetitions']) > 10:
-                self.logger.error("Issue in creating mccm... To many repetitions:%s" % (
-                        json_input['repetitions']))
+                self.logger.error("Issue in creating mccm... To many repetitions:%s" % (json_input['repetitions']))
                 raise Exception('More than 10 repetitions')
 
         self.update(json_input)
@@ -52,8 +52,8 @@ class mccm(json_base):
         import tools.settings as settings
         t = datetime.date.today()
         meeting_day = int(settings.get_value('mccm_meeting_day'))
-        w = 0 if meeting_day>=t.weekday() else 1
-        t = t + datetime.timedelta(days=meeting_day-t.weekday(), weeks=w)
+        w = 0 if meeting_day >= t.weekday() else 1
+        t = t + datetime.timedelta(days=meeting_day - t.weekday(), weeks=w)
         return t
 
     def get_editable(self):
@@ -61,7 +61,7 @@ class mccm(json_base):
         if self.get_attribute('status') == 'new':
             for key in self._json_base__schema:
                 editable[key] = True
-            not_editable=["status", "prepid", "meeting", "pwg", "approval", "message_id", "generated_chains"]
+            not_editable = ["status", "prepid", "meeting", "pwg", "approval", "message_id", "generated_chains"]
             for key in not_editable:
                 editable[key] = False
         else:
@@ -72,7 +72,7 @@ class mccm(json_base):
     @staticmethod
     def get_mccm_by_generated_chain(chain_id):
         mccms_db = database('mccms')
-        __query = mccms_db.construct_lucene_query({'generated_chains' : chain_id})
+        __query = mccms_db.construct_lucene_query({'generated_chains': chain_id})
         result = mccms_db.full_text_search('search', __query, page=-1)
         try:
             return mccm(json_input=result[0])
@@ -101,7 +101,7 @@ class mccm(json_base):
         for req in request_list:
             if isinstance(req, list):
                 if len(req) == 1:
-                    new_request_list.append(r[0])
+                    new_request_list.append(req[0])
                 elif len(req) == 2:
                     start = int(req[0].split('-')[2])
                     split = req[1].split('-')
@@ -127,12 +127,8 @@ class mccm(json_base):
         new_requests = self.get_request_list(self.get_attribute("requests"))
 
         while len(new_requests) > index:
-            query = requests_db.construct_lucene_query({'prepid':
-                    new_requests[index:index+20]}, boolean_operator='OR')
-
-            fetched_requests += requests_db.full_text_search("search", query,
-                    page=-1)
-
+            query = requests_db.construct_lucene_query({'prepid': new_requests[index:index + 20]}, boolean_operator='OR')
+            fetched_requests += requests_db.full_text_search("search", query, page=-1)
             index += 20
 
         fetched_requests_dict = {}
