@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from simplejson import dumps, loads
+from simplejson import loads
 from flask import request
 
 from RestAPIMethod import RESTResource
@@ -11,7 +11,6 @@ from tools.locator import locator
 from json_layer.user import user
 from json_layer.notification import notification
 from tools.user_management import user_pack, roles, access_rights, authenticator
-
 
 
 class GetUserRole(RESTResource):
@@ -41,7 +40,7 @@ class GetUserPWG(RESTResource):
         """
         Retrieve the pwg of the provided user
         """
-        ## this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
+        # this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
 
         all_pwgs = settings.get_value('pwg')
         db = database('users')
@@ -104,34 +103,32 @@ class AskRole(RESTResource):
         """
         Ask for the increase of the role of the current user to the given pwg
         """
-        ## get who's there
+        # get who's there
         user_p = user_pack()
         udb = database(self.db_name)
-        mcm_u = user( udb.get( user_p.get_username()))
-
-        ## get the requested pwgs
+        mcm_u = user(udb.get(user_p.get_username()))
+        # get the requested pwgs
         pwgs = pwgs.split(',')
-        #### set the pwgs to the current user
+        # set the pwgs to the current user
         current = mcm_u.get_attribute('pwg')
-        current = list(set(current+pwgs))
+        current = list(set(current + pwgs))
         mcm_u.set_attribute('pwg', current)
-        mcm_u.update_history({'action':'ask role','step' : pwgs})
+        mcm_u.update_history({'action': 'ask role', 'step': pwgs})
         udb.update(mcm_u.json())
 
-        ## get the production managers emails
-        __query = udb.construct_lucene_query({'role' : 'production_manager'})
+        # get the production managers emails
+        __query = udb.construct_lucene_query({'role': 'production_manager'})
         production_managers = udb.full_text_search('search', __query, page=-1)
-        ### send a notification to prod manager + service
+        # send a notification to prod manager + service
         to_who = map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')]
-        to_who.append( user_p.get_email() )
+        to_who.append(user_p.get_email())
         com = communicator()
         l_type = locator()
         subject = 'Increase role for user %s' % mcm_u.get_attribute('fullname')
         message = 'Please increase the role of the user %s to the next level.\n\n%susers?prepid=%s' % (
             mcm_u.get_attribute('username'),
             l_type.baseurl(),
-            mcm_u.get_attribute('username')
-        )
+            mcm_u.get_attribute('username'))
         notification(
             subject,
             message,
@@ -139,11 +136,10 @@ class AskRole(RESTResource):
             group=notification.USERS,
             action_objects=[mcm_u.get_attribute('prepid')],
             object_type='users',
-            target_role='production_manager'
-        )
+            target_role='production_manager')
         com.sendMail(to_who, subject, message)
 
-        return {"results" : True, "message" : "user %s in for %s" %( mcm_u.get_attribute('username'), current)}
+        return {"results": True, "message": "user %s in for %s" % (mcm_u.get_attribute('username'), current)}
 
 
 class AddRole(RESTResource):
@@ -169,7 +165,7 @@ class AddRole(RESTResource):
             self.logger.error('Could not save object to database')
             return {"results": False}
 
-        mcm_user.update_history({'action':'created'})
+        mcm_user.update_history({'action': 'created'})
         mcm_user.reload()
         return {"results": True}
 
@@ -191,21 +187,19 @@ class ChangeRole(RESTResource):
     def change_role(self, username, action):
         db = database(self.db_name)
         doc = user(db.get(username))
-        user_p = user_pack()
-        current_user = user(db.get(user_p.get_username()))
         current_role = doc.get_attribute("role")
         if action == '-1':
             if current_role != self.all_roles[0]:
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) - 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
-                doc.update_history({'action': 'decrease' , 'step':doc.get_attribute("role")})
+                doc.update_history({'action': 'decrease', 'step': doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
-            return {"results": username + " already is user"} #else return that hes already a user
+            return {"results": username + " already is user"}  # else return that hes already a user
         if action == '1':
-            if len(self.all_roles) != self.all_roles.index(current_role) + 1: #if current role is not the top one
+            if len(self.all_roles) != self.all_roles.index(current_role) + 1:  # if current role is not the top one
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) + 1])
                 self.authenticator.set_user_role(username, doc.get_attribute("role"))
-                doc.update_history({'action': 'increase' , 'step':doc.get_attribute("role")})
+                doc.update_history({'action': 'increase', 'step': doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
             return {"results": username + " already has top role"}
         return {"results": "Failed to update user: " + username + " role"}

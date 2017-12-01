@@ -39,7 +39,7 @@ class BatchAnnouncer(RESTResource):
         bdb = database('batches')
         if not semaphore_events.is_set(bid):
             return {"results": False, "message":
-                    "Batch {0} has on-going submissions.".format(bid), "prepid" : bid}
+                    "Batch {0} has on-going submissions.".format(bid), "prepid": bid}
 
         b = batch(bdb.get(bid))
         workflows = ''
@@ -122,7 +122,6 @@ class InspectBatches(BatchAnnouncer):
                 if batch_id and announced_batch['prepid'] != batch_id:
                     continue
                 this_bid = announced_batch['prepid']
-
                 all_done = False
                 for r in announced_batch['requests']:
                     all_done = False
@@ -153,10 +152,9 @@ class InspectBatches(BatchAnnouncer):
                     mcm_b = batch(announced_batch)
                     mcm_b.set_status()
                     bdb.update(mcm_b.json())
-                    res.append({"results": True, "prepid" : this_bid, "message": "Set to done"})
+                    res.append({"results": True, "prepid": this_bid, "message": "Set to done"})
                 else:
-                    res.append({"results": False, "prepid": this_bid,
-                            "message": "Not completed"})
+                    res.append({"results": False, "prepid": this_bid, "message": "Not completed"})
         else:
             self.logger.info('Not setting any batch to done')
 

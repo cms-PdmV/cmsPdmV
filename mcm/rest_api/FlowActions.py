@@ -3,7 +3,7 @@
 import flask
 import traceback
 
-from simplejson import dumps, loads
+from simplejson import loads
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -44,16 +44,16 @@ class FlowRESTResource(RESTResource):
         rp = f.get_attribute('request_parameters')
         if nc:
             camp = cdb.get(nc)
-            ## that erase all previous values in the flows requests parameters ...
+            # that erase all previous values in the flows requests parameters ...
             if not 'sequences' in rp or len(rp['sequences']) != len(camp['sequences']):
                 rp['sequences'] = []
                 for seq in camp['sequences']:
-                    #rp['sequences'].append({})
-                    rp['sequences'].append({"default" : {}})
+                    # rp['sequences'].append({})
+                    rp['sequences'].append({"default": {}})
                 f.set_attribute('request_parameters', rp)
 
 
-    #def __compare_json(self, old, new):
+    # def __compare_json(self, old, new):
     #    return self.update_derived_objects(old, new)
 
     def update_derived_objects(self, old, new):
@@ -75,35 +75,35 @@ class FlowRESTResource(RESTResource):
 
         # create new chained campaigns
         try:
-            #self.update_chained_campaigns(next_c,  tbc)
-            self.update_chained_campaigns(next_c, allowed) #JR. to make sure everything gets propagated
+            # self.update_chained_campaigns(next_c,  tbc)
+            self.update_chained_campaigns(next_c, allowed)  # JR. to make sure everything gets propagated
         except Exception as ex:
             self.logger.error('Could not build derived chained_campaigns. Reason: %s' % ex)
             self.logger.error(traceback.format_exc())
             return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
 
-        # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and 
+        # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and
         #               use this flow.
 
         # if reached, then successful
         return {'results': True}
 
     def update_campaigns(self, next_c, allowed, cdb):
-        ##switch off and defered to when a chained campaign is actually created
+        # switch off and defered to when a chained campaign is actually created
         return
-        ## check to see if next_c is legal
-        #if not cdb.document_exists(next_c):
+        # check to see if next_c is legal
+        # if not cdb.document_exists(next_c):
         #    raise ValueError('Campaign ' + str(next_c) + ' does not exist.')
 
-        #if not next_c:
+        # if not next_c:
         #    return
 
-        #n = cdb.get(next_c)
-        #if n['root'] == 0:
+        # n = cdb.get(next_c)
+        # if n['root'] == 0:
         #    raise ValueError('Campaign ' + str(next_c) + ' is a root campaign.')
 
-        ## iterate through all allowed campaigns and update the next_c field
-        #for c in allowed:
+        # iterate through all allowed campaigns and update the next_c field
+        # for c in allowed:
         #    camp = campaign(json_input=cdb.get(c))
         #    try:
         #        # append campaign
@@ -133,16 +133,17 @@ class FlowRESTResource(RESTResource):
             if not self.is_energy_consistent(next_mcm_c, allowed_c, cdb):
                 return {"results": False,
                         "message": 'Next campaign {0} and allowed campaigns have inconsistent energies'.format(next_c)}
-            ##consistency check
+            # consistency check
             if next_c in allowed_c:
                 return {"results": False, "message": "Cannot have next campaign in the allowed campaign"}
         return True
 
     # create all possible chained campaigns going from allowed.member to next
     def update_chained_campaigns(self, next_c, allowed):
-        #### we can switch this method off in order to not generate godzillions of chained campaigns
-        ## we have the SelectChainedCampaigns ability for that
+        #  we can switch this method off in order to not generate godzillions of chained campaigns
+        # we have the SelectChainedCampaigns ability for that
         return
+
 
 class CreateFlow(FlowRESTResource):
     def __init__(self):
@@ -180,7 +181,7 @@ class CreateFlow(FlowRESTResource):
             return {"results": False, 'message': 'Error: PrepId should not have "_" in it.'}
         f.set_attribute('_id', f.get_attribute('prepid'))
 
-        #uniquing the allowed campaigns if passed duplicates by mistake
+        # uniquing the allowed campaigns if passed duplicates by mistake
         if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
             f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
 
@@ -192,7 +193,7 @@ class CreateFlow(FlowRESTResource):
         if result is not True:
             return result
 
-        ## adjust the requests parameters based on what was provided as next campaign
+        # adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc, cdb, f)
 
         # update history
@@ -203,12 +204,13 @@ class CreateFlow(FlowRESTResource):
             self.logger.error('Could not save newly created flow %s to database.' % (f.get_attribute('_id')))
             return {"results": False}
 
-        #return right away instead of trying and failing on missing next or allowed
+        # return right away instead of trying and failing on missing next or allowed
         if not nc or not len(f.get_attribute('allowed_campaigns')):
             return {"results": True}
 
         # update all relevant campaigns with the "Next" parameter
-        return self.update_derived_objects(flow().json() ,f.json())
+        return self.update_derived_objects(flow().json(), f.json())
+
 
 class UpdateFlow(FlowRESTResource):
     def __init__(self):
@@ -227,7 +229,7 @@ class UpdateFlow(FlowRESTResource):
         cdb = database('campaigns')
         db = database(self.db_name)
         data = loads(jsdata)
-        if not '_rev' in data:
+        if '_rev' not in data:
             return {"results": "Cannot update without _rev"}
         try:
             f = flow(json_input=data)
@@ -241,7 +243,7 @@ class UpdateFlow(FlowRESTResource):
         # find out what is the change
         old = db.get(f.get_attribute('_id'))
 
-        #uniquing the allowed campaigns if passed duplicates by mistake
+        # uniquing the allowed campaigns if passed duplicates by mistake
         if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
             f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
 
@@ -250,7 +252,7 @@ class UpdateFlow(FlowRESTResource):
         if result is not True:
             return result
 
-        ## adjust the requests parameters based on what was provided as next campaign
+        # adjust the requests parameters based on what was provided as next campaign
         self.set_default_request_parameters(nc, cdb, f)
 
         # update history
@@ -282,7 +284,7 @@ class DeleteFlow(RESTResource):
         ccdb = database('chained_campaigns')
         cdb = database('campaigns')
         # delete all chained campaigns with this flow
-        ## exception can be thrown on impossibility of removing
+        # exception can be thrown on impossibility of removing
         try:
             self.delete_chained_campaigns(fid, ccdb)
         except Exception as ex:
@@ -296,24 +298,20 @@ class DeleteFlow(RESTResource):
 
         return {"results": fdb.delete(fid)}
 
-
     def delete_chained_campaigns(self, fid, ccdb):
         # get all campaigns that contain the flow : fid
-        __query = ccdb.construct_lucene_query({'contains' : fid})
+        __query = ccdb.construct_lucene_query({'contains': fid})
         ccamps = ccdb.full_text_search('search', __query, page=-1)
 
         # check that all relelvant chained campaigns are empty
-        crdb = database('chained_requests')
         for cc in ccamps:
-            __query2 = ccdb.construct_lucene_query({'member_of_campaign' : cc['prepid']})
+            __query2 = ccdb.construct_lucene_query({'member_of_campaign': cc['prepid']})
             mcm_crs = ccdb.full_text_search('search', __query2)
             if len(mcm_crs) != 0:
-                raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign' % (fid,
-                                                                                                             cc[
-                                                                                                                 'prepid']))
+                raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign' % (fid, cc['prepid']))
 
-        ## all chained campaigns are empty :
-        #=> remove them one by one
+        # all chained campaigns are empty :
+        # => remove them one by one
         for cc in ccamps:
             ccdb.delete(cc['prepid'])
 
@@ -324,16 +322,16 @@ class DeleteFlow(RESTResource):
 
         next_c = f['next_campaign']
         # get all campaigns that contain the flow's next campaign in the campaign's next
-        __query = cdb.construct_lucene_query({'next' : next_c})
+        __query = cdb.construct_lucene_query({'next': next_c})
         camps = cdb.full_text_search('search', __query, page=-1)
 
         for c in camps:
-            ##check that nothing allows to flow in it
+            # check that nothing allows to flow in it
             # get the list of chained campaign that still contain both
-            __query2 = ccdb.construct_lucene_query({'contains' : [c['prepid'], next_c]})
+            __query2 = ccdb.construct_lucene_query({'contains': [c['prepid'], next_c]})
             mcm_ccs = ccdb.full_text_search('search', __query2, page=-1)
             if not len(mcm_ccs):
-                #there a no chained campaign left, that uses both that campaign and next_c
+                # there a no chained campaign left, that uses both that campaign and next_c
                 c['next'].remove(fid)
                 try:
                     cdb.update(c)
@@ -370,7 +368,6 @@ class ApproveFlow(RESTResource):
         """
         return self.multiple_approve(flow_ids, step)
 
-
     def multiple_approve(self, rid, val):
         if ',' in rid:
             rlist = rid.rsplit(',')
@@ -389,7 +386,7 @@ class ApproveFlow(RESTResource):
 
         try:
             f.approve(int(val))
-        except:
+        except Exception:
             return {"prepid": rid, "results": False}
 
         return {"prepid": rid, "results": db.update(f.json())}

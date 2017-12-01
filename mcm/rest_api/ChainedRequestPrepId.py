@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-from simplejson import dumps
-
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 from json_layer.chained_request import chained_request
+
 
 # generates the next valid prepid
 class ChainedRequestPrepId(RESTResourceIndex):
@@ -31,18 +30,18 @@ class ChainedRequestPrepId(RESTResourceIndex):
             if (campaign, pwg) in self.serial_number_cache:
                 sn = self.serial_number_cache[(campaign, pwg)] + 1
             else:
-                sn=1
-                serial_number_lookup = creq_db.raw_query('serial_number', {'group':True, 'key':[campaign, pwg]})
+                sn = 1
+                serial_number_lookup = creq_db.raw_query('serial_number', {'group': True, 'key': [campaign, pwg]})
                 if serial_number_lookup:
-                    sn = serial_number_lookup[0]['value']+1
+                    sn = serial_number_lookup[0]['value'] + 1
 
-            ## construct the new id
+            # construct the new id
             new_prepid = pwg + '-' + campaign + '-' + str(sn).zfill(5)
-            if sn==1:
+            if sn == 1:
                 self.logger.info('Beginning new prepid family: %s' % (new_prepid))
 
-            new_request = chained_request({'_id':new_prepid, 'prepid':new_prepid, 'pwg':pwg, 'member_of_campaign':campaign})
-            new_request.update_history({'action':'created'})
+            new_request = chained_request({'_id': new_prepid, 'prepid': new_prepid, 'pwg': pwg, 'member_of_campaign': campaign})
+            new_request.update_history({'action': 'created'})
             creq_db.save(new_request.json())
             self.serial_number_cache[(campaign, pwg)] = sn
             self.logger.info('New chain id: %s' % new_prepid)
