@@ -26,9 +26,11 @@ from flask_restful import reqparse
 
 
 class RequestRESTResource(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = access_rights.generator_contact
         self.with_trace = True
 
     def set_campaign(self, mcm_req):
@@ -128,11 +130,13 @@ class RequestRESTResource(RESTResource):
 
 
 class CloneRequest(RequestRESTResource):
+
+    #access_limit = access_rights.generator_contact ## maybe that is wrong
+
     def __init__(self):
         RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
-        # self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
     def get(self, request_id):
         """
@@ -177,11 +181,13 @@ class CloneRequest(RequestRESTResource):
 
 
 class ImportRequest(RequestRESTResource):
+
+    #access_limit = access_rights.generator_contact ## maybe that is wrong
+
     def __init__(self):
         RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
-        # self.access_limit = access_rights.generator_contact ## maybe that is wrong
 
     def put(self):
         """
@@ -273,9 +279,10 @@ class ManageRequest(UpdateRequest):
     Same as UpdateRequest, leaving no trace in history, for admin only
     """
 
+    access_limit = access_rights.administrator
+
     def __init__(self):
         UpdateRequest.__init__(self)
-        self.access_limit = access_rights.administrator
         self.with_trace = False
         self.before_request()
         self.count_call()
@@ -312,9 +319,10 @@ class GetCmsDriverForRequest(RESTResource):
 
 class OptionResetForRequest(RESTResource):
 
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -373,7 +381,7 @@ class GetSetupForRequest(RESTResource):
             self.opt = 'test'
         elif 'valid' in flask.request.path:
             self.opt = 'valid'
-            self.access_limit = access_rights.administrator
+            access_limit = access_rights.administrator
         else:
             raise Exception("Cannot create this resource with mode %s" % self.opt)
         self.before_request()
@@ -405,9 +413,11 @@ class GetSetupForRequest(RESTResource):
 
 
 class DeleteRequest(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
         self.db_name = 'requests'
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -615,9 +625,11 @@ class ApproveRequest(RESTResource):
 
 
 class ResetRequestApproval(ApproveRequest):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
         ApproveRequest.__init__(self)
-        self.access_limit = access_rights.generator_contact
         self.hard = 'soft_reset' not in flask.request.path
         self.before_request()
         self.count_call()
@@ -673,8 +685,10 @@ class GetStatus(RESTResource):
 
 
 class InspectStatus(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -717,8 +731,10 @@ class InspectStatus(RESTResource):
 
 
 class UpdateStats(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -757,8 +773,10 @@ class UpdateStats(RESTResource):
 
 
 class SetStatus(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -818,10 +836,11 @@ class TestRequest(RESTResource):
 
 class InjectRequest(RESTResource):
 
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         # set user access to administrator
         self.db_name = 'requests'
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -886,8 +905,10 @@ class GetDefaultGenParams(RESTResource):
 
 
 class NotifyUser(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -1001,8 +1022,10 @@ class GetActors(RESTResource):
 
 
 class SearchableRequest(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -1125,9 +1148,11 @@ class RequestLister():
 
 
 class RequestsFromFile(RequestLister, RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
         RequestLister.__init__(self)
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -1141,8 +1166,10 @@ class RequestsFromFile(RequestLister, RESTResource):
 
 
 class StalledReminder(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -1233,8 +1260,10 @@ class StalledReminder(RESTResource):
 
 
 class RequestsReminder(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
@@ -1567,8 +1596,9 @@ class ListRequestPrepids(RequestRESTResource):
 
 class GetUploadCommand(RESTResource):
 
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
@@ -1588,8 +1618,9 @@ class GetUploadCommand(RESTResource):
 
 class GetInjectCommand(RESTResource):
 
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
@@ -1628,8 +1659,9 @@ class GetUniqueValues(RESTResource):
 
 class PutToForceComplete(RESTResource):
 
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -1692,8 +1724,10 @@ class PutToForceComplete(RESTResource):
 
 
 class ForceCompleteMethods(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
@@ -1709,8 +1743,10 @@ class ForceCompleteMethods(RESTResource):
 
 
 class RequestsPriorityChange(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
         self.requests_db = database("requests")
@@ -1734,8 +1770,10 @@ class RequestsPriorityChange(RESTResource):
 
 
 class Reserve_and_ApproveChain(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
         self.cdb = database("chained_requests")
@@ -1785,8 +1823,10 @@ class TaskChainRequestDict(RESTResource):
     """
     Provide the taskchain dictionnary for uploading to request manager
     """
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}

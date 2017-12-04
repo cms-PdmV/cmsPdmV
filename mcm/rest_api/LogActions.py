@@ -47,8 +47,10 @@ class ReadInjectionLog(RESTResource):
 
 
 class GetVerbosities(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 

@@ -16,8 +16,10 @@ from simplejson import loads
 
 
 class CreateCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -70,8 +72,10 @@ class CreateCampaign(RESTResource):
 
 
 class UpdateCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -121,9 +125,11 @@ class UpdateCampaign(RESTResource):
 
 
 class DeleteCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'campaigns'
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -200,8 +206,10 @@ class GetCampaign(RESTResource):
 
 
 class ToggleCampaignStatus(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -229,8 +237,10 @@ class ToggleCampaignStatus(RESTResource):
 
 
 class ApproveCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -347,9 +357,11 @@ class ListAllCampaigns(CampaignsRESTResource):
 
 
 class InspectRequests(CampaignsRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -361,9 +373,11 @@ class InspectRequests(CampaignsRESTResource):
 
 
 class InspectCampaigns(CampaignsRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         CampaignsRESTResource.__init__(self)
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 

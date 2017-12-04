@@ -13,8 +13,10 @@ from couchdb_layer.mcm_database import database
 
 
 class RenewCertificate(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -43,8 +45,10 @@ class RenewCertificate(RESTResource):
 
 
 class ChangeVerbosity(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -63,8 +67,10 @@ class ChangeVerbosity(RESTResource):
 
 
 class Communicate(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -82,8 +88,9 @@ class Search(RESTResource):
     Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
     """
 
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.casting = defaultdict(lambda: defaultdict(lambda: ""))
         self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))

@@ -16,8 +16,10 @@ from simplejson import loads
 
 
 class GetBatch(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -30,8 +32,10 @@ class GetBatch(RESTResource):
 
 
 class BatchAnnouncer(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -196,8 +200,10 @@ class ResetBatch(BatchAnnouncer):
 
 
 class HoldBatch(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -225,8 +231,10 @@ class HoldBatch(RESTResource):
 
 
 class NotifyBatch(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
         self.bdb = database('batches')
