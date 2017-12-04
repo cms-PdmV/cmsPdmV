@@ -60,6 +60,7 @@ class CheckNotifications(NotificationRESTResource):
             return stats[self.username]
         return {'All': 0, 'unseen': 0}
 
+
 class FetchNotifications(NotificationRESTResource):
 
     def __init__(self):
@@ -77,9 +78,7 @@ class FetchNotifications(NotificationRESTResource):
         query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
-            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
-        ])
-
+            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})])
         notifications = self.notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
         self.set_seen(notifications)
         self.logger.info("Fetched notifications")
@@ -107,6 +106,7 @@ class SaveSeen(NotificationRESTResource):
             return {"results": False, "message": message}
         return self.substract_seens_in_stats(1)
 
+
 class FetchGroupActionObjects(NotificationRESTResource):
 
     def __init__(self):
@@ -125,8 +125,7 @@ class FetchGroupActionObjects(NotificationRESTResource):
         query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
-            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
-        ])
+            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})])
         notifications = self.notifications_db.full_text_search('search', query)
         action_objects = []
         object_type = ''
@@ -139,6 +138,7 @@ class FetchGroupActionObjects(NotificationRESTResource):
         action_objects_results = self.fetch_action_objects(action_objects, object_type, kwargs['page'], kwargs['limit'])
         self.logger.info("Fetched group action objects for group %s" % kwargs['group'])
         return action_objects_results
+
 
 class SearchNotifications(NotificationRESTResource):
 
@@ -159,8 +159,7 @@ class SearchNotifications(NotificationRESTResource):
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
             ('action_objects', {'value': search, 'join_operator': 'AND', 'open_parenthesis': True}),
-            ('title', {'value': search, 'join_operator': 'OR', 'close_parenthesis': True})
-        ])
+            ('title', {'value': search, 'join_operator': 'OR', 'close_parenthesis': True})])
         notifications = self.notifications_db.full_text_search('search', query, page=kwargs['page'], limit=10, sort="\_id")
         self.set_seen(notifications)
         self.logger.info("Searched text %s in notifications" % search)
@@ -205,8 +204,7 @@ class MarkAsSeen(NotificationRESTResource):
         query = self.notifications_db.construct_lucene_complex_query([
             ('target_role', {'value': self.role}),
             ('targets', {'value': self.username, 'join_operator': 'OR'}),
-            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})
-        ])
+            ('group', {'value': kwargs['group'], 'join_operator': 'AND'})])
         page = 0
         limit = 50
         set_seen_counter = 0

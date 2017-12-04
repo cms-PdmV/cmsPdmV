@@ -5,6 +5,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 
+
 class GetBjobs(RESTResource):
 
     access_limit = access_rights.user
@@ -127,7 +128,7 @@ class GetLocksInfo(RESTResource):
 
     def get(self):
         from tools.locker import locker
-        data = {"RLocks" : locker.lock_dictionary, "Locks" : locker.thread_lock_dictionary}
+        data = {"RLocks": locker.lock_dictionary, "Locks": locker.thread_lock_dictionary}
         return {"locks_len": len(data), "locks_data": str(data)}
 
 class GetQueueInfo(RESTResource):

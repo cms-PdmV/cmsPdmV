@@ -13,6 +13,7 @@ from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
 
+
 class CreateChainedRequest(RESTResource):
 
     access_limit = access_rights.administrator
@@ -30,17 +31,19 @@ class CreateChainedRequest(RESTResource):
 
     def import_request(self, data):
         db = database(self.db_name)
-        json_input=loads(data)
+        json_input = loads(data)
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
-            return {"results":False}
+            return {"results": False}
+
         if 'prepid' in json_input:
             req = chained_request(json_input)
             cr_id = req.get_attribute('prepid')
         else:
             cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
             if not cr_id:
-                return {"results":False}
+                return {"results": False}
+
             req = chained_request(db.get(cr_id))
         for key in json_input:
             if key not in ['prepid', '_id', '_rev', 'history']:
@@ -57,17 +60,18 @@ class CreateChainedRequest(RESTResource):
         if not db.document_exists(req.get_attribute('_id')):
             if db.save(req.json()):
                 self.logger.info('new chained_request successfully saved.')
-                return {"results":True, "prepid": req.get_attribute('prepid')}
+                return {"results": True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
-                return {"results":False}
+                return {"results": False}
         else:
             if db.update(req.json()):
                 self.logger.info('new chained_request successfully saved.')
-                return {"results":True, "prepid": req.get_attribute('prepid')}
+                return {"results": True, "prepid": req.get_attribute('prepid')}
             else:
                 self.logger.error('Could not save new chained_request to database')
-                return {"results":False}
+                return {"results": False}
+
 
 class UpdateChainedRequest(RESTResource):
 
@@ -87,16 +91,16 @@ class UpdateChainedRequest(RESTResource):
     def update_request(self, data):
         try:
             req = chained_request(json_input=loads(data))
-        except chained_request.IllegalAttributeName as ex:
-            return {"results":False}
+        except chained_request.IllegalAttributeName:
+            return {"results": False}
 
         if not req.get_attribute('prepid') and not req.get_attribute('_id'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
-            #req.set_attribute('_id', req.get_attribute('prepid')
+            # req.set_attribute('_id', req.get_attribute('prepid')
 
         self.logger.info('Updating chained_request %s' % (req.get_attribute('_id')))
-        self.logger.info('wtf %s'%(str(req.get_attribute('approval'))))
+        self.logger.info('wtf %s' % (str(req.get_attribute('approval'))))
         # update history
         req.update_history({'action': 'update'})
         new_priority = req.get_attribute('action_parameters')['block_number']
@@ -127,42 +131,41 @@ class DeleteChainedRequest(RESTResource):
         crdb = database('chained_requests')
         rdb = database('requests')
         mcm_cr = chained_request(crdb.get(crid))
-        mcm_a = None
-        ## get all objects
-        mcm_r_s=[]
-        for (i,rid) in enumerate(mcm_cr.get_attribute('chain')):
+        # get all objects
+        mcm_r_s = []
+        for (i, rid) in enumerate(mcm_cr.get_attribute('chain')):
             mcm_r = request(rdb.get(rid))
-            #this is not a valid check as it is allowed to remove a chain around already running requests
+            # this is not a valid check as it is allowed to remove a chain around already running requests
             #    if mcm_r.get_attribute('status') != 'new':
             #        return {"results":False,"message" : "the request %s part of the chain %s for action %s is not in new status"%( mcm_r.get_attribute('prepid'),
             #                                                                                                                             crid,
             #                                                                                                                             mcm_a.get_attribute('prepid'))}
             in_chains = mcm_r.get_attribute('member_of_chain')
-            in_chains.remove( crid )
+            in_chains.remove(crid)
             self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
                     mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
 
             mcm_r.set_attribute('member_of_chain', in_chains)
-            if i==0:
-                if len(in_chains)==0 and mcm_r.get_attribute('status')!='new':
-                    return {"results":False, "message" : "the request %s, not in status new, at the root of the chain will not be chained anymore"% rid}
+            if i == 0:
+                if len(in_chains) == 0 and mcm_r.get_attribute('status') != 'new':
+                    return {"results": False, "message": "the request %s, not in status new, at the root of the chain will not be chained anymore" % rid}
             else:
-                if len(in_chains)==0:
-                    return {"results":False,"message" : "the request %s, not at the root of the chain will not be chained anymore"% rid}
+                if len(in_chains) == 0:
+                    return {"results": False, "message": "the request %s, not at the root of the chain will not be chained anymore" % rid}
 
-            mcm_r.update_history({'action':'leave','step':crid})
-            mcm_r_s.append( mcm_r )
+            mcm_r.update_history({'action': 'leave', 'step': crid})
+            mcm_r_s.append(mcm_r)
         if mcm_cr.get_attribute('action_parameters')['flag']:
             return {
-                "results":False,
-                "message" : "the action for %s is not disabled"%(crid)
+                "results": False,
+                "message": "the action for %s is not disabled" % (crid)
             }
-        ## then save all changes
+        # then save all changes
         for mcm_r in mcm_r_s:
-            if not rdb.update( mcm_r.json()):
-                return {"results":False,"message" : "Could not save request "+ mcm_r.get_attribute('prepid')}
+            if not rdb.update(mcm_r.json()):
+                return {"results": False, "message": "Could not save request " + mcm_r.get_attribute('prepid')}
             else:
-                subject = "Request {0} left chain".format( mcm_r.get_attribute('prepid'))
+                subject = "Request {0} left chain".format(mcm_r.get_attribute('prepid'))
                 message = "Request {0} has successfuly left chain {1}".format(mcm_r.get_attribute('prepid'), crid)
                 notification(
                     subject,
@@ -171,8 +174,7 @@ class DeleteChainedRequest(RESTResource):
                     group=notification.REQUEST_OPERATIONS,
                     action_objects=[mcm_r.get_attribute('prepid')],
                     object_type='requests',
-                    base_object=mcm_r
-                )
+                    base_object=mcm_r)
                 mcm_r.notify(subject, message)
 
         return {"results": crdb.delete(crid)}
@@ -224,10 +226,10 @@ class FlowToNextStep(RESTResource):
         """
         Allow to flow a chained request with internal information
         """
-        check_stats=True
+        check_stats = True
         reserve = False
         if action != '':
-            check_stats = (action !='force')
+            check_stats = (action != 'force')
             reserve = (action == 'reserve')
             if reserve_campaign != '':
                 reserve = reserve_campaign
@@ -242,7 +244,7 @@ class FlowToNextStep(RESTResource):
         res = []
         chains_requests_dict = {}
         for chain_id in chain_id_list:
-            flow_results = self.flow(chain_id, check_stats=check_stats, reserve = reserve)
+            flow_results = self.flow(chain_id, check_stats=check_stats, reserve=reserve)
             if flow_results['results'] and 'generated_requests' in flow_results:
                 chains_requests_dict[chain_id] = flow_results['generated_requests']
                 flow_results.pop('generated_requests')
@@ -256,16 +258,16 @@ class FlowToNextStep(RESTResource):
             return res[0]
         return res
 
-    def flow2(self,  data):
+    def flow2(self, data):
         db = database('chained_requests')
         chain_id = data['prepid']
         try:
             creq = chained_request(json_input=db.get(chain_id))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-            return {"results":str(ex)}
+            return {"results": str(ex)}
 
-        self.logger.info('Attempting to flow to next step for chained_request %s' %  (
+        self.logger.info('Attempting to flow to next step for chained_request %s' % (
                 creq.get_attribute('_id')))
 
         # if the chained_request can flow, do it
@@ -279,11 +281,11 @@ class FlowToNextStep(RESTResource):
         if 'block_white_list' in data:
             inwhite = data['block_white_list']
         if 'force' in data:
-            check_stats = data['force']!='force'
+            check_stats = data['force'] != 'force'
         if 'reserve' in data and data["reserve"]:
             reserve = data["reserve"]
-            return creq.reserve(limit = reserve)
-        return creq.flow_trial( inputds,  inblack,  inwhite, check_stats)
+            return creq.reserve(limit=reserve)
+        return creq.flow_trial(inputds, inblack, inwhite, check_stats)
 
     def flow(self, chainid, check_stats=True, reserve=False):
         try:
@@ -291,9 +293,9 @@ class FlowToNextStep(RESTResource):
             creq = chained_request(json_input=db.get(chainid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-            return {"results":str(ex)}
+            return {"results": str(ex)}
 
-        #TO-DO check if chained_request is in settings forceflow_list and remove it!
+        # TO-DO check if chained_request is in settings forceflow_list and remove it!
         # if the chained_request can flow, do it
         if reserve:
             self.logger.info('Attempting to reserve to next step for chained_request %s' % (
@@ -302,7 +304,6 @@ class FlowToNextStep(RESTResource):
 
         self.logger.info('Attempting to flow to next step for chained_request %s' % (
                 creq.get_attribute('_id')))
-
         return creq.flow_trial(check_stats=check_stats)
 
 
@@ -321,7 +322,7 @@ class RewindToPreviousStep(RESTResource):
         res = []
         crids = chained_request_ids.split(",")
         for crid in crids:
-            res.append( self.rewind_one( crid ) )
+            res.append(self.rewind_one(crid))
 
         if len(res) != 1:
             return res
@@ -331,51 +332,48 @@ class RewindToPreviousStep(RESTResource):
     def rewind_one(self, crid):
         crdb = database('chained_requests')
         rdb = database('requests')
-        if not crdb.document_exists( crid ):
-            return {"results":False, "message":"does not exist","prepid" : crid}
-        mcm_cr = chained_request( crdb.get( crid) )
+        if not crdb.document_exists(crid):
+            return {"results": False, "message": "does not exist", "prepid": crid}
+        mcm_cr = chained_request(crdb.get(crid))
         current_step = mcm_cr.get_attribute('step')
-        if current_step==0:
-            ## or should it be possible to cancel the initial requests of a chained request
-            return {"results":False, "message":"already at the root","prepid" : crid}
+        if current_step == 0:
+            # or should it be possible to cancel the initial requests of a chained request
+            return {"results": False, "message": "already at the root", "prepid": crid}
 
-        ## supposedly all the other requests were already reset!
-        for next in mcm_cr.get_attribute('chain')[current_step+1:]:
-            ## what if that next one is not in the db
-            if not rdb.document_exists( next):
-                self.logger.error('%s is part of %s but does not exist'%( next, crid))
+        # supposedly all the other requests were already reset!
+        for next in mcm_cr.get_attribute('chain')[current_step + 1:]:
+            # what if that next one is not in the db
+            if not rdb.document_exists(next):
+                self.logger.error('%s is part of %s but does not exist' % (next, crid))
                 continue
-            mcm_r = request(rdb.get( next ))
-            if mcm_r.get_attribute('status')!='new':
+            mcm_r = request(rdb.get(next))
+            if mcm_r.get_attribute('status') != 'new':
                 # this cannot be right!
-                self.logger.error('%s is after the current request and is not new: %s' % (
-                        next, mcm_r.get_attribute('status')))
+                self.logger.error('%s is after the current request and is not new: %s' % (next, mcm_r.get_attribute('status')))
+                return {"results": False, "message": "%s is not new" % (next), "prepid": crid}
 
-                return {"results":False, "message":"%s is not new" % (next), "prepid" : crid}
-
-        ##get the one to be reset
-        current_id=mcm_cr.get_attribute('chain')[current_step]
-        mcm_r = request( rdb.get( current_id ))
+        # get the one to be reset
+        current_id = mcm_cr.get_attribute('chain')[current_step]
+        mcm_r = request(rdb.get(current_id))
         mcm_r.reset()
-        saved = rdb.update( mcm_r.json() )
+        saved = rdb.update(mcm_r.json())
         if not saved:
-            {"results":False, "message":"could not save the last request of the chain","prepid" : crid}
-        ## the current chained request has very likely been updated :
-        ## reload it as you have not changed anything to it yet
-        mcm_cr = chained_request( crdb.get( crid) )
-
-        mcm_cr.set_attribute('step',current_step -1 )
+            {"results": False, "message": "could not save the last request of the chain", "prepid": crid}
+        # the current chained request has very likely been updated :
+        # reload it as you have not changed anything to it yet
+        mcm_cr = chained_request(crdb.get(crid))
+        mcm_cr.set_attribute('step', current_step - 1)
         # set status, last status
         mcm_cr.set_last_status()
-        mcm_cr.set_attribute('status','processing')
-
-        saved = crdb.update( mcm_cr.json())
+        mcm_cr.set_attribute('status', 'processing')
+        saved = crdb.update(mcm_cr.json())
         if saved:
-            return {"results":True,"prepid" : crid}
+            return {"results": True, "prepid": crid}
         else:
-            return {"results" : False,
-                "message" : "could not save chained requests. the DB is going to be inconsistent !",
-                "prepid" : crid}
+            return {
+                "results": False,
+                "message": "could not save chained requests. the DB is going to be inconsistent !",
+                "prepid": crid}
 
 
 class ApproveChainedRequest(RESTResource):
@@ -397,26 +395,28 @@ class ApproveChainedRequest(RESTResource):
             rlist = rid.rsplit(',')
             res = []
             for r in rlist:
-                 res.append(self.approve(r, val))
+                res.append(self.approve(r, val))
             return res
         else:
             return self.approve(rid, val)
 
-    def approve(self,  rid,  val=-1):
+    def approve(self, rid, val=-1):
         db = database('chained_requests')
         if not db.document_exists(rid):
-            return {"prepid": rid, "results":'Error: The given chained_request id does not exist.'}
+            return {"prepid": rid, "results": 'Error: The given chained_request id does not exist.'}
         creq = chained_request(json_input=db.get(rid))
         try:
             creq.approve(val)
         except Exception as ex:
-            return {"prepid": rid, "results":False, 'message' : str(ex)}
+            return {"prepid": rid, "results": False, 'message': str(ex)}
 
         saved = db.update(creq.json())
         if saved:
-            return {"prepid":rid, "results":True}
+            return {"prepid": rid, "results": True}
         else:
-            return {"prepid":rid, "results":False ,
+            return {
+                "prepid": rid,
+                "results": False,
                 'message': 'unable to save the updated chained request'}
 
 
@@ -439,11 +439,11 @@ class InspectChain(RESTResource):
         res = []
         crdb = database('chained_requests')
         for cr in crlist:
-            if crdb.document_exists( cr):
-                mcm_cr = chained_request( crdb.get( cr) )
-                res.append( mcm_cr.inspect() )
+            if crdb.document_exists(cr):
+                mcm_cr = chained_request(crdb.get(cr))
+                res.append(mcm_cr.inspect())
             else:
-                res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist' % cr})
+                res.append({"prepid": cr, "results": False, 'message': '%s does not exist' % cr})
 
         if len(res) > 1:
             return res
@@ -466,16 +466,14 @@ class SearchableChainedRequest(RESTResource):
         rdb = database('chained_requests')
         if action == 'do':
             all_requests = rdb.get_all()
-
             searchable = {}
-
             for request in all_requests:
                 for key in ["prepid", "approval", "status", "pwg", "step",
                             "last_status", "member_of_campaign", "dataset_name"]:
-                    if not key in searchable:
+                    if key not in searchable:
                         searchable[key] = set([])
                     if not key in request:
-                        ## that should make things break down, and due to schema evolution missed-migration
+                        # that should make things break down, and due to schema evolution missed-migration
                         continue
                     if type(request[key]) == list:
                         for item in request[key]:
@@ -483,12 +481,12 @@ class SearchableChainedRequest(RESTResource):
                     else:
                         searchable[key].add(str(request[key]))
 
-            #unique it
+            # unique it
             for key in searchable:
                 searchable[key] = list(searchable[key])
                 searchable[key].sort()
 
-            #store that value
+            # store that value
             search = database('searchable')
             if search.document_exists('chained_requests'):
                 search.delete('chained_requests')
@@ -497,7 +495,7 @@ class SearchableChainedRequest(RESTResource):
             searchable.pop('_id')
             return searchable
         else:
-            ## just retrieve that value
+            # just retrieve that value
             search = database('searchable')
             searchable = search.get('chained_requests')
             searchable.pop('_id')
@@ -521,31 +519,28 @@ class TestChainedRequest(RESTResource):
         rdb = database('requests')
         settingsDB = database('settings')
         mcm_cr = chained_request(crdb.get(chained_request_id))
-        mcm_rs = []
-        if settingsDB.get('validation_stop')['value'] == True:
+        if settingsDB.get('validation_stop')['value']:
             return {
-                    "results" : False,
-                    'message': ('validation jobs are halted to allow forthcoming mcm ''restart - try again later'),
-                    "prepid" : chained_request_id
-            }
+                "results": False,
+                'message': ('validation jobs are halted to allow forthcoming mcm ''restart - try again later'),
+                "prepid": chained_request_id}
         requires_validation = False
         for rid in mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]:
             mcm_r = request(rdb.get(rid))
-            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status: #We dont care about non root request because they are not being used on chain run test
+            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status:  # We dont care about non root request because they are not being used on chain run test
                 break
             requires_validation = True
             if mcm_r.get_attribute('status') != 'new' or mcm_r.get_attribute('approval') != 'none':
                 return {
-                        "results" : False,
-                        "prepid" : chained_request_id,
-                        "message" : "request %s is in status %s, approval: %s" % (rid, mcm_r.get_attribute('status'), mcm_r.get_attribute('approval'))
-                    }
+                    "results": False,
+                    "prepid": chained_request_id,
+                    "message": "request %s is in status %s, approval: %s" % (rid, mcm_r.get_attribute('status'), mcm_r.get_attribute('approval'))}
             try:
                 mcm_r.ok_to_move_to_approval_validation(for_chain=True)
-                mcm_r.update_history({'action' : 'approve', 'step' : 'validation'})
+                mcm_r.update_history({'action': 'approve', 'step': 'validation'})
                 mcm_r.set_attribute('approval', 'validation')
                 mcm_r.reload()
-                text = 'Within chain %s \n'% mcm_cr.get_attribute('prepid')
+                text = 'Within chain %s \n' % mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
                 subject = 'Approval %s in chain %s for request %s' % ('validation', mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid'))
                 notification(
@@ -555,34 +550,29 @@ class TestChainedRequest(RESTResource):
                     group=notification.REQUEST_APPROVALS,
                     action_objects=[mcm_r.get_attribute('prepid')],
                     object_type='requests',
-                    base_object=mcm_r
-                )
+                    base_object=mcm_r)
                 mcm_r.notify(subject, text, accumulate=True)
             except Exception as e:
                 mcm_cr.reset_requests(str(e), notify_one=rid)
                 return {
-                        "results" : False,
-                        "message" : str(e),
-                        "prepid" : chained_request_id
-                    }
+                    "results": False,
+                    "message": str(e),
+                    "prepid": chained_request_id}
         if not requires_validation:
             return {
-                    "results" : True,
-                    "message" : "No validation required",
-                    "prepid" : chained_request_id
-                }
+                "results": True,
+                "message": "No validation required",
+                "prepid": chained_request_id}
         mcm_cr.set_attribute('validate', 1)
         if not crdb.update(mcm_cr.json()):
             return {
-                    "results" : False,
-                    "message" : "Failed while trying to update the document in DB",
-                    "prepid" : chained_request_id
-                }
+                "results": False,
+                "message": "Failed while trying to update the document in DB",
+                "prepid": chained_request_id}
         return {
-                "results" : True,
-                "message" : "run test will start soon",
-                "prepid" : chained_request_id
-            }
+            "results": True,
+            "message": "run test will start soon",
+            "prepid": chained_request_id}
 
 
 class SoftResetChainedRequest(RESTResource):
@@ -601,20 +591,20 @@ class SoftResetChainedRequest(RESTResource):
         rdb = database('requests')
 
         mcm_cr = chained_request(crdb.get(chained_request_id))
-        for rid in reversed(mcm_cr.get_attribute('chain')[:mcm_cr.get_attribute('step')+1]):
-            ## from the current one to the first one REVERSED
+        for rid in reversed(mcm_cr.get_attribute('chain')[:mcm_cr.get_attribute('step') + 1]):
+            # from the current one to the first one REVERSED
             mcm_r = request(rdb.get(rid))
             try:
                 mcm_r.reset(hard=False)
             except Exception as e:
-                return {'prepid' : chained_request_id, 'results' : False, 'message' : str(e)}
+                return {'prepid': chained_request_id, 'results': False, 'message': str(e)}
 
             mcm_r.reload()
             mcm_cr = chained_request(crdb.get(chained_request_id))
-            mcm_cr.set_attribute('step', max(0, mcm_cr.get_attribute('chain').index(rid)-1))
+            mcm_cr.set_attribute('step', max(0, mcm_cr.get_attribute('chain').index(rid) - 1))
             mcm_cr.reload()
 
-        return {'prepid' : chained_request_id, 'results':True}
+        return {'prepid': chained_request_id, 'results': True}
 
 
 class InjectChainedRequest(RESTResource):
@@ -645,10 +635,10 @@ class InjectChainedRequest(RESTResource):
             return thread.make_command()
         else:
             submit_pool.add_task(thread.internal_run)
-            #thread.start()
-            return {"results" : True,
-                    "message" : "chain submission for %s will be forked unless same request is being handled already" % chained_request_id,
-                    "prepid" : chained_request_id}
+            return {
+                "results": True,
+                "message": "chain submission for %s will be forked unless same request is being handled already" % chained_request_id,
+                "prepid": chained_request_id}
 
 
 class ChainsFromTicket(RESTResource):
@@ -673,7 +663,7 @@ class ChainsFromTicket(RESTResource):
         ticket_prepid = kwargs['ticket']
         chained_requests_db = database('chained_requests')
         mccms_db = database('mccms')
-        mccm_query = mccms_db.construct_lucene_query({'prepid' : ticket_prepid})
+        mccm_query = mccms_db.construct_lucene_query({'prepid': ticket_prepid})
         result = mccms_db.full_text_search("search", mccm_query, page=-1)
         if len(result) == 0:
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
@@ -690,7 +680,7 @@ class ChainsFromTicket(RESTResource):
         while start < end:
             fetch_till = start + 20
             fetch_till = end if fetch_till > end else fetch_till
-            chained_request_query = chained_requests_db.construct_lucene_query({'prepid' : generated_chains[start:fetch_till]}, boolean_operator="OR")
+            chained_request_query = chained_requests_db.construct_lucene_query({'prepid': generated_chains[start:fetch_till]}, boolean_operator="OR")
             chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
             start += 20
         return chained_request_list
@@ -720,18 +710,17 @@ class TaskChainDict(RESTResource):
         __DT_prio = settingsDB.get('datatier_input')["value"]
 
         def tranform_to_step_chain(wma_dict, total_time_evt, total_size_evt):
-            ##replace Task -> Step in inside dictionaries
+            # replace Task -> Step in inside dictionaries
             for task_num in range(wma_dict["TaskChain"]):
-                for elem in wma_dict["Task%s" % (task_num+1)]:
+                for elem in wma_dict["Task%s" % (task_num + 1)]:
                     if "Task" in elem:
-                        wma_dict["Task%s" % (task_num+1)][
-                        elem.replace("Task", "Step")] = wma_dict["Task%s" % (task_num+1)].pop(elem)
+                        wma_dict["Task%s" % (task_num + 1)][elem.replace("Task", "Step")] = wma_dict["Task%s" % (task_num + 1)].pop(elem)
 
-                ##we later add the global fields
-                del(wma_dict["Task%s" % (task_num+1)]["TimePerEvent"])
-                del(wma_dict["Task%s" % (task_num+1)]["SizePerEvent"])
+                # we later add the global fields
+                del(wma_dict["Task%s" % (task_num + 1)]["TimePerEvent"])
+                del(wma_dict["Task%s" % (task_num + 1)]["SizePerEvent"])
 
-            ##we do same replacement on top level
+            # we do same replacement on top level
             for el in wma_dict:
                 if wma_dict[el].__class__ == str and "task" in wma_dict[el]:
                     wma_dict[el] = wma_dict[el].replace("task", "step")
@@ -741,26 +730,27 @@ class TaskChainDict(RESTResource):
 
             wma_dict["RequestType"] = "StepChain"
 
-            ##as of 2017-05 StepChain needs these as sum of internal Tasks
+            # as of 2017-05 StepChain needs these as sum of internal Tasks
             wma_dict["TimePerEvent"] = total_time_evt
             wma_dict["SizePerEvent"] = total_size_evt
 
             return wma_dict
 
         if not crdb.document_exists(chained_request_id):
-            ## it's a request actually, pick up all chains containing it
+            # it's a request actually, pick up all chains containing it
             mcm_r = rdb.get(chained_request_id)
-            #mcm_crs = crdb.query(query="root_request==%s"% chained_request_id) ## not only when its the root of
+            # mcm_crs = crdb.query(query="root_request==%s"% chained_request_id) ## not only when its the root of
             mcm_crs = crdb.query(query="contains==%s" % chained_request_id)
             task_name = 'task_' + chained_request_id
         else:
             mcm_crs = [crdb.get(chained_request_id)]
-            ##here name should be task_chain's[curr_step] request_prepid
+            # here name should be task_chain's[curr_step] request_prepid
             # so it would be task_prepid-of-current-request same as in top
             __req_id = mcm_crs[0]['chain'][mcm_crs[0]['step']]
             task_name = 'task_' + __req_id
 
-        if len(mcm_crs) == 0:  return {}
+        if len(mcm_crs) == 0:
+            return {}
 
         tasktree = {}
         ignore_status = False
@@ -778,97 +768,97 @@ class TaskChainDict(RESTResource):
         for mcm_cr in mcm_crs:
             __chains_type.append(mcm_cr["chain_type"])
             starting_point = mcm_cr['step']
-            if ignore_status: starting_point = 0
+            if ignore_status:
+                starting_point = 0
             for (ir, r) in enumerate(mcm_cr['chain']):
-                if (ir < starting_point) :
-                    continue ## ad no task for things before what is already done
+                if (ir < starting_point):
+                    continue  # ad no task for things before what is already done
                 if veto_point and (ir > veto_point):
                     continue
-                mcm_r = request(rdb.get( r ))
+                mcm_r = request(rdb.get(r))
                 if mcm_r.get_attribute('status') == 'done' and not ignore_status:
                     continue
 
-                if not r in tasktree:
-                    tasktree[r] = {'next' : [], 'dict' : [], 'rank' : ir}
+                if r not in tasktree:
+                    tasktree[r] = {'next': [], 'dict': [], 'rank': ir}
 
                 base = ir == 0 and mcm_r.get_wmagent_type() in ['MonteCarlo', 'LHEStepZero']
-                depend = (ir > starting_point) ## all the ones later than the starting point depend on a previous task
+                depend = (ir > starting_point)  # all the ones later than the starting point depend on a previous task
                 if ir < (len(mcm_cr['chain']) - 1):
-                    tasktree[r]['next'].append( mcm_cr['chain'][ir + 1])
+                    tasktree[r]['next'].append(mcm_cr['chain'][ir + 1])
 
                 tasktree[r]['dict'] = mcm_r.request_to_tasks(base, depend)
-                ##if request is added to tasktree, we save global sums for StepChains
+                # if request is added to tasktree, we save global sums for StepChains
                 __total_time_evt += mcm_r.get_sum_time_events()
                 __total_size_evt += sum(mcm_r.get_attribute("size_event"))
 
         for (r, item) in tasktree.items():
-            ##here we should generate unique list of steps+output tiers
-            #as we iterate over requests in tasktree
+            # here we should generate unique list of steps+output tiers
+            # as we iterate over requests in tasktree
             __uniq_tiers = []
             for el in item['dict']:
-                ##map of tiers and taskID in order of steps
+                # map of tiers and taskID in order of steps
                 __uniq_tiers.append((el['TaskName'], el['_output_tiers_']))
 
             item['unique_tiers_'] = __uniq_tiers
             for n in item['next']:
-                ##here we should take input from datatier selection;
-                #have a map of tiers -> taskNames and select appropriate one
+                # here we should take input from datatier selection;
+                # have a map of tiers -> taskNames and select appropriate one
                 __input_tier = tasktree[n]['dict'][0]['_first_step_']
                 tModule = tName = ""
                 if __input_tier in __DT_prio:
-                    ##in case there is a possible DataTier in global_dict
+                    # in case there is a possible DataTier in global_dict
                     tModule, tName = request.do_datatier_selection(__DT_prio[__input_tier], __uniq_tiers)
 
                 if tModule != "" and tName != "":
-                    tasktree[n]['dict'][0].update({"InputFromOutputModule" : tModule,
-                            "InputTask" : tName})
+                    tasktree[n]['dict'][0].update({"InputFromOutputModule": tModule, "InputTask": tName})
                 else:
-                    ##default & fallback solution
-                    tasktree[n]['dict'][0].update({"InputFromOutputModule" : item['dict'][-1]['output_'],
-                            "InputTask" : item['dict'][-1]['TaskName']})
+                    # default & fallback solution
+                    tasktree[n]['dict'][0].update({"InputFromOutputModule": item['dict'][-1]['output_'],
+                        "InputTask": item['dict'][-1]['TaskName']})
 
         wma = {
-            "RequestType" : "TaskChain",
-            "Group" : "ppd",
+            "RequestType": "TaskChain",
+            "Group": "ppd",
             "Requestor": "pdmvserv",
-            "TaskChain" : 0,
+            "TaskChain": 0,
             "ProcessingVersion": 1,
-            "RequestPriority" : 0,
-            "SubRequestType" : "MC",
-            ##we default to 1 in multicore global
-            "Multicore" : 1,
-            }
+            "RequestPriority": 0,
+            "SubRequestType": "MC",
+            # we default to 1 in multicore global
+            "Multicore": 1}
 
         task = 1
         for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
             for d in item['dict']:
-                if d['priority_'] > wma['RequestPriority']:  wma['RequestPriority'] = d['priority_']
-                if d['request_type_'] in ['ReDigi']:  wma['SubRequestType'] = 'ReDigi'
+                if d['priority_'] > wma['RequestPriority']:
+                    wma['RequestPriority'] = d['priority_']
+                if d['request_type_'] in ['ReDigi']:
+                    wma['SubRequestType'] = 'ReDigi'
                 for k in d.keys():
                     if k.endswith('_'):
                         d.pop(k)
-                wma['Task%d'%task] = d
+                wma['Task%d' % task] = d
                 task += 1
 
-        wma['TaskChain'] = task-1
-
+        wma['TaskChain'] = task - 1
         if wma['TaskChain'] == 0:
             return dumps({})
 
-        for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
-            wma[item] = wma['Task%d'% wma['TaskChain']][item]
+        for item in ['CMSSWVersion', 'ScramArch', 'TimePerEvent', 'SizePerEvent', 'GlobalTag', 'Memory']:
+            wma[item] = wma['Task%d' % wma['TaskChain']][item]
 
-        ##since 2016-11, processingString and AcquisitionEra is mandatory in global params
+        # since 2016-11, processingString and AcquisitionEra is mandatory in global params
         wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
         wma['ProcessingString'] = wma['Task1']['ProcessingString']
         wma['Campaign'] = wma['Task1']['Campaign']
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
-
         if __chains_type.count("StepChain") == len(__chains_type):
             return dumps(tranform_to_step_chain(wma, __total_time_evt, __total_size_evt), indent=4)
         else:
             return dumps(wma, indent=4)
+
 
 class GetSetupForChains(RESTResource):
 
@@ -936,18 +926,17 @@ class ForceChainReqToDone(RESTResource):
 
     def force_status_done(self, prepid):
         if not self.crdb.document_exists(prepid):
-            return dumps({"results": False,
-                    "message": "Chained request with prepid {0} does not exist".format(prepid)})
+            return dumps({"results": False, "message": "Chained request with prepid {0} does not exist".format(prepid)})
         cr = chained_request(self.crdb.get(prepid))
         if not (cr.get_attribute("status") in ["done", "force_done"]):
             cr.set_status(to_status="force_done")
-            self.logger.debug("forcing chain_req status to done. cr status:%s" %(
-                    cr.get_attribute("status")))
+            self.logger.debug("forcing chain_req status to done. cr status:%s" % (cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
-            return {'prepid': prepid, 'message': ret, 'results' : True}
+            return {'prepid': prepid, 'message': ret, 'results': True}
         else:
             ret = "Chained request already in status done"
             return {'prepid': prepid, 'message': ret, 'results': False}
+
 
 class ForceStatusDoneToProcessing(RESTResource):
 
@@ -975,12 +964,12 @@ class ForceStatusDoneToProcessing(RESTResource):
     def force_status(self, prepid):
         if not self.crdb.document_exists(prepid):
             return dumps({"results": False,
-                    "message": "Chained request with prepid {0} does not exist".format(prepid)})
+                "message": "Chained request with prepid {0} does not exist".format(prepid)})
         cr = chained_request(self.crdb.get(prepid))
         if cr.get_attribute("status") == "force_done":
             cr.set_status(to_status="processing")
-            self.logger.debug("Moving chain_req back to satus 'processing'. cr status:%s" %(
-                    cr.get_attribute("status")))
+            self.logger.debug("Moving chain_req back to satus 'processing'. cr status:%s" % (
+                cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
             return {'prepid': prepid, 'message': ret, 'results': True}
         else:
@@ -1010,8 +999,8 @@ class ToForceFlowList(RESTResource):
         __updated = False
 
         forceflow_list = self.sdb.get("list_of_forceflow")
-        ##TO-DO check if prepid exists!
-        ##TO-DO check the status of chain_req!
+        # TO-DO check if prepid exists!
+        # TO-DO check the status of chain_req!
         for el in rlist:
             if el not in forceflow_list["value"]:
                 forceflow_list["value"].append(el)
@@ -1023,9 +1012,9 @@ class ToForceFlowList(RESTResource):
             else:
                 res.append({"prepid": el, 'results': False, 'message': 'Chained request already in forceflow list'})
 
-        ##TO-DO check the update return value
+        # TO-DO check the update return value
         if __updated:
-            ret = self.sdb.update(forceflow_list)
+            self.sdb.update(forceflow_list)
 
         return res
 
@@ -1057,8 +1046,8 @@ class ChainedRequestsPriorityChange(RESTResource):
                     self.logger.error(message)
         return {
             'results': True if len(fails) == 0 else False,
-            'message': fails
-        }
+            'message': fails}
+
 
 class RemoveFromForceFlowList(RESTResource):
 
@@ -1087,10 +1076,11 @@ class RemoveFromForceFlowList(RESTResource):
                 forceflow_list["value"].remove(el)
                 res.append({"prepid": el, 'results': True, 'message': 'OK'})
 
-        ##TO-DO check the update return value
+        # TO-DO check the update return value
         ret = self.sdb.update(forceflow_list)
 
         return res
+
 
 class GetUniqueChainedRequestValues(RESTResource):
     def __init__(self):
@@ -1109,4 +1099,4 @@ class GetUniqueChainedRequestValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
+        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)

@@ -24,6 +24,7 @@ from tools.user_management import access_rights
 from tools.priority import priority
 from flask_restful import reqparse
 
+
 class RequestRESTResource(RESTResource):
 
     access_limit = access_rights.generator_contact
@@ -38,7 +39,7 @@ class RequestRESTResource(RESTResource):
         camp = mcm_req.get_attribute('member_of_campaign')
         if not cdb.document_exists(camp):
             return None
-            ## get campaign
+            # get campaign
         camp = campaign(cdb.get(camp))
         mcm_req.set_attribute('energy', camp.get_attribute('energy'))
         if not mcm_req.get_attribute('cmssw_release'):
@@ -52,7 +53,7 @@ class RequestRESTResource(RESTResource):
             return {"results": False, 'message': 'could not save object with a revision number in the object'}
 
         try:
-            #mcm_req = request(json_input=loads(data))
+            # mcm_req = request(json_input=loads(data))
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName as ex:
             return {"results": False, "message": str(ex)}
@@ -75,7 +76,7 @@ class RequestRESTResource(RESTResource):
             mcm_req.set_attribute('_id', '')
             mcm_req.set_attribute('prepid', '')
 
-        ##N.B (JR), '' is always an existing document
+        # N.B (JR), '' is always an existing document
         existed = False
         if db.document_exists(mcm_req.get_attribute('_id')):
             existed = True
@@ -94,25 +95,25 @@ class RequestRESTResource(RESTResource):
 
         self.logger.info('New prepid: %s' % (mcm_req.get_attribute('prepid')))
 
-        ## put a generator info by default in case of possible root request
+        # put a generator info by default in case of possible root request
         if camp.get_attribute('root') <= 0:
             mcm_req.update_generator_parameters()
 
-        ##cast the campaign parameters into the request: knowing that those can be edited at will later
+        # cast the campaign parameters into the request: knowing that those can be edited at will later
         if not mcm_req.get_attribute('sequences'):
             mcm_req.set_options(can_save=False)
 
-        #c = cdb.get(camp)
-        #tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
-        #for item in tobeDraggedInto:
+        # c = cdb.get(camp)
+        # tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
+        # for item in tobeDraggedInto:
         #    mcm_req.set_attribute(item,c.get_attribute(item))
-        #nSeq=len(c.get_attribute('sequences'))
-        #mcm_req.
+        # nSeq=len(c.get_attribute('sequences'))
+        # mcm_req.
 
         # update history
         if self.with_trace:
             if step:
-                mcm_req.update_history({'action': label, 'step' : step})
+                mcm_req.update_history({'action': label, 'step': step})
             else:
                 mcm_req.update_history({'action': label})
 
@@ -160,17 +161,17 @@ class CloneRequest(RequestRESTResource):
             if new_json['flown_with']:
                 return {"results": False, "message": "cannot clone a request that has been flown"}
 
-            to_wipe=['_id','_rev','prepid','approval','status','history','config_id','reqmgr_name','member_of_chain','validation','completed_events','version','priority','analysis_id', 'extension','output_dataset']
+            to_wipe = ['_id', '_rev', 'prepid', 'approval', 'status', 'history', 'config_id', 'reqmgr_name', 'member_of_chain', 'validation', 'completed_events', 'version', 'priority', 'analysis_id', 'extension', 'output_dataset']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
-                ## this is a cloning accross campaign: a few other things need to be cleanedup
+                # this is a cloning accross campaign: a few other things need to be cleanedup
                 to_wipe.extend( ['cmssw_release','energy','sequences'] )
 
             new_json.update(data)
-            ##set the memory of new request to that of future member_of_campaign
+            # set the memory of new request to that of future member_of_campaign
             new_json['memory'] = cdb.get(new_json['member_of_campaign'])['memory']
             new_json['generator_parameters'] = new_json['generator_parameters'][-1:]
             new_json['generator_parameters'][0]['version'] = 0
-            ## remove some of the parameters to get then fresh from a new request.
+            # remove some of the parameters to get then fresh from a new request.
             for w in to_wipe:
                 del new_json[w]
 
@@ -213,7 +214,7 @@ class UpdateRequest(RequestRESTResource):
             res = self.update_request(flask.request.data.strip())
             return res
         except Exception as e:
-            #trace = traceback.format_exc()
+            # trace = traceback.format_exc()
             trace = str(e)
             self.logger.error('Failed to update a request from API \n%s' % (trace))
             return {'results': False, 'message': 'Failed to update a request from API %s' % trace}
@@ -226,7 +227,7 @@ class UpdateRequest(RequestRESTResource):
             return {"results": False, 'message': 'could not locate revision number in the object'}
 
         if not db.document_exists(data['_id']):
-            return {"results": False, 'message': 'request %s does not exist' % ( data['_id'])}
+            return {"results": False, 'message': 'request %s does not exist' % (data['_id'])}
         else:
             if db.get(data['_id'])['_rev'] != data['_rev']:
                 return {"results": False, 'message': 'revision clash'}
@@ -240,7 +241,7 @@ class UpdateRequest(RequestRESTResource):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
 
-        ## operate a check on whether it can be changed
+        # operate a check on whether it can be changed
         previous_version = request(db.get(mcm_req.get_attribute('prepid')))
         editable = previous_version.get_editable()
         for (key, right) in editable.items():
@@ -250,18 +251,17 @@ class UpdateRequest(RequestRESTResource):
                     self.logger.info('##UPDATING [%s] field## %s: %s vs %s' % (
                         mcm_req.get_attribute('prepid'), key,
                         previous_version.get_attribute(key),
-                        mcm_req.get_attribute(key)
-                    ))
+                        mcm_req.get_attribute(key)))
                 continue
 
             if key == 'sequences':
-                ## need a special treatment because it is a list of dicts
+                # need a special treatment because it is a list of dicts
                 continue
             if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s: %s' % (
                     key, previous_version.get_attribute(key), mcm_req.get_attribute(key), right))
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
-                #raise ValueError('Illegal change of parameter')
+                # raise ValueError('Illegal change of parameter')
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
@@ -336,7 +336,7 @@ class OptionResetForRequest(RESTResource):
         for req_id in req_ids:
             req = request(rdb.get(req_id))
             if req.get_attribute('status') == 'new' and req.get_attribute('approval') == 'validation':
-                ## to be replaced by a lock
+                # to be replaced by a lock
                 res[req_id] = False
                 continue
             req.set_options()
@@ -355,7 +355,7 @@ class GetFragmentForRequest(RESTResource):
         """
       Retrieve the fragment as stored for a given request
       """
-        ##TO-DO: do we need it? We should keep it fow backward compatibility
+        # TO-DO: do we need it? We should keep it fow backward compatibility
         v = True if version else False
 
         db = database(self.db_name)
@@ -371,6 +371,7 @@ class GetFragmentForRequest(RESTResource):
         fragmentText = mcm_req.get_attribute('fragment')
         return fragmentText
 
+
 class GetSetupForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -382,7 +383,7 @@ class GetSetupForRequest(RESTResource):
             self.opt = 'valid'
             access_limit = access_rights.administrator
         else:
-            raise Exception("Cannot create this resource with mode %s"% self.opt)
+            raise Exception("Cannot create this resource with mode %s" % self.opt)
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
@@ -391,24 +392,25 @@ class GetSetupForRequest(RESTResource):
         """
             Retrieve the script necessary to setup and test a given request
         """
-        run=False
-        do_valid=False
-        if self.opt=='test' or self.opt=='valid':
-            run=True
-        if self.opt=='valid':
-            do_valid=True
+        run = False
+        do_valid = False
+        if self.opt == 'test' or self.opt == 'valid':
+            run = True
+        if self.opt == 'valid':
+            do_valid = True
         db = database(self.db_name)
         if db.document_exists(prepid):
             try:
                 mcm_req = request(db.get(prepid))
             except request.IllegalAttributeName:
                 return dumps({"results": False})
-            setupText = mcm_req.get_setup_file(run=run,do_valid=do_valid,events=events)
-            #delete certificate line
+            setupText = mcm_req.get_setup_file(run=run, do_valid=do_valid, events=events)
+            # delete certificate line
             setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
             return setupText
         else:
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
+
 
 class DeleteRequest(RESTResource):
 
@@ -431,37 +433,42 @@ class DeleteRequest(RESTResource):
         mcm_r = request(db.get(pid))
 
         if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
-            ##if request has a member_of_campaign we user role to be equal or more than
-            ## prod_manager, so we have to do check manually and return False
-            return {"prepid": pid, "results": False,
-                    "message": "Only prod_managers and up can delete already chained requests"}
+            # if request has a member_of_campaign we user role to be equal or more than
+            # prod_manager, so we have to do check manually and return False
+            return {
+                "prepid": pid, "results": False,
+                "message": "Only prod_managers and up can delete already chained requests"}
 
         if mcm_r.get_attribute('status') != 'new':
-            return {"prepid": pid, "results": False,
-                    "message": "Not possible to delete a request (%s) in status %s" % (
-                            pid, mcm_r.get_attribute('status'))}
+            return {
+                "prepid": pid,
+                "results": False,
+                "message": "Not possible to delete a request (%s) in status %s" % (pid, mcm_r.get_attribute('status'))}
         if mcm_r.has_at_least_an_action():
             return {
                 "prepid": pid,
                 "results": False,
-                "message": "Not possible to delete a request (%s) that is part of a valid chain" % (pid)
-            }
+                "message": "Not possible to delete a request (%s) that is part of a valid chain" % (pid)}
         in_chains = mcm_r.get_attribute('member_of_chain')
         for in_chain in in_chains:
             mcm_cr = chained_request(crdb.get(in_chain))
             if mcm_cr.get_attribute('chain')[-1] != pid:
-                ## the pid is not the last of the chain
-                return {"prepid": pid, "results": False,
-                        "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
-                                pid, in_chain)}
+                # the pid is not the last of the chain
+                return {
+                    "prepid": pid,
+                    "results": False,
+                    "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
+                        pid, in_chain)}
 
             if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index(pid):
-                ## we are currently processing that request
-                return {"prepid": pid, "results": False,
-                        "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
-                                    pid, mcm_cr.get_attribute('step'), in_chain)}
+                # we are currently processing that request
+                return {
+                    "prepid": pid,
+                    "results": False,
+                    "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
+                        pid, mcm_cr.get_attribute('step'), in_chain)}
 
-            ## found a chain that deserves the request to be pop-ep out from the end
+            # found a chain that deserves the request to be pop-ep out from the end
             new_chain = mcm_cr.get_attribute('chain')
             new_chain.remove(pid)
             mcm_cr.set_attribute('chain', new_chain)
@@ -469,15 +476,16 @@ class DeleteRequest(RESTResource):
             mcm_cr.reload()
 
         # delete chained requests !
-        #self.delete_chained_requests(self,pid):
+        # self.delete_chained_requests(self,pid):
         return {"prepid": pid, "results": db.delete(pid)}
 
     def delete_chained_requests(self, pid):
         crdb = database('chained_requests')
-        __query = crdb.construct_lucene_query({'contains' : pid})
+        __query = crdb.construct_lucene_query({'contains': pid})
         mcm_crs = crdb.full_text_search('search', __query, page=-1)
         for doc in mcm_crs:
             crdb.delete(doc['prepid'])
+
 
 class GetRequestByDataset(RESTResource):
     def __init__(self):
@@ -488,15 +496,16 @@ class GetRequestByDataset(RESTResource):
         """
         retrieve the dictionnary of a request, based on the output dataset specified
         """
-        datasetname = '/'+ dataset.replace('*','')
+        datasetname = '/' + dataset.replace('*', '')
         rdb = database('requests')
-        __query = rdb.construct_lucene_query({'produce' : datasetname})
+        __query = rdb.construct_lucene_query({'produce': datasetname})
         r = rdb.full_text_search('search', __query, page=-1)
 
         if len(r):
-            return dumps({"results" : r[0]})
+            return dumps({"results": r[0]})
         else:
             return dumps({"results": {}})
+
 
 class GetRequestOutput(RESTResource):
     def __init__(self):
@@ -508,17 +517,17 @@ class GetRequestOutput(RESTResource):
         """
         Retrieve the list of datasets from a give request
         """
-        ## how to structure better the output ? using a dict ?
-        res = { prepid : []}
+        # how to structure better the output ? using a dict ?
+        res = {prepid: []}
         rdb = database('requests')
 
         if is_chain == 'chain':
             collect = []
             crdb = database('chained_requests')
-            __query = crdb.construct_lucene_query({'contains' : prepid})
+            __query = crdb.construct_lucene_query({'contains': prepid})
             for cr in crdb.full_text_search('search', __query, page=-1):
                 for r in reversed(cr['chain']):
-                    if not r in collect:
+                    if r not in collect:
                         collect.append(r)
         else:
             collect = [prepid]
@@ -527,11 +536,12 @@ class GetRequestOutput(RESTResource):
             mcm_r = rdb.get(rid)
             if len(mcm_r['reqmgr_name']):
                 if 'pdmv_dataset_list' in mcm_r['reqmgr_name'][-1]['content']:
-                    res[prepid].extend( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'] )
+                    res[prepid].extend(mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_list'])
                 else:
-                    res[prepid].append( mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'] )
+                    res[prepid].append(mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'])
 
         return res
+
 
 class GetRequest(RESTResource):
     def __init__(self):
@@ -577,7 +587,7 @@ class ApproveRequest(RESTResource):
         else:
             return self.approve(rid, val, hard)
 
-    def approve(self, rid, val=-1,hard=True):
+    def approve(self, rid, val=-1, hard=True):
         _res = ""
         db = database('requests')
         if not db.document_exists(rid):
@@ -585,14 +595,13 @@ class ApproveRequest(RESTResource):
         req = request(json_input=db.get(rid))
 
         self.logger.info('Approving request %s for step "%s"' % (rid, val))
-
-        #req.approve(val)
+        # req.approve(val)
         try:
             if val == 0:
                 req.reset(hard)
                 saved = db.update(req.json())
             else:
-                with locker.lock('{0}-wait-for-approval'.format( rid ) ):
+                with locker.lock('{0}-wait-for-approval'.format(rid)):
                     _res = req.approve(val)
                     saved = db.update(req.json())
 
@@ -602,13 +611,13 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except request.IllegalApprovalStep as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
-        except:
+        except Exception:
             trace = traceback.format_exc()
             self.logger.error("Exception caught in approval\n%s" % (trace))
             return {'prepid': rid, 'results': False, 'message': trace}
         if saved:
             if _res:
-                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': False, 'message' : _res["message"]}
+                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': False, 'message': _res["message"]}
             else:
                 return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
         else:
@@ -657,7 +666,7 @@ class GetStatus(RESTResource):
         __retries = 3
         if rid == "":
             self.logger.info("someone is looking for empty request status")
-            return {"results" : "You shouldnt be looking for empty prepid"}
+            return {"results": "You shouldnt be looking for empty prepid"}
 
         db = database('requests')
         if not db.document_exists(rid):
@@ -665,7 +674,7 @@ class GetStatus(RESTResource):
 
         mcm_r = db.get(rid)
 
-        while not 'status' in mcm_r:
+        while 'status' not in mcm_r:
             if __retries == 0:
                 return {"prepid": rid, "results": "Ran out of retries to query DB"}
             time.sleep(1)
@@ -702,15 +711,15 @@ class InspectStatus(RESTResource):
             if mcm_r:
                 answer = mcm_r.inspect(force_req)
                 res.append(answer)
-                ### trigger chained request inspection on "true" results from inspection
+                # trigger chained request inspection on "true" results from inspection
                 if answer['results']:
                     crs = mcm_r.get_attribute('member_of_chain')
                     for cr in crs:
-                        if crdb.document_exists( cr ):
-                            mcm_cr = chained_request( crdb.get( cr ) )
-                            res.append( mcm_cr.inspect() )
+                        if crdb.document_exists(cr):
+                            mcm_cr = chained_request(crdb.get(cr))
+                            res.append(mcm_cr.inspect())
                         else:
-                            res.append( {"prepid": cr, "results":False, 'message' : '%s does not exist'% cr})
+                            res.append({"prepid": cr, "results": False, 'message': '%s does not exist' % cr})
             else:
                 res.append({"prepid": r, "results": False, 'message': '%s does not exist' % r})
 
@@ -719,6 +728,7 @@ class InspectStatus(RESTResource):
             return res
         else:
             return res[0]
+
 
 class UpdateStats(RESTResource):
 
@@ -741,21 +751,26 @@ class UpdateStats(RESTResource):
 
         rdb = database('requests')
         if not rdb.document_exists(request_id):
-            return {"prepid" : request_id, "results": False,
-                    "message" : '%s does not exist' % request_id}
+            return {"prepid": request_id, "results": False,
+                    "message": '%s does not exist' % request_id}
 
         mcm_r = request(rdb.get(request_id))
         if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
             mcm_r.reload()
-            return {"prepid" : request_id, "results": True}
+            return {"prepid": request_id, "results": True}
         else:
             if force:
                 mcm_r.reload()
-                return {"prepid" : request_id, "results": False,
-                        "message" : "no apparent changes, but request was foced to reload"}
+                return {
+                    "prepid": request_id,
+                    "results": False,
+                    "message": "no apparent changes, but request was foced to reload"}
             else:
-                return {"prepid" : request_id, "results": False,
-                        "message" : "no apparent changes"}
+                return {
+                    "prepid": request_id,
+                    "results": False,
+                    "message": "no apparent changes"}
+
 
 class SetStatus(RESTResource):
 
@@ -789,18 +804,18 @@ class SetStatus(RESTResource):
         req = request(json_input=db.get(rid))
 
         try:
-            ## set the status with a notification if done via the rest api
+            # set the status with a notification if done via the rest api
             req.set_status(step, with_notification=True)
         except request.WrongStatusSequence as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
-        except:
+        except Exception:
             return {"prepid": rid, "results": False, 'message': 'Unknown error' + traceback.format_exc()}
 
         return {"prepid": rid, "results": db.update(req.json())}
 
 
 class TestRequest(RESTResource):
-    ## a rest api to make a creation test of a request
+    # a rest api to make a creation test of a request
     def __init__(self):
         self.counter = 0
         self.before_request()
@@ -812,11 +827,12 @@ class TestRequest(RESTResource):
         """
         rdb = database('requests')
 
-        mcm_r = request( rdb.get(request_id))
+        mcm_r = request(rdb.get(request_id))
 
         outs = mcm_r.get_outputs()
 
         return outs
+
 
 class InjectRequest(RESTResource):
 
@@ -926,8 +942,7 @@ class NotifyUser(RESTResource):
                 group=notification.REQUEST_OPERATIONS,
                 action_objects=[req.get_attribute('prepid')],
                 object_type='requests',
-                base_object=req
-            )
+                base_object=req)
             req.notify(subject, message, accumulate=True)
 
             # update history with "notification"
@@ -938,8 +953,7 @@ class NotifyUser(RESTResource):
 
                 return results
 
-            results.append({"prepid": pid, "results": True,
-                    "message": "Notification send for %s" % pid})
+            results.append({"prepid": pid, "results": True, "message": "Notification send for %s" % pid})
 
         return results
 
@@ -971,15 +985,16 @@ class RegisterUser(RESTResource):
         request_in_db = request(rdb.get(pid))
         current_user = request_in_db.current_user
         if not current_user or not udb.document_exists(current_user):
-            return {"prepid": pid, "results": False,
-                    'message': "You (%s) are not a registered user to McM, correct this first" % current_user}
+            return {
+                "prepid": pid,
+                "results": False,
+                'message': "You (%s) are not a registered user to McM, correct this first" % current_user}
 
         if current_user in request_in_db.get_actors():
-            return {"prepid": pid, "results": False,
-                    'message': "%s already in the list of people for notification of %s" % (current_user, pid)}
-
-        #self.logger.error('list of users %s'%(request_in_db.get_actors()))
-        #self.logger.error('current actor %s'%(current_user))
+            return {
+                "prepid": pid,
+                "results": False,
+                'message': "%s already in the list of people for notification of %s" % (current_user, pid)}
 
         request_in_db.update_history({'action': 'register', 'step': current_user})
         rdb.save(request_in_db.json())
@@ -1021,9 +1036,10 @@ class SearchableRequest(RESTResource):
         searchable = {}
         for key in ['energy', 'dataset_name', 'status', 'approval', 'extension', 'generators',
                              'member_of_chain', 'pwg', 'process_string', 'mcdb_id', 'prepid', 'flown_with',
-                             'member_of_campaign','tags']:
+                             'member_of_campaign', 'tags']:
             searchable[key] = []
         return searchable
+
 
 class RequestLister():
     def __init__(self):
@@ -1046,7 +1062,7 @@ class RequestLister():
                 return None
             if not serial.isdigit():
                 return None
-            if not campaign in all_campaigns:
+            if campaign not in all_campaigns:
                 return None
             if odb.document_exists(word):
                 return word
@@ -1068,7 +1084,7 @@ class RequestLister():
 
         all_ids = []
         all_dsn = {}
-        ## parse that file for prepids
+        # parse that file for prepids
         possible_campaign = None
         cdb = database('campaigns')
 
@@ -1084,10 +1100,10 @@ class RequestLister():
                     possible_campaign = None
                 elif word.startswith('@'):
                     possible_campaign = word[1:]
-                    if not possible_campaign in all_dsn:
+                    if possible_campaign not in all_dsn:
                         all_dsn[possible_campaign] = []
 
-                ## is that a prepid ?
+                # is that a prepid ?
                 an_id = None
                 a_dsn = None
                 if possible_campaign is None:
@@ -1101,12 +1117,12 @@ class RequestLister():
                     if a_dsn:
                         all_dsn[possible_campaign].append(a_dsn)
 
-                ## the ley word for range
+                # the ley word for range
                 if word == '->':
                     if len(in_the_line):
                         in_the_line = [in_the_line[-1]]
 
-                ## dealing with id range
+                # dealing with id range
                 if len(in_the_line) == 2:
                     id_start = in_the_line[0]
                     id_end = in_the_line[1]
@@ -1115,18 +1131,17 @@ class RequestLister():
                         serial_start = int(id_start.split('-')[-1])
                         serial_end = int(id_end.split('-')[-1]) + 1
                         for serial in range(serial_start, serial_end):
-                            all_ids.append('-'.join(id_start.split('-')[0:2] + ['%05d' % serial]))
+                            all_ids.append('-'.join(id_start.split('-')[0: 2] + ['%05d' % serial]))
 
         for (possible_campaign, possible_dsn) in all_dsn.items():
-            #self.logger.error("Found those dsn to look for %s"%(possible_dsn))
             if not cdb.document_exists(possible_campaign):
                 continue
-                ## get all requests
-            __query3 = odb.construct_lucene_query({'member_of_campaign' : possible_campaign})
+                # get all requests
+            __query3 = odb.construct_lucene_query({'member_of_campaign': possible_campaign})
             all_requests = odb.full_text_search('search', __query3, page=-1)
-            for request in all_requests:
-                if request['dataset_name'] in possible_dsn:
-                    all_ids.append(request['prepid'])
+            for _request in all_requests:
+                if _request['dataset_name'] in possible_dsn:
+                    all_ids.append(_request['prepid'])
         all_ids = list(set(all_ids))
         all_ids.sort()
         return all_ids
@@ -1164,38 +1179,38 @@ class StalledReminder(RESTResource):
         """
         rdb = database('requests')
         bdb = database('batches')
-        statsDB = database('stats',url='http://vocms084.cern.ch:5984/')
-        __query = rdb.construct_lucene_query({'status' : 'submitted'})
+        statsDB = database('stats', url='http://vocms084.cern.ch:5984/')
+        __query = rdb.construct_lucene_query({'status': 'submitted'})
         rs = rdb.full_text_search('search', __query, page=-1)
-        today = time.mktime( time.gmtime())
-        text="The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n"%( time_since, time_remaining, below_completed)
-        reminded=0
-        by_batch=defaultdict(list)
+        today = time.mktime(time.gmtime())
+        text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
+        reminded = 0
+        by_batch = defaultdict(list)
         request_prepids = []
         for r in rs:
-            date_s = filter( lambda h : 'step' in h and h['step']=='submitted', r['history'])[-1]['updater']['submission_date']
-            date= time.mktime( time.strptime(date_s, "%Y-%m-%d-%H-%M"))
-            elapsed_t = (today-date)
-            elapsed=(today-date)/60./60./24. #in days
-            remaining=float("inf")
+            date_s = filter(lambda h: 'step' in h and h['step'] == 'submitted', r['history'])[-1]['updater']['submission_date']
+            date = time.mktime(time.strptime(date_s, "%Y-%m-%d-%H-%M"))
+            elapsed_t = (today - date)
+            elapsed = (today - date) / 60. / 60. / 24.  # in days
+            remaining = float("inf")
             if r['completed_events']:
-                remaining_t = (elapsed_t * ((r['total_events'] / float(r['completed_events']))-1))
-                remaining = remaining_t /60./60./24.
-                if remaining<0: ## already over stats
-                    remaining=0.
-            fraction = min(100.,r['completed_events']*100./r['total_events']) ## maxout to 100% completed
-            if fraction > below_completed: continue
+                remaining_t = (elapsed_t * ((r['total_events'] / float(r['completed_events'])) - 1))
+                remaining = remaining_t / 60. / 60. / 24.
+                if remaining < 0:  # already over stats
+                    remaining = 0.
+            fraction = min(100., r['completed_events'] * 100. / r['total_events'])  # maxout to 100% completed
+            if fraction > below_completed:
+                continue
 
-            if (remaining>time_remaining and remaining!=float('Inf')) or (elapsed>time_since and remaining!=0):
-                reminded+=1
+            if (remaining > time_remaining and remaining != float('Inf')) or (elapsed > time_since and remaining != 0):
+                reminded += 1
                 __query2 = bdb.construct_lucene_complex_query([
                     ('contains', {'value': r['prepid']}),
-                    ('status', {'value': ['announced', 'hold']})
-                ])
+                    ('status', {'value': ['announced', 'hold']})])
                 bs = bdb.full_text_search('search', __query2, page=-1)
-                ## take the last one ?
+                # take the last one ?
                 in_batch = 'NoBatch'
-                if len (bs):
+                if len(bs):
                     in_batch = bs[-1]['prepid']
                 wma_status = 'not-found'
                 if len(r['reqmgr_name']):
@@ -1204,34 +1219,35 @@ class StalledReminder(RESTResource):
                         stats = statsDB.get(wma_name)
                         wma_status = stats['pdmv_status_from_reqmngr']
 
-                line="%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n"%( r['prepid'],
-                                                                                                                                   elapsed,
-                                                                                                                                   r['completed_events'],
-                                                                                                                                   fraction,
-                                                                                                                                   remaining,
-                                                                                                                                   wma_status,
-                                                                                                                                   r['priority'])
+                line = "%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n" % (
+                    r['prepid'],
+                    elapsed,
+                    r['completed_events'],
+                    fraction,
+                    remaining,
+                    wma_status,
+                    r['priority'])
                 by_batch[in_batch].append(line)
                 request_prepids.append(r['prepid'])
         l_type = locator()
-        for (b,lines) in by_batch.items():
-            text+="In batch %s:\n"%b
-            text+='%sbatches?prepid=%s\n'%( l_type.baseurl(), b)
+        for (b, lines) in by_batch.items():
+            text += "In batch %s:\n" % b
+            text += '%sbatches?prepid=%s\n' % (l_type.baseurl(), b)
             for line in lines:
-                text+=line
-            text+='\n'
-        text+="\nAttention might be required\n"
+                text += line
+            text += '\n'
+        text += "\nAttention might be required\n"
         com = communicator()
 
         udb = database('users')
-        __query4 = udb.construct_lucene_query({'role' : 'production_manager'})
-        __query5 = udb.construct_lucene_query({'role' : 'generator_convener'})
+        __query4 = udb.construct_lucene_query({'role': 'production_manager'})
+        __query5 = udb.construct_lucene_query({'role': 'generator_convener'})
 
         production_managers = udb.full_text_search('search', __query4, page=-1)
         gen_conveners = udb.full_text_search('search', __query5, page=-1)
         people_list = production_managers + gen_conveners
-        subject = "Gentle reminder of %d requests that appear stalled"%(reminded)
-        if reminded!=0:
+        subject = "Gentle reminder of %d requests that appear stalled" % (reminded)
+        if reminded != 0:
             notification(
                 subject,
                 text,
@@ -1239,10 +1255,9 @@ class StalledReminder(RESTResource):
                 group=notification.REMINDERS,
                 action_objects=request_prepids,
                 object_type='requests',
-                target_role='generator_convener'
-            )
-            com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')],
-                         subject, text)
+                target_role='generator_convener')
+            com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')], subject, text)
+
 
 class RequestsReminder(RESTResource):
 
@@ -1267,33 +1282,28 @@ class RequestsReminder(RESTResource):
         udb = database('users')
         rdb = database('requests')
         crdb = database('chained_requests')
-
-        # a dictionary  campaign : [ids]
-        ids_for_production_managers = {}
-        # a dictionary  campaign : [ids]
-        ids_for_gen_conveners = {}
         # a dictionary contact : { campaign : [ids] }
         ids_for_users = {}
 
         res = []
-        ## fill up the reminders
+        # fill up the reminders
         def get_all_in_status(status, extracheck=None):
             campaigns_and_ids = {}
-            __query = rdb.construct_lucene_query({'status' : status})
+            __query = rdb.construct_lucene_query({'status': status})
             for mcm_r in rdb.full_text_search('search', __query, page=-1):
-                ## check whether it has a valid action before to add them in the reminder
+                # check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
-                if not c in campaigns_and_ids:
+                if c not in campaigns_and_ids:
                     campaigns_and_ids[c] = set()
                 if extracheck is None or extracheck(mcm_r):
                     campaigns_and_ids[c].add(mcm_r['prepid'])
 
-            #then remove the empty entries, and sort the others
+            # then remove the empty entries, and sort the others
             for c in campaigns_and_ids.keys():
                 if not len(campaigns_and_ids[c]):
                     campaigns_and_ids.pop(c)
                 else:
-                    campaigns_and_ids[c] = sorted( campaigns_and_ids[c] )
+                    campaigns_and_ids[c] = sorted(campaigns_and_ids[c])
 
             return campaigns_and_ids
 
@@ -1319,10 +1329,11 @@ class RequestsReminder(RESTResource):
 
                 for rid in ids:
                     req = request(rdb.get(rid))
-                    message += '\t%s (%s) (%d chains) (prio %s) \n' % ( rid, 
-                                                                     req.get_attribute('dataset_name'),
-                                                                     len(req.get_attribute('member_of_chain')),
-                                                                     req.get_attribute('priority'))
+                    message += '\t%s (%s) (%d chains) (prio %s) \n' % (
+                        rid,
+                        req.get_attribute('dataset_name'),
+                        len(req.get_attribute('member_of_chain')),
+                        req.get_attribute('priority'))
                 message += '\n'
             return message
 
@@ -1331,67 +1342,66 @@ class RequestsReminder(RESTResource):
 
         def streaming_function():
             if not what or 'production_manager' in what:
-                ## send the reminder to the production managers
+                # send the reminder to the production managers
                 ids_for_production_managers = get_all_in_status('approved', extracheck=is_in_chain)
                 for c in ids_for_production_managers:
                     res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
 
                 if len(ids_for_production_managers):
-                    __query2 = udb.construct_lucene_query({'role' : 'production_manager'})
+                    __query2 = udb.construct_lucene_query({'role': 'production_manager'})
                     production_managers = udb.full_text_search('search', __query2, page=-1)
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
-                    subject = 'Gentle reminder on %s requests to be submitted'%( count_entries(ids_for_production_managers))
+                    subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
                     notification(
                         subject,
                         message,
                         [],
                         group=notification.REMINDERS,
-                        target_role='production_manager'
-                    )
+                        target_role='production_manager')
                     com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_conveners' in what or 'generator_convener' in what:
-            ## send the reminder to generator conveners
+                # send the reminder to generator conveners
                 ids_for_gen_conveners = get_all_in_status('defined')
                 for c in ids_for_gen_conveners:
                     res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
                 if len(ids_for_gen_conveners):
-                    __query3 = udb.construct_lucene_query({'role' : 'generator_convener'})
+                    __query3 = udb.construct_lucene_query({'role': 'generator_convener'})
                     gen_conveners = udb.full_text_search('search', __query3, page=-1)
                     message = 'A few requests need your approvals \n\n'
                     message += prepare_text_for(ids_for_gen_conveners, 'defined')
-                    subject = 'Gentle reminder on %s requests to be approved by you'%(count_entries(ids_for_gen_conveners))
+                    subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
                     notification(
                         subject,
                         message,
                         [],
                         group=notification.REMINDERS,
-                        target_role='generator_convener'
-                    )
+                        target_role='generator_convener')
                     com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
                 all_ids = set()
-                ## remind the gen contact about requests that are:
-                ##   - in status new, and have been flown
-                ##__query4 = rdb.construct_lucene_query({'status' : 'new'})
-                __query5 = rdb.construct_lucene_query({'status' : 'validation'})
-                ###mcm_rs = rdb.full_text_search('search', __query4, page=-1)
+                # remind the gen contact about requests that are:
+                #   - in status new, and have been flown
+                # __query4 = rdb.construct_lucene_query({'status' : 'new'})
+                __query5 = rdb.construct_lucene_query({'status': 'validation'})
+                # mcm_rs = rdb.full_text_search('search', __query4, page=-1)
                 mcm_rs = []
                 mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
                 for mcm_r in mcm_rs:
                     c = mcm_r['member_of_campaign']
                     request_id = mcm_r['prepid']
-                    if not 'flown_with' in mcm_r: continue # just because in -dev it might be the case
-                    fw = mcm_r['flown_with']
+                    if 'flown_with' not in mcm_r:
+                        continue  # just because in -dev it might be the case
                     # to get a remind only on request that are in a chain (including flown by construction)
-                    if len(mcm_r['member_of_chain']) == 0: continue
+                    if len(mcm_r['member_of_chain']) == 0:
+                        continue
                     # to get a remind only on request that are being necessary to move forward : being the request being processed in at least a chain.
                     on_going = False
                     yield '.'
                     for in_chain in mcm_r['member_of_chain']:
-                        mcm_chained_request = chained_request( crdb.get( in_chain ) )
+                        mcm_chained_request = chained_request(crdb.get(in_chain))
                         try:
                             if mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step')] == request_id:
                                 on_going = True
@@ -1402,50 +1412,49 @@ class RequestsReminder(RESTResource):
                                 {
                                     'error': 'step not in chain',
                                     'chain': mcm_chained_request.get_attribute('prepid'),
-                                    'request': request_id
-                                },
-                                indent=2
-                            )
-                        time.sleep(0.5) #we don't want to crash DB with a lot of single queries
+                                    'request': request_id},
+                                indent=2)
+                        time.sleep(0.5)  # we don't want to crash DB with a lot of single queries
                         yield '.'
-                    if not on_going: continue
+                    if not on_going:
+                        continue
                     try:
                         all_involved = request(mcm_r).get_actors()
-                    except Exception as e:
-                        yield dumps('request is not in db %s' %(mcm_r))
+                    except Exception:
+                        yield dumps('request is not in db %s' % (mcm_r))
                     for contact in all_involved:
-                        if not contact in ids_for_users:
-                            ids_for_users[contact]={}
+                        if contact not in ids_for_users:
+                            ids_for_users[contact] = {}
 
-                        if not c in ids_for_users[contact]:
+                        if c not in ids_for_users[contact]:
                             ids_for_users[contact][c] = set()
-                        ids_for_users[contact][c].add( request_id )
+                        ids_for_users[contact][c].add(request_id)
                         yield '.'
 
-                #then remove the non generator
-                __query6 = udb.construct_lucene_query({'role' : 'generator_contact'})
-                gen_contacts = map(lambda u : u['username'], udb.full_text_search('search', __query6, page=-1))
+                # then remove the non generator
+                __query6 = udb.construct_lucene_query({'role': 'generator_contact'})
+                gen_contacts = map(lambda u: u['username'], udb.full_text_search('search', __query6, page=-1))
                 for contact in ids_for_users.keys():
-                    if who and not contact in who:
-                        ids_for_users.pop( contact )
+                    if who and contact not in who:
+                        ids_for_users.pop(contact)
                         continue
                     if contact not in gen_contacts:
                         # not a contact
-                        ids_for_users.pop( contact )
+                        ids_for_users.pop(contact)
                         continue
                     yield '.'
                     for c in ids_for_users[contact].keys():
                         if not len(ids_for_users[contact][c]):
                             ids_for_users[contact].pop(c)
                         else:
-                            ids_for_users[contact][c] = sorted( ids_for_users[contact][c] )
+                            ids_for_users[contact][c] = sorted(ids_for_users[contact][c])
                         yield '.'
-                        #for serialization only in dumps
-                        #ids_for_users[contact][c] = list( ids_for_users[contact][c] )
+                        # for serialization only in dumps
+                        # ids_for_users[contact][c] = list( ids_for_users[contact][c] )
 
-                    #if there is nothing left. remove
+                    # if there is nothing left. remove
                     if not len(ids_for_users[contact].keys()):
-                        ids_for_users.pop( contact )
+                        ids_for_users.pop(contact)
                         continue
 
                 if len(ids_for_users):
@@ -1453,7 +1462,7 @@ class RequestsReminder(RESTResource):
                         for c in campaigns_and_ids:
                             all_ids.update(campaigns_and_ids[c])
                             yield dumps({'prepid': c}, indent=2)
-                        mcm_u = udb.get( contact )
+                        mcm_u = udb.get(contact)
                         if len(campaigns_and_ids):
                             message = 'Few requests need your action \n\n'
                             message += prepare_text_for(campaigns_and_ids, '')
@@ -1465,13 +1474,12 @@ class RequestsReminder(RESTResource):
                             name = contact
                             if mcm_u['fullname']:
                                 name = mcm_u['fullname']
-                            subject = 'Gentle reminder on %s requests to be looked at by %s'% (count_entries(campaigns_and_ids),name)
+                            subject = 'Gentle reminder on %s requests to be looked at by %s' % (count_entries(campaigns_and_ids), name)
                             notification(
                                 subject,
                                 message,
                                 [contact],
-                                group=notification.REMINDERS,
-                            )
+                                group=notification.REMINDERS,)
                             com.sendMail(to_who, subject, message)
                             yield '.'
 
@@ -1502,7 +1510,7 @@ class UpdateMany(RequestRESTResource):
             for value in updated_values:
                 if value in ['generator_parameters', 'sequences', 'keep_output']:
                     document[value] = updated_values[value]
-                elif isinstance(updated_values[value],list):
+                elif isinstance(updated_values[value], list):
                     temp = updated_values[value]
                     temp.extend(document[value])
                     document[value] = list(set(temp))
@@ -1511,7 +1519,7 @@ class UpdateMany(RequestRESTResource):
             try:
                 return_info.append(self.updateSingle.update_request(dumps(document)))
             except Exception as e:
-                return_info.append( {"results" : False, "message" : str(e)} )
+                return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
 
@@ -1534,18 +1542,18 @@ class GetAllRevisions(RequestRESTResource):
     def get_all_revs(self, prepid):
         list_of_revs = []
         doc_id = prepid
-        all_revs_url = self.db_url+"/"+self.db_name+"/"+doc_id+"?revs_info=true"
-        single_rev_url = self.db_url+"/"+self.db_name+"/"+doc_id+"?rev="
+        all_revs_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?revs_info=true"
+        single_rev_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?rev="
         http_request = urllib2.Request(all_revs_url)
         http_request.add_header('Content-Type', 'text/plain')
-        http_request.get_method = lambda : 'GET'
+        http_request.get_method = lambda: 'GET'
         result = self.opener.open(http_request)
         revision_data = loads(result.read())
         for revision in revision_data["_revs_info"]:
             if revision["status"] == "available":
-                single_request = urllib2.Request(single_rev_url+revision["rev"])
+                single_request = urllib2.Request(single_rev_url + revision["rev"])
                 single_request.add_header('Content-Type', 'text/plain')
-                single_request.get_method = lambda : 'GET'
+                single_request.get_method = lambda: 'GET'
                 single_result = self.opener.open(single_request)
                 single_doc = single_result.read()
                 list_of_revs.append(loads(single_doc))
@@ -1579,9 +1587,7 @@ class ListRequestPrepids(RequestRESTResource):
         __query = request_db.construct_lucene_query(
             {
                 'prepid': prepid,
-                'member_of_campaign': member_of_campaign
-            }
-        )
+                'member_of_campaign': member_of_campaign})
         query_result = request_db.full_text_search("search", __query, page=0, limit=kwargs['limit'], include_fields='prepid')
         self.logger.info('Searching requests id with options: %s' % (kwargs))
         results = [record['prepid'] for record in query_result]
@@ -1648,7 +1654,8 @@ class GetUniqueValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache= 'startkey' not in kwargs)
+        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+
 
 class PutToForceComplete(RESTResource):
 
@@ -1668,15 +1675,13 @@ class PutToForceComplete(RESTResource):
         reqDB = database('requests')
         settingsDB = database('settings')
         udb = database('users')
-
         self.logger.info('Will try to add to forcecomplete a request: %s' % (pid))
-
         req = request(reqDB.get(pid))
         curr_user = user(udb.get(req.current_user))
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
 
 
-        ##do some checks
+        # do some checks
         if req.get_attribute('status') != 'submitted':
             self.logger.info('%s is not submitted for forcecompletion' % (pid))
             message = 'Cannot add a request which is not submitted'
@@ -1685,13 +1690,13 @@ class PutToForceComplete(RESTResource):
         # we want users to close only theirs PWGs
         if not req.get_attribute("pwg") in curr_user.get_pwgs():
             self.logger.info("User's PWG:%s is doesnt have requests PWG:%s" % (
-                    curr_user.get_pwgs(), req.get_attribute("pwg")))
+                curr_user.get_pwgs(), req.get_attribute("pwg")))
 
             message = "User's PWG:%s is doesnt have requests PWG:%s" % (
-                    ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
+                ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
 
             return {"prepid": pid, "results": False, 'message': message}
-        #check if request if at least 50% complete
+        # check if request if at least 50% complete
         if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5:
             self.logger.info('%s is below 50percent completion' % (pid))
             message = 'Request is below 50 percent completion'
@@ -1705,7 +1710,7 @@ class PutToForceComplete(RESTResource):
         forcecomplete_list['value'].append(pid)
         ret = settingsDB.update(forcecomplete_list)
 
-        ##lets see if we succeeded in saving it to settings DB
+        # lets see if we succeeded in saving it to settings DB
         if ret:
             req.update_history({'action': 'forcecomplete'})
             reqDB.save(req.json())
@@ -1715,7 +1720,8 @@ class PutToForceComplete(RESTResource):
             return {"prepid": pid, "results": False, 'message': message}
 
         return {"prepid": pid, "results": True,
-                'message' :'Successfully added request to force complete list'}
+                'message': 'Successfully added request to force complete list'}
+
 
 class ForceCompleteMethods(RESTResource):
 
@@ -1725,7 +1731,6 @@ class ForceCompleteMethods(RESTResource):
         self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
-
         self.representations = {'text/plain': self.output_text}
 
     def get(self):
@@ -1733,10 +1738,9 @@ class ForceCompleteMethods(RESTResource):
         Get a list of workflows for force complete
         """
         settingsDB = database('settings')
-
         forcecomplete_list = settingsDB.get('list_of_forcecomplete')
-
         return dumps(forcecomplete_list['value'], indent=4)
+
 
 class RequestsPriorityChange(RESTResource):
 
@@ -1762,8 +1766,8 @@ class RequestsPriorityChange(RESTResource):
                 self.logger.error(message)
         return {
             'results': True if len(fails) == 0 else False,
-            'message': fails
-        }
+            'message': fails}
+
 
 class Reserve_and_ApproveChain(RESTResource):
 
@@ -1788,7 +1792,7 @@ class Reserve_and_ApproveChain(RESTResource):
         creq = chained_request(self.cdb.get(chain_id))
         __current_step = creq.get_attribute("step")
 
-        ##Try to reserve needed chained_req to the end
+        # Try to reserve needed chained_req to the end
         reserve_ret = creq.reserve(limit=True)
         if not reserve_ret["results"]:
             return reserve_ret
@@ -1814,6 +1818,7 @@ class Reserve_and_ApproveChain(RESTResource):
             return {"results": False,
                     "message": str(ex)}
 
+
 class TaskChainRequestDict(RESTResource):
     """
     Provide the taskchain dictionnary for uploading to request manager
@@ -1828,30 +1833,27 @@ class TaskChainRequestDict(RESTResource):
 
     def get(self, request_id):
         requests_db = database('requests')
-        settings_db = database('settings')
         mcm_request = request(requests_db.get(request_id))
         task_name = 'task_' + request_id
         request_type = mcm_request.get_wmagent_type()
-
         if request_type in ['MonteCarlo', 'LHEStepZero']:
             task_dicts = mcm_request.request_to_tasks(True, False)
         elif request_type in ['MonteCarloFromGEN', 'ReDigi']:
             task_dicts = mcm_request.request_to_tasks(False, False)
 
         wma = {
-            "RequestType" : "TaskChain",
-            "Group" : "ppd",
+            "RequestType": "TaskChain",
+            "Group": "ppd",
             "Requestor": "pdmvserv",
-            "TaskChain" : 0,
+            "TaskChain": 0,
             "ProcessingVersion": 1,
-            "RequestPriority" : 0,
-            ##we default to 1 in multicore global
-            "Multicore" : 1
-        }
+            "RequestPriority": 0,
+            # we default to 1 in multicore global
+            "Multicore": 1}
 
         if not len(task_dicts):
             return dumps({})
-        #Dict customization
+        # Dict customization
         if mcm_request.get_attribute('priority') > wma['RequestPriority']:
             wma['RequestPriority'] = mcm_request.get_attribute('priority')
 
@@ -1867,11 +1869,11 @@ class TaskChainRequestDict(RESTResource):
             for key in task.keys():
                 if key.endswith('_'):
                     task.pop(key)
-            wma['Task%d'%task_counter] = task
+            wma['Task%d' % task_counter] = task
             task_counter += 1
-        wma['TaskChain'] = task_counter-1
-        for item in ['CMSSWVersion','ScramArch','TimePerEvent','SizePerEvent','GlobalTag','Memory']:
-            wma[item] = wma['Task%d'% wma['TaskChain']][item]
+        wma['TaskChain'] = task_counter - 1
+        for item in ['CMSSWVersion', 'ScramArch', 'TimePerEvent', 'SizePerEvent', 'GlobalTag', 'Memory']:
+            wma[item] = wma['Task%d' % wma['TaskChain']][item]
         wma['AcquisitionEra'] = wma['Task1']['AcquisitionEra']
         wma['ProcessingString'] = wma['Task1']['ProcessingString']
         wma['Campaign'] = wma['Task1']['Campaign']

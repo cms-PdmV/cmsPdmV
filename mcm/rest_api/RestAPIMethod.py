@@ -13,13 +13,11 @@ class RESTResource(Resource):
     access_limit = None
     access_user = []
     call_counters = {}
-
     limit_per_method = {
         'GET': access_rights.user,
         'PUT': access_rights.generator_contact,
         'POST': access_rights.generator_contact,
-        'DELETE': access_rights.administrator
-    }
+        'DELETE': access_rights.administrator}
 
     def __init__(self, content=''):
         self.content = content
@@ -34,11 +32,11 @@ class RESTResource(Resource):
         if not user_p.get_username():
             # meaning we are going public, only allow GET.
             if 'public' not in request.path:
-                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(request.headers), str(request.path) ))
+                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(request.headers), str(request.path)))
         else:
             if not authenticator.can_access(user_p.get_username(), access_limit):
                 if user_p.get_username() in self.access_user:
-                    self.logger.error('User %s allowed to get through'% user_p.get_username())
+                    self.logger.error('User %s allowed to get through' % user_p.get_username())
                 else:
                     abort(403)
 

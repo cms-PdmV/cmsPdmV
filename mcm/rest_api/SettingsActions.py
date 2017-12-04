@@ -57,11 +57,11 @@ class SaveSetting(RESTResource):
             return {"results": False, 'message': 'could save an object with revision'}
 
         if '_id' in data and db.document_exists(data['_id']):
-            return {"results": False, 'message': 'setting %s already exists.'% ( data['_id'])}
+            return {"results": False, 'message': 'setting %s already exists.' % (data['_id'])}
         if 'prepid' in data and db.document_exists(data['prepid']):
-            return {"results": False, 'message': 'setting %s already exists.'% ( data['prepid'])}
+            return {"results": False, 'message': 'setting %s already exists.' % (data['prepid'])}
 
-        if not 'prepid' in data and not '_id' in data:
+        if 'prepid' not in data and '_id' not in data:
             return {"results": False, 'message': 'could save an object with no name'}
 
         new_setting = setting(data)
@@ -84,7 +84,7 @@ class UpdateSetting(RESTResource):
         try:
             res = self.update(request.data.strip())
             return res
-        except:
+        except Exception:
             self.logger.error('Failed to update a setting from API')
             return {'results': False, 'message': 'Failed to update a setting from API'}
 
@@ -96,7 +96,7 @@ class UpdateSetting(RESTResource):
             return {"results": False, 'message': 'could not locate revision number in the object'}
 
         if not db.document_exists(data['_id']):
-            return {"results": False, 'message': 'mccm %s does not exist' % ( data['_id'])}
+            return {"results": False, 'message': 'mccm %s does not exist' % (data['_id'])}
         else:
             if db.get(data['_id'])['_rev'] != data['_rev']:
                 return {"results": False, 'message': 'revision clash'}
@@ -107,12 +107,13 @@ class UpdateSetting(RESTResource):
             self.logger.error('Prepid returned was None')
             raise ValueError('Prepid returned was None')
 
-        ## operate a check on whether it can be changed
+        # operate a check on whether it can be changed
         previous_version = setting(db.get(new_version.get_attribute('prepid')))
         editable = previous_version.get_editable()
         for (key, right) in editable.items():
             # does not need to inspect the ones that can be edited
-            if right: continue
+            if right:
+                continue
             if previous_version.get_attribute(key) != new_version.get_attribute(key):
                 self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
                     key, previous_version.get_attribute(key), new_version.get_attribute(key), right))

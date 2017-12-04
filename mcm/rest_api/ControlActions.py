@@ -8,10 +8,9 @@ from tools.user_management import access_rights
 import tools.settings as settings
 from simplejson import dumps, loads
 
-from tools.locker import locker
 from tools.communicator import communicator
 from couchdb_layer.mcm_database import database
-from tools.locator import locator
+
 
 class RenewCertificate(RESTResource):
 
@@ -25,7 +24,7 @@ class RenewCertificate(RESTResource):
         """
         Renew certificates on our request upload/injection machines
         """
-        #machines = ["cms-pdmv-op.cern.ch"]
+        # machines = ["cms-pdmv-op.cern.ch"]
         machines = ["vocms081.cern.ch"]
         for elem in machines:
             ssh_exec = ssh_executor(server=elem)
@@ -58,13 +57,14 @@ class ChangeVerbosity(RESTResource):
         Change verbosity of logger
         """
         if settings.set_value('log_verbosity', level):
-            ##TO-DO:
+            # TO-DO:
             # do we really need this?
             self.logger.info("We want to set log verbosity to: %s" % (level))
-            #self.logger.set_verbosity(level)
+            # self.logger.set_verbosity(level)
         else:
             return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
         return {"results": True, "message": "New verbosity for logger: {0}".format(level)}
+
 
 class Communicate(RESTResource):
 
@@ -79,8 +79,9 @@ class Communicate(RESTResource):
         Trigger the accumulated communications from McM, optionally above /N messages
         """
         com = communicator()
-        res=com.flush(message_number)
-        return {'results':True, 'subject' : res}
+        res = com.flush(message_number)
+        return {'results': True, 'subject' : res}
+
 
 class Search(RESTResource):
     """
@@ -143,7 +144,7 @@ class Search(RESTResource):
             lucene_query = odb.construct_lucene_query(args)
             self.logger.info("lucene url: %s" % (lucene_query))
             res = odb.full_text_search("search", lucene_query, page=page,
-                    limit=limit, get_raw=get_raw, include_fields=str(include_fields))
+                limit=limit, get_raw=get_raw, include_fields=str(include_fields))
 
         else:
             res = odb.get_all(page, limit, get_raw=get_raw)
@@ -213,7 +214,7 @@ class MultiSearch(Search):
             new_previous = []
             flatten = self.type_dict[search['db_name']][search['return_field']] == list
             for i in range(0, prev_len, 100):
-                self.__add_previous_to_search(search, previous[i:i+100], i)
+                self.__add_previous_to_search(search, previous[i:i + 100], i)
                 res = [x[search['return_field']] for x in self.search(search['search'], search['db_name'])]
                 new_previous.extend([i for x in res for i in x] if flatten else res)
 
@@ -228,7 +229,7 @@ class MultiSearch(Search):
         # pagination by hand (so the whole thing won't break because of super-long queries)
         # MIGHT CAUSE DUPLICATIONS OF DOCUMENTS IN RESULTS!
         for i in range(0, prev_len, 100):
-            self.__add_previous_to_search(search, previous[i:i+100], i)
+            self.__add_previous_to_search(search, previous[i:i + 100], i)
             partial_result = self.search(search['search'], search['db_name'])
             current_len += len(partial_result)
             if start_adding:
@@ -238,6 +239,6 @@ class MultiSearch(Search):
                 subskip = current_len - skip
                 start_adding = True
                 res.extend(partial_result)
-            if current_len >= skip+limit:
+            if current_len >= skip + limit:
                 break
-        return {"results": res[-subskip:len(res)-subskip+limit] if page != -1 else res}
+        return {"results": res[-subskip:len(res) - subskip + limit] if page != -1 else res}
