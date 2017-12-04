@@ -1,4 +1,4 @@
-from simplejson import dumps, loads
+from simplejson import loads
 
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
@@ -6,10 +6,11 @@ from tools.user_management import access_rights
 from flask import request
 
 
-
 class GetTags(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -22,8 +23,10 @@ class GetTags(RESTResource):
 
 
 class AddTag(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 
@@ -39,9 +42,12 @@ class AddTag(RESTResource):
             doc["list"].append(tag)
         return {"results": db.save(doc)}
 
+
 class RemoveTag(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
-        self.access_limit = access_rights.generator_contact
         self.before_request()
         self.count_call()
 

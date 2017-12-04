@@ -42,7 +42,7 @@ class Announcer():
             if self.l_type.isDev():
                 to_who.append(settings.get_value('hypernews_test'))
             else:
-                to_who.append(settings.get_value('dataops_announce' ))
+                to_who.append(settings.get_value('dataops_announce'))
 
             try:
                 elem = (r_to_be_rejected + ds_to_be_invalidated)[0]
@@ -50,13 +50,13 @@ class Announcer():
             except IndexError:
                 sender = None
 
-            self.com.sendMail(to_who,
-                    'Request and Datasets to be Invalidated', text, sender)
+            self.com.sendMail(to_who, 'Request and Datasets to be Invalidated', text, sender)
 
             for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
                 to_announce.set_announced()
                 idb = database(self.db_name)
                 idb.update(to_announce.json())
+
 
 class Clearer():
     def __init__(self):
@@ -69,10 +69,12 @@ class Clearer():
                 idb = database(self.db_name)
                 idb.update(to_announce.json())
 
+
 class GetInvalidation(RESTResource):
 
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -86,9 +88,12 @@ class GetInvalidation(RESTResource):
         db = database('invalidations')
         return {"results": db.get(object_name)}
 
+
 class DeleteInvalidation(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.before_request()
         self.count_call()
 
@@ -100,10 +105,13 @@ class DeleteInvalidation(RESTResource):
         self.logger.info('Deleting invalidation: %s' % (invalidation_id))
         return {"results": db.delete(invalidation_id)}
 
+
 class AnnounceInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'invalidations'
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -116,31 +124,32 @@ class AnnounceInvalidations(RESTResource):
         if len(input_data) > 0:
             return self.announce(input_data)
         else:
-            return {"results":False, "message": "No elements selected"}
+            return {"results": False, "message": "No elements selected"}
 
     def announce(self, data):
         db = database(self.db_name)
         __ds_list = []
         __r_list = []
-        for doc_id in data: #for each _id we get object from db
+        for doc_id in data:  # for each _id we get object from db
             tmp = db.get(doc_id)
             if tmp["type"] == "dataset" and tmp["status"] == "new":
                 __ds_list.append(tmp)
             elif tmp["type"] == "request" and tmp["status"] == "new":
                 __r_list.append(tmp)
             else:
-                self.logger.info("Tried to ANNOUNCE non new invaldation: %s" % (
-                        tmp["object"]))
+                self.logger.info("Tried to ANNOUNCE non new invaldation: %s" % (tmp["object"]))
 
         announcer = Announcer()
         announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return {"results":True, "ds_to_invalidate": __ds_list,
-                "requests_to_invalidate": __r_list}
+        return {"results": True, "ds_to_invalidate": __ds_list, "requests_to_invalidate": __r_list}
+
 
 class ClearInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -152,30 +161,32 @@ class ClearInvalidations(RESTResource):
         if len(input_data) > 0:
             return self.clear(input_data)
         else:
-            return {"results":False, "message": "No elements selected"}
+            return {"results": False, "message": "No elements selected"}
 
     def clear(self, data):
         db = database(self.db_name)
         __ds_list = []
         __r_list = []
         for doc_id in data:
-            tmp = db.get(doc_id) #we don't want to set clear announced objects
+            tmp = db.get(doc_id)  # we don't want to set clear announced objects
             if tmp["type"] == "dataset" and tmp["status"] == "new":
                 __ds_list.append(tmp)
             elif tmp["type"] == "request" and tmp["status"] == "new":
                 __r_list.append(tmp)
             else:
-                self.logger.error("Tried to CLEAN non new invaldation: %s" %
-                    (tmp["object"]))
+                self.logger.error("Tried to CLEAN non new invaldation: %s" % (tmp["object"]))
 
         __clearer = Clearer()
         __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return {"results":True, "ds_to_invalidate": __ds_list,
+        return {"results": True, "ds_to_invalidate": __ds_list,
                 "requests_to_invalidate": __r_list}
 
+
 class AcknowledgeInvalidation(RESTResource):
+
+    access_limit = access_rights.administrator
+
     def __init__(self):
-        self.access_limit = access_rights.administrator
         self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
@@ -187,23 +198,23 @@ class AcknowledgeInvalidation(RESTResource):
         idb = database('invalidations')
         doc = idb.get(invalidation_id)
         if not doc:
-            return {"results": False, "message": 'Error: %s is not a doc id' % (
-                    invalidation_id)}
+            return {"results": False, "message": 'Error: %s is not a doc id' % (invalidation_id)}
 
         doc["status"] = "acknowledged"
         saved = idb.save(doc)
         if saved:
-            return {"results": True, "message": "Invalidation doc %s is acknowledged" % (
-                    invalidation_id)}
+            return {"results": True, "message": "Invalidation doc %s is acknowledged" % (invalidation_id)}
 
         else:
-            return {"results": False, "message" : "Could not save the change in %s" % (
-                    invalidation_id)}
+            return {"results": False, "message" : "Could not save the change in %s" % (invalidation_id)}
+
 
 class PutOnHoldInvalidation(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -224,19 +235,22 @@ class PutOnHoldInvalidation(RESTResource):
                 if __invl.get_attribute("status") == "new":
                     ret = __invl.set_attribute('status', 'hold')
                     out = db.update(ret)
-                    res.append({"object": el, "results" : True, "message" : out})
+                    res.append({"object": el, "results": True, "message": out})
                 else:
-                    res.append({"object" : el, "results" : False, "message" : "status not new"})
+                    res.append({"object": el, "results": False, "message": "status not new"})
             else:
                 __msg = "%s dosn't exists in DB" % (el)
-                res.append({"object": el, "results" : False, "message" : __msg})
+                res.append({"object": el, "results": False, "message": __msg})
 
-        return {"results" : res}
+        return {"results": res}
+
 
 class PutHoldtoNewInvalidations(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = "invalidations"
-        self.access_limit = access_rights.production_manager
         self.before_request()
         self.count_call()
 
@@ -260,8 +274,8 @@ class PutHoldtoNewInvalidations(RESTResource):
                     out = db.update(ret)
                     res.append(out)
                 else:
-                    res.append({"object" : el, "results" : False, "message" : "status not HOLD"})
+                    res.append({"object": el, "results": False, "message": "status not HOLD"})
             else:
                 __msg = __msg = "%s dosn't exists in DB" % (el)
-                res.append({"object" : el, "results" : False, "message" : __msg})
-        return {"results" : res}
+                res.append({"object": el, "results": False, "message": __msg})
+        return {"results": res}

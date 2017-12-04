@@ -5,9 +5,12 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 
+
 class GetBjobs(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -34,8 +37,10 @@ class GetBjobs(RESTResource):
 
 
 class GetLogFeed(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -61,8 +66,10 @@ class GetLogFeed(RESTResource):
 
 
 class GetRevision(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -90,8 +97,10 @@ class GetStartTime(RESTResource):
 
 
 class GetLogs(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.path = "logs"
         self.before_request()
         self.count_call()
@@ -110,19 +119,23 @@ class GetLogs(RESTResource):
 
 
 class GetLocksInfo(RESTResource):
-   def __init__(self):
-       self.access_limit = access_rights.administrator
-       self.before_request()
-       self.count_call()
 
-   def get(self):
-       from tools.locker import locker
-       data = {"RLocks" : locker.lock_dictionary, "Locks" : locker.thread_lock_dictionary}
-       return {"locks_len": len(data), "locks_data": str(data)}
+    access_limit = access_rights.administrator
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self):
+        from tools.locker import locker
+        data = {"RLocks": locker.lock_dictionary, "Locks": locker.thread_lock_dictionary}
+        return {"locks_len": len(data), "locks_data": str(data)}
 
 class GetQueueInfo(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 

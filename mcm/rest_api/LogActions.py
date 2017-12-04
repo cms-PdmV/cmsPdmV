@@ -4,6 +4,7 @@ from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
 from tools.user_management import access_rights
 
+
 class ReadInjectionLog(RESTResource):
     def __init__(self):
         self.logfile = 'logs/inject.log'
@@ -29,8 +30,8 @@ class ReadInjectionLog(RESTResource):
             self.logger.error('Could not access logs: "%s". Reason: %s' % (self.logfile, ex))
             return {"results": "Error: Could not access logs."}
 
-        #important = data[data.rindex('## Logger instance retrieved'):]
-        ## needs this otherwise, simultaneous submission would be truncated to the last to write ## Logger instance retrieved
+        # important = data[data.rindex('## Logger instance retrieved'):]
+        # needs this otherwise, simultaneous submission would be truncated to the last to write ## Logger instance retrieved
         important = data[data.rindex('[%s] ## Logger instance retrieved' % (pid)):]
         if not important:
             raise ValueError('Malformed logs. Could not detect start of injection.')
@@ -46,8 +47,10 @@ class ReadInjectionLog(RESTResource):
 
 
 class GetVerbosities(RESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
-        self.access_limit = access_rights.user
         self.before_request()
         self.count_call()
 
@@ -55,7 +58,7 @@ class GetVerbosities(RESTResource):
         """
         Get all the possible verbosities and currently chosen one
         """
-        ##TO-DO
-        #remove this method... no need to display log verbosity in dashboard
+        # TO-DO
+        # remove this method... no need to display log verbosity in dashboard
         verbosities = {0: "basic logging", 1: "error logging", 2: "error and info logging", 3: "full logging"}
         return {"results": (verbosities, self.logger.getEffectiveLevel())}
