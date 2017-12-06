@@ -926,16 +926,16 @@ class ForceChainReqToDone(RESTResource):
 
     def force_status_done(self, prepid):
         if not self.crdb.document_exists(prepid):
-            return dumps({"results": False, "message": "Chained request with prepid {0} does not exist".format(prepid)})
+            return dumps({"results": False, "message": "Chained request with prepid {0} does not exist".format(prepid)}, indent=4)
         cr = chained_request(self.crdb.get(prepid))
         if not (cr.get_attribute("status") in ["done", "force_done"]):
             cr.set_status(to_status="force_done")
             self.logger.debug("forcing chain_req status to done. cr status:%s" % (cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
-            return {'prepid': prepid, 'message': ret, 'results': True}
+            return dumps({'prepid': prepid, 'message': ret, 'results': True}, indent=4)
         else:
             ret = "Chained request already in status done"
-            return {'prepid': prepid, 'message': ret, 'results': False}
+            return dumps({'prepid': prepid, 'message': ret, 'results': False}, indent=4)
 
 
 class ForceStatusDoneToProcessing(RESTResource):
@@ -971,10 +971,10 @@ class ForceStatusDoneToProcessing(RESTResource):
             self.logger.debug("Moving chain_req back to satus 'processing'. cr status:%s" % (
                 cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
-            return {'prepid': prepid, 'message': ret, 'results': True}
+            return dumps({'prepid': prepid, 'message': ret, 'results': True}, indent=4)
         else:
             ret = "Chained request not in status force_done"
-            return {'prepid': prepid, 'message': ret, 'results': False}
+            return dumps({'prepid': prepid, 'message': ret, 'results': False}, indent=4)
 
 
 class ToForceFlowList(RESTResource):

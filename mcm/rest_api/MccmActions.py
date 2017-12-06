@@ -231,7 +231,7 @@ class DeleteMccm(RESTResource):
         db = database('mccms')
         mcm_mccm = db.get(mccm_id)
         if mcm_mccm['status'] == 'done':
-            return dumps({"results": False, "message": "Cannot delete a ticket that is done"})
+            return {"results": False, "message": "Cannot delete a ticket that is done"}
         return {"results": db.delete(mccm_id)}
 
 

@@ -62,7 +62,7 @@ class ChangeVerbosity(RESTResource):
             self.logger.info("We want to set log verbosity to: %s" % (level))
             # self.logger.set_verbosity(level)
         else:
-            return dumps({"results": False, "message": "Couldn't save new verbosity to database"})
+            return {"results": False, "message": "Couldn't save new verbosity to database"}
         return {"results": True, "message": "New verbosity for logger: {0}".format(level)}
 
 
