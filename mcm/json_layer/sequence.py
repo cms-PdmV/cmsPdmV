@@ -63,7 +63,7 @@ class sequence(json_base):
             return ''
         elif self.get_attribute(attribute) == True:
             return "--" + str(attribute)
-        elif not self.get_attribute(attribute) == False:
+        elif self.get_attribute(attribute) == False:
             return ''
         elif attribute == 'extra' and self.get_attribute(attribute):
             return self.get_attribute(attribute)
