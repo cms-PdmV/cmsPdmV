@@ -491,6 +491,7 @@ class GetRequestByDataset(RESTResource):
     def __init__(self):
         self.before_request()
         self.count_call()
+        self.representations = {'text/plain': self.output_text}
 
     def get(self, dataset):
         """
@@ -502,9 +503,9 @@ class GetRequestByDataset(RESTResource):
         r = rdb.full_text_search('search', __query, page=-1)
 
         if len(r):
-            return dumps({"results": r[0]})
+            return dumps({"results": r[0]}, indent=4)
         else:
-            return dumps({"results": {}})
+            return dumps({"results": {}}, indent=4)
 
 
 class GetRequestOutput(RESTResource):
