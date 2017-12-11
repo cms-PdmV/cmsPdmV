@@ -3,14 +3,16 @@
 import logging
 import os
 
+
 class InjectionLogAdapter(logging.LoggerAdapter):
     """
     Custom Adapter to modify message with extra info e.g. prepid
     """
     def process(self, msg, kwargs):
-        ##TO-DO:
+        # TO-DO:
         # inject logger replaces \n with <breakline> in msg
         return '[%s] %s' % (self.extra['handle'], msg.replace('\n', '<breakline>')), kwargs
+
 
 class UserFilter(logging.Filter):
     """
@@ -26,13 +28,14 @@ class UserFilter(logging.Filter):
             record.user = "main_thread"
         return True
 
+
 class MemoryFilter(logging.Filter):
     """
     This is a filter which injects contextual information into the log.
     """
 
     def filter(self, record):
-        ## memory usage
+        # memory usage
         try:
             _proc_status = '/proc/%d/status' % os.getpid()
             t = open(_proc_status)
@@ -41,7 +44,7 @@ class MemoryFilter(logging.Filter):
             i = v.index('VmRSS')
             v = v[i:].split(None, 3)  # whitespace
             mem = "%s %s" % (v[1], v[2])
-        except:
+        except Exception:
             mem = "N/A"
 
         record.mem = mem

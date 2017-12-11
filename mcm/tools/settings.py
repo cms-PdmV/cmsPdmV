@@ -13,10 +13,10 @@ def get(label):
     with locker.lock(label):
         cache_key = 'settings_' + label
         cached_value = __cache.get(cache_key)
-        if cached_value != None:
+        if cached_value is not None:
             return cached_value
         setting = __db.get(label)
-        __cache.set(cache_key, setting, timeout = __CACHE_TIMEOUT)
+        __cache.set(cache_key, setting, timeout=__CACHE_TIMEOUT)
         return setting
 
 def get_value(label):
@@ -30,7 +30,7 @@ def add(label, setting):
         result = __db.save(setting)
         if result:
             cache_key = 'settings_' + label
-            __cache.set(cache_key, setting, timeout = __CACHE_TIMEOUT)
+            __cache.set(cache_key, setting, timeout=__CACHE_TIMEOUT)
         return result
 
 def set_value(label, value):
@@ -47,5 +47,5 @@ def set(label, setting):
             # getting it from database?
             new_value = __db.get(label)
             cache_key = 'settings_' + label
-            __cache.set(cache_key, new_value, timeout = __CACHE_TIMEOUT)
+            __cache.set(cache_key, new_value, timeout=__CACHE_TIMEOUT)
         return result
