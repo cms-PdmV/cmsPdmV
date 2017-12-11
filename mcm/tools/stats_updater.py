@@ -14,7 +14,7 @@ class stats_updater:
     def update(self, arg):
         com = ''
         com += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        com += 'cd /build/vlimant/CMSSW_5_3_14/ \n'
+        com += 'cd /build/pdmvserv/CMSSW_5_3_14/ \n'
         com += 'eval `scramv1 runtime -sh`'
         com += 'cd /afs/cern.ch/cms/PPD/PdmV/tools/stats \n'
         com += 'tools/driveUpdate.py --do update --search %s %s %s \n' % (arg, self.force, self.inspect)
