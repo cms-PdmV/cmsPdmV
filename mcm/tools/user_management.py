@@ -9,20 +9,20 @@ from tools.enum import Enum
 from flask import request, has_request_context
 from werkzeug.contrib.cache import SimpleCache
 
+
 class user_pack:
     """
     Class used for transmission between user representation in requests and packed user representation
     """
-    def __init__(self,db=False):
+    def __init__(self, db=False):
         self.user_dict = user_pack.get_request_header_dictionary()
         if db:
-            if  self.get_username():
-                ## the user name could be not provided in case of public/ apis
+            if self.get_username():
+                # the user name could be not provided in case of public/ apis
                 udb = database('users')
-                u = udb.get( self.get_username())
-                if "email" in u: #we take email from DB if user is registered, else we use ADFS
+                u = udb.get(self.get_username())
+                if "email" in u:  # we take email from DB if user is registered, else we use ADFS
                     self.user_dict['email'] = u['email']
-
 
     @staticmethod
     def get_request_header_dictionary():
@@ -31,12 +31,12 @@ class user_pack:
         """
         if not has_request_context():
             return defaultdict(lambda: None)
-        user_dict = defaultdict(lambda: None, [(key.lower().replace('-','_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.iteritems()])
+        user_dict = defaultdict(lambda: None, [(key.lower().replace('-', '_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.iteritems()])
         return user_dict
 
     def __getattr__(self, name):
         if name.startswith('get_'):
-            return lambda : self.user_dict['_'.join(name.split('_')[1:])]
+            return lambda: self.user_dict['_'.join(name.split('_')[1:])]
         else:
             return self.user_dict[name]
 
@@ -90,11 +90,10 @@ class authenticator:
 
                 try:
                     user_role = user['role']
-                except:
+                except Exception:
                     cls.logger.error('Error getting role for user "' + username + '". Will use default value "' + user_role + '"')
 
-            cls.__users_roles_cache.set(cache_key, user_role, timeout = cls.CACHE_TIMEOUT)
-
+            cls.__users_roles_cache.set(cache_key, user_role, timeout=cls.CACHE_TIMEOUT)
             return user_role
 
     @classmethod

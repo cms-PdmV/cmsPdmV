@@ -3,21 +3,20 @@ import logging
 from threading import RLock, Event, Lock
 from collections import defaultdict
 
+
 class Locker(object):
     """
     Class provides interface for locking mechanism using some kind of IDs passed as parameters in methods.
-
     By using the lock method it can be used as a context manager:
     locker = Locker()
     with locker.lock(id):
         do something locked
     after releasing lock
     """
-
     # using reentrant lock so other threads don't release it
     internal_lock = RLock()
     lock_dictionary = defaultdict(RLock)
-    ## we also have a dict of Lock which can be release from different threads
+    # we also have a dict of Lock which can be release from different threads
     thread_lock_dictionary = defaultdict(Lock)
     logger = logging.getLogger("mcm_error")
 
@@ -41,8 +40,8 @@ class Locker(object):
             self.logger.info("Releasing lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
-    ### Thread sharable lock methods: can be released by different threads
-    ### mostly needed for submission time locks before putting to Queue
+    # Thread sharable lock methods: can be released by different threads
+    # mostly needed for submission time locks before putting to Queue
     def thread_lock(self, lock_id):
         """
         Create and return Lock object to be shared between threads
@@ -72,6 +71,7 @@ class Locker(object):
 
 locker = Locker()
 
+
 class SemaphoreEvents(object):
     """
     Class works like semaphore (counts number of threads) and uses events to call waiting threads when the counter
@@ -94,7 +94,7 @@ class SemaphoreEvents(object):
 
     def decrement(self, lock_id):
         with locker.lock(lock_id):
-            self.count_dictionary[lock_id] = max(0, self.count_dictionary[lock_id]-1) ## floor to 0
+            self.count_dictionary[lock_id] = max(0, self.count_dictionary[lock_id] - 1)  # floor to 0
             self.logger.info("Semaphore {0} decremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
             if self.count_dictionary[lock_id] == 0:
                 self.event_dictionary[lock_id].set()
@@ -106,12 +106,12 @@ class SemaphoreEvents(object):
 
     def is_set(self, lock_id):
         with locker.lock(lock_id):
-            #return self.event_dictionary[lock_id].is_set()
+            # return self.event_dictionary[lock_id].is_set()
             if lock_id in self.event_dictionary:
                 return self.event_dictionary[lock_id].is_set()
             else:
-                ## because the default oonstructor is with is_set=False
-                #in case the batch was created, sever cycled, and one tries to announce it on the "second" session
+                # because the default oonstructor is with is_set=False
+                # in case the batch was created, sever cycled, and one tries to announce it on the "second" session
                 return True
 
 semaphore_events = SemaphoreEvents()

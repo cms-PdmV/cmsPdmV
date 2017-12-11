@@ -4,17 +4,16 @@ import shutil
 
 from tools.locator import locator
 
+
 class installer:
     """
     that class is meant for initializing the request directory and care of removing it
-
     """
     logger = logging.getLogger("mcm_error")
 
     def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True, is_abs_path=False):
 
         self.cleanup = clean_on_exit
-
         self.careOfExistingDirectory = care_on_existing
         if is_abs_path:
             self.directory = sub_directory
@@ -28,7 +27,7 @@ class installer:
         # check if exists (and force)
         if os.path.exists(self.directory):
             if self.careOfExistingDirectory:
-                self.logger.error( os.popen('echo %s; ls -f %s' % (self.directory, self.directory)).read())
+                self.logger.error(os.popen('echo %s; ls -f %s' % (self.directory, self.directory)).read())
                 self.logger.error('Directory ' + self.directory + ' already exists.')
                 raise Exception('Data directory %s already exists' % self.directory)
             else:
