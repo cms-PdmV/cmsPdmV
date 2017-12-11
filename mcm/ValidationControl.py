@@ -21,7 +21,8 @@ from tools.locator import locator
 class ValidationHandler:
     '''
     A class that handles everything for chained requests and requests validations, this includes constructing the command, creating related files and directories,
-    monitoring the bjobs and getting the results to update the performance.
+    monitoring the jobs and getting the results to update the performance. Validations are submitted to htcondor which is a job scheduler. Every 20 minutes (Jenkins) we run
+    this script to check for new validations to submit or if the ones submitted already finished.
     '''
 
     JOBS_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.txt'
@@ -34,8 +35,8 @@ class ValidationHandler:
     request_db = database('requests')
     chained_request_db = database('chained_requests')
     CHAIN_REQUESTS = 'requests'
-    new_jobs = [] #could be a request id or chain id
-    submmited_jobs = {} #could be a request id or chain id
+    new_jobs = []  # could be a request id or chain id
+    submmited_jobs = {}  # could be a request id or chain id
     submmited_prepids_set = set()
     test_directory_path = ''
     data_script_path = ''
@@ -62,13 +63,13 @@ class ValidationHandler:
     def setup_directories(self):
         locator = installer('validation/tests', care_on_existing=False)
         self.test_directory_path = locator.location()
-        self.data_script_path = self.test_directory_path[:-6] #remove tests/
+        self.data_script_path = self.test_directory_path[:-6]  # remove tests/
 
     def setup_logger(self):
-        logging.basicConfig(level=logging.INFO,
-                    format='[%(asctime)s][%(levelname)s]%(message)s',
-                    datefmt='%d/%b/%Y:%H:%M:%S'
-        )
+        logging.basicConfig(
+            level=logging.INFO,
+            format='[%(asctime)s][%(levelname)s]%(message)s',
+            datefmt='%d/%b/%Y:%H:%M:%S')
         self.logger = logging.getLogger('validationJobs')
 
     def get_new_chain_prepids(self):
@@ -80,9 +81,7 @@ class ValidationHandler:
         __query = self.request_db.construct_lucene_query(
             {
                 'status': 'new',
-                'approval': 'validation'
-            }
-        )
+                'approval': 'validation'})
         query_result = self.request_db.full_text_search("search", __query, page=-1, include_fields='prepid')
         return [record['prepid'] for record in query_result]
 
@@ -116,22 +115,21 @@ class ValidationHandler:
         out = ""
         err = ""
         if stdout:
-            out=stdout.read()
-            err=stderr.read()
+            out = stdout.read()
+            err = stderr.read()
         trials = 1
         # wait for afs to synchronize the output file
-        while ( (not stdin and not stdout and not stderr) or err) and trials < trials_time_out:
+        while ((not stdin and not stdout and not stderr) or err) and trials < trials_time_out:
             time.sleep(self.batch_retry_timeout)
             trials += 1
             self.logger.info('Trying to get %s for the %s time' % (path, trials))
             stdin, stdout, stderr = self.ssh_exec.execute(cmd)
             if stdout:
-                out=stdout.read()
-                err=stderr.read()
+                out = stdout.read()
+                err = stderr.read()
 
         if trials >= trials_time_out:
-            self.logger.error('%s could not be retrieved after %s tries in interval of %s s' % (
-                    path, trials, self.batch_retry_timeout))
+            self.logger.error('%s could not be retrieved after %s tries in interval of %s s' % (path, trials, self.batch_retry_timeout))
 
         return out, err
 
@@ -142,7 +140,7 @@ class ValidationHandler:
         return True
 
     def create_test_file(self, to_write, run_test_path, file_name):
-        location = installer(run_test_path, care_on_existing=False, is_abs_path=True)
+        installer(run_test_path, care_on_existing=False, is_abs_path=True)
         test_file_path = run_test_path + '/' + file_name
         try:
             with open(test_file_path, 'w') as there:
@@ -165,7 +163,7 @@ class ValidationHandler:
         to_write += 'transfer_output_files = %s\n' % transfer_output_files
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)\n'
         to_write += '+MaxRuntime           = %s\n' % timeout
-        to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory/2000.0))) # htcondor gives 2GB per core, if you want more memory you need to request more cores
+        to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory / 2000.0)))  # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += 'queue'
         config_file_path = run_test_path + '/' + self.CONDOR_FILE_NAME
         try:
@@ -191,8 +189,7 @@ class ValidationHandler:
             mcm_request.test_failure(
                 message='There was a problem while creating the file for prepid: %s' % (mcm_request.get_attribute('prepid')),
                 what='Validation run test',
-                rewind=True
-            )
+                rewind=True)
             return {}
         timeout = mcm_request.get_timeout()
         memory = mcm_request.get_attribute("memory")
@@ -203,16 +200,15 @@ class ValidationHandler:
             mcm_request.test_failure(message=job_info['error'], what='Validation run test', rewind=True)
             return {}
         job_info[self.DOC_REV] = mcm_request.json()[self.DOC_REV]
-        job_info[self.DOC_VALIDATION] = mcm_request.get_attribute(self.DOC_VALIDATION) #this field change when calling request.get_setup_file, to be propagated in case of success
+        job_info[self.DOC_VALIDATION] = mcm_request.get_attribute(self.DOC_VALIDATION)  # this field change when calling request.get_setup_file, to be propagated in case of success
         return job_info
 
     def execute_command_submission(self, prepid, run_test_path):
         cmd = 'cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
         self.logger.info('Executing submission command: \n%s' % cmd)
-        stdin,  stdout,  stderr = self.ssh_exec.execute(cmd)
+        stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         message_ssh = "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)
-        if not self.check_ssh_outputs(stdin, stdout, stderr,
-                message_ssh):
+        if not self.check_ssh_outputs(stdin, stdout, stderr, message_ssh):
             return {'error': message_ssh}
         out = stdout.read()
         errors = stderr.read()
@@ -223,13 +219,13 @@ class ValidationHandler:
             self.logger.error(message)
             return {'error': message}
         job_id = out.split()[7]
-        return {self.JOB_ID: job_id[:-1]} #remove .
+        return {self.JOB_ID: job_id[:-1]}  # remove .
 
     def submit_chain(self, prepid, run_test_path):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         except_requests = []
         reset = False
-        #If a request of a chain was singly submmited to validation and then somebody reseted it, we will find it here
+        # If a request of a chain was singly submmited to validation and then somebody reseted it, we will find it here
         for request_prepid in mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step'):]:
             if request_prepid in self.submmited_prepids_set:
                 except_requests.append(request_prepid)
@@ -239,7 +235,7 @@ class ValidationHandler:
             self.logger.error(message)
             mcm_chained_request.reset_requests(message, except_requests=except_requests)
             return {}
-        to_write = mcm_chained_request.get_setup(run=True, validation= True, for_validation=True)
+        to_write = mcm_chained_request.get_setup(run=True, validation=True, for_validation=True)
         file_name = self.TEST_FILE_NAME % prepid
         if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_chained_request.reset_requests('There was a problem while creating the file for prepid: %s' % (mcm_chained_request.get_attribute('prepid')))
@@ -247,7 +243,7 @@ class ValidationHandler:
         requests_in_chain = {}
         for request_prepid in mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step'):]:
             mcm_request = request(self.request_db.get(request_prepid))
-            if not mcm_request.is_root and 'validation' not in mcm_request._json_base__status: #only root or possible root requests
+            if not mcm_request.is_root and 'validation' not in mcm_request._json_base__status:  # only root or possible root requests
                 break
             status = mcm_request.get_attribute('status')
             approval = mcm_request.get_attribute('approval')
@@ -289,7 +285,7 @@ class ValidationHandler:
                         self.logger.error('Stopping submissions due to multiple submission failures!!')
                         return
             except Exception as e:
-                #Catch any unexpected exepction and keep going
+                # Catch any unexpected exepction and keep going
                 message = "Unexpected exception while trying to submit %s message: %s\ntraceback %s" % (prepid, str(e), traceback.format_exc())
                 try:
                     self.report_error(prepid, message)
@@ -311,7 +307,7 @@ class ValidationHandler:
             self.logger.error("Htcondor is failing, stopping everything!")
             return None
         jobs_dict = {}
-        lines = lines[1:] #remove headings
+        lines = lines[1:]  # remove headings
         for line in lines:
             columns = line.split()
             if not len(columns):
@@ -330,16 +326,15 @@ class ValidationHandler:
     def report_error(self, prepid, message):
         self.logger.error(message)
         try:
-            if 'chain' in  prepid:
+            if 'chain' in prepid:
                 mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
                 mcm_chained_request.reset_requests(message)
             else:
                 mcm_request = request(self.request_db.get(prepid))
                 mcm_request.test_failure(
-                        message=message,
-                        what='Validation run test',
-                        rewind=True
-                )
+                    message=message,
+                    what='Validation run test',
+                    rewind=True)
         except Exception as e:
             self.logger.error("Exception while reporting an error for %s message: %s \ntraceback: %s" % (prepid, str(e), traceback.format_exc()))
 
@@ -357,9 +352,9 @@ class ValidationHandler:
                     remove_jobs.append(prepid)
                     continue
                 elif jobs_dict[job_id] in ['RUN', 'IDLE']:
-                    self.logger.info('Job %s for prepid %s status: %s' % (job_id ,prepid, jobs_dict[job_id]))
+                    self.logger.info('Job %s for prepid %s status: %s' % (job_id, prepid, jobs_dict[job_id]))
             except Exception as e:
-                #Catch any unexpected exception and keep going
+                # Catch any unexpected exception and keep going
                 message = "Unexpected exception while monitoring job for prepid %s message: %s \ntraceback: %s" % (prepid, str(e), traceback.format_exc())
                 self.report_error(prepid, message)
                 remove_jobs.append(prepid)
@@ -415,7 +410,11 @@ class ValidationHandler:
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         if not was_exited:
             message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: \n%s \n Log out:\n %s" % (
-                out_path, job_out, job_error_out, error_out, log_out)
+                out_path,
+                job_out,
+                job_error_out,
+                error_out,
+                log_out)
         else:
             message = "Job validation failed for chain %s \nJob out: \n%s \n Error out: \n%s \n Log out: \n%s" % (prepid, job_out, error_out, log_out)
         mcm_chained_request.reset_requests(message)
@@ -439,8 +438,7 @@ class ValidationHandler:
                         prepid, error,
                         job_out,
                         error_out,
-                        log_out
-                    )
+                        log_out)
             if not success:
                 mcm_chained_request.reset_requests(message, notify_one=request_prepid)
                 return
@@ -451,13 +449,12 @@ class ValidationHandler:
                 request_prepid = mcm_request.get_attribute('prepid')
                 message = "The request %s of chain %s could not be saved after the runtest procedure" % (request_prepid, prepid)
                 self.logger.error(message)
-                #reset it and keep saving requests
+                # reset it and keep saving requests
                 mcm_request.test_failure(
-                        message=message,
-                        what='Chain validation run test',
-                        rewind=True
-                )
-        mcm_chained_request.reload(save_current=False) # setting new requests status change the chain object
+                    message=message,
+                    what='Chain validation run test',
+                    rewind=True)
+        mcm_chained_request.reload(save_current=False)  # setting new requests status change the chain object
         mcm_chained_request.set_attribute('validate', 0)
         if not self.chained_request_db.update(mcm_chained_request.json()):
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % prepid
@@ -469,8 +466,7 @@ class ValidationHandler:
                 group=notification.CHAINED_REQUESTS,
                 action_objects=[mcm_chained_request.get_attribute('prepid')],
                 object_type='chained_requests',
-                base_object=mcm_chained_request
-            )
+                base_object=mcm_chained_request)
             mcm_chained_request.notify('Chained validation run test', message)
             return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
@@ -490,10 +486,9 @@ class ValidationHandler:
             message = 'The request %s has changed during the run test procedure, preventing from being saved' % (prepid)
             self.logger.error(message)
             mcm_request.test_failure(
-                        message=message,
-                        what='Validation run test',
-                        rewind=True
-            )
+                message=message,
+                what='Validation run test',
+                rewind=True)
             return
         path = self.test_directory_path + prepid + '/'
         (is_success, error) = mcm_request.pickup_all_performance(path)
@@ -507,11 +502,10 @@ class ValidationHandler:
         saved = self.request_db.update(mcm_request.json())
         if not saved:
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
-            mcm_current.test_failure(
+            mcm_request.test_failure(
                 message='The request could not be saved after the run test procedure',
                 what='Validation run test',
-                rewind=True
-            )
+                rewind=True)
             return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
@@ -522,24 +516,24 @@ class ValidationHandler:
             no_success_message = "File %s does not look properly formatted or does not exist. \n %s \n %s \n Error out: \n%s \n Log out: \n%s" % (
                 out_path, job_out, job_error_out, error_out, log_out)
         else:
-            file_name = self.TEST_FILE_NAME % prepid
             no_success_message = '\t Job out: \n%s\n\t Error out: \n%s\n Log out: \n%s ' % (job_out, error_out, log_out)
         mcm_request.test_failure(
             message=no_success_message,
             what='Validation run test',
-            rewind=True
-        )
+            rewind=True)
 
     def main(self):
+        # First we check if some of the submitted jobs already finished to process them.
         if self.ssh_exec is None:
             sys.exit(-1)
         self.monitor_submmited_jobs()
-        if not self.is_condor_working:
+        if not self.is_condor_working:  # Sometimes htcondor is not working so we stop everything
             return
-        self.new_jobs =  self.get_new_request_prepids() + self.get_new_chain_prepids()
+        self.new_jobs = self.get_new_request_prepids() + self.get_new_chain_prepids()
         prepids_to_submit = self.get_prepids_to_submit()
         self.submit_jobs(prepids_to_submit)
         self.save_jobs()
+
 
 if __name__ == "__main__":
     validation_handler = ValidationHandler()
