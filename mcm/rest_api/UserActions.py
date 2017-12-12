@@ -199,14 +199,14 @@ class ChangeRole(RESTResource):
         if action == '-1':
             if current_role != self.all_roles[0]:
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) - 1])
-                self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                authenticator.set_user_role(username, doc.get_attribute("role"))
                 doc.update_history({'action': 'decrease', 'step': doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
             return {"results": username + " already is user"}  # else return that hes already a user
         if action == '1':
             if len(self.all_roles) != self.all_roles.index(current_role) + 1:  # if current role is not the top one
                 doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) + 1])
-                self.authenticator.set_user_role(username, doc.get_attribute("role"))
+                authenticator.set_user_role(username, doc.get_attribute("role"))
                 doc.update_history({'action': 'increase', 'step': doc.get_attribute("role")})
                 return {"results": db.update(doc.json())}
             return {"results": username + " already has top role"}

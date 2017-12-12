@@ -104,7 +104,7 @@ class authenticator:
     @classmethod
     def set_user_role(cls, username, role):
         with locker.lock(username):
-            cls.__users_roles[username] = role
+            cls.__users_roles_cache.set(username, role, timeout=cls.CACHE_TIMEOUT)
 
     @classmethod
     def can_access(cls, username, limit):
