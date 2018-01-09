@@ -214,7 +214,7 @@
                       <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
                     </div>
                     <div ng-switch-when="Generators">
-                      <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
+                      <list-edit ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="generators"></list-edit>
                     </div>
                     <div ng-switch-when="Type">
                       <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
