@@ -633,7 +633,7 @@ testApp.directive("customValidationEdit", function(){
 });
 
 
-testApp.directive("listEdit", function(){
+testApp.directive("listEdit", function($http){
   return {
     replace: false,
     restrict: 'E',
@@ -669,7 +669,7 @@ testApp.directive("listEdit", function(){
     '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
     '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
     '      </a>'+
-    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id" class="input-xxlarge"></i>'+
+    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id" class="input-xxlarge" typeahead="suggestion for suggestion in loadSuggestions($viewValue)"></i>'+
     '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
     '    </form>'+
     '</div>'+
@@ -682,6 +682,7 @@ testApp.directive("listEdit", function(){
         scope.editable = {};
         scope.new_id = "";
         scope.columnName = scope.$eval(attr.column);
+        scope.fieldName = attr.suggestionsFieldname;
       };
 
       scope.remove = function(index){
@@ -692,6 +693,27 @@ testApp.directive("listEdit", function(){
         scope.analysis_data.push(scope.new_analysis_id);
         scope.add_analysis_id = false;
         scope.new_analysis_id = "";
+      };
+
+      scope.loadSuggestions = function (fieldValue) {
+        if (scope.fieldName == undefined || fieldValue == '') {
+          return {};
+        }
+
+        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
+        searchURL += "?limit=10&group=true";
+        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
+
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          var filteredResults = data['data']['results'].filter(function(el) {
+            return scope.analysis_data.indexOf(el) < 0;
+          });
+          return filteredResults;
+
+        }, function(data){
+          alert("Error getting suggestions for " + scope.fieldName + " field (value=" + fieldValue + "): " + data.status);
+        });
       };
     }
   }

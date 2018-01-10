@@ -1149,14 +1149,15 @@ class request(json_base):
             # lets check if downloaded file actually exists and has more than 0 bytes
             infile += '[ -s %s ] || exit $?;\n' % (self.get_fragment())
 
-        ##check if fragment contains gridpack path and that gridpack is in cvmfs
-        infile += '\n'
-        infile += 'if grep -q "gridpacks" %s; then\n' % (self.get_fragment())
-        infile += '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then\n ' % (self.get_fragment())
-        infile += '    echo "Gridpack inside fragment is not in cvmfs."\n'
-        infile += '    exit -1\n'
-        infile += '  fi\n'
-        infile += 'fi\n'
+        ##check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
+        if run:
+            infile += '\n'
+            infile += 'if grep -q "gridpacks" %s; then\n' % (self.get_fragment())
+            infile += '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then\n ' % (self.get_fragment())
+            infile += '    echo "Gridpack inside fragment is not in cvmfs."\n'
+            infile += '    exit -1\n'
+            infile += '  fi\n'
+            infile += 'fi\n'
 
         # previous counter
         previous = 0
