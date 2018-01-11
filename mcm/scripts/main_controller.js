@@ -50,7 +50,6 @@ angular.module('testApp').controller('mainCtrl',
     $scope.user.name = data.data.username;
     $scope.user.role = data.data.role;
     $scope.user.roleIndex = parseInt(data.data.role_index);
-    $scope.xMasSpecial();
   },function(data){
     alert("Error getting user information. Error: "+data.status);
   });
