@@ -1954,6 +1954,7 @@ class request(json_base):
     def get_timeout_for_runtest(self):
         fraction = settings.get_value('test_timeout_fraction')
         timeout = settings.get_value('batch_timeout') * 60. * fraction
+
         # if by default it is not possible to run a test => 0 events in
         if self.get_n_for_test(self.target_for_test(), adjust=False) == 0:
             # adjust the timeout for 10 events !
@@ -1962,6 +1963,9 @@ class request(json_base):
 
     def get_timeout(self):
         default = settings.get_value('batch_timeout') * 60.
+        # we double the timeout if user wants twice the events in validation
+        if self.get_attribute('validation').get('double_time', False):
+            default = 2 * default
         # to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
         return int(max((estimate_rt) / fraction, default))
@@ -1986,6 +1990,10 @@ class request(json_base):
         else:
             fraction = settings.get_value('test_timeout_fraction')
             timeout = settings.get_value('batch_timeout') * 60. * fraction
+
+        # we double the timeout if user wants twice the events in validation
+        if self.get_attribute('validation').get('double_time', False):
+            timeout = 2 * timeout
 
         # check that it is not going to time-out
         # either the batch test time-out is set accordingly, or we limit the events

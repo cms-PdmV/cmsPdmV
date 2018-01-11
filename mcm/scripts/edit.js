@@ -614,6 +614,10 @@ testApp.directive("customValidationEdit", function(){
     '          <i class="icon-th-large"></i>'+
     '        </a>'+
     '      </div>'+
+    '      <div class="control-group">'+
+    '        Twice events in validation:'+
+    '        <input type="checkbox" ng-model="validation_data.double_time" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1">'+
+    '      </div>'+
     '    </fieldset>'+
     '  </form>'+
     '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
