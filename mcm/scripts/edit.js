@@ -615,7 +615,7 @@ testApp.directive("customValidationEdit", function(){
     '        </a>'+
     '      </div>'+
     '      <div class="control-group">'+
-    '        Twice events in validation:'+
+    '        Twice longer validation:'+
     '        <input type="checkbox" ng-model="validation_data.double_time" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1">'+
     '      </div>'+
     '    </fieldset>'+
