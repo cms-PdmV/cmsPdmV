@@ -1499,6 +1499,8 @@ class request(json_base):
             # that it is not taken from stats but the mcm document itself
             if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
                 mcm_content = transfer(stats_r, keys_to_import)
+                if 'content' in mcm_rr[rwma_i] and len(mcm_content) != len(mcm_rr[rwma_i]['content']):
+                    changes_happen = True
                 mcm_rr[rwma_i]['content'] = mcm_content
 
         # take out the one which were not found !
