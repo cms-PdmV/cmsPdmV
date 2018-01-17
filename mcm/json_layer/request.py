@@ -1229,11 +1229,6 @@ class request(json_base):
                 res += '        fi\n'
                 res += '    fi\n'
                 res += 'fi\n'
-                res += 'grep "AvgEventTime" %s \n' % runtest_xml_file
-                res += 'if [ $? -eq 0 ]; then\n'
-                res += '  var1=$(grep "AvgEventTime" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
-                res += '  bc -l <<< "scale=4; $var1/%s"\n' % (self.get_core_num())
-                res += 'fi\n'
                 res += 'grep "EventThroughput" %s \n' % runtest_xml_file
                 res += 'if [ $? -eq 0 ]; then\n'
                 res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
