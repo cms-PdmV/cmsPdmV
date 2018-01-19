@@ -1225,14 +1225,14 @@ class request(json_base):
                 res += '        events=$(grep "TotalEvents" %s | tail -1 | sed "s/.*>\(.*\)<.*/\\1/")\n' % runtest_xml_file
                 res += '        size=$(grep "Timing-tstoragefile-write-totalMegabytes" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % runtest_xml_file
                 res += '        if [ $events -gt 0 ]; then\n'
-                res += '            echo "Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"\n'
+                res += '            echo "McM Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"\n'
                 res += '        fi\n'
                 res += '    fi\n'
                 res += 'fi\n'
                 res += 'grep "EventThroughput" %s \n' % runtest_xml_file
                 res += 'if [ $? -eq 0 ]; then\n'
                 res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
-                res += '  bc -l <<< "scale=4; 1/$var1"\n'
+                res += '  echo "McM time_event value: $(bc -l <<< "scale=4; 1/$var1")"\n'
                 res += 'fi\n'
                 res += 'echo CPU efficiency info:\n'
                 res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
