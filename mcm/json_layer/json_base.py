@@ -57,6 +57,14 @@ class json_base:
         def __str__(self):
             return 'Illegal Status: ' + self.__step
 
+    class WrongTimeEvent(Exception):
+        def __init__(self, message=''):
+            self.message = message
+            json_base.logger.error(str(self))
+
+        def __str__(self):
+            return self.message
+
     def __init__(self, json=None):
         json = json if json else {}
         if json:

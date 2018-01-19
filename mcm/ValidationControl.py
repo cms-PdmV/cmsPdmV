@@ -478,6 +478,25 @@ class ValidationHandler:
         except Exception as ex:
             self.logger.error('Could not delete directory "%s". Reason: %s \ntraceback: %s' % (path, ex, traceback.format_exc()))
 
+    def update_validation_status(self, request, success, inc_count=True):
+        """
+        Set request.validation.status to 'success' and increment request.validation.validations_count by 1
+        """
+        if inc_count:
+            validations_count = request.get_attribute('validation').get('validations_count')
+            if validations_count is None:
+                validations_count = 0
+
+            validations_count += 1
+            request.get_attribute('validation')['validations_count'] = validations_count
+
+        request.get_attribute('validation')['success'] = 'YES' if success is True else 'NO'
+        saved = self.request_db.update(request.json())
+        if not saved:
+            self.logger.info('Could not save ' + request.json()['prepid'])
+
+        request.reload(save_current=False)
+
     def process_finished_request_success(self, prepid, doc_info, job_out, error_out, log_out):
         mcm_request = request(self.request_db.get(prepid))
         doc_revision = doc_info[self.DOC_REV]
@@ -490,15 +509,32 @@ class ValidationHandler:
                 what='Validation run test',
                 rewind=True)
             return
+
         path = self.test_directory_path + prepid + '/'
-        (is_success, error) = mcm_request.pickup_all_performance(path)
-        if not is_success:
+        error = ''
+        is_success = False
+        attempt_retry = False
+        self.logger.info('Will try to pickup all performance')
+        try:
+            self.logger.info('Start try')
+            (is_success, error) = mcm_request.pickup_all_performance(path)
             error = 'Error:\n%s\n Error out:\n%s\n' % (error, error_out)
-            self.process_finished_request_failed(prepid, job_out, error, log_out=log_out)
+            self.logger.info('Finish try')
+        except request.WrongTimeEvent as ex:
+            self.logger.info('Uh-oh, got an exception %s' % (ex))
+            error = 'WrongTimeEvent exception: %s\n' % (ex)
+            attempt_retry = True
+            self.logger.info('Finishing except block, attempt_retry=' + str(attempt_retry))
+
+        if not is_success:
+            self.logger.info('Is not success, will call process_finished_request_failed with attempt_retry=' + str(attempt_retry))
+            self.process_finished_request_failed(prepid, job_out, error, log_out=log_out, attempt_retry=attempt_retry)
             return
+
         mcm_request.set_status(with_notification=True)
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
+        self.update_validation_status(mcm_request, True)
         saved = self.request_db.update(mcm_request.json())
         if not saved:
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
@@ -509,7 +545,7 @@ class ValidationHandler:
             return
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
-    def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path='', log_out=''):
+    def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path='', log_out='', attempt_retry=False):
         mcm_request = request(self.request_db.get(prepid))
         # need to provide all the information back
         if not was_exited:
@@ -517,10 +553,36 @@ class ValidationHandler:
                 out_path, job_out, job_error_out, error_out, log_out)
         else:
             no_success_message = '\t Job out: \n%s\n\t Error out: \n%s\n Log out: \n%s ' % (job_out, error_out, log_out)
-        mcm_request.test_failure(
-            message=no_success_message,
-            what='Validation run test',
-            rewind=True)
+
+        self.update_validation_status(mcm_request, False)
+        validations_count = mcm_request.get_attribute('validation').get('validations_count')
+        max_validations = settings.get_value('max_validations')
+        self.logger.info('Request %s failed. Validations done %d/%d. Attempt retry if validations < max_validations? %s' % (
+            prepid,
+            validations_count,
+            max_validations,
+            "YES" if attempt_retry else "NO"
+        ))
+        if attempt_retry and validations_count < max_validations:
+            self.logger.info('Request %s will be validated again.' % (prepid))
+            subject = 'Validation will be retried for %s' % (prepid)
+            message = 'Validation for %s request will be retried again. Number of validations done: %d/%d.' % (prepid, validations_count, max_validations)
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[mcm_request.get_attribute('prepid')],
+                object_type='requests',
+                base_object=mcm_request
+            )
+            mcm_request.notify(subject, message)
+        else:
+            self.logger.info('Request %s will NOT be validated again' % (prepid))
+            mcm_request.test_failure(
+                message=no_success_message,
+                what='Validation run test',
+                rewind=True)
 
     def main(self):
         # First we check if some of the submitted jobs already finished to process them.
