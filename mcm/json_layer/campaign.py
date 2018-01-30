@@ -43,7 +43,8 @@ class campaign(json_base):
         'sequences': [],  # list of jsons of jsons
         'approval': '',
         'history': [],
-        'memory': 2300}
+        'memory': 2300,
+        'no_output': True}
 
     _json_base__status = ['stopped', 'started']
 

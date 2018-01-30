@@ -955,7 +955,10 @@ class request(json_base):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
                     freshKeep.append(False)  # dimension keep output to the sequences
-                freshKeep[-1] = True  # last output must be kept
+
+                if not camp.get_attribute("no_output"):
+                    freshKeep[-1] = True  # last output must be kept
+
                 self.set_attribute('sequences', freshSeq)
                 self.set_attribute('keep_output', freshKeep)
             if can_save:
@@ -963,6 +966,9 @@ class request(json_base):
                 self.reload()
 
     def reset_options(self, can_save=True):
+        self.logger.error("executing code that we shouldnt")
+        cdb = database('campaigns')
+        camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
         # a way of resetting the sequence and necessary parameters
         if self.get_attribute('status') == 'new':
             self.set_attribute('cmssw_release', '')
@@ -973,6 +979,10 @@ class request(json_base):
             for i in range(len(self.get_attribute('sequences'))):
                 freshSeq.append(sequence().json())
                 freshKeep.append(False)
+
+            if not camp.get_attribute("no_output"):
+                freshKeep[-1] = True  # last output must be kept
+
             freshKeep[-1] = True
             self.set_attribute('sequences', freshSeq)
             self.set_attribute('keep_output', freshKeep)
