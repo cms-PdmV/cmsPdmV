@@ -1445,7 +1445,7 @@ class request(json_base):
                 'pdmv_dataset_list', 'pdmv_status_in_DAS', 'pdmv_dataset_statuses',
                 'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS', 'pdmv_open_evts_in_DAS',
                 'pdmv_submission_date', 'pdmv_submission_time', 'pdmv_type',
-                'pdmv_present_priority', 'pdmv_prep_id']
+                'pdmv_present_priority', 'pdmv_prep_id', 'pdmv_status_history_from_reqmngr']
 
         mcm_rr = self.get_attribute('reqmgr_name')
         __curr_output = self.get_attribute('output_dataset')
@@ -1504,6 +1504,8 @@ class request(json_base):
             # that it is not taken from stats but the mcm document itself
             if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
                 mcm_content = transfer(stats_r, keys_to_import)
+                if 'content' in mcm_rr[rwma_i] and len(mcm_content) != len(mcm_rr[rwma_i]['content']):
+                    changes_happen = True
                 mcm_rr[rwma_i]['content'] = mcm_content
 
         # take out the one which were not found !
