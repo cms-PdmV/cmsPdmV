@@ -534,7 +534,7 @@ class request(json_base):
         if not do_runtest:
             self.set_status()
 
-        self.get_attribute('validation')['validations_count'] = 0
+        self.reset_validations_counter()
         if message:
             return message
 
@@ -2856,3 +2856,35 @@ class request(json_base):
         return True if there is a negative or zero value in time_event/size_event list
         """
         return any(n <= 0 for n in self.get_attribute(field))
+
+    def reset_validations_counter(self):
+        """
+        Set validation.validations_count to 0
+        """
+        self.get_attribute('validation')['validations_count'] = 0
+        print(self.get_attribute('prepid') + ' reset validations counter')
+
+    def inc_validations_counter(self):
+        """
+        Increment validation.validations_count by 1
+        """
+        validations_count = self.get_validations_count() + 1
+        self.get_attribute('validation')['validations_count'] = validations_count
+        request_db = database('requests')
+        saved = request_db.update(self.json())
+        if not saved:
+            self.logger.error('Could not save ' + self.get_attribute('prepid'))
+
+        self.reload(save_current=False)
+        print(self.get_attribute('prepid') + ' inc validations counter ' + str(self.get_validations_count()))
+
+    def get_validations_count(self):
+        """
+        Return validation.validations_count
+        """
+        validations_count = self.get_attribute('validation').get('validations_count')
+        if validations_count is None:
+            validations_count = 0
+
+        print(self.get_attribute('prepid') + ' get validations counte ' + str(validations_count))
+        return validations_count

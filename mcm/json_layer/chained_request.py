@@ -1026,4 +1026,4 @@ class chained_request(json_base):
                 action_objects=[self.get_attribute('prepid')],
                 object_type='chained_requests',
                 base_object=self)
-            mcm_chained_request.notify(subject, message)
+            self.notify(subject, message)
