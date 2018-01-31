@@ -2220,15 +2220,19 @@ class request(json_base):
     def check_cpu_efficiency(self, cpu_time, total_time):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
         # <TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
+        cpu_eff_threshold = settings.get_value('cpu_efficiency_threshold')
+        self.logger.error("checking cpu efficinecy. threshold:%s" % (cpu_eff_threshold))
 
         __test_eff = cpu_time / (self.get_core_num() * total_time)
-        if  __test_eff < 0.4:
+        if  __test_eff < cpu_eff_threshold:
+            self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
             subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, with %s cores, CPU efficiency %s < 0.4.'
+            message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
                     ' You should lower number of cores accordingly.') % (
                         self.get_attribute('prepid'),
                         self.get_core_num(),
-                        __test_eff)
+                        __test_eff,
+                        cpu_eff_threshold)
 
             # we do not set the nThreads because we also need a process string in request to be set.
             # seq = self.get_attribute("sequences")
@@ -2413,7 +2417,12 @@ class request(json_base):
             geninfo = generator_parameters(self.get_attribute('generator_parameters')[-1]).json()
 
         self.check_gen_efficiency(geninfo, total_event, total_event_in)
-        self.check_cpu_efficiency(total_job_cpu, total_job_time)
+        # we check cpu_eff ONLY if request is multicore
+        if self.get_core_num() > 1:
+            self.check_cpu_efficiency(total_job_cpu, total_job_time)
+        else:
+            self.logger.debug("Not doing cpu efficiency check for 1 core request")
+
         self.check_time_event(total_event, total_event_in, timing)
 
         # some checks if we succeeded in parsing the values
