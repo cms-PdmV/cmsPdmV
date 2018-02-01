@@ -2228,7 +2228,7 @@ class request(json_base):
             self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
             subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
             message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
-                    ' You should lower number of cores accordingly.') % (
+                    ' You should lower number of cores and memory accordingly.') % (
                         self.get_attribute('prepid'),
                         self.get_core_num(),
                         __test_eff,
