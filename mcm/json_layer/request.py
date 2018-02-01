@@ -379,6 +379,12 @@ class request(json_base):
                     'validation',
                     'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
 
+        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 2300:
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'validation',
+                'Single core request should use <= 2.3GB memory')
+
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
