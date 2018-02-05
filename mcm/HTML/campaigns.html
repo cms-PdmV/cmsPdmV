@@ -82,7 +82,7 @@
                 <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
-                <a ng-click='delete_object("campaigns", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);" ng-href="#">
+                <a ng-click='open_isSureModal("delete", data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(3);" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
