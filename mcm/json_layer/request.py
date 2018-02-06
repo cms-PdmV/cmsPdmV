@@ -2862,7 +2862,6 @@ class request(json_base):
         Set validation.validations_count to 0
         """
         self.get_attribute('validation')['validations_count'] = 0
-        print(self.get_attribute('prepid') + ' reset validations counter')
 
     def inc_validations_counter(self):
         """
@@ -2876,7 +2875,6 @@ class request(json_base):
             self.logger.error('Could not save ' + self.get_attribute('prepid'))
 
         self.reload(save_current=False)
-        print(self.get_attribute('prepid') + ' inc validations counter ' + str(self.get_validations_count()))
 
     def get_validations_count(self):
         """
@@ -2886,5 +2884,4 @@ class request(json_base):
         if validations_count is None:
             validations_count = 0
 
-        print(self.get_attribute('prepid') + ' get validations counte ' + str(validations_count))
         return validations_count
