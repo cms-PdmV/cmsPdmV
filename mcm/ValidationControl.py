@@ -429,36 +429,46 @@ class ValidationHandler:
     def process_finished_chain_success(self, prepid, doc_info, job_out, error_out, log_out):
         mcm_chained_request = chained_request(self.chained_request_db.get(prepid))
         requests_in_chain = []
+        success = True
+        failed_request_prepid = None
         for request_prepid, doc_rev in doc_info[self.CHAIN_REQUESTS].iteritems():
             mcm_request = request(self.request_db.get(request_prepid))
-            success = True
-            message = ''
-            if doc_rev != mcm_request.json()[self.DOC_REV]:
+            # Increase counters for all requests, but save error message only for the first failed request
+            if success and doc_rev != mcm_request.json()[self.DOC_REV]:
                 message = 'The request %s in the chain %s has changed during the run test procedure, preventing from being saved' % (request_prepid, prepid)
                 success = False
+                failed_request_prepid = request_prepid
 
-            path = self.test_directory_path + prepid + '/'
-            self.logger.info('Processing request %s in chain %s' % (request_prepid, prepid))
             mcm_request.inc_validations_counter()
-            if success:
-                try:
-                    success, error = mcm_request.pickup_all_performance(path)
-                    error = 'Error:\n%s\n Error out:\n%s\n' % (error, error_out)
-                except request.WrongTimeEvent as ex:
-                    self.logger.error('Exception: %s' % (ex))
-                    retry_validation = self.process_request_wrong_time_event(mcm_request, prepid)
-                    if retry_validation:
-                        return
+            mcm_request.reload()
 
-                if not success:
-                    message = 'Error while picking up all the performance for request %s of chain %s: \n Error:\n%s\n Job out:\n%s\n Error out: \n%s\n Log out: \n%s\n' % (
-                        request_prepid,
-                        prepid, error,
-                        job_out,
-                        error_out,
-                        log_out)
+        if not success:
+            mcm_chained_request.reset_requests(message, notify_one=failed_request_prepid)
+            return
+
+        for request_prepid, doc_rev in doc_info[self.CHAIN_REQUESTS].iteritems():
+            self.logger.info('Processing request %s in chain %s' % (request_prepid, prepid))
+            mcm_request = request(self.request_db.get(request_prepid))
+            success = True
+            path = self.test_directory_path + prepid + '/'
+            try:
+                success, error = mcm_request.pickup_all_performance(path)
+                error = 'Error:\n%s\n Error out:\n%s\n' % (error, error_out)
+            except request.WrongTimeEvent as ex:
+                self.logger.error('Exception: %s' % (ex))
+                error = 'Exception:\n%s\n' % (ex)
+                success = False
+                retry_validation = self.process_request_wrong_time_event(mcm_request, prepid)
+                if retry_validation:
+                    return
 
             if not success:
+                message = 'Error while picking up all the performance for request %s of chain %s: \n Error:\n%s\n Job out:\n%s\n Error out: \n%s\n Log out: \n%s\n' % (
+                    request_prepid,
+                    prepid, error,
+                    job_out,
+                    error_out,
+                    log_out)
                 mcm_chained_request.reset_requests(message, notify_one=request_prepid)
                 return
 
