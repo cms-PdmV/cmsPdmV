@@ -379,6 +379,12 @@ class request(json_base):
                     'validation',
                     'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
 
+        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 2300:
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'validation',
+                'Single core request should use <= 2.3GB memory')
+
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
@@ -955,7 +961,10 @@ class request(json_base):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
                     freshKeep.append(False)  # dimension keep output to the sequences
-                freshKeep[-1] = True  # last output must be kept
+
+                if not camp.get_attribute("no_output"):
+                    freshKeep[-1] = True  # last output must be kept
+
                 self.set_attribute('sequences', freshSeq)
                 self.set_attribute('keep_output', freshKeep)
             if can_save:
@@ -963,6 +972,9 @@ class request(json_base):
                 self.reload()
 
     def reset_options(self, can_save=True):
+        self.logger.error("executing code that we shouldnt")
+        cdb = database('campaigns')
+        camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
         # a way of resetting the sequence and necessary parameters
         if self.get_attribute('status') == 'new':
             self.set_attribute('cmssw_release', '')
@@ -973,6 +985,10 @@ class request(json_base):
             for i in range(len(self.get_attribute('sequences'))):
                 freshSeq.append(sequence().json())
                 freshKeep.append(False)
+
+            if not camp.get_attribute("no_output"):
+                freshKeep[-1] = True  # last output must be kept
+
             freshKeep[-1] = True
             self.set_attribute('sequences', freshSeq)
             self.set_attribute('keep_output', freshKeep)
@@ -1435,7 +1451,7 @@ class request(json_base):
                 'pdmv_dataset_list', 'pdmv_status_in_DAS', 'pdmv_dataset_statuses',
                 'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS', 'pdmv_open_evts_in_DAS',
                 'pdmv_submission_date', 'pdmv_submission_time', 'pdmv_type',
-                'pdmv_present_priority', 'pdmv_prep_id']
+                'pdmv_present_priority', 'pdmv_prep_id', 'pdmv_status_history_from_reqmngr']
 
         mcm_rr = self.get_attribute('reqmgr_name')
         __curr_output = self.get_attribute('output_dataset')
@@ -1494,6 +1510,8 @@ class request(json_base):
             # that it is not taken from stats but the mcm document itself
             if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
                 mcm_content = transfer(stats_r, keys_to_import)
+                if 'content' in mcm_rr[rwma_i] and len(mcm_content) != len(mcm_rr[rwma_i]['content']):
+                    changes_happen = True
                 mcm_rr[rwma_i]['content'] = mcm_content
 
         # take out the one which were not found !
@@ -2209,15 +2227,19 @@ class request(json_base):
     def check_cpu_efficiency(self, cpu_time, total_time):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
         # <TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
+        cpu_eff_threshold = settings.get_value('cpu_efficiency_threshold')
+        self.logger.error("checking cpu efficinecy. threshold:%s" % (cpu_eff_threshold))
 
         __test_eff = cpu_time / (self.get_core_num() * total_time)
-        if  __test_eff < 0.4:
+        if  __test_eff < cpu_eff_threshold:
+            self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
             subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, with %s cores, CPU efficiency %s < 0.4.'
-                    ' You should lower number of cores accordingly.') % (
+            message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
+                    ' You should lower number of cores and memory accordingly.') % (
                         self.get_attribute('prepid'),
                         self.get_core_num(),
-                        __test_eff)
+                        __test_eff,
+                        cpu_eff_threshold)
 
             # we do not set the nThreads because we also need a process string in request to be set.
             # seq = self.get_attribute("sequences")
@@ -2402,7 +2424,12 @@ class request(json_base):
             geninfo = generator_parameters(self.get_attribute('generator_parameters')[-1]).json()
 
         self.check_gen_efficiency(geninfo, total_event, total_event_in)
-        self.check_cpu_efficiency(total_job_cpu, total_job_time)
+        # we check cpu_eff ONLY if request is multicore
+        if self.get_core_num() > 1:
+            self.check_cpu_efficiency(total_job_cpu, total_job_time)
+        else:
+            self.logger.debug("Not doing cpu efficiency check for 1 core request")
+
         self.check_time_event(total_event, total_event_in, timing)
 
         # some checks if we succeeded in parsing the values
