@@ -526,7 +526,6 @@ class ValidationHandler:
         path = self.test_directory_path + prepid + '/'
         error = ''
         is_success = False
-        self.logger.info('Will try to pickup all performance')
         mcm_request.inc_validations_counter()
         try:
             (is_success, error) = mcm_request.pickup_all_performance(path)
