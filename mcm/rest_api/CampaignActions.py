@@ -126,7 +126,7 @@ class UpdateCampaign(RESTResource):
 
 class DeleteCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
+    access_limit = access_rights.administrator
 
     def __init__(self):
         self.db_name = 'campaigns'
