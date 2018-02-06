@@ -1,6 +1,6 @@
 angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window',
-  function resultsCtrl($scope, $http, $location, $window){
+  ['$scope', '$http', '$location', '$window', '$modal',
+  function resultsCtrl($scope, $http, $location, $window, $modal){
 
     $scope.defaults = [
         {text:'PrepId',select:true, db_name:'prepid'},
@@ -155,6 +155,30 @@ angular.module('testApp').controller('resultsCtrl',
         alert("Error getting information");
       });
     };
+
+  $scope.open_isSureModal = function(action, prepid){
+    var isSure = $modal.open( {
+       templateUrl: 'isSureModal.html',
+        controller: ModalIsSureCtrl,
+        resolve: {
+          prepid: function() {
+            return prepid;
+          },
+          action: function() {
+            return action;
+          }
+        }
+    });
+    isSure.result.then(function() {
+      switch (action) {
+        case "delete":
+          $scope.delete_object('campaigns', prepid);
+          break;
+        default:
+          break;
+      }
+    });
+  };
 
    $scope.$watch(function() {
       var loc_dict = $location.search();
