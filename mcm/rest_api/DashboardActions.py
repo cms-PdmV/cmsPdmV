@@ -4,6 +4,7 @@ import os
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
+import subprocess
 
 
 class GetBjobs(RESTResource):
@@ -52,17 +53,17 @@ class GetLogFeed(RESTResource):
         return self.read_logs(name, lines)
 
     def read_logs(self, name, nlines):
-
-        with open(name) as log_file:
-            try:
-                data = log_file.readlines()
-            except IOError as ex:
-                self.logger.error('Could not access logs: "{0}". Reason: {1}'.format(name, ex))
-                return {"results": "Error: Could not access logs."}
+        if not os.path.isfile(name):
+            return {'results': 'Error: File "%s" does not exist' % (name)}
 
         if nlines > 0:
-            data = data[-nlines:]
-        return {"results": ''.join(data)}
+            command = 'tail -n%d %s' % (nlines, name)
+        else:
+            command = 'cat %s' % (name)
+
+        read_process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        data = read_process.communicate()[0]
+        return {"results": data}
 
 
 class GetRevision(RESTResource):
