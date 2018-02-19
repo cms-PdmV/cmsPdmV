@@ -12,7 +12,7 @@ from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
-from simplejson import loads
+from simplejson import loads, dumps
 
 
 class CreateCampaign(RESTResource):
@@ -317,10 +317,15 @@ class CampaignsRESTResource(RESTResource):
                 mcm_r = request(r)
                 try:
                     if mcm_r:
-                        res.append(mcm_r.inspect())
+                        #making it as a stream
+                        yield dumps(mcm_r.inspect(), indent=4)
+                        #res.append(mcm_r.inspect())
                     else:
-                        res.append({"prepid": r, "results": False,
-                                'message': '%s does not exist' % (r)})
+                        #making it as a stream
+                        yield dumps({"prepid": r, "results": False,
+                                'message': '%s does not exist' % (r)}, indent=4)
+                        #res.append({"prepid": r, "results": False,
+                        #        'message': '%s does not exist' % (r)})
                 except Exception as e:
                     subject = "Exception while inspecting request "
                     message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
@@ -335,12 +340,13 @@ class CampaignsRESTResource(RESTResource):
                         base_object=mcm_r)
                     mcm_r.notify(subject, message, accumulate=True)
             time.sleep(2)
-        if len(res) > 1:
-            return res
-        elif len(res):
-            return res[0]
-        else:
-            return []
+        ## TO-DO: delete unused code
+        #if len(res) > 1:
+        #    return res
+        #elif len(res):
+        #    return res[0]
+        #else:
+        #    return []
 
 
 class ListAllCampaigns(CampaignsRESTResource):
@@ -369,7 +375,8 @@ class InspectRequests(CampaignsRESTResource):
         """
         Inspect the campaign or coma separated list of campaigns for completed requests
         """
-        return self.multiple_inspect(campaign_id)
+        return ["this api will be deprecated"]
+        #return self.multiple_inspect(campaign_id)
 
 
 class InspectCampaigns(CampaignsRESTResource):
@@ -388,6 +395,9 @@ class InspectCampaigns(CampaignsRESTResource):
         if group != 'all':
             return {"results": 'Error: Incorrect argument provided'}
         c_list = self.listAll()
+        # force pretify output in browser for multiple lines
+        self.representations = {'text/plain': self.output_text}
+
         from random import shuffle
         shuffle(c_list)
-        return self.multiple_inspect(','.join(c_list))
+        return flask.Response(flask.stream_with_context(self.multiple_inspect(','.join(c_list))))
