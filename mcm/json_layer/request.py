@@ -525,7 +525,6 @@ class request(json_base):
             if self.get_attribute('process_string') or __flow_ps:  # if both are not empty string
                 message = {"message": "Request was put to validation. Process string was provided while the sequences is the same as one of the campaign."}
 
-
         if for_chain:
             return
 
@@ -541,6 +540,7 @@ class request(json_base):
         if not do_runtest:
             self.set_status()
 
+        self.reset_validations_counter()
         if message:
             return message
 
@@ -2059,7 +2059,8 @@ class request(json_base):
             if os.path.exists(xml):
                 self.update_performance(open(xml).read(), what)
             return (True, "")
-
+        except self.WrongTimeEvent as wte:
+            raise wte
         except Exception:
             trace = traceback.format_exc()
             self.logger.error('Failed to get %s reports for %s \n %s' % (what,
@@ -2185,7 +2186,7 @@ class request(json_base):
             self.set_attribute('time_event', [__mean_value])
             self.reload()
             self.notify(subject, message, accumulate=True)
-            raise Exception(message)
+            raise self.WrongTimeEvent(message)
 
         elif (measured_time_evt >= self.get_sum_time_events() * (1 + timing_fraction)):
             __all_values = self.get_attribute('time_event') + [measured_time_evt]
@@ -2214,7 +2215,7 @@ class request(json_base):
             self.set_attribute('time_event', [__mean_value])
             self.reload()
             self.notify(subject, message, accumulate=True)
-            raise Exception(message)
+            raise self.WrongTimeEvent(message)
 
         else:
             # fine tune the value
@@ -2882,3 +2883,32 @@ class request(json_base):
         return True if there is a negative or zero value in time_event/size_event list
         """
         return any(n <= 0 for n in self.get_attribute(field))
+
+    def reset_validations_counter(self):
+        """
+        Set validation.validations_count to 0
+        """
+        self.get_attribute('validation')['validations_count'] = 0
+
+    def inc_validations_counter(self):
+        """
+        Increment validation.validations_count by 1
+        """
+        validations_count = self.get_validations_count() + 1
+        self.get_attribute('validation')['validations_count'] = validations_count
+        request_db = database('requests')
+        saved = request_db.update(self.json())
+        if not saved:
+            self.logger.error('Could not save ' + self.get_attribute('prepid'))
+
+        self.reload(save_current=False)
+
+    def get_validations_count(self):
+        """
+        Return validation.validations_count
+        """
+        validations_count = self.get_attribute('validation').get('validations_count')
+        if validations_count is None:
+            validations_count = 0
+
+        return validations_count
