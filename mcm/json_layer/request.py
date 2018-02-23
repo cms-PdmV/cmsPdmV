@@ -1166,7 +1166,7 @@ class request(json_base):
             infile += '[ -s %s ] || exit $?;\n' % (self.get_fragment())
 
         ##check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
-        if run:
+        if run and self.get_fragment():
             infile += '\n'
             infile += 'if grep -q "gridpacks" %s; then\n' % (self.get_fragment())
             infile += '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then\n ' % (self.get_fragment())
