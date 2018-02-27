@@ -306,47 +306,53 @@ class CampaignsRESTResource(RESTResource):
         res = []
         rdb = database('requests')
         index = 0
-        while len(clist) > index:
-            query = rdb.construct_lucene_complex_query([
-                ('member_of_campaign', {'value': clist[index: index + 20]}),
-                ('status', {'value': in_statuses})
-            ])
-            rlist = rdb.full_text_search('search', query, page=-1)
-            index += 20
-            for r in rlist:
-                mcm_r = request(r)
-                try:
-                    if mcm_r:
-                        #making it as a stream
-                        yield dumps(mcm_r.inspect(), indent=4)
-                        #res.append(mcm_r.inspect())
-                    else:
-                        #making it as a stream
-                        yield dumps({"prepid": r, "results": False,
-                                'message': '%s does not exist' % (r)}, indent=4)
-                        #res.append({"prepid": r, "results": False,
-                        #        'message': '%s does not exist' % (r)})
-                except Exception as e:
-                    subject = "Exception while inspecting request "
-                    message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
-                    self.logger.error(subject + message)
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REQUEST_OPERATIONS,
-                        action_objects=[mcm_r.get_attribute('prepid')],
-                        object_type='requests',
-                        base_object=mcm_r)
-                    mcm_r.notify(subject, message, accumulate=True)
-            time.sleep(2)
-        ## TO-DO: delete unused code
-        #if len(res) > 1:
-        #    return res
-        #elif len(res):
-        #    return res[0]
-        #else:
-        #    return []
+        self.logger.error("Chain inspect begin. Number of chains to be inspected: %s" % (len(clist)))
+        try:
+            while len(clist) > index:
+                yield dumps({"current cr element": "%s/%s" % (index, len(clist))}, indent=2)
+                query = rdb.construct_lucene_complex_query([
+                    ('member_of_campaign', {'value': clist[index: index + 1]}),
+                    ('status', {'value': in_statuses})
+                ])
+                ##do another loop over the requests themselves
+                req_page = 0
+                request_res = rdb.full_text_search('search', query, page=req_page)
+
+                while len(request_res) > 0:
+                    self.logger.info("inspecting single requests. page: %s" % (req_page))
+                    for r in request_res:
+                        self.logger.info("running inspect on request: %s" % (r['prepid']))
+                        mcm_r = request(r)
+
+                        if mcm_r:
+                            #making it as a stream
+                            yield dumps(mcm_r.inspect(), indent=4)
+                        else:
+                            #making it as a stream
+                            yield dumps({"prepid": r, "results": False,
+                                    'message': '%s does not exist' % (r)}, indent=4)
+
+                    req_page += 1
+                    request_res = rdb.full_text_search('search', query, page=req_page)
+                    time.sleep(0.5)
+
+                index += 1
+                time.sleep(1)
+        except Exception as e:
+            subject = "Exception while inspecting request "
+            message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
+            self.logger.error(subject + message)
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[mcm_r.get_attribute('prepid')],
+                object_type='requests',
+                base_object=mcm_r)
+            mcm_r.notify(subject, message, accumulate=True)
+
+        self.logger.info("Campaign inspection finished!")
 
 
 class ListAllCampaigns(CampaignsRESTResource):
