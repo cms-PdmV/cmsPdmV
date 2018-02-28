@@ -1460,7 +1460,7 @@ class request(json_base):
         if refresh:
             from tools.stats_updater import stats_updater
             # stats driveUpdate with search option for prepid
-            # on cmsdev04 machine
+            # on cmsdev13 machine
             updater = stats_updater()
             out = updater.update(self.get_attribute('prepid'))
 

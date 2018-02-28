@@ -3,7 +3,7 @@ from tools.ssh_executor import ssh_executor
 
 class stats_updater:
     def __init__(self, inspect=False, force=True):
-        self.ssh = ssh_executor(server='cmsdev04.cern.ch')
+        self.ssh = ssh_executor(server='cmsdev13.cern.ch')
         self.inspect = ""
         if inspect:
             self.inspect = '--inspect'
