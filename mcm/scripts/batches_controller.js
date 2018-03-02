@@ -13,6 +13,7 @@ angular.module('testApp').controller('resultsCtrl',
     $scope.filt = {}; //define an empty filter
     $scope.local_requests = {};
     $scope.underscore = _;
+    $scope.selected_prepids = [];
 
     $scope.batches_defaults = [
       {text:'PrepId',select:true, db_name:'prepid'},
@@ -226,6 +227,26 @@ angular.module('testApp').controller('resultsCtrl',
         return "";
       }
     };
+
+    $scope.add_to_selected_list = function(prepid){
+      if (_.contains($scope.selected_prepids, prepid)){
+        $scope.selected_prepids = _.without($scope.selected_prepids,prepid);
+      }else{
+        $scope.selected_prepids.push(prepid);
+      }
+    };
+
+    $scope.toggleAll = function(){
+      if ($scope.selected_prepids.length != $scope.result.length){
+        _.each($scope.result, function(v){
+          $scope.selected_prepids.push(v.prepid);
+        });
+        $scope.selected_prepids = _.uniq($scope.selected_prepids);
+      }else{
+        $scope.selected_prepids = [];
+      }
+    };
+
   }]);
 
 angular.module('testApp').controller('ModalDemoCtrl',
@@ -246,6 +267,18 @@ angular.module('testApp').controller('ModalDemoCtrl',
       });
 
       announceModal.result.then(function (data) {
+
+        // some hackish checks for multiple announcement
+        if (data.prepid == 'all' && $scope.selected_prepids.length == 0)
+        {
+          alert("No batches were selected for multiple announce");
+          return "";
+        }
+        if (data.prepid == 'all')
+        {
+          data.prepid = $scope.selected_prepids;
+        }
+
         $http({method: 'PUT', url:'restapi/batches/announce', data:{prepid: data.prepid, notes: data.mail}}).success(function(data, status){
           $scope.update["success"] = true;
           $scope.update["fail"] = false;

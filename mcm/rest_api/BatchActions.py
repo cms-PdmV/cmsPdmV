@@ -55,7 +55,7 @@ class BatchAnnouncer(RESTResource):
         if workflows != '':
             approver = RequestApprover(bid, workflows)
             result = approver.internal_run()
-            if(result['results']):
+            if (result['results']):
                 r = b.announce(message)
         else:
             r = b.announce(message)
@@ -86,12 +86,25 @@ class AnnounceBatch(BatchAnnouncer):
     def announce(self, data):
         if 'prepid' not in data or 'notes' not in data:
             raise ValueError('no prepid nor notes in batch announcement api')
+
         bdb = database('batches')
         bid = data['prepid']
-        if not bdb.document_exists(bid):
-            return {"results": False, "message": "%s is not a valid batch name" % bid}
+        res = []
 
-        return self.announce_with_text(bid, data['notes'])
+        if bid.__class__ == list:
+            ##if it's multiple announce iterate on the list of prepids
+            for el in bid:
+                if not bdb.document_exists(el):
+                    res.append({"results": False, "message": "%s is not a valid batch name" % el})
+
+                res.append(self.announce_with_text(el, data['notes']))
+        else:
+            if not bdb.document_exists(bid):
+                res = {"results": False, "message": "%s is not a valid batch name" % bid}
+
+            res = self.announce_with_text(bid, data['notes'])
+
+        return res
 
 
 class InspectBatches(BatchAnnouncer):

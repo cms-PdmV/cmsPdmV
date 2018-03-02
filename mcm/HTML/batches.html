@@ -97,6 +97,7 @@
                   <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ng-href="#"><i class="icon-screenshot"></i></a>
                   <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold/unhold batch {{data.prepid}}"  ng-href="#"><i class="icon-pause" ng-hide="role(3) || data.status!='new';"></i><i class="icon-play" ng-hide="role(3) || data.status!='hold';"></i></a>
                   <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
+                  <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" style="margin-top: 0px;margin-bottom: 6px;">
                 </div>
               </div>
               <div ng-switch-when="PrepId">
@@ -136,6 +137,15 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span5" style="margin-top:20px;">
+        <span>
+          <div ng-controller="ModalDemoCtrl">
+            Multiple selection buttons
+            <a rel="tooltip" title="Announce selected batches" ng-hide="role(3);" ng-href="#" ng-click="announceModal('all');">
+              <i class="icon-envelope"></i>
+            </a>
+            <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
+          </div>
+        </span>
       </div>
     </div>
   </span>
