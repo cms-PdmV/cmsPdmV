@@ -178,9 +178,7 @@
                       </ul>
                     </div>
                     <div ng-switch-when="Extension">
-                      <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]">
-                        <option ng-repeat="key in [0,1,2,3,4,5]" ng-selected ="result[column.db_name] == key">{{key}}</option>
-                      </select>
+                      <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
                     </div>
                     <div ng-switch-when="Allowed campaigns">
                       <div select-campaign ng-model="result[column.db_name]"></div>
