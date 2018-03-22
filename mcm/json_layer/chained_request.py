@@ -521,7 +521,7 @@ class chained_request(json_base):
             completed_events_to_pass = int(current_request.get_attribute('total_events') * statistics_fraction)
 
             notify_on_fail = True  # to be tuned according to the specific cases
-            if current_request.get_attribute('completed_events') <= 0:
+            if current_request.get_attribute('completed_events') <= 0 and current_request.get_attribute("keep_output").count(True) > 0:
                 self.logger.debug("compl_evts: %s, prepid: %s" % (
                     current_request.get_attribute('completed_events'),
                     current_request.get_attribute('prepid')))
