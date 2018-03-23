@@ -575,9 +575,10 @@ class chained_request(json_base):
                     current_request.notify(subject,
                                            message,
                                            accumulate=True)
-                raise self.ChainedRequestCannotFlowException(
-                    self.get_attribute('_id'),
-                    'The number of events completed (%s) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), completed_events_to_pass))
+                if current_request.get_attribute("keep_output").count(True) > 0:
+                    raise self.ChainedRequestCannotFlowException(
+                        self.get_attribute('_id'),
+                        'The number of events completed (%s) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), completed_events_to_pass))
 
         # select what is to happened : [create, patch, use]
         next_id = None
