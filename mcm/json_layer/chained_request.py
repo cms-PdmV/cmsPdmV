@@ -551,34 +551,40 @@ class chained_request(json_base):
                         completed_events_to_pass = next_total_events
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
-                if notify_on_fail:
-                    message = 'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
-                        current_request.get_attribute('prepid'),
-                        current_request.get_attribute('completed_events'),
-                        completed_events_to_pass,
-                        self.get_attribute('prepid'),
-                        l_type.baseurl(),
-                        current_request.get_attribute('prepid'),
-                        l_type.baseurl(),
-                        current_request.get_attribute('prepid'),
-                        l_type.baseurl(),
-                        self.get_attribute('prepid'))
-                    subject = 'Flowing %s with not enough statistics' % (current_request.get_attribute('prepid'))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.CHAINED_REQUESTS,
-                        action_objects=[self.get_attribute('prepid')],
-                        object_type='chained_requests',
-                        base_object=self)
-                    current_request.notify(subject,
-                                           message,
-                                           accumulate=True)
                 if current_request.get_attribute("keep_output").count(True) > 0:
+                    if notify_on_fail:
+                        message = 'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
+                            current_request.get_attribute('prepid'),
+                            current_request.get_attribute('completed_events'),
+                            completed_events_to_pass,
+                            self.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            current_request.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            current_request.get_attribute('prepid'),
+                            l_type.baseurl(),
+                            self.get_attribute('prepid'))
+
+                        subject = 'Flowing %s with not enough statistics' % (current_request.get_attribute('prepid'))
+
+                        notification(
+                            subject,
+                            message,
+                            [],
+                            group=notification.CHAINED_REQUESTS,
+                            action_objects=[self.get_attribute('prepid')],
+                            object_type='chained_requests',
+                            base_object=self)
+
+                        current_request.notify(subject,
+                                               message,
+                                               accumulate=True)
+
                     raise self.ChainedRequestCannotFlowException(
                         self.get_attribute('_id'),
                         'The number of events completed (%s) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), completed_events_to_pass))
+                else:
+                    self.logger.debug("we are flowing chain_req even if current request didn't kept output")
 
         # select what is to happened : [create, patch, use]
         next_id = None
