@@ -1715,6 +1715,11 @@ class request(json_base):
                     if not curr_v[-1] in tiers_expected and not skip_check:
                         continue
 
+                    if not skip_check:
+                        if not ds.split('/')[-2].split('-')[-2] in proc_strings:
+                            # most likely there is a fake/wrong dataset
+                            continue
+
                     # find and save the max version for the dataset
                     uniq_name = curr_v[1] + curr_v[-1]
 
