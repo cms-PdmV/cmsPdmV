@@ -27,6 +27,9 @@ if __name__ == "__main__":
         page += 1
 
     deleted_notifications = 0
+    print('List with %d notification ids' % (len(old_notifications_ids)))
+    old_notifications_ids = set(old_notifications_ids)
+    print('Set with %d notification ids' % (len(old_notifications_ids)))
     for notification_id in old_notifications_ids:
         if notifications_db.db.delete_doc(notification_id):
             print('Deleted %s' % (notification_id))
