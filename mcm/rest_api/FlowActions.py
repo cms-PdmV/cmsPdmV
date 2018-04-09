@@ -229,6 +229,7 @@ class UpdateFlow(FlowRESTResource):
     def update_flow(self, jsdata):
 
         cdb = database('campaigns')
+        rdb = database('requests')
         db = database(self.db_name)
         data = loads(jsdata)
         if '_rev' not in data:
@@ -244,6 +245,16 @@ class UpdateFlow(FlowRESTResource):
 
         # find out what is the change
         old = db.get(f.get_attribute('_id'))
+
+        new_process_string = data.get('request_parameters', {}).get('process_string', None)
+        old_process_string = old.get('request_parameters', {}).get('process_string', None)
+        if new_process_string != old_process_string:
+            query = rdb.construct_lucene_query({'status': 'submitted',
+                                                'flown_with': data['prepid']})
+            query_result = rdb.full_text_search("search", query, page=-1, include_fields='prepid')
+            if len(query_result) > 0:
+                return {"results": False,
+                        "message": "Cannot change process string because there are requests in 'submitted' status that are flown with %s" % (data['prepid'])}
 
         # uniquing the allowed campaigns if passed duplicates by mistake
         if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
