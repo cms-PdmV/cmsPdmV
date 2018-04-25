@@ -733,7 +733,7 @@ class chained_request(json_base):
             input_dataset = self.get_ds_input(
                 current_request.get_attribute('output_dataset'),
                 next_request.get_attribute("sequences"))
-        elif len(current_request.get_attribute('reqmgr_name')):
+        elif len(current_request.get_attribute('reqmgr_name')) and current_request.get_attribute("keep_output").count(True) > 0:
             self.logger.debug("input_ds based by request_manager....")
             last_wma = current_request.get_attribute('reqmgr_name')[-1]
             if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
