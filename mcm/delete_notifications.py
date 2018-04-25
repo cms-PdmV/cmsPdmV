@@ -10,7 +10,7 @@ if __name__ == "__main__":
     old_notifications_ids = []
     results = [{}]
     while len(results) > 0:
-        results = notifications_db.full_text_search("search", query, page=page, limit=100)
+        results = notifications_db.get_all(page_num=page, limit=100)
         print('Page %d' % (page))
         for result in results:
             if result['_id'].startswith('_') or result['_id'] == 'notification_stats':
