@@ -2536,7 +2536,6 @@ class request(json_base):
         self.get_stats()
         # increase the revision only if there was a request in req mng, or a dataset already on the table
         increase_revision = False
-        __ps_values = self.get_camp_plus_ps_and_tiers()
 
         # and put them in invalidation
         for wma in self.get_attribute('reqmgr_name'):
@@ -2556,18 +2555,15 @@ class request(json_base):
             ds_to_invalidate = list(set(ds_to_invalidate))
             increase_revision = True
 
-        for ds in ds_to_invalidate:
-            __to_invalidate = True
-            # lets check whether the rqmngr ds matches all ouput ds params.
-            for p in __ps_values:
-                __to_invalidate = all(ps in ds for ps in p)
-
-                if __to_invalidate:
-                    new_invalidation = {"object": ds, "type": "dataset", "status": "new", "prepid": self.get_attribute('prepid')}
-                    new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
-                    invalidation.save(new_invalidation)
-                    increase_revision = True
-                    break
+        # create datset invalidation for those datasets produced by request itself.
+        # we check if dataset was produced in our previously reset workflow(-s)
+        for ds in self.get_attribute("output_dataset"):
+            if ds in ds_to_invalidate:
+                self.logger.debug("adding new invalidation for ds: %s" % (ds))
+                new_invalidation = {"object": ds, "type": "dataset", "status": "new", "prepid": self.get_attribute('prepid')}
+                new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
+                invalidation.save(new_invalidation)
+                increase_revision = True
 
         # do not increase version if not in an announced batch
         bdb = database('batches')
