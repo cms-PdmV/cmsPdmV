@@ -661,6 +661,10 @@ class ChainsFromTicket(RESTResource):
         kwargs = self.parser.parse_args()
         page = kwargs['page']
         limit = kwargs['limit']
+        if page < 0:
+            page = 0
+            limit = 999999
+
         ticket_prepid = kwargs['ticket']
         chained_requests_db = database('chained_requests')
         mccms_db = database('mccms')
