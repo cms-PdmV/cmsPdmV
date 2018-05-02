@@ -422,7 +422,7 @@ class HoldCampaigns(CampaignsRESTResource):
             if headers is None:
                 headers = {}
 
-            headers['Content-type'] = 'application/json'
+            headers['Content-Type'] = 'application/json'
 
         return self.output_text(data, code, headers)
 
