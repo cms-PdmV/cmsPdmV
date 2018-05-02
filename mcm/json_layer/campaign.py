@@ -44,7 +44,8 @@ class campaign(json_base):
         'approval': '',
         'history': [],
         'memory': 2300,
-        'no_output': False}
+        'no_output': False,
+        'on_hold': 0}
 
     _json_base__status = ['stopped', 'started']
 
