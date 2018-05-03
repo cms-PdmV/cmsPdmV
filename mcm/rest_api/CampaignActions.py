@@ -13,6 +13,7 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
 from simplejson import loads, dumps
+import tools.settings as settings
 
 
 class CreateCampaign(RESTResource):
@@ -411,8 +412,11 @@ class InspectCampaigns(CampaignsRESTResource):
 
 class HoldCampaigns(CampaignsRESTResource):
 
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         CampaignsRESTResource.__init__(self)
+        self.access_user = settings.get_value('allowed_to_acknowledge')
         self.before_request()
         self.count_call()
 
