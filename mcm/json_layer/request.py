@@ -2524,6 +2524,16 @@ class request(json_base):
                                 'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (
                                     chain, mcm_r.get_attribute('prepid'), mcm_r.get_attribute('status')))
 
+        # If doing a soft reset, see if current status is submit/approved or submit submitted
+        if not hard:
+            approval = self.get_attribute('approval')
+            status = self.get_attribute('status')
+            if approval not in ['submit'] or status not in ['approved', 'submitted']:
+                self.logger.error("Trying to soft reset %s/%s request" % (approval, status))
+                raise json_base.WrongStatusSequence(status,
+                                                    approval,
+                                                    "You can soft reset only in submit/approved and submit/submitted")
+
         if hard:
             self.approve(0)
 
@@ -2603,21 +2613,13 @@ class request(json_base):
             # Doing soft reset: we should go 1 status/approval back if request is not done
             # when done, they need to do hard reset and invalidate wf's
             self.logger.info("Soft resetting request: %s " % (self.get_attribute('prepid')))
+            __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
+            __status_index = self._json_base__status.index(self.get_attribute('status'))
+            if self.get_attribute('status') == 'submitted':
+                __status_index -= 1
+            self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
+            self.set_status(step=__status_index, with_notification=True)
 
-            # see if request in approved status & and the approval is above approved
-            if self.get_attribute('status') in ['approved', 'submitted'] and self.get_attribute('approval') in ['submit']:
-                __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
-                __status_index = self._json_base__status.index(self.get_attribute('status'))
-                if self.get_attribute('status') == 'submitted':
-                    __status_index -= 1
-                self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
-                self.set_status(step=__status_index, with_notification=True)
-            else:
-                self.logger.debug("status: %s approval: %s" % (self.get_attribute('status'),
-                        self.get_attribute('approval')))
-                raise json_base.WrongStatusSequence(self.get_attribute('status'),
-                        self.get_attribute('approval'),
-                        "You cannot soft reset in status below submitted/approved")
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
