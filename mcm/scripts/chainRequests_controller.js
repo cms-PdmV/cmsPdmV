@@ -82,7 +82,8 @@ angular.module('testApp').controller('resultsCtrl',
     $scope.delete_object = function(db, value){
       $http({method:'DELETE', url:'restapi/'+db+'/delete/'+value}).success(function(data,status){
         if (data["results"]){
-          alert('Object was deleted successfully.');
+          // alert('Object was deleted successfully.');
+          $scope.setSuccess(status);
         }else{
           alert('Could not delete because '+data['message']);
         }
@@ -392,10 +393,10 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.result_status = data.status;
         $scope.got_results = true;
         $scope.parseColumns();
-      }).error(function(status){
+      }).error(function(data, status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
-        $scope.update["status_code"] = status;
+        $scope.update["status_code"] = data.status;
       });
     };
 
@@ -406,10 +407,10 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.result = data.results;
         $scope.result_status = data.status;
         $scope.got_results = true;
-      }).error(function(status){
+      }).error(function(data, status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
-        $scope.update["status_code"] = status;
+        $scope.update["status_code"] = data.status;
       });
     };
 
