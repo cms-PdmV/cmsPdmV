@@ -552,10 +552,12 @@ class chained_request(json_base):
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if current_request.get_attribute("keep_output").count(True) > 0:
+                    __percentage = 100*float(current_request.get_attribute('completed_events'))/float(completed_events_to_pass)
                     if notify_on_fail:
-                        message = 'For the request %s, the completed statistics %s is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
+                        message = 'For the request %s, the completed statistics %s (%.2f%%) is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
                             current_request.get_attribute('prepid'),
                             current_request.get_attribute('completed_events'),
+                            __percentage,
                             completed_events_to_pass,
                             self.get_attribute('prepid'),
                             l_type.baseurl(),
@@ -582,7 +584,7 @@ class chained_request(json_base):
 
                     raise self.ChainedRequestCannotFlowException(
                         self.get_attribute('_id'),
-                        'The number of events completed (%s) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), completed_events_to_pass))
+                        'The number of events completed %s (%.2f%%) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), __percentage, completed_events_to_pass))
                 else:
                     self.logger.debug("we are flowing chain_req even if current request didn't kept output")
 
