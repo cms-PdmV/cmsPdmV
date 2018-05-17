@@ -192,6 +192,10 @@
 	          <div ng-switch-when="Status">
 	            <a ng-href='campaigns?status={{data[value.db_name]}}' rel="tooltip" title="Show all campaigns in status {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	          </div>
+            <div ng-switch-when="On Hold">
+              <a ng-if="data[value.db_name] == 1" ng-href='campaigns?on_hold={{data[value.db_name]}}' rel="tooltip" title="View campaigns that are on hold" target="_self">{{data[value.db_name]}} (Yes)</a>
+              <a ng-if="data[value.db_name] != 1" ng-href='campaigns?on_hold={{data[value.db_name]}}' rel="tooltip" title="View campaigns that are not on hold" target="_self">{{data[value.db_name]}} (No)</a>
+            </div>
             <div ng-switch-default>{{data[value.db_name]}}</div>
           </div>
         </td>

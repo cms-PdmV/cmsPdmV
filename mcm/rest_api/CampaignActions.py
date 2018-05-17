@@ -13,6 +13,7 @@ from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
 from simplejson import loads, dumps
+import tools.settings as settings
 
 
 class CreateCampaign(RESTResource):
@@ -407,3 +408,52 @@ class InspectCampaigns(CampaignsRESTResource):
         from random import shuffle
         shuffle(c_list)
         return flask.Response(flask.stream_with_context(self.multiple_inspect(','.join(c_list))))
+
+
+class HoldCampaigns(CampaignsRESTResource):
+
+    access_limit = access_rights.production_manager
+
+    def __init__(self):
+        CampaignsRESTResource.__init__(self)
+        self.access_user = settings.get_value('allowed_to_acknowledge')
+        self.before_request()
+        self.count_call()
+
+    def form_response(self, data, code, headers=None):
+        if type(data) == dict:
+            data = dumps(data, indent=4)
+            if headers is None:
+                headers = {}
+
+            headers['Content-Type'] = 'application/json'
+
+        return self.output_text(data, code, headers)
+
+    def post(self):
+        """
+        Change campaign hold status. Content type 'application/json' must be set.
+        Request is a JSON with 'prepid' and 'on_hold' (0/1) attributes.
+        """
+        data = flask.request.data
+        try:
+            data_json = loads(data)
+            campaign_name = data_json['prepid']
+            campaign_hold = int(data_json['on_hold'])
+        except:
+            return self.form_response({'error': 'Request must have \'prepid\' and \'on_hold\' attributes'}, code=400)
+
+        if campaign_hold != 0 and campaign_hold != 1:
+            return self.form_response({'error': 'campaign_hold must be (0/1) or (true/false)'}, code=400)
+
+        db = database('campaigns')
+        if not db.document_exists(campaign_name):
+            return self.form_response({'error': 'Campaign %s is not found' % (campaign_name)}, code=404)
+
+        camp = campaign(json_input=db.get(campaign_name))
+        camp.set_attribute('on_hold', campaign_hold)
+        result = db.update(camp.json())
+        if result:
+            return self.form_response({'result': 'success'}, code=200)
+        else:
+            return self.form_response({'result': 'failure'}, code=500)

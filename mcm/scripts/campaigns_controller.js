@@ -11,8 +11,9 @@ angular.module('testApp').controller('resultsCtrl',
         //{text:'ProdType',select:true, db_name:'production_type'},
         {text:'CMSSW Release',select:true, db_name:'cmssw_release'},
         {text:'Energy',select:true, db_name:'energy'},
-	      {text:'Next',select:true, db_name:'next'},
-	      {text:'Notes',select:true, db_name:'notes'}
+        {text:'Next',select:true, db_name:'next'},
+        {text:'Notes',select:true, db_name:'notes'},
+        {text:'On Hold',select:false, db_name:'on_hold'}
     ];
 
     $scope.update = [];
