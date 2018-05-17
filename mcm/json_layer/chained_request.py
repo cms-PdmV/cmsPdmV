@@ -519,6 +519,7 @@ class chained_request(json_base):
             current_eff_error = 1. - current_request.get_efficiency_error()
             statistics_fraction = min(statistics_fraction, current_eff_error)
             completed_events_to_pass = int(current_request.get_attribute('total_events') * statistics_fraction)
+            total_events_for_percentage = current_request.get_attribute('total_events')
 
             notify_on_fail = True  # to be tuned according to the specific cases
             if current_request.get_attribute('completed_events') <= 0 and current_request.get_attribute("keep_output").count(True) > 0:
@@ -552,7 +553,7 @@ class chained_request(json_base):
 
             if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
                 if current_request.get_attribute("keep_output").count(True) > 0:
-                    __percentage = 100*float(current_request.get_attribute('completed_events'))/float(completed_events_to_pass)
+                    __percentage = 100*float(current_request.get_attribute('completed_events'))/float(total_events_for_percentage)
                     if notify_on_fail:
                         message = 'For the request %s, the completed statistics %s (%.2f%%) is not enough to fullfill the requirement to the next level : need at least %s in chain %s \n\n Please report to the operation HN or at the next MccM what action should be taken.\n\n %srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
                             current_request.get_attribute('prepid'),
