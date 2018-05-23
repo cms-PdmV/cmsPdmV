@@ -1180,7 +1180,7 @@ class StalledReminder(RESTResource):
         """
         rdb = database('requests')
         bdb = database('batches')
-        statsDB = database('stats', url='http://vocms084.cern.ch:5984/')
+        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
         __query = rdb.construct_lucene_query({'status': 'submitted'})
         rs = rdb.full_text_search('search', __query, page=-1)
         today = time.mktime(time.gmtime())
