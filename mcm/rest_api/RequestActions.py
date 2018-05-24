@@ -772,6 +772,42 @@ class UpdateStats(RESTResource):
                     "results": False,
                     "message": "no apparent changes"}
 
+class UpdateEventsFromWorkflow(RESTResource):
+
+    access_limit = access_rights.administrator
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, wf_id):
+        """
+        Update statistics for requests from specified workflow
+        """
+
+        rdb = database('requests')
+        __query = rdb.construct_lucene_query({"reqmgr_name": wf_id})
+        # include only prepids for us
+        res = rdb.full_text_search("search", __query, page=-1, include_fields='prepid')
+        if len(res) == 0:
+            return {"workflow": wf_id, "results": False,
+                    "message": "No requests found produced by this workflow"}
+
+        ret = []
+        # iterate on all requests running in same workflow, then put stats_update
+        # we do not trigger stats refresh as this api will be triggered by stats
+        for req in res:
+            mcm_r = request(rdb.get(req["prepid"]))
+            if mcm_r.get_stats(limit_to_set=0.0, refresh=False):
+                mcm_r.reload()
+                ret.append({"prepid": req["prepid"], "results": True})
+            else:
+                ret.append({
+                    "prepid": req["prepid"],
+                    "results": False,
+                    "message": "no apparent changes"})
+
+        return ret
 
 class SetStatus(RESTResource):
 
