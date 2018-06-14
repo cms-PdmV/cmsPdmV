@@ -58,9 +58,6 @@ class batch(json_base):
             for r in self.get_attribute('requests'):
                 pid = r['content']['pdmv_prep_id']
                 mcm_r = rdb.get(pid)
-                if len(mcm_r) == 0:
-                    continue
-
                 campaigns.add(mcm_r['member_of_campaign'])
 
             subject = "New %s production, batch %d" % (','.join(campaigns), int(batchNumber))
@@ -115,9 +112,6 @@ class batch(json_base):
             else:
                 pid = r['name'].split('_')[1]
             mcm_r = rdb.get(pid)
-            if len(mcm_r) == 0:
-                continue
-
             total_events += mcm_r['total_events']
             c = mcm_r['member_of_campaign']
             if c not in request_messages:
