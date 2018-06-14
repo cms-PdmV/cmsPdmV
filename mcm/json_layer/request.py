@@ -405,6 +405,10 @@ class request(json_base):
 
             for similar in similar_ds:
                 if similar['prepid'] == my_id:
+                    # ignore itself
+                    continue
+                if similar['prepid']['keep_output'].count(True) == 0:
+                    # ignore if request kept no output
                     continue
                 similar_r = request(similar)
                 similar_process_strings = similar_r.get_processing_strings()
