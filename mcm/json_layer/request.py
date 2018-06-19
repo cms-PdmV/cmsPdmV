@@ -1606,8 +1606,8 @@ class request(json_base):
                 completed = 0
                 # above how much change do we update : 5%
 
-            if ((float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')) and
-                self.get_attribute("keep_output").count(True) > 0)) or forced == True:
+            if (((float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events'))) or forced) and
+                    self.get_attribute("keep_output").count(True) > 0):
 
                 self.set_attribute('completed_events', completed)
                 changes_happen = True
