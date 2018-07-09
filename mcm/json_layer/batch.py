@@ -137,7 +137,7 @@ class batch(json_base):
             message += "This batch is a resubmission : v{0}\n".format(self.get_attribute('version') + 1)
         message += "Link to the batch:\n"
         l_type = locator()
-        message += '%s/batches?prepid=%s \n\n' % (l_type.baseurl(), self.get_attribute('prepid'))
+        message += '%sbatches?prepid=%s \n\n' % (l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
             message += "Additional comments for this batch:\n" + current_notes + '\n'
 
