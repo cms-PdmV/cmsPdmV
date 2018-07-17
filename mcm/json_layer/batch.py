@@ -21,7 +21,7 @@ class batch(json_base):
         'version': 0
     }
 
-    _json_base__status = ['new', 'announced', 'done']
+    _json_base__status = ['new', 'being_announced', 'announced', 'done']
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
@@ -81,6 +81,11 @@ class batch(json_base):
         if len(self.get_attribute('requests')) == 0:
             return False
 
+        # Toggle status to being_announced
+        self.logger.info('Will announce %s' % (self.get_attribute('prepid')))
+        self.set_status()
+        self.logger.info('Batch "%s" status is %s' % (self.get_attribute('prepid'), self.get_attribute('status')))
+
         current_notes = self.get_attribute('notes')
         if current_notes:
             current_notes += '\n'
@@ -109,7 +114,9 @@ class batch(json_base):
             mcm_r = rdb.get(pid)
             total_events += mcm_r['total_events']
             c = mcm_r['member_of_campaign']
-            if c not in request_messages: request_messages[c] = ""
+            if c not in request_messages:
+                request_messages[c] = ""
+
             request_messages[c] += " * %s (%s) -> %s\n" % (pid, mcm_r['dataset_name'], r['name'])
 
         campaigns = sorted(request_messages.keys())
@@ -130,7 +137,7 @@ class batch(json_base):
             message += "This batch is a resubmission : v{0}\n".format(self.get_attribute('version') + 1)
         message += "Link to the batch:\n"
         l_type = locator()
-        message += '%s/batches?prepid=%s \n\n' % (l_type.baseurl(), self.get_attribute('prepid'))
+        message += '%sbatches?prepid=%s \n\n' % (l_type.baseurl(), self.get_attribute('prepid'))
         if current_notes:
             message += "Additional comments for this batch:\n" + current_notes + '\n'
 
@@ -163,5 +170,6 @@ class batch(json_base):
         # toggle the status
         # only when we are sure it functions self.set_status()
         self.set_status()
+        self.logger.info('Batch "%s" status is %s' % (self.get_attribute('prepid'), self.get_attribute('status')))
 
         return True

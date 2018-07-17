@@ -752,9 +752,39 @@ class request(json_base):
             for r in chain:
                 if r == self.get_attribute('prepid'):
                     continue  # no self checking
+
                 mcm_r = request(rdb.get(r))
                 # we can move on to submit if everything coming next in the chain is new
                 moveon_with_single_submit &= (mcm_r.get_attribute('status') in ['new'])
+
+        fdb = database('flows')
+        ccdb = database('chained_campaigns')
+        # Check if any of the requests in any chained requests are new to block automatic submission.
+        for c in self.get_attribute('member_of_chain'):
+            mcm_cr = crdb.get(c)
+            chain = mcm_cr['chain'][mcm_cr['step']:]
+            chained_campaign = ccdb.get(mcm_cr['member_of_campaign'])
+
+            # Flag means whether chained campaign is active. If it's not active, ignore it
+            if not chained_campaign.get('action_parameters', {}).get('flag', True):
+                self.logger.info('Chained campaign %s flag is off, skipping check' % (chained_campaign.get_attribute('prepid')))
+                continue
+
+            for r in chain:
+                if r == self.get_attribute('prepid'):
+                    # No self checking
+                    continue
+
+                mcm_r = request(rdb.get(r))
+                mcm_r_flow = flow(fdb.get(mcm_r.get_attribute('flown_with')))
+                if mcm_r_flow.get_attribute('approval') in ['submit', 'tasksubmit'] and mcm_r.get_attribute('status') in ['new']:
+                    raise self.WrongApprovalSequence(
+                        self.get_attribute('status'),
+                        'submit',
+                        'The request %s could not be submitted because following request %s is none-new and flow is "%s". Approve following requests first.' % (
+                            self.get_attribute('prepid'),
+                            mcm_r.get_attribute('prepid'),
+                            mcm_r_flow.get_attribute('approval')))
 
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
@@ -1606,8 +1636,8 @@ class request(json_base):
                 completed = 0
                 # above how much change do we update : 5%
 
-            if ((float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events')) and
-                self.get_attribute("keep_output").count(True) > 0)) or forced == True:
+            if (((float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events'))) or forced) and
+                    self.get_attribute("keep_output").count(True) > 0):
 
                 self.set_attribute('completed_events', completed)
                 changes_happen = True
