@@ -303,9 +303,9 @@ class chained_request(json_base):
         count_limit = None
         campaign_limit = None
         if limit:
-            if limit:
-                # just protect for unexpected input
-                self.logger.error('limit=True was passed on to reservation. No limit set')
+            self.logger.info('limit: %s was passed on to reservation.' % (limit))
+            if limit.__class__ == bool:
+                campaign_limit = None
             elif limit.isdigit():
                 count_limit = int(limit)
             else:
@@ -423,7 +423,6 @@ class chained_request(json_base):
                     self.get_attribute('member_of_campaign')
                 )
             )
-
         if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
             return {'result': False}
 
