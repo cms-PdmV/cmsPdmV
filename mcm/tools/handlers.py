@@ -109,18 +109,18 @@ class ConfigMakerAndUploader(Handler):
     def internal_run(self):
         self.inject_logger.info('Before lock 1')
         if not self.lock.acquire(blocking=False):
-            self.logger.error('Could not acquire lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
+            self.inject_logger.error('Could not acquire lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             return False
 
         try:
-            self.logger.info('Acquired lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
+            self.inject_logger.info('Acquired lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             request_db = database('requests')
             req = request(request_db.get(self.prepid))
             ret = req.prepare_and_upload_config()
             return True if ret else False
 
         finally:
-            self.logger.info('Releasing a lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
+            self.inject_logger.info('Releasing a lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             self.lock.release()
 
 
@@ -302,8 +302,7 @@ class SubmissionsBase(Handler):
         locator_type = locator()
         command = 'cd %s \n' % (locator_type.workLocation())
         command += mcm_r.make_release()
-        # command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/j/jrumsevi/private/voms_proxy.cert\n'
+        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
         if locator_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
@@ -338,9 +337,9 @@ class SubmissionsBase(Handler):
                     object_type='chained_requests',
                     base_object=req)
             else:
-                self.logger.error('Could not notify. Unsupported type: %s.\nSubject: %s\nMessage: %s' % (type(req),
-                                                                                                         subject,
-                                                                                                         message))
+                self.inject_logger.error('Could not notify. Unsupported type: %s.\nSubject: %s\nMessage: %s' % (type(req),
+                                                                                                                subject,
+                                                                                                                message))
                 return
 
             req.notify(subject, message)
