@@ -2771,19 +2771,6 @@ class request(json_base):
             for i in to_release:
                 locker.release(i)
 
-    def prepare_submit_command(self):
-        l_type = locator()
-        command = 'cd %s \n' % (l_type.workLocation())
-        command += self.make_release()
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        test_params = ''
-        if l_type.isDev():
-            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        command += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/requests/get_dict/%s %s \n' % (l_type.baseurl(), self.get_attribute('prepid'), test_params)
-        return command
-
     def get_events_per_lumi(self, num_cores):
         cdb = database('campaigns')
         camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))

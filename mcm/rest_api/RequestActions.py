@@ -1671,7 +1671,7 @@ class GetInjectCommand(RESTResource):
             self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(request_id))
             return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
         req = request(db.get(request_id))
-        return req.prepare_submit_command()
+        return RequestInjector(prepid=request_id).make_injection_command(req)
 
 
 class GetUniqueValues(RESTResource):

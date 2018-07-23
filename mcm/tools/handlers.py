@@ -131,8 +131,7 @@ class SubmissionsBase(Handler):
         self.prepid = kwargs['prepid']
         self.request_db = database('requests')
         self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
-        self.lock = kwargs['lock']  # Internal process lock for resources
-        self.queue_lock = kwargs['queue_lock']  # Lock if request is put in processing pool
+        self.queue_lock = kwargs.get('queue_lock', None)  # Lock if request is put in processing pool
         self.check_approval = kwargs.get('check_approval', True)
         self.database_name = None
 
