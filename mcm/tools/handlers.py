@@ -245,7 +245,7 @@ class SubmissionsBase(Handler):
 
     def internal_run(self):
         self.inject_logger.info('Request injection: %s' % (self.prepid))
-        self.requests, self.task_name, self.batch_name = self.get_requests_batch_type()
+        self.requests, self.batch_name, self.task_name = self.get_requests_batch_type()
         self.inject_logger.info('Before lock 3')
         with locker.lock('%s-wait-for-approval' % (self.prepid)):
             self.inject_logger.info('Will acquire lock for RequestInjector. prepid %s' % (self.prepid))
