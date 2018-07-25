@@ -107,7 +107,6 @@ class ConfigMakerAndUploader(Handler):
         self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
 
     def internal_run(self):
-        self.inject_logger.info('Before lock 1')
         if not self.lock.acquire(blocking=False):
             self.inject_logger.error('Could not acquire lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             return False
@@ -159,7 +158,6 @@ class SubmissionsBase(Handler):
         return True
 
     def inject_configs(self):
-        self.inject_logger.info('Before lock 2')
         if not self.lock.acquire(blocking=False):
             self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
             return False
@@ -169,7 +167,6 @@ class SubmissionsBase(Handler):
             mcm_r = self.requests[-1]
             self.batch_name = BatchPrepId().next_batch_id(self.batch_name, create_batch=True)
             if self.batch_name:
-                self.inject_logger.info('Semaphore 1')
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
@@ -246,10 +243,8 @@ class SubmissionsBase(Handler):
     def internal_run(self):
         self.inject_logger.info('Request injection: %s' % (self.prepid))
         self.requests, self.batch_name, self.task_name = self.get_requests_batch_type()
-        self.inject_logger.info('Before lock 3')
         with locker.lock('%s-wait-for-approval' % (self.prepid)):
             self.inject_logger.info('Will acquire lock for RequestInjector. prepid %s' % (self.prepid))
-            self.inject_logger.info('Before lock 4')
             if not self.lock.acquire(blocking=False):
                 message = 'The request with name %s is being handled already' % (self.prepid)
                 self.inject_logger.error(message)
