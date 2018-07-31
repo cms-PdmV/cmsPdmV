@@ -196,7 +196,7 @@ angular.module('testApp').controller('resultsCtrl',
     }
 
     $scope.approve_gen_request = function(prepids){
-      $http({method:'GET', url:'restapi/requests/approve/' + prepids}).success(function(data,status){
+      $http({method:'POST', url:'restapi/requests/approve', data: prepids}).success(function(data,status){
         if (!$scope.isArray(data)){
           data = [data];
         }
