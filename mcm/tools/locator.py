@@ -6,20 +6,15 @@ class locator:
         pass
 
     def isDev(self):
-        host = os.environ['HOSTNAME']
-
-        if host in ['vocms085.cern.ch']:  # openstack -dev machine
-            return True
-        elif host in ['vocms093.cern.ch', 'vocms087.cern.ch']:  # prod and int machines
-            return False
-        return True
+        return not (self.isInt() or self.isProd())
 
     def isInt(self):
         host = os.environ['HOSTNAME']
-        if host in ['vocms087.cern.ch']:  # int machine
-            return True
-        else:
-            return False
+        return host in ['vocms082.cern.ch']  # Int machine
+
+    def isProd(self):
+        host = os.environ['HOSTNAME']
+        return host in ['vocms093.cern.ch']  # Prod machine
 
     def dbLocation(self):
         if self.isDev():

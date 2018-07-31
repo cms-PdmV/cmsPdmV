@@ -30,6 +30,7 @@ import logging
 import logging.handlers
 import shelve
 import datetime
+import sys
 
 
 RESTResource.counter = shelve.open('.mcm_rest_counter')
@@ -214,6 +215,7 @@ api.add_resource(
 api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
 api.add_resource(
     ApproveRequest,
+    '/restapi/requests/approve',
     '/restapi/requests/approve/<string:request_id>',
     '/restapi/requests/approve/<string:request_id>/<int:step>')
 api.add_resource(
@@ -411,41 +413,54 @@ api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_ac
 api.add_resource(SearchNotifications, '/restapi/notifications/search')
 api.add_resource(MarkAsSeen, '/restapi/notifications/mark_as_seen')
 # Define loggers
-# ERROR log file
 error_logger = app.logger
-maxBytes = getattr(error_logger, "rot_maxBytes", 10000000)
-backupCount = getattr(error_logger, "rot_backupCount", 1000)
-fname = getattr(error_logger, "rot_error_file", "logs/error.log")
+max_bytes = getattr(error_logger, "rot_maxBytes", 10000000)
+backup_count = getattr(error_logger, "rot_backupCount", 1000)
 logger = logging.getLogger()
 logger.setLevel(0)
-ha = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S')
-usr_filt = UserFilter()
-ha.setFormatter(error_formatter)
-ha.addFilter(usr_filt)
-error_logger.addHandler(ha)
-# set up injection logger
+user_filter = UserFilter()
+memory_filter = MemoryFilter()
+logging.getLogger('werkzeug').disabled = True
+console_logging = False
+console_handler = logging.StreamHandler(sys.stdout)
+# Error logger
+if console_logging:
+    error_handler = console_handler
+else:
+    error_log_filename = getattr(error_logger, "rot_error_file", "logs/error.log")
+    error_handler = logging.handlers.RotatingFileHandler(error_log_filename, 'a', max_bytes, backup_count)
+
+error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+error_handler.setFormatter(error_formatter)
+error_handler.addFilter(user_filter)
+error_logger.addHandler(error_handler)
+
+# Injection logger
 # due to LogAdapter empty space for message will be added inside of it
-inject_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S')
-inject_logger = logging.getLogger("mcm_inject")
-hi = logging.FileHandler('logs/inject.log', 'a')
-hi.setFormatter(inject_formatter)
-inject_logger.addHandler(hi)
+injection_logger = logging.getLogger("mcm_inject")
+if console_logging:
+    injection_handler = console_handler
+else:
+    injection_handler = logging.FileHandler('logs/inject.log', 'a')
+
+injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+injection_handler.setFormatter(injection_formatter)
+injection_logger.addHandler(injection_handler)
+
 # Access log file
 access_logger = logging.getLogger("access_log")
-fname = getattr(access_logger, "rot_access_file", "logs/access.log")
-h = logging.handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-rest_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S')
-mem_filt = MemoryFilter()
-h.setLevel(logging.DEBUG)
-h.setFormatter(rest_formatter)
-h.addFilter(usr_filt)
-h.addFilter(mem_filt)
-access_logger.addHandler(h)
-logging.getLogger('werkzeug').disabled = True
+access_log_filename = getattr(access_logger, "rot_access_file", "logs/access.log")
+if console_logging:
+    access_handler = console_handler
+else:
+    access_handler = logging.handlers.RotatingFileHandler(access_log_filename, 'a', max_bytes, backup_count)
+
+access_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+access_handler.setLevel(logging.DEBUG)
+access_handler.setFormatter(access_formatter)
+access_handler.addFilter(user_filter)
+access_handler.addFilter(memory_filter)
+access_logger.addHandler(access_handler)
 
 # Log accesses
 def after_this_request(f):

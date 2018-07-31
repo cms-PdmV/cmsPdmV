@@ -572,11 +572,20 @@ class ApproveRequest(RESTResource):
         self.before_request()
         self.count_call()
 
-    def get(self, request_id, step=-1):
+    def get(self, request_id=None, step=-1):
         """
         Approve to the next step, or specified index the given request or coma separated list of requests
         """
+        if request_id is None:
+            return {'results': False, 'message': 'No prepid was given'}
+
         return self.multiple_approve(request_id, step)
+
+    def post(self, request_id=None, step=-1):
+        """
+        Approve to next step. Ignore GET parameter, use list of prepids from POST data
+        """
+        return self.multiple_approve(flask.request.data)
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
@@ -1671,7 +1680,7 @@ class GetInjectCommand(RESTResource):
             self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(request_id))
             return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
         req = request(db.get(request_id))
-        return req.prepare_submit_command()
+        return RequestInjector(prepid=request_id).make_injection_command(req)
 
 
 class GetUniqueValues(RESTResource):
