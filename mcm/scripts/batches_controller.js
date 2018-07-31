@@ -7,6 +7,10 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.dbName = $location.search()["db_name"];
     }
 
+    if ($location.search()["status"] === undefined) {
+      $location.search("status", "new");
+    }
+
     $scope.puce = {};
     $scope.r_status = {};
     $scope.update = [];
