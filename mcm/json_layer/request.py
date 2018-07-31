@@ -30,6 +30,14 @@ from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
 
 
+class AFSPermissionError(Exception):
+    def __init__(self, message=None):
+        self.message = message
+
+    def __str__(self):
+        return 'AFS permission error: %s' % (self.message)
+
+
 class request(json_base):
     class DuplicateApprovalStep(Exception):
         def __init__(self, approval=None):
@@ -1461,6 +1469,7 @@ class request(json_base):
         if rewind:
             self.set_status(0)
             self.approve(0)
+
         self.update_history({'action': 'failed'})
         if with_notification:
             subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
@@ -1474,6 +1483,7 @@ class request(json_base):
                 base_object=self
             )
             self.notify(subject, message)
+
         self.reload()
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
@@ -2654,7 +2664,6 @@ class request(json_base):
             self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
             self.set_status(step=__status_index, with_notification=True)
 
-
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
@@ -2717,6 +2726,9 @@ class request(json_base):
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
+                            if '.bashrc: Permission denied' in error:
+                                raise AFSPermissionError(error)
+
                             return False
                         cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
@@ -2758,19 +2770,6 @@ class request(json_base):
         finally:
             for i in to_release:
                 locker.release(i)
-
-    def prepare_submit_command(self):
-        l_type = locator()
-        command = 'cd %s \n' % (l_type.workLocation())
-        command += self.make_release()
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        test_params = ''
-        if l_type.isDev():
-            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        command += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/requests/get_dict/%s %s \n' % (l_type.baseurl(), self.get_attribute('prepid'), test_params)
-        return command
 
     def get_events_per_lumi(self, num_cores):
         cdb = database('campaigns')

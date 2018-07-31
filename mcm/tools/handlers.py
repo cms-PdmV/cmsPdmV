@@ -12,7 +12,7 @@ from tools.locker import locker, semaphore_events
 import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
-from json_layer.request import request
+from json_layer.request import request, AFSPermissionError
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from json_layer.notification import notification
@@ -102,175 +102,356 @@ class ConfigMakerAndUploader(Handler):
 
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
-        self.prepid = kwargs["prepid"]
-        self.request_db = database("requests")
+        self.prepid = kwargs['prepid']
+        self.check_approval = kwargs.get('check_approval', True)
+        self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
 
     def internal_run(self):
         if not self.lock.acquire(blocking=False):
-            self.logger.error("Could not acquire lock for ConfigMakerAndUploader. prepid %s" % (
-                self.prepid))
+            self.inject_logger.error('Could not acquire lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             return False
+
         try:
-            self.logger.info("Acquired lock for ConfigMakerAndUploader. prepid %s" % (
-                self.prepid))
-            req = request(self.request_db.get(self.prepid))
+            self.inject_logger.info('Acquired lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
+            request_db = database('requests')
+            req = request(request_db.get(self.prepid))
             ret = req.prepare_and_upload_config()
             return True if ret else False
+
         finally:
-            self.logger.info("Releasing a lock for ConfigMakerAndUploader. prepid %s" % (
-                self.prepid))
+            self.inject_logger.info('Releasing a lock for ConfigMakerAndUploader. prepid %s' % (self.prepid))
             self.lock.release()
 
 
-class RequestSubmitter(Handler):
-    """
-    Class injecting the request
-    """
+class SubmissionsBase(Handler):
 
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
-        self.prepid = kwargs["prepid"]
-        self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
+        self.prepid = kwargs['prepid']
         self.request_db = database('requests')
-        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"), {'handle': self.prepid})
+        self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
+        self.queue_lock = kwargs.get('queue_lock', None)  # Lock if request is put in processing pool
+        self.check_approval = kwargs.get('check_approval', True)
+        self.database_name = None
 
-    def injection_error(self, message, req):
-        self.inject_logger.info(message)
-        if req:
-            req.test_failure(message, what='Request injection')
-
-    def check_request(self):
-        if not self.request_db.document_exists(self.prepid):
-            self.inject_logger.error("The request {0} does not exist".format(self.prepid))
-            return False, None
-        req = request(self.request_db.get(self.prepid))
-        if self.check_approval and req.get_attribute('approval') != 'submit':
-            self.injection_error(
-                "The request is in approval {0}, while submit is required".format(
-                    req.get_attribute('approval')), req)
-
-            return False, None
-        if req.get_attribute('status') != 'approved':
-            self.injection_error(
-                "The request is in status {0}, while approved is required".format(
-                    req.get_attribute('status')), req)
-            return False, None
-        return True, req
-
-    def internal_run(self):
-        try:
-            if not self.lock.acquire(blocking=False):
-                self.injection_error('Couldnt acquire lock', None)
+    def submit_configs(self):
+        # Upload all config files to config cache, with "configuration economy" already implemented
+        for req in self.requests:
+            if (self.check_approval and req.get_attribute('approval') != 'approve') or req.get_attribute('status') != 'approved':
+                message = 'Request %s is in "%s"/"%s" approval/status, requires "approve"/"approved"' % (
+                    self.prepid,
+                    req.get_attribute('approval'),
+                    req.get_attribute('status'))
+                self.inject_logger.error(message)
                 return False
-            try:
-                okay, req = self.check_request()
-                if not okay:
+
+            req.set_attribute('approval', 'submit')
+            req.reload()
+            self.inject_logger.info('Set %s to %s/%s' % (self.prepid,
+                                                         req.get_attribute('approval'),
+                                                         req.get_attribute('status')))
+            request_prepid = req.get_attribute('prepid')
+            uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
+            if not uploader.internal_run():
+                return False
+
+        return True
+
+    def inject_configs(self):
+        if not self.lock.acquire(blocking=False):
+            self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
+            return False
+
+        self.inject_logger.info('Injection with prepid %s' % (self.prepid))
+        try:
+            mcm_r = self.requests[-1]
+            self.batch_name = BatchPrepId().next_batch_id(self.batch_name, create_batch=True)
+            if self.batch_name:
+                semaphore_events.increment(self.batch_name)
+
+            self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
+            with ssh_executor(server='vocms081.cern.ch') as ssh:
+                cmd = self.make_injection_command(mcm_r)
+                self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
+                # modify here to have the command to be executed
+                _, stdout, stderr = ssh.execute(cmd)
+                output = stdout.read()
+                error = stderr.read()
+                if error:
+                    self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
+                    if '.bashrc: Permission denied' in error:
+                        raise AFSPermissionError(error)
+
+                if output:
+                    self.inject_logger.info('Output for %s injection. %s' % (self.prepid, output))
+
+                if error and not output:  # money on the table that it will break as well?
+                    self.notify('Request injection failed for %s' % (self.prepid),
+                                'Error in wmcontrol: %s' % (error),
+                                mcm_r)
                     return False
 
-                batch_name = BatchPrepId().next_batch_id(req.get_attribute("member_of_campaign"),
-                    create_batch=True)
+                output_lines = output.split('\n')
+                injected_workflows = [line.split()[-1] for line in output_lines if line.startswith('Injected workflow:')]
+                if not injected_workflows:
+                    # No workflows were created
+                    self.notify('Request injection happened but no request manager names for %s' % (self.prepid),
+                                'Injection has succeeded but no request manager names were registered. ' +
+                                'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (output, error),
+                                mcm_r)
+                    return False
+                else:
+                    self.inject_logger.info('Injected workflows: %s' % (injected_workflows))
 
-                semaphore_events.increment(batch_name)  # so it's not possible to announce while still injecting
-                executor = ssh_executor(server='vocms081.cern.ch')
-                try:
-                    cmd = req.prepare_submit_command()
-                    self.inject_logger.info("Command being used for injecting request {0}: {1}".format(
-                        self.prepid, cmd))
-                    _, stdout, stderr = executor.execute(cmd)
-                    if not stdout and not stderr:
-                        self.injection_error('ssh error for request {0} injection'.format(
-                            self.prepid), req)
+                # what gets printed into the batch object
+                added_request_managers = []
+                once = set()
+                for mcm_r in self.requests:
+                    if mcm_r.get_attribute('prepid') in once:
+                        continue
+
+                    once.add(mcm_r.get_attribute('prepid'))
+                    added = [{'name': workflow,
+                              'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for workflow in injected_workflows]
+                    added_request_managers.extend(added)
+
+                # edit the batch object
+                with locker.lock(self.batch_name):
+                    bdb = database('batches')
+                    bat = batch(bdb.get(self.batch_name))
+                    bat.add_requests(added_request_managers)
+                    bat.update_history({'action': 'updated', 'step': self.task_name})
+                    if not bat.reload():
+                        self.inject_logger.error('Error saving %s' % (self.batch_name))
                         return False
-                    output = stdout.read()
-                    error = stderr.read()
-                    self.injection_error(output, None)
-                    self.injection_error(error, None)
-                    if error and not output:  # money on the table that it will break as well?
-                        self.injection_error('Error in wmcontrol: {0}'.format(error), req)
-                        return False
 
-                    injected_requests = [l.split()[-1] for l in output.split('\n') if
-                            l.startswith('Injected workflow:')]
+                # reload the content of all requests as they might have changed already
+                return self.injection_succeeded(added_request_managers)
 
-                    if not injected_requests:
-                        self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s' % (
-                            output, error), req)
-                        return False
-
-                    # another great structure
-                    added_requests = [{'name': app_req, 'content': {'pdmv_prep_id': self.prepid}} for app_req in injected_requests]
-                    requests = req.get_attribute('reqmgr_name')
-                    requests.extend(added_requests)
-                    req.set_attribute('reqmgr_name', requests)
-                    # inject to batch
-                    with locker.lock(batch_name):
-                        bdb = database('batches')
-                        bat = batch(bdb.get(batch_name))
-                        bat.add_requests(added_requests)
-                        bat.update_history({'action': 'updated', 'step': self.prepid})
-                        saved = bdb.update(bat.json())
-                    if not saved:
-                        self.injection_error(
-                            'There was a problem with registering request in the batch {0}'.format(
-                                batch_name), req)
-                        return False
-                    # and in the end update request in database
-                    req.update_history({'action': 'inject', 'step': batch_name})
-                    req.set_status(step=req._json_base__status.index('submitted'), with_notification=True)
-                    saved = self.request_db.update(req.json())
-                    if not saved:
-                        self.injection_error('Could not update request {0} in database'.format(
-                            self.prepid), req)
-                        return False
-                    for added_req in added_requests:
-                        self.inject_logger.info('Request {0} sent to {1}'.format(
-                            added_req['name'], batch_name))
-
-                    return True
-                finally:  # lover batch semahore, created on submission time
-                    semaphore_events.decrement(batch_name)
-
-            finally:  # finally release Sumbitter lock
-                self.lock.release()
-                try:
-                    executor.close_executor()
-                except UnboundLocalError:
-                    pass
+        except AFSPermissionError as ape:
+            raise ape
         except Exception:
-            self.injection_error('Error with injecting the {0} request:\n{1}'.format(self.prepid, traceback.format_exc()), None)
+            self.inject_logger.error("Error with injecting chains for %s :\n%s" % (self.prepid, traceback.format_exc()))
+        finally:  # we decrement batch id and release lock on prepid+lower semaphore
+            if self.batch_name:  # ditry thing for now. Because batch name can be None for certain use-cases in code above
+                semaphore_events.decrement(self.batch_name)
 
-
-class RequestInjector(Handler):
-    def __init__(self, **kwargs):
-        Handler.__init__(self, **kwargs)
-        self.lock = kwargs["lock"]  # internal process lock for recources
-        self.prepid = kwargs["prepid"]
-        self.uploader = ConfigMakerAndUploader(**kwargs)
-        self.submitter = RequestSubmitter(**kwargs)
-        self.queue_lock = kwargs["queue_lock"]  # lock if request is put in processing POOL
-        self.inject_logger = InjectionLogAdapter(logging.getLogger("mcm_inject"), {'handle': self.prepid})
+            self.lock.release()
+            if self.queue_lock:
+                self.queue_lock.release()
 
     def internal_run(self):
-        self.inject_logger.info('## Logger instance retrieved')
-        with locker.lock('{0}-wait-for-approval'.format(self.prepid)):
-            self.logger.info("Acquire lock for RequestInjector. prepid %s" % (self.prepid))
+        self.inject_logger.info('Request injection: %s' % (self.prepid))
+        self.requests, self.batch_name, self.task_name = self.get_requests_batch_type()
+        with locker.lock('%s-wait-for-approval' % (self.prepid)):
+            self.inject_logger.info('Will acquire lock for RequestInjector. prepid %s' % (self.prepid))
             if not self.lock.acquire(blocking=False):
+                message = 'The request with name %s is being handled already' % (self.prepid)
+                self.inject_logger.error(message)
                 return {
-                    "prepid": self.prepid,
-                    "results": False,
-                    "message": "The request with name {0} is being handled already".format(self.prepid)}
+                    'prepid': self.prepid,
+                    'results': False,
+                    'message': message}
+
             try:
-                if not self.uploader.internal_run():
+                if not self.submit_configs():
+                    message = 'Problem with uploading the configuration for %s' % (self.prepid)
+                    self.inject_logger.error(message)
                     return {
                         "prepid": self.prepid,
                         "results": False,
-                        "message": "Problem with uploading the configuration for request {0}".format(self.prepid)}
-                __ret = self.submitter.internal_run()
-                self.inject_logger.info('Request submitter returned: %s' % (__ret))
+                        "message": message}
+                else:
+                    self.inject_logger.info('Configs uploaded successfully for %s' % (self.prepid))
+
+                if not self.inject_configs():
+                    message = 'Problem with injecting %s' % (self.prepid)
+                    self.inject_logger.error(message)
+                    return {
+                        "prepid": self.prepid,
+                        "results": False,
+                        "message": message}
+                else:
+                    self.inject_logger.info('Injected successfully for %s' % (self.prepid))
+
+                self.inject_logger.info('Successfully uploaded config and injected %s' % (self.prepid))
+            except AFSPermissionError:
+                self.inject_logger.error('Got AFS permission error')
+                for req in self.requests:
+                    if req.get_attribute('approval') == 'submit' and req.get_attribute('status') == 'approved':
+                        self.inject_logger.info('Setting %s to approve/approved' % (req.get_attribute('prepid')))
+                        req.reload(save_current=False)
+                        req.update_history({'action': 'inject', 'step': 'Injection failed (AFS). Setting to approve/approved'})
+                        req.set_attribute('approval', 'approve')
+                        req.reload()
+                    else:
+                        self.inject_logger.info('Not soft resetting %s, because it is %s-%s' % (req.get_attribute('prepid'),
+                                                                                                req.get_attribute('approval'),
+                                                                                                req.get_attribute('status')))
 
             finally:
                 self.lock.release()
-                self.queue_lock.release()
+                # self.queue_lock.release()
+
+    def make_injection_command(self, mcm_r=None):
+        locator_type = locator()
+        command = 'cd %s \n' % (locator_type.workLocation())
+        command += mcm_r.make_release()
+        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        test_params = ''
+        if locator_type.isDev():
+            test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
+
+        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
+        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        command += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/%s/get_dict/%s %s \n' % (locator_type.baseurl(),
+                                                                                                     self.database_name,
+                                                                                                     self.prepid,
+                                                                                                     test_params)
+        return command
+
+    def notify(self, subject, message, req):
+        self.inject_logger.info('Notify:\n  Subject: %s\n\n  Message: %s' % (subject, message))
+        if req is not None:
+            if req.__class__ == request:
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.REQUEST_OPERATIONS,
+                    action_objects=[req.get_attribute('prepid')],
+                    object_type='requests',
+                    base_object=req)
+            elif req.__class__ == chained_request:
+                notification(
+                    subject,
+                    message,
+                    [],
+                    group=notification.CHAINED_REQUESTS,
+                    action_objects=[req.get_attribute('prepid')],
+                    object_type='chained_requests',
+                    base_object=req)
+            else:
+                self.inject_logger.error('Could not notify. Unsupported type: %s.\nSubject: %s\nMessage: %s' % (type(req),
+                                                                                                                subject,
+                                                                                                                message))
+                return
+
+            req.notify(subject, message)
+
+    def injection_succeeded(self, added_requests):
+        raise NotImplementedError()
+
+    def get_requests_batch_type(self):
+        '''
+        Return a list of requests, batch name and task type
+        '''
+        raise NotImplementedError()
+
+
+class RequestInjector(SubmissionsBase):
+    def __init__(self, **kwargs):
+        SubmissionsBase.__init__(self, **kwargs)
+        self.database_name = 'requests'
+
+    def get_requests_batch_type(self):
+        '''
+        Return a list of requests, batch name and task type
+        '''
+        self.req = request(self.request_db.get(self.prepid))
+        return [self.req], self.req.get_attribute('member_of_campaign'), self.prepid
+
+    def injection_succeeded(self, added_request_managers):
+        self.req.reload(save_current=False)
+        request_managers = self.req.get_attribute('reqmgr_name')
+        request_managers.extend(added_request_managers)
+        self.req.set_attribute('reqmgr_name', request_managers)
+        # and in the end update request in database
+        self.req.update_history({'action': 'inject', 'step': self.batch_name})
+        self.req.set_status(step=self.req._json_base__status.index('submitted'), with_notification=True)
+        saved = self.request_db.update(self.req.json())
+        if not saved:
+            self.inject_logger.error('Could not update request %s in database' % (self.prepid))
+            return False
+
+        subject = 'Injection succeeded for %s' % self.requests[-1].get_attribute('prepid')
+        self.notify(subject, self.req.textified(), self.req)
+        for added_req in added_request_managers:
+            self.inject_logger.info('Request %s added to %s' % (added_req['name'], self.batch_name))
+
+        return True
+
+
+class ChainRequestInjector(SubmissionsBase):
+    def __init__(self, **kwargs):
+        SubmissionsBase.__init__(self, **kwargs)
+        self.chained_requests_db = database('chained_requests')
+        self.database_name = 'chained_requests'
+
+    def get_requests_batch_type(self):
+        '''
+        Return a list of requests, batch name and task type
+        '''
+        if not self.chained_requests_db.document_exists(self.prepid):
+            # It's a request actually, pick up all chains containing it
+            mcm_request = self.request_db.get(self.prepid)
+            mcm_crs = self.chained_requests_db.query(query="contains==%s" % self.prepid)
+            task_name = 'task_' + self.prepid
+        else:
+            mcm_crs = [self.chained_requests_db.get(self.prepid)]
+            current_step_prepid = mcm_crs[0]['chain'][mcm_crs[0]['step']]
+            mcm_request = self.request_db.get(current_step_prepid)
+            task_name = 'task_' + current_step_prepid
+
+        batch_name = 'Task_' + mcm_request['member_of_campaign']
+
+        if len(mcm_crs) == 0:
+            return
+
+        mcm_requests = []
+        for cr in mcm_crs:
+            mcm_cr = chained_request(cr)
+            chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+            for request_prepid in chain:
+                req = request(self.request_db.get(request_prepid))
+                mcm_requests.append(req)
+
+        self.mcm_crs = mcm_crs
+        return mcm_requests, batch_name, task_name
+
+    def injection_succeeded(self, added_request_managers):
+        seen = set()
+        for cr in self.mcm_crs:
+            mcm_cr = chained_request(cr)
+            chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
+            message = 'Following requests in %s chain were injected:\n\n' % (cr.get('prepid', '* no-prepid *'))
+            for rn in chain:
+                if rn in seen:
+                    continue  # don't do it twice
+
+                seen.add(rn)
+                mcm_r = request(self.request_db.get(rn))
+                message += mcm_r.textified()
+                message += "\n\n"
+                mcm_r.set_attribute('reqmgr_name', added_request_managers)
+                mcm_r.update_history({'action': 'inject', 'step': self.batch_name})
+                # if not self.check_approval:
+                #     mcm_r.set_attribute('approval', 'submit')
+                # set the status to submitted
+                mcm_r.set_status(step=mcm_r._json_base__status.index('submitted'), with_notification=False)
+                mcm_r.reload()
+                mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
+            # re-get the object
+            mcm_cr = chained_request(self.chained_requests_db.get(cr['prepid']))
+            # take care of changes to the chain
+            mcm_cr.update_history({'action': 'inject', 'step': self.batch_name})
+            mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain')) - 1)
+            mcm_cr.set_attribute('status', 'processing')
+            subject = 'Injection succeeded for %s' % (cr.get('prepid', '* no-prepid *'))
+            self.notify(subject, message, mcm_cr)
+            mcm_cr.reload()
+
+        return True
 
 
 class RequestApprover(Handler):
@@ -342,200 +523,3 @@ class RequestApprover(Handler):
                 'results': False,
                 'message': message}
         return {'results': True}
-
-
-class ChainRequestInjector(Handler):
-    def __init__(self, **kwargs):
-        Handler.__init__(self, **kwargs)
-        self.lock = kwargs["lock"]
-        self.prepid = kwargs["prepid"]
-        self.check_approval = kwargs["check_approval"] if "check_approval" in kwargs else True
-        self.queue_lock = kwargs["queue_lock"]  # lock if request is put in processing POOL
-
-    def injection_error(self, message, rs):
-        self.logger.error(message)
-        for r in rs:
-            r.test_failure(message, what='Request injection in chain')
-            pass
-
-    def make_command(self, mcm_r=None):
-        l_type = locator()
-        cmd = 'cd %s \n' % (l_type.workLocation())
-        if mcm_r:
-            cmd += mcm_r.make_release()
-        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        there = ''
-        if l_type.isDev():
-            there = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        cmd += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/chained_requests/get_dict/%s %s \n' % (l_type.baseurl(), self.prepid, there)
-        return cmd
-
-    def internal_run(self):
-        if not self.lock.acquire(blocking=False):
-            self.logger.error("Could not acquire lock for ChainRequestInjector. prepid %s" % (self.prepid))
-            return False
-        try:
-            crdb = database('chained_requests')
-            rdb = database('requests')
-            batch_name = None
-            if not crdb.document_exists(self.prepid):
-                # it's a request actually, pick up all chains containing it
-                mcm_r = rdb.get(self.prepid)
-                # mcm_crs = crdb.query(query="root_request==%s"% self.prepid) ## not only when its the root of
-                mcm_crs = crdb.query(query="contains==%s" % self.prepid)
-                task_name = 'task_' + self.prepid
-                batch_type = 'Task_' + mcm_r['member_of_campaign']
-            else:
-                mcm_crs = [crdb.get(self.prepid)]
-                current_step_prepid = mcm_crs[0]['chain'][mcm_crs[0]['step']]
-                mcm_request = rdb.get(current_step_prepid)
-                task_name = 'task_' + current_step_prepid
-                batch_type = 'Task_' + mcm_request['member_of_campaign']
-
-            if len(mcm_crs) == 0:
-                return False
-            mcm_rs = []
-            # upload all config files to config cache, with "configuration economy" already implemented
-            for cr in mcm_crs:
-                mcm_cr = chained_request(cr)
-                chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
-                for request_prepid in chain:
-                    mcm_rs.append(request(rdb.get(request_prepid)))
-                    if self.check_approval and mcm_rs[-1].get_attribute('approval') != 'submit':
-                        message = 'requests %s is in "%s"/"%s" status/approval, requires "approved"/"submit"' % (
-                            request_prepid, mcm_rs[-1].get_attribute('status'),
-                            mcm_rs[-1].get_attribute('approval'))
-                        self.logger.error(message)
-                        subject = '%s injection failed' % mcm_cr.get_attribute('prepid')
-                        notification(
-                            subject,
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[mcm_cr.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=mcm_cr)
-                        mcm_cr.notify(subject, message)
-                        return False
-
-                    if mcm_rs[-1].get_attribute('status') != 'approved':
-                        # change the return format to percolate the error message
-                        message = 'requests %s in in "%s"/"%s" status/approval, requires "approved"/"submit"' % (
-                            request_prepid, mcm_rs[-1].get_attribute('status'),
-                            mcm_rs[-1].get_attribute('approval'))
-                        self.logger.error(message)
-                        subject = '%s injection failed' % mcm_cr.get_attribute('prepid')
-                        notification(
-                            subject,
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[mcm_cr.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=mcm_cr)
-                        mcm_cr.notify(subject, message)
-                        return False
-
-                    uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
-                    if not uploader.internal_run():
-                        message = 'Problem with uploading the configuration for request %s' % (request_prepid)
-                        notification(
-                            'Configuration upload failed',
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[mcm_cr.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=mcm_cr)
-                        mcm_cr.notify('Configuration upload failed', message)
-                        self.logger.error(message)
-                        return False
-
-            mcm_r = mcm_rs[-1]
-            batch_name = BatchPrepId().next_batch_id(batch_type, create_batch=True)
-            semaphore_events.increment(batch_name)
-            self.logger.error('found batch %s' % batch_name)
-            with ssh_executor(server='vocms081.cern.ch') as ssh:
-                cmd = self.make_command(mcm_r)
-                self.logger.error('prepared command %s' % cmd)
-                # modify here to have the command to be executed
-                _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.info(output)
-                self.logger.info(error)
-                injected_requests = [l.split()[-1] for l in output.split('\n') if
-                                     l.startswith('Injected workflow:')]
-                if not injected_requests:
-                    self.injection_error('Injection has succeeded but no request manager names were registered. Check with administrators. \nOutput: \n%s\n\nError: \n%s' % (
-                        output, error), mcm_rs)
-                    return False
-                # what gets printed into the batch object
-                added_requests = []
-                once = set()
-                for mcm_r in mcm_rs:
-                    if mcm_r.get_attribute('prepid') in once:
-                        continue
-                    once.add(mcm_r.get_attribute('prepid'))
-                    added = [{'name': app_req, 'content': {'pdmv_prep_id': mcm_r.get_attribute('prepid')}} for app_req in injected_requests]
-                    added_requests.extend(added)
-
-                # edit the batch object
-                with locker.lock(batch_name):
-                    bdb = database('batches')
-                    bat = batch(bdb.get(batch_name))
-                    bat.add_requests(added_requests)
-                    bat.update_history({'action': 'updated', 'step': task_name})
-                    bat.reload()
-
-                # reload the content of all requests as they might have changed already
-                added = [{'name': app_req, 'content': {'pdmv_prep_id': task_name}} for app_req in injected_requests]
-
-                seen = set()
-                for cr in mcm_crs:
-                    mcm_cr = chained_request(cr)
-                    chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
-                    message = ""
-                    for rn in chain:
-                        if rn in seen:
-                            continue  # don't do it twice
-                        seen.add(rn)
-                        mcm_r = request(rdb.get(rn))
-                        message += mcm_r.textified()
-                        message += "\n\n"
-                        mcm_r.set_attribute('reqmgr_name', added)
-                        mcm_r.update_history({'action': 'inject', 'step': batch_name})
-                        if not self.check_approval:
-                            mcm_r.set_attribute('approval', 'submit')
-                        # set the status to submitted
-                        mcm_r.set_status(step=mcm_r._json_base__status.index('submitted'), with_notification=False)
-                        mcm_r.reload()
-                        mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
-                    # re-get the object
-                    mcm_cr = chained_request(crdb.get(cr['prepid']))
-                    # take care of changes to the chain
-                    mcm_cr.update_history({'action': 'inject', 'step': batch_name})
-                    mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain')) - 1)
-                    mcm_cr.set_attribute('status', 'processing')
-                    subject = 'Injection succeeded for %s' % mcm_cr.get_attribute('prepid')
-                    notification(
-                            subject,
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[mcm_cr.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=mcm_cr)
-                    mcm_cr.notify(subject, message)
-                    mcm_cr.reload()
-
-                return True
-        except Exception:
-            self.injection_error("Error with injecting chains for %s :\n %s" % (self.prepid, traceback.format_exc()), [])
-
-        finally:  # we decrement batch id and release lock on prepid+lower semaphore
-            if batch_name:  # ditry thing for now. Because batch name can be None for certain use-cases in code above
-                semaphore_events.decrement(batch_name)
-            self.lock.release()
-            self.queue_lock.release()
