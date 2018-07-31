@@ -1,4 +1,19 @@
-kill `ps -e -f | grep main | grep python | awk '{print $2}'`
-sleep 3
-kill -9 `ps -e -f | grep main | grep python | awk '{print $2}'`
-python2.6 main_tenance.py
+#!/bin/bash
+
+IFS=$'\n'
+
+echo 'Killing all main.py'
+for x in $(ps -e -f | grep main | grep python | grep $USER); do
+   echo "Will kill $x"
+   kill -9 `echo $x | awk {'print $2'}`
+done
+
+echo 'Killing all start_mcm.sh'
+for x in $(ps -e -f | grep start_mcm.sh | grep bash | grep $USER); do
+   echo "Will kill $x"
+   kill -9 `echo $x | awk {'print $2'}`
+done
+
+unset IFS
+
+python main_tenance.py
