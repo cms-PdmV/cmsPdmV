@@ -153,8 +153,8 @@ angular.module('testApp').controller('resultsCtrl',
   }]);
 
 angular.module('testApp').controller('ModalDemoCtrl',
-  ['$scope', '$http', '$modal',
-  function ModalDemoCtrl($scope, $http, $modal){
+  ['$scope', '$http', '$modal', '$location',
+  function ModalDemoCtrl($scope, $http, $modal, $location){
     $scope.open = function () {
       var flowCreationModal = $modal.open({
           templateUrl: "flowCreateModal.html",
@@ -166,6 +166,7 @@ angular.module('testApp').controller('ModalDemoCtrl',
               .success(function(data, status){
                 if (data["results"] == true)
                 {
+                  $location.url('flows?prepid=' + flowId);
                   $scope.setSuccess(status);
                 }
                 else{
