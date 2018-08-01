@@ -24,6 +24,7 @@ from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 from simplejson import dumps
 from urllib2 import unquote
+from tools.ssh_executor import ssh_executor
 
 import signal
 import logging
@@ -488,6 +489,9 @@ def log_access():
 
 
 def run_flask():
+    print('Will do dummy ssh connection in order to initialize ssh_executor. Wait!')
+    ssh_executor().execute('echo pippo')
+    print('Finished ssh, McM will start shortly...')
     app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt', '/etc/pki/tls/private/localhost.key'))
 
 # Execute this function when stopping flask
