@@ -93,7 +93,7 @@
         <!--     END OF MODAL                 -->
               </div>
         <div ng-switch-when="Notes">
-        <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+        <div style="width:400px"><pre class="notes">{{data[value.db_name]}}</pre></div>
         </div>
         <div ng-switch-when="Alias">
           <a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
