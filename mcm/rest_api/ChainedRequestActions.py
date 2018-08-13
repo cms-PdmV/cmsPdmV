@@ -912,6 +912,7 @@ class ForceChainReqToDone(RESTResource):
 
     def __init__(self):
         self.crdb = database('chained_requests')
+        self.ldb = database('lists')
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
@@ -925,9 +926,9 @@ class ForceChainReqToDone(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.force_status_done(r))
-            return res
+            return dumps(res)
         else:
-            return [self.force_status_done(chained_request_ids)]
+            return dumps([self.force_status_done(chained_request_ids)])
 
     def force_status_done(self, prepid):
         if not self.crdb.document_exists(prepid):
@@ -935,6 +936,7 @@ class ForceChainReqToDone(RESTResource):
         cr = chained_request(self.crdb.get(prepid))
         if not (cr.get_attribute("status") in ["done", "force_done"]):
             cr.set_status(to_status="force_done")
+            cr.remove_from_nonflowing_list()
             self.logger.debug("forcing chain_req status to done. cr status:%s" % (cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
             return dumps({'prepid': prepid, 'message': ret, 'results': True}, indent=4)
@@ -962,9 +964,9 @@ class ForceStatusDoneToProcessing(RESTResource):
             res = []
             for r in rlist:
                 res.append(self.force_status(r))
-            return res
+            return dumps(res)
         else:
-            return [self.force_status(chained_request_ids)]
+            return dumps([self.force_status(chained_request_ids)])
 
     def force_status(self, prepid):
         if not self.crdb.document_exists(prepid):
