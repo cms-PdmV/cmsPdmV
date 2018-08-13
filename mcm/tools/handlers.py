@@ -226,6 +226,8 @@ class SubmissionsBase(Handler):
                         return False
 
                 # reload the content of all requests as they might have changed already
+                added_request_managers = [{'name': workflow,
+                                           'content': {'pdmv_prep_id': self.task_name}} for workflow in injected_workflows]
                 return self.injection_succeeded(added_request_managers)
 
         except AFSPermissionError as ape:
