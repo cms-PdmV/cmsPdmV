@@ -34,23 +34,23 @@
           </tr>
         </thead>
         <tbody>
-          <tr ng-repeat="settings_info in result | orderBy:sort.column: sort.descending">
+          <tr ng-repeat="list_info in result | orderBy:sort.column: sort.descending">
             <td ng-repeat="data in lists_defaults" ng-if="data.select">
             <div ng-switch on="data.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href="lists?prepid={{settings_info['prepid']}}" target="_self">{{settings_info['prepid']}}</a>
+                <a ng-href="lists?prepid={{list_info['prepid']}}" target="_self">{{list_info['prepid']}}</a>
               </div>
               <div ng-switch-when="chain">
-                <a ng-href="chained_requests?prepid={{settings_info['chain']}}" rel="tooltip" title="View only {{settings_info['chain']}}" target="_self"> {{settings_info['chain']}}</a>
+                <a ng-href="chained_requests?prepid={{list_info['chain']}}" rel="tooltip" title="View only {{list_info['chain']}}" target="_self"> {{list_info['chain']}}</a>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px"><pre class="notes">{{settings_info[data.db_name]}} </pre></div>
+                <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
               </div>
               <div ng-switch-when="reason">
-                <div style="width:400px"><pre class="notes">{{settings_info[data.db_name]}} </pre></div>
+                <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
               </div>
               <div ng-switch-default>
-                {{settings_info[data.db_name]}}
+                {{list_info[data.db_name]}}
               </div>
             </div>
             </td>
