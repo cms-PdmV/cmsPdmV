@@ -79,7 +79,7 @@ class GetRevision(RESTResource):
         returns the current tag of the software running
         """
         import subprocess
-        output = subprocess.Popen(["git", "describe", "--abbrev=0"], stdout=subprocess.PIPE)
+        output = subprocess.Popen(["git", "describe", "--tags", "--abbrev=0"], stdout=subprocess.PIPE)
         revision = output.communicate()[0]
         return revision
 

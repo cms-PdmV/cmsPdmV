@@ -10,7 +10,7 @@ fi
 
 
 # the current version
-revision=`git describe --abbrev=0`
+revision=`git describe --tags --abbrev=0`
 echo "running revision",$revision
 
 export MCM_REVISION=$revision
