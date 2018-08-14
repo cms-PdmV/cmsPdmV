@@ -924,11 +924,14 @@ class ForceChainReqToDone(RESTResource):
         if ',' in chained_request_ids:
             rlist = chained_request_ids.rsplit(',')
             res = []
+            success = True
             for r in rlist:
-                res.append(self.force_status_done(r))
-            return dumps(res)
+                result = self.force_status_done(r)
+                success = success and result.get('results', False)
+                res.append(result)
+            return dumps({'results': success, 'message': res}, indent=4)
         else:
-            return dumps([self.force_status_done(chained_request_ids)])
+            return dumps(self.force_status_done(chained_request_ids), indent=4)
 
     def force_status_done(self, prepid):
         if not self.crdb.document_exists(prepid):
@@ -939,10 +942,10 @@ class ForceChainReqToDone(RESTResource):
             cr.remove_from_nonflowing_list()
             self.logger.debug("forcing chain_req status to done. cr status:%s" % (cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
-            return dumps({'prepid': prepid, 'message': ret, 'results': True}, indent=4)
+            return {'prepid': prepid, 'message': ret, 'results': True}
         else:
             ret = "Chained request already in status done"
-            return dumps({'prepid': prepid, 'message': ret, 'results': False}, indent=4)
+            return {'prepid': prepid, 'message': ret, 'results': False}
 
 
 class ForceStatusDoneToProcessing(RESTResource):
@@ -962,11 +965,14 @@ class ForceStatusDoneToProcessing(RESTResource):
         if ',' in chained_request_ids:
             rlist = chained_request_ids.rsplit(',')
             res = []
+            success = True
             for r in rlist:
-                res.append(self.force_status(r))
-            return dumps(res)
+                result = self.force_status(r)
+                success = success and result.get('results', False)
+                res.append(result)
+            return dumps({'results': success, 'message': res}, indent=4)
         else:
-            return dumps([self.force_status(chained_request_ids)])
+            return dumps(self.force_status(chained_request_ids), indent=4)
 
     def force_status(self, prepid):
         if not self.crdb.document_exists(prepid):
@@ -978,10 +984,10 @@ class ForceStatusDoneToProcessing(RESTResource):
             self.logger.debug("Moving chain_req back to satus 'processing'. cr status:%s" % (
                 cr.get_attribute("status")))
             ret = self.crdb.save(cr.json())
-            return dumps({'prepid': prepid, 'message': ret, 'results': True}, indent=4)
+            return {'prepid': prepid, 'message': ret, 'results': True}
         else:
-            ret = "Chained request not in status force_done"
-            return dumps({'prepid': prepid, 'message': ret, 'results': False}, indent=4)
+            ret = "Chained request already in status done"
+            return {'prepid': prepid, 'message': ret, 'results': False}
 
 
 class ToForceFlowList(RESTResource):
