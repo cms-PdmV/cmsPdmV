@@ -130,7 +130,7 @@
             <!--     END OF MODAL                 -->
             </div>
             <div ng-switch-when="Notes">
-              <div style="width:400px"><pre>{{data[value.db_name]}}</pre></div>
+              <div style="width:400px"><pre class="notes">{{data[value.db_name]}}</pre></div>
             </div>
             <div ng-switch-when="Sequences">
               <div sequence-display ng-model="data.prepid"></div>

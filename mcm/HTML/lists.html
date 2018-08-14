@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+  <head>
+    <base href="/mcm/">
+    <title>Lists page McM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+
+    <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+    <!--[IF IE]>
+      <script type="text/javascript">
+        var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+      </script>
+    <![endif]-->
+    <![if !IE]>
+      <script type="text/javascript">
+        var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      </script>
+    <![endif]>
+    <script src="scripts/main_controller.js"></script>
+    <script src="scripts/lists_controller.js"></script>
+    <script src="scripts/notifications.js"></script>
+  </head>
+  <body ng-controller="mainCtrl">
+    <span ng-controller="resultsCtrl">
+      <div ng-include="'HTML/navbar_template.html'"></div>
+      <div class="row-fluid"><div class="offset4"><h2 ng-if="list_overview">Lists in McM</h2><h2 ng-if="!list_overview">List <em>{{list_name}}</em></h2></div></div>
+      <table class="table table-bordered table-stripped">
+        <thead>
+          <tr>
+            <th ng-repeat="column in lists_defaults" ng-if="column.select" ng-switch on="column.text">
+              {{column.text}}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="list_info in result | orderBy:sort.column: sort.descending">
+            <td ng-repeat="data in lists_defaults" ng-if="data.select">
+            <div ng-switch on="data.db_name">
+              <div ng-switch-when="prepid">
+                <a ng-href="lists?prepid={{list_info['prepid']}}" target="_self">{{list_info['prepid']}}</a>
+              </div>
+              <div ng-switch-when="chain">
+                <a ng-href="chained_requests?prepid={{list_info['chain']}}" rel="tooltip" title="View only {{list_info['chain']}}" target="_self"> {{list_info['chain']}}</a>
+              </div>
+              <div ng-switch-when="notes">
+                <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
+              </div>
+              <div ng-switch-when="reason">
+                <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
+              </div>
+              <div ng-switch-default>
+                {{list_info[data.db_name]}}
+              </div>
+            </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="row-fluid custom-footer-priority">
+        <div class="span5" style="margin-top:20px;">
+        </div>
+        <div class="span2" style="margin-top:20px;">
+          <span ng-show="got_results && result_status == 200 && result_status">
+            Found {{result.length}} results
+          </span>
+          <span class="alert alert-error" ng-show="got_results && result_status != 200 && result_status">
+            <strong>HTTP Error {{result_status}}</strong>
+          </span>
+          <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+          <div ng-show="update['success']">
+            Success. Status code: <font color="green">{{update['status_code']}}</font>
+          </div>
+          <div ng-show="update['fail']">
+            Fail. Status code: <font color="red">{{update['status_code']}}</font>
+          </div>
+        </div>
+      </div>
+    </span>
+  </body>
+</html>

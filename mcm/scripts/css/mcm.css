@@ -217,3 +217,7 @@ img.led {
 .margin-r {
     margin-right: 5px;
 }
+
+.notes {
+    word-break: break-word;
+}

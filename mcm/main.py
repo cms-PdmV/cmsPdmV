@@ -16,6 +16,7 @@ from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, Ca
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
+from rest_api.ListActions import GetList
 
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
@@ -118,6 +119,10 @@ def edit_many_html():
 def dashboard_html():
     return send_from_directory('HTML', 'dashboard.html')
 
+@app.route('/lists')
+def stalled_html():
+    return send_from_directory('HTML', 'lists.html')
+
 @app.route('/scripts/<path:path>')
 def send_static(path):
     return send_from_directory('scripts', path)
@@ -148,6 +153,7 @@ api.add_resource(
     '/restapi/tags',
     '/restapi/control',
     '/restapi/notifications',
+    '/restapi/lists',
     '/public',
     '/public/restapi',
     '/public/restapi/requests',
@@ -394,6 +400,8 @@ api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string
 api.add_resource(GetSetting, '/restapi/settings/get/<string:setting_id>')
 api.add_resource(UpdateSetting, '/restapi/settings/update')
 api.add_resource(SaveSetting, '/restapi/settings/save')
+# REST list Actions
+api.add_resource(GetList, '/restapi/lists/get/<string:list_id>')
 # REST tags Actions
 api.add_resource(GetTags, '/restapi/tags/get_all')
 api.add_resource(AddTag, '/restapi/tags/add')
