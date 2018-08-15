@@ -47,6 +47,7 @@ angular.module('testApp').controller('resultsCtrl',
           var millisInDay = 1000 * 60 * 60 * 24;
           _.each($scope.result, function(part) {
             var doneSince = new Date(part['nonflowing_since'] * 1000);
+            doneSince.setUTCHours(0,0,0,0);
             part['days'] = parseInt((today - doneSince) / millisInDay);
             part['nonflowing_since'] = doneSince.toISOString().slice(0, 10);
           });
