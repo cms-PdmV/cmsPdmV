@@ -537,7 +537,8 @@ class database:
         __retries = 3
         limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_design/lucene/%s?q=%s" % (index_name, query)
-        for i in xrange(1, __retries+1):
+        data = {'rows': []}
+        for i in xrange(1, __retries + 1):
             try:
                 options = {
                     'limit': limit,
@@ -549,16 +550,20 @@ class database:
                     options['include_fields'] = include_fields
                 if sort != '':
                     options['sort'] = sort
-                data = self.db.FtiSearch(url, options=options, get_raw=get_raw) #we sort ascending by doc._id field
+                data = self.db.FtiSearch(url, options=options, get_raw=get_raw)  # we sort ascending by doc._id field
                 break
             except Exception as ex:
-                self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (
-                        url, ex, i, __retries))
-            ##if we are retrying we should wait little bit
+                self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (url,
+                                                                                             ex,
+                                                                                             i,
+                                                                                             __retries))
+            # if we are retrying we should wait little bit
             time.sleep(0.5)
+
         if include_fields != '':
-            return [ elem["fields"] for elem in data['rows']]
-        return data if get_raw else [ elem["doc"] for elem in data['rows']]
+            return [elem["fields"] for elem in data['rows']]
+
+        return data if get_raw else [elem["doc"] for elem in data['rows']]
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
         sequence_id = "%s/%s" % (view_doc, view_name)
