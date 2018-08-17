@@ -12,6 +12,7 @@ from json_layer.notification import notification
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
+from ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):
@@ -51,6 +52,14 @@ class CreateChainedRequest(RESTResource):
         if not req.get_attribute('prepid'):
             self.logger.error('prepid returned was None')
             raise ValueError('Prepid returned was None')
+
+        if 'chain_type' in json_input:
+            chain_type = json_input['chain_type']
+        else:
+            ccdb = database('chained_campaigns')
+            chain_type = ccdb.get(json_input['member_of_campaign']).get('chain_type', 'TaskType')
+
+        req.set_attribute('chain_type', chain_type)
         self.logger.info('Created new chained_request %s' % cr_id)
         # update history with the submission details
         req.update_history({'action': 'created'})
