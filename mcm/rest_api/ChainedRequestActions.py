@@ -57,7 +57,7 @@ class CreateChainedRequest(RESTResource):
             chain_type = json_input['chain_type']
         else:
             ccdb = database('chained_campaigns')
-            chain_type = ccdb.get(json_input['member_of_campaign']).get('chain_type', 'TaskType')
+            chain_type = ccdb.get(json_input['member_of_campaign']).get('chain_type', 'TaskChain')
 
         req.set_attribute('chain_type', chain_type)
         self.logger.info('Created new chained_request %s' % cr_id)
