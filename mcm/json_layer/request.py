@@ -1336,7 +1336,8 @@ class request(json_base):
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
             self.logger.info('trying to change priority to %s at %s' % (self.get_attribute('prepid'), new_priority))
-            reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name')]
+            reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
+            self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
                 ssh_exec = ssh_executor(server='vocms081.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
