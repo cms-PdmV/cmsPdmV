@@ -36,7 +36,8 @@ class chained_campaign(json_base):
             'flag': True
         },
         'history': [],
-        'valid': True
+        'valid': True,
+        'chain_type': 'TaskChain'
     }
 
     def __init__(self, json_input=None):
@@ -119,8 +120,9 @@ class chained_campaign(json_base):
 
         # set values
         creq.set_attribute('pwg', pwg)
-        creq.set_attribute('member_of_campaign',  self.get_attribute('prepid'))
+        creq.set_attribute('member_of_campaign', self.get_attribute('prepid'))
         creq.set_attribute('action_parameters', self.get_attribute('action_parameters'))
+        creq.set_attribute('chain_type', self.get_attribute('chain_type'))
         # By default flag should be true
         creq.get_attribute('action_parameters')['flag'] = True
         if not creq.get_attribute('prepid'):
