@@ -185,14 +185,14 @@ class request(json_base):
             self.remove_from_forcecomplete()
 
     def remove_from_forcecomplete(self):
-        settingsDB = database('settings')
-        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+        lists_db = database('lists')
+        forcecomplete_list = lists_db.get('list_of_forcecomplete')
         prepid = self.get_attribute('prepid')
         if prepid not in forcecomplete_list['value']:
             return
         self.logger.info("Deleting a request %s from forcecomplete" % (prepid))
         forcecomplete_list['value'].remove(prepid)
-        if not settingsDB.update(forcecomplete_list):
+        if not lists_db.update(forcecomplete_list):
             self.logger.error('Failed to save forcecomplete to DB while removing %s from list' % prepid)
 
     def get_editable(self):

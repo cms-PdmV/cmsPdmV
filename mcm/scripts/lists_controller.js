@@ -58,6 +58,14 @@ angular.module('testApp').controller('resultsCtrl',
             {text:'Nonflowing for days', select:true, db_name:'days'}
           ];
           $scope.result = $scope.result.sort(function(a,b) {return (a.nonflowing_since > b.nonflowing_since) ? 1 : ((b.nonflowing_since > a.nonflowing_since) ? -1 : 0);} ); 
+        } else if ($scope.list_name === "list_of_forceflow") {
+          $scope.lists_defaults = [
+            {text:'Chained request PrepID', select:true, db_name:'_array_value_chain'}
+          ];
+        } else if ($scope.list_name === "list_of_forcecomplete") {
+          $scope.lists_defaults = [
+            {text:'Request PrepID', select:true, db_name:'_array_value_request'}
+          ];
         }
         $scope.selectionReady = true;
       }, function() {

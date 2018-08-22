@@ -49,6 +49,12 @@
               <div ng-switch-when="reason">
                 <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
               </div>
+              <div ng-switch-when="_array_value_chain">
+                <a ng-href="chained_requests?prepid={{list_info}}" rel="tooltip" title="View only {{list_info}}" target="_self"> {{list_info}}</a>
+              </div>
+              <div ng-switch-when="_array_value_request">
+                <a ng-href="requests?prepid={{list_info}}" rel="tooltip" title="View only {{list_info}}" target="_self"> {{list_info}}</a>
+              </div>
               <div ng-switch-default>
                 {{list_info[data.db_name]}}
               </div>

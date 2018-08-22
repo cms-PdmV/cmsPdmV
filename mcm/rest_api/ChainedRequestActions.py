@@ -995,7 +995,7 @@ class ToForceFlowList(RESTResource):
     access_limit = access_rights.generator_contact
 
     def __init__(self):
-        self.sdb = database('settings')
+        self.ldb = database('lists')
         self.cdb = database('chained_requests')
         self.before_request()
         self.count_call()
@@ -1011,7 +1011,7 @@ class ToForceFlowList(RESTResource):
         res = []
         __updated = False
 
-        forceflow_list = self.sdb.get("list_of_forceflow")
+        forceflow_list = self.ldb.get("list_of_forceflow")
         # TO-DO check if prepid exists!
         # TO-DO check the status of chain_req!
         for el in rlist:
@@ -1027,7 +1027,7 @@ class ToForceFlowList(RESTResource):
 
         # TO-DO check the update return value
         if __updated:
-            self.sdb.update(forceflow_list)
+            self.ldb.update(forceflow_list)
 
         return res
 
@@ -1067,7 +1067,7 @@ class RemoveFromForceFlowList(RESTResource):
     access_limit = access_rights.generator_contact
 
     def __init__(self):
-        self.sdb = database('settings')
+        self.ldb = database('lists')
         self.before_request()
         self.count_call()
 
@@ -1081,7 +1081,7 @@ class RemoveFromForceFlowList(RESTResource):
             rlist = [chained_request_ids]
         res = []
 
-        forceflow_list = self.sdb.get("list_of_forceflow")
+        forceflow_list = self.ldb.get("list_of_forceflow")
         for el in rlist:
             if el not in forceflow_list["value"]:
                 res.append({"prepid": el, 'results': False, 'message': 'Not in forceflow list'})
@@ -1090,7 +1090,7 @@ class RemoveFromForceFlowList(RESTResource):
                 res.append({"prepid": el, 'results': True, 'message': 'OK'})
 
         # TO-DO check the update return value
-        ret = self.sdb.update(forceflow_list)
+        ret = self.ldb.update(forceflow_list)
 
         return res
 
