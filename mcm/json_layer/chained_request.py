@@ -711,10 +711,10 @@ class chained_request(json_base):
                 saved = rdb.update(next_request.json())
                 if not saved:
                     raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'Unable to save %s with updated member_of_chains' % next_id)
-                forceflow_list = sdb.get("list_of_forceflow")
+                forceflow_list = ldb.get("list_of_forceflow")
                 if self.get_attribute("prepid") in forceflow_list["value"]:
                     forceflow_list["value"].remove(self.get_attribute("prepid"))
-                    sdb.update(forceflow_list)
+                    ldb.update(forceflow_list)
             return {'result': True}
         elif approach == 'patch':
             self.logger.debug("patching request in reservation: %s" % (next_id))
@@ -848,10 +848,10 @@ class chained_request(json_base):
             next_request.notify(notification_subject, notification_text, accumulate=True)
 
         # we remove the chain_req id from force_flow list if it's in there
-        forceflow_list = sdb.get("list_of_forceflow")
+        forceflow_list = ldb.get("list_of_forceflow")
         if self.get_attribute("prepid") in forceflow_list["value"]:
             forceflow_list["value"].remove(self.get_attribute("prepid"))
-            sdb.update(forceflow_list)
+            ldb.update(forceflow_list)
 
         # It's flown, remove it from list_of_nonflowing_chains
         self.remove_from_nonflowing_list()

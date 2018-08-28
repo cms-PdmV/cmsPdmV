@@ -1719,13 +1719,12 @@ class PutToForceComplete(RESTResource):
         pid = data['prepid']
 
         reqDB = database('requests')
-        settingsDB = database('settings')
+        lists_db = database('lists')
         udb = database('users')
         self.logger.info('Will try to add to forcecomplete a request: %s' % (pid))
         req = request(reqDB.get(pid))
         curr_user = user(udb.get(req.current_user))
-        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
-
+        forcecomplete_list = lists_db.get('list_of_forcecomplete')
 
         # do some checks
         if req.get_attribute('status') != 'submitted':
@@ -1754,7 +1753,7 @@ class PutToForceComplete(RESTResource):
             return {"prepid": pid, "results": False, 'message': message}
 
         forcecomplete_list['value'].append(pid)
-        ret = settingsDB.update(forcecomplete_list)
+        ret = lists_db.update(forcecomplete_list)
 
         # lets see if we succeeded in saving it to settings DB
         if ret:
@@ -1783,8 +1782,8 @@ class ForceCompleteMethods(RESTResource):
         """
         Get a list of workflows for force complete
         """
-        settingsDB = database('settings')
-        forcecomplete_list = settingsDB.get('list_of_forcecomplete')
+        lists_db = database('lists')
+        forcecomplete_list = lists_db.get('list_of_forcecomplete')
         return dumps(forcecomplete_list['value'], indent=4)
 
 
