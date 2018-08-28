@@ -1948,7 +1948,9 @@ class request(json_base):
 
     def target_for_test(self):
         # could reverse engineer the target
-        return settings.get_value('test_target')
+        test_target = settings.get_value('test_target')
+        total_events = self.get_attribute('total_events')
+        return max(0, min(test_target, total_events))
 
     def get_efficiency_error(self, relative=True):
         if not self.get_attribute('generator_parameters'):
