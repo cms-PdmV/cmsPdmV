@@ -16,7 +16,7 @@ from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, Ca
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
-from rest_api.ListActions import GetList
+from rest_api.ListActions import GetList, UpdateList
 
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
@@ -402,6 +402,7 @@ api.add_resource(UpdateSetting, '/restapi/settings/update')
 api.add_resource(SaveSetting, '/restapi/settings/save')
 # REST list Actions
 api.add_resource(GetList, '/restapi/lists/get/<string:list_id>')
+api.add_resource(UpdateList, '/restapi/lists/update')
 # REST tags Actions
 api.add_resource(GetTags, '/restapi/tags/get_all')
 api.add_resource(AddTag, '/restapi/tags/add')
