@@ -207,7 +207,7 @@
               <div ng-switch-when="Cmssw release">
                 <a ng-href='requests?cmssw_release={{data[value.db_name]}}' rel="tooltip" title="Show requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
-              <div ng-switch-when="Mcdb id" ng-hide="data[value.db_name]<=0">
+              <div ng-switch-when="Mcdb id">
                 <a ng-href='requests?mcdb_id={{data[value.db_name]}}' rel="tooltip" title="Show requests for mcdb ID {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
               </div>
               <div ng-switch-when="PrepId">
