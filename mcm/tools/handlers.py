@@ -88,8 +88,9 @@ class Handler():
     lock = None
 
     def __init__(self, **kwargs):
+        self.prepid = kwargs['prepid']
         if 'lock' not in kwargs:
-            self.lock = Lock()
+            self.lock = locker.lock(self.prepid)
         else:
             self.lock = kwargs['lock']
 
@@ -102,7 +103,6 @@ class ConfigMakerAndUploader(Handler):
 
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
-        self.prepid = kwargs['prepid']
         self.check_approval = kwargs.get('check_approval', True)
         self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
 
@@ -116,6 +116,7 @@ class ConfigMakerAndUploader(Handler):
             request_db = database('requests')
             req = request(request_db.get(self.prepid))
             ret = req.prepare_and_upload_config()
+            self.inject_logger.info('Prepared and uploaded config: %s. prepid %s' % (ret, self.prepid))
             return True if ret else False
 
         finally:
@@ -127,7 +128,6 @@ class SubmissionsBase(Handler):
 
     def __init__(self, **kwargs):
         Handler.__init__(self, **kwargs)
-        self.prepid = kwargs['prepid']
         self.request_db = database('requests')
         self.inject_logger = InjectionLogAdapter(logging.getLogger('mcm_inject'), {'handle': self.prepid})
         self.queue_lock = kwargs.get('queue_lock', None)  # Lock if request is put in processing pool
@@ -151,7 +151,7 @@ class SubmissionsBase(Handler):
                                                          req.get_attribute('approval'),
                                                          req.get_attribute('status')))
             request_prepid = req.get_attribute('prepid')
-            uploader = ConfigMakerAndUploader(prepid=request_prepid, lock=locker.lock(request_prepid))
+            uploader = ConfigMakerAndUploader(prepid=request_prepid)
             if not uploader.internal_run():
                 return False
 
@@ -238,14 +238,9 @@ class SubmissionsBase(Handler):
             if self.batch_name:  # ditry thing for now. Because batch name can be None for certain use-cases in code above
                 semaphore_events.decrement(self.batch_name)
 
-            self.lock.release()
-            if self.queue_lock:
-                self.queue_lock.release()
-
     def internal_run(self):
-        self.inject_logger.info('Request injection: %s' % (self.prepid))
-        self.requests, self.batch_name, self.task_name = self.get_requests_batch_type()
         with locker.lock('%s-wait-for-approval' % (self.prepid)):
+            self.inject_logger.info('Request injection: %s' % (self.prepid))
             self.inject_logger.info('Will acquire lock for RequestInjector. prepid %s' % (self.prepid))
             if not self.lock.acquire(blocking=False):
                 message = 'The request with name %s is being handled already' % (self.prepid)
@@ -256,6 +251,7 @@ class SubmissionsBase(Handler):
                     'message': message}
 
             try:
+                self.requests, self.batch_name, self.task_name = self.get_requests_batch_type()
                 if not self.submit_configs():
                     message = 'Problem with uploading the configuration for %s' % (self.prepid)
                     self.inject_logger.error(message)
@@ -293,7 +289,8 @@ class SubmissionsBase(Handler):
 
             finally:
                 self.lock.release()
-                # self.queue_lock.release()
+                if self.queue_lock:
+                    self.queue_lock.release()
 
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
