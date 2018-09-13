@@ -128,9 +128,18 @@ class GetLocksInfo(RESTResource):
         self.count_call()
 
     def get(self):
-        from tools.locker import locker
-        data = {"RLocks": locker.lock_dictionary, "Locks": locker.thread_lock_dictionary}
-        return {"locks_len": len(data), "locks_data": str(data)}
+        from tools.locker import locker, semaphore_events
+        pretty_r_locks = {}
+        for key, lock in locker.lock_dictionary.iteritems():
+            pretty_r_locks[key] = '%s %s' % (key, str(lock))
+
+        pretty_locks = {}
+        for key, lock in locker.thread_lock_dictionary.iteritems():
+            pretty_locks[key] = '%s %s' % (key, str(lock))
+
+        return {"r_locks": pretty_r_locks,
+                "locks (thread)": pretty_locks,
+                "semaphores": semaphore_events.count_dictionary}
 
 class GetQueueInfo(RESTResource):
 
