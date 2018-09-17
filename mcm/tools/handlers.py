@@ -158,9 +158,9 @@ class SubmissionsBase(Handler):
         return True
 
     def inject_configs(self):
-        if not self.lock.acquire(blocking=False):
-            self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
-            return False
+        # if not self.lock.acquire(blocking=False):
+        #     self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
+        #     return False
 
         self.inject_logger.info('Injection with prepid %s' % (self.prepid))
         try:
@@ -288,7 +288,9 @@ class SubmissionsBase(Handler):
                                                                                                 req.get_attribute('status')))
 
             finally:
+                self.logger.info('Finally releasing lock for %s %s' % (self.prepid, self.lock))
                 self.lock.release()
+                self.logger.info('After release %s %s' % (self.prepid, self.lock))
                 if self.queue_lock:
                     self.queue_lock.release()
 
@@ -337,6 +339,8 @@ class SubmissionsBase(Handler):
                 return
 
             req.notify(subject, message)
+        else:
+            self.logger.error('Could not notify because request object is None. Subject: %s' % (subject))
 
     def injection_succeeded(self, added_requests):
         raise NotImplementedError()
