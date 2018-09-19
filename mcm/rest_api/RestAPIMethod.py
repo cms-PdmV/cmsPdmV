@@ -6,6 +6,7 @@ from tools.user_management import authenticator, user_pack
 from tools.locker import locker
 from flask_restful import Resource
 from flask import request, abort, make_response, current_app, render_template
+import json
 
 
 class RESTResource(Resource):
@@ -42,7 +43,11 @@ class RESTResource(Resource):
 
     def output_text(self, data, code, headers=None):
         """Makes a Flask response with a plain text encoded body"""
-        resp = make_response(data, code)
+        if isinstance(data, dict):
+            resp = make_response(json.dumps(data), code)
+        else:
+            resp = make_response(data, code)
+
         resp.headers.extend(headers or {})
         return resp
 

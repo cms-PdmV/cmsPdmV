@@ -1227,54 +1227,60 @@ class StalledReminder(RESTResource):
         bdb = database('batches')
         statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
         __query = rdb.construct_lucene_query({'status': 'submitted'})
-        rs = rdb.full_text_search('search', __query, page=-1)
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
         reminded = 0
         by_batch = defaultdict(list)
         request_prepids = []
-        for r in rs:
-            date_s = filter(lambda h: 'step' in h and h['step'] == 'submitted', r['history'])[-1]['updater']['submission_date']
-            date = time.mktime(time.strptime(date_s, "%Y-%m-%d-%H-%M"))
-            elapsed_t = (today - date)
-            elapsed = (today - date) / 60. / 60. / 24.  # in days
-            remaining = float("inf")
-            if r['completed_events']:
-                remaining_t = (elapsed_t * ((r['total_events'] / float(r['completed_events'])) - 1))
-                remaining = remaining_t / 60. / 60. / 24.
-                if remaining < 0:  # already over stats
-                    remaining = 0.
-            fraction = min(100., r['completed_events'] * 100. / r['total_events'])  # maxout to 100% completed
-            if fraction > below_completed:
-                continue
+        page = 0
+        rs = [{}]
+        while len(rs) > 0:
+            rs = rdb.full_text_search('search', __query, page=page, limit=100)
+            self.logger.info('Found %d requests that are in status submitted in page %d' % (len(rs), page))
+            page += 1
+            for r in rs:
+                date_s = filter(lambda h: 'step' in h and h['step'] == 'submitted', r['history'])[-1]['updater']['submission_date']
+                date = time.mktime(time.strptime(date_s, "%Y-%m-%d-%H-%M"))
+                elapsed_t = (today - date)
+                elapsed = (today - date) / 60. / 60. / 24.  # in days
+                remaining = float("inf")
+                if r['completed_events']:
+                    remaining_t = (elapsed_t * ((r['total_events'] / float(r['completed_events'])) - 1))
+                    remaining = remaining_t / 60. / 60. / 24.
+                    if remaining < 0:  # already over stats
+                        remaining = 0.
+                fraction = min(100., r['completed_events'] * 100. / r['total_events'])  # maxout to 100% completed
+                if fraction > below_completed:
+                    continue
 
-            if (remaining > time_remaining and remaining != float('Inf')) or (elapsed > time_since and remaining != 0):
-                reminded += 1
-                __query2 = bdb.construct_lucene_complex_query([
-                    ('contains', {'value': r['prepid']}),
-                    ('status', {'value': ['announced', 'hold']})])
-                bs = bdb.full_text_search('search', __query2, page=-1)
-                # take the last one ?
-                in_batch = 'NoBatch'
-                if len(bs):
-                    in_batch = bs[-1]['prepid']
-                wma_status = 'not-found'
-                if len(r['reqmgr_name']):
-                    wma_name = r['reqmgr_name'][-1]['name']
-                    if statsDB.document_exists(wma_name):
+                if (remaining > time_remaining and remaining != float('Inf')) or (elapsed > time_since and remaining != 0):
+                    reminded += 1
+                    __query2 = bdb.construct_lucene_complex_query([
+                        ('contains', {'value': r['prepid']}),
+                        ('status', {'value': ['announced', 'hold']})])
+                    bs = bdb.full_text_search('search', __query2, page=-1)
+                    # take the last one ?
+                    in_batch = 'NoBatch'
+                    if len(bs):
+                        in_batch = bs[-1]['prepid']
+                    wma_status = 'not-found'
+                    if len(r['reqmgr_name']):
+                        wma_name = r['reqmgr_name'][-1]['name']
                         stats = statsDB.get(wma_name)
-                        wma_status = stats['pdmv_status_from_reqmngr']
+                        if 'pdmv_status_from_reqmngr' in stats:
+                            wma_status = stats['pdmv_status_from_reqmngr']
 
-                line = "%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n" % (
-                    r['prepid'],
-                    elapsed,
-                    r['completed_events'],
-                    fraction,
-                    remaining,
-                    wma_status,
-                    r['priority'])
-                by_batch[in_batch].append(line)
-                request_prepids.append(r['prepid'])
+                    line = "%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n" % (
+                        r['prepid'],
+                        elapsed,
+                        r['completed_events'],
+                        fraction,
+                        remaining,
+                        wma_status,
+                        r['priority'])
+                    by_batch[in_batch].append(line)
+                    request_prepids.append(r['prepid'])
+
         l_type = locator()
         for (b, lines) in by_batch.items():
             text += "In batch %s:\n" % b
