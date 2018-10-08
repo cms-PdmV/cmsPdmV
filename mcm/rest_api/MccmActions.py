@@ -368,7 +368,6 @@ class GenerateChains(RESTResource):
         allowed_campaign = ccs[0]
         for request_prepid in request_prepids:
             mcm_r = rdb.get(request_prepid)
-            self.logger.info(dumps(mcm_r, indent=4))
             if mcm_r['member_of_campaign'] != allowed_campaign:
                 return {
                     "prepid" : mid,
