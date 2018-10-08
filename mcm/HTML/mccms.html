@@ -68,7 +68,7 @@
                 <a rel="tooltip" title="Edit details" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(1);" target="_self"><i class="icon-wrench"></i></a>
                 <a rel="tooltip" title="Cancel ticket {{mccm_info.prepid}}" ng-click="open_isSureModal('cancel', mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-thumbs-down"></i></a>
                 <a rel="tooltip" title="Generate chains for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
-                <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'/reserve')" ng-href="#" ng-hide="role(3);"><i class="icon-indent-right"></i></a>
+                <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="dropdownModal(mccm_info.prepid,mccm_info.chains)" ng-href="#" ng-hide="role(3)"><i class="icon-indent-right"></i></a>
                 <a rel="tooltip" title="Recalculate total_events for {{mccm_info.prepid}}" ng-click="recalculate_evts(mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-filter"></i></a>
                 <a rel="tooltip" title="View all requests for {{mccm_info.prepid}}" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
               </div>
@@ -176,6 +176,26 @@
             </script>
           </div>
         </div>
+        <!-- MODAL-->
+        <script type="text/ng-template" id="dropdownModal.html">
+          <div class="modal-header">
+            <h4>Limited reservation for {{toggle_prepid}}?</h4>
+          </div>
+          <div class="modal-body">
+            <span ng-repeat="(prepid, singleChainDropdown) in campaignListDropdown">
+              {{ prepid }}<br>
+              <select ng-model="campaignListDropdownSelector[prepid]">
+                <option ng-repeat="elem in singleChainDropdown track by $index">{{elem}}</option>
+              </select>
+              <br>
+            </span>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector)">Confirm</button>
+            <button class="btn btn-success" ng-click="cancel()">Cancel</button>
+          </div>
+        </script>
+        <!-- END of MODAL-->
     </div>
   </span>
   </body>
