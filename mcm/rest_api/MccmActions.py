@@ -394,11 +394,16 @@ class GenerateChains(RESTResource):
 
         res = []
         special = mcm_m.get_attribute('special')
+        if isinstance(reserve, bool):
+            reserve_campaigns = [reserve] * len(request_prepids)
+        else:
+            reserve_campaigns = reserve.split(',')
+
         for request_prepid in request_prepids:
             self.logger.info("Generating all chained request for request %s" % request_prepid)
             for times in range(mcm_m.get_attribute('repetitions')):
-                for mcm_chained_campaign in chained_campaigns:
-                    res.append(self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve, special=special))
+                for index, mcm_chained_campaign in enumerate(chained_campaigns):
+                    res.append(self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special))
                     # for now we put a small delay to not crash index with a lot of action
                     time.sleep(1)
         generated_chains = {}

@@ -305,6 +305,73 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
+    $scope.dropdownModal = function(prepid, chain_prepids) {
+      var isConfirmed = $modal.open({
+        templateUrl: 'dropdownModal.html',
+        controller: ReserveMccmModalInstance,
+        resolve: {
+          prepid: function() {
+            return prepid;
+          },
+          chain_prepids: function() {
+            return chain_prepids;
+          }
+        }
+      });
+
+      isConfirmed.result.then(function (campaigns) {
+        var reserveLimits = '';
+        for (var i = 0; i < chain_prepids.length; i++) {
+          if (campaigns[chain_prepids[i]] == undefined || campaigns[chain_prepids[i]] == "--------") {
+            reserveLimits += '';
+          } else {
+            reserveLimits += campaigns[chain_prepids[i]];
+          }
+          if (i != chain_prepids.length - 1) {
+            reserveLimits += ',';
+          }
+        }
+        $scope.generate(prepid, '/reserve/' + reserveLimits);
+      });
+    };
+
+    var ReserveMccmModalInstance = function($scope, $modalInstance, $window, $http, prepid, chain_prepids) {
+      $scope.loadingData = true;
+      $scope.campaignListDropdown = Object();
+      $scope.campaignListDropdownSelector = Object();
+      for (var i = 0; i < chain_prepids.length; i++) {
+        $scope.campaignListDropdown[chain_prepids[i]] = ["--------"];
+        $scope.campaignListDropdownSelector[chain_prepids[i]] = $scope.campaignListDropdown[chain_prepids[i]][0];
+        var url = undefined;
+        if (chain_prepids[i].indexOf('chain_') == -1) {
+          url = "search?db_name=chained_campaigns&get_raw&alias=" + chain_prepids[i];
+        } else {
+          url = "search?db_name=chained_campaigns&get_raw&prepid=" + chain_prepids[i];
+        }
+        var promiseDeep = $http.get(url);
+        promiseDeep.then(function(d){
+          d.data.rows[0].doc.campaigns.forEach(function(c) {
+            var prepid = d.data.rows[0].doc.prepid;
+            var alias = d.data.rows[0].doc.alias;
+            if (prepid in $scope.campaignListDropdown) {
+              $scope.campaignListDropdown[prepid].push(c[0]);
+            } else {
+              $scope.campaignListDropdown[alias].push(c[0]);
+            }
+          });
+        });
+      }
+      $scope.loadingData = false;
+
+      $scope.toggle_prepid = prepid;
+      $scope.confirm = function(id) {
+        $modalInstance.close(id);
+      };
+      $scope.cancel = function() {
+        $modalInstance.dismiss();
+      };
+    };
+
     var CreateMccmModalInstance = function($scope, $modalInstance, $window, $http, pwgs) {
       $scope.mccms = {
         pwgs: pwgs,
