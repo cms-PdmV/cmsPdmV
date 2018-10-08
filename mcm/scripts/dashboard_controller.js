@@ -98,7 +98,7 @@ angular.module('testApp').controller('resultsCtrl',
       if (log_name.includes(".log"))
       {
         // the first time DOM object is initialized and tries to get_feed with default name which is wrong
-        var lines = $scope.logs.lines>100?-1:$scope.logs.lines;
+        var lines = $scope.logs.lines>100?'':$scope.logs.lines;
         var promise = $http.get("restapi/dashboard/get_log_feed/" + log_name + "/" + lines);
         promise.then(function(data, status){
           $scope.update["success"] = true;
