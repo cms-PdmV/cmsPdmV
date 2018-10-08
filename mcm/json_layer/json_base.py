@@ -363,9 +363,26 @@ class json_base:
                accumulate=False):
 
         dest = map(lambda i: i, who)
+
         if actors:
             # add the actors to the object
             dest.extend(self.get_actors(what='author_email', Nchild=Nchild))
+            if 'pwg' in self.keys():
+                pwg = self.get_attribute('pwg')
+                if pwg:
+                    users_db = database('users')
+                    generator_contacts_query = users_db.construct_lucene_query({'role': 'generator_contact', 'pwg': pwg})
+                    generator_contacts = users_db.full_text_search("search", generator_contacts_query, page=-1)
+                    generator_contacts = [x['email'] for x in generator_contacts]
+                    generator_conveners_query = users_db.construct_lucene_query({'role': 'generator_convener'})
+                    generator_conveners = users_db.full_text_search("search", generator_conveners_query, page=-1)
+                    generator_conveners = [x['email'] for x in generator_conveners]
+                    self.logger.info('Will also notify %s and %s about %s' % (generator_contacts,
+                                                                              generator_conveners,
+                                                                              self.get_attribute('prepid')))
+                    dest.extend(generator_contacts)
+                    dest.extend(generator_conveners)
+
         if service:
             # let the service know at any time
             dest.append(settings.get_value('service_account'))
