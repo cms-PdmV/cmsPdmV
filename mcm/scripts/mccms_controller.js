@@ -320,8 +320,6 @@ angular.module('testApp').controller('resultsCtrl',
       });
 
       isConfirmed.result.then(function (campaigns) {
-        console.log(campaigns);
-        console.log(chain_prepids);
         var reserveLimits = '';
         for (var i = 0; i < chain_prepids.length; i++) {
           if (campaigns[chain_prepids[i]] == undefined || campaigns[chain_prepids[i]] == "--------") {
@@ -367,11 +365,9 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.toggle_prepid = prepid;
       $scope.confirm = function(id) {
-        console.log('confirm ' + prepid);
         $modalInstance.close(id);
       };
       $scope.cancel = function() {
-        console.log('cancel ' + prepid);
         $modalInstance.dismiss();
       };
     };
