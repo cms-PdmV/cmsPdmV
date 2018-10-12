@@ -363,6 +363,9 @@ class json_base:
                accumulate=False):
 
         dest = map(lambda i: i, who)
+        if actors:  
+            # add the actors to the object  
+            dest.extend(self.get_actors(what='author_email', Nchild=Nchild))
         if service:
             # let the service know at any time
             dest.append(settings.get_value('service_account'))
