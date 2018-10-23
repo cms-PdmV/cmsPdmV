@@ -231,7 +231,7 @@ class request(json_base):
     def get_events_for_dataset(self, workflows, dataset):
         self.logger.debug("Running num_events search for dataset")
         for elem in workflows:
-            if dataset in elem["content"]["pdmv_dataset_statuses"]:
+            if dataset in elem["content"].get("pdmv_dataset_statuses", []):
                 return elem["content"]["pdmv_dataset_statuses"][dataset]["pdmv_evts_in_DAS"]
         # TO-DO do we need to put a default return? As all the time there must be a DS
 
