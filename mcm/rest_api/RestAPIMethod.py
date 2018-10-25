@@ -44,11 +44,13 @@ class RESTResource(Resource):
     def output_text(self, data, code, headers=None):
         """Makes a Flask response with a plain text encoded body"""
         if isinstance(data, dict):
-            resp = make_response(json.dumps(data), code)
-        else:
-            resp = make_response(data, code)
+            data = json.dumps(data)
 
-        resp.headers.extend(headers or {})
+        resp = make_response(data, code)
+        if headers:
+            for key, value in headers.iteritems():
+                resp.headers[key] = value
+
         return resp
 
     def count_call(self):

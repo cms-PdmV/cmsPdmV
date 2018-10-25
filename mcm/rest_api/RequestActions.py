@@ -503,9 +503,13 @@ class GetRequestByDataset(RESTResource):
         r = rdb.full_text_search('search', __query, page=-1)
 
         if len(r):
-            return dumps({"results": r[0]}, indent=4)
+            return self.output_text({"results": r[0]},
+                                    200,
+                                    headers={'Content-Type': 'application/json'})
         else:
-            return dumps({"results": {}}, indent=4)
+            return self.output_text({"results": {}},
+                                    200,
+                                    headers={'Content-Type': 'application/json'})
 
 
 class GetRequestOutput(RESTResource):
