@@ -88,7 +88,8 @@ class request(json_base):
         'approval': '',
         'analysis_id': [],
         'energy': 0.0,
-        'tags': []
+        'tags': [],
+        'transient_output_modules': [[]]
     }
 
     def __init__(self, json_input=None):
@@ -996,6 +997,7 @@ class request(json_base):
             # putting things together from the campaign+flow
             freshSeq = []
             freshKeep = []
+            freshTransientOutputModules = []
             if flownWith:
                 request.put_together(camp, flownWith, self)
             else:
@@ -1003,12 +1005,14 @@ class request(json_base):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
                     freshKeep.append(False)  # dimension keep output to the sequences
+                    freshTransientOutputModules.append([])
 
                 if not camp.get_attribute("no_output"):
                     freshKeep[-1] = True  # last output must be kept
 
                 self.set_attribute('sequences', freshSeq)
                 self.set_attribute('keep_output', freshKeep)
+                self.set_attribute('transient_output_modules', freshTransientOutputModules)
             if can_save:
                 self.update_history({'action': 'reset', 'step': 'option'})
                 self.reload()
@@ -1024,9 +1028,11 @@ class request(json_base):
             self.set_attribute('output_dataset', [])
             freshSeq = []
             freshKeep = []
+            freshTransientOutputModules = []
             for i in range(len(self.get_attribute('sequences'))):
                 freshSeq.append(sequence().json())
                 freshKeep.append(False)
+                freshTransientOutputModules.append([])
 
             if not camp.get_attribute("no_output"):
                 freshKeep[-1] = True  # last output must be kept
@@ -1034,6 +1040,7 @@ class request(json_base):
             freshKeep[-1] = True
             self.set_attribute('sequences', freshSeq)
             self.set_attribute('keep_output', freshKeep)
+            self.set_attribute('transient_output_modules', freshTransientOutputModules)
             # then update itself in DB
             if can_save:
                 self.reload()
@@ -2519,11 +2526,14 @@ class request(json_base):
         new_req.set_attribute('sequences', sequences)
         # setup the keep output parameter
         keep = []
+        freshTransientOutputModules = []
         for s in sequences:
             keep.append(False)
+            freshTransientOutputModules.append([])
+
         keep[-1] = True
         new_req.set_attribute('keep_output', keep)
-
+        new_req.set_attribute('transient_output_modules', freshTransientOutputModules)
         # override request's parameters
         for key in fl.get_attribute('request_parameters'):
             if key == 'sequences':
@@ -2905,6 +2915,11 @@ class request(json_base):
             task_dict['output_'] = "%soutput" % (self.get_attribute('sequences')[sequence_index]['eventcontent'][0])
             task_dict['priority_'] = self.get_attribute('priority')
             task_dict['request_type_'] = self.get_wmagent_type()
+            transient_output_modules = self.get_attribute('transient_output_modules')
+            if len(transient_output_modules) > sequence_index:
+                if transient_output_modules[sequence_index]:
+                    task_dict['TransientOutputModules'] = transient_output_modules[sequence_index]
+
             tasks.append(task_dict)
         return tasks
 
