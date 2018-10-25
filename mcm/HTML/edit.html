@@ -264,6 +264,14 @@
                       {{result[column.db_name]}}
                       </button>
                     </div>
+                    <div ng-switch-when="Transient output modules">
+                      <ul ng-repeat="elem in result[column.db_name] track by $index">
+                        <li>
+                          Sequence {{ $index +1 }}:
+                          <list-edit ng-model="result[column.db_name][$index]" column="column.text" suggestions-fieldname="transient_output_modules" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-edit>
+                        </li>
+                      </ul>
+                    </div>
                     <div ng-switch-default style="width: 400px;">
                       <div ng-switch on="underscore.isBoolean(result[column.db_name])">
                         <div ng-switch-when="true">
