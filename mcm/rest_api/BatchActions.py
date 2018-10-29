@@ -60,6 +60,28 @@ class BatchAnnouncer(RESTResource):
         else:
             r = b.announce(message)
         if r:
+            map_wf_to_prepid = {}
+            for dictionary in b.get_attribute('requests'):
+                wf = dictionary.get('name')
+                prepid = dictionary.get('content', {}).get('pdmv_prep_id')
+                if not wf or not prepid:
+                    continue
+
+                if wf not in map_wf_to_prepid:
+                    map_wf_to_prepid[wf] = []
+
+                map_wf_to_prepid[wf].append(prepid)
+
+            rdb = database('requests')
+            priority_coeff = settings.get_value('miniaod_priority_increase_coefficient')
+            for wf, requests in map_wf_to_prepid.iteritems():
+                if len(requests) == 1 and 'nanoaod' in requests[0].lower():
+                    for r_prepid in requests:
+                        req = request(rdb.get(r_prepid))
+                        current_priority = req.get_attribute('priority')
+                        new_priority = int(current_priority + priority_coeff * 1000)
+                        req.change_priority(new_priority)
+
             return {
                 "results": bdb.update(b.json()),
                 "message": r,
