@@ -1666,6 +1666,19 @@ class request(json_base):
 
         self.set_attribute('reqmgr_name', mcm_rr)
 
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        chained_requests = crdb.query('contains==%s' % (self.get_attribute('prepid')))
+        for cr in chained_requests:
+            chain = cr.get('chain', [])
+            index_of_this_request = chain.index(self.get_attribute('prepid'))
+            if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
+                next_request = request(rdb.get(chain[index_of_this_request + 1]))
+                if not next_request.get_attribute('input_dataset'):
+                    input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
+                    next_request.set_attribute('input_dataset', input_dataset)
+                    next_request.save()
+
         if (len(mcm_rr) and 'content' in mcm_rr[-1] and
                 'pdmv_present_priority' in mcm_rr[-1]['content'] and
                 mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
