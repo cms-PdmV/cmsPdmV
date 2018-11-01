@@ -1257,6 +1257,15 @@ class request(json_base):
                 res = res.replace('--customise %s' % (old_cust), '--customise %s' % (new_cust))
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
+
+            if 'wmlhegs' in self.get_attribute('prepid').lower():
+                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed}%100)"'
+                if '--customise_commands ' in cmsd:
+                    res = res.replace('--customise_commands ',
+                                      '--customise_commands %s,' % (random_seed_command))
+                else:
+                    res += '--customise_commands %s ' % (random_seed_command)
+
             res += inline_c
 
             res += '-n ' + str(events) + ' || exit $? ; \n'
@@ -1303,6 +1312,9 @@ class request(json_base):
 
         infile += '\nscram b\n'
         infile += 'cd ../../\n'
+        if 'wmlhegs' in self.get_attribute('prepid').lower():
+            infile += 'seed=$(date +%s)\n'
+
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
