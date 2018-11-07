@@ -2130,68 +2130,46 @@ class request(json_base):
             return (False, trace)
 
     def check_gen_efficiency(self, geninfo, events_produced, events_ran):
-        rough_efficiency = float(events_produced) / events_ran
-        rough_efficiency_error = rough_efficiency * sqrt(1. / events_produced + 1. / events_ran)
-        set_efficiency = self.get_efficiency()
+        measured_efficiency = float(events_produced) / events_ran
+        user_efficiency = self.get_efficiency()
+        sigma = (measured_efficiency * (1 - measured_efficiency)) / events_ran
+        if sigma < 0.025:
+            sigma = 0.025
 
-        # we check if set efficiency is below 50% of set efficiency
-        subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (self.get_attribute('prepid'))
-        message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                ' the mcm validation test measured %.4f +/- %.4f\n'
-                '(there were %s trial events, of which %s passed the filter/matching).\n'
-                'Please check and reset the request if necessary.'
-                ' Not within 50%%.') % (
-                    self.get_attribute('prepid'),
-                    'filter_efficiency',
-                    geninfo['filter_efficiency'],
-                    geninfo['filter_efficiency_error'],
-                    'match_efficiency',
-                    geninfo['match_efficiency'],
-                    geninfo['match_efficiency_error'],
-                    rough_efficiency,
-                    rough_efficiency_error,
-                    events_ran,
-                    events_produced)
-
-        if rough_efficiency > 1:
-            message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                ' the mcm validation test measured %.4f +/- %.4f\n'
-                ' Efficiency cannot be more than 1.\n') % (
-                        self.get_attribute('prepid'),
-                        'filter_efficiency',
-                        geninfo['filter_efficiency'],
-                        geninfo['filter_efficiency_error'],
-                        'match_efficiency',
-                        geninfo['match_efficiency'],
-                        geninfo['match_efficiency_error'],
-                        rough_efficiency,
-                        rough_efficiency_error)
-
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        two_sigma = sigma * 2
+        subject = 'Runtest for %s: efficiency is incorrect' % (self.get_attribute('prepid'))
+        if measured_efficiency > 1:
+            message = ('For the request %s measured efficiency was more than 1.\n'
+                       'McM validation test measured %.4f efficiency.\n'
+                       'There were %s trial events, of which %s passed filter/matching.\n'
+                       'User provided efficiency %.4f * %.4f = %.4f.\n'
+                       'Efficiency cannot be more than 1.\n'
+                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
+                                                                                      measured_efficiency,
+                                                                                      events_ran,
+                                                                                      events_produced,
+                                                                                      geninfo['filter_efficiency'],
+                                                                                      geninfo['match_efficiency'],
+                                                                                      user_efficiency)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if (rough_efficiency <= set_efficiency * (1 - 0.5)):
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-        if (rough_efficiency >= set_efficiency * (1 + 0.5)):
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        if measured_efficiency < user_efficiency - two_sigma or measured_efficiency > user_efficiency + two_sigma:
+            message = ('For the request %s measured efficiency was not withing set threshold.\n'
+                       'McM validation test measured %.4f efficiency.\n'
+                       'There were %s trial events, of which %s passed filter/matching.\n'
+                       'User provided efficiency %.4f * %.4f = %.4f.\n'
+                       'McM threshold is %.4f +- %.4f.\n'
+                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
+                                                                                      measured_efficiency,
+                                                                                      events_ran,
+                                                                                      events_produced,
+                                                                                      geninfo['filter_efficiency'],
+                                                                                      geninfo['match_efficiency'],
+                                                                                      user_efficiency,
+                                                                                      user_efficiency,
+                                                                                      two_sigma)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
