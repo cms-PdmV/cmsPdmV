@@ -2148,7 +2148,7 @@ class request(json_base):
         if sigma < 0.025:
             sigma = 0.025
 
-        two_sigma = sigma * 2
+        three_sigma = sigma * 3
         subject = 'Runtest for %s: efficiency is incorrect' % (self.get_attribute('prepid'))
         if measured_efficiency > 1:
             message = ('For the request %s measured efficiency was more than 1.\n'
@@ -2167,7 +2167,7 @@ class request(json_base):
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if measured_efficiency < user_efficiency - two_sigma or measured_efficiency > user_efficiency + two_sigma:
+        if measured_efficiency < user_efficiency - three_sigma or measured_efficiency > user_efficiency + three_sigma:
             message = ('For the request %s measured efficiency was not withing set threshold.\n'
                        'McM validation test measured %.4f efficiency.\n'
                        'There were %s trial events, of which %s passed filter/matching.\n'
@@ -2181,7 +2181,7 @@ class request(json_base):
                                                                                       geninfo['match_efficiency'],
                                                                                       user_efficiency,
                                                                                       user_efficiency,
-                                                                                      two_sigma)
+                                                                                      three_sigma)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
