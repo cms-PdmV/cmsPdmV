@@ -700,6 +700,29 @@ class GetStatus(RESTResource):
         return {rid: mcm_r['status']}
 
 
+class GetStatusAndApproval(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, prepid):
+        """
+        Get the status and approval of given prepid
+        """
+        return self.status(prepid)
+
+    def status(self, rid):
+        if rid == "":
+            return {"results": "You shouldnt be looking for empty prepid"}
+
+        db = database('requests')
+        if not db.document_exists(rid):
+            return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
+
+        mcm_r = db.get(rid)
+        return {rid: '%s-%s' % (mcm_r['approval'], mcm_r['status'])}
+
+
 class InspectStatus(RESTResource):
 
     access_limit = access_rights.production_manager
