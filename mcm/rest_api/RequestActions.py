@@ -625,6 +625,8 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except request.IllegalApprovalStep as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
+        except request.BadParameterValue as ex:
+            return {"prepid": rid, "results": False, 'message': str(ex)}
         except Exception:
             trace = traceback.format_exc()
             self.logger.error("Exception caught in approval\n%s" % (trace))

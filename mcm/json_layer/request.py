@@ -287,6 +287,9 @@ class request(json_base):
                 'validation',
                 'bad user admin level %s' % (self.current_user_level))
 
+        if self.get_attribute('memory') < 2300:
+            raise self.BadParameterValue('Memory (%sMB) is lower than threshold (2300MB)' % (self.get_attribute('memory')))
+
         if not self.correct_types():
             raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(self.get_attribute('prepid')))
 
