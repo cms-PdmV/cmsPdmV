@@ -2053,9 +2053,9 @@ class request(json_base):
 
     def get_timeout(self):
         default = settings.get_value('batch_timeout') * 60.
-        # we double the timeout if user wants twice the events in validation
-        if self.get_attribute('validation').get('double_time', False):
-            default = 2 * default
+        # we multiply the timeout if user wants more events in validation
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        default = multiplier * default
         # to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
         return int(max((estimate_rt) / fraction, default))
@@ -2081,9 +2081,9 @@ class request(json_base):
             fraction = settings.get_value('test_timeout_fraction')
             timeout = settings.get_value('batch_timeout') * 60. * fraction
 
-        # we double the timeout if user wants twice the events in validation
-        if self.get_attribute('validation').get('double_time', False):
-            timeout = 2 * timeout
+        # we multiply the timeout if user wants more events in validation
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        timeout = multiplier * timeout
 
         # check that it is not going to time-out
         # either the batch test time-out is set accordingly, or we limit the events
