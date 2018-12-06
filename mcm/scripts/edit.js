@@ -615,8 +615,9 @@ testApp.directive("customValidationEdit", function(){
     '        </a>'+
     '      </div>'+
     '      <div class="control-group">'+
-    '        Twice longer validation:'+
-    '        <input type="checkbox" ng-model="validation_data.double_time" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1">'+
+    '        Validation length: '+
+    '        <select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2]"></select>'+
+    '        x 8h = {{validation_data.time_multiplier * 8}}h' +
     '      </div>'+
     '    </fieldset>'+
     '  </form>'+
@@ -626,10 +627,18 @@ testApp.directive("customValidationEdit", function(){
     link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
         scope.validation_data = ctrl.$viewValue;
+        if (scope.validation_data.time_multiplier == undefined) {
+          scope.validation_data.time_multiplier = 1
+        }
       };
       scope.$watch("validation_data.nEvents", function(elem){ //watch nEvents -> is user leaves empty remove nEvents, as not to save null
         if (!elem){
           delete(scope.validation_data.nEvents);
+        }
+      });
+      scope.$watch("validation_data.time_multiplier", function(elem){ //watch time_multiplier -> is user leaves empty remove time_multiplier, as not to save null
+        if (!elem){
+          delete(scope.validation_data.time_multiplier);
         }
       });
     }
