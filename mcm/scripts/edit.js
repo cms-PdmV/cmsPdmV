@@ -616,8 +616,10 @@ testApp.directive("customValidationEdit", function(){
     '      </div>'+
     '      <div class="control-group">'+
     '        Validation length: '+
-    '        <select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2]"></select>'+
-    '        x 8h = {{validation_data.time_multiplier * 8}}h' +
+    '        <span ng-hide="!role(3)"><select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2]"></select>'+
+    '        x 8h = {{validation_data.time_multiplier * 8}}h</span>' +
+    '        <span ng-hide="role(3)"><select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2,3,4]"></select>'+
+    '        x 8h = {{validation_data.time_multiplier * 8}}h</span>' +
     '      </div>'+
     '    </fieldset>'+
     '  </form>'+
