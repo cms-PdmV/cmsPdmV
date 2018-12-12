@@ -173,18 +173,6 @@ class DeleteChainedRequest(RESTResource):
         for mcm_r in mcm_r_s:
             if not rdb.update(mcm_r.json()):
                 return {"results": False, "message": "Could not save request " + mcm_r.get_attribute('prepid')}
-            else:
-                subject = "Request {0} left chain".format(mcm_r.get_attribute('prepid'))
-                message = "Request {0} has successfuly left chain {1}".format(mcm_r.get_attribute('prepid'), crid)
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[mcm_r.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=mcm_r)
-                mcm_r.notify(subject, message)
 
         return {"results": crdb.delete(crid)}
 

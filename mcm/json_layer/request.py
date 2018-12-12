@@ -137,40 +137,13 @@ class request(json_base):
             result = self.ok_to_move_to_approval_approve()
         elif step == "submit":
             result = self.ok_to_move_to_approval_submit()
-        subject = 'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid'))
-        notification(
-            subject,
-            self.textified(),
-            [],
-            group=notification.REQUEST_APPROVALS,
-            action_objects=[self.get_attribute('prepid')],
-            object_type='requests',
-            base_object=self)
-        self.notify(
-            subject,
-            self.textified(),
-            accumulate=True)
+
         return result
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         # call the base
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
-        title = 'Status changed for request %s to %s' % (self.get_attribute('prepid'), new_status)
-        if with_notification:
-            notification(
-                title,
-                self.textified(),
-                [],
-                group='Requests_in_' + new_status,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-            self.notify(
-                title,
-                self.textified(),
-                accumulate=True)
-        # and set the last_status of each chained_request I am member of, last
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
