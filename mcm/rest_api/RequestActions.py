@@ -267,8 +267,8 @@ class UpdateRequest(RequestRESTResource):
         old_validation_multiplier = previous_version.get_attribute('validation').get('time_multiplier', 1)
         if (new_validation_multiplier != old_validation_multiplier
             and new_validation_multiplier > 2
-            and mcm_req.current_user_level < access_rights.production_manager):
-            return {"results": False, 'message': 'You need to be at least production manager to set validation to >16h %s' % (mcm_req.current_user_level)}
+            and mcm_req.current_user_level < access_rights.generator_convener):
+            return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
