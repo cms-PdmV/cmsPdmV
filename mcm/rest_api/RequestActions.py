@@ -1159,9 +1159,13 @@ class RequestLister():
                 return None
             return dsn
 
-    def get_list_of_ids(self, odb):
+    def get_list_of_ids(self, odb, json_data=None):
         self.logger.info("Got a file from uploading")
-        data = loads(flask.request.data.strip())
+        if json_data is not None:
+            data = json_data
+        else:
+            data = loads(flask.request.data.strip())
+
         text = data['contents']
 
         all_ids = []
