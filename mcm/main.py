@@ -12,7 +12,7 @@ from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetU
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
 from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
@@ -397,6 +397,7 @@ api.add_resource(
     '/restapi/mccms/reminder/<int:block_threshold>')
 api.add_resource(MccMReminderGenContacts, '/restapi/mccms/reminder_gen_contacts')
 api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string:mccm_id>')
+api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:mccm_id>')
 # REST settings Actions
 api.add_resource(GetSetting, '/restapi/settings/get/<string:setting_id>')
 api.add_resource(UpdateSetting, '/restapi/settings/update')

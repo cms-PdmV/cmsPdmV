@@ -4,6 +4,7 @@ import time
 from simplejson import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestActions import RequestLister
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from json_layer.user import user
@@ -649,3 +650,42 @@ class CalculateTotalEvts(RESTResource):
             return {"results": True}
         else:
             return {"results": False, "message": "Could not save the ticket to be cancelled."}
+
+class CheckIfAllApproved(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, mccm_id):
+        """
+        Return whether all requests in MccM are approve-approved
+        """
+        mccm_db = database('mccms')
+
+        if not mccm_db.document_exists(mccm_id):
+            return {"results": False}
+
+        mccm_doc = mccm_db.get(prepid=mccm_id)
+        req_db = database('requests')
+        query = ''
+        for root_request in mccm_doc.get('requests', []):
+            if isinstance(root_request, str) or isinstance(root_request, unicode):
+                query += '%s\n' % (root_request)
+            elif isinstance(root_request, list):
+                # List always contains two elements - start and end of a range
+                query += '%s -> %s\n' % (root_request[0], root_request[1])
+
+        req_lister = RequestLister()
+        req_lister.logger = self.logger
+        requests = req_lister.get_list_of_ids(req_db, {'contents' : query})
+        allowed_approvals = set(['approve', 'submit'])
+        for request_prepid in requests:
+            req = req_db.get(request_prepid)
+            approval = req.get('approval')
+            if approval not in allowed_approvals:
+                return {'results': False}
+
+        return {'results': True}

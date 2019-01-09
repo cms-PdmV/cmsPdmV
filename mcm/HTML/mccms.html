@@ -70,6 +70,7 @@
                 <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="dropdownModal(mccm_info.prepid,mccm_info.chains)" ng-href="#" ng-hide="role(3)"><i class="icon-indent-right"></i></a>
                 <a rel="tooltip" title="Recalculate total_events for {{mccm_info.prepid}}" ng-click="recalculate_evts(mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-filter"></i></a>
                 <a rel="tooltip" title="View all requests for {{mccm_info.prepid}}" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
+                <a ng-hide="allRequestsApproved[mccm_info.prepid] !== undefined" ng-click="checkIfAllApproved(mccm_info.prepid)" rel="tooltip" title="Check approval of requests" ng-href="#"><i class="icon-eye-open"></i></a>
               </div>
               <div ng-switch-when="Prepid">
                 <a ng-href='mccms?prepid={{mccm_info[data.db_name]}}' rel="tooltip" title="View only {{mccm_info[data.db_name]}}" target="_self">{{mccm_info[data.db_name]}}</a>
@@ -105,6 +106,8 @@
                 <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Requests">
+                <i ng-hide="allRequestsApproved[mccm_info.prepid] === undefined || allRequestsApproved[mccm_info.prepid] === true" style="color:red">Not all requests are approved</i>
+                <i ng-hide="allRequestsApproved[mccm_info.prepid] === undefined || allRequestsApproved[mccm_info.prepid] === false" style="color:green">All requests are approved</i>
                 <ul>
                   <div ng-repeat="elem in mccm_info[data.db_name]">
                     <li ng-hide="isArray(elem);">
