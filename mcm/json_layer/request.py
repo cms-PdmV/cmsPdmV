@@ -10,7 +10,7 @@ import traceback
 import time
 import logging
 from math import sqrt
-from simplejson import loads
+from simplejson import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
@@ -137,40 +137,13 @@ class request(json_base):
             result = self.ok_to_move_to_approval_approve()
         elif step == "submit":
             result = self.ok_to_move_to_approval_submit()
-        subject = 'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid'))
-        notification(
-            subject,
-            self.textified(),
-            [],
-            group=notification.REQUEST_APPROVALS,
-            action_objects=[self.get_attribute('prepid')],
-            object_type='requests',
-            base_object=self)
-        self.notify(
-            subject,
-            self.textified(),
-            accumulate=True)
+
         return result
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         # call the base
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
-        title = 'Status changed for request %s to %s' % (self.get_attribute('prepid'), new_status)
-        if with_notification:
-            notification(
-                title,
-                self.textified(),
-                [],
-                group='Requests_in_' + new_status,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-            self.notify(
-                title,
-                self.textified(),
-                accumulate=True)
-        # and set the last_status of each chained_request I am member of, last
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
@@ -1955,21 +1928,29 @@ class request(json_base):
 
     def textified(self):
         l_type = locator()
-        view_in_this_order = ['pwg', 'prepid', 'dataset_name', 'mcdb_id', 'analysis_id', 'notes',
-                'total_events', 'validation', 'approval', 'status', 'input_dataset',
-                'member_of_chain', 'reqmgr_name', 'completed_events']
+        view_in_this_order = ['pwg',
+                              'prepid',
+                              'dataset_name',
+                              'mcdb_id',
+                              'analysis_id',
+                              'notes',
+                              'total_events',
+                              'validation',
+                              'approval',
+                              'status',
+                              'input_dataset',
+                              'member_of_chain',
+                              'reqmgr_name',
+                              'completed_events']
 
         text = ''
         for view in view_in_this_order:
-            if self.get_attribute(view):
-                if type(self.get_attribute(view)) == list:
-                    for (i, item) in enumerate(self.get_attribute(view)):
-                        text += '%s[%s] : %s \n' % (view, i, pprint.pformat(item))
-                elif type(self.get_attribute(view)) == int:
-                    if self.get_attribute(view) > 0:
-                        text += '%s : %s \n' % (view, self.get_attribute(view))
+            value = self.get_attribute(view)
+            if value:
+                if isinstance(value, list) or isinstance(value, dict):
+                    text += '%s: %s\n' % (view, dumps(value, indent=4))
                 else:
-                    text += '%s : %s \n' % (view, self.get_attribute(view))
+                    text += '%s: %s\n' % (view, self.get_attribute(view))
         text += '\n'
         text += '%srequests?prepid=%s' % (l_type.baseurl(), self.get_attribute('prepid'))
         return text
@@ -2217,10 +2198,10 @@ class request(json_base):
             __all_values = self.get_attribute('time_event') + [measured_time_evt]
             __mean_value = float(sum(__all_values)) / max(len(__all_values), 1)
 
-            subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: time per event over-estimate' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to:%s') % (
+                    ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2249,7 +2230,7 @@ class request(json_base):
             subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to:%s') % (
+                    ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2288,7 +2269,7 @@ class request(json_base):
         __test_eff = cpu_time / (self.get_core_num() * total_time)
         if  __test_eff < cpu_eff_threshold:
             self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
-            subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: CPU efficiency too low' % (self.get_attribute('prepid'))
             message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
                     ' You should lower number of cores and memory accordingly.') % (
                         self.get_attribute('prepid'),
@@ -2345,7 +2326,7 @@ class request(json_base):
         if file_size < int(0.90 * sum(self.get_attribute('size_event'))):
             # size over-estimated
             # warn if over-estimated by more than 10%
-            subject = 'Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: size per event over-estimate' % (self.get_attribute('prepid'))
             message = ('For the request %s, size/event=%s was given, %s was'
                     ' measured from %s events (ran %s).') % (
                         self.get_attribute('prepid'),

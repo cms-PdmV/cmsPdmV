@@ -455,22 +455,6 @@ class GenerateChains(RESTResource):
         chains.sort()
         mcm_request.set_attribute('member_of_chain', list(set(chains)))
         mcm_request.update_history({'action': 'join chain', 'step': new_chain_prepid})
-        if with_notify:
-            subject = "Request %s joined chain" % mcm_request.get_attribute('prepid')
-            message = "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid)
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[mcm_request.get_attribute('prepid')],
-                object_type='requests',
-                base_object=mcm_request)
-            mcm_request.notify(
-                subject,
-                message,
-                Nchild=0,
-                accumulate=True)
         mcm_request.save()
         # do the reservation of the whole chain ?
         generated_requests = []

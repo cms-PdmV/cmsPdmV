@@ -9,6 +9,7 @@ import tools.settings as settings
 from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from copy import deepcopy
+from tools.user_management import access_rights
 
 class json_base:
     __json = {}
@@ -371,9 +372,32 @@ class json_base:
                accumulate=False):
 
         dest = map(lambda i: i, who)
-        if actors:  
-            # add the actors to the object  
-            dest.extend(self.get_actors(what='author_email', Nchild=Nchild))
+        if actors:
+            auth = authenticator()
+            # add the actors to the object
+            for history_entry in self.get_attribute('history'):
+                username = history_entry.get('updater', {}).get('author_username')
+                if not username:
+                    continue
+
+                email = history_entry.get('updater', {}).get('author_email')
+                if not email:
+                    continue
+
+                if email in dest:
+                    # No need to chech the same person again
+                    continue
+
+                action = history_entry.get('action')
+                if not action:
+                    continue
+
+                user_level, user_role = auth.get_user_role_index(username)
+                if user_level == access_rights.user and action != 'register':
+                    continue
+
+                dest.append(email)
+
         if service:
             # let the service know at any time
             dest.append(settings.get_value('service_account'))
