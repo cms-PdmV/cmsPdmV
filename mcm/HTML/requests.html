@@ -364,6 +364,19 @@
               <div ng-switch-when="Filter efficiency" align="center">
                 {{data["generator_parameters"].slice(-1)[0]["filter_efficiency"]}}
               </div>
+              <div ng-switch-when="Cadi line" align="center">
+                <a ng-show="data[value.db_name]" rel="tooltip" title="Cadi line" ng-href="http://cms.cern.ch/iCMS/analysisadmin/cadilines?line={{data[value.db_name]}}">{{data[value.db_name]}}</a>
+              </div>
+              <div ng-switch-when="Interested pwgs">
+                <ul>
+                  <li ng-repeat="elem in data[value.db_name]"><a ng-href='{{getLocation()}}&interested_pwg={{elem}}' rel="tooltip" title="Showall requests where {{elem}} is interested pwg" target="_self">{{elem}}</a></li>
+                </ul>
+              </div>
+              <div ng-switch-when="Timescale tags">
+                <ul>
+                  <li ng-repeat="elem in data[value.db_name]"><a ng-href='{{getLocation()}}&timescale_tag={{elem}}' rel="tooltip" title="Showall requests that contain {{elem}}" target="_self">{{elem}}</a></li>
+                </ul>
+              </div>
               <div ng-switch-default align="center">{{data[value.db_name]}}</div>
             </div>
           </td>

@@ -270,6 +270,12 @@ class UpdateRequest(RequestRESTResource):
             and mcm_req.current_user_level < access_rights.generator_convener):
             return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
 
+        all_interested_pwgs = set(settings.get_value('pwg'))
+        interested_pwgs = mcm_req.get_attribute('interested_pwgs')
+        for interested_pwg in interested_pwgs:
+            if interested_pwg not in all_interested_pwgs:
+                return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
+
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
         # update history
@@ -1971,3 +1977,24 @@ class TaskChainRequestDict(RESTResource):
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
         return dumps(wma, indent=4)
+
+
+class TimescaleTags(RESTResource):
+
+    access_limit = access_rights.user
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, request_id):
+        requests_db = database('requests')
+        mcm_request = request(requests_db.get(request_id))
+        if not mcm_request:
+            return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}
+
+        campaign = mcm_request.get_attribute('member_of_campaign')
+        timescale_tags = settings.get_value('timescale_tags')
+        tags = set(timescale_tags.get('all',[])).union(set(timescale_tags.get(campaign,[])))
+        return {'results': sorted(list(tags)),
+                'message': '%s tags found' % (len(tags))}

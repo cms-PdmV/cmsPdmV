@@ -88,7 +88,10 @@ class request(json_base):
         'approval': '',
         'analysis_id': [],
         'energy': 0.0,
-        'tags': []
+        'tags': [],
+        'cadi_line': '',
+        'interested_pwgs': [],
+        'timescale_tags': []
     }
 
     def __init__(self, json_input=None):
