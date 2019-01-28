@@ -2264,9 +2264,21 @@ class request(json_base):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
         # <TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
         cpu_eff_threshold = settings.get_value('cpu_efficiency_threshold')
-        self.logger.error("checking cpu efficinecy. threshold:%s" % (cpu_eff_threshold))
+        efficinecy_exceptions = settings.get_value('cpu_eff_threshold_exceptions')
+        campaign = self.get_attribute('member_of_campaign')
+        prepid = self.get_attribute('prepid')
+        if prepid in efficinecy_exceptions:
+            cpu_eff_threshold = efficinecy_exceptions.get(prepid, 0.0)
+            self.logger.info('Found %s in CPU efficiency exceptions' % (prepid))
+        elif campaign in efficinecy_exceptions:
+            cpu_eff_threshold = efficinecy_exceptions.get(campaign, 0.0)
+            self.logger.info('Found %s in CPU efficiency exceptions' % (campaign))
+
+        self.logger.info("Checking CPU efficinecy. Threshold: %s" % (cpu_eff_threshold))
 
         __test_eff = cpu_time / (self.get_core_num() * total_time)
+
+        self.logger.info("CPU efficinecy for %s is %s" % (prepid, __test_eff))
         if  __test_eff < cpu_eff_threshold:
             self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
             subject = 'Runtest for %s: CPU efficiency too low' % (self.get_attribute('prepid'))
