@@ -119,6 +119,12 @@ class RequestRESTResource(RESTResource):
 
         # save to database or update if existed
         if not existed:
+            interested_pwgs = mcm_req.get_attribute('interested_pwgs')
+            pwg = mcm_req.get_attribute('pwg')
+            if pwg not in interested_pwgs:
+                interested_pwgs.append(pwg)
+                mcm_req.set_attribute('interested_pwgs', interested_pwgs)
+
             if not db.save(mcm_req.json()):
                 self.logger.error('Could not save results to database')
                 return {"results": False}
@@ -1979,7 +1985,7 @@ class TaskChainRequestDict(RESTResource):
         return dumps(wma, indent=4)
 
 
-class TimescaleTags(RESTResource):
+class PPDTags(RESTResource):
 
     access_limit = access_rights.user
 
@@ -1994,7 +2000,7 @@ class TimescaleTags(RESTResource):
             return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}
 
         campaign = mcm_request.get_attribute('member_of_campaign')
-        timescale_tags = settings.get_value('timescale_tags')
-        tags = set(timescale_tags.get('all',[])).union(set(timescale_tags.get(campaign,[])))
+        ppd_tags = settings.get_value('ppd_tags')
+        tags = set(ppd_tags.get('all',[])).union(set(ppd_tags.get(campaign,[])))
         return {'results': sorted(list(tags)),
                 'message': '%s tags found' % (len(tags))}

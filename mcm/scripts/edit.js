@@ -798,8 +798,8 @@ testApp.directive("listPredefined", function($http){
           return {};
         }
         var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
-        if (scope.fieldName === 'timescale_tags') {
-          searchURL = "restapi/requests/timescale_tags/" + scope.result.prepid ;
+        if (scope.fieldName === 'ppd_tags') {
+          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
         }
         var promise = $http.get(searchURL);
         return promise.then(function(data){

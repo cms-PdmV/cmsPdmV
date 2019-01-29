@@ -673,6 +673,7 @@ class chained_request(json_base):
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
+            next_request.set_attribute("interested_pwgs", [current_request.get_attribute('pwg')])
             self.request_join(next_request)
 
         elif approach == 'use':

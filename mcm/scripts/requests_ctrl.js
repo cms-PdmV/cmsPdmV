@@ -13,6 +13,10 @@ angular.module('testApp').controller('resultsCtrl',
         {text:'History',select:true, db_name:'history'},
         {text:'Tags',select:true, db_name:'tags'}
     ];
+    $scope.requests_renames = {
+        'ppd_tags': 'PPD tags',
+        'interested_pwgs':'Interested PWGs',
+    };
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
 
     $scope.filt = {}; //define an empty filter
@@ -211,7 +215,11 @@ angular.module('testApp').controller('resultsCtrl',
                     }
                 });
                 if (add) {
-                    $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                    if (v in $scope.requests_renames) {
+                        $scope.requests_defaults.push({text: $scope.requests_renames[v], select: false, db_name: v});
+                    } else {
+                        $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                    }
                 }
             });
             if (_.keys($location.search()).indexOf('fields') != -1) {

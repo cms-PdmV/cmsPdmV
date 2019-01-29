@@ -91,7 +91,7 @@ class request(json_base):
         'tags': [],
         'cadi_line': '',
         'interested_pwgs': [],
-        'timescale_tags': []
+        'ppd_tags': []
     }
 
     def __init__(self, json_input=None):
