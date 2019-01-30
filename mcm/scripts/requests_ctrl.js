@@ -958,8 +958,12 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
-    '          <td style="padding: 0px; white-space: normal; min-width: 150px;' +
-        '">{{elem.step}}</td>'+ //is it needed?
+    '          <td style="padding: 0px; white-space: normal; min-width: 150px;">' +
+    '            <div ng-switch="isJSON(elem.step).toString()">'+
+    '              <div ng-switch-when="true"><pre style="min-width:275px">{{elem.step}}</pre></div>'+
+    '              <div ng-switch-default>{{elem.step}}</div>'+
+    '            </div>'+
+    '          </td>'+ //is it needed?
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
@@ -970,7 +974,24 @@ testApp.directive("customHistory", function(){
       ctrl.$render = function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
+        for (var index in scope.show_info) {
+          var entry = scope.show_info[index]
+          if (entry['action'] === 'update' && scope.isJSON(JSON.stringify(entry['step']))) {
+            entry['step'] = JSON.stringify(entry['step'], undefined, 2)
+          }
+        }
       };
+      scope.isJSON = function(text) {
+        if (!text) {
+          return false;
+        }
+        try {
+          JSON.parse(text);
+        } catch (e) {
+          return false;
+        }
+        return true;
+      }
     }
   }
 });

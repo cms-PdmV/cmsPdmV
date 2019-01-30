@@ -47,6 +47,24 @@ class RequestRESTResource(RESTResource):
 
         return camp
 
+    def get_req_diff(self, old, new):
+        old_keys = set(old.keys())
+        new_keys = set(new.keys())
+        camparable_keys = set(['ppd_tags'])
+        diff = {}
+        for key in camparable_keys:
+            if key in old_keys and key not in new_keys:
+                diff[key] = {'old': old[key]}
+            elif key in new_keys and key not in old_keys:
+                diff[key] = {'new': new[key]}
+            elif old.get(key) != new.get(key):
+                if isinstance(old[key], dict) and isinstance(new[key], dict):
+                    diff[key] = self.get_req_diff(old[key], new[key])
+                else:
+                    diff[key] = {'old': old[key], 'new': new[key]}
+
+        return diff
+
     def import_request(self, data, db, label='created', step=None):
 
         if '_rev' in data:
@@ -286,7 +304,12 @@ class UpdateRequest(RequestRESTResource):
 
         # update history
         if self.with_trace:
-            mcm_req.update_history({'action': 'update'})
+            difference = self.get_req_diff(previous_version.json(), mcm_req.json())
+            if difference:
+                mcm_req.update_history({'action': 'update', 'step': difference})
+            else:
+                mcm_req.update_history({'action': 'update'})
+
         return self.save_request(mcm_req, db)
 
     def save_request(self, mcm_req, db):
