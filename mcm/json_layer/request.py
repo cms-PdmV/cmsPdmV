@@ -144,6 +144,14 @@ class request(json_base):
         # call the base
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
+        prepid = self.get_attribute('prepid')
+        if 'pLHE' in self.get_attribute('prepid'):
+            title = 'Status changed for request %s to %s' % (prepid, new_status)
+            self.notify(
+                title,
+                self.textified(),
+                accumulate=True)
+
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
@@ -1474,6 +1482,20 @@ class request(json_base):
             self.notify(subject, message)
 
         self.reload()
+
+    def test_success(self, message, what='Submission', with_notification=True):
+        if with_notification:
+            subject = '%s succeeded for request %s' % (what, self.get_attribute('prepid'))
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[self.get_attribute('prepid')],
+                object_type='requests',
+                base_object=self
+            )
+            self.notify(subject, message)
 
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
             refresh=False, forced=False):
