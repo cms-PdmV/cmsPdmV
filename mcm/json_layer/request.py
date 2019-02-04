@@ -90,7 +90,7 @@ class request(json_base):
         'energy': 0.0,
         'tags': [],
         'cadi_line': '',
-        'interested_pwgs': [],
+        'interested_pwg': [],
         'ppd_tags': []
     }
 

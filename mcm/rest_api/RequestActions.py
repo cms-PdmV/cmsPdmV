@@ -137,11 +137,11 @@ class RequestRESTResource(RESTResource):
 
         # save to database or update if existed
         if not existed:
-            interested_pwgs = mcm_req.get_attribute('interested_pwgs')
+            interested_pwg = mcm_req.get_attribute('interested_pwg')
             pwg = mcm_req.get_attribute('pwg')
-            if pwg not in interested_pwgs:
-                interested_pwgs.append(pwg)
-                mcm_req.set_attribute('interested_pwgs', interested_pwgs)
+            if pwg not in interested_pwg:
+                interested_pwg.append(pwg)
+                mcm_req.set_attribute('interested_pwg', interested_pwg)
 
             if not db.save(mcm_req.json()):
                 self.logger.error('Could not save results to database')
@@ -294,10 +294,10 @@ class UpdateRequest(RequestRESTResource):
             and mcm_req.current_user_level < access_rights.generator_convener):
             return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
 
-        all_interested_pwgs = set(settings.get_value('pwg'))
-        interested_pwgs = mcm_req.get_attribute('interested_pwgs')
-        for interested_pwg in interested_pwgs:
-            if interested_pwg not in all_interested_pwgs:
+        all_interested_pwg = set(settings.get_value('pwg'))
+        interested_pwg = mcm_req.get_attribute('interested_pwg')
+        for interested_pwg in interested_pwg:
+            if interested_pwg not in all_interested_pwg:
                 return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))

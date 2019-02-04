@@ -15,7 +15,7 @@ angular.module('testApp').controller('resultsCtrl',
     ];
     $scope.requests_renames = {
         'ppd_tags': 'PPD tags',
-        'interested_pwgs':'Interested PWGs',
+        'interested_pwg':'Interested PWGs',
     };
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
 

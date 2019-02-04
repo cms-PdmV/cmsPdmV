@@ -369,12 +369,18 @@
               </div>
               <div ng-switch-when="Interested PWGs">
                 <ul>
-                  <li ng-repeat="elem in data[value.db_name]"><a ng-href='{{getLocation()}}&interested_pwgs={{elem}}' rel="tooltip" title="Show all requests where {{elem}} is interested PWG" target="_self">{{elem}}</a></li>
+                  <li ng-repeat="elem in data[value.db_name]">
+                    <!-- <a ng-href='{{getLocation()}}&interested_pwg={{elem}}' rel="tooltip" title="Show all requests where {{elem}} is interested PWG" target="_self">{{elem}}</a> -->
+                    {{elem}}
+                  </li>
                 </ul>
               </div>
               <div ng-switch-when="PPD tags">
                 <ul>
-                  <li ng-repeat="elem in data[value.db_name]"><a ng-href='{{getLocation()}}&ppd_tags={{elem}}' rel="tooltip" title="Show all requests that contain {{elem}} PPD tag" target="_self">{{elem}}</a></li>
+                  <li ng-repeat="elem in data[value.db_name]">
+                    <!-- <a ng-href='{{getLocation()}}&ppd_tags={{elem}}' rel="tooltip" title="Show all requests that contain {{elem}} PPD tag" target="_self">{{elem}}</a> -->
+                    {{elem}}
+                  </li>
                 </ul>
               </div>
               <div ng-switch-default align="center">{{data[value.db_name]}}</div>
