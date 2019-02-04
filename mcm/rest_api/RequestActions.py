@@ -47,6 +47,24 @@ class RequestRESTResource(RESTResource):
 
         return camp
 
+    def get_req_diff(self, old, new):
+        old_keys = set(old.keys())
+        new_keys = set(new.keys())
+        camparable_keys = set(['ppd_tags'])
+        diff = {}
+        for key in camparable_keys:
+            if key in old_keys and key not in new_keys:
+                diff[key] = {'old': old[key]}
+            elif key in new_keys and key not in old_keys:
+                diff[key] = {'new': new[key]}
+            elif old.get(key) != new.get(key):
+                if isinstance(old[key], dict) and isinstance(new[key], dict):
+                    diff[key] = self.get_req_diff(old[key], new[key])
+                else:
+                    diff[key] = {'old': old[key], 'new': new[key]}
+
+        return diff
+
     def import_request(self, data, db, label='created', step=None):
 
         if '_rev' in data:
@@ -119,6 +137,12 @@ class RequestRESTResource(RESTResource):
 
         # save to database or update if existed
         if not existed:
+            interested_pwg = mcm_req.get_attribute('interested_pwg')
+            pwg = mcm_req.get_attribute('pwg')
+            if pwg not in interested_pwg:
+                interested_pwg.append(pwg)
+                mcm_req.set_attribute('interested_pwg', interested_pwg)
+
             if not db.save(mcm_req.json()):
                 self.logger.error('Could not save results to database')
                 return {"results": False}
@@ -263,11 +287,29 @@ class UpdateRequest(RequestRESTResource):
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
                 # raise ValueError('Illegal change of parameter')
 
+        new_validation_multiplier = mcm_req.get_attribute('validation').get('time_multiplier', 1)
+        old_validation_multiplier = previous_version.get_attribute('validation').get('time_multiplier', 1)
+        if (new_validation_multiplier != old_validation_multiplier
+            and new_validation_multiplier > 2
+            and mcm_req.current_user_level < access_rights.generator_convener):
+            return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
+
+        all_interested_pwg = set(settings.get_value('pwg'))
+        interested_pwg = mcm_req.get_attribute('interested_pwg')
+        for interested_pwg in interested_pwg:
+            if interested_pwg not in all_interested_pwg:
+                return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
+
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
         # update history
         if self.with_trace:
-            mcm_req.update_history({'action': 'update'})
+            difference = self.get_req_diff(previous_version.json(), mcm_req.json())
+            if difference:
+                mcm_req.update_history({'action': 'update', 'step': difference})
+            else:
+                mcm_req.update_history({'action': 'update'})
+
         return self.save_request(mcm_req, db)
 
     def save_request(self, mcm_req, db):
@@ -625,6 +667,8 @@ class ApproveRequest(RESTResource):
             return {"prepid": rid, "results": False, 'message': str(ex)}
         except request.IllegalApprovalStep as ex:
             return {"prepid": rid, "results": False, 'message': str(ex)}
+        except request.BadParameterValue as ex:
+            return {"prepid": rid, "results": False, 'message': str(ex)}
         except Exception:
             trace = traceback.format_exc()
             self.logger.error("Exception caught in approval\n%s" % (trace))
@@ -696,6 +740,29 @@ class GetStatus(RESTResource):
             __retries -= 1
 
         return {rid: mcm_r['status']}
+
+
+class GetStatusAndApproval(RESTResource):
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, prepid):
+        """
+        Get the status and approval of given prepid
+        """
+        return self.status(prepid)
+
+    def status(self, rid):
+        if rid == "":
+            return {"results": "You shouldnt be looking for empty prepid"}
+
+        db = database('requests')
+        if not db.document_exists(rid):
+            return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
+
+        mcm_r = db.get(rid)
+        return {rid: '%s-%s' % (mcm_r['approval'], mcm_r['status'])}
 
 
 class InspectStatus(RESTResource):
@@ -1127,9 +1194,13 @@ class RequestLister():
                 return None
             return dsn
 
-    def get_list_of_ids(self, odb):
+    def get_list_of_ids(self, odb, json_data=None):
         self.logger.info("Got a file from uploading")
-        data = loads(flask.request.data.strip())
+        if json_data is not None:
+            data = json_data
+        else:
+            data = loads(flask.request.data.strip())
+
         text = data['contents']
 
         all_ids = []
@@ -1935,3 +2006,24 @@ class TaskChainRequestDict(RESTResource):
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
         return dumps(wma, indent=4)
+
+
+class PPDTags(RESTResource):
+
+    access_limit = access_rights.user
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, request_id):
+        requests_db = database('requests')
+        mcm_request = request(requests_db.get(request_id))
+        if not mcm_request:
+            return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}
+
+        campaign = mcm_request.get_attribute('member_of_campaign')
+        ppd_tags = settings.get_value('ppd_tags')
+        tags = set(ppd_tags.get('all',[])).union(set(ppd_tags.get(campaign,[])))
+        return {'results': sorted(list(tags)),
+                'message': '%s tags found' % (len(tags))}

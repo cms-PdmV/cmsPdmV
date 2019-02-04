@@ -24,8 +24,6 @@
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/edit.js"></script>
         <script src="scripts/edit_controller.js"></script>
-        <script src="scripts/notifications.js"></script>
-
         <!-- angularui is needed for codemirror -->
         <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
         <script src="scripts/angular-ui.min.js"></script>
@@ -257,6 +255,12 @@
                         <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
+                    </div>
+                    <div ng-switch-when="Interested pwgs">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
+                    </div>
+                    <div ng-switch-when="Ppd tags">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="ppd_tags" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
                     </div>
                     <div ng-switch-when="Chain type">
                       <button class="btn btn-info"

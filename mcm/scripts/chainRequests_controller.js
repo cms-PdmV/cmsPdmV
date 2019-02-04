@@ -54,16 +54,18 @@ angular.module('testApp').controller('resultsCtrl',
               $scope.r_status [ prepid ] = undefined;
             }else{
               $scope.puce[prepid] = 'processing-bg.gif';
-              $http({method:'GET', url: 'public/restapi/requests/get_status/'+prepid}).success(function(data,status){
+              $http({method:'GET', url: 'public/restapi/requests/get_status_and_approval/'+prepid}).success(function(data,status){
                 r_prepid=_.keys(data)[0];
                 r_status = data[r_prepid];
                 $scope.r_status[ r_prepid ] = r_status;
-                status_map = { 'done' : 'led-green.gif',
-                   'submitted' : 'led-blue.gif',
-                   'approved' : 'led-orange.gif',
-                   'defined' : 'led-orange.gif',
-                   'validation' : 'led-red.gif',
-                   'new' : 'led-red.gif'}
+                status_map = {'submit-done': 'led-green.gif',
+                              'submit-submitted': 'led-blue.gif',
+                              'submit-approved': 'led-red.gif',
+                              'approve-approved': 'led-orange.gif',
+                              'define-defined': 'led-yellow.gif',
+                              'validation-validation': 'led-purple.gif',
+                              'validation-new': 'led-aqua.gif',
+                              'none-new': 'led-gray.gif'}
                 if (status_map[r_status]){
                   $scope.puce[ r_prepid ] = status_map[r_status];
                 }else{

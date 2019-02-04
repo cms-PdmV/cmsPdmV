@@ -615,8 +615,11 @@ testApp.directive("customValidationEdit", function(){
     '        </a>'+
     '      </div>'+
     '      <div class="control-group">'+
-    '        Twice longer validation:'+
-    '        <input type="checkbox" ng-model="validation_data.double_time" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1">'+
+    '        Validation length: '+
+    '        <span ng-hide="!role(3)"><select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2]"></select>'+
+    '        x 8h = {{(validation_data.time_multiplier ? validation_data.time_multiplier : 1)* 8}}h</span>' +
+    '        <span ng-hide="role(3)"><select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2,3,4]"></select>'+
+    '        x 8h = {{(validation_data.time_multiplier ? validation_data.time_multiplier : 1) * 8}}h</span>' +
     '      </div>'+
     '    </fieldset>'+
     '  </form>'+
@@ -630,6 +633,11 @@ testApp.directive("customValidationEdit", function(){
       scope.$watch("validation_data.nEvents", function(elem){ //watch nEvents -> is user leaves empty remove nEvents, as not to save null
         if (!elem){
           delete(scope.validation_data.nEvents);
+        }
+      });
+      scope.$watch("validation_data.time_multiplier", function(elem){ //watch time_multiplier -> is user leaves empty remove time_multiplier, as not to save null
+        if (!elem){
+          delete(scope.validation_data.time_multiplier);
         }
       });
     }
@@ -717,6 +725,90 @@ testApp.directive("listEdit", function($http){
 
         }, function(data){
           alert("Error getting suggestions for " + scope.fieldName + " field (value=" + fieldValue + "): " + data.status);
+        });
+      };
+    }
+  }
+});
+
+testApp.directive("listPredefined", function($http){
+  return {
+    replace: false,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <ul>'+
+    '   <li ng-repeat="elem in analysis_data">'+
+    '     <span ng-hide="editable[$index]">'+
+    '       {{elem}}'+
+    '     </span>'+
+    '     <span ng-hide="editable[$index] || not_editable_list.indexOf(columnName)!=-1">'+
+    '       <a ng-click="remove($index)">'+
+    '         <i class="icon-remove-sign"></i>'+
+    '       </a>'+
+    '     <span>'+
+    '   </li>'+
+    '  </ul>'+
+    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(columnName)!=-1">'+
+    '      <a ng-click="add_analysis_id=!add_analysis_id;">'+
+    '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
+    '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
+    '      </a>'+
+    '      <select ng-model="new_analysis_id" ng-show="add_analysis_id">'+
+    '        <option ng-repeat="suggestion in suggestions">{{suggestion}}</option>'+
+    '      </select>'+
+    '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
+    '    </form>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$init = function() {
+        console.log('INIT!')
+      };
+
+      ctrl.$render = function(){
+        scope.analysis_data = ctrl.$viewValue;
+        scope.new_analysis_id = "";
+        scope.editable = {};
+        scope.new_id = "";
+        scope.columnName = scope.$eval(attr.column);
+        scope.fieldName = attr.suggestionsFieldname;
+        scope.suggestions = []
+        if (scope.suggestions.length === 0) {
+          scope.loadSuggestions()
+        }
+      };
+
+      scope.remove = function(index){
+        scope.analysis_data.splice(index, 1);
+        scope.loadSuggestions()
+      };
+
+      scope.pushNewAnalysisID = function(){
+        scope.analysis_data.push(scope.new_analysis_id);
+        scope.add_analysis_id = false;
+        scope.new_analysis_id = "";
+        scope.loadSuggestions()
+      };
+
+      scope.loadSuggestions = function () {
+        if (scope.fieldName == undefined) {
+          return {};
+        }
+        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
+        if (scope.fieldName === 'ppd_tags') {
+          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
+        }
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          var filteredResults = data['data']['results'].filter(function(el) {
+            return scope.analysis_data.indexOf(el) < 0;
+          });
+          scope.suggestions = filteredResults;
+        }, function(data){
+          alert("Error getting suggestions for " + scope.fieldName + " " + data.status + " ");
         });
       };
     }

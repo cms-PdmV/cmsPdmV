@@ -273,25 +273,6 @@ class chained_request(json_base):
 
             req.set_attribute("member_of_chain", chain)
 
-        loc = locator()
-        subject = "Request {0} joined chain".format(req.get_attribute('prepid'))
-        message = "Request {0} has successfully joined chain {1}\n\n{2}\n".format(
-            req.get_attribute('prepid'),
-            self.get_attribute('_id'),
-            "/".join([loc.baseurl(), "requests?prepid={0}".format(req.get_attribute('prepid'))])
-        )
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.CHAINED_REQUESTS,
-            action_objects=[self.get_attribute('prepid')],
-            object_type='chained_requests',
-            base_object=self)
-        req.notify(subject,
-                   message,
-                   accumulate=True)
-
         req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
         if not req.get_attribute('prepid') in self.get_attribute('chain'):
             chain = self.get_attribute('chain')
@@ -692,6 +673,7 @@ class chained_request(json_base):
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
+            next_request.set_attribute("interested_pwg", [current_request.get_attribute('pwg')])
             self.request_join(next_request)
 
         elif approach == 'use':
@@ -805,47 +787,6 @@ class chained_request(json_base):
                 action = "flow"
 
             self.update_history({'action': action, 'step': next_request.get_attribute('prepid')})
-
-        if not reserve:
-            notification_subject = 'Flow for request %s in %s' % (current_request.get_attribute('prepid'), next_campaign_id)
-            notification_text = 'The request %s has been flown within:\n \t %s \n into campaign:\n \t %s \n using:\n \t %s \n creating the new request:\n \t %s \n as part of:\n \t %s \n and from the produced dataset:\n %s \n\n%srequests?prepid=%s \n%srequests?prepid=%s \n' % (
-                current_request.get_attribute('prepid'),
-                self.get_attribute('member_of_campaign'),
-                next_campaign_id,
-                flow_name,
-                next_request.get_attribute('prepid'),
-                self.get_attribute('prepid'),
-                next_request.get_attribute('input_dataset'),
-                l_type.baseurl(),
-                current_request.get_attribute('prepid'),
-                l_type.baseurl(),
-                next_request.get_attribute('prepid'))
-            notification(
-                notification_subject,
-                notification_text,
-                [],
-                group=notification.CHAINED_REQUESTS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='chained_requests',
-                base_object=self)
-            current_request.notify(notification_subject, notification_text, accumulate=True)
-        else:
-            notification_subject = 'Reservation of request {0}'.format(next_request.get_attribute('prepid'))
-            notification_text = 'The request {0} of campaign \n\t{2}\nhas been reserved as part of \n\t{1}\nas the next step for {4}\n\n{3}requests?prepid={4}\n{5}requests?prepid={6}\n'.format(
-                next_request.get_attribute('prepid'),
-                self.get_attribute('prepid'),
-                next_campaign_id,
-                l_type.baseurl(), current_request.get_attribute('prepid'),
-                l_type.baseurl(), next_request.get_attribute('prepid'),)
-            notification(
-                notification_subject,
-                notification_text,
-                [],
-                group=notification.CHAINED_REQUESTS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='chained_requests',
-                base_object=self)
-            next_request.notify(notification_subject, notification_text, accumulate=True)
 
         # we remove the chain_req id from force_flow list if it's in there
         forceflow_list = ldb.get("list_of_forceflow")

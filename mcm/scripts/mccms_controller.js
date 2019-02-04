@@ -24,6 +24,7 @@ angular.module('testApp').controller('resultsCtrl',
       column: 'value.name',
       descending: false
     };
+    $scope.allRequestsApproved = {};
 
     $scope.selectedCls = function(column) {
       return column == $scope.sort.column && 'sort-' + $scope.sort.descending;
@@ -257,6 +258,21 @@ angular.module('testApp').controller('resultsCtrl',
       },function(){
         alert("Something went wrong");
       });
+    };
+
+    $scope.checkIfAllApproved = function(prepid){
+      for (i = 0; i < $scope.result.length; i++) {
+        if ($scope.result[i].prepid == prepid) {
+          // if already present. remove it to redisplay properly
+          if (_.keys($scope.allRequestsApproved).indexOf(prepid) == -1 || $scope.allRequestsApproved[prepid] == undefined) {
+            $http({method:'GET', url: 'restapi/mccms/check_all_approved/' + prepid}).success(function(data,status){
+              $scope.allRequestsApproved[prepid] = data.results;
+            }).error(function(status){
+              alert('Cannot get information for ' + prepid);
+            });
+          }
+        }
+      }
     };
 
     $scope.open_isSureModal = function(action, prepid){

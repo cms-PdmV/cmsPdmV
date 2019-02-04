@@ -21,7 +21,6 @@
         <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/requests_ctrl.js"></script>
-        <script src="scripts/notifications.js"></script>
   </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
@@ -218,7 +217,7 @@
                 <a ng-href="admin/_utils/document.html?requests/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
               </div>
 	            <div ng-switch-when="Pwg">
-		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Showall requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
+		            <a ng-href='{{getLocation()}}&pwg={{data[value.db_name]}}' rel="tooltip" title="Show all requests for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
 	            </div>
               <div ng-switch-when="Approvals">
                 <div custom-approval ng-model="data[value.db_name]"></div>
@@ -308,10 +307,8 @@
                     <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                     <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                   </li>
-                  <li ng-show="data[value.db_name].double_time != undefined">
-                    Twice longer validation:
-                    <i class="icon-ok" ng-show="data[value.db_name].double_time"></i>
-                    <i class="icon-remove" ng-show="!data[value.db_name].double_time"></i>
+                  <li ng-show="data[value.db_name].time_multiplier != undefined">
+                    Length: {{data[value.db_name].time_multiplier}} * 8h = {{8 * data[value.db_name].time_multiplier}}h
                   </li>
 		              <!--<li ng-repeat="att in data[value.db_name]">
 		                {{att}}
@@ -374,6 +371,25 @@
                     <ul>
                       <li ng-repeat="module_name in elem">{{ module_name }}</li>
                     </ul>
+                  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="Cadi line" align="center">
+                <a ng-show="data[value.db_name]" rel="tooltip" title="Cadi line" ng-href="http://cms.cern.ch/iCMS/analysisadmin/cadilines?line={{data[value.db_name]}}">{{data[value.db_name]}}</a>
+              </div>
+              <div ng-switch-when="Interested PWGs">
+                <ul>
+                  <li ng-repeat="elem in data[value.db_name]">
+                    <!-- <a ng-href='{{getLocation()}}&interested_pwg={{elem}}' rel="tooltip" title="Show all requests where {{elem}} is interested PWG" target="_self">{{elem}}</a> -->
+                    {{elem}}
+                  </li>
+                </ul>
+              </div>
+              <div ng-switch-when="PPD tags">
+                <ul>
+                  <li ng-repeat="elem in data[value.db_name]">
+                    <!-- <a ng-href='{{getLocation()}}&ppd_tags={{elem}}' rel="tooltip" title="Show all requests that contain {{elem}} PPD tag" target="_self">{{elem}}</a> -->
+                    {{elem}}
                   </li>
                 </ul>
               </div>

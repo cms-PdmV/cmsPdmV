@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -12,7 +12,7 @@ from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetU
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
 from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts
+from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
@@ -175,6 +175,7 @@ api.add_resource(
     '/public/restapi/requests/get_valid/<string:prepid>/<int:events>',
     '/public/restapi/requests/get_valid/<string:prepid>')
 api.add_resource(GetStatus, '/public/restapi/requests/get_status/<string:request_ids>')
+api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_approval/<string:prepid>')
 api.add_resource(
     GetActors,
     '/public/restapi/requests/get_actors/<string:request_id>',
@@ -277,6 +278,7 @@ api.add_resource(PutToForceComplete, '/restapi/requests/add_forcecomplete')
 api.add_resource(ForceCompleteMethods, '/restapi/requests/forcecomplete')
 api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
 api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
+api.add_resource(PPDTags, '/restapi/requests/ppd_tags/<string:request_id>')
 # REST Campaign Actions
 api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
@@ -396,6 +398,7 @@ api.add_resource(
     '/restapi/mccms/reminder/<int:block_threshold>')
 api.add_resource(MccMReminderGenContacts, '/restapi/mccms/reminder_gen_contacts')
 api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string:mccm_id>')
+api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:mccm_id>')
 # REST settings Actions
 api.add_resource(GetSetting, '/restapi/settings/get/<string:setting_id>')
 api.add_resource(UpdateSetting, '/restapi/settings/update')

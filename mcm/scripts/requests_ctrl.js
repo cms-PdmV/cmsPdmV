@@ -13,6 +13,10 @@ angular.module('testApp').controller('resultsCtrl',
         {text:'History',select:true, db_name:'history'},
         {text:'Tags',select:true, db_name:'tags'}
     ];
+    $scope.requests_renames = {
+        'ppd_tags': 'PPD tags',
+        'interested_pwg':'Interested PWGs',
+    };
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
 
     $scope.filt = {}; //define an empty filter
@@ -211,7 +215,11 @@ angular.module('testApp').controller('resultsCtrl',
                     }
                 });
                 if (add) {
-                    $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                    if (v in $scope.requests_renames) {
+                        $scope.requests_defaults.push({text: $scope.requests_renames[v], select: false, db_name: v});
+                    } else {
+                        $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
+                    }
                 }
             });
             if (_.keys($location.search()).indexOf('fields') != -1) {
@@ -950,8 +958,12 @@ testApp.directive("customHistory", function(){
     '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
     '              </div>'+
     '          </td>'+
-    '          <td style="padding: 0px; white-space: normal; min-width: 150px;' +
-        '">{{elem.step}}</td>'+ //is it needed?
+    '          <td style="padding: 0px; white-space: normal; min-width: 150px;">' +
+    '            <div ng-switch="isJSON(elem.step).toString()">'+
+    '              <div ng-switch-when="true"><pre style="min-width:275px">{{elem.step}}</pre></div>'+
+    '              <div ng-switch-default>{{elem.step}}</div>'+
+    '            </div>'+
+    '          </td>'+ //is it needed?
     '        </tr>'+
     '      </tbody>'+
     '    </table>'+
@@ -962,7 +974,24 @@ testApp.directive("customHistory", function(){
       ctrl.$render = function(){
         scope.show_history = false;
         scope.show_info = ctrl.$viewValue;
+        for (var index in scope.show_info) {
+          var entry = scope.show_info[index]
+          if (entry['action'] === 'update' && scope.isJSON(JSON.stringify(entry['step']))) {
+            entry['step'] = JSON.stringify(entry['step'], undefined, 2)
+          }
+        }
       };
+      scope.isJSON = function(text) {
+        if (!text) {
+          return false;
+        }
+        try {
+          JSON.parse(text);
+        } catch (e) {
+          return false;
+        }
+        return true;
+      }
     }
   }
 });

@@ -4,6 +4,7 @@ import time
 from simplejson import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestActions import RequestLister
 from couchdb_layer.mcm_database import database
 from json_layer.mccm import mccm
 from json_layer.user import user
@@ -455,22 +456,6 @@ class GenerateChains(RESTResource):
         chains.sort()
         mcm_request.set_attribute('member_of_chain', list(set(chains)))
         mcm_request.update_history({'action': 'join chain', 'step': new_chain_prepid})
-        if with_notify:
-            subject = "Request %s joined chain" % mcm_request.get_attribute('prepid')
-            message = "Request %s has successfully joined chain %s" % (mcm_request.get_attribute('prepid'), new_chain_prepid)
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[mcm_request.get_attribute('prepid')],
-                object_type='requests',
-                base_object=mcm_request)
-            mcm_request.notify(
-                subject,
-                message,
-                Nchild=0,
-                accumulate=True)
         mcm_request.save()
         # do the reservation of the whole chain ?
         generated_requests = []
@@ -517,52 +502,56 @@ class MccMReminderGenContacts(RESTResource):
         def streaming_function():
             mccms_db = database('mccms')
             users_db = database('users')
+            generator_contacts_query = users_db.construct_lucene_query({'role': 'generator_contact'})
+            generator_contacts = users_db.full_text_search("search", generator_contacts_query, page=-1)
+            generator_contacts_by_pwg = {}
+            generator_contacts_emails = set()
+            for contact in generator_contacts:
+                for pwg in contact.get('pwg', []):
+                    if pwg not in generator_contacts_by_pwg:
+                        generator_contacts_by_pwg[pwg] = []
+
+                    generator_contacts_by_pwg[pwg].append(contact.get('email'))
+                    generator_contacts_emails.add(contact.get('email'))
+
             __query = mccms_db.construct_lucene_query({'status': 'new'})
             mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
-            non_gen_contact_authors = set()
             authors_tickets_dict = dict()
-            emails_prepids = dict()
+            yield '<pre>'
             for ticket in mccms_tickets:
-                yield '\nProcessing ticket %s' % (ticket['prepid'])
+                yield 'Processing ticket %s\n' % (ticket['prepid'])
                 mccm_ticket = mccm(json_input=ticket)
+                pwg = mccm_ticket.get_attribute('pwg')
                 authors = mccm_ticket.get_actors(what='author_email')
+                yield '%s worked on %s\n' % (authors, ticket['prepid'])
+                authors = filter(lambda e: e in generator_contacts_emails, list(set(authors + generator_contacts_by_pwg.get(pwg, []))))
+                yield '%s will be notified about %s\n' % (authors, ticket['prepid'])
                 for author_email in authors:
-                    if author_email in authors_tickets_dict:
-                        authors_tickets_dict[author_email].append(ticket['prepid'])
-                    elif author_email not in non_gen_contact_authors:
-                        __role_query = users_db.construct_lucene_query({'email': author_email})
-                        result = users_db.full_text_search('search', __role_query, page=-1, include_fields='role,prepid')
-                        time.sleep(0.5)  # we don't want to crash DB with a lot of single queries
-                        if result and result[0]['role'] == 'generator_contact':
-                            authors_tickets_dict[author_email] = [ticket['prepid']]
-                            emails_prepids[author_email] = result[0]['prepid']
-                        else:
-                            non_gen_contact_authors.add(author_email)
-                    yield '.'
-            subject_part1 = 'Gentle reminder on %s '
-            subject_part2 = ' to be operated by you'
-            message_part1 = 'Dear GEN Contact, \nPlease find below the details of %s MccM '
-            message_part2 = ' in status "new". Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n'
+                    if author_email in generator_contacts_emails:
+                        if author_email not in authors_tickets_dict:
+                            authors_tickets_dict[author_email] = set()
+
+                        authors_tickets_dict[author_email].add(ticket['prepid'])
+
+            subject_template = 'Gentle reminder on %s ticket%s to be operated by you'
+            message_template = ('Dear GEN Contact,\nPlease find below the details of %s MccM ticket%s in status "new". ' + 
+                                'Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n')
             base_url = locator().baseurl()
             mail_communicator = communicator()
+            service_account = settings.get_value('service_account')
             for author_email, ticket_prepids in authors_tickets_dict.iteritems():
                 num_tickets = len(ticket_prepids)
-                full_message = (message_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + message_part2
+                subject = subject_template % (num_tickets, '' if num_tickets == 1 else 's')
+                message = message_template % (num_tickets, '' if num_tickets == 1 else 's')
                 for ticket_prepid in ticket_prepids:
-                    full_message += 'Ticket: %s \n' % (ticket_prepid)
-                    full_message += '%smccms?prepid=%s \n\n' % (base_url, ticket_prepid)
+                    message += 'Ticket: %s\n%smccms?prepid=%s\n\n' % (ticket_prepid, base_url, ticket_prepid)
                     yield '.'
-                full_message += '\n'
-                subject = (subject_part1 % (num_tickets)) + ('ticket' if num_tickets == 1 else 'tickets') + subject_part2
-                notification(
-                    subject,
-                    full_message,
-                    [emails_prepids[author_email]],
-                    group=notification.REMINDERS,
-                    action_objects=ticket_prepids,
-                    object_type='mccms')
-                mail_communicator.sendMail([author_email], subject, full_message)
-                yield '\nEmail sent to %s\n' % (author_email)
+
+                yield '\n'
+                message += 'You received this email because you are listed as generator contact of physics group(s) of these tickets.\n'
+                self.logger.info('Email:%s\nSubject: %s\nMessage:%s' % (author_email, subject, message))
+                mail_communicator.sendMail([author_email, service_account], subject, message)
+                yield 'Email sent to %s\n' % (author_email)
 
         return flask.Response(flask.stream_with_context(streaming_function()))
 
@@ -649,3 +638,42 @@ class CalculateTotalEvts(RESTResource):
             return {"results": True}
         else:
             return {"results": False, "message": "Could not save the ticket to be cancelled."}
+
+class CheckIfAllApproved(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, mccm_id):
+        """
+        Return whether all requests in MccM are approve-approved
+        """
+        mccm_db = database('mccms')
+
+        if not mccm_db.document_exists(mccm_id):
+            return {"results": False}
+
+        mccm_doc = mccm_db.get(prepid=mccm_id)
+        req_db = database('requests')
+        query = ''
+        for root_request in mccm_doc.get('requests', []):
+            if isinstance(root_request, str) or isinstance(root_request, unicode):
+                query += '%s\n' % (root_request)
+            elif isinstance(root_request, list):
+                # List always contains two elements - start and end of a range
+                query += '%s -> %s\n' % (root_request[0], root_request[1])
+
+        req_lister = RequestLister()
+        req_lister.logger = self.logger
+        requests = req_lister.get_list_of_ids(req_db, {'contents' : query})
+        allowed_approvals = set(['approve', 'submit'])
+        for request_prepid in requests:
+            req = req_db.get(request_prepid)
+            approval = req.get('approval')
+            if approval not in allowed_approvals:
+                return {'results': False}
+
+        return {'results': True}

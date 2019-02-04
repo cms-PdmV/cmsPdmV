@@ -198,7 +198,7 @@ class InspectChainedCampaignsRest(RESTResource):
                     self.logger.info("Inspection for: %s returned: %s" % (cr['prepid'],
                             __inspect_ret))
 
-                    yield dumps(__inspect_ret, indent=8)
+                    yield dumps(__inspect_ret, indent=4)
 
                 # force slowing-down of inspect to not abuse the DB
                 time.sleep(1)

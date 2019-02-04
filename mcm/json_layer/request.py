@@ -10,7 +10,7 @@ import traceback
 import time
 import logging
 from math import sqrt
-from simplejson import loads
+from simplejson import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
@@ -89,7 +89,10 @@ class request(json_base):
         'analysis_id': [],
         'energy': 0.0,
         'tags': [],
-        'transient_output_modules': [[]]
+        'transient_output_modules': [[]],
+        'cadi_line': '',
+        'interested_pwg': [],
+        'ppd_tags': []
     }
 
     def __init__(self, json_input=None):
@@ -138,40 +141,21 @@ class request(json_base):
             result = self.ok_to_move_to_approval_approve()
         elif step == "submit":
             result = self.ok_to_move_to_approval_submit()
-        subject = 'Approval %s for %s %s' % (step, 'request', self.get_attribute('prepid'))
-        notification(
-            subject,
-            self.textified(),
-            [],
-            group=notification.REQUEST_APPROVALS,
-            action_objects=[self.get_attribute('prepid')],
-            object_type='requests',
-            base_object=self)
-        self.notify(
-            subject,
-            self.textified(),
-            accumulate=True)
+
         return result
 
     def set_status(self, step=-1, with_notification=False, to_status=None):
         # call the base
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
-        title = 'Status changed for request %s to %s' % (self.get_attribute('prepid'), new_status)
-        if with_notification:
-            notification(
-                title,
-                self.textified(),
-                [],
-                group='Requests_in_' + new_status,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        prepid = self.get_attribute('prepid')
+        if 'pLHE' in self.get_attribute('prepid'):
+            title = 'Status changed for request %s to %s' % (prepid, new_status)
             self.notify(
                 title,
                 self.textified(),
                 accumulate=True)
-        # and set the last_status of each chained_request I am member of, last
+
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
@@ -287,6 +271,9 @@ class request(json_base):
                 self.get_attribute('status'),
                 'validation',
                 'bad user admin level %s' % (self.current_user_level))
+
+        if self.get_attribute('memory') < 2300:
+            raise self.BadParameterValue('Memory (%sMB) is lower than threshold (2300MB)' % (self.get_attribute('memory')))
 
         if not self.correct_types():
             raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(self.get_attribute('prepid')))
@@ -1264,6 +1251,15 @@ class request(json_base):
                 res = res.replace('--customise %s' % (old_cust), '--customise %s' % (new_cust))
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
+
+            if 'wmlhegs' in self.get_attribute('prepid').lower():
+                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed}%100)"'
+                if '--customise_commands ' in cmsd:
+                    res = res.replace('--customise_commands ',
+                                      '--customise_commands %s,' % (random_seed_command))
+                else:
+                    res += '--customise_commands %s ' % (random_seed_command)
+
             res += inline_c
 
             res += '-n ' + str(events) + ' || exit $? ; \n'
@@ -1310,6 +1306,9 @@ class request(json_base):
 
         infile += '\nscram b\n'
         infile += 'cd ../../\n'
+        if 'wmlhegs' in self.get_attribute('prepid').lower():
+            infile += 'seed=$(date +%s)\n'
+
         infile += cmsd_list
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
@@ -1494,6 +1493,20 @@ class request(json_base):
 
         self.reload()
 
+    def test_success(self, message, what='Submission', with_notification=True):
+        if with_notification:
+            subject = '%s succeeded for request %s' % (what, self.get_attribute('prepid'))
+            notification(
+                subject,
+                message,
+                [],
+                group=notification.REQUEST_OPERATIONS,
+                action_objects=[self.get_attribute('prepid')],
+                object_type='requests',
+                base_object=self
+            )
+            self.notify(subject, message)
+
     def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
             refresh=False, forced=False):
 
@@ -1672,6 +1685,19 @@ class request(json_base):
                 changes_happen = True
 
         self.set_attribute('reqmgr_name', mcm_rr)
+
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        chained_requests = crdb.query('contains==%s' % (self.get_attribute('prepid')))
+        for cr in chained_requests:
+            chain = cr.get('chain', [])
+            index_of_this_request = chain.index(self.get_attribute('prepid'))
+            if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
+                next_request = request(rdb.get(chain[index_of_this_request + 1]))
+                if not next_request.get_attribute('input_dataset'):
+                    input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
+                    next_request.set_attribute('input_dataset', input_dataset)
+                    next_request.save()
 
         if (len(mcm_rr) and 'content' in mcm_rr[-1] and
                 'pdmv_present_priority' in mcm_rr[-1]['content'] and
@@ -1934,21 +1960,29 @@ class request(json_base):
 
     def textified(self):
         l_type = locator()
-        view_in_this_order = ['pwg', 'prepid', 'dataset_name', 'mcdb_id', 'analysis_id', 'notes',
-                'total_events', 'validation', 'approval', 'status', 'input_dataset',
-                'member_of_chain', 'reqmgr_name', 'completed_events']
+        view_in_this_order = ['pwg',
+                              'prepid',
+                              'dataset_name',
+                              'mcdb_id',
+                              'analysis_id',
+                              'notes',
+                              'total_events',
+                              'validation',
+                              'approval',
+                              'status',
+                              'input_dataset',
+                              'member_of_chain',
+                              'reqmgr_name',
+                              'completed_events']
 
         text = ''
         for view in view_in_this_order:
-            if self.get_attribute(view):
-                if type(self.get_attribute(view)) == list:
-                    for (i, item) in enumerate(self.get_attribute(view)):
-                        text += '%s[%s] : %s \n' % (view, i, pprint.pformat(item))
-                elif type(self.get_attribute(view)) == int:
-                    if self.get_attribute(view) > 0:
-                        text += '%s : %s \n' % (view, self.get_attribute(view))
+            value = self.get_attribute(view)
+            if value:
+                if isinstance(value, list) or isinstance(value, dict):
+                    text += '%s: %s\n' % (view, dumps(value, indent=4))
                 else:
-                    text += '%s : %s \n' % (view, self.get_attribute(view))
+                    text += '%s: %s\n' % (view, self.get_attribute(view))
         text += '\n'
         text += '%srequests?prepid=%s' % (l_type.baseurl(), self.get_attribute('prepid'))
         return text
@@ -2032,9 +2066,9 @@ class request(json_base):
 
     def get_timeout(self):
         default = settings.get_value('batch_timeout') * 60.
-        # we double the timeout if user wants twice the events in validation
-        if self.get_attribute('validation').get('double_time', False):
-            default = 2 * default
+        # we multiply the timeout if user wants more events in validation
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        default = multiplier * default
         # to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
         return int(max((estimate_rt) / fraction, default))
@@ -2060,9 +2094,9 @@ class request(json_base):
             fraction = settings.get_value('test_timeout_fraction')
             timeout = settings.get_value('batch_timeout') * 60. * fraction
 
-        # we double the timeout if user wants twice the events in validation
-        if self.get_attribute('validation').get('double_time', False):
-            timeout = 2 * timeout
+        # we multiply the timeout if user wants more events in validation
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        timeout = multiplier * timeout
 
         # check that it is not going to time-out
         # either the batch test time-out is set accordingly, or we limit the events
@@ -2124,68 +2158,46 @@ class request(json_base):
             return (False, trace)
 
     def check_gen_efficiency(self, geninfo, events_produced, events_ran):
-        rough_efficiency = float(events_produced) / events_ran
-        rough_efficiency_error = rough_efficiency * sqrt(1. / events_produced + 1. / events_ran)
-        set_efficiency = self.get_efficiency()
+        measured_efficiency = float(events_produced) / events_ran
+        user_efficiency = self.get_efficiency()
+        sigma = (measured_efficiency * (1 - measured_efficiency)) / events_ran
+        if sigma < 0.025:
+            sigma = 0.025
 
-        # we check if set efficiency is below 50% of set efficiency
-        subject = 'Runtest for %s: efficiency seems incorrect from rough estimate.' % (self.get_attribute('prepid'))
-        message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                ' the mcm validation test measured %.4f +/- %.4f\n'
-                '(there were %s trial events, of which %s passed the filter/matching).\n'
-                'Please check and reset the request if necessary.'
-                ' Not within 50%%.') % (
-                    self.get_attribute('prepid'),
-                    'filter_efficiency',
-                    geninfo['filter_efficiency'],
-                    geninfo['filter_efficiency_error'],
-                    'match_efficiency',
-                    geninfo['match_efficiency'],
-                    geninfo['match_efficiency_error'],
-                    rough_efficiency,
-                    rough_efficiency_error,
-                    events_ran,
-                    events_produced)
-
-        if rough_efficiency > 1:
-            message = ('For the request %s,\n%s=%s +/- %s\n%s=%s +/- %s were given;\n'
-                ' the mcm validation test measured %.4f +/- %.4f\n'
-                ' Efficiency cannot be more than 1.\n') % (
-                        self.get_attribute('prepid'),
-                        'filter_efficiency',
-                        geninfo['filter_efficiency'],
-                        geninfo['filter_efficiency_error'],
-                        'match_efficiency',
-                        geninfo['match_efficiency'],
-                        geninfo['match_efficiency_error'],
-                        rough_efficiency,
-                        rough_efficiency_error)
-
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        three_sigma = sigma * 3
+        subject = 'Runtest for %s: efficiency is incorrect' % (self.get_attribute('prepid'))
+        if measured_efficiency > 1:
+            message = ('For the request %s measured efficiency was more than 1.\n'
+                       'McM validation test measured %.4f efficiency.\n'
+                       'There were %s trial events, of which %s passed filter/matching.\n'
+                       'User provided efficiency %.4f * %.4f = %.4f.\n'
+                       'Efficiency cannot be more than 1.\n'
+                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
+                                                                                      measured_efficiency,
+                                                                                      events_ran,
+                                                                                      events_produced,
+                                                                                      geninfo['filter_efficiency'],
+                                                                                      geninfo['match_efficiency'],
+                                                                                      user_efficiency)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
-        if (rough_efficiency <= set_efficiency * (1 - 0.5)):
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-        if (rough_efficiency >= set_efficiency * (1 + 0.5)):
-            notification(subject, message, [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        if measured_efficiency < user_efficiency - three_sigma or measured_efficiency > user_efficiency + three_sigma:
+            message = ('For the request %s measured efficiency was not withing set threshold.\n'
+                       'McM validation test measured %.4f efficiency.\n'
+                       'There were %s trial events, of which %s passed filter/matching.\n'
+                       'User provided efficiency %.4f * %.4f = %.4f.\n'
+                       'McM threshold is %.4f +- %.4f.\n'
+                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
+                                                                                      measured_efficiency,
+                                                                                      events_ran,
+                                                                                      events_produced,
+                                                                                      geninfo['filter_efficiency'],
+                                                                                      geninfo['match_efficiency'],
+                                                                                      user_efficiency,
+                                                                                      user_efficiency,
+                                                                                      three_sigma)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
@@ -2218,10 +2230,10 @@ class request(json_base):
             __all_values = self.get_attribute('time_event') + [measured_time_evt]
             __mean_value = float(sum(__all_values)) / max(len(__all_values), 1)
 
-            subject = 'Runtest for %s: time per event over-estimate.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: time per event over-estimate' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to:%s') % (
+                    ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2250,7 +2262,7 @@ class request(json_base):
             subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
                     ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to:%s') % (
+                    ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2284,12 +2296,24 @@ class request(json_base):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
         # <TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
         cpu_eff_threshold = settings.get_value('cpu_efficiency_threshold')
-        self.logger.error("checking cpu efficinecy. threshold:%s" % (cpu_eff_threshold))
+        efficinecy_exceptions = settings.get_value('cpu_eff_threshold_exceptions')
+        campaign = self.get_attribute('member_of_campaign')
+        prepid = self.get_attribute('prepid')
+        if prepid in efficinecy_exceptions:
+            cpu_eff_threshold = efficinecy_exceptions.get(prepid, 0.0)
+            self.logger.info('Found %s in CPU efficiency exceptions' % (prepid))
+        elif campaign in efficinecy_exceptions:
+            cpu_eff_threshold = efficinecy_exceptions.get(campaign, 0.0)
+            self.logger.info('Found %s in CPU efficiency exceptions' % (campaign))
+
+        self.logger.info("Checking CPU efficinecy. Threshold: %s" % (cpu_eff_threshold))
 
         __test_eff = cpu_time / (self.get_core_num() * total_time)
+
+        self.logger.info("CPU efficinecy for %s is %s" % (prepid, __test_eff))
         if  __test_eff < cpu_eff_threshold:
             self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
-            subject = 'Runtest for %s: CPU efficiency too low.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: CPU efficiency too low' % (self.get_attribute('prepid'))
             message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
                     ' You should lower number of cores and memory accordingly.') % (
                         self.get_attribute('prepid'),
@@ -2346,7 +2370,7 @@ class request(json_base):
         if file_size < int(0.90 * sum(self.get_attribute('size_event'))):
             # size over-estimated
             # warn if over-estimated by more than 10%
-            subject = 'Runtest for %s: size per event over-estimate.' % (self.get_attribute('prepid'))
+            subject = 'Runtest for %s: size per event over-estimate' % (self.get_attribute('prepid'))
             message = ('For the request %s, size/event=%s was given, %s was'
                     ' measured from %s events (ran %s).') % (
                         self.get_attribute('prepid'),
