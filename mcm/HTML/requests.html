@@ -364,6 +364,16 @@
               <div ng-switch-when="Filter efficiency" align="center">
                 {{data["generator_parameters"].slice(-1)[0]["filter_efficiency"]}}
               </div>
+              <div ng-switch-when="Transient output modules" align="left">
+                <ul ng-repeat="elem in data[value.db_name] track by $index">
+                  <li>
+                    For sequence {{ $index +1 }}:
+                    <ul>
+                      <li ng-repeat="module_name in elem">{{ module_name }}</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
               <div ng-switch-when="Cadi line" align="center">
                 <a ng-show="data[value.db_name]" rel="tooltip" title="Cadi line" ng-href="http://cms.cern.ch/iCMS/analysisadmin/cadilines?line={{data[value.db_name]}}">{{data[value.db_name]}}</a>
               </div>
