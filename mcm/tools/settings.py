@@ -1,12 +1,8 @@
 from couchdb_layer.mcm_database import database
 from tools.locker import locker
+from tools.countdown_cache import CountdownCache
 
-from werkzeug.contrib.cache import SimpleCache
-
-# Cache timeout in seconds
-__CACHE_TIMEOUT = 60 * 60
-
-__cache = SimpleCache()
+__cache = CountdownCache()
 __db = database('settings')
 
 def get(label):
@@ -16,7 +12,7 @@ def get(label):
         if cached_value is not None:
             return cached_value
         setting = __db.get(label)
-        __cache.set(cache_key, setting, timeout=__CACHE_TIMEOUT)
+        __cache.set(cache_key, setting)
         return setting
 
 def get_value(label):
@@ -30,7 +26,7 @@ def add(label, setting):
         result = __db.save(setting)
         if result:
             cache_key = 'settings_' + label
-            __cache.set(cache_key, setting, timeout=__CACHE_TIMEOUT)
+            __cache.set(cache_key, setting)
         return result
 
 def set_value(label, value):
@@ -47,5 +43,5 @@ def set(label, setting):
             # getting it from database?
             new_value = __db.get(label)
             cache_key = 'settings_' + label
-            __cache.set(cache_key, new_value, timeout=__CACHE_TIMEOUT)
+            __cache.set(cache_key, new_value)
         return result

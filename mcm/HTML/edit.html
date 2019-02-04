@@ -256,6 +256,12 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
+                    <div ng-switch-when="Interested pwgs">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
+                    </div>
+                    <div ng-switch-when="Ppd tags">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="ppd_tags" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
+                    </div>
                     <div ng-switch-when="Chain type">
                       <button class="btn btn-info"
                       ng-click="result[column.db_name] = result[column.db_name] === 'TaskChain' ? 'StepChain' : 'TaskChain'">

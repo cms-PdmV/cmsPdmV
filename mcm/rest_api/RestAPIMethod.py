@@ -46,6 +46,9 @@ class RESTResource(Resource):
         if isinstance(data, dict):
             data = json.dumps(data)
 
+        if isinstance(data, list):
+            data = str(data)
+
         resp = make_response(data, code)
         if headers:
             for key, value in headers.iteritems():
