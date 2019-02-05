@@ -256,7 +256,7 @@
                         <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
                       </ng-form>
                     </div>
-                    <div ng-switch-when="Interested pwgs">
+                    <div ng-switch-when="Interested pwg">
                       <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
                     </div>
                     <div ng-switch-when="Ppd tags">
