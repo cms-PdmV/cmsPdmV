@@ -30,6 +30,12 @@ class RESTResource(Resource):
         elif request.method in self.limit_per_method:
             access_limit = self.limit_per_method[request.method]
         user_p = user_pack()
+        try:
+            self.user_dict = {'username': user_p.get_username(),
+                              'role': authenticator.get_user_role(user_p.get_username())}
+        except:
+            self.user_dict = {'username': 'anonymous',
+                              'role': 'user'}
         if not user_p.get_username():
             # meaning we are going public, only allow GET.
             if 'public' not in request.path:
