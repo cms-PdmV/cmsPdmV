@@ -1,3 +1,5 @@
+import sys
+
 class CountdownCache:
     def __init__(self, count=25):
         self.count = count
@@ -25,3 +27,13 @@ class CountdownCache:
             return self.__cache[key]
 
         return None
+
+    def get_size(self):
+        return sys.getsizeof(self.__cache) + sys.getsizeof(self.__counter)
+
+    def get_length(self):
+        return len(self.__cache)
+
+    def clear(self):
+        self.__cache.clear()
+        self.__counter.clear()
