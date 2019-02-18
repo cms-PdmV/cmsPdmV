@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
-from tools.user_management import access_rights
+from tools.user_management import access_rights, authenticator
 import tools.settings as settings
 from simplejson import dumps, loads
 
@@ -242,3 +242,54 @@ class MultiSearch(Search):
             if current_len >= skip + limit:
                 break
         return {"results": res[-subskip:len(res) - subskip + limit] if page != -1 else res}
+
+
+class CacheInfo(RESTResource):
+
+    access_limit = access_rights.user
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self):
+        """
+        Get information about cache sizes in McM
+        """
+        db = database('requests')
+        db_cache_length, db_cache_size = db.cache_size()
+        settings_cache_length, settings_cache_size = settings.cache_size()
+        user_cache_length, user_cache_size = authenticator.cache_size()
+        return {'results': {'db_cache_length': db_cache_length,
+                            'db_cache_size': db_cache_size,
+                            'settings_cache_length': settings_cache_length,
+                            'settings_cache_size': settings_cache_size,
+                            'user_cache_length': user_cache_length,
+                            'user_cache_size': user_cache_size}}
+
+class CacheClear(RESTResource):
+
+    access_limit = access_rights.administrator
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self):
+        """
+        Clear McM cache
+        """
+        db = database('requests')
+        db.clear_cache()
+        settings.clear_cache()
+        authenticator.clear_cache()
+        db_cache_length, db_cache_size = db.cache_size()
+        settings_cache_length, settings_cache_size = settings.cache_size()
+        user_cache_length, user_cache_size = settings.cache_size()
+        return {'message': 'Cleared caches',
+                'results': {'db_cache_length': db_cache_length,
+                            'db_cache_size': db_cache_size,
+                            'settings_cache_length': settings_cache_length,
+                            'settings_cache_size': settings_cache_size,
+                            'user_cache_length': user_cache_length,
+                            'user_cache_size': user_cache_size}}

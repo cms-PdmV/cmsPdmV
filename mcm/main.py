@@ -1,4 +1,4 @@
-from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity
+from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
@@ -417,6 +417,8 @@ api.add_resource(
     Communicate,
     '/restapi/control/communicate',
     '/restapi/control/communicate/<string:message_number>')
+api.add_resource(CacheInfo, '/restapi/control/cache_info')
+api.add_resource(CacheClear, '/restapi/control/cache_clear')
 # REST notification Actions
 api.add_resource(CheckNotifications, '/restapi/notifications/check')
 api.add_resource(FetchNotifications, '/restapi/notifications/fetch')

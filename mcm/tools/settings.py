@@ -45,3 +45,11 @@ def set(label, setting):
             cache_key = 'settings_' + label
             __cache.set(cache_key, new_value)
         return result
+
+def cache_size():
+    return __cache.get_length(), __cache.get_size()
+
+def clear_cache():
+    size = cache_size()
+    __cache.clear()
+    return size

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import sys
 
 from collections import defaultdict
 from tools.locker import locker
@@ -119,3 +120,19 @@ class authenticator:
             return False
         except AttributeError:
             raise ValueError('Role {0} is not recognized'.format(role))
+
+    @classmethod
+    def cache_size(cls):
+        """
+        Return number of elements in cache and cache size in bytes
+        """
+        return len(cls.__users_roles_cache._cache), sys.getsizeof(cls.__users_roles_cache._cache)
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Clear cache
+        """
+        size = cls.cache_size()
+        cls.__users_roles_cache.clear()
+        return size

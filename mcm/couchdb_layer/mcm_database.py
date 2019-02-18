@@ -4,6 +4,7 @@ import time
 import os
 import ast
 import logging
+import sys
 
 from simplejson import dumps
 from tools.locator import locator
@@ -88,6 +89,20 @@ class database:
             return True
         except ValueError:
             return False
+
+    def cache_size(self):
+        """
+        Return number of elements in cache and cache size in bytes
+        """
+        return len(self.cache._cache), sys.getsizeof(self.cache._cache)
+
+    def clear_cache(self):
+        """
+        Clear cache
+        """
+        size = self.cache_size()
+        self.cache.clear()
+        return size
 
     def get(self,  prepid=''):
 

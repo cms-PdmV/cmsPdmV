@@ -113,6 +113,15 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
+    $scope.getCacheInfo = function(){
+      var promise = $http.get("restapi/control/cache_info");
+      promise.then(function(data, status){
+        $scope.cacheInfo = data.data.results;
+      }, function(data, status){
+        $scope.cacheInfo = {};
+      });
+    };
+
     $scope.getLines = function(line_number){
       return line_number>100?"All":line_number
     };
@@ -123,6 +132,12 @@ angular.module('testApp').controller('resultsCtrl',
         //$scope.batch_int_id = setInterval($scope.getBjobsData, 60000);
       } else {
         clearInterval($scope.batch_int_id);
+      }
+    }, true);
+
+    $scope.$watch('tabsettings.cache.active', function(){
+      if($scope.tabsettings.batch.active) {
+        $scope.getCacheInfo();
       }
     }, true);
 
