@@ -251,7 +251,7 @@ angular.module('testApp').controller('resultCtrl',
       promise.then(function(data){
         $scope.result = data.data.results;
         if ($scope.result.length != 0){
-          columns = _.keys($scope.result);
+          columns = _.keys($scope.result).sort();
           rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
           _.each(rejected, function(v){
             add = true;

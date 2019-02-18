@@ -135,6 +135,10 @@
               <div ng-switch-when="History">
                 <div custom-history ng-model="data[value.db_name]"></div>
               </div>
+              <div ng-switch-when="Do not check cmssw versions" align="center" title="Do not check whether CMSSW versions in chained requests are the same or increasing">
+                <i class="icon-ok" ng-show="data.do_not_check_cmssw_versions"></i>
+                <i class="icon-remove" ng-show="!data.do_not_check_cmssw_versions"></i>
+              </div>
               <div ng-switch-default>{{data[value.db_name]}}</div>
             </div>
           </td>

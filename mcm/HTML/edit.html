@@ -276,6 +276,9 @@
                         </li>
                       </ul>
                     </div>
+                    <div ng-switch-when="Do not check cmssw versions">
+                      <input type="checkbox" ng-model="result[column.db_name]">
+                    </div>
                     <div ng-switch-default style="width: 400px;">
                       <div ng-switch on="underscore.isBoolean(result[column.db_name])">
                         <div ng-switch-when="true">
