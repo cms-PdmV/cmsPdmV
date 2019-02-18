@@ -74,6 +74,9 @@ class authenticator:
     # get the roles that are registered to a specific username
     @classmethod
     def get_user_role(cls, username, email=None):
+        if not username:
+            return 'user'
+
         with locker.lock(username):
             cache_key = 'authenticator_user_role_' + username
             cached_value = cls.__users_roles_cache.get(cache_key)

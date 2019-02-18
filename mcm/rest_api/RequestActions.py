@@ -651,6 +651,16 @@ class ApproveRequest(RESTResource):
         req = request(json_input=db.get(rid))
 
         self.logger.info('Approving request %s for step "%s"' % (rid, val))
+        if req.get_attribute('approval') == 'define' and req.get_attribute('status') == 'defined' and val == -1:
+            username = self.user_dict.get('username', '')
+            role = self.user_dict.get('role', 'user')
+            if role not in set(['administrator', 'generator_convener']) and username not in set(['pgunnell', 'prebello', 'zhenhu']):
+                self.logger.warning('%s (%s) was stopped from approving %s' % (username, role, rid))
+                return {'prepid': rid, 'results': False, 'message': 'You are not allowed to approve requests'}
+            else:
+                self.logger.warning('%s (%s) was allowed to approve %s' % (username, role, rid))
+
+
         # req.approve(val)
         try:
             if val == 0:
