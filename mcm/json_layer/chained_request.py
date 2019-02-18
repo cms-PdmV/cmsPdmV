@@ -474,7 +474,7 @@ class chained_request(json_base):
             self.add_to_nonflowing_list('Request %s has inconsistent energy.' % (next_campaign.get_attribute('prepid')))
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
 
-        if not next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
+        if not mcm_cc.get('do_not_check_cmssw_versions', False) and not next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
             self.add_to_nonflowing_list('Request %s has lower release version.' % (next_campaign.get_attribute('prepid')))
             raise self.ChainedRequestCannotFlowException(self.get_attribute("_id"), 'cannot flow any further. Request {0} has lower release version.'.format(next_campaign.get_attribute("prepid")))
 

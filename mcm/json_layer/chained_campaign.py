@@ -37,7 +37,8 @@ class chained_campaign(json_base):
         },
         'history': [],
         'valid': True,
-        'chain_type': 'TaskChain'
+        'chain_type': 'TaskChain',
+        'do_not_check_cmssw_versions': False
     }
 
     def __init__(self, json_input=None):
