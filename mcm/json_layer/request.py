@@ -1073,6 +1073,28 @@ class request(json_base):
         # the last tier is the main output : reverse it
         return list(reversed(r_tiers))
 
+    def get_transient_tiers(self):
+        transient_output_modules = self.get_attribute('transient_output_modules')
+        transient_tiers = []
+        for (i, s) in enumerate(self.get_attribute('sequences')):
+            modules = transient_output_modules[i]
+            if len(modules) == 0:
+                # If there are no transient output modules,
+                # there is no point in looking at datatiers
+                continue
+
+            eventcontent = s.get('eventcontent', [])
+            datatier = s.get('datatier', [])
+            for (ec_index, eventcontent_entry) in enumerate(eventcontent):
+                if '%soutput' % (eventcontent_entry) in modules:
+                    if ec_index < len(datatier):
+                        transient_tiers.append(datatier[ec_index])
+
+        if len(transient_tiers) > 0:
+            self.logger.info('Transient tiers for %s are: %s' % (self.get_attribute('prepid'), transient_tiers))
+
+        return transient_tiers
+
     def get_outputs(self):
         outs = []
         keeps = self.get_attribute('keep_output')
@@ -1892,6 +1914,12 @@ class request(json_base):
                         not_good.update({'message' : 'Not all outputs are valid'})
                         saved = db.save(self.json())
                         return not_good
+
+                    self.logger.info('Expected tiers of %s are %s' % (self.get_attribute('prepid'), tiers_expected))
+                    transient_tiers = self.get_transient_tiers()
+                    if len(transient_tiers) > 0:
+                        tiers_expected = [x for x in tiers_expected if x not in transient_tiers]
+                        self.logger.info('Expected tiers of %s after removing transien tiers: %s' % (self.get_attribute('prepid'), tiers_expected))
 
                     # make sure no expected tier was left behind
                     if not force:
