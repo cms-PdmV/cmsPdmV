@@ -2161,7 +2161,7 @@ class request(json_base):
         measured_efficiency = float(events_produced) / events_ran
         user_efficiency = self.get_efficiency()
         sigma = (measured_efficiency * (1 - measured_efficiency)) / events_ran
-        if (sigma < measured_efficiency * 0.02):
+        if sigma < measured_efficiency * 0.02:
             sigma = measured_efficiency * 0.02
 
         three_sigma = sigma * 3
