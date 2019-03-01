@@ -253,7 +253,10 @@ api.add_resource(
     '/restapi/requests/update_stats/<string:request_id>/<string:refresh>',
     '/restapi/requests/update_stats/<string:request_id>/<string:refresh>/<string:forced>')
 api.add_resource(UpdateEventsFromWorkflow, '/restapi/requests/fetch_stats_by_wf/<string:wf_id>')
-api.add_resource(RequestsFromFile, '/restapi/requests/listwithfile')
+api.add_resource(
+    RequestsFromFile,
+    '/restapi/requests/listwithfile',
+    '/public/restapi/requests/listwithfile')
 api.add_resource(TestRequest, '/restapi/requests/test/<string:request_id>')
 api.add_resource(SearchableRequest, '/restapi/requests/searchable')
 api.add_resource(
@@ -381,7 +384,10 @@ api.add_resource(GetVerbosities, '/restapi/dashboard/get_verbosities')
 api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
 api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
 # REST mccms Actions
-api.add_resource(GetMccm, '/restapi/mccms/get/<string:mccm_id>')
+api.add_resource(
+    GetMccm,
+    '/restapi/mccms/get/<string:mccm_id>',
+    '/public/restapi/mccms/get/<string:mccm_id>')
 api.add_resource(UpdateMccm, '/restapi/mccms/update')
 api.add_resource(CreateMccm, '/restapi/mccms/save')
 api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:mccm_id>')
