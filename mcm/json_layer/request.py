@@ -1194,7 +1194,7 @@ class request(json_base):
             infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
             infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
             # Clone gen repo
-            infile += 'git clone https://github.com/justinasr/genproductions\n'
+            infile += 'git clone https://github.com/cms-sw/genproductions\n'
             # Go inside
             infile += 'cd genproductions/bin/utils\n'
             # Run script and write to log file
