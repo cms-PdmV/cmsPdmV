@@ -1077,6 +1077,9 @@ class request(json_base):
         transient_output_modules = self.get_attribute('transient_output_modules')
         transient_tiers = []
         for (i, s) in enumerate(self.get_attribute('sequences')):
+            if i >= len(transient_output_modules):
+                continue
+
             modules = transient_output_modules[i]
             if len(modules) == 0:
                 # If there are no transient output modules,
