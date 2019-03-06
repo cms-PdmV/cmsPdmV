@@ -3031,3 +3031,19 @@ class request(json_base):
             validations_count = 0
 
         return validations_count
+
+    def get_gen_script_output(self):
+        prepid = self.get_attribute('prepid')
+        campaign = self.get_attribute('member_of_campaign')
+        filename = '%s.log' % (prepid)
+        command = ''
+        command += 'export EOS_MGM_URL=root://eoscms.cern.ch\n'
+        command += 'eos cp /eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s/%s /tmp\n' % (campaign, filename)
+        command += 'if [ $? -ne 0 ]; then\n'
+        command += '    echo "Error getting checking script output. Either output does not exist or log fetch from EOS failed"\n'
+        command += 'else\n'
+        command += '    cat /tmp/%s\n' % (filename)
+        command += '    rm /tmp/%s\n' % (filename)
+        command += 'fi\n'
+        result = str(os.popen(command).read())
+        return result
