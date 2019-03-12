@@ -2037,3 +2037,22 @@ class PPDTags(RESTResource):
         tags = set(ppd_tags.get('all',[])).union(set(ppd_tags.get(campaign,[])))
         return {'results': sorted(list(tags)),
                 'message': '%s tags found' % (len(tags))}
+
+
+class GENLogOutput(RESTResource):
+
+    access_limit = access_rights.user
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, request_id):
+        requests_db = database('requests')
+        mcm_request = request(requests_db.get(request_id))
+        if not mcm_request:
+            return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}
+
+        result = mcm_request.get_gen_script_output()
+        code = 404 if 'Error getting checking script output' in result else 200
+        return self.output_text(result, code, headers={'Content-Type': 'text/plain'})
