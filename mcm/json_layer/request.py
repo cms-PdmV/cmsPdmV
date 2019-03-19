@@ -1240,6 +1240,7 @@ class request(json_base):
             # Write a couple of empty lines to the end of a file
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+            infile += 'cd ../../..\n'
             # Check exit code of script
             infile += 'if [ $ERRORS -ne 0 ]; then\n'
             infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
@@ -3067,9 +3068,14 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         campaign = self.get_attribute('member_of_campaign')
         filename = '%s.log' % (prepid)
+        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
+        l_type = locator()
+        if l_type.isDev():
+            eos_path += '_dev'
+
         command = ''
         command += 'export EOS_MGM_URL=root://eoscms.cern.ch\n'
-        command += 'eos cp /eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s/%s /tmp\n' % (campaign, filename)
+        command += 'eos cp %s/%s/%s /tmp\n' % (eos_path, campaign, filename)
         command += 'if [ $? -ne 0 ]; then\n'
         command += '    echo "Error getting checking script output. Either output does not exist or log fetch from EOS failed"\n'
         command += 'else\n'
