@@ -313,6 +313,9 @@
                   <li ng-show="data[value.db_name].time_multiplier != undefined">
                     Length: {{data[value.db_name].time_multiplier}} * 8h = {{8 * data[value.db_name].time_multiplier}}h
                   </li>
+                  <li ng-show="data[value.db_name].validation_os != undefined && data[value.db_name].validation_os.length > 0">
+                    Validation OS: {{data[value.db_name].validation_os}}
+                  </li>
 		              <!--<li ng-repeat="att in data[value.db_name]">
 		                {{att}}
 		              </li>-->
