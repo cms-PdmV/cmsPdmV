@@ -621,12 +621,6 @@ testApp.directive("customValidationEdit", function(){
     '        <span ng-hide="role(3)"><select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2,3,4]"></select>'+
     '        x 8h = {{(validation_data.time_multiplier ? validation_data.time_multiplier : 1) * 8}}h</span>' +
     '      </div>'+
-    '      <div class="control-group">'+
-    '        Validation OS: '+
-    '        <select style="width:150px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.validation_os" ng-options="key as key for key in [\'SLCern6\',\'CentOS7\']">' +
-    '          <option value="">Default</option>'+
-    '        </select>'+
-    '      </div>'+
     '    </fieldset>'+
     '  </form>'+
     '  <input type="text" ng-switch-default ng-model="validation_data" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
@@ -644,11 +638,6 @@ testApp.directive("customValidationEdit", function(){
       scope.$watch("validation_data.time_multiplier", function(elem){ //watch time_multiplier -> is user leaves empty remove time_multiplier, as not to save null
         if (!elem){
           delete(scope.validation_data.time_multiplier);
-        }
-      });
-      scope.$watch("validation_data.validation_os", function(elem){ //watch time_multiplier -> is user leaves empty remove time_multiplier, as not to save null
-        if (!elem){
-          delete(scope.validation_data.validation_os);
         }
       });
     }

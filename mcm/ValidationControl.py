@@ -150,7 +150,16 @@ class ValidationHandler:
             self.logger.error('There was a problem while creating the file: %s message: %s \ntraceback %s' % (test_file_path, str(e), traceback.format_exc()))
             return False
 
-    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files, request_object):
+    def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files, request_object=None):
+        if request_object:
+            scram_arch = request_object.get_scram_arch().lower()
+            if 'slc7' in scram_arch:
+                validation_os = 'CentOS7'
+            else:
+                validation_os = 'SLCern6'
+        else:
+            validation_os = None
+
         validation_os = request_object.json().get('validation', {}).get('validation_os', None)
         transfer_output_files = '_rt.xml, '.join(transfer_files)
         transfer_output_files += '_rt.xml'
@@ -248,6 +257,7 @@ class ValidationHandler:
             return {}
 
         requests_in_chain = {}
+        first_request_in_chain = None
         for request_prepid in mcm_chained_request.get_attribute('chain')[mcm_chained_request.get_attribute('step'):]:
             mcm_request = request(self.request_db.get(request_prepid))
             if not mcm_request.is_root and 'validation' not in mcm_request._json_base__status:  # only root or possible root requests
@@ -262,6 +272,9 @@ class ValidationHandler:
                 return {}
 
             requests_in_chain[request_prepid] = mcm_request.json()[self.DOC_REV]
+            if not first_request_in_chain:
+                first_request_in_chain = mcm_request
+
         if not len(requests_in_chain):
             message = 'No requests to be validated in chain: %s' % prepid
             self.logger.info(message)
@@ -269,7 +282,7 @@ class ValidationHandler:
             return {}
 
         timeout, memory, threads = mcm_chained_request.get_timeout_memory_threads()
-        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, list(requests_in_chain.iterkeys()), mcm_chained_request)
+        self.create_htcondor_config_file(run_test_path, prepid, timeout, memory, threads, list(requests_in_chain.iterkeys()), first_request_in_chain)
         job_info = self.execute_command_submission(prepid, run_test_path)
         if 'error' in job_info:
             mcm_chained_request.reset_requests(job_info['error'])
