@@ -2236,17 +2236,17 @@ class request(json_base):
     def check_gen_efficiency(self, geninfo, events_produced, events_ran):
         measured_efficiency = float(events_produced) / events_ran
         user_efficiency = self.get_efficiency()
-        sigma = (measured_efficiency * (1 - measured_efficiency)) / events_ran
-        if sigma < measured_efficiency * 0.02:
-            sigma = measured_efficiency * 0.02
+        sigma = sqrt((measured_efficiency * (1 - measured_efficiency)) / events_ran)
+        if sigma < measured_efficiency * 0.05:
+            sigma = measured_efficiency * 0.05
 
         three_sigma = sigma * 3
         subject = 'Runtest for %s: efficiency is incorrect' % (self.get_attribute('prepid'))
         if measured_efficiency > 1:
             message = ('For the request %s measured efficiency was more than 1.\n'
-                       'McM validation test measured %.4f efficiency.\n'
+                       'McM validation test measured %.8f efficiency.\n'
                        'There were %s trial events, of which %s passed filter/matching.\n'
-                       'User provided efficiency %.4f * %.4f = %.4f.\n'
+                       'User provided efficiency %.8f * %.8f = %.8f.\n'
                        'Efficiency cannot be more than 1.\n'
                        'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
                                                                                       measured_efficiency,
@@ -2261,10 +2261,10 @@ class request(json_base):
 
         if measured_efficiency < user_efficiency - three_sigma or measured_efficiency > user_efficiency + three_sigma:
             message = ('For the request %s measured efficiency was not withing set threshold.\n'
-                       'McM validation test measured %.4f efficiency.\n'
+                       'McM validation test measured %.8f efficiency.\n'
                        'There were %s trial events, of which %s passed filter/matching.\n'
-                       'User provided efficiency %.4f * %.4f = %.4f.\n'
-                       'McM threshold is %.4f +- %.4f.\n'
+                       'User provided efficiency %.8f * %.8f = %.8f.\n'
+                       'McM threshold is %.8f +- %.8f.\n'
                        'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
                                                                                       measured_efficiency,
                                                                                       events_ran,
