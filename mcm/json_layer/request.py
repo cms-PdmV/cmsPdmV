@@ -2835,6 +2835,7 @@ class request(json_base):
 
                 config_generation_command = self.prepare_config_generation_command()
                 upload_command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
+                command = config_generation_command + '\n' + upload_command
                 if execute:
                     with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
@@ -2921,7 +2922,7 @@ class request(json_base):
                     self.inject_logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid))
                     self.logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid))
                     return False
-            return config_generation_command + '\n' + upload_command
+            return command
         finally:
             for i in to_release:
                 locker.release(i)
