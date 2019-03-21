@@ -1214,20 +1214,20 @@ class request(json_base):
 
         infile += '\n'
         infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
-        infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-        infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
         if for_validation:
+            infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
+            infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
             infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
 
         # Clone gen repo
-        infile += 'wget https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
+        infile += 'wget --quiet https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
         # Run script and write to log file
         if for_validation:
             infile += 'mkdir -p $EOS_PATH\n'
 
         infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
         if l_type.isDev():
-            eos_path += ' --dev'
+            infile += ' --dev'
 
         if for_validation:
             infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
