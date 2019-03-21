@@ -1219,9 +1219,7 @@ class request(json_base):
             infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
             infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
             # Clone gen repo
-            infile += 'git clone https://github.com/cms-sw/genproductions\n'
-            # Go inside
-            infile += 'cd genproductions/bin/utils\n'
+            infile += 'wget https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
             # Run script and write to log file
             infile += 'mkdir -p $EOS_PATH\n'
             infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
@@ -1240,7 +1238,6 @@ class request(json_base):
             # Write a couple of empty lines to the end of a file
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-            infile += 'cd ../../..\n'
             # Check exit code of script
             infile += 'if [ $ERRORS -ne 0 ]; then\n'
             infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
