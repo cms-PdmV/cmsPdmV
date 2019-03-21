@@ -1188,15 +1188,21 @@ class request(json_base):
 
         return self.scram_arch
 
-    def make_release(self):
+    def make_release(self, scram_arch=None, cmssw_release=None):
+        if not scram_arch:
+            scram_arch = self.get_scram_arch()
+
+        if not cmssw_release:
+            cmssw_release = self.get_attribute('cmssw_release')
+
         makeRel = 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
-        makeRel += 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
-        makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
+        makeRel += 'export SCRAM_ARCH=%s\n' % (scram_arch)
+        makeRel += 'if [ -r %s/src ] ; then \n' % (cmssw_release)
+        makeRel += ' echo release %s already exists\n' % (cmssw_release)
         makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        makeRel += 'scram p CMSSW ' + cmssw_release + '\n'
         makeRel += 'fi\n'
-        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        makeRel += 'cd ' + cmssw_release + '/src\n'
         makeRel += 'eval `scram runtime -sh`\n'  # setup the cmssw
 
         return makeRel
