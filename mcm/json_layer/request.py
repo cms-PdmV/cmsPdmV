@@ -2777,11 +2777,16 @@ class request(json_base):
             self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
             self.set_status(step=__status_index, with_notification=True)
 
-    def prepare_upload_command(self, cfgs, test_string):
+    def prepare_config_generation_command(self):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
         cmd += self.get_setup_file(directory)
         cmd += '\n'
+        return cmd
+
+    def prepare_upload_command(self, cfgs, test_string):
+        directory = installer.build_location(self.get_attribute('prepid'))
+        cmd = 'cd %s \n' % directory
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
@@ -2816,7 +2821,8 @@ class request(json_base):
                     cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(prepid, dev, i + 1)
             if cfgs_to_upload:
 
-                command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
+                config_generation_command = self.prepare_config_generation_command()
+                upload_command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
                     with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
@@ -2825,13 +2831,26 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
+                        if 'slc7' in request_arch.lower():
+                            config_generation_machine_name = 'lxplus7.cern.ch'
+                        else:
+                            config_generation_machine_name = 'vocms081.cern.ch'
+
+                        upload_executor = ssh_executor(server=config_generation_machine_name)
+                        _, stdout, stderr = upload_executor.execute(config_generation_command)
                         if not stdout and not stderr:
-                            self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                            self.logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
+                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
+                            self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name),
+                                              what='Configuration upload')
+
+                        upload_machine_name = "vocms081.cern.ch"
+                        upload_executor = ssh_executor(server=upload_machine_name)
+                        _, stdout, stderr = upload_executor.execute(upload_command)
+                        if not stdout and not stderr:
+                            self.logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name))
+                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name))
+                            self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name),
                                               what='Configuration upload')
                             return False
                         output = stdout.read()
