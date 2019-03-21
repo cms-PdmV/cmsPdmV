@@ -195,7 +195,7 @@ class ValidationHandler:
             if mcm_chain.get_attribute('validate') and prepid in mcm_chain.get_attribute('chain')[mcm_chain.get_attribute('step'):]:
                 return {}
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
-        to_write = mcm_request.get_setup_file(run=True, do_valid=True, for_validation=True)
+        to_write = mcm_request.get_setup_file(run=True, do_valid=True, for_validation=True, gen_script=True)
         file_name = self.TEST_FILE_NAME % prepid
         if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)

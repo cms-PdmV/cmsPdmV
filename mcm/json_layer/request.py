@@ -1201,62 +1201,63 @@ class request(json_base):
 
         return makeRel
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
+    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
         # run is for adding cmsRun
         # do_valid id for adding the file upload
         l_type = locator()
         infile = '#!/bin/bash\n'
 
         # GEN checking script
-        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
-        if l_type.isDev():
-            eos_path += '_dev'
+        if gen_script:
+            eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
+            if l_type.isDev():
+                eos_path += '_dev'
 
-        infile += '\n'
-        infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
-        if for_validation:
-            infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-            infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
-            infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
-
-        # Clone gen repo
-        infile += 'wget --quiet https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
-        # Run script and write to log file
-        if for_validation:
-            infile += 'mkdir -p $EOS_PATH\n'
-
-        infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
-        if l_type.isDev():
-            infile += ' --dev'
-
-        if for_validation:
-            infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
-        else:
             infile += '\n'
+            infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
+            if for_validation:
+                infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
+                infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
+                infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
 
-        # Get exit code
-        infile += 'ERRORS=$?\n'
-        if for_validation:
-            # Add latest log to all logs
-            infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
-            # Print newest log
-            infile += 'echo --BEGIN GEN Request checking script output--\n'
-            infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
-            infile += 'echo --END GEN Request checking script output--\n'
-            # Write a couple of empty lines to the end of a file
-            infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-            infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+            # Clone gen repo
+            infile += 'wget --quiet https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
+            # Run script and write to log file
+            if for_validation:
+                infile += 'mkdir -p $EOS_PATH\n'
 
-        # Check exit code of script
-        infile += 'if [ $ERRORS -ne 0 ]; then\n'
-        infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
-        infile += '    echo "Validation WILL NOT RUN"\n'
-        infile += '    echo "Please correct errors in the request and run validation again"\n'
-        infile += '    exit $ERRORS\n'
-        infile += 'fi\n'
-        # If error code is zero, continue to validation
-        infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
-        infile += '\n'
+            infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
+            if l_type.isDev():
+                infile += ' --dev'
+
+            if for_validation:
+                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+            else:
+                infile += '\n'
+
+            # Get exit code
+            infile += 'ERRORS=$?\n'
+            if for_validation:
+                # Add latest log to all logs
+                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
+                # Print newest log
+                infile += 'echo --BEGIN GEN Request checking script output--\n'
+                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+                infile += 'echo --END GEN Request checking script output--\n'
+                # Write a couple of empty lines to the end of a file
+                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+
+            # Check exit code of script
+            infile += 'if [ $ERRORS -ne 0 ]; then\n'
+            infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
+            infile += '    echo "Validation WILL NOT RUN"\n'
+            infile += '    echo "Please correct errors in the request and run validation again"\n'
+            infile += '    exit $ERRORS\n'
+            infile += 'fi\n'
+            # If error code is zero, continue to validation
+            infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
+            infile += '\n'
 
         if directory or for_validation:
             infile += self.make_release()
@@ -2786,7 +2787,7 @@ class request(json_base):
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
-        cmd += self.get_setup_file(directory)
+        cmd += self.get_setup_file(directory, gen_script=False)
         cmd += '\n'
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'

@@ -446,7 +446,7 @@ class GetSetupForRequest(RESTResource):
                 mcm_req = request(db.get(prepid))
             except request.IllegalAttributeName:
                 return dumps({"results": False})
-            setupText = mcm_req.get_setup_file(run=run, do_valid=do_valid, events=events)
+            setupText = mcm_req.get_setup_file(run=run, do_valid=do_valid, events=events, gen_script=run)
             # delete certificate line
             setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
             return setupText
