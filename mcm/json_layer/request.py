@@ -1208,27 +1208,35 @@ class request(json_base):
         infile = '#!/bin/bash\n'
 
         # GEN checking script
+        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
+        if l_type.isDev():
+            eos_path += '_dev'
+
+        infile += '\n'
+        infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
+        infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
+        infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
         if for_validation:
-            eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
-            if l_type.isDev():
-                eos_path += '_dev'
-
-            infile += '\n'
-            infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
-            infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-            infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
             infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
-            # Clone gen repo
-            infile += 'wget https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
-            # Run script and write to log file
-            infile += 'mkdir -p $EOS_PATH\n'
-            infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
-            if l_type.isDev():
-                eos_path += ' --dev'
 
+        # Clone gen repo
+        infile += 'wget https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
+        # Run script and write to log file
+        if for_validation:
+            infile += 'mkdir -p $EOS_PATH\n'
+
+        infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
+        if l_type.isDev():
+            eos_path += ' --dev'
+
+        if for_validation:
             infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
-            # Get exit code
-            infile += 'ERRORS=$?\n'
+        else:
+            infile += '\n'
+
+        # Get exit code
+        infile += 'ERRORS=$?\n'
+        if for_validation:
             # Add latest log to all logs
             infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
             # Print newest log
@@ -1238,16 +1246,17 @@ class request(json_base):
             # Write a couple of empty lines to the end of a file
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
             infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-            # Check exit code of script
-            infile += 'if [ $ERRORS -ne 0 ]; then\n'
-            infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
-            infile += '    echo "Validation WILL NOT RUN"\n'
-            infile += '    echo "Please correct errors in the request and run validation again"\n'
-            infile += '    exit $ERRORS\n'
-            infile += 'fi\n'
-            # If error code is zero, continue to validation
-            infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
-            infile += '\n'
+
+        # Check exit code of script
+        infile += 'if [ $ERRORS -ne 0 ]; then\n'
+        infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
+        infile += '    echo "Validation WILL NOT RUN"\n'
+        infile += '    echo "Please correct errors in the request and run validation again"\n'
+        infile += '    exit $ERRORS\n'
+        infile += 'fi\n'
+        # If error code is zero, continue to validation
+        infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
+        infile += '\n'
 
         if directory or for_validation:
             infile += self.make_release()
