@@ -2787,6 +2787,18 @@ class request(json_base):
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
+
+
+        cmd += 'source /cvmfs/cms.cern.ch/cmsset_default.sh'
+        cmd += 'export SCRAM_ARCH=slc6_amd64_gcc700'
+        cmd += 'if [ -r CMSSW_10_4_0/src ] ; then' 
+        cmd += ' echo release CMSSW_10_4_0 already exists'
+        cmd += 'else'
+        cmd += ' scram p CMSSW CMSSW_10_4_0'
+        cmd += 'fi'
+        cmd += 'cd CMSSW_10_4_0/src'
+        cmd += 'eval `scram runtime -sh`'
+        cmd += 'cd ../../'
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
