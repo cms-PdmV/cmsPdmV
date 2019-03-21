@@ -153,6 +153,7 @@ class ValidationHandler:
     def create_htcondor_config_file(self, run_test_path, prepid, timeout, memory, threads, transfer_files, request_object=None):
         if request_object:
             scram_arch = request_object.get_scram_arch().lower()
+            self.logger.info('Architecture for %s is %s' % (prepid, scram_arch))
             if 'slc7' in scram_arch:
                 validation_os = 'CentOS7'
             else:
@@ -160,7 +161,6 @@ class ValidationHandler:
         else:
             validation_os = None
 
-        validation_os = request_object.json().get('validation', {}).get('validation_os', None)
         transfer_output_files = '_rt.xml, '.join(transfer_files)
         transfer_output_files += '_rt.xml'
         file_name = self.TEST_FILE_NAME % prepid
