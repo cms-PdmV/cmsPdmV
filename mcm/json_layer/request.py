@@ -2836,13 +2836,19 @@ class request(json_base):
                         else:
                             config_generation_machine_name = 'vocms081.cern.ch'
 
-                        upload_executor = ssh_executor(server=config_generation_machine_name)
-                        _, stdout, stderr = upload_executor.execute(config_generation_command)
+                        config_generation_executor = ssh_executor(server=config_generation_machine_name)
+                        _, stdout, stderr = config_generation_executor.execute(config_generation_command)
                         if not stdout and not stderr:
                             self.logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
                             self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
                             self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name),
                                               what='Configuration upload')
+                            return False
+
+                        output = stdout.read()
+                        error = stderr.read()
+                        self.logger.info('Output for config generation: %s' % (output))
+                        self.logger.info('Error for config generation: %s' % (error))
 
                         upload_machine_name = "vocms081.cern.ch"
                         upload_executor = ssh_executor(server=upload_machine_name)
@@ -2853,8 +2859,12 @@ class request(json_base):
                             self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name),
                                               what='Configuration upload')
                             return False
+
                         output = stdout.read()
                         error = stderr.read()
+                        self.logger.info('Output for config generation: %s' % (output))
+                        self.logger.info('Error for config generation: %s' % (error))
+
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
@@ -2862,6 +2872,7 @@ class request(json_base):
                                 raise AFSPermissionError(error)
 
                             return False
+
                         cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
                         if len(cfgs_to_upload) != len(cfgs_uploaded):
@@ -2898,7 +2909,7 @@ class request(json_base):
                     self.inject_logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid))
                     self.logger.error('There was a problem overwriting the config_id %s for request %s' % (sorted_additional_config_ids, prepid))
                     return False
-            return command
+            return config_generation_command + '\n' + upload_command
         finally:
             for i in to_release:
                 locker.release(i)
