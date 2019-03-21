@@ -2787,8 +2787,6 @@ class request(json_base):
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
-
-
         cmd += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
         cmd += 'export SCRAM_ARCH=slc6_amd64_gcc700\n'
         cmd += 'if [ -r CMSSW_10_4_0/src ] ; then\n' 
@@ -2835,7 +2833,7 @@ class request(json_base):
 
                 config_generation_command = self.prepare_config_generation_command()
                 upload_command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
-                command = config_generation_command + '\n' + upload_command
+                command = upload_command
                 if execute:
                     with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
