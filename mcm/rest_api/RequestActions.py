@@ -302,8 +302,8 @@ class UpdateRequest(RequestRESTResource):
                 return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
 
         dataset_name = mcm_req.get_attribute('dataset_name')
-        dataset_name_regex = re.compile('[0-9a-zA-Z_\-]*')
-        if len(dataset_name) and dataset_name_regex.match(dataset_name):
+        dataset_name_regex = re.compile('.*[^0-9a-zA-Z_-].*')
+        if dataset_name_regex.match(dataset_name):
             return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
