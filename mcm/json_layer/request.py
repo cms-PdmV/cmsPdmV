@@ -1184,6 +1184,10 @@ class request(json_base):
             for project in arch.getElementsByTagName("project"):
                 release = str(project.getAttribute('label'))
                 if release == release_to_find:
+                    if 'slc7' in scram_arch:
+                        # Return slc6 scram arch for CMSSW 10 5 and newer
+                        scram_arch = 'slc6_amd64_gcc700'
+
                     self.scram_arch = scram_arch
 
         return self.scram_arch
