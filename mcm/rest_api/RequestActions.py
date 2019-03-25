@@ -5,6 +5,7 @@ import time
 import urllib2
 from simplejson import dumps, loads
 from collections import defaultdict
+import re
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource
@@ -299,6 +300,11 @@ class UpdateRequest(RequestRESTResource):
         for interested_pwg in interested_pwg:
             if interested_pwg not in all_interested_pwg:
                 return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
+
+        dataset_name = mcm_req.get_attribute('dataset_name')
+        dataset_name_regex = re.compile('.*[^0-9a-zA-Z_-].*')
+        if dataset_name_regex.match(dataset_name):
+            return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
 
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
