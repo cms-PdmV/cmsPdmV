@@ -186,10 +186,29 @@ class CloneRequest(RequestRESTResource):
             if new_json['flown_with']:
                 return {"results": False, "message": "cannot clone a request that has been flown"}
 
-            to_wipe = ['_id', '_rev', 'prepid', 'approval', 'status', 'history', 'config_id', 'reqmgr_name', 'member_of_chain', 'validation', 'completed_events', 'version', 'priority', 'analysis_id', 'extension', 'output_dataset', 'tags']
+            to_wipe = ['_id',
+                       '_rev',
+                       'prepid',
+                       'approval',
+                       'status',
+                       'history',
+                       'config_id',
+                       'reqmgr_name',
+                       'member_of_chain',
+                       'validation',
+                       'completed_events',
+                       'version',
+                       'priority',
+                       'analysis_id',
+                       'extension',
+                       'output_dataset',
+                       'tags',
+                       'cmssw_release',
+                       'sequences',
+                       'keep_output']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 # this is a cloning accross campaign: a few other things need to be cleanedup
-                to_wipe.extend( ['cmssw_release','energy','sequences'] )
+                to_wipe.extend( ['energy'] )
 
             new_json.update(data)
             # set the memory of new request to that of future member_of_campaign
