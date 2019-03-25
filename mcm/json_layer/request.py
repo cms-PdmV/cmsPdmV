@@ -1188,15 +1188,21 @@ class request(json_base):
 
         return self.scram_arch
 
-    def make_release(self):
+    def make_release(self, scram_arch=None, cmssw_release=None):
+        if not scram_arch:
+            scram_arch = self.get_scram_arch()
+
+        if not cmssw_release:
+            cmssw_release = self.get_attribute('cmssw_release')
+
         makeRel = 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
-        makeRel += 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
-        makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
+        makeRel += 'export SCRAM_ARCH=%s\n' % (scram_arch)
+        makeRel += 'if [ -r %s/src ] ; then \n' % (cmssw_release)
+        makeRel += ' echo release %s already exists\n' % (cmssw_release)
         makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        makeRel += 'scram p CMSSW ' + cmssw_release + '\n'
         makeRel += 'fi\n'
-        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
+        makeRel += 'cd ' + cmssw_release + '/src\n'
         makeRel += 'eval `scram runtime -sh`\n'  # setup the cmssw
 
         return makeRel
@@ -2777,11 +2783,26 @@ class request(json_base):
             self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
             self.set_status(step=__status_index, with_notification=True)
 
-    def prepare_upload_command(self, cfgs, test_string):
+    def prepare_config_generation_command(self):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
         cmd += self.get_setup_file(directory)
         cmd += '\n'
+        return cmd
+
+    def prepare_upload_command(self, cfgs, test_string):
+        directory = installer.build_location(self.get_attribute('prepid'))
+        cmd = 'cd %s \n' % directory
+        cmd += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
+        cmd += 'export SCRAM_ARCH=slc6_amd64_gcc700\n'
+        cmd += 'if [ -r CMSSW_10_4_0/src ] ; then\n' 
+        cmd += ' echo release CMSSW_10_4_0 already exists\n'
+        cmd += 'else\n'
+        cmd += ' scram p CMSSW CMSSW_10_4_0\n'
+        cmd += 'fi\n'
+        cmd += 'cd CMSSW_10_4_0/src\n'
+        cmd += 'eval `scram runtime -sh`\n'
+        cmd += 'cd ../../\n'
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
@@ -2816,7 +2837,9 @@ class request(json_base):
                     cfgs_to_upload[i] = "{0}{1}_{2}_cfg.py".format(prepid, dev, i + 1)
             if cfgs_to_upload:
 
-                command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
+                config_generation_command = self.prepare_config_generation_command()
+                upload_command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
+                command = upload_command
                 if execute:
                     with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
@@ -2825,17 +2848,40 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
+                        if 'slc7' in request_arch.lower():
+                            config_generation_machine_name = 'lxplus7.cern.ch'
+                        else:
+                            config_generation_machine_name = 'vocms081.cern.ch'
+
+                        config_generation_executor = ssh_executor(server=config_generation_machine_name)
+                        _, stdout, stderr = config_generation_executor.execute(config_generation_command)
                         if not stdout and not stderr:
-                            self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                            self.logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
+                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name))
+                            self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, config_generation_machine_name),
                                               what='Configuration upload')
                             return False
+
                         output = stdout.read()
                         error = stderr.read()
+                        self.logger.info('Output for config generation: %s' % (output))
+                        self.logger.info('Error for config generation: %s' % (error))
+
+                        upload_machine_name = "vocms081.cern.ch"
+                        upload_executor = ssh_executor(server=upload_machine_name)
+                        _, stdout, stderr = upload_executor.execute(upload_command)
+                        if not stdout and not stderr:
+                            self.logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name))
+                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name))
+                            self.test_failure('SSH error for request {0}. Could not retrieve outputs. Machine %s.'.format(prepid, upload_machine_name),
+                                              what='Configuration upload')
+                            return False
+
+                        output = stdout.read()
+                        error = stderr.read()
+                        self.logger.info('Output for config generation: %s' % (output))
+                        self.logger.info('Error for config generation: %s' % (error))
+
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
@@ -2843,6 +2889,7 @@ class request(json_base):
                                 raise AFSPermissionError(error)
 
                             return False
+
                         cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
                         if len(cfgs_to_upload) != len(cfgs_uploaded):

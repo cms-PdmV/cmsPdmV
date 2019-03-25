@@ -297,7 +297,7 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         command = 'cd %s \n' % (locator_type.workLocation())
-        command += mcm_r.make_release()
+        command += mcm_r.make_release('slc6_amd64_gcc700', 'CMSSW_10_4_0')
         command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
         if locator_type.isDev():
