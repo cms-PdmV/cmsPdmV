@@ -106,6 +106,9 @@ class UpdateChainedCampaign(RESTResource):
 
 
 class DeleteChainedCampaign(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
         self.db_name = 'chained_campaigns'
         self.before_request()
