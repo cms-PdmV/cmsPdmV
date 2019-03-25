@@ -1207,46 +1207,53 @@ class request(json_base):
 
         return makeRel
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False):
+    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
         # run is for adding cmsRun
         # do_valid id for adding the file upload
         l_type = locator()
         infile = '#!/bin/bash\n'
 
         # GEN checking script
-        if for_validation:
+        if gen_script:
             eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
             if l_type.isDev():
                 eos_path += '_dev'
 
             infile += '\n'
             infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
-            infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-            infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
-            infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
+            if for_validation:
+                infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
+                infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
+                infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
+
             # Clone gen repo
-            infile += 'git clone https://github.com/cms-sw/genproductions\n'
-            # Go inside
-            infile += 'cd genproductions/bin/utils\n'
+            infile += 'wget --quiet https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
             # Run script and write to log file
-            infile += 'mkdir -p $EOS_PATH\n'
+            if for_validation:
+                infile += 'mkdir -p $EOS_PATH\n'
+
             infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
             if l_type.isDev():
-                eos_path += ' --dev'
+                infile += ' --dev'
 
-            infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+            if for_validation:
+                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+            else:
+                infile += '\n'
+
             # Get exit code
             infile += 'ERRORS=$?\n'
-            # Add latest log to all logs
-            infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
-            # Print newest log
-            infile += 'echo --BEGIN GEN Request checking script output--\n'
-            infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
-            infile += 'echo --END GEN Request checking script output--\n'
-            # Write a couple of empty lines to the end of a file
-            infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-            infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-            infile += 'cd ../../..\n'
+            if for_validation:
+                # Add latest log to all logs
+                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
+                # Print newest log
+                infile += 'echo --BEGIN GEN Request checking script output--\n'
+                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+                infile += 'echo --END GEN Request checking script output--\n'
+                # Write a couple of empty lines to the end of a file
+                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+
             # Check exit code of script
             infile += 'if [ $ERRORS -ne 0 ]; then\n'
             infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
@@ -2786,7 +2793,7 @@ class request(json_base):
     def prepare_config_generation_command(self):
         directory = installer.build_location(self.get_attribute('prepid'))
         cmd = 'cd %s \n' % directory
-        cmd += self.get_setup_file(directory)
+        cmd += self.get_setup_file(directory, gen_script=False)
         cmd += '\n'
         return cmd
 
