@@ -1189,8 +1189,8 @@ class request(json_base):
         return self.scram_arch
 
     def make_release(self):
-        makeRel = 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
-        makeRel += 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
+        makeRel = 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
+        makeRel += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
         makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
         makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
         makeRel += 'else\n'
@@ -2786,13 +2786,29 @@ class request(json_base):
 
     def prepare_upload_command(self, cfgs, test_string):
         directory = installer.build_location(self.get_attribute('prepid'))
-        cmd = 'cd %s \n' % directory
+        cmd = ''
+        scram_arch = self.get_scram_arch()
+        executable_file_name = '%supload_script_%s.sh' % (directory, self.get_attribute('prepid'))
+        if 'slc7_' in scram_arch:
+            cmd += '#!/bin/bash\n'
+            cmd += 'cd %s \n' % directory
+            cmd += 'cat > %s << \'EOF\'\n' % (executable_file_name)
+            cmd += '#!/bin/bash\n'
+
+        cmd += 'cd %s \n' % directory
         cmd += self.get_setup_file(directory, gen_script=False)
         cmd += '\n'
         cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
         cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
+        if 'slc7_' in scram_arch:
+            cmd += '\n\nEOF\n'
+            cmd += 'chmod +x %s\n' % (executable_file_name)
+            cmd += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
+            cmd += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest %s\n' % (executable_file_name)
+
+        self.inject_logger.info('Upload command:\n\n%s\n\n' % (cmd))
         return cmd
 
     def prepare_and_upload_config(self, execute=True):
