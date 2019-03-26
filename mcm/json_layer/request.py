@@ -1207,6 +1207,11 @@ class request(json_base):
         l_type = locator()
         infile = '#!/bin/bash\n'
 
+        first_tiers = ','.join(self.get_tier(0))
+        # pLHE, GS and wmLHEGS
+        if first_tiers != 'LHE' and first_tiers != 'GEN-SIM' and first_tiers != 'LHE,GEN-SIM':
+            gen_script = False
+
         # GEN checking script
         if gen_script:
             eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
