@@ -4,7 +4,7 @@ from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest,
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns, SelectNewChainedCampaigns
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
-from rest_api.FlowActions import CreateFlow,  UpdateFlow,  DeleteFlow,  GetFlow,  ApproveFlow
+from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.LogActions import ReadInjectionLog, GetVerbosities
@@ -353,6 +353,7 @@ api.add_resource(
     ApproveFlow,
     '/restapi/flows/approve/<string:flow_ids>',
     '/restapi/flows/approve/<string:flow_ids>/<int:step>')
+api.add_resource(CloneFlow, '/restapi/flows/clone')
 # REST Batches Actions
 api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
 api.add_resource(AnnounceBatch, '/restapi/batches/announce')
