@@ -405,3 +405,51 @@ class ApproveFlow(RESTResource):
             return {"prepid": rid, "results": False}
 
         return {"prepid": rid, "results": db.update(f.json())}
+
+
+class CloneFlow(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def put(self):
+        """
+        Make a clone with specific requirements
+        """
+        data = loads(flask.request.data.strip())
+        pid = data['prepid']
+        new_pid = data['new_prepid']
+        if not pid or not new_pid:
+            return {'results': False,
+                    'message': 'Invalid flow name'}
+
+        return self.clone_flow(pid, new_pid)
+
+    def clone_flow(self, pid, new_pid):
+        db = database("flows")
+        if not db.document_exists(pid):
+            return {'results': False,
+                    'message': 'Flow %s does not exist' % (pid)}
+
+        if db.document_exists(new_pid):
+            return {'results': False,
+                    'message': 'Flow %s already exist' % (new_pid)}
+
+        new_json = db.get(pid)
+        new_json['prepid'] = new_pid
+        new_json['_id'] = new_pid
+        del new_json['history']
+
+        new_flow = flow()
+        new_flow.update(new_json)
+        new_flow.update_history({'action': 'clone', 'step': pid})
+        if new_flow.save():
+            return {'results': True,
+                    'message': 'Created %s' % (new_pid),
+                    'prepid': new_pid}
+        else:
+            return {'results': False,
+                    'message': 'Error saving new flow'}

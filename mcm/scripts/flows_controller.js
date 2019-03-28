@@ -1,6 +1,6 @@
 angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window',
-  function resultsCtrl($scope, $http, $location, $window){
+  ['$scope', '$http', '$modal', '$location', '$window',
+  function resultsCtrl($scope, $http, $modal, $location, $window){
     $scope.flows_defaults = [
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:true, db_name:''},
@@ -144,6 +144,42 @@ angular.module('testApp').controller('resultsCtrl',
       }, function(){ alert("Error getting information"); });
     };
 
+    $scope.openCloneModal = function(id)
+    {
+      var cloneModal = $modal.open({
+        templateUrl: 'cloneModal.html',
+        controller: CloneModalInstance,
+        resolve: {
+          prepid : function() {
+            return id;
+          }
+        }
+      });
+
+      cloneModal.result.then(function(input_dict)
+      {
+        $http({method:'PUT', url:'restapi/'+$scope.dbName+'/clone/', data:input_dict}).success(function(data,status){
+          $scope.update["success"] = data["results"];
+          $scope.update["fail"] = !data["results"];
+          $scope.update["status_code"] = status;
+          if (data["message"])
+          {
+            $scope.update["status_code"] = data["message"];
+          }
+          if (data["prepid"])
+          {
+            $window.open("edit?db_name=flows&query="+data["prepid"]);
+          }
+          $scope.update["message"] = data;
+        }).error(function(data,status){
+          $scope.update["success"] = false;
+          $scope.update["fail"] = true;
+          $scope.update["status_code"] = status;
+          $scope.update["message"] = data;
+        });
+      });
+    }
+
     $scope.$watch(function() {
       var loc_dict = $location.search();
       return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
@@ -191,6 +227,21 @@ var CreateFlowModalInstance = function($scope, $modalInstance) {
         $modalInstance.close($scope.flow.flowId);
     }
 
+};
+
+var CloneModalInstance = function($http, $scope, $modalInstance, prepid) {
+  $scope.data = {
+    oldPrepid: prepid,
+    newPrepid: ''
+  };
+
+  $scope.clone = function() {
+    $modalInstance.close({"prepid":$scope.data.oldPrepid, "new_prepid":$scope.data.newPrepid});
+  };
+
+  $scope.close = function() {
+    $modalInstance.dismiss();
+  };
 };
 
 // NEW for directive

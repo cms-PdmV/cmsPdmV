@@ -57,6 +57,9 @@
                 <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
                   <i class="icon-wrench"></i>
                 </a>
+                <a ng-click="openCloneModal(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Clone Flow" ng-href="#">
+                  <i class="icon-share-alt"></i>
+                </a>
                 <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
@@ -159,6 +162,18 @@
                 <font color="red" ng-if="flow.flowId.indexOf('_') != -1">Flow name should not have "_" in it</font>
                 <button class="btn btn-success" ng-click="save()" ng-disabled="flow.flowId.indexOf('_') != -1">Create</button>
                 <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+              </div> <!--end of modal footer-->
+            </script>
+            <script type="text/ng-template" id="cloneModal.html"> <!--hidden modal template-->
+              <div class="modal-header">
+                <h4>Clone flow: {{data.prepid}}</h4>
+              </div>  <!--end of modal header-->
+              <div class="modal-body">
+                New Flow name: <input type="text" ng-model="data.newPrepid"/>
+              </div> <!--end of modal body-->
+              <div class="modal-footer">
+                <button class="btn btn-success" ng-click="clone()" >Clone!</button>
+                <button class="btn btn-warning cancel" ng-click="close()">Close</button>
               </div> <!--end of modal footer-->
             </script>
           </div> <!--end of modalControler DIV-->
