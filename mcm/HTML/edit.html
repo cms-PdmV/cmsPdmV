@@ -179,7 +179,7 @@
                       <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
                     </div>
                     <div ng-switch-when="Allowed campaigns">
-                      <div select-campaign ng-model="result[column.db_name]"></div>
+                      <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions="allCampaigns"></list-predefined>
                     </div>
                     <div ng-switch-when="Pwg">
                       <div ng-switch on="dbName">
@@ -198,7 +198,7 @@
                       </div>
                     </div>
                     <div ng-switch-when="Next campaign">
-                      <select ng-model="result[column.db_name]" ng-options="value for value in allCampaigns"></select>
+                      <single-predefined ng-model="result[column.db_name]" column="column.text" suggestions="allCampaigns"></single-predefined>
                     </div>
                     <div ng-switch-when="Announced">
                       <input type="checkbox" ng-model="result[column.db_name]">
