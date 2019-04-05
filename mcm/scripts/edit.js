@@ -745,7 +745,7 @@ testApp.directive("listPredefined", function($http){
     template:
     '<div>'+
     '  <ul>'+
-    '   <li ng-repeat="elem in analysis_data">'+
+    '   <li ng-repeat="elem in analysis_data track by $index">'+
     '     <span ng-hide="editable[$index]">'+
     '       {{elem}}'+
     '     </span>'+
@@ -761,9 +761,7 @@ testApp.directive("listPredefined", function($http){
     '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
     '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
     '      </a>'+
-    '      <select ng-model="new_analysis_id" ng-show="add_analysis_id">'+
-    '        <option ng-repeat="suggestion in suggestions">{{suggestion}}</option>'+
-    '      </select>'+
+    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id" class="input-xxlarge" typeahead="suggestion for suggestion in getSuggestions($viewValue)">'+
     '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
     '    </form>'+
     '</div>'+
@@ -781,7 +779,9 @@ testApp.directive("listPredefined", function($http){
         scope.new_id = "";
         scope.columnName = scope.$eval(attr.column);
         scope.fieldName = attr.suggestionsFieldname;
-        scope.suggestions = []
+        if (scope.suggestions === undefined) {
+          scope.suggestions = [];
+        }
         if (scope.suggestions.length === 0) {
           scope.loadSuggestions()
         }
@@ -793,13 +793,127 @@ testApp.directive("listPredefined", function($http){
       };
 
       scope.pushNewAnalysisID = function(){
+        if (!(scope.suggestions.includes(scope.new_analysis_id))) {
+          alert(scope.new_analysis_id + ' is not a valid value')
+          return;
+        }
         scope.analysis_data.push(scope.new_analysis_id);
         scope.add_analysis_id = false;
         scope.new_analysis_id = "";
         scope.loadSuggestions()
       };
 
+      scope.getSuggestions = function(value) {
+        if (scope.suggestions.length === 0) {
+          scope.loadSuggestions();
+        }
+        var filteredResults = scope.suggestions.filter(function(el) {
+          return el.indexOf(value) >= 0;
+        });
+        return filteredResults;
+      }
+
       scope.loadSuggestions = function () {
+        if (attr.suggestions !== undefined && scope[attr.suggestions] !== undefined) {
+          scope.suggestions = scope[attr.suggestions];
+        } else {
+          scope.suggestions = []
+        }
+        if (scope.fieldName == undefined) {
+          return {};
+        }
+        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
+        if (scope.fieldName === 'ppd_tags') {
+          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
+        }
+        var promise = $http.get(searchURL);
+        return promise.then(function(data){
+          var filteredResults = data['data']['results'].filter(function(el) {
+            return scope.analysis_data.indexOf(el) < 0;
+          });
+          scope.suggestions = filteredResults;
+        }, function(data){
+          alert("Error getting suggestions for " + scope.fieldName + " " + data.status + " ");
+        });
+      };
+    }
+  }
+});
+
+testApp.directive("singlePredefined", function($http){
+  return {
+    replace: false,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <span ng-show="analysis_data !== undefined && analysis_data !== \'\'">'+
+    '    {{analysis_data}}'+
+    '    <span ng-hide="editable[$index] || not_editable_list.indexOf(columnName)!=-1">'+
+    '      <a ng-click="remove()">'+
+    '        <i class="icon-remove-sign"></i>'+
+    '      </a>'+
+    '    </span>'+
+    '  </span>'+
+    '  <form ng-hide="analysis_data !== undefined && analysis_data !== \'\'" class="form-inline" ng-hide="not_editable_list.indexOf(columnName)!=-1">'+
+    '    <input type="text" ng-model="new_analysis_id" class="input-xxlarge" typeahead="suggestion for suggestion in getSuggestions($viewValue)">'+
+    '    <i class="icon-plus-sign" ng-click="pushNewAnalysisID()"></i>'+
+    '  </form>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$init = function() {
+        console.log('INIT!')
+      };
+
+      ctrl.$render = function(){
+        scope.analysis_data = ctrl.$viewValue;
+        scope.new_analysis_id = "";
+        scope.editable = {};
+        scope.new_id = "";
+        scope.columnName = scope.$eval(attr.column);
+        scope.fieldName = attr.suggestionsFieldname;
+        if (scope.suggestions === undefined) {
+          scope.suggestions = [];
+        }
+        if (scope.suggestions.length === 0) {
+          scope.loadSuggestions()
+        }
+      };
+
+      scope.remove = function(){
+        scope.analysis_data = ''
+        scope.loadSuggestions()
+      };
+
+      scope.pushNewAnalysisID = function(){
+        if (!(scope.suggestions.includes(scope.new_analysis_id))) {
+          alert(scope.new_analysis_id + ' is not a valid value')
+          return;
+        }
+        scope.analysis_data = scope.new_analysis_id;
+        scope.add_analysis_id = false;
+        scope.new_analysis_id = "";
+        scope.loadSuggestions()
+      };
+
+      scope.getSuggestions = function(value) {
+        if (scope.suggestions.length === 0) {
+          scope.loadSuggestions();
+        }
+        var filteredResults = scope.suggestions.filter(function(el) {
+          return el.indexOf(value) >= 0;
+        });
+        return filteredResults;
+      }
+
+      scope.loadSuggestions = function () {
+        if (attr.suggestions !== undefined && scope[attr.suggestions] !== undefined) {
+          scope.suggestions = scope[attr.suggestions];
+        } else {
+          scope.suggestions = []
+        }
         if (scope.fieldName == undefined) {
           return {};
         }

@@ -34,6 +34,7 @@ angular.module('testApp').controller('resultCtrl',
         break;
       case "flows":
         $scope.not_editable_list = ["Prepid", "Approval"];
+        $scope.allCampaigns = []
         var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
           promise.then(function(data){
           $scope.allCampaigns = data.data.results;
