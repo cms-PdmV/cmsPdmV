@@ -1209,9 +1209,10 @@ class request(json_base):
 
         first_tiers = ','.join(self.get_tier(0))
         # pLHE, GS and wmLHEGS
-        if first_tiers != 'LHE' and first_tiers != 'GEN-SIM' and first_tiers != 'LHE,GEN-SIM':
+        if first_tiers != 'LHE' and first_tiers != 'GEN-SIM' and first_tiers != 'LHE,GEN-SIM' and first_tiers != 'GEN-SIM,LHE':
             gen_script = False
 
+        self.logger.info('Tiers for %s are %s' % (self.get_attribute('prepid'), first_tiers))
         # GEN checking script
         if gen_script:
             eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
