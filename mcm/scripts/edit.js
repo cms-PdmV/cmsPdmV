@@ -895,6 +895,7 @@ testApp.directive("singlePredefined", function($http){
         scope.analysis_data = scope.new_analysis_id;
         scope.add_analysis_id = false;
         scope.new_analysis_id = "";
+        ctrl.$setViewValue(scope.analysis_data);
         scope.loadSuggestions()
       };
 
