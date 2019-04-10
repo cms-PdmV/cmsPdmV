@@ -1172,8 +1172,25 @@ class request(json_base):
         # economise to call many times.
         if hasattr(self, 'scram_arch'):
             return self.scram_arch
-        self.scram_arch = None
+
+        scram_arch_exceptions = settings.get_value('scram_arch_exceptions')
+        prepid = self.get_attribute('prepid')
+        campaign = self.get_attribute('member_of_campaign')
         release_to_find = self.get_attribute('cmssw_release')
+        if prepid in scram_arch_exceptions:
+            self.scram_arch = scram_arch_exceptions.get(prepid)
+            self.logger.info('Found %s in scram arch exceptions (%s)' % (prepid, self.scram_arch))
+            return self.scram_arch
+        elif campaign in scram_arch_exceptions:
+            self.scram_arch = scram_arch_exceptions.get(campaign)
+            self.logger.info('Found %s in scram arch exceptions (%s)' % (campaign, self.scram_arch))
+            return self.scram_arch
+        elif release_to_find in scram_arch_exceptions:
+            self.scram_arch = scram_arch_exceptions.get(release_to_find)
+            self.logger.info('Found %s in scram arch exceptions (%s)' % (release_to_find, self.scram_arch))
+            return self.scram_arch
+
+        self.scram_arch = None
         import xml.dom.minidom
 
         release_announcement = settings.get_value('release_announcement')
