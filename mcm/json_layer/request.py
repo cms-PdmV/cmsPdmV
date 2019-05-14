@@ -1624,6 +1624,13 @@ class request(json_base):
         self.logger.info('All workflows for %s: %s' % (self.get_attribute('prepid'),
                                                        dumps(list(all_reqmgr_name_list), indent=2)))
         new_mcm_reqmgr_list = []
+        skippable_transitions = set(['rejected',
+                                     'aborted',
+                                     'failed',
+                                     'rejected-archived',
+                                     'aborted-archived',
+                                     'failed-archived',
+                                     'aborted-completed'])
         for reqmgr_name in all_reqmgr_name_list:
             stats_doc = None
             for stats_workflow in stats_workflows:
@@ -1642,9 +1649,17 @@ class request(json_base):
                 stats_request_transition = [{'Status': 'new', 'UpdateTime': 0}]
 
             status_history_from_reqmngr = [x['Status'] for x in stats_request_transition]
+            if len(set(status_history_from_reqmngr).intersection(skippable_transitions)) > 0:
+                self.logger.info('Adding empty %s because it has skippable status: %s' % (reqmgr_name, status_history_from_reqmngr))
+                new_mcm_reqmgr_list.append({'name': reqmgr_name,
+                                            'content': {}})
+                continue
+
             submission_timestamp = stats_request_transition[0].get('UpdateTime', 0)
+            last_update_timestamp = stats_doc.get('LastUpdate', 0)
             submission_date = time.strftime('%y%m%d', time.gmtime(submission_timestamp))
             submission_time = time.strftime('%H%M%S', time.gmtime(submission_timestamp))
+            last_update_time = time.strftime('%a %b %d %H:%M:%S %Y', time.gmtime(last_update_timestamp))
             output_datasets = stats_doc.get('OutputDatasets', [])
             event_number_history = stats_doc.get('EventNumberHistory', [])
             dataset_name = output_datasets[0] if len(output_datasets) else ''
@@ -1677,7 +1692,8 @@ class request(json_base):
                                   'pdmv_present_priority': stats_doc.get('RequestPriority'),
                                   'pdmv_status_history_from_reqmngr': status_history_from_reqmngr,
                                   'pdmv_submission_time': submission_time,
-                                  'pdmv_open_evts_in_DAS': open_evts_in_das}}
+                                  'pdmv_open_evts_in_DAS': open_evts_in_das,
+                                  'pdmv_monitor_time': last_update_time}}
 
             new_mcm_reqmgr_list.append(new_rr)
 
@@ -1685,15 +1701,12 @@ class request(json_base):
         old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=4, sort_keys=True)
         new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
-        self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
-        if not changes_happen:
-            return changes_happen
-
         self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)))
         self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
 
         if len(new_mcm_reqmgr_list):
             tiers_expected = self.get_tiers()
+            self.logger.info('%s tiers expected: %s' % (self.get_attribute('prepid'), tiers_expected))
             collected = self.collect_outputs(new_mcm_reqmgr_list,
                                              tiers_expected,
                                              self.get_processing_strings(),
@@ -1717,6 +1730,7 @@ class request(json_base):
             keep_output = self.get_attribute("keep_output").count(True) > 0
             if keep_output:
                 self.set_attribute('completed_events', completed)
+                changes_happen = True
 
             self.logger.info('Completed events for %s: %s' % (self.get_attribute('prepid'),
                                                               completed))
@@ -1729,6 +1743,7 @@ class request(json_base):
             if (output_dataset != collected) and (self.get_attribute('status') != 'done') and keep_output:
                 self.logger.info('Stats update, DS differs. for %s' % (self.get_attribute("prepid")))
                 self.set_attribute('output_dataset', collected)
+                changes_happen = True
 
         crdb = database('chained_requests')
         rdb = database('requests')
@@ -1752,6 +1767,7 @@ class request(json_base):
             self.update_history({'action': 'wm priority',
                                  'step': new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority']})
 
+        self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
         return changes_happen
 
     def get_stats_old(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
@@ -2011,7 +2027,7 @@ class request(json_base):
 
     def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
 
-        re_to_match = re.compile("/%s/%s(.*)-v(.*)/" % (prime_ds, camp))
+        re_to_match = re.compile("/%s(.*)/%s(.*)\\-v(.*)/" % (prime_ds, camp))
         collected = []
         versioned = {}
 
@@ -2021,7 +2037,7 @@ class request(json_base):
             tiers_hash_map[t] = tiers_expected.index(t)
 
         for wma in mcm_rr:
-            if 'content' not in wma:
+            if 'content' not in wma or not wma['content']:
                 continue
             if 'pdmv_dataset_list' not in wma['content']:
                 continue
@@ -2035,7 +2051,7 @@ class request(json_base):
                     # 1st is datset+process_string
                     # 2nd is version number
                     # 3rd is datatier
-                    curr_v = re.split('(.*)-v(.*)/', ds)
+                    curr_v = re.split('(.*)\\-v(.*)/', ds)
                     # Do some checks
                     if not curr_v[-1] in tiers_expected and not skip_check:
                         continue

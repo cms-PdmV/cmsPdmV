@@ -464,19 +464,20 @@ testApp.directive("reqmgrName", function($http){
         scope.getrqmnr_data(req_name, index);
       };
       scope.getrqmnr_data = function(req_name, index){
-        var __tmp = _.without(req_name.split("_"),"");
-        var __filename = _.rest(__tmp, __tmp.length-1)[0];
-        var __dirname = _.without(__tmp, __filename)
-        __url = __dirname.join("/") + "/" + __filename
-        scope.links[req_name] = "https://cms-pdmv.web.cern.ch/cms-pdmv/stats/growth/"+__url+".gif";
-        getfrom='/stats/restapi/get_one/'+req_name;
-        $http({method:'GET', url: getfrom}).success(function(data,status){
-          scope.stats_cache[req_name] = data;
-        }).error(function(status){
-          scope.stats_cache[req_name] = "Not found";
-        });
+        var index;
+        scope.stats_cache[req_name] = 'Not found'
+        for (index = 0; index < scope.rqmngr_data.length; ++index) {
+          req_mgr_dict = scope.rqmngr_data[index];
+          if (req_mgr_dict['name'] === req_name) {
+            if (Object.keys(req_mgr_dict['content']).length > 0) {
+              scope.stats_cache[req_name] = req_mgr_dict['content']
+            }
+            break;
+          }
+        }
       };
       scope.$on('loadDataSet', function (events, values) {
+
         if (scope.dbName == "requests") {
           if (scope.data._id == values[2]) {
             scope.load_dataset_list(values[0], values[1]);
