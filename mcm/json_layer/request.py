@@ -1613,7 +1613,170 @@ class request(json_base):
             )
             self.notify(subject, message)
 
-    def get_stats(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
+    def get_stats(self, limit_to_set=0.05, refresh=False, forced=False):
+        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/requests',
+                                               options={'include_docs': True,
+                                                        'key': '"%s"' % self.get_attribute('prepid')})['rows']
+        stats_workflows = [stats_wf['doc'] for stats_wf in stats_workflows]
+        mcm_reqmgr_list = self.get_attribute('reqmgr_name')
+        mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
+        stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
+        all_reqmgr_name_list = set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list))
+        self.logger.info('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                         dumps(list(stats_reqmgr_name_list), indent=2)))
+        self.logger.info('McM workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                       dumps(list(mcm_reqmgr_name_list), indent=2)))
+        self.logger.info('All workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                       dumps(list(all_reqmgr_name_list), indent=2)))
+        new_mcm_reqmgr_list = []
+        skippable_transitions = set(['rejected',
+                                     'aborted',
+                                     'failed',
+                                     'rejected-archived',
+                                     'aborted-archived',
+                                     'failed-archived',
+                                     'aborted-completed'])
+        for reqmgr_name in all_reqmgr_name_list:
+            stats_doc = None
+            for stats_workflow in stats_workflows:
+                if stats_workflow.get('RequestName') == reqmgr_name:
+                    stats_doc = stats_workflow
+                    break
+
+            if not stats_doc or not stats_db.document_exists(reqmgr_name):
+                self.logger.warning('Workflow %s is in McM already, but not in Stats DB' % (reqmgr_name))
+                new_mcm_reqmgr_list.append({'name': reqmgr_name,
+                                            'content': {}})
+                continue
+
+            stats_request_transition = stats_doc.get('RequestTransition', [])
+            if not stats_request_transition:
+                stats_request_transition = [{'Status': 'new', 'UpdateTime': 0}]
+
+            status_history_from_reqmngr = [x['Status'] for x in stats_request_transition]
+            if len(set(status_history_from_reqmngr).intersection(skippable_transitions)) > 0:
+                self.logger.info('Adding empty %s because it has skippable status: %s' % (reqmgr_name, status_history_from_reqmngr))
+                new_mcm_reqmgr_list.append({'name': reqmgr_name,
+                                            'content': {}})
+                continue
+
+            submission_timestamp = stats_request_transition[0].get('UpdateTime', 0)
+            last_update_timestamp = stats_doc.get('LastUpdate', 0)
+            submission_date = time.strftime('%y%m%d', time.gmtime(submission_timestamp))
+            submission_time = time.strftime('%H%M%S', time.gmtime(submission_timestamp))
+            last_update_time = time.strftime('%a %b %d %H:%M:%S %Y', time.gmtime(last_update_timestamp))
+            output_datasets = stats_doc.get('OutputDatasets', [])
+            event_number_history = stats_doc.get('EventNumberHistory', [])
+            dataset_name = output_datasets[0] if len(output_datasets) else ''
+            dataset_statuses = {}
+            events_in_das = 0
+            status_in_das = 'NONE'
+            open_evts_in_das = 0
+            if event_number_history:
+                event_number_history = event_number_history[-1]
+                for dataset, content in event_number_history.get('Datasets', {}).iteritems():
+                    dataset_statuses[dataset] = {'pdmv_evts_in_DAS': content.get('Events', 0),
+                                                 'pdmv_status_in_DAS': content.get('Type', 'NONE'),
+                                                 'pdmv_open_evts_in_DAS': 0}
+
+                    if dataset == dataset_name:
+                        events_in_das = dataset_statuses[dataset]['pdmv_evts_in_DAS']
+                        status_in_das = dataset_statuses[dataset]['pdmv_status_in_DAS']
+                        open_evts_in_das = dataset_statuses[dataset]['pdmv_open_evts_in_DAS']
+
+            new_rr = {'name': reqmgr_name,
+                      'content': {'pdmv_type': stats_doc.get('RequestType', ''),
+                                  'pdmv_status_from_reqmngr': status_history_from_reqmngr[-1],
+                                  'pdmv_dataset_name': dataset_name,
+                                  'pdmv_prep_id': stats_doc.get('PrepID', ''),
+                                  'pdmv_dataset_statuses': dataset_statuses,
+                                  'pdmv_evts_in_DAS': events_in_das,
+                                  'pdmv_dataset_list': output_datasets,
+                                  'pdmv_submission_date': submission_date,
+                                  'pdmv_status_in_DAS': status_in_das,
+                                  'pdmv_present_priority': stats_doc.get('RequestPriority'),
+                                  'pdmv_status_history_from_reqmngr': status_history_from_reqmngr,
+                                  'pdmv_submission_time': submission_time,
+                                  'pdmv_open_evts_in_DAS': open_evts_in_das,
+                                  'pdmv_monitor_time': last_update_time}}
+
+            new_mcm_reqmgr_list.append(new_rr)
+
+        new_mcm_reqmgr_list = sorted(new_mcm_reqmgr_list, key=lambda workflow: '_'.join(workflow['name'].split('_')[-3]))
+        old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=4, sort_keys=True)
+        new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)
+        changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
+        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)))
+        self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
+
+        if len(new_mcm_reqmgr_list):
+            tiers_expected = self.get_tiers()
+            self.logger.info('%s tiers expected: %s' % (self.get_attribute('prepid'), tiers_expected))
+            collected = self.collect_outputs(new_mcm_reqmgr_list,
+                                             tiers_expected,
+                                             self.get_processing_strings(),
+                                             self.get_attribute('dataset_name'),
+                                             self.get_attribute('member_of_campaign'),
+                                             skip_check=forced)
+
+            self.logger.info('Collected outputs for %s: %s' % (self.get_attribute('prepid'),
+                                                               dumps(collected, indent=4, sort_keys=True)))
+
+            # 1st element which is not DQMIO
+            completed = 0
+            if len(collected):
+                # we find the first DS not DQMIO, if not possible default to 0th elem
+                datasets_to_calc = next((el for el in collected if el.find("DQMIO") == -1), collected[0])
+                (_, completed) = self.collect_status_and_completed_events(new_mcm_reqmgr_list, datasets_to_calc)
+            else:
+                self.logger.error('Could not calculate completed events for %s' % (self.get_attribute('prepid')))
+                completed = 0
+
+            keep_output = self.get_attribute("keep_output").count(True) > 0
+            if keep_output:
+                self.set_attribute('completed_events', completed)
+                changes_happen = True
+
+            self.logger.info('Completed events for %s: %s' % (self.get_attribute('prepid'),
+                                                              completed))
+
+            # we check if output_dataset managed to change.
+            # ussually when request is assigned, but no evts are generated
+            # we check for done status so we wouldn't be updating old requests with changed infrastructure
+            # also we change it only if we keep any output in request
+            output_dataset = self.get_attribute('output_dataset')
+            if (output_dataset != collected) and (self.get_attribute('status') != 'done') and keep_output:
+                self.logger.info('Stats update, DS differs. for %s' % (self.get_attribute("prepid")))
+                self.set_attribute('output_dataset', collected)
+                changes_happen = True
+
+        crdb = database('chained_requests')
+        rdb = database('requests')
+        chained_requests = crdb.query('contains==%s' % (self.get_attribute('prepid')))
+        for cr in chained_requests:
+            chain = cr.get('chain', [])
+            index_of_this_request = chain.index(self.get_attribute('prepid'))
+            if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
+                next_request = request(rdb.get(chain[index_of_this_request + 1]))
+                if not next_request.get_attribute('input_dataset'):
+                    input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
+                    next_request.set_attribute('input_dataset', input_dataset)
+                    next_request.save()
+
+        if (len(new_mcm_reqmgr_list) and
+                'content' in new_mcm_reqmgr_list[-1] and
+                'pdmv_present_priority' in new_mcm_reqmgr_list[-1]['content'] and
+                new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
+
+            self.set_attribute('priority', new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'])
+            self.update_history({'action': 'wm priority',
+                                 'step': new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority']})
+
+        self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
+        return changes_happen
+
+    def get_stats_old(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
             refresh=False, forced=False):
 
         # existing rwma
@@ -1870,7 +2033,7 @@ class request(json_base):
 
     def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
 
-        re_to_match = re.compile("/%s/%s(.*)-v(.*)/" % (prime_ds, camp))
+        re_to_match = re.compile("/%s(.*)/%s(.*)\\-v(.*)/" % (prime_ds, camp))
         collected = []
         versioned = {}
 
@@ -1880,7 +2043,7 @@ class request(json_base):
             tiers_hash_map[t] = tiers_expected.index(t)
 
         for wma in mcm_rr:
-            if 'content' not in wma:
+            if 'content' not in wma or not wma['content']:
                 continue
             if 'pdmv_dataset_list' not in wma['content']:
                 continue
@@ -1894,7 +2057,7 @@ class request(json_base):
                     # 1st is datset+process_string
                     # 2nd is version number
                     # 3rd is datatier
-                    curr_v = re.split('(.*)-v(.*)/', ds)
+                    curr_v = re.split('(.*)\\-v(.*)/', ds)
                     # Do some checks
                     if not curr_v[-1] in tiers_expected and not skip_check:
                         continue
