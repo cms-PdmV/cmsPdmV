@@ -1226,7 +1226,13 @@ class request(json_base):
 
         first_tiers = ','.join(self.get_tier(0))
         # pLHE, GS and wmLHEGS
-        if first_tiers != 'LHE' and first_tiers != 'GEN-SIM' and first_tiers != 'LHE,GEN-SIM' and first_tiers != 'GEN-SIM,LHE':
+        gen_script_tiers = set(['LHE',
+                                'GEN-SIM',
+                                'LHE,GEN-SIM',
+                                'GEN-SIM,LHE',
+                                'GEN,LHE',
+                                'LHE,GEN'])
+        if first_tiers not in gen_script_tiers:
             gen_script = False
 
         self.logger.info('Tiers for %s are %s' % (self.get_attribute('prepid'), first_tiers))
