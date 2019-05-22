@@ -1858,7 +1858,7 @@ class PutToForceComplete(RESTResource):
 
             return {"prepid": pid, "results": False, 'message': message}
         # check if request if at least 50% complete
-        if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5:
+        if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5 and curr_user.get_attribute('role') != 'administrator':
             self.logger.info('%s is below 50percent completion' % (pid))
             message = 'Request is below 50 percent completion'
             return {"prepid": pid, "results": False, 'message': message}
