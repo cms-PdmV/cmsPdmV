@@ -114,6 +114,14 @@ class RequestRESTResource(RESTResource):
 
         self.logger.info('New prepid: %s' % (mcm_req.get_attribute('prepid')))
 
+        member_of_campaign = mcm_req.get_attribute('member_of_campaign')
+        all_ppd_tags = settings.get_value('ppd_tags')
+        allowed_ppd_tags = set(all_ppd_tags.get('all',[])).union(set(all_ppd_tags.get(member_of_campaign,[])))
+        for ppd_tag in mcm_req.get_attribute('ppd_tags'):
+            if ppd_tag not in allowed_ppd_tags:
+                self.logger.error('Illegal PPD Tag %s was found while importing %s' % (ppd_tag, mcm_req.get_attribute('prepid')))
+                return {"results": False, "message": "PPD Tag %s is not allowed" % (ppd_tag)}
+
         # put a generator info by default in case of possible root request
         if camp.get_attribute('root') <= 0:
             mcm_req.update_generator_parameters()
@@ -306,6 +314,14 @@ class UpdateRequest(RequestRESTResource):
                     key, previous_version.get_attribute(key), mcm_req.get_attribute(key), right))
                 return {"results": False, 'message': 'Illegal change of parameter %s' % key}
                 # raise ValueError('Illegal change of parameter')
+
+        member_of_campaign = mcm_req.get_attribute('member_of_campaign')
+        all_ppd_tags = settings.get_value('ppd_tags')
+        allowed_ppd_tags = set(all_ppd_tags.get('all',[])).union(set(all_ppd_tags.get(member_of_campaign,[])))
+        for ppd_tag in mcm_req.get_attribute('ppd_tags'):
+            if ppd_tag not in allowed_ppd_tags:
+                self.logger.error('Illegal PPD Tag %s was found while updating %s' % (ppd_tag, mcm_req.get_attribute('prepid')))
+                return {"results": False, "message": "PPD Tag %s is not allowed" % (ppd_tag)}
 
         new_validation_multiplier = mcm_req.get_attribute('validation').get('time_multiplier', 1)
         old_validation_multiplier = previous_version.get_attribute('validation').get('time_multiplier', 1)
