@@ -210,6 +210,7 @@ class CloneRequest(RequestRESTResource):
                 # this is a cloning accross campaign: a few other things need to be cleanedup
                 to_wipe.extend( ['energy'] )
 
+            old_validation_multiplier = new_json['validation'].get('time_multiplier', 1)
             new_json.update(data)
             # set the memory of new request to that of future member_of_campaign
             new_json['memory'] = cdb.get(new_json['member_of_campaign'])['memory']
@@ -218,6 +219,9 @@ class CloneRequest(RequestRESTResource):
             # remove some of the parameters to get then fresh from a new request.
             for w in to_wipe:
                 del new_json[w]
+
+            if old_validation_multiplier != 1:
+                new_json['validation'] = {'time_multiplier': old_validation_multiplier}
 
             return self.import_request(new_json, db, label='clone', step=pid)
         else:
