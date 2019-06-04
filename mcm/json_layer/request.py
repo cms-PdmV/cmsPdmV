@@ -1646,6 +1646,11 @@ class request(json_base):
                     stats_doc = stats_workflow
                     break
 
+            if not stats_doc and stats_db.document_exists(reqmgr_name):
+                self.logger.info('Workflow %s is in Stats DB, but workflow does not have request %s in it\'s list' % (reqmgr_name,
+                                                                                                                      self.get_attribute('prepid')))
+                stats_doc = stats_db.get(reqmgr_name)
+
             if not stats_doc or not stats_db.document_exists(reqmgr_name):
                 self.logger.warning('Workflow %s is in McM already, but not in Stats DB' % (reqmgr_name))
                 new_mcm_reqmgr_list.append({'name': reqmgr_name,
