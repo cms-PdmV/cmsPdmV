@@ -900,7 +900,7 @@ class GetSetupForChains(RESTResource):
         if self.opt == 'valid':
             valid = True
         return cr.get_setup(directory=kwargs['directory'], run=run, events=kwargs['events'],
-                validation=valid, scratch=__scratch)
+                validation=valid, scratch=__scratch, gen_script=run)
 
 
 class ForceChainReqToDone(RESTResource):

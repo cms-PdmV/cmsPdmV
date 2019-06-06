@@ -250,7 +250,7 @@ class ValidationHandler:
             mcm_chained_request.reset_requests(message, except_requests=except_requests)
             return {}
 
-        to_write = mcm_chained_request.get_setup(run=True, validation=True, for_validation=True)
+        to_write = mcm_chained_request.get_setup(run=True, validation=True, for_validation=True, gen_script=True)
         file_name = self.TEST_FILE_NAME % prepid
         if not self.create_test_file(to_write, run_test_path, file_name):
             mcm_chained_request.reset_requests('There was a problem while creating the file for prepid: %s' % (mcm_chained_request.get_attribute('prepid')))
