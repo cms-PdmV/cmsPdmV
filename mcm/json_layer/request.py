@@ -1369,21 +1369,24 @@ class request(json_base):
                     res += '--customise_commands %s ' % (random_seed_command)
 
             if run and i == 0:
-                num_cores = self.get_attribute('sequences')[i].get('nThreads', None)
-                if not num_cores:
-                    num_cores = 1
+                cdb = database('campaigns')
+                camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
+                if camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
+                    num_cores = self.get_attribute('sequences')[i].get('nThreads', None)
+                    if not num_cores:
+                        num_cores = 1
 
-                events_per_lumi = self.get_events_per_lumi(num_cores)
-                max_forward_eff = self.get_forward_efficiency()
-                events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
-                events_per_lumi /= max_forward_eff # this does not take its own efficiency
-                events_per_lumi = int(events_per_lumi)
-                events_per_lumi_command = 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
-                if '--customise_commands ' in res:
-                    res = res.replace('--customise_commands ',
-                                      '--customise_commands %s\\\\n' % (events_per_lumi_command))
-                else:
-                    res += '--customise_commands %s ' % (events_per_lumi_command)
+                    events_per_lumi = self.get_events_per_lumi(num_cores)
+                    max_forward_eff = self.get_forward_efficiency()
+                    events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
+                    events_per_lumi /= max_forward_eff # this does not take its own efficiency
+                    events_per_lumi = int(events_per_lumi)
+                    events_per_lumi_command = 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
+                    if '--customise_commands ' in res:
+                        res = res.replace('--customise_commands ',
+                                          '--customise_commands %s\\\\n' % (events_per_lumi_command))
+                    else:
+                        res += '--customise_commands %s ' % (events_per_lumi_command)
 
             res += inline_c
 
