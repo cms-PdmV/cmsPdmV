@@ -1368,7 +1368,7 @@ class request(json_base):
                 else:
                     res += '--customise_commands %s ' % (random_seed_command)
 
-            if run and i == 0 and first_tiers in gen_script_tiers::
+            if run and i == 0 and first_tiers in gen_script_tiers:
                 cdb = database('campaigns')
                 camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
                 if camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
