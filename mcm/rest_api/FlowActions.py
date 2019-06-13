@@ -345,7 +345,7 @@ class DeleteFlow(RESTResource):
             mcm_ccs = ccdb.full_text_search('search', __query2, page=-1)
             if not len(mcm_ccs):
                 # there a no chained campaign left, that uses both that campaign and next_c
-                c['next'].remove(fid)
+                c['next'].remove(next_c)
                 try:
                     cdb.update(c)
                 except Exception as ex:
