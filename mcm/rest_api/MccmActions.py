@@ -17,6 +17,7 @@ from tools.locator import locator
 from tools.communicator import communicator
 import tools.settings as settings
 from tools.user_management import access_rights
+from tools.priority import priority
 
 
 class GetMccm(RESTResource):
@@ -457,6 +458,7 @@ class GenerateChains(RESTResource):
         mcm_request.set_attribute('member_of_chain', list(set(chains)))
         mcm_request.update_history({'action': 'join chain', 'step': new_chain_prepid})
         mcm_request.save()
+        mcm_request_status = mcm_request.get_attribute('status')
         # do the reservation of the whole chain ?
         generated_requests = []
         if reserve:
@@ -469,6 +471,22 @@ class GenerateChains(RESTResource):
                     "results": False,
                     "prepid": new_chain_prepid,
                     "message": results_dict['message']}
+
+        block = mccm_ticket.get_attribute('block')
+        self.logger.info('Generated requests for %s are %s' % (generated_chained_request.get_attribute('prepid'), generated_requests))
+        self.logger.info('Status of %s root request %s is %s' % (generated_chained_request.get_attribute('prepid'), request_prepid, mcm_request_status))
+        if mcm_request_status == 'done':
+            # change priority of the whole chain
+            self.logger.info('Setting block %s for %s' % (block, generated_chained_request.get_attribute('prepid')))
+            generated_chained_request.set_priority(block)
+        elif mcm_request_status == 'approved' or mcm_request_status == 'submitted':
+            # change priority only for the newly created requests
+            new_priority = priority().priority(block)
+            for generated_request_prepid in generated_requests:
+                generated_request = request(json_input=requests_db.get(generated_request_prepid))
+                self.logger.info('Setting priority %s for %s' % (new_priority, generated_request_prepid))
+                generated_request.change_priority(new_priority)
+
         return {
                 "results":True,
                 "prepid": new_chain_prepid,
@@ -478,7 +496,7 @@ class GenerateChains(RESTResource):
         block = mccm_ticket.get_attribute('block')
         staged = mccm_ticket.get_attribute('staged')
         threshold = mccm_ticket.get_attribute('threshold')
-        generated_chained_request.set_priority(block)
+        # generated_chained_request.set_priority(block)
         action_parameters = generated_chained_request.get_attribute('action_parameters')
         action_parameters.update(
             {
