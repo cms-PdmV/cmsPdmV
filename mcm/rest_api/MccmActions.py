@@ -358,6 +358,12 @@ class GenerateChains(RESTResource):
                 }, boolean_operator="OR"
             )
             query_result = ccdb.full_text_search('search', __query, page=-1)
+            if len(query_result) == 0:
+                return {
+                    'prepid' : mid,
+                    'results' : False,
+                    'message' : 'Chained campaign "%s" does not exist' % (cc)}
+
             chained_campaigns.extend(map(lambda cc: chained_campaign(cc), query_result))
         # collect the name of the campaigns it can belong to
         ccs = list(set(map(lambda cc: cc.get_attribute('campaigns')[0][0], chained_campaigns)))
@@ -368,6 +374,7 @@ class GenerateChains(RESTResource):
                 "message": "inconsistent list of chains %s, leading to different root campaigns %s" % (mcm_m.get_attribute('chains'), ccs)}
 
         allowed_campaign = ccs[0]
+        crdb = database('chained_requests')
         for request_prepid in request_prepids:
             mcm_r = rdb.get(request_prepid)
             if mcm_r['member_of_campaign'] != allowed_campaign:
@@ -387,6 +394,23 @@ class GenerateChains(RESTResource):
                     "prepid": mid,
                      "results": False,
                     "message": "A request (%s) is in the middle of a chain already." % (request_prepid)}
+
+            for cc in chained_campaigns:
+                duplicate_query = ccdb.construct_lucene_query({
+                        'member_of_campaign': cc.get_attribute('prepid'),
+                        'contains': request_prepid,
+                        'pwg': mcm_r['pwg']
+                    },
+                    boolean_operator='AND')
+                duplicate_query_result = crdb.full_text_search('search', duplicate_query, page=-1)
+                if len(duplicate_query_result) > 0:
+                    return {
+                        'prepid' : mid,
+                        'results' : False,
+                        'message' : 'Chain(s) with request "%s" and chained campaign "%s" already exist. '
+                                    'Chained request(s): %s' % (request_prepid,
+                                                                cc.get_attribute('prepid'),
+                                                                ',\n'.join([x['prepid'] for x in duplicate_query_result]))}
 
         if not mcm_m.get_attribute('repetitions'):
             return {
