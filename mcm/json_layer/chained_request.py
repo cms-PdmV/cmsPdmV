@@ -505,7 +505,9 @@ class chained_request(json_base):
         # update the stats to its best
         # used for normal flowing
         if not reserve:
-            current_request.get_stats()
+            if current_request.get_attribute('status') != 'done':
+                current_request.get_stats()
+
             next_total_events = current_request.get_attribute('completed_events')
             # get the original expected events and allow a margin of 5% less statistics
             statistics_fraction = settings.get_value('statistics_fraction')
@@ -772,7 +774,7 @@ class chained_request(json_base):
                 'Could not save the new request %s' % (next_request.get_attribute('prepid')))
 
         # inspect priority Do we want to override priority of a request when we flow to next step?
-        self.set_priority(action_parameters['block_number'])
+        next_request.change_priority(priority().priority(action_parameters['block_number']))
         if not reserve:
             # sync last status
             self.set_attribute('last_status', next_request.get_attribute('status'))
