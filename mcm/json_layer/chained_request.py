@@ -767,14 +767,20 @@ class chained_request(json_base):
         if mcm_f.get_attribute('approval') == "tasksubmit" and next_request.get_attribute("total_events") == -1:
             # in case we reserve multiple steps and they are injected as TaskChain
             next_request.set_attribute("total_events", current_request.get_attribute("total_events"))
+
+        # inspect priority Do we want to override priority of a request when we flow to next step?
+        new_priority = priority().priority(action_parameters['block_number'])
+        if not next_request.change_priority(new_priority):
+            raise self.ChainedRequestCannotFlowException(
+                self.get_attribute('_id'),
+                'Could not save the new request %s. Error changing priority to %s' % (next_request.get_attribute('prepid'), new_priority))
+
         request_saved = rdb.save(next_request.json())
         if not request_saved:
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'Could not save the new request %s' % (next_request.get_attribute('prepid')))
 
-        # inspect priority Do we want to override priority of a request when we flow to next step?
-        next_request.change_priority(priority().priority(action_parameters['block_number']))
         if not reserve:
             # sync last status
             self.set_attribute('last_status', next_request.get_attribute('status'))
