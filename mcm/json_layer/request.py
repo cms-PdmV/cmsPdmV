@@ -2814,10 +2814,12 @@ class request(json_base):
 
         self.check_gen_efficiency(geninfo, total_event, total_event_in)
         # we check cpu_eff ONLY if request is multicore
-        if self.get_core_num() > 1:
+        # Some special exception for requests with 16 cores
+        number_of_cores = self.get_core_num()
+        if number_of_cores > 1 and number_of_cores != 16:
             self.check_cpu_efficiency(total_job_cpu, total_job_time)
         else:
-            self.logger.debug("Not doing cpu efficiency check for 1 core request")
+            self.logger.debug("Not doing cpu efficiency check for %s core request" % (number_of_cores))
 
         self.check_time_event(total_event, total_event_in, timing)
 
