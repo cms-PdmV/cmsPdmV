@@ -499,11 +499,11 @@ class GenerateChains(RESTResource):
         block = mccm_ticket.get_attribute('block')
         self.logger.info('Generated requests for %s are %s' % (generated_chained_request.get_attribute('prepid'), generated_requests))
         self.logger.info('Status of %s root request %s is %s' % (generated_chained_request.get_attribute('prepid'), request_prepid, mcm_request_status))
-        if mcm_request_status == 'done':
+        if mcm_request_status == 'done' or mcm_request_status == 'approved':
             # change priority of the whole chain
             self.logger.info('Setting block %s for %s' % (block, generated_chained_request.get_attribute('prepid')))
             generated_chained_request.set_priority(block)
-        elif mcm_request_status == 'approved' or mcm_request_status == 'submitted':
+        elif mcm_request_status == 'submitted':
             # change priority only for the newly created requests
             new_priority = priority().priority(block)
             for generated_request_prepid in generated_requests:
