@@ -1234,7 +1234,8 @@ class request(json_base):
                                 'LHE,GEN',
                                 'GEN'])
 
-        if first_tiers not in gen_script_tiers:
+        sequence_step = self.get_attribute('sequences')[0].get('step', '')
+        if first_tiers not in gen_script_tiers and 'RECOBEFMIX' not in sequence_step:
             gen_script = False
 
         self.logger.info('Tiers for %s are %s' % (self.get_attribute('prepid'), first_tiers))
