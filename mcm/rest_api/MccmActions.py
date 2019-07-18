@@ -275,10 +275,11 @@ class GenerateChains(RESTResource):
             if limit_campaign_id != '':
                 reserve = limit_campaign_id
 
+        ignore_existing = flask.request.args.get('ignore_existing', 'False').lower() != 'false'
         lock = locker.lock(mccm_id)
         if lock.acquire(blocking=False):
             try:
-                res = self.generate(mccm_id, reserve)
+                res = self.generate(mccm_id, reserve, ignore_existing)
             finally:
                 lock.release()
             return res
@@ -287,13 +288,13 @@ class GenerateChains(RESTResource):
                 "results": False,
                 "message": "%s is already being operated on" % mccm_id}
 
-    def generate(self, mid, reserve=False):
+    def generate(self, mid, reserve=False, ignore_existing=False):
         mdb = database('mccms')
         rdb = database('requests')
 
         mcm_m = mccm(mdb.get(mid))
 
-        if mcm_m.get_attribute('status') != 'new':
+        if mcm_m.get_attribute('status') != 'new' and not ignore_existing:
             return {
                 "prepid": mid,
                 "results": False,
@@ -375,6 +376,7 @@ class GenerateChains(RESTResource):
 
         allowed_campaign = ccs[0]
         crdb = database('chained_requests')
+        chained_campaigns_for_requests = {}
         for request_prepid in request_prepids:
             mcm_r = rdb.get(request_prepid)
             if mcm_r['member_of_campaign'] != allowed_campaign:
@@ -395,6 +397,7 @@ class GenerateChains(RESTResource):
                      "results": False,
                     "message": "A request (%s) is in the middle of a chain already." % (request_prepid)}
 
+            chained_campaigns_for_requests[mcm_r['prepid']] = []
             for cc in chained_campaigns:
                 duplicate_query = ccdb.construct_lucene_query({
                         'member_of_campaign': cc.get_attribute('prepid'),
@@ -404,13 +407,16 @@ class GenerateChains(RESTResource):
                     boolean_operator='AND')
                 duplicate_query_result = crdb.full_text_search('search', duplicate_query, page=-1)
                 if len(duplicate_query_result) > 0:
-                    return {
-                        'prepid' : mid,
-                        'results' : False,
-                        'message' : 'Chain(s) with request "%s" and chained campaign "%s" already exist. '
-                                    'Chained request(s): %s' % (request_prepid,
-                                                                cc.get_attribute('prepid'),
-                                                                ',\n'.join([x['prepid'] for x in duplicate_query_result]))}
+                    if not ignore_existing:
+                        return {
+                            'prepid' : mid,
+                            'results' : False,
+                            'message' : 'Chain(s) with request "%s" and chained campaign "%s" already exist. '
+                                        'Chained request(s): %s' % (request_prepid,
+                                                                    cc.get_attribute('prepid'),
+                                                                    ',\n'.join([x['prepid'] for x in duplicate_query_result]))}
+                else:
+                    chained_campaigns_for_requests[mcm_r['prepid']].append(cc.get_attribute('prepid'))
 
         if not mcm_m.get_attribute('repetitions'):
             return {
@@ -418,6 +424,7 @@ class GenerateChains(RESTResource):
                 "results": False,
                 "message": "The number of repetitions (%s) is invalid" % (mcm_m.get_attribute('repetitions'))}
 
+        self.logger.info('Will generate chains for these requests and campaigns:\n%s', dumps(chained_campaigns_for_requests, indent=4))
         res = []
         special = mcm_m.get_attribute('special')
         if isinstance(reserve, bool):
@@ -425,24 +432,32 @@ class GenerateChains(RESTResource):
         else:
             reserve_campaigns = reserve.split(',')
 
+        generated_chains = mcm_m.get_attribute('generated_chains')
+        if generated_chains is None:
+            generated_chains = {}
+
         for request_prepid in request_prepids:
             self.logger.info("Generating all chained request for request %s" % request_prepid)
             for times in range(mcm_m.get_attribute('repetitions')):
                 for index, mcm_chained_campaign in enumerate(chained_campaigns):
-                    res.append(self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special))
-                    # for now we put a small delay to not crash index with a lot of action
-                    time.sleep(1)
-        generated_chains = {}
-        for el in res:
-            if not el['results']:
-                return {
-                    "prepid": mid,
-                    "results": False,
-                    "message": el['message'],
-                    'chained_request_prepid': el['prepid'] if 'prepid' in el else ''}
-            generated_chains[el['prepid']] = el['generated_requests']
-        self.logger.debug("just generated chains: %s" % (generated_chains))
-        mcm_m.set_attribute("generated_chains", generated_chains)
+                    if mcm_chained_campaign.get_attribute('prepid') in chained_campaigns_for_requests.get(request_prepid, []):
+                        generated_dict = self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special)
+                        # for now we put a small delay to not crash index with a lot of action
+                        time.sleep(1)
+                        if not generated_dict['results']:
+                            return {"prepid": mid,
+                                    "results": False,
+                                    "message": generated_dict['message'],
+                                    'chained_request_prepid': generated_dict['prepid'] if 'prepid' in generated_dict else ''}
+
+                        generated_chains[generated_dict['prepid']] = generated_dict['generated_requests']
+                        mcm_m.set_attribute("generated_chains", generated_chains)
+                        mdb.update(mcm_m.json())
+                        mcm_m.reload(save_current=False)
+                        time.sleep(0.5)
+                    else:
+                        self.logger.info('Skipping %s and %s' % (request_prepid, mcm_chained_campaign.get_attribute('prepid')))
+
         mcm_m.set_status()
         mdb.update(mcm_m.json())
         return {

@@ -191,9 +191,10 @@
               </select>
               <br>
             </span>
+            <input type="checkbox" ng-model="ignoreExistingChains"> Do not raise error on existing chained requests
           </div>
           <div class="modal-footer">
-            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector)">Confirm</button>
+            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, ignoreExistingChains)">Confirm</button>
             <button class="btn btn-success" ng-click="cancel()">Cancel</button>
           </div>
         </script>
