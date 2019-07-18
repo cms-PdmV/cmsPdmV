@@ -335,7 +335,9 @@ angular.module('testApp').controller('resultsCtrl',
         }
       });
 
-      isConfirmed.result.then(function (campaigns) {
+      isConfirmed.result.then(function (res) {
+        var campaigns = res.campaigns;
+        var ignoreExistingChains = res.ignoreExistingChains;
         var reserveLimits = '';
         for (var i = 0; i < chain_prepids.length; i++) {
           if (campaigns[chain_prepids[i]] == undefined || campaigns[chain_prepids[i]] == "--------") {
@@ -347,7 +349,11 @@ angular.module('testApp').controller('resultsCtrl',
             reserveLimits += ',';
           }
         }
-        $scope.generate(prepid, '/reserve/' + reserveLimits);
+        if (ignoreExistingChains) {
+          $scope.generate(prepid, '/reserve/' + reserveLimits + '?ignore_existing=True')
+        } else {
+          $scope.generate(prepid, '/reserve/' + reserveLimits);
+        }
       });
     };
 
@@ -355,6 +361,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.loadingData = true;
       $scope.campaignListDropdown = Object();
       $scope.campaignListDropdownSelector = Object();
+      $scope.ignoreExistingChains = false;
       for (var i = 0; i < chain_prepids.length; i++) {
         $scope.campaignListDropdown[chain_prepids[i]] = ["--------"];
         $scope.campaignListDropdownSelector[chain_prepids[i]] = $scope.campaignListDropdown[chain_prepids[i]][0];
@@ -380,8 +387,8 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.loadingData = false;
 
       $scope.toggle_prepid = prepid;
-      $scope.confirm = function(id) {
-        $modalInstance.close(id);
+      $scope.confirm = function(id, ignoreExistingChains) {
+        $modalInstance.close({'campaigns': id, 'ignoreExistingChains': ignoreExistingChains});
       };
       $scope.cancel = function() {
         $modalInstance.dismiss();
