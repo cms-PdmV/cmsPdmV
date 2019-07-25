@@ -1,82 +1,82 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
-        <base href="/mcm/">
-        <title>Chained campaigns page McM</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+    <base href="/mcm/">
+    <title>Chained campaigns page McM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
-        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-         <!--[IF IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-           </script>
-         <![endif]-->
-         <![if !IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-           </script>
-         <![endif]>
-        <script src="scripts/main_controller.js"></script>
-        <script src="scripts/chainedCampaigns_controller.js"></script>
+    <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+    <!--[IF IE]>
+    <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+    </script>
+    <![endif]-->
+    <![if !IE]>
+      <script type="text/javascript">
+        var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      </script>
+    <![endif]>
+    <script src="scripts/main_controller.js"></script>
+    <script src="scripts/chainedCampaigns_controller.js"></script>
   </head>
   <body ng-controller="mainCtrl">
     <span ng-controller="resultsCtrl">
-    <div ng-include="'HTML/navbar_template.html'"></div>
-        <div style='margin-bottom: 5px' class="container">
-            <select-well ng-if="selectionReady" database="{{dbName}}" selection="chainedCampaigns_defaults"></select-well>
-        </div>
-    <table class="table table-bordered table-stripped">
-      <thead>
-        <tr>
-          <th ng-repeat="column in chainedCampaigns_defaults" ng-if="column.select" style="white-space: nowrap;">
-            {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="data in filterResults()">
-          <td ng-repeat="value in chainedCampaigns_defaults" ng-if="value.select" style="white-space: nowrap;">
-            <div ng-switch on="value.text">
-              <div ng-switch-when="PrepId">
-                <a ng-href='chained_campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-align-right"></i></a>
-                <a ng-href="admin/_utils/document.html?chained_campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
-              </div>
-              <div ng-switch-when="Valid" align="center">
-                <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
-                  <i class="icon-ok" ng-show="data.valid"></i>
-                  <i class="icon-remove" ng-show="!data.valid"></i>
-                </a>
-              </div>
-              <div ng-switch-when="Actions">
-                <div ng-controller="ModalDemoCtrl">
-                  <a ng-click="createChainedRequest(data.prepid)" rel="tooltip" title="Create new request" ng-hide="role(3);" ng-href="#">
-                    <i class="icon-plus-sign"></i>
+      <div ng-include="'HTML/navbar_template.html'"></div>
+      <div style='margin-bottom: 5px' class="container">
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="chainedCampaigns_defaults"></select-well>
+      </div>
+      <table class="table table-bordered table-stripped">
+        <thead>
+          <tr>
+            <th ng-repeat="column in chainedCampaigns_defaults" ng-if="column.select" style="white-space: nowrap;">
+              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#chained_campaigns_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="data in filterResults()">
+            <td ng-repeat="value in chainedCampaigns_defaults" ng-if="value.select" style="white-space: nowrap;">
+              <div ng-switch on="value.text">
+                <div ng-switch-when="PrepId">
+                  <a ng-href='chained_campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-align-right"></i></a>
+                  <a ng-href="admin/_utils/document.html?chained_campaigns/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
+                </div>
+                <div ng-switch-when="Valid" align="center">
+                  <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
+                    <i class="icon-ok" ng-show="data.valid"></i>
+                    <i class="icon-remove" ng-show="!data.valid"></i>
                   </a>
-                  <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self" ng-hide="data.exists==false;">
-                    <i class="icon-indent-left"></i>
-                  </a>
-                  <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3) || data.exists==false;" ng-href="#">
-                    <i class="icon-minus-sign"></i>
-                  </a>
-                  <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3) || data.exists==false;">
-                    <i class="icon-wrench"></i>
-                  </a>
-                  <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
-                    <i class="icon-refresh"></i>
-                  </a>
-                  <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
-                    <i class="icon-screenshot"></i>
-                  </a>
-                  <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
-                    <i class="icon-picture"></i>
-                  </a>
-                  <a ng-href="/pmp/present?c=true&m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
-                    <i class="icon-film"></i>
-                  </a>
-                  <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
+                </div>
+                <div ng-switch-when="Actions">
+                  <div ng-controller="ModalDemoCtrl">
+                    <a ng-click="createChainedRequest(data.prepid)" rel="tooltip" title="Create new request" ng-hide="role(3);" ng-href="#">
+                      <i class="icon-plus-sign"></i>
+                    </a>
+                    <a ng-href='chained_requests?member_of_campaign={{data.prepid}}&page=0' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self" ng-hide="data.exists==false;">
+                      <i class="icon-indent-left"></i>
+                    </a>
+                    <a ng-click='delete_object("chained_campaigns", data.prepid)' rel="tooltip" title="Delete" ng-hide="role(3) || data.exists==false;" ng-href="#">
+                      <i class="icon-minus-sign"></i>
+                    </a>
+                    <a ng-href='edit?db_name=chained_campaigns&prepid={{data._id}}' rel="tooltip" title="Edit details" target="_self" ng-hide="role(3) || data.exists==false;">
+                      <i class="icon-wrench"></i>
+                    </a>
+                    <a ng-click="create(data.prepid, data.campaigns)" ng-show="!role(3) && data.exists==false;" rel="tooltip" title="Create chain campaign {{data.prepid}}" >
+                      <i class="icon-refresh"></i>
+                    </a>
+                    <a ng-click='inspect(data.prepid)' rel="tooltip" title="Inspect chained campaign" ng-hide="role(3) || data.exists==false;" ng-href="#"> 
+                      <i class="icon-screenshot"></i>
+                    </a>
+                    <a ng-href="/pmp/present?c=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                      <i class="icon-picture"></i>
+                    </a>
+                    <a ng-href="/pmp/present?c=true&m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                      <i class="icon-film"></i>
+                    </a>
+                    <script type="text/ng-template" id="createChainedRequestModal.html"> <!--hidden modal template-->
                       <div class="modal-header">
-                          <h4>Create a chained request</h4>
+                        <h4>Create a chained request</h4>
                       </div>  <!--end of modal header-->
                       <div class="modal-body">
                         Create chained request for: {{prepid}} campaign
@@ -87,68 +87,103 @@
                         <button class="btn btn-success" ng-click="save()">Create</button>
                         <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
                       </div> <!--end of modal footer-->
-                  </script>
-                </div> <!--end of modalControler DIV-->
-        <!--     END OF MODAL                 -->
-              </div>
-        <div ng-switch-when="Notes">
-        <div style="width:400px"><pre class="notes">{{data[value.db_name]}}</pre></div>
-        </div>
-        <div ng-switch-when="Alias">
-          <a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
-        </div>
-              <div ng-switch-when="Campaigns">
-                <ul>
-                  <li ng-repeat="element in data[value.db_name]">
-                    <div ng-switch on="_.isArray(element)">
-                      <div ng-switch-when="true" ng-switch on="element[1]!=null;">
-                        <div ng-switch-when="true">
-                          <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="icon-magnet"></i></a>
-                          <a>
-                            <i class="icon-arrow-right"></i>
-                          </a>
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
-                        </div>
-                        <div ng-switch-when="false">
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
-                        </div>
-                        <div ng-switch-default>
-                          <a>
-                            <i class="icon-arrow-right"></i>
-                          </a>
-                          {{element}}
+                    </script>
+                  </div> <!--end of modalControler DIV-->
+                  <!--     END OF MODAL                 -->
+                </div>
+                <div ng-switch-when="Notes">
+                  <div style="width:400px"><pre class="notes">{{data[value.db_name]}}</pre></div>
+                </div>
+                <div ng-switch-when="Alias">
+                  <a ng-href='chained_campaigns?alias={{data.alias}}' rel="tooltip" title="View chained campaigns with alias {{data.alias}}" target="_self">{{data.alias}}</a>
+                </div>
+                <div ng-switch-when="Campaigns">
+                  <ul>
+                    <li ng-repeat="element in data[value.db_name]">
+                      <div ng-switch on="_.isArray(element)">
+                        <div ng-switch-when="true" ng-switch on="element[1]!=null;">
+                          <div ng-switch-when="true">
+                            <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="icon-align-right"></i></a>
+                            <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="icon-magnet"></i></a>
+                            <a>
+                              <i class="icon-arrow-right"></i>
+                            </a>
+                            <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
+                            <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+                          </div>
+                          <div ng-switch-when="false">
+                            <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
+                            <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+                          </div>
+                          <div ng-switch-default>
+                            <a>
+                              <i class="icon-arrow-right"></i>
+                            </a>
+                            {{element}}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </li>
+                  </ul>
+                </div>
+                <div ng-switch-when="Submission details">
+                  <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
+                    <dt>{{key}}</dt>
+                    <dd>{{value}}</dd>
+                  </dl>
+                </div>
+                <div ng-switch-when="History">
+                  <div custom-history ng-model="data[value.db_name]"></div>
+                </div>
+                <div ng-switch-when="Do not check cmssw versions" align="center" title="Do not check whether CMSSW versions in chained requests are the same or increasing">
+                  <i class="icon-ok" ng-show="data.do_not_check_cmssw_versions"></i>
+                  <i class="icon-remove" ng-show="!data.do_not_check_cmssw_versions"></i>
+                </div>
+                <div ng-switch-default>{{data[value.db_name]}}</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="row-fluid custom-footer">
+        <div class="span5" style="margin-top:20px;">
+          <div ng-controller="ModalCreateChainedCampaign"> <!-- MODAL -->
+            <input type="button" class="btn" ng-click="open()" value="Create a chained campaign" ng-hide="role(3);" align="left"/>
+            <script type="text/ng-template" id="chainedCampaignCreateModal.html">
+              <div class="modal-header">
+                <h4>Create a chained campaign</h4>
+              </div>
+              <div class="modal-body">
+                <table>
+                  <tr>
+                    <th>Step</th>
+                    <th>Flow</th>
+                    <th>Campaign</th>
+                  </tr>
+                  <tr ng-repeat="pair in pairs track by $index">
+                    <td style="text-align:center">{{ $index + 1 }}</td>
+                    <td><select ng-options="flow.prepid for flow in pair.flows" ng-model="pair.selectedFlow" ng-change="updateFlow($index)" ng-disabled="$index == 0"></select></td>
+                    <td><select ng-options="prepid for prepid in pair.campaigns" ng-model="pair.selectedCampaign" ng-change="updateCampaign($index)" ng-disabled="$index != 0"></select></td>
+                  </tr>
+                </table>
+                <h5 ng-show="pairs.length > 1">Chained campaign will look like this</h5>
+                <ul>
+                  <li ng-show="pair.selectedFlow.prepid || ($index == 0 && pair.selectedCampaign)" ng-repeat="pair in pairs track by $index">Step {{ $index + 1}}:
+                    <ul>
+                      <li ng-show="$index != 0">Flow: {{pair.selectedFlow.prepid}}</li>
+                      <li>Campaign: {{pair.selectedCampaign}}</li>
+                    </ul>
                   </li>
                 </ul>
               </div>
-              <div ng-switch-when="Submission details">
-                <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
-                    <dt>{{key}}</dt>
-                    <dd>{{value}}</dd>
-                </dl>
+              <div class="modal-footer">
+                <button class="btn btn-success" ng-click="save()" ng-disabled="pairs.length <= 1">Create</button>
+                <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
               </div>
-              <div ng-switch-when="History">
-                <div custom-history ng-model="data[value.db_name]"></div>
-              </div>
-              <div ng-switch-when="Do not check cmssw versions" align="center" title="Do not check whether CMSSW versions in chained requests are the same or increasing">
-                <i class="icon-ok" ng-show="data.do_not_check_cmssw_versions"></i>
-                <i class="icon-remove" ng-show="!data.do_not_check_cmssw_versions"></i>
-              </div>
-              <div ng-switch-default>{{data[value.db_name]}}</div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="row-fluid custom-footer">
-      <div class="span5" style="margin-top:20px;">
+            </script>
+          </div>
+        </div> <!-- END OF MODAL -->
       </div>
-    </div>
-  </span>
+    </span>
   </body>
 </html>
