@@ -251,10 +251,17 @@
                       </ng-form>
                     </div>
                     <div ng-switch-when="Events per lumi">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
+                      <div ng-switch on="dbName">
+                        <div ng-switch-when="requests">
+                          <events-lumi-edit ng-model="result[column.db_name]" column="column.text"></events-lumi-edit>
+                        </div>
+                        <div ng-switch-default>
+                          <ng-form name="fieldForm">
+                            <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                            <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                          </ng-form>
+                        </div>
+                      </div>
                     </div>
                     <div ng-switch-when="Interested pwg">
                       <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
