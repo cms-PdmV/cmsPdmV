@@ -130,6 +130,9 @@ class Search(RESTResource):
         if 'include_fields' in args:
             include_fields = args['include_fields']
             args.pop('include_fields')
+        if 'keep_output' in args:
+            args['keep_output'] = args['keep_output'].replace(',', '_')
+
         res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
         if get_raw:
             self.representations = {'text/plain': self.output_text}

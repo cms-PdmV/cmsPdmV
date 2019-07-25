@@ -38,14 +38,23 @@ class CreateChainedCampaign(RESTResource):
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results": False, "message": str(ex)}
 
+        if not ccamp.get_attribute('prepid'):
+            generated_prepid = 'chain'
+            for i, c in enumerate(ccamp.get_attribute('campaigns')):
+                generated_prepid += '_'
+                if i == 0:
+                    generated_prepid += c[0]
+                else:
+                    generated_prepid += c[1]
+
+            ccamp.set_attribute('prepid', generated_prepid)
+
         self.logger.info('Creating new chained_campaign %s...' % (ccamp.get_attribute('prepid')))
-
         ccamp.set_attribute("_id", ccamp.get_attribute("prepid"))
-        if not ccamp.get_attribute("_id"):  # or self.db.document_exists(ccamp.get_attribute("_id")):
-            self.logger.error('Campaign %s already exists. Cannot re-create it.' % (
-                    ccamp.get_attribute('_id')))
-
-            return {"results": False, "message": 'Error: Campaign ' + ccamp.get_attribute("_id") + ' already exists'}
+        chained_campaign_id = ccamp.get_attribute('_id')
+        if db.document_exists(chained_campaign_id):  # or self.db.document_exists(ccamp.get_attribute("_id")):
+            self.logger.error('Campaign %s already exists. Cannot re-create it.' % (chained_campaign_id))
+            return {"results": False, "message": 'Campaign %s already exists' % (chained_campaign_id)}
 
         # update history
         ccamp.update_history({'action' :'created'})
