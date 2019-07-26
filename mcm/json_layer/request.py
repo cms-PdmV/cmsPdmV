@@ -92,7 +92,8 @@ class request(json_base):
         'transient_output_modules': [[]],
         'cadi_line': '',
         'interested_pwg': [],
-        'ppd_tags': []
+        'ppd_tags': [],
+        'events_per_lumi': 0
     }
 
     def __init__(self, json_input=None):
@@ -3219,11 +3220,17 @@ class request(json_base):
                 task_dict["ProcessingVersion"] = self.get_attribute('version')
             if sequence_index == 0:
                 if base:
+                    if self.get_attribute('events_per_lumi') > 0:
+                        events_per_lumi = self.get_attribute('events_per_lumi')
+                        self.logger.info('Using custom events per lumi for %s: %s' % (self.get_attribute('prepid'), events_per_lumi))
+                    else:
+                        events_per_lumi = self.get_events_per_lumi(task_dict.get("Multicore", None))
+
                     task_dict.update({
                         "SplittingAlgo": "EventBased",
                         "RequestNumEvents": self.get_attribute('total_events'),
                         "Seeding": "AutomaticSeeding",
-                        "EventsPerLumi": self.get_events_per_lumi(task_dict.get("Multicore", None)),
+                        "EventsPerLumi": events_per_lumi,
                         "LheInputFiles": self.get_attribute('mcdb_id') > 0})
                     # temporary work-around for request manager not creating enough jobs
                     # https://github.com/dmwm/WMCore/issues/5336

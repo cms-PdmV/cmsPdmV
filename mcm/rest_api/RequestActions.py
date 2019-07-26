@@ -345,6 +345,10 @@ class UpdateRequest(RequestRESTResource):
         if dataset_name_regex.match(dataset_name):
             return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
 
+        requests_events_per_lumi = mcm_req.get_attribute('events_per_lumi')
+        if requests_events_per_lumi != 0 and (requests_events_per_lumi < 200 or requests_events_per_lumi > 1000):
+            return {"results": False, 'message': 'Events per lumi must be 200<=X<=1000 or 0 to use campaign\'s value'}
+
         self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
 
         # update history

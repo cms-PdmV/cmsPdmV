@@ -1037,3 +1037,40 @@ testApp.directive("sizeEventEdit", function(){
     }
   }
 });
+
+testApp.directive("eventsLumiEdit", function(){
+  return {
+    replace: true,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <input type="checkbox" ng-model="useCampaignsValue" style="margin-top: 0">Use campaign\'s value<br>'+
+    '  <input type="number" ng-model="eventsPerLumi" class="input-xxsmall" style="width: 120px; margin-top:4px;" ng-show="!useCampaignsValue"></input>'+
+    '  <span ng-show="!useCampaignsValue && (eventsPerLumi < 200 || eventsPerLumi > 1000)" style="color:red"><br>Values must be withing 200 and 1000 or 0 to use value from campaign</span>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attr, ctrl)
+    {
+      ctrl.$render = function(){
+        scope.eventsPerLumi = ctrl.$viewValue;
+        scope.oldEventsPerLumi = scope.eventsPerLumi;
+        if (scope.eventsPerLumi == 0) {
+          scope.eventsPerLumi = 200;
+        }
+        scope.useCampaignsValue = ctrl.$viewValue == 0;
+      };
+      scope.$watch("useCampaignsValue", function(elem){ //watch nEvents -> is user leaves empty remove nEvents, as not to save null
+        if (elem){
+          scope.oldEventsPerLumi = scope.eventsPerLumi;
+          scope.eventsPerLumi = 0;
+        } else {
+          scope.eventsPerLumi = scope.oldEventsPerLumi;
+        }
+      });
+      scope.$watch("eventsPerLumi", function(elem){ //watch nEvents -> is user leaves empty remove nEvents, as not to save null
+        ctrl.$setViewValue(scope.eventsPerLumi);
+      });
+    }
+  }
+});
