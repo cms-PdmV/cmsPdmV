@@ -367,6 +367,10 @@
               <div ng-switch-when="Filter efficiency" align="center">
                 {{data["generator_parameters"].slice(-1)[0]["filter_efficiency"]}}
               </div>
+              <div ng-switch-when="Events per lumi">
+                <span ng-show="data[value.db_name] != 0">{{data[value.db_name]}}</span>
+                <span ng-show="data[value.db_name] == 0">Use campaign's value</span>
+              </div>
               <div ng-switch-when="Transient output modules" align="left">
                 <ul ng-repeat="elem in data[value.db_name] track by $index">
                   <li>
