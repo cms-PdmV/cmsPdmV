@@ -703,7 +703,8 @@ class ApproveRequest(RESTResource):
         if req.get_attribute('approval') == 'define' and req.get_attribute('status') == 'defined' and val == -1:
             username = self.user_dict.get('username', '')
             role = self.user_dict.get('role', 'user')
-            if role not in set(['administrator', 'generator_convener']) and username not in set(['pgunnell', 'prebello', 'zhenhu']):
+            allowed_to_approve = settings.get_value('allowed_to_approve')
+            if role not in set(['administrator', 'generator_convener']) and username not in allowed_to_approve:
                 self.logger.warning('%s (%s) was stopped from approving %s' % (username, role, rid))
                 return {'prepid': rid, 'results': False, 'message': 'You are not allowed to approve requests'}
             else:
