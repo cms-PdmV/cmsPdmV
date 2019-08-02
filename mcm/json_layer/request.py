@@ -721,6 +721,14 @@ class request(json_base):
                     self.get_attribute('status'),
                     'submit',
                     "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
+
+        self.logger.info('Similar DS to %s are: %s' % (self.get_attribute('prepid'), ', '.join([s['prepid'] for s in similar_ds])))
+        if len(similar_ds) == 0:
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'submit',
+                "It seems that database is down, could not check for duplicates")
+
         for similar in similar_ds:
             if similar['prepid'] == self.get_attribute('prepid'):
                 continue  # no self check
