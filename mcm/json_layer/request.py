@@ -732,6 +732,11 @@ class request(json_base):
         for similar in similar_ds:
             if similar['prepid'] == self.get_attribute('prepid'):
                 continue  # no self check
+
+            if similar['approval'] in ['new', 'validation']:
+                # Not paying attention to new or validating requests
+                continue
+
             similar_r = request(similar)
             similar_ps_and_t = similar_r.get_camp_plus_ps_and_tiers()
             # check for collision
