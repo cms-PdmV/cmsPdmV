@@ -379,6 +379,12 @@ class GenerateChains(RESTResource):
         chained_campaigns_for_requests = {}
         for request_prepid in request_prepids:
             mcm_r = rdb.get(request_prepid)
+            if not mcm_r:
+                return {
+                    "prepid" : mid,
+                    "results" : False,
+                    "message" : "Request %s could not be found therefore chained request could not be created." % (request_prepid)}
+
             if mcm_r['member_of_campaign'] != allowed_campaign:
                 return {
                     "prepid" : mid,
