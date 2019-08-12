@@ -659,6 +659,8 @@ class GetRequest(RESTResource):
         # cast the sequence for schema evolution !!! here or not ?
         for (i_s, s) in enumerate(mcm_r['sequences']):
             mcm_r['sequences'][i_s] = sequence(s).json()
+
+        mcm_r['generator_parameters'] = [g for g in mcm_r['generator_parameters'] if g]
         return {"results": mcm_r}
 
 
