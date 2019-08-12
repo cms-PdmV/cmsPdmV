@@ -133,9 +133,6 @@
                   <a ng-click="remove_from_forceflow(data.prepid)" rel="tooltip" title="Remove from global forceflow list" ng-hide="role(1);"  ng-if="data.status == 'processing'" ng-href="#">
                     <i class="icon-eject"></i>
                   </a>
-                  <a ng-href="graph?prepid={{data.prepid}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
-                    <i class="icon-picture"></i>
-                  </a>
                   <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
                   <a ng-show="action_status[data.prepid]==true" > <font color=green>{{action_report[data.prepid]}}</font></a>
                   <a ng-show="action_status[data.prepid]==false" > <font color=red>{{action_report[data.prepid]}}</font></a>
@@ -257,9 +254,6 @@
         </a>
         <a ng-click="multiple_step('back_forcedone','')" rel="tooltip" title="Move force_done back to processing for selected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-circle-arrow-up"></i>
-        </a>
-        <a ng-href="graph?prepid={{selected_prepids.join()}}&db_name={{dbName}}" rel="tooltip" title="Get growth graph" target="_blank">
-          <i class="icon-picture"></i>
         </a>
         <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
       </div>
