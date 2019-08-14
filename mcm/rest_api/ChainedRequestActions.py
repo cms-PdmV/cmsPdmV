@@ -150,11 +150,13 @@ class DeleteChainedRequest(RESTResource):
             #                                                                                                                             crid,
             #                                                                                                                             mcm_a.get_attribute('prepid'))}
             in_chains = mcm_r.get_attribute('member_of_chain')
-            in_chains.remove(crid)
-            self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
-                    mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
+            if crid in in_chains:
+                in_chains.remove(crid)
+                self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
+                        mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
 
-            mcm_r.set_attribute('member_of_chain', in_chains)
+                mcm_r.set_attribute('member_of_chain', in_chains)
+
             if i == 0:
                 if len(in_chains) == 0 and mcm_r.get_attribute('status') != 'new':
                     return {"results": False, "message": "the request %s, not in status new, at the root of the chain will not be chained anymore" % rid}

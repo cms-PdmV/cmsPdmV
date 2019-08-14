@@ -388,6 +388,7 @@ class RequestInjector(SubmissionsBase):
         self.req.set_attribute('reqmgr_name', request_managers)
         # and in the end update request in database
         self.req.update_history({'action': 'inject', 'step': self.batch_name})
+        self.req.set_attribute('approval', 'submit')
         self.req.set_status(step=self.req._json_base__status.index('submitted'), with_notification=True)
         saved = self.request_db.update(self.req.json())
         if not saved:
@@ -458,6 +459,7 @@ class ChainRequestInjector(SubmissionsBase):
                 # if not self.check_approval:
                 #     mcm_r.set_attribute('approval', 'submit')
                 # set the status to submitted
+                mcm_r.set_attribute('approval', 'submit')
                 mcm_r.set_status(step=mcm_r._json_base__status.index('submitted'), with_notification=False)
                 mcm_r.reload()
                 mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
