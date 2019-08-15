@@ -337,7 +337,8 @@ angular.module('testApp').controller('resultsCtrl',
 
       isConfirmed.result.then(function (res) {
         var campaigns = res.campaigns;
-        var ignoreExistingChains = res.ignoreExistingChains;
+        var skipExistingChains = res.skipExistingChains === true;
+        var generateAllChains = res.generateAllChains === true;
         var reserveLimits = '';
         for (var i = 0; i < chain_prepids.length; i++) {
           if (campaigns[chain_prepids[i]] == undefined || campaigns[chain_prepids[i]] == "--------") {
@@ -349,11 +350,7 @@ angular.module('testApp').controller('resultsCtrl',
             reserveLimits += ',';
           }
         }
-        if (ignoreExistingChains) {
-          $scope.generate(prepid, '/reserve/' + reserveLimits + '?ignore_existing=True')
-        } else {
-          $scope.generate(prepid, '/reserve/' + reserveLimits);
-        }
+        $scope.generate(prepid, '/reserve/' + reserveLimits + '?skip_existing=' + skipExistingChains + '&generate_all=' + generateAllChains)
       });
     };
 
@@ -361,7 +358,8 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.loadingData = true;
       $scope.campaignListDropdown = Object();
       $scope.campaignListDropdownSelector = Object();
-      $scope.ignoreExistingChains = false;
+      $scope.skipExistingChains = false;
+      $scope.generateAllChains = false;
       for (var i = 0; i < chain_prepids.length; i++) {
         $scope.campaignListDropdown[chain_prepids[i]] = ["--------"];
         $scope.campaignListDropdownSelector[chain_prepids[i]] = $scope.campaignListDropdown[chain_prepids[i]][0];
@@ -387,8 +385,10 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.loadingData = false;
 
       $scope.toggle_prepid = prepid;
-      $scope.confirm = function(id, ignoreExistingChains) {
-        $modalInstance.close({'campaigns': id, 'ignoreExistingChains': ignoreExistingChains});
+      $scope.confirm = function(id, skipExistingChains, generateAllChains) {
+        $modalInstance.close({'campaigns': id,
+                              'skipExistingChains': skipExistingChains,
+                              'generateAllChains': generateAllChains});
       };
       $scope.cancel = function() {
         $modalInstance.dismiss();

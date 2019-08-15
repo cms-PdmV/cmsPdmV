@@ -275,11 +275,15 @@ class GenerateChains(RESTResource):
             if limit_campaign_id != '':
                 reserve = limit_campaign_id
 
-        ignore_existing = flask.request.args.get('ignore_existing', 'False').lower() != 'false'
+        # Skip existing ones
+        skip_existing = flask.request.args.get('skip_existing', 'False').lower() == 'true'
+        # Generate all
+        generate_all = flask.request.args.get('generate_all', 'False').lower() == 'true'
+
         lock = locker.lock(mccm_id)
         if lock.acquire(blocking=False):
             try:
-                res = self.generate(mccm_id, reserve, ignore_existing)
+                res = self.generate(mccm_id, reserve, skip_existing, generate_all)
             finally:
                 lock.release()
             return res
@@ -288,13 +292,13 @@ class GenerateChains(RESTResource):
                 "results": False,
                 "message": "%s is already being operated on" % mccm_id}
 
-    def generate(self, mid, reserve=False, ignore_existing=False):
+    def generate(self, mid, reserve=False, skip_existing=False, generate_all=False):
         mdb = database('mccms')
         rdb = database('requests')
 
         mcm_m = mccm(mdb.get(mid))
 
-        if mcm_m.get_attribute('status') != 'new' and not ignore_existing:
+        if mcm_m.get_attribute('status') != 'new' and not skip_existing:
             return {
                 "prepid": mid,
                 "results": False,
@@ -412,8 +416,8 @@ class GenerateChains(RESTResource):
                     },
                     boolean_operator='AND')
                 duplicate_query_result = crdb.full_text_search('search', duplicate_query, page=-1)
-                if len(duplicate_query_result) > 0:
-                    if not ignore_existing:
+                if len(duplicate_query_result) > 0 and not generate_all:
+                    if not skip_existing:
                         return {
                             'prepid' : mid,
                             'results' : False,
@@ -448,6 +452,7 @@ class GenerateChains(RESTResource):
                 for index, mcm_chained_campaign in enumerate(chained_campaigns):
                     if mcm_chained_campaign.get_attribute('prepid') in chained_campaigns_for_requests.get(request_prepid, []):
                         generated_dict = self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special)
+                        res.append(generated_dict)
                         # for now we put a small delay to not crash index with a lot of action
                         time.sleep(1)
                         if not generated_dict['results']:
@@ -463,6 +468,12 @@ class GenerateChains(RESTResource):
                         time.sleep(0.5)
                     else:
                         self.logger.info('Skipping %s and %s' % (request_prepid, mcm_chained_campaign.get_attribute('prepid')))
+
+        if not res:
+            return {
+                "prepid": mid,
+                "results": False,
+                "message": "Everything went fine, but nothing was generated"}
 
         mcm_m.set_status()
         mdb.update(mcm_m.json())
