@@ -191,10 +191,11 @@
               </select>
               <br>
             </span>
-            <input type="checkbox" ng-model="ignoreExistingChains"> Do not raise error on existing chained requests
+            <span title="Silently skip already existing chained requests"><input type="checkbox" ng-model="skipExistingChains"> Generate only non-existing chained requests</span><br>
+            <span title="Generate all chained requests for all requests and chained campaings. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests</span>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, ignoreExistingChains)">Confirm</button>
+            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, skipExistingChains, generateAllChains)">Confirm</button>
             <button class="btn btn-success" ng-click="cancel()">Cancel</button>
           </div>
         </script>
