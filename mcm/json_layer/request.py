@@ -2880,7 +2880,9 @@ class request(json_base):
             keep.append(False)
             freshTransientOutputModules.append([])
 
-        keep[-1] = True
+        if not nc.get_attribute('no_output'):
+            keep[-1] = True
+
         new_req.set_attribute('keep_output', keep)
         new_req.set_attribute('transient_output_modules', freshTransientOutputModules)
         # override request's parameters
