@@ -1376,7 +1376,7 @@ class request(json_base):
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
             if 'wmlhegs' in self.get_attribute('prepid').lower():
-                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed}%100)"'
+                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed})"'
                 if '--customise_commands ' in cmsd:
                     res = res.replace('--customise_commands ',
                                       '--customise_commands %s\\\\n' % (random_seed_command))
@@ -1457,7 +1457,7 @@ class request(json_base):
         infile += '\nscram b\n'
         infile += 'cd ../../\n'
         if 'wmlhegs' in self.get_attribute('prepid').lower():
-            infile += 'seed=$(date +%s)\n'
+            infile += 'seed=$(($(date +%s) % 100 + 1))\n'
 
         infile += cmsd_list
         # since it's all in a subshell, there is
