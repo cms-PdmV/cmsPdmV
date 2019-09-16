@@ -162,7 +162,7 @@ angular.module('testApp').controller('resultsCtrl',
       for (var a in $scope.result) {
         if (-1 != $scope.selected_prepids.indexOf($scope.result[a].prepid)) {
           for (var b in $scope.result[a].reqmgr_name) {
-            this.$broadcast("loadDataSet", [$scope.result[a].reqmgr_name[b].name, b, $scope.result[a].prepid]);
+            this.$broadcast("loadDataSet", [$scope.result[a].prepid, $scope.result[a].reqmgr_name[b].name, $scope.result[a].reqmgr_name[b]]);
           }
         }
       }
