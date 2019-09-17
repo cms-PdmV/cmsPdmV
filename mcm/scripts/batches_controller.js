@@ -185,30 +185,33 @@ angular.module('testApp').controller('resultsCtrl',
       });
     };
 
-    $scope.preloadRequest = function (chain, load_single, number) {
-      var url = "restapi/requests/get/"+chain;
-      if ( !_.has($scope.local_requests,chain) ){
+    $scope.preloadRequest = function (batch_prepid, request_prepid, completion) {
+      var url = 'restapi/requests/get/' + request_prepid;
+      if (!_.has($scope.local_requests, request_prepid)) {
         var promise = $http.get(url);
-        promise.then( function(data){
-          $scope.local_requests[chain] = data.data.results.reqmgr_name;
-          if (load_single != "")
-          {
-            _.each($scope.local_requests[chain], function (element) {
-              $scope.$broadcast('loadDataSet', [element.name, number, load_single]);
-            });
+        promise.then(function(data) {
+          $scope.local_requests[request_prepid] = data.data.results.reqmgr_name;
+          if (completion !== undefined) {
+            completion(request_prepid);
           }
-        },function(data){
+        }, function(data){
           alert("error " + data.results);
         });
+      } else {
+        if (completion !== undefined) {
+          completion(request_prepid);
+        }
       }
     };
 
-    $scope.broadcast_inspect = function (requests_data, column_id) {
+    $scope.broadcast_inspect = function (batch_prepid, requests_data) {
+      $scope.loadStats(requests_data);
       _.each(requests_data, function (element, index){
-        if ($scope.r_status[element.content.pdmv_prep_id] == "submitted")
-        {
-          $scope.preloadRequest(element.content.pdmv_prep_id, column_id, index);
-        }
+        $scope.preloadRequest(batch_prepid, element.content.pdmv_prep_id, function(request_prepid) {
+          _.each($scope.local_requests[request_prepid], function (element2, index2){
+            $scope.$broadcast('loadDataSet', [batch_prepid, element2.name, element2]);
+          });
+        });
       });
     };
 

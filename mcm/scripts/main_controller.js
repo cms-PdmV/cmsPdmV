@@ -449,44 +449,35 @@ testApp.directive("reqmgrName", function($http){
   return {
     require: 'ngModel',
     restrict: 'E',
-    scope: true,
+    // scope: true,
     templateUrl: 'HTML/templates/request.manager.name.html',
     replace: true,
+    reqmgr_name: [],
     link: function(scope, element, attrs, ctrl)
     {
       scope.links = {};
       scope.image_width = 150;
       ctrl.$render = function(){
-        scope.rqmngr_data = ctrl.$viewValue;
-        scope.r_prepid = scope.$eval(attrs.prepid);
+        scope.reqmgr_name = ctrl.$viewValue;
+        scope.prepid = scope.$eval(attrs.prepid);
       };
-      scope.load_dataset_list = function (req_name, index){
-        scope.getrqmnr_data(req_name, index);
-      };
-      scope.getrqmnr_data = function(req_name, index){
-        var index;
-        scope.stats_cache[req_name] = 'Not found'
-        for (index = 0; index < scope.rqmngr_data.length; ++index) {
-          req_mgr_dict = scope.rqmngr_data[index];
-          if (req_mgr_dict['name'] === req_name) {
-            if (Object.keys(req_mgr_dict['content']).length > 0) {
-              scope.stats_cache[req_name] = req_mgr_dict['content']
+      scope.getrqmnr_data = function(reqmgr_name){
+        scope.stats_cache[reqmgr_name] = 'Not found'
+        for (var index = 0; index < scope.reqmgr_name.length; index++) {
+          reqmgr_name_dict = scope.reqmgr_name[index];
+          if (reqmgr_name_dict['name'] === reqmgr_name) {
+            if (Object.keys(reqmgr_name_dict['content']).length > 0) {
+              scope.stats_cache[reqmgr_name] = reqmgr_name_dict['content']
             }
             break;
           }
         }
       };
       scope.$on('loadDataSet', function (events, values) {
-
-        if (scope.dbName == "requests") {
-          if (scope.data._id == values[2]) {
-            scope.load_dataset_list(values[0], values[1]);
-          }
-        } else {
-          if (scope.r_prepid == values[2]) {
-            scope.load_dataset_list(values[0], values[1]);
-          }
+        if (scope.prepid !== values[0]) {
+          return
         }
+        scope.stats_cache[values[1]] = values[2].content
       });
     }
   }

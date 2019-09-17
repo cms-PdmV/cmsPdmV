@@ -1752,7 +1752,7 @@ class request(json_base):
 
             new_mcm_reqmgr_list.append(new_rr)
 
-        new_mcm_reqmgr_list = sorted(new_mcm_reqmgr_list, key=lambda workflow: '_'.join(workflow['name'].split('_')[-3]))
+        new_mcm_reqmgr_list = sorted(new_mcm_reqmgr_list, key=lambda workflow: '_'.join(workflow['name'].split('_')[-3:]))
         old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=4, sort_keys=True)
         new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
