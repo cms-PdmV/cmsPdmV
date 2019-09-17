@@ -41,7 +41,7 @@
                 <a ng-switch-when="false" ng-href="https://cmsweb.cern.ch/das/request?input={{DS}}" rel="tooltip" title="Show {{DS}} in DAS" target="_blank"><del>{{DS}}</del></a>
               </span>,
               {{stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_status_in_DAS}}<span ng-if="stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_status_in_DAS === undefined"><i>unknown status</i></span>,
-              {{stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_evts_in_DAS}}<span ng-if="stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_evts_in_DAS === undefined"><i>unknown</i></span> events
+              {{numberWithCommas(stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_evts_in_DAS)}}<span ng-if="stats_cache[reqmgr.name].pdmv_dataset_statuses[DS].pdmv_evts_in_DAS === undefined"><i>unknown</i></span> events
             </li>
           </ul>
         </li>
