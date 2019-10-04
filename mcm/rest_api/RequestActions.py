@@ -423,16 +423,23 @@ class OptionResetForRequest(RESTResource):
         """
         rdb = database(self.db_name)
         req_ids = request_ids.split(',')
-        res = {}
+        response = []
         for req_id in req_ids:
             req = request(rdb.get(req_id))
-            if req.get_attribute('status') == 'new' and req.get_attribute('approval') == 'validation':
-                # to be replaced by a lock
-                res[req_id] = False
+            if req.get_attribute('approval') != 'none' or req.get_attribute('status') != 'new':
+                response.append({"results": False,
+                                 "prepid": req_id,
+                                 "message": "Cannot option reset %s because it\'s status is not none-new" % (req_id)})
                 continue
+
             req.set_options()
-            res[req_id] = True
-        return {"results": res}
+            response.append({"results": True,
+                             "prepid": req_id})
+
+        if len(response) == 1:
+            return response[0]
+        else:
+            return response
 
 
 class GetFragmentForRequest(RESTResource):
