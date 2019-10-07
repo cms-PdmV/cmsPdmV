@@ -114,19 +114,11 @@ angular.module('testApp').controller('resultsCtrl',
 		      $scope.update["fail"] = false;
 		      $scope.update["status_code"] = data["results"];
 		      $scope.action_report[prepid] = 'OK';
-		      if (step=='clone'){
-		        // not used anymore
-		        $scope.action_report[prepid]= 'OK';
-		        $scope.action_status[prepid]
-		        $scope.update["status_code"] = 'edit?db_name=requests&query='+data["prepid"];
-		      } else{
-		        //$window.location.reload();
-		        $scope.getData();
-		      }
+	        $scope.getData();
 	      } else{
-		        $scope.update["fail"] = true;
-		        $scope.update["status_code"] = data['message'];
-		        $scope.action_report[data['prepid']] = data['message'];
+	        $scope.update["fail"] = true;
+	        $scope.update["status_code"] = data['message'];
+	        $scope.action_report[data['prepid']] = data['message'];
         }
       }).error(function(status){
         $scope.update["success"] = false;
@@ -349,7 +341,7 @@ angular.module('testApp').controller('resultsCtrl',
   $scope.parse_report = function(data,status){
     to_reload=true;
     for (i=0;i<data.length;i++){
-      $scope.action_status[data[i]['prepid']] = data[i]['results'];
+      $scope.action_status[data[i]['prepid']] = data[i]['message'];
       if ($scope.parse_one ( data[i] )){
 		    to_reload=false;
       }
@@ -1009,9 +1001,6 @@ testApp.directive("sequenceDisplay", function($http){
     '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">'+
     '     <i class="icon-remove"></i>'+
     '    </a>'+
-    '    <a rel="tooltip" title="Option reset" ng-click="resetOptions()" ng-hide="role(1);">'+
-    '     <i class="icon-share"></i>'+
-    '    </a>'+
     '    <ul>'+
     '      <li ng-repeat="sequence in driver"><div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div></li>'+
     '    </ul>'+
@@ -1033,15 +1022,6 @@ testApp.directive("sequenceDisplay", function($http){
           });
         }
       };
-
-      scope.resetOptions = function(){
-        var promise = $http.get("restapi/"+scope.dbName+"/option_reset/"+scope.sequencePrepId);
-        promise.then(function(data){
-          scope.driver = data.data.results[scope.sequencePrepId];
-        }, function(data){
-          alert("Error: ", data.status);
-      });
-    };
    }
   }
 });
