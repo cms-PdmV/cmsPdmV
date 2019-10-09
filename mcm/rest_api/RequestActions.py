@@ -216,7 +216,7 @@ class CloneRequest(RequestRESTResource):
                        'keep_output']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 # this is a cloning accross campaign: a few other things need to be cleanedup
-                to_wipe.extend( ['energy'] )
+                to_wipe.extend(['energy', 'ppd_tags'])
 
             old_validation_multiplier = new_json['validation'].get('time_multiplier', 1)
             new_json.update(data)
