@@ -1267,7 +1267,7 @@ class request(json_base):
                 infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
 
             # Clone gen repo
-            infile += 'wget --quiet https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
+            infile += 'wget --quiet -O request_fragment_check.py https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
             # Run script and write to log file
             if for_validation:
                 infile += 'mkdir -p $EOS_PATH\n'
@@ -1277,7 +1277,7 @@ class request(json_base):
                 infile += ' --dev'
 
             if for_validation:
-                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE 2>&1\n'
             else:
                 infile += '\n'
 
