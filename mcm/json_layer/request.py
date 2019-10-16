@@ -777,7 +777,7 @@ class request(json_base):
 
             # Flag means whether chained campaign is active. If it's not active, ignore it
             if not chained_campaign.get('action_parameters', {}).get('flag', True):
-                self.logger.info('Chained campaign %s flag is off, skipping check' % (chained_campaign.get_attribute('prepid')))
+                self.logger.info('Chained campaign %s flag is off, skipping check' % (chained_campaign.get('prepid', '???')))
                 continue
 
             for r in chain:
