@@ -91,29 +91,16 @@ angular.module('testApp').controller('resultsCtrl',
 
   $scope.getData = function () {
       var query = "";
-      var select = false;
-      var select_id = null;
 
       _.each($location.search(), function (value, key) {
-          if (key != 'shown' && key != 'select' && key != 'fields') {
+          if (key != 'shown' && key != 'fields') {
               query += "&" + key + "=" + value;
-          }
-          if (key == 'select') {
-              select = true;
-              select_id = value;
           }
       });
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var promise, get_raw;
-      if (select) {
-          if (select_id != null){
-            promise = $http.get("restapi/chained_campaigns/select/"+select_id);
-          }
-      }
-      else {
-          get_raw = true;
-          promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw");
-      }
+      get_raw = true;
+      promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw");
       //var promise = $http.get("search/?"+ "db_name="+$scope.dbName+query);
       promise.then(function (data) {
           $scope.result_status = data.status;
