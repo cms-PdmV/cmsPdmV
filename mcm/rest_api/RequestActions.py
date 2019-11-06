@@ -472,7 +472,6 @@ class GetFragmentForRequest(RESTResource):
 
 class GetSetupForRequest(RESTResource):
     def __init__(self):
-        self.db_name = 'requests'
         if 'setup' in flask.request.path:
             self.opt = 'setup'
         elif 'test' in flask.request.path:
@@ -482,29 +481,19 @@ class GetSetupForRequest(RESTResource):
             access_limit = access_rights.administrator
         else:
             raise Exception("Cannot create this resource with mode %s" % self.opt)
+
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
     def get(self, prepid, events=None):
         """
-            Retrieve the script necessary to setup and test a given request
+        Retrieve the script necessary to setup and test a given request
         """
-        run = False
-        do_valid = False
-        if self.opt == 'test' or self.opt == 'valid':
-            run = True
-        if self.opt == 'valid':
-            do_valid = True
-        db = database(self.db_name)
+        db = database('requests')
         if db.document_exists(prepid):
-            try:
-                mcm_req = request(db.get(prepid))
-            except request.IllegalAttributeName:
-                return dumps({"results": False})
-            setupText = mcm_req.get_setup_file(run=run, do_valid=do_valid, events=events, gen_script=run)
-            # delete certificate line
-            setupText = setupText.replace('export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n', '')
+            mcm_req = request(db.get(prepid))
+            setupText = mcm_req.get_setup_file(events=events, for_validation=True, automatic_validation=False)
             return setupText
         else:
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)

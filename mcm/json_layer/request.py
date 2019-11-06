@@ -1223,116 +1223,131 @@ class request(json_base):
         makeRel = 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
         makeRel += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
         makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
+        makeRel += '  echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
         makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
+        makeRel += '  scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
         makeRel += 'fi\n'
         makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
         makeRel += 'eval `scram runtime -sh`\n'  # setup the cmssw
 
         return makeRel
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
+    def get_setup_file(self, directory='', events=None, for_validation=False, automatic_validation=False):
+        """
+        events - number of events to run
+        for_validation - whether this script is for validation or for production
+        gen_script - whether to check if gen_checking script should be added
+        """
         # run is for adding cmsRun
-        # do_valid id for adding the file upload
-        l_type = locator()
-        infile = '#!/bin/bash\n'
+        loc = locator()
+        is_dev = loc.isDev()
+        base_url = loc.baseurl()
+        prepid = self.get_attribute('prepid')
+        bash_file = ['#!/bin/bash', '']
 
-        first_tiers = ','.join(self.get_tier(0))
-        # pLHE, GS and wmLHEGS
-        gen_script_tiers = set(['LHE',
-                                'GEN-SIM',
-                                'LHE,GEN-SIM',
-                                'GEN-SIM,LHE',
-                                'GEN,LHE',
-                                'LHE,GEN',
-                                'GEN'])
+        # Add GEN script part if needed
+        if for_validation:
+            first_sequence_datatiers = ','.join(self.get_tier(0))
+            self.logger.info('Datatiers for first sequence of %s are %s' % (prepid, first_sequence_datatiers))
+            gen_first_sequence_datatiers = set(['LHE',
+                                                'GEN-SIM',
+                                                'LHE,GEN-SIM',
+                                                'GEN-SIM,LHE',
+                                                'GEN,LHE',
+                                                'LHE,GEN',
+                                                'GEN'])
 
-        sequence_step = self.get_attribute('sequences')[0].get('step', '')
-        if first_tiers not in gen_script_tiers and 'RECOBEFMIX' not in sequence_step:
-            gen_script = False
+            first_sequence_steps = self.get_attribute('sequences')[0].get('step', '')
+            self.logger.info('Steps of first sequence steps of %s are %s' % (prepid, first_sequence_steps))
+            # If either --datatier is in the list or RECOBEFMIX is in steps
+            # RECOBEFMIX is FastSim, it should trigger the gen_checking_script check
+            if first_sequence_datatiers in gen_first_sequence_datatiers or 'RECOBEFMIX' in first_sequence_steps:
+                # Download the script
+                bash_file += ['rm -f request_fragment_check.py',
+                              'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py']
+                # Checking script invocation
+                request_fragment_check = 'python request_fragment_check.py --bypass_status --prepid %s' % (prepid)
+                if is_dev:
+                    # Add --dev, so script would use McM DEV
+                    request_fragment_check += ' --dev'
 
-        self.logger.info('Tiers for %s are %s' % (self.get_attribute('prepid'), first_tiers))
-        # GEN checking script
-        if gen_script:
-            eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
-            if l_type.isDev():
-                eos_path += '_dev'
+                if automatic_validation:
+                    # For automatic validation
+                    if is_dev:
+                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev'
+                    else:
+                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
 
-            infile += '\n'
-            infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
+                    # Set variables to save the script output
+                    bash_file += ['REQUEST_LOG=%s/%s/%s.log' % (eos_path, campaign, prepid),
+                                  'REQUEST_NEWEST_LOG=%s/%s/%s_newest.log' % (eos_path, campaign, prepid),
+                                  'mkdir -p %s' % (eos_path)]
+
+                    # Point output to EOS
+                    # Save stdout and stderr
+                    request_fragment_check += '> $REQUEST_NEWEST_LOG 2>&1'
+
+                # Execute the GEN script
+                bash_file += [request_fragment_check]
+                # Get exit code of GEN script
+                bash_file += ['GEN_ERR=$?']
+                if automatic_validation:
+                    # Add latest log to all logs
+                    bash_file += ['cat $REQUEST_NEWEST_LOG >> $REQUEST_LOG',
+                                  # Write a couple of empty lines to the end of a file
+                                  'echo "" >> $REQUEST_LOG',
+                                  'echo "" >> $REQUEST_LOG',
+                                  # Print newest log to stdout
+                                  'echo "--BEGIN GEN Request checking script output--"',
+                                  'cat $REQUEST_NEWEST_LOG',
+                                  'echo "--END GEN Request checking script output--"']
+
+                # Check exit code of script
+                bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
+                              '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
+                              '  echo "Validation WILL NOT RUN"',
+                              '  echo "Please correct errors in the request and run validation again"',
+                              '  exit $GEN_ERR',
+                              'fi',
+                              # If error code is zero, continue to validation
+                              'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
+                              # Empty line after GEN business
+                              '']
+
+        # Set up CMSSW environment
+        bash_file += self.make_release().strip().split('\n')
+        # Get the fragment if need be
+        bash_file += self.retrieve_fragment().strip().split('\n')
+
+        if not for_validation:
+            bash_file += ['export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert', '']
+
+        # Download the fragment directly from McM into a file
+        fragment_name = self.get_fragment()
+        if fragment_name:
+            bash_file += ['curl -s -k %spublic/restapi/requests/get_fragment/%s --retry 3 --create-dirs -o %s' % (base_url,
+                                                                                                                  prepid,
+                                                                                                                  fragment_name),
+                          # Check if downloaded file actually exists and has more than 0 bytes
+                          '[ -s %s ] || exit $?;' % (fragment_name)]
+
+            # Check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
             if for_validation:
-                infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-                infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
-                infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
+                bash_file += [''
+                              'if grep -q "gridpacks" %s; then' % (fragment_name),
+                              '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then' % (fragment_name),
+                              '    echo "Gridpack inside fragment is not in cvmfs."',
+                              '    exit -1',
+                              '  fi',
+                              'fi',
+                              '']
 
-            # Clone gen repo
-            infile += 'wget --quiet -O request_fragment_check.py https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
-            # Run script and write to log file
-            if for_validation:
-                infile += 'mkdir -p $EOS_PATH\n'
+        if events is None:
+            events = self.get_n_for_test(self.target_for_test())
 
-            infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
-            if l_type.isDev():
-                infile += ' --dev'
+        bash_file += ['EVENTS=%s' % (events)]
 
-            if for_validation:
-                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE 2>&1\n'
-            else:
-                infile += '\n'
-
-            # Get exit code
-            infile += 'ERRORS=$?\n'
-            if for_validation:
-                # Add latest log to all logs
-                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
-                # Print newest log
-                infile += 'echo --BEGIN GEN Request checking script output--\n'
-                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
-                infile += 'echo --END GEN Request checking script output--\n'
-                # Write a couple of empty lines to the end of a file
-                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-
-            # Check exit code of script
-            infile += 'if [ $ERRORS -ne 0 ]; then\n'
-            infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
-            infile += '    echo "Validation WILL NOT RUN"\n'
-            infile += '    echo "Please correct errors in the request and run validation again"\n'
-            infile += '    exit $ERRORS\n'
-            infile += 'fi\n'
-            # If error code is zero, continue to validation
-            infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
-            infile += '\n'
-
-        if directory or for_validation:
-            infile += self.make_release()
-        else:
-            infile += self.make_release()
-
-        # get the fragment if need be
-        infile += self.retrieve_fragment()
-
-        infile += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n'
-        fragment_retry_amount = 2
-        # copy the fragment directly from the DB into a file
-        if self.get_attribute('fragment'):
-            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --retry %s --create-dirs -o %s \n' % (
-                l_type.baseurl(), self.get_attribute('prepid'),
-                fragment_retry_amount, self.get_fragment())
-
-            # lets check if downloaded file actually exists and has more than 0 bytes
-            infile += '[ -s %s ] || exit $?;\n' % (self.get_fragment())
-
-        ##check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
-        if run and self.get_fragment():
-            infile += '\n'
-            infile += 'if grep -q "gridpacks" %s; then\n' % (self.get_fragment())
-            infile += '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then\n ' % (self.get_fragment())
-            infile += '    echo "Gridpack inside fragment is not in cvmfs."\n'
-            infile += '    exit -1\n'
-            infile += '  fi\n'
-            infile += 'fi\n'
+        return '\n'.join(bash_file)
 
         # previous counter
         previous = 0
@@ -1341,14 +1356,12 @@ class request(json_base):
         cmsd_list = ''
 
         configuration_names = []
-        if events is None:
-            events = self.get_n_for_test(self.target_for_test())
-
-        for i, cmsd in enumerate(self.build_cmsDrivers()):
+        cms_drivers = self.build_cmsDrivers()
+        for i, cms_driver in enumerate(cms_drivers):
             inline_c = ''
             # check if customization is needed to check it out from cvs
-            if '--customise ' in cmsd:
-                cust = cmsd.split('--customise ')[1].split(' ')[0]
+            if '--customise ' in cms_drivers:
+                cust = cms_drivers.split('--customise ')[1].split(' ')[0]
                 toks = cust.split('.')
                 cname = toks[0] + '.py'
                 # add customization
@@ -1356,7 +1369,7 @@ class request(json_base):
                     # this works for back-ward compatiblity
                     infile += self.retrieve_fragment(name=cname)
                     # force inline the customisation fragment in that case.
-                    # if user sets inlinde_custom to 0 we dont set it
+                    # if user sets inline_custom to 0 we dont set it
                     if int(self.get_attribute("sequences")[-1]["inline_custom"]) != 0:
                         inline_c = '--inline_custom 1 '
 
@@ -1465,7 +1478,7 @@ class request(json_base):
 
         # if there was a release setup, jsut remove it
         # not in dev
-        if (directory or for_validation) and not l_type.isDev():
+        if (directory or for_validation) and not is_dev:
             infile += 'rm -rf %s' % (self.get_attribute('cmssw_release'))
 
         return infile
