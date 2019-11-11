@@ -656,9 +656,53 @@ class request(json_base):
                         self.get_attribute('status'),
                         'approve',
                         'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
+
+        self.check_for_collisions()
         # start uploading the configs ?
         if not for_chain:
             self.set_status()
+
+    def check_for_collisions(self):
+        request_db = database('requests')
+        dataset_query = request_db.construct_lucene_query({'dataset_name': self.get_attribute('dataset_name')})
+        same_dataset_requests = request_db.full_text_search('search', dataset_query, page=-1)
+        if len(same_dataset_requests) == 0:
+            raise self.BadParameterValue('It seems that database is down, could not check for duplicates')
+
+        my_campaign_process_string_tier = self.get_camp_plus_ps_and_tiers()
+        my_prepid = self.get_attribute('prepid')
+        for (my_campaign_prepid, my_process_string, my_tier) in my_campaign_process_string_tier:
+            process_string_parts = [s.lower() for s in my_process_string.split('_')]
+            process_string_parts_set = set(process_string_parts)
+            if len(process_string_parts) != len(process_string_parts_set) and self.current_user_level == 4:
+                raise self.BadParameterValue('There is a duplicate string in the constructed processing string - %s' % (my_process_string))
+
+        self.logger.info('Requests (%s) with same dataset as %s: %s' % (len(same_dataset_requests),
+                                                                        my_prepid,
+                                                                        ', '.join([r['prepid'] for r in same_dataset_requests])))
+
+        for other_request_json in same_dataset_requests:
+            if other_request_json['prepid'] == my_prepid:
+                continue  # no self check
+
+            if other_request_json['approval'] in ['new', 'validation']:
+                # Not paying attention to new or validating requests
+                continue
+
+            other_request = request(other_request_json)
+            other_request_campaign_process_string_tier = other_request.get_camp_plus_ps_and_tiers()
+            print('ME: %s' % (my_campaign_process_string_tier))
+            print('OTHER: %s' % (other_request_campaign_process_string_tier))
+            # check for collision
+            collisions = [x for x in other_request_campaign_process_string_tier if x in my_campaign_process_string_tier]
+            if len(collisions) != 0:
+                collision = collisions[0]
+                text = 'Output dataset name collision with %s. Campaign "%s", process string "%s", tier "%s"' % (other_request_json['prepid'],
+                                                                                                                 collision[0],
+                                                                                                                 collision[1],
+                                                                                                                 collision[2])
+                self.logger.info(text)
+                raise self.BadParameterValue(text)
 
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level < 3:
@@ -710,45 +754,7 @@ class request(json_base):
 
         # do a dataset collision check : remind that it requires the flows to have process_string properly set
         rdb = database('requests')
-        __query = rdb.construct_lucene_query({'dataset_name': self.get_attribute('dataset_name')})
-        similar_ds = rdb.full_text_search('search', __query, page=-1)
-        my_ps_and_t = self.get_camp_plus_ps_and_tiers()
-        for (camp, my_ps, my_t) in my_ps_and_t:
-            check_ingredients = map(lambda s: s.lower(), my_ps.split('_'))
-            __uniq_set = set()
-            if any(x in __uniq_set or __uniq_set.add(x) for x in check_ingredients) and self.current_user_level == 4:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'submit',
-                    "There is a duplicate string in the constructed processing (%s) string of one of the expected output dataset. Checking %s" % ( my_ps, check_ingredients ))
-
-        self.logger.info('Similar DS to %s are: %s' % (self.get_attribute('prepid'), ', '.join([s['prepid'] for s in similar_ds])))
-        if len(similar_ds) == 0:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                "It seems that database is down, could not check for duplicates")
-
-        for similar in similar_ds:
-            if similar['prepid'] == self.get_attribute('prepid'):
-                continue  # no self check
-
-            if similar['approval'] in ['new', 'validation']:
-                # Not paying attention to new or validating requests
-                continue
-
-            similar_r = request(similar)
-            similar_ps_and_t = similar_r.get_camp_plus_ps_and_tiers()
-            # check for collision
-            collisions = filter(lambda ps: ps in my_ps_and_t, similar_ps_and_t)
-            if len(collisions) != 0:
-                text = str(collisions)
-                self.logger.info("Possible collisions prepid: %s" % (similar['prepid']))
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'submit',
-                    'Output dataset naming collision with %s. Similar id: %s' % (text, similar['prepid']))
-
+        self.check_for_collisions()
         moveon_with_single_submit = True  # for the case of chain request submission
         is_the_current_one = False
         # check on position in chains
