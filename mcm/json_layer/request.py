@@ -691,8 +691,6 @@ class request(json_base):
 
             other_request = request(other_request_json)
             other_request_campaign_process_string_tier = other_request.get_camp_plus_ps_and_tiers()
-            print('ME: %s' % (my_campaign_process_string_tier))
-            print('OTHER: %s' % (other_request_campaign_process_string_tier))
             # check for collision
             collisions = [x for x in other_request_campaign_process_string_tier if x in my_campaign_process_string_tier]
             if len(collisions) != 0:
