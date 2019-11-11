@@ -33,7 +33,7 @@ def do_with_timeout(func, *args, **kwargs):
     try:
         print('Running %s with timeout %ss' % (func.__name__, timeout))
         result = func(*args, **kwargs)
-    except TimeoutException as exc:
+    except TimeoutException:
         result = None
     finally:
         signal.alarm(0)
@@ -45,8 +45,7 @@ def get_all_campaigns():
     campaigns_db = database('campaigns')
     all_campaigns_result = do_with_timeout(campaigns_db.raw_query, 'prepid', timeout=300)
     if all_campaigns_result:
-        all_campaigns = campaigns_db.raw_query('prepid')
-        prepids_list = [x['id'] for x in all_campaigns]
+        prepids_list = [x['id'] for x in all_campaigns_result]
     else:
         prepids_list = []
 
@@ -67,10 +66,8 @@ def multiple_inspect(campaign_prepids):
                                                                 ('status', {'value': request_statuses})])
 
             while len(requests) > 0:
-                requests_result = do_with_timeout(requests_db.full_text_search, 'search', query, page=page, timeout=300)
-                if requests_result is not None:
-                    requests = requests_result
-                else:
+                requests = do_with_timeout(requests_db.full_text_search, 'search', query, page=page, timeout=300)
+                if not requests:
                     requests = []
 
                 print('Inspecting requests of %s. Page: %s. Requests %s' % (campaign_prepid, page, len(requests)))
@@ -89,7 +86,7 @@ def multiple_inspect(campaign_prepids):
                 page += 1
                 time.sleep(0.5)
 
-            time.sleep(1)
+            time.sleep(0.1)
         except Exception as e:
             print('Exception while inspecting campaign %s' % (campaign_prepid))
             print(e)
@@ -97,4 +94,3 @@ def multiple_inspect(campaign_prepids):
 
 if __name__ == '__main__':
     multiple_inspect(get_all_campaigns())
-
