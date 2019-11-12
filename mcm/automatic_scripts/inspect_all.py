@@ -1,10 +1,12 @@
 import sys
 import os
+import json
+import time
+import types
 sys.path.append(os.path.abspath(os.path.pardir))
 from couchdb_layer.mcm_database import database
 from json_layer.request import request
-import time
-import json
+from tools.user_management import authenticator
 
 
 def do_with_timeout(func, *args, **kwargs):
@@ -74,17 +76,16 @@ def multiple_inspect(campaign_prepids):
                 for req_dict in requests:
                     print('Inspecting %s. %s-%s' % (req_dict['prepid'], req_dict['approval'], req_dict['status']))
                     req = request(req_dict)
-                    req.current_user_level = 4
 
                     if req:
                         print(json.dumps(do_with_timeout(req.inspect, timeout=300), indent=2))
                     else:
                         print('%s does not exist' % (req_dict['prepid']))
 
-                    time.sleep(0.2)
+                    time.sleep(0.1)
 
                 page += 1
-                time.sleep(0.5)
+                time.sleep(0.1)
 
             time.sleep(0.1)
         except Exception as e:
@@ -93,4 +94,8 @@ def multiple_inspect(campaign_prepids):
 
 
 if __name__ == '__main__':
+    def get_user_role(*args, **kwargs):
+        return 'administrator'
+
+    authenticator.get_user_role = types.MethodType(get_user_role, authenticator())
     multiple_inspect(get_all_campaigns())
