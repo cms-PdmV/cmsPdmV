@@ -2556,12 +2556,11 @@ class request(json_base):
         # TO-DO: change the 0.2 to value from settings DB
         if (measured_time_evt <= self.get_sum_time_events() * (1 - timing_fraction)):
             __all_values = self.get_attribute('time_event') + [measured_time_evt]
-            __mean_value = float(sum(__all_values)) / max(len(__all_values), 1)
-
+            __mean_value = [float(sum(__all_values)) / max(len(__all_values), 1)] * len(self.get_attribute('time_event'))
             subject = 'Runtest for %s: time per event over-estimate' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to: %s.') % (
+                       ' measured from %s events (ran %s).'
+                       ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2570,27 +2569,18 @@ class request(json_base):
                         timing_fraction * 100,
                         __mean_value)
 
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
-            self.set_attribute('time_event', [__mean_value])
+            self.set_attribute('time_event', __mean_value)
             self.reload()
             self.notify(subject, message, accumulate=True)
             raise self.WrongTimeEvent(message)
 
         elif (measured_time_evt >= self.get_sum_time_events() * (1 + timing_fraction)):
             __all_values = self.get_attribute('time_event') + [measured_time_evt]
-            __mean_value = float(sum(__all_values)) / max(len(__all_values), 1)
+            __mean_value = [float(sum(__all_values)) / max(len(__all_values), 1)] * len(self.get_attribute('time_event'))
             subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
             message = ('For the request %s, time/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).'
-                    ' Not within %d%%. Setting to: %s.') % (
+                       ' measured from %s events (ran %s).'
+                       ' Not within %d%%. Setting to: %s.') % (
                         self.get_attribute('prepid'),
                         self.get_sum_time_events(),
                         measured_time_evt,
@@ -2599,16 +2589,7 @@ class request(json_base):
                         timing_fraction*100,
                         __mean_value)
 
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
-            self.set_attribute('time_event', [__mean_value])
+            self.set_attribute('time_event', __mean_value)
             self.reload()
             self.notify(subject, message, accumulate=True)
             raise self.WrongTimeEvent(message)
