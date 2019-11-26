@@ -2599,7 +2599,7 @@ class request(json_base):
             self.logger.info("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
                     self.get_sum_time_events(), measured_time_evt, evts_pass))
 
-            self.set_attribute('time_event', [measured_time_evt])
+            self.set_attribute('time_event', [measured_time_evt] * len(self.get_attribute('time_event')))
 
     def check_cpu_efficiency(self, cpu_time, total_time):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
