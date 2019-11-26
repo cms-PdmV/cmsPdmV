@@ -1236,27 +1236,28 @@ class request(json_base):
         """
         events - number of events to run
         for_validation - whether this script is for validation or for production
-        gen_script - whether to check if gen_checking script should be added
+        automatic_validation - whether this script is for automatic or user (local) validation
         """
         # run is for adding cmsRun
         loc = locator()
         is_dev = loc.isDev()
         base_url = loc.baseurl()
         prepid = self.get_attribute('prepid')
+        member_of_campaign = self.get_attribute('member_of_campaign')
         bash_file = ['#!/bin/bash', '']
 
         # Add GEN script part if needed
-        if for_validation:
-            first_sequence_datatiers = ','.join(self.get_tier(0))
-            self.logger.info('Datatiers for first sequence of %s are %s' % (prepid, first_sequence_datatiers))
-            gen_first_sequence_datatiers = set(['LHE',
-                                                'GEN-SIM',
-                                                'LHE,GEN-SIM',
-                                                'GEN-SIM,LHE',
-                                                'GEN,LHE',
-                                                'LHE,GEN',
-                                                'GEN'])
+        first_sequence_datatiers = ','.join(self.get_tier(0))
+        self.logger.info('Datatiers for first sequence of %s are %s' % (prepid, first_sequence_datatiers))
+        gen_first_sequence_datatiers = set(['LHE',
+                                            'GEN-SIM',
+                                            'LHE,GEN-SIM',
+                                            'GEN-SIM,LHE',
+                                            'GEN,LHE',
+                                            'LHE,GEN',
+                                            'GEN'])
 
+        if for_validation:
             first_sequence_steps = self.get_attribute('sequences')[0].get('step', '')
             self.logger.info('Steps of first sequence steps of %s are %s' % (prepid, first_sequence_steps))
             # If either --datatier is in the list or RECOBEFMIX is in steps
@@ -1274,13 +1275,13 @@ class request(json_base):
                 if automatic_validation:
                     # For automatic validation
                     if is_dev:
-                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev'
+                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
                     else:
-                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
+                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
 
                     # Set variables to save the script output
-                    bash_file += ['REQUEST_LOG=%s/%s/%s.log' % (eos_path, campaign, prepid),
-                                  'REQUEST_NEWEST_LOG=%s/%s/%s_newest.log' % (eos_path, campaign, prepid),
+                    bash_file += ['REQUEST_LOG=%s/%s.log' % (eos_path, prepid),
+                                  'REQUEST_NEWEST_LOG=%s/%s_newest.log' % (eos_path, prepid),
                                   'mkdir -p %s' % (eos_path)]
 
                     # Point output to EOS
@@ -1316,7 +1317,7 @@ class request(json_base):
 
         # Set up CMSSW environment
         bash_file += self.make_release().strip().split('\n')
-        # Get the fragment if need be
+        # Get the fragment if need to
         bash_file += self.retrieve_fragment().strip().split('\n')
 
         if not for_validation:
@@ -1339,149 +1340,105 @@ class request(json_base):
                               '    echo "Gridpack inside fragment is not in cvmfs."',
                               '    exit -1',
                               '  fi',
-                              'fi',
-                              '']
+                              'fi']
 
         if events is None:
             events = self.get_n_for_test(self.target_for_test())
 
-        bash_file += ['EVENTS=%s' % (events)]
+        bash_file += ['',
+                      'EVENTS=%s' % (events)]
+        if 'wmlhegs' in prepid.lower():
+            bash_file += ['SEED=$(($(date +%s) % 100 + 1))',
+                          'echo "Seed is "$SEED']
 
-        return '\n'.join(bash_file)
-
-        # previous counter
-        previous = 0
-
-        # validate and build cmsDriver commands
-        cmsd_list = ''
-
+        bash_file += ['scram b',
+                      'cd ../../']
         configuration_names = []
         cms_drivers = self.build_cmsDrivers()
         for i, cms_driver in enumerate(cms_drivers):
-            inline_c = ''
             # check if customization is needed to check it out from cvs
-            if '--customise ' in cms_drivers:
-                cust = cms_drivers.split('--customise ')[1].split(' ')[0]
+            if '--customise ' in cms_driver:
+                cust = cms_driver.split('--customise ')[1].split(' ')[0]
                 toks = cust.split('.')
                 cname = toks[0] + '.py'
                 # add customization
                 if 'GenProduction' in cname:
                     # this works for back-ward compatiblity
-                    infile += self.retrieve_fragment(name=cname)
+                    cms_driver += self.retrieve_fragment(name=cname).strip().split('\n')
                     # force inline the customisation fragment in that case.
                     # if user sets inline_custom to 0 we dont set it
                     if int(self.get_attribute("sequences")[-1]["inline_custom"]) != 0:
-                        inline_c = '--inline_custom 1 '
+                        cms_driver += '--inline_custom 1 '
 
-            # tweak a bit more finalize cmsDriver command
-            res = cmsd
-            configuration_names.append(os.path.join(directory,
-                    self.get_attribute('prepid') + "_" + str(previous + 1) + '_cfg.py'))
-
-            res += '--python_filename %s --no_exec ' % (configuration_names[-1])
-            # add monitoring at all times...
-            if '--customise ' in cmsd:
-                old_cust = cmsd.split('--customise ')[1].split()[0]
-                new_cust = old_cust
-                new_cust += ',Configuration/DataProcessing/Utils.addMonitoring'
-                res = res.replace('--customise %s' % (old_cust), '--customise %s' % (new_cust))
-            else:
-                res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
-
-            if 'wmlhegs' in self.get_attribute('prepid').lower():
-                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed})"'
-                if '--customise_commands ' in cmsd:
-                    res = res.replace('--customise_commands ',
-                                      '--customise_commands %s\\\\n' % (random_seed_command))
+            if 'wmlhegs' in prepid.lower():
+                # Random seed command
+                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+                if '--customise_commands ' in cms_driver:
+                    # Replace if customise_commands exist
+                    cms_driver = cms_driver.replace('--customise_commands ',
+                                                    '--customise_commands %s\\\\n' % (random_seed_command))
                 else:
-                    res += '--customise_commands %s ' % (random_seed_command)
+                    # Append if customise_commands do not exist
+                    cms_driver += '--customise_commands %s ' % (random_seed_command)
 
-            if run and i == 0 and first_tiers in gen_script_tiers:
-                cdb = database('campaigns')
-                camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
-                if camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
+            configuration_names.append(os.path.join(directory, '%s_%s_cfg.py' % (prepid, i + 1)))
+            cms_driver += '--python_filename %s --no_exec ' % (configuration_names[-1])
+
+            # If it's for validation and it matches conditions for gen checking script
+            if for_validation and i == 0 and first_sequence_datatiers in gen_first_sequence_datatiers:
+                campaign_db = database('campaigns')
+                camp = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
+                # Only if campaign cmssw is >= 9.3
+                if camp and camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
                     member_of_chains = self.get_attribute('member_of_chain')
+                    # Only if this request is member of at least one chain
                     if len(member_of_chains) > 0:
-                        crdb = database('chained_requests')
-                        from json_layer.chained_request import chained_request
-                        chained_req = chained_request(crdb.get(member_of_chains[0]))
-                        chained_req_chain = chained_req.get_attribute('chain')
-                        if len(chained_req_chain) > 0 and chained_req_chain[0] == self.get_attribute('prepid'):
-                            num_cores = self.get_attribute('sequences')[i].get('nThreads', None)
-                            if not num_cores:
-                                num_cores = 1
-
-                            events_per_lumi = self.get_events_per_lumi(num_cores)
-                            max_forward_eff = self.get_forward_efficiency()
-                            events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
-                            events_per_lumi /= max_forward_eff # this does not take its own efficiency
-                            events_per_lumi = int(events_per_lumi)
+                        chained_request_db = database('chained_requests')
+                        chained_req_chain = chained_request_db.get(member_of_chains[0]).get('chain', [])
+                        # Only if this request is root request
+                        if chained_req_chain and chained_req_chain[0] == prepid:
+                            events_per_lumi = self.get_events_per_lumi_calculated(i)
                             events_per_lumi_command = 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
-                            if '--customise_commands ' in res:
-                                res = res.replace('--customise_commands ',
-                                                  '--customise_commands %s\\\\n' % (events_per_lumi_command))
+                            if '--customise_commands ' in cms_driver:
+                                cms_driver = cms_driver.replace('--customise_commands ',
+                                                                '--customise_commands %s\\\\n' % (events_per_lumi_command))
                             else:
-                                res += '--customise_commands %s ' % (events_per_lumi_command)
+                                cms_driver += '--customise_commands %s ' % (events_per_lumi_command)
 
-            res += inline_c
-
-            res += '-n ' + str(events) + ' || exit $? ; \n'
-            if run:
-
-                if previous:
-                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" % (
-                            self.get_attribute('prepid'), previous + 1))
-
+            cms_driver += '-n $EVENTS || exit $?;'
+            bash_file += [cms_driver]
+            if for_validation:
+                if i:
+                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" % (prepid, i + 1))
                 else:
-                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" % (
-                            self.get_attribute('prepid')))
+                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" % (prepid))
 
-                res += 'cmsRun -e -j %s %s || exit $? ; \n' % (
-                        runtest_xml_file, configuration_names[-1])
+                # Run
+                bash_file += ['cmsRun -e -j %s %s || exit $? ; \n' % (runtest_xml_file, configuration_names[-1])]
 
-                if events >= 0:
-                    res += 'echo %d events were ran \n' % events
+                bash_file += ['echo $EVENTS" events were ran"']
+                # Grep xml file for time per event, size per event, total events
+                bash_file += ['grep "TotalEvents" %s' % (runtest_xml_file),
+                              'if [ $? -eq 0 ]; then',
+                              '  grep "Timing-tstoragefile-write-totalMegabytes" %s' % (runtest_xml_file),
+                              '  if [ $? -eq 0 ]; then',
+                              '    events=$(grep "TotalEvents" %s | tail -1 | sed "s/.*>\\(.*\\)<.*/\\1/")' % runtest_xml_file,
+                              '    size=$(grep "Timing-tstoragefile-write-totalMegabytes" %s | sed "s/.* Value=\\"\\(.*\\)\\".*/\\1/")' % runtest_xml_file,
+                              '    if [ $events -gt 0 ]; then',
+                              '      echo "McM Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"',
+                              '    fi',
+                              '  fi',
+                              'fi',
+                              'grep "EventThroughput" %s' % runtest_xml_file,
+                              'if [ $? -eq 0 ]; then',
+                              '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\\(.*\\)\\".*/\\1/")' % (runtest_xml_file),
+                              '  echo "McM time_event value: $(bc -l <<< "scale=4; 1/$var1")"',
+                              'fi',
+                              'echo CPU efficiency info:',
+                              'grep "TotalJobCPU" %s' % runtest_xml_file,
+                              'grep "TotalJobTime" %s' % runtest_xml_file]
 
-                res += 'grep "TotalEvents" %s \n' % runtest_xml_file
-                res += 'if [ $? -eq 0 ]; then\n'
-                res += '    grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
-                res += '    if [ $? -eq 0 ]; then\n'
-                res += '        events=$(grep "TotalEvents" %s | tail -1 | sed "s/.*>\(.*\)<.*/\\1/")\n' % runtest_xml_file
-                res += '        size=$(grep "Timing-tstoragefile-write-totalMegabytes" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % runtest_xml_file
-                res += '        if [ $events -gt 0 ]; then\n'
-                res += '            echo "McM Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"\n'
-                res += '        fi\n'
-                res += '    fi\n'
-                res += 'fi\n'
-                res += 'grep "EventThroughput" %s \n' % runtest_xml_file
-                res += 'if [ $? -eq 0 ]; then\n'
-                res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
-                res += '  echo "McM time_event value: $(bc -l <<< "scale=4; 1/$var1")"\n'
-                res += 'fi\n'
-                res += 'echo CPU efficiency info:\n'
-                res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
-                res += 'grep "TotalJobTime" %s \n' % runtest_xml_file
-                # TO-DO:
-                # 1) add efficiency calc(?)
-
-            cmsd_list += res + '\n'
-            previous += 1
-
-        infile += '\nscram b\n'
-        infile += 'cd ../../\n'
-        if 'wmlhegs' in self.get_attribute('prepid').lower():
-            infile += 'seed=$(($(date +%s) % 100 + 1))\n'
-
-        infile += cmsd_list
-        # since it's all in a subshell, there is
-        # no need for directory traversal (parent stays unaffected)
-
-        # if there was a release setup, jsut remove it
-        # not in dev
-        if (directory or for_validation) and not is_dev:
-            infile += 'rm -rf %s' % (self.get_attribute('cmssw_release'))
-
-        return infile
+        return '\n'.join(bash_file)
 
     def modify_priority(self, new_priority):
         self.set_attribute('priority', new_priority)
@@ -3175,6 +3132,26 @@ class request(json_base):
                 return int(num_cores) * int(evts_per_lumi["singlecore"])
         else:  # TO-DO what if singlecore is deleted from dict?
             return evts_per_lumi["singlecore"]
+
+    def get_events_per_lumi_calculated(self, sequence_index):
+        if self.get_attribute('events_per_lumi') > 0:
+            # If request has it's own events per lumi, use that value
+            events_per_lumi = self.get_attribute('events_per_lumi')
+            self.logger.info('Using custom events per lumi for %s: %s' % (self.get_attribute('prepid'), events_per_lumi))
+        else:
+            # Get number of cores
+            num_cores = self.get_attribute('sequences')[sequence_index].get('nThreads', None)
+            if not num_cores:
+                num_cores = 1
+
+            # Use campaign's events per lumi
+            events_per_lumi = self.get_events_per_lumi(num_cores)
+
+        max_forward_eff = self.get_forward_efficiency()
+        events_per_lumi /= self.get_efficiency()
+        events_per_lumi /= max_forward_eff
+        events_per_lumi = int(events_per_lumi)
+        return events_per_lumi
 
     def get_core_num(self):
         self.logger.info("calling get_core_num for:%s" % (self.get_attribute('prepid')))

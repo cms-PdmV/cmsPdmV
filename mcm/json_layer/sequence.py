@@ -59,6 +59,15 @@ class sequence(json_base):
         if attribute == 'nThreads':
             if int(self.get_attribute('nThreads')) <= 1:
                 return ''
+        if attribute == 'customise':
+            c = '--%s ' % (attribute)
+            if self.get_attribute(attribute):
+                c += self.get_attribute(attribute)
+                c += ','
+
+            # Always add monitoring
+            c += 'Configuration/DataProcessing/Utils.addMonitoring'
+            return c
         if self.get_attribute(attribute) == '':
             return ''
         elif self.get_attribute(attribute) == True:

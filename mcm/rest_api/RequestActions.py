@@ -493,7 +493,14 @@ class GetSetupForRequest(RESTResource):
         db = database('requests')
         if db.document_exists(prepid):
             mcm_req = request(db.get(prepid))
-            setupText = mcm_req.get_setup_file(events=events, for_validation=True, automatic_validation=False)
+            setupText = '********************************\n'
+            setupText += '***** for_validation=False *****\n'
+            setupText += '********************************\n\n'
+            setupText += mcm_req.get_setup_file(events=events, for_validation=False, automatic_validation=False)
+            setupText += '\n\n**********************************************************\n***** for_validation=True automatic_validation=False *****\n**********************************************************\n\n'
+            setupText += mcm_req.get_setup_file(events=events, for_validation=True, automatic_validation=False)
+            setupText += '\n\n*********************************************************\n***** for_validation=True automatic_validation=True *****\n*********************************************************\n\n'
+            setupText += mcm_req.get_setup_file(events=events, for_validation=True, automatic_validation=True)
             return setupText
         else:
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
