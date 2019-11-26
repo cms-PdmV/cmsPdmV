@@ -1,9 +1,10 @@
+import os
 import sys
 import time
 sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
 from rest import McM
 
-mcm = McM(dev=False)
+mcm = McM(dev=False, cookie=os.getenv('PROD_COOKIE'))
 
 requests = mcm.get('requests', query='priority=110000&prepid=*MiniAOD*&status=submitted')
 
