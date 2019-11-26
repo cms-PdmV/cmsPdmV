@@ -3,7 +3,7 @@ import time
 sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
 from rest import McM
 
-mcm = McM(dev=True, debug=True)
+mcm = McM(dev=False)
 
 requests = mcm.get('requests', query='priority=110000&prepid=*MiniAOD*&status=submitted')
 
@@ -26,5 +26,6 @@ for request in requests:
         prepid = request['prepid']
         priority = request['priority']
         priority += 1
-        result = mcm._McM__post('restapi/requests/priority_change', [{'prepid': prepid, 'priority': priority}])
+        print('Change %s priority to %s' % (prepid, priority))
+        result = mcm._McM__post('restapi/requests/priority_change', [{'prepid': prepid, 'priority_raw': priority}])
         print(result)
