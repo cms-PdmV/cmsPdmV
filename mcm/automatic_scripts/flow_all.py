@@ -3,6 +3,7 @@ import os
 import json
 import time
 import types
+import logging
 
 sys.path.append(os.path.abspath(os.path.pardir))
 from couchdb_layer.mcm_database import database
@@ -21,7 +22,7 @@ def do_with_timeout(func, *args, **kwargs):
         pass
 
     def handler(signum, frame):
-        print('Timeout of %ss reached' % (timeout))
+        logging.warning('Timeout of %ss reached' % (timeout))
         raise TimeoutException()
 
     if args is None:
@@ -34,7 +35,7 @@ def do_with_timeout(func, *args, **kwargs):
     signal.signal(signal.SIGALRM, handler)
     signal.alarm(timeout)
     try:
-        print('Running %s with timeout %ss' % (func.__name__, timeout))
+        logging.info('Running %s with timeout %ss' % (func.__name__, timeout))
         result = func(*args, **kwargs)
     except TimeoutException:
         result = None
@@ -53,12 +54,12 @@ def get_all_chained_campaigns():
         return []
 
 
-def multiple_inspect(chained_campaign_prepids):
+    def multiple_inspect(chained_campaign_prepids):
     chained_requests_db = database('chained_requests')
-    print('Chained campaigns inspect begin. Number of chained campaigns to be inspected: %s' % (len(chained_campaign_prepids)))
+    logging.info('Chained campaigns inspect begin. Number of chained campaigns to be inspected: %s' % (len(chained_campaign_prepids)))
     for chained_campaign_index, chained_campaign_prepid in enumerate(chained_campaign_prepids):
         try:
-            print('Current chained campaign: %s (%s/%s)' % (chained_campaign_prepid, chained_campaign_index + 1, len(chained_campaign_prepids)))
+            logging.info('Current chained campaign: %s (%s/%s)' % (chained_campaign_prepid, chained_campaign_index + 1, len(chained_campaign_prepids)))
             chained_requests_db.clear_cache()
             page = 0
             chained_requests = [{}]
@@ -67,22 +68,24 @@ def multiple_inspect(chained_campaign_prepids):
                                                                         ('status', {'value': 'processing'})])
 
             while len(chained_requests) > 0:
+                logging.info('Page %s of %s' % (page, chained_campaign_prepid))
                 chained_requests = do_with_timeout(chained_requests_db.full_text_search, 'search', query, page=page, timeout=300)
                 if not chained_requests:
                     chained_requests = []
-                    continue
+                    break
 
                 chained_requests = [x for x in chained_requests if x.get('action_parameters', {}).get('flag', False)]
-                print('Inspecting chained requests of %s. Page: %s. Requests %s' % (chained_campaign_prepid, page, len(chained_requests)))
+                logging.info('Inspecting chained requests of %s. Page: %s. Requests %s' % (chained_campaign_prepid, page, len(chained_requests)))
                 for chained_request_dict in chained_requests:
-                    print('Inspecting %s. %s. Step %s' % (chained_request_dict['prepid'],
-                                                          '->'.join(chained_request_dict['chain']),
-                                                          chained_request_dict['step']))
+                    logging.info('Inspecting %s. %s. Step %s' % (chained_request_dict['prepid'],
+                                                                 '->'.join(chained_request_dict['chain']),
+                                                                 chained_request_dict['step']))
+                    time.sleep(0.01)
                     chained_req = chained_request(chained_request_dict)
                     if chained_req:
-                        print(json.dumps(do_with_timeout(chained_req.inspect, timeout=300), indent=2))
+                        logging.info(json.dumps(do_with_timeout(chained_req.inspect, timeout=300), indent=2))
                     else:
-                        print('%s does not exist' % (chained_request_dict['prepid']))
+                        logging.warning('%s does not exist' % (chained_request_dict['prepid']))
 
                     time.sleep(0.1)
 
@@ -91,13 +94,14 @@ def multiple_inspect(chained_campaign_prepids):
 
             time.sleep(0.1)
         except Exception as e:
-            print('Exception while flowing chained campaign %s' % (chained_campaign_prepid))
-            print(e)
+            logging.error('Exception while flowing chained campaign %s' % (chained_campaign_prepid))
+            logging.error(e)
 
 
 if __name__ == '__main__':
     def get_user_role(*args, **kwargs):
         return 'administrator'
 
+    logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
     authenticator.get_user_role = types.MethodType(get_user_role, authenticator())
     multiple_inspect(get_all_chained_campaigns())
