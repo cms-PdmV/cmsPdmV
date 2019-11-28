@@ -54,7 +54,7 @@ def get_all_chained_campaigns():
         return []
 
 
-    def multiple_inspect(chained_campaign_prepids):
+def multiple_inspect(chained_campaign_prepids):
     chained_requests_db = database('chained_requests')
     logging.info('Chained campaigns inspect begin. Number of chained campaigns to be inspected: %s' % (len(chained_campaign_prepids)))
     for chained_campaign_index, chained_campaign_prepid in enumerate(chained_campaign_prepids):
