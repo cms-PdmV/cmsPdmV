@@ -658,6 +658,7 @@ class request(json_base):
                         'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
 
         self.check_for_collisions()
+        self.get_input_dataset_status()
         # start uploading the configs ?
         if not for_chain:
             self.set_status()
@@ -753,6 +754,7 @@ class request(json_base):
         # do a dataset collision check : remind that it requires the flows to have process_string properly set
         rdb = database('requests')
         self.check_for_collisions()
+        self.get_input_dataset_status()
         moveon_with_single_submit = True  # for the case of chain request submission
         is_the_current_one = False
         # check on position in chains
@@ -1829,209 +1831,36 @@ class request(json_base):
         self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
         return changes_happen
 
-    def get_stats_old(self, keys_to_import=None, override_id=None, limit_to_set=0.05,
-            refresh=False, forced=False):
+    def get_input_dataset_status(self):
+        input_dataset = self.get_attribute('input_dataset')
+        if not input_dataset:
+            return
 
-        # existing rwma
-        if not keys_to_import:
-            keys_to_import = ['pdmv_dataset_name',
-                'pdmv_dataset_list', 'pdmv_status_in_DAS', 'pdmv_dataset_statuses',
-                'pdmv_status_from_reqmngr', 'pdmv_evts_in_DAS', 'pdmv_open_evts_in_DAS',
-                'pdmv_submission_date', 'pdmv_submission_time', 'pdmv_type',
-                'pdmv_present_priority', 'pdmv_prep_id', 'pdmv_status_history_from_reqmngr']
+        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/outputDatasets',
+                                               options={'include_docs': True,
+                                                        'limit': 1,
+                                                        'key': '"%s"' % input_dataset})['rows']
+        status = None
+        prepid = self.get_attribute('prepid')
+        self.logger.info('Found %s workflows with %s as output dataset' % (len(stats_workflows), input_dataset))
+        if stats_workflows:
+            workflow = stats_workflows[0]
+            dataset_info = workflow.get('doc', {}).get('EventNumberHistory', [])
+            dataset_info = [x for x in dataset_info if input_dataset in x.get('Datasets', {})]
+            dataset_info = sorted(dataset_info, key=lambda x: x.get('Time', 0))
+            for entry in reversed(dataset_info):
+                if input_dataset in entry['Datasets']:
+                    status = entry['Datasets'][input_dataset].get('Type')
+                    self.logger.info('Status of input dataset %s of %s is %s' % (input_dataset,
+                                                                                 prepid,
+                                                                                 status))
+                    break
 
-        mcm_rr = self.get_attribute('reqmgr_name')
-        __curr_output = self.get_attribute('output_dataset')
-
-        # first trigger an update of the stats itself
-        if refresh:
-            from tools.stats_updater import stats_updater
-            # stats driveUpdate with search option for prepid
-            # on cmsdev13 machine
-            updater = stats_updater()
-            out = updater.update(self.get_attribute('prepid'))
-
-        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
-
-        changes_happen = False
-
-        # make a connection check to stats ! Get the views
-        if not statsDB.document_exists('_design/stats'):
-            self.logger.error('Connection to stats DB is down. Cannot get updated statistics')
-            return False
-
-        def transfer(stats_r, keys_to_import):
-            mcm_content = {}
-            if not len(keys_to_import):
-                keys_to_import = stats_r.keys()
-            for k in keys_to_import:
-                if k in stats_r:
-                    mcm_content[k] = stats_r[k]
-            return mcm_content
-
-        # update all existing
-        earliest_date = 0
-        earliest_time = 0
-        failed_to_find = []
-        for (rwma_i, rwma) in enumerate(mcm_rr):
-            if not statsDB.document_exists(rwma['name']):
-                self.logger.error('the request %s is linked in McM already, but is not in stats DB' % (rwma['name']))
-                # very likely, this request was aborted, rejected, or failed
-                # connection check was done just above
-                if rwma_i != 0:
-                    # always keep the original request
-                    changes_happen = True
-                    failed_to_find.append(rwma['name'])
-                stats_r = rwma['content']
-            else:
-                stats_r = statsDB.get(rwma['name'])
-
-            if ('pdmv_submission_date' in stats_r and earliest_date == 0) or (
-                    'pdmv_submission_date' in stats_r and int(earliest_date) > int(stats_r['pdmv_submission_date'])):
-                earliest_date = stats_r['pdmv_submission_date']  # yymmdd
-            if ('pdmv_submission_time' in stats_r and earliest_time == 0) or (
-                    'pdmv_submission_time' in stats_r and int(earliest_time) > int(stats_r['pdmv_submission_time'])):
-                earliest_time = stats_r['pdmv_submission_time']
-
-            # no need to copy over if it has just been noticed
-            # that it is not taken from stats but the mcm document itself
-            if not len(failed_to_find) or rwma['name'] != failed_to_find[-1]:
-                mcm_content = transfer(stats_r, keys_to_import)
-                if 'content' in mcm_rr[rwma_i] and len(mcm_content) != len(mcm_rr[rwma_i]['content']):
-                    changes_happen = True
-                mcm_rr[rwma_i]['content'] = mcm_content
-
-        # take out the one which were not found !
-        # the original one ([0]) is never removed
-        mcm_rr = filter(lambda wmr: not wmr['name'] in failed_to_find, mcm_rr)
-
-        if (not earliest_date or not earliest_time) and len(mcm_rr):
-            # this is a problem. probably the inital workflow was rejected even before stats could pick it up
-            # work is meant to be <something>_<date>_<time>_<a number>
-            # the date and time is UTC, while McM is UTC+2 : hence the need for rewinding two hours
-
-            (d, t) = mcm_rr[0]['name'].split('_')[-3:-1]
-            (d, t) = time.strftime(
-                "%y%m%d$%H%M%S",
-                time.gmtime(time.mktime(time.strptime(d + t,"%y%m%d%H%M%S")))).split('$')
-
-            earliest_date = d
-            earliest_time = t
-
-        #
-        # look for new ones
-        # we could have to de-sync the following with
-        # look_for_what = mcm_rr[0]['content']['prepid']
-        # to pick up chained requests taskchain clones
-        #
-        look_for_what = self.get_attribute('prepid')
-        if len(mcm_rr):
-            if 'pdmv_prep_id' in mcm_rr[0]['content']:
-                look_for_what = mcm_rr[0]['content']['pdmv_prep_id']  # which should be adapted on the other end to match
-
-        if override_id:
-            look_for_what = override_id
-        if look_for_what:
-            stats_rr = statsDB.query(query='prepid==%s' % (look_for_what), page_num=-1)
-        else:
-            stats_rr = []
-
-        # order them from [0] earliest to [n] latest
-        def sortRequest(r1, r2):
-            if r1['pdmv_submission_date'] == r2['pdmv_submission_date']:
-                return cmp(r1['pdmv_request_name'], r2['pdmv_request_name'])
-            else:
-                return cmp(r1['pdmv_submission_date'], r2['pdmv_submission_date'])
-
-        stats_rr.sort(cmp=sortRequest)
-
-        for stats_r in stats_rr:
-            # only add it if not present yet
-            if stats_r['pdmv_request_name'] in map(lambda d: d['name'], mcm_rr):
-                continue
-
-            # only add if the date is later than the earliest_date
-            if 'pdmv_submission_date' not in stats_r:
-                continue
-            if stats_r['pdmv_submission_date'] and int(stats_r['pdmv_submission_date']) < int(earliest_date):
-                continue
-            if not override_id and int(earliest_date) == 0 and int(earliest_time) == 0:
-                continue
-            if (stats_r['pdmv_submission_date'] and
-                    int(stats_r['pdmv_submission_date']) == int(earliest_date)):
-
-                if (earliest_time and 'pdmv_submission_time' in stats_r and
-                        stats_r['pdmv_submission_time'] and
-                        int(stats_r['pdmv_submission_time']) < int(earliest_time)):
-
-                    continue
-
-            mcm_content = transfer(stats_r, keys_to_import)
-            mcm_rr.append({'content': mcm_content,
-                    'name': stats_r['pdmv_request_name']})
-
-            changes_happen = True
-
-        if len(mcm_rr):
-            tiers_expected = self.get_tiers()
-            collected = self.collect_outputs(mcm_rr, tiers_expected, self.get_processing_strings(),
-                    self.get_attribute("dataset_name"), self.get_attribute("member_of_campaign"),
-                    skip_check=forced)
-
-            # 1st element which is not DQMIO
-            completed = 0
-            if len(collected):
-                # we find the first DS not DQMIO, if not possible default to 0th elem
-                __ds_to_calc = next((el for el in collected if el.find("DQMIO") == -1), collected[0])
-                (valid, completed) = self.collect_status_and_completed_events(mcm_rr, __ds_to_calc)
-            else:
-                self.logger.error('Could not calculate completed from last request')
-                completed = 0
-                # above how much change do we update : 5%
-
-            if (((float(completed) > float((1 + limit_to_set) * self.get_attribute('completed_events'))) or forced) and
-                    self.get_attribute("keep_output").count(True) > 0):
-
-                self.set_attribute('completed_events', completed)
-                changes_happen = True
-
-            # we check if output_dataset managed to change.
-            # ussually when request is assigned, but no evts are generated
-            # we check for done status so we wouldn't be updating old requests with changed infrastructure
-            # also we change it only if we keep any output in request
-            if ((__curr_output != collected) and (self.get_attribute('status') != 'done') and
-                self.get_attribute("keep_output").count(True) > 0) or forced == True:
-
-                self.logger.info("Stats update, DS differs. for %s" % (self.get_attribute("prepid")))
-                self.set_attribute('output_dataset', collected)
-                changes_happen = True
-
-        self.set_attribute('reqmgr_name', mcm_rr)
-
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        chained_requests = crdb.query('contains==%s' % (self.get_attribute('prepid')))
-        for cr in chained_requests:
-            chain = cr.get('chain', [])
-            index_of_this_request = chain.index(self.get_attribute('prepid'))
-            if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
-                next_request = request(rdb.get(chain[index_of_this_request + 1]))
-                if not next_request.get_attribute('input_dataset'):
-                    input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
-                    next_request.set_attribute('input_dataset', input_dataset)
-                    next_request.save()
-
-        if (len(mcm_rr) and 'content' in mcm_rr[-1] and
-                'pdmv_present_priority' in mcm_rr[-1]['content'] and
-                mcm_rr[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
-
-            self.set_attribute('priority', mcm_rr[-1]['content']['pdmv_present_priority'])
-            self.update_history({'action': 'wm priority',
-                    'step': mcm_rr[-1]['content']['pdmv_present_priority']})
-
-            changes_happen = True
-
-        return changes_happen
+        if status and status not in ('VALID',):
+            self.logger.error('Input dataset %s of %s is %s' % (input_dataset, prepid, status))
+            raise self.BadParameterValue('Input dataset of %s has status "%s" which is not allowed' % (prepid,
+                                                                                                       status))
 
     def inspect(self, force=False):
         # this will look for corresponding wm requests, add them,
