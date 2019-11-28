@@ -885,6 +885,9 @@ angular.module('testApp').controller('ModalDemoCtrl',
         case "rewind":
           $scope.single_step('rewind', prepid, '');
           break;
+        case "rewind to root":
+          $scope.single_step('rewind_to_root', prepid, '');
+          break;
         case "flow":
           $scope.flowChainedRequest(prepid, '');
           break;
