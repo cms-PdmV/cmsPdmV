@@ -501,6 +501,19 @@ class chained_request(json_base):
         if next_campaign.get_attribute('status') == 'stopped':
             raise self.CampaignStoppedException(next_campaign_id)
 
+        # Handle a strange case where next request is already done and current does not save output
+        if len(self.get_attribute('chain')) > self.get_attribute('step') + 1:
+            # If existing chain is long enough
+            existing_next_req = rdb.get(self.get_attribute('chain')[self.get_attribute('step') + 1])
+            if existing_next_req.get('status') == 'done':
+                self.set_attribute('step', self.get_attribute('step') + 1)
+                self.remove_from_nonflowing_list()
+                self.logger.info('Next request - %s is done, moving step to +1' % (existing_next_req.get('prepid')))
+                return {
+                    'result': True,
+                    'generated_request': existing_next_req.get('prepid')
+                }
+
         # what is going to be the required number of events for the next request
         # update the stats to its best
         # used for normal flowing
