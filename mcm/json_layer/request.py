@@ -1244,21 +1244,19 @@ class request(json_base):
         l_type = locator()
         infile = '#!/bin/bash\n'
 
-        first_tiers = ','.join(self.get_tier(0))
-        # pLHE, GS and wmLHEGS
-        gen_script_tiers = set(['LHE',
-                                'GEN-SIM',
-                                'LHE,GEN-SIM',
-                                'GEN-SIM,LHE',
-                                'GEN,LHE',
-                                'LHE,GEN',
-                                'GEN'])
+        sequence_steps = []
+        for seq in self.get_attribute('sequences'):
+            for st in seq.get('step', []):
+                sequence_steps.extend([x.strip() for x in st.split(',') if x.strip()])
 
-        sequence_step = self.get_attribute('sequences')[0].get('step', '')
-        if first_tiers not in gen_script_tiers and 'RECOBEFMIX' not in sequence_step:
+        sequence_steps = set(sequence_steps)
+        gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
+        if not (sequence_steps & gen_script_steps):
             gen_script = False
 
-        self.logger.info('Tiers for %s are %s' % (self.get_attribute('prepid'), first_tiers))
+        self.logger.info('Steps for %s are %s. Run GEN script: %s' % (self.get_attribute('prepid'),
+                                                                      sequence_steps,
+                                                                      'YES' if gen_script else 'NO'))
         # GEN checking script
         if gen_script:
             eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
@@ -1389,7 +1387,7 @@ class request(json_base):
                 else:
                     res += '--customise_commands %s ' % (random_seed_command)
 
-            if run and i == 0 and first_tiers in gen_script_tiers:
+            if run and i == 0 and (sequence_steps & gen_script_steps):
                 cdb = database('campaigns')
                 camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
                 if camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
