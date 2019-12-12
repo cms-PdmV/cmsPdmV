@@ -174,7 +174,7 @@ class ValidationHandler:
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)\n'
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory / 2000.0)))  # htcondor gives 2GB per core, if you want more memory you need to request more cores
-        to_write += '+AccountingGroup      = "group_u_CMS.CAF.PHYS"'
+        to_write += '+AccountingGroup      = "group_u_CMS.CAF.PHYS"\n'
         if validation_os:
             to_write += 'requirements          = (OpSysAndVer =?= "%s")\n' % (validation_os)
 
@@ -218,7 +218,7 @@ class ValidationHandler:
         return job_info
 
     def execute_command_submission(self, prepid, run_test_path):
-        cmd = 'cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
+        cmd = 'module load lxbatch/tzero && cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
         self.logger.info('Executing submission command: \n%s' % cmd)
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         message_ssh = "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)
@@ -319,8 +319,12 @@ class ValidationHandler:
                     self.logger.error('Error while reporting failure message: %s\ntraceback %s' % (str(e), traceback.format_exc()))
                     self.removeDirectory(test_path)
 
-    def get_jobs_status(self):
-        cmd = 'condor_q -af:h ClusterId JobStatus'
+    def get_jobs_status(self, caf=False):
+        cmd = ''
+        if caf:
+            cmd += 'module load lxbatch/tzero && '
+
+        cmd += 'condor_q -af:h ClusterId JobStatus'
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         if not self.check_ssh_outputs(stdin, stdout, stderr,
                 "Problem with SSH execution of command: %s" % (cmd)):
@@ -365,6 +369,8 @@ class ValidationHandler:
 
     def monitor_submmited_jobs(self):
         jobs_dict = self.get_jobs_status()
+        # Include jobs from both queues - CAF and not CAF
+        jobs_dict.update(self.get_jobs_status(caf=True))
         if jobs_dict is None:
             return
         remove_jobs = []
