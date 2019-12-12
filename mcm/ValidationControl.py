@@ -174,6 +174,7 @@ class ValidationHandler:
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)\n'
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory / 2000.0)))  # htcondor gives 2GB per core, if you want more memory you need to request more cores
+        to_write += '+AccountingGroup      = "group_u_CMS.CAF.PHYS"'
         if validation_os:
             to_write += 'requirements          = (OpSysAndVer =?= "%s")\n' % (validation_os)
 
