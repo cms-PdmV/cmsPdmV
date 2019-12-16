@@ -1317,7 +1317,7 @@ class request(json_base):
         # get the fragment if need be
         infile += self.retrieve_fragment()
 
-        infile += 'export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert\n'
+        infile += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert\n'
         fragment_retry_amount = 2
         # copy the fragment directly from the DB into a file
         if self.get_attribute('fragment'):
