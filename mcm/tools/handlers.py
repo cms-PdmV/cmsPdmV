@@ -145,6 +145,8 @@ class SubmissionsBase(Handler):
                 self.inject_logger.error(message)
                 return False
 
+            req.check_for_collisions()
+            req.get_input_dataset_status()
             req.set_attribute('approval', 'submit')
             req.reload()
             self.inject_logger.info('Set %s to %s/%s' % (self.prepid,

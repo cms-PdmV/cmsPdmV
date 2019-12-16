@@ -31,7 +31,7 @@ class GetBjobs(RESTResource):
             ssh_exec.close_executor()
 
     def create_command(self, options):
-        bcmd = 'condor_q'
+        bcmd = 'condor_q -nobatch '
         for opt in options.split(','):
             bcmd += opt
         return bcmd

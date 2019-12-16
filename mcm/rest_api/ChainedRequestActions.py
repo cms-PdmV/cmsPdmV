@@ -375,6 +375,42 @@ class RewindToPreviousStep(RESTResource):
                 "prepid": crid}
 
 
+class RewindToRoot(RewindToPreviousStep):
+
+    access_limit = access_rights.production_manager
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, chained_request_ids):
+        """
+        Rewind the provided coma separated chained requests to the root request
+        """
+        res = []
+        crdb = database('chained_requests')
+        crids = chained_request_ids.split(",")
+        for crid in crids:
+            ch_request = chained_request(crdb.get(crid))
+            if not ch_request:
+                res.append({"results": False, "message": "does not exist", "prepid": crid})
+                continue
+
+            step = ch_request.get_attribute('step')
+            for i in range(0, step):
+                res_one = self.rewind_one(crid)
+                if not res_one['results']:
+                    res.append(res_one)
+                    break
+            else:
+                res.append({'results': True, 'prepid': crid})
+
+        if len(res) != 1:
+            return res
+        else:
+            return res[0]
+
+
 class ApproveChainedRequest(RESTResource):
 
     access_limit = access_rights.production_manager

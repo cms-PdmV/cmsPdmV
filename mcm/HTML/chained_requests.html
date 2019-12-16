@@ -103,7 +103,10 @@
                   <a ng-click='isSureModal("soft reset", data.prepid)' rel="tooltip" title="Soft reset the flow" ng-hide="role(3);" ng-href="#">
                     <i class="icon-step-backward"></i>
                   </a>
-                  <a ng-click='isSureModal("rewind", data.prepid)' rel="tooltip" title="Rewind the flow" ng-hide="role(3);" ng-href="#">
+                  <a ng-click='isSureModal("rewind to root", data.prepid)' rel="tooltip" title="Rewind chained request to root" ng-hide="role(3);" ng-href="#">
+                    <i class="icon-fast-backward"></i>
+                  </a>
+                  <a ng-click='isSureModal("rewind", data.prepid)' rel="tooltip" title="Rewind chained request by one step" ng-hide="role(3);" ng-href="#">
                     <i class="icon-backward"></i>
                   </a>
                   <a ng-click='isSureModal("flow", data.prepid)' rel="tooltip" title="Flow" ng-hide="role(3);" ng-href="#">

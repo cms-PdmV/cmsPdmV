@@ -1951,7 +1951,12 @@ class RequestsPriorityChange(RESTResource):
         for request_dict in requests:
             request_prepid = request_dict['prepid']
             mcm_request = request(self.requests_db.get(request_prepid))
-            if not mcm_request.change_priority(priority().priority(request_dict['priority'])):
+            if 'priority_raw' in request_dict:
+                new_priority = request_dict['priority_raw']
+            else:
+                new_priority = priority().priority(request_dict['priority'])
+
+            if not mcm_request.change_priority(new_priority):
                 message = 'Unable to set new priority in request %s' % request_prepid
                 fails.append(message)
                 self.logger.error(message)
