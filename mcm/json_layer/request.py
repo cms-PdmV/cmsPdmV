@@ -1253,81 +1253,85 @@ class request(json_base):
         bash_file = ['#!/bin/bash', '']
 
         # Add GEN script part if needed
-        first_sequence_datatiers = ','.join(self.get_tier(0))
-        self.logger.info('Datatiers for first sequence of %s are %s' % (prepid, first_sequence_datatiers))
-        gen_first_sequence_datatiers = set(['LHE',
-                                            'GEN-SIM',
-                                            'LHE,GEN-SIM',
-                                            'GEN-SIM,LHE',
-                                            'GEN,LHE',
-                                            'LHE,GEN',
-                                            'GEN'])
+        sequence_steps = []
+        for seq in self.get_attribute('sequences'):
+            for st in seq.get('step', []):
+                sequence_steps.extend([x.strip() for x in st.split(',') if x.strip()])
 
-        if for_validation:
-            first_sequence_steps = self.get_attribute('sequences')[0].get('step', '')
-            self.logger.info('Steps of first sequence steps of %s are %s' % (prepid, first_sequence_steps))
-            # If either --datatier is in the list or RECOBEFMIX is in steps
-            # RECOBEFMIX is FastSim, it should trigger the gen_checking_script check
-            if first_sequence_datatiers in gen_first_sequence_datatiers or 'RECOBEFMIX' in first_sequence_steps:
-                # Download the script
-                bash_file += ['rm -f request_fragment_check.py',
-                              'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py']
-                # Checking script invocation
-                request_fragment_check = 'python request_fragment_check.py --bypass_status --prepid %s' % (prepid)
+        sequence_steps = set(sequence_steps)
+        gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
+        gen_script = for_validation
+        if not (sequence_steps & gen_script_steps):
+            gen_script = False
+
+        self.logger.info('Steps for %s are %s. Run GEN script: %s' % (self.get_attribute('prepid'),
+                                                                      sequence_steps,
+                                                                      'YES' if gen_script else 'NO'))
+
+        add_dqm_upload = for_validation and automatic_validation and (sequence_steps & gen_script_steps)
+        self.logger.info('Add DQM upload: %s' % ('YES' if add_dqm_upload else 'NO'))
+        if gen_script:
+            # Download the script
+            bash_file += ['# GEN Script begin',
+                          'rm -f request_fragment_check.py',
+                          'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py']
+            # Checking script invocation
+            request_fragment_check = 'python request_fragment_check.py --bypass_status --prepid %s' % (prepid)
+            if is_dev:
+                # Add --dev, so script would use McM DEV
+                request_fragment_check += ' --dev'
+
+            if automatic_validation:
+                # For automatic validation
                 if is_dev:
-                    # Add --dev, so script would use McM DEV
-                    request_fragment_check += ' --dev'
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
+                else:
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
 
-                if automatic_validation:
-                    # For automatic validation
-                    if is_dev:
-                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
-                    else:
-                        eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
+                # Set variables to save the script output
+                bash_file += ['REQUEST_LOG=%s/%s.log' % (eos_path, prepid),
+                              'REQUEST_NEWEST_LOG=%s/%s_newest.log' % (eos_path, prepid),
+                              'mkdir -p %s' % (eos_path)]
 
-                    # Set variables to save the script output
-                    bash_file += ['REQUEST_LOG=%s/%s.log' % (eos_path, prepid),
-                                  'REQUEST_NEWEST_LOG=%s/%s_newest.log' % (eos_path, prepid),
-                                  'mkdir -p %s' % (eos_path)]
+                # Point output to EOS
+                # Save stdout and stderr
+                request_fragment_check += '> $REQUEST_NEWEST_LOG 2>&1'
 
-                    # Point output to EOS
-                    # Save stdout and stderr
-                    request_fragment_check += '> $REQUEST_NEWEST_LOG 2>&1'
+            # Execute the GEN script
+            bash_file += [request_fragment_check]
+            # Get exit code of GEN script
+            bash_file += ['GEN_ERR=$?']
+            if automatic_validation:
+                # Add latest log to all logs
+                bash_file += ['cat $REQUEST_NEWEST_LOG >> $REQUEST_LOG',
+                              # Write a couple of empty lines to the end of a file
+                              'echo "" >> $REQUEST_LOG',
+                              'echo "" >> $REQUEST_LOG',
+                              # Print newest log to stdout
+                              'echo "--BEGIN GEN Request checking script output--"',
+                              'cat $REQUEST_NEWEST_LOG',
+                              'echo "--END GEN Request checking script output--"']
 
-                # Execute the GEN script
-                bash_file += [request_fragment_check]
-                # Get exit code of GEN script
-                bash_file += ['GEN_ERR=$?']
-                if automatic_validation:
-                    # Add latest log to all logs
-                    bash_file += ['cat $REQUEST_NEWEST_LOG >> $REQUEST_LOG',
-                                  # Write a couple of empty lines to the end of a file
-                                  'echo "" >> $REQUEST_LOG',
-                                  'echo "" >> $REQUEST_LOG',
-                                  # Print newest log to stdout
-                                  'echo "--BEGIN GEN Request checking script output--"',
-                                  'cat $REQUEST_NEWEST_LOG',
-                                  'echo "--END GEN Request checking script output--"']
-
-                # Check exit code of script
-                bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
-                              '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
-                              '  echo "Validation WILL NOT RUN"',
-                              '  echo "Please correct errors in the request and run validation again"',
-                              '  exit $GEN_ERR',
-                              'fi',
-                              # If error code is zero, continue to validation
-                              'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
-                              # Empty line after GEN business
-                              '']
+            # Check exit code of script
+            bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
+                          '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
+                          '  echo "Validation WILL NOT RUN"',
+                          '  echo "Please correct errors in the request and run validation again"',
+                          '  exit $GEN_ERR',
+                          'fi',
+                          # If error code is zero, continue to validation
+                          'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
+                          '# GEN Script end',
+                          # Empty line after GEN business
+                          '']
 
         # Set up CMSSW environment
         bash_file += self.make_release().strip().split('\n')
         # Get the fragment if need to
         bash_file += self.retrieve_fragment().strip().split('\n')
 
-        if not for_validation:
-            bash_file += ['export X509_USER_PROXY=$HOME/private/personal/voms_proxy.cert', '']
+        if not for_validation or (for_validation and automatic_validation):
+            bash_file += ['export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert', '']
 
         # Download the fragment directly from McM into a file
         fragment_name = self.get_fragment()
@@ -1361,6 +1365,9 @@ class request(json_base):
                       'cd ../../']
         configuration_names = []
         cms_drivers = self.build_cmsDrivers()
+        if add_dqm_upload:
+            cms_drivers = self.update_cmsdrivers_for_dqm(cms_drivers)
+
         for i, cms_driver in enumerate(cms_drivers):
             # check if customization is needed to check it out from cvs
             if '--customise ' in cms_driver:
@@ -1391,7 +1398,7 @@ class request(json_base):
             cms_driver += '--python_filename %s --no_exec ' % (configuration_names[-1])
 
             # If it's for validation and it matches conditions for gen checking script
-            if for_validation and i == 0 and first_sequence_datatiers in gen_first_sequence_datatiers:
+            if for_validation and i == 0 and gen_script:
                 campaign_db = database('campaigns')
                 camp = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
                 # Only if campaign cmssw is >= 9.3
@@ -1444,7 +1451,67 @@ class request(json_base):
                               'grep "TotalJobCPU" %s' % runtest_xml_file,
                               'grep "TotalJobTime" %s' % runtest_xml_file]
 
+            if add_dqm_upload:
+                bash_file += ['']
+                conditions = ''
+                if '--conditions' in cms_driver:
+                    conditions = '--conditions ' + self.extract_value_from_cmsdriver(cms_driver, '--conditions')
+
+                era = ''
+                if '--era' in cms_driver:
+                    era = '--era ' + self.extract_value_from_cmsdriver(cms_driver, '--era')
+
+
+                file_in = self.extract_value_from_cmsdriver(cms_driver, '--fileout').replace('.root', '_inDQM.root')
+                bash_file += ['cmsDriver.py step3 --python_file harvest.py %s --filein %s --step HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM %s --mc -n $EVENTS' % (conditions, file_in, era)]
+                dqm_file_name = 'DQM_V0001_R000000001__RelVal%s__%s-%s-v1__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), conditions.replace('--conditions ', '').strip())
+                bash_file += ['mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s' % (dqm_file_name)]
+                bash_file += ['visDQMUpload.py https://cmsweb-testbed.cern.ch/dqm/relval-test %s' % (dqm_file_name)]
+
+                # (or perhaps as a test here: 'https://cmsweb-testbed.cern.ch/dqm/relval')
+
         return '\n'.join(bash_file)
+
+    def extract_value_from_cmsdriver(self, driver, attribute):
+        if attribute in driver:
+            value = [x.strip() for x in driver.split(attribute)[1].split(' ') if x.strip()][0]
+            return value
+        else:
+            return None
+
+    def update_cmsdrivers_for_dqm(self, drivers):
+        new_drivers = []
+        for driver in drivers:
+            step = self.extract_value_from_cmsdriver(driver, '--step')
+            if not step:
+                # Very very strange
+                new_drivers.append(driver)
+                continue
+
+            if 'VALIDATION:genvalid_all' not in driver:
+                driver = driver.replace('--step %s' % (step), '--step %s,VALIDATION:genvalid_all' % (step))
+
+            eventcontent = self.extract_value_from_cmsdriver(driver, '--eventcontent')
+            if not step:
+                # Very very strange
+                new_drivers.append(driver)
+                continue
+
+            if 'DQM' not in driver:
+                driver = driver.replace('--eventcontent %s' % (eventcontent), '--eventcontent %s,DQM' % (eventcontent))
+
+            datatier = self.extract_value_from_cmsdriver(driver, '--datatier')
+            if not step:
+                # Very very strange
+                new_drivers.append(driver)
+                continue
+
+            if 'DQMIO' not in driver:
+                driver = driver.replace('--datatier %s' % (datatier), '--datatier %s,DQMIO' % (datatier))
+
+            new_drivers.append(driver)
+
+        return new_drivers
 
     def modify_priority(self, new_priority):
         self.set_attribute('priority', new_priority)
