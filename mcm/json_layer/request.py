@@ -2517,56 +2517,35 @@ class request(json_base):
 
     def check_file_size(self, file_size, events_pass, events_ran):
         # size check
-        if file_size > int(1.1 * sum(self.get_attribute('size_event'))):
-            # notify if more than 10% discrepancy found !
-            subject = 'Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, size/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).') % (
-                            self.get_attribute('prepid'),
-                            sum(self.get_attribute('size_event')),
-                            file_size,
-                            events_pass,
-                            events_ran)
-
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        number_of_sequences = len(self.get_attribute('sequences'))
+        sum_of_current_size_event = sum(self.get_attribute('size_event'))
+        prepid = self.get_attribute('prepid')
+        if file_size > int(1.1 * sum_of_current_size_event):
+            # Measured size is >10% bigger
+            subject = 'Runtest for %s: size per event under-estimate.' % (prepid)
+            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
+                       prepid,
+                       sum_of_current_size_event,
+                       file_size,
+                       events_pass,
+                       events_ran)
 
             self.notify(subject, message, accumulate=True)
-
-        self.set_attribute('size_event', [file_size])
-        self.reload()
-
-        if file_size < int(0.90 * sum(self.get_attribute('size_event'))):
-            # size over-estimated
-            # warn if over-estimated by more than 10%
+        elif file_size < int(0.9 * sum_of_current_size_event):
+            # Measured size is > 10% smaller
             subject = 'Runtest for %s: size per event over-estimate' % (self.get_attribute('prepid'))
-            message = ('For the request %s, size/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).') % (
-                        self.get_attribute('prepid'),
-                        sum(self.get_attribute('size_event')),
-                        file_size,
-                        events_pass,
-                        events_ran)
-
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
+                       prepid,
+                       sum_of_current_size_event,
+                       file_size,
+                       events_pass,
+                       events_ran)
 
             self.notify(subject, message, accumulate=True)
-            # correct the value from the runtest.
-            self.set_attribute('size_event', [file_size])
-            self.reload()
+
+        # Correct the value from the test run
+        self.set_attribute('size_event', [float(file_size) / number_of_sequences] * number_of_sequences)
+        self.reload()
 
     def check_memory(self, memory, events_pass, events_ran):
         if memory > self.get_attribute('memory'):
