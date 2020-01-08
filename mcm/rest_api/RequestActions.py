@@ -114,6 +114,16 @@ class RequestRESTResource(RESTResource):
 
         self.logger.info('New prepid: %s' % (mcm_req.get_attribute('prepid')))
 
+        number_of_sequences = len(camp.get_attribute('sequences'))
+        if 'time_event' not in data:
+            self.logger.info('No time_event in data, creating %s default values' % (number_of_sequences))
+            mcm_req.set_attribute('time_event', [-1] * number_of_sequences)
+
+        if 'size_event' not in data:
+            self.logger.info('No size_event in data, creating %s default values' % (number_of_sequences))
+            mcm_req.set_attribute('size_event', [-1] * number_of_sequences)
+
+
         member_of_campaign = mcm_req.get_attribute('member_of_campaign')
         all_ppd_tags = settings.get_value('ppd_tags')
         allowed_ppd_tags = set(all_ppd_tags.get('all',[])).union(set(all_ppd_tags.get(member_of_campaign,[])))

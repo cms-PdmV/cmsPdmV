@@ -2360,73 +2360,68 @@ class request(json_base):
     def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
         timing_n_limit = settings.get_value('timing_n_limit')
         timing_fraction = settings.get_value('timing_fraction')
+        prepid = self.get_attribute('prepid')
+        number_of_sequences = len(self.get_attribute('sequences'))
+        sum_of_current_time_event = self.get_sum_time_events()
 
         # check if we ran a meaninful number of events and that measured time_event is above threshold
-        # makes sense for really long events.
+        # makes sense for cases where time per event is very big
         if evts_pass < timing_n_limit:
-            subject = 'Runtest for %s: too few events for estimate' % (self.get_attribute('prepid'))
-            message = ('For the request %s, time/event=%s was given.'
-                    ' Ran %s - too few to do accurate estimation') % (
-                            self.get_attribute('prepid'),
-                            self.get_sum_time_events(),
-                            evts_pass)
-
-            notification(subject, message, [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=self)
+            subject = 'Runtest for %s: too few events for estimate' % (prepid)
+            message = 'For the request %s, time per event %ss was given. Ran %s events - too few to do accurate estimation' % (
+                       prepid,
+                       sum_of_current_time_event,
+                       evts_pass)
 
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
         # TO-DO: change the 0.2 to value from settings DB
-        if (measured_time_evt <= self.get_sum_time_events() * (1 - timing_fraction)):
-            __all_values = self.get_attribute('time_event') + [measured_time_evt]
-            __mean_value = [float(sum(__all_values)) / max(len(__all_values), 1)] * len(self.get_attribute('time_event'))
-            subject = 'Runtest for %s: time per event over-estimate' % (self.get_attribute('prepid'))
-            message = ('For the request %s, time/event=%s was given, %s was'
-                       ' measured from %s events (ran %s).'
-                       ' Not within %d%%. Setting to: %s.') % (
-                        self.get_attribute('prepid'),
-                        self.get_sum_time_events(),
-                        measured_time_evt,
-                        evts_pass,
-                        evts_ran,
-                        timing_fraction * 100,
-                        __mean_value)
+        if (measured_time_evt < sum_of_current_time_event * (1 - timing_fraction)):
+            all_values = self.get_attribute('time_event') + [measured_time_evt]
+            mean_value = [float(sum(all_values)) / len(all_values)] * number_of_sequences
+            subject = 'Runtest for %s: time per event over-estimate' % (prepid)
+            message = 'For the request %s, time per event %ss was given, %ss was measured from %s events (ran %s). Not within %d%%. Setting to: %s.' % (
+                       prepid,
+                       sum_of_current_time_event,
+                       measured_time_evt,
+                       evts_pass,
+                       evts_ran,
+                       timing_fraction * 100,
+                       mean_value)
 
-            self.set_attribute('time_event', __mean_value)
+            self.set_attribute('time_event', mean_value)
             self.reload()
             self.notify(subject, message, accumulate=True)
             raise self.WrongTimeEvent(message)
 
-        elif (measured_time_evt >= self.get_sum_time_events() * (1 + timing_fraction)):
-            __all_values = self.get_attribute('time_event') + [measured_time_evt]
-            __mean_value = [float(sum(__all_values)) / max(len(__all_values), 1)] * len(self.get_attribute('time_event'))
-            subject = 'Runtest for %s: time per event under-estimate.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, time/event=%s was given, %s was'
-                       ' measured from %s events (ran %s).'
-                       ' Not within %d%%. Setting to: %s.') % (
-                        self.get_attribute('prepid'),
-                        self.get_sum_time_events(),
-                        measured_time_evt,
-                        evts_pass,
-                        evts_ran,
-                        timing_fraction*100,
-                        __mean_value)
+        elif (measured_time_evt > sum_of_current_time_event * (1 + timing_fraction)):
+            all_values = self.get_attribute('time_event') + [measured_time_evt]
+            mean_value = [float(sum(all_values)) / len(all_values)] * number_of_sequences
+            subject = 'Runtest for %s: time per event under-estimate.' % (prepid)
+            message = 'For the request %s, time per event %ss was given, %ss was measured from %s events (ran %s). Not within %d%%. Setting to: %s.' % (
+                       prepid,
+                       sum_of_current_time_event,
+                       measured_time_evt,
+                       evts_pass,
+                       evts_ran,
+                       timing_fraction * 100,
+                       mean_value)
 
-            self.set_attribute('time_event', __mean_value)
+            self.set_attribute('time_event', mean_value)
             self.reload()
             self.notify(subject, message, accumulate=True)
             raise self.WrongTimeEvent(message)
 
         else:
             # fine tune the value
-            self.logger.info("validation_test time_event fine tune. Previously:%s measured:%s, events:%s" % (
-                    self.get_sum_time_events(), measured_time_evt, evts_pass))
+            self.logger.info('Validation for %s time per event fine tune. Previously: %ss measured:%ss, events:%ss' % (
+                              prepid,
+                              sum_of_current_time_event,
+                              measured_time_evt,
+                              evts_pass))
 
-            self.set_attribute('time_event', [measured_time_evt] * len(self.get_attribute('time_event')))
+            self.set_attribute('time_event', [measured_time_evt] * number_of_sequences)
 
     def check_cpu_efficiency(self, cpu_time, total_time):
         # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
@@ -2478,56 +2473,35 @@ class request(json_base):
 
     def check_file_size(self, file_size, events_pass, events_ran):
         # size check
-        if file_size > int(1.1 * sum(self.get_attribute('size_event'))):
-            # notify if more than 10% discrepancy found !
-            subject = 'Runtest for %s: size per event under-estimate.' % (self.get_attribute('prepid'))
-            message = ('For the request %s, size/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).') % (
-                            self.get_attribute('prepid'),
-                            sum(self.get_attribute('size_event')),
-                            file_size,
-                            events_pass,
-                            events_ran)
-
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+        number_of_sequences = len(self.get_attribute('sequences'))
+        sum_of_current_size_event = sum(self.get_attribute('size_event'))
+        prepid = self.get_attribute('prepid')
+        if file_size > int(1.1 * sum_of_current_size_event):
+            # Measured size is >10% bigger
+            subject = 'Runtest for %s: size per event under-estimate.' % (prepid)
+            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
+                       prepid,
+                       sum_of_current_size_event,
+                       file_size,
+                       events_pass,
+                       events_ran)
 
             self.notify(subject, message, accumulate=True)
-
-        self.set_attribute('size_event', [file_size])
-        self.reload()
-
-        if file_size < int(0.90 * sum(self.get_attribute('size_event'))):
-            # size over-estimated
-            # warn if over-estimated by more than 10%
+        elif file_size < int(0.9 * sum_of_current_size_event):
+            # Measured size is > 10% smaller
             subject = 'Runtest for %s: size per event over-estimate' % (self.get_attribute('prepid'))
-            message = ('For the request %s, size/event=%s was given, %s was'
-                    ' measured from %s events (ran %s).') % (
-                        self.get_attribute('prepid'),
-                        sum(self.get_attribute('size_event')),
-                        file_size,
-                        events_pass,
-                        events_ran)
-
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
+            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
+                       prepid,
+                       sum_of_current_size_event,
+                       file_size,
+                       events_pass,
+                       events_ran)
 
             self.notify(subject, message, accumulate=True)
-            # correct the value from the runtest.
-            self.set_attribute('size_event', [file_size])
-            self.reload()
+
+        # Correct the value from the test run
+        self.set_attribute('size_event', [float(file_size) / number_of_sequences] * number_of_sequences)
+        self.reload()
 
     def check_memory(self, memory, events_pass, events_ran):
         if memory > self.get_attribute('memory'):
