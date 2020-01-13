@@ -28,6 +28,7 @@ class ValidationHandler:
     JOBS_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.txt'
     LOG_FILE_NAME = 'validationJobs' + os.environ['HOSTNAME'] + '.log'
     TEST_FILE_NAME = '%s_run_test.sh'
+    LAUNCHER_FILE_NAME = '%s_run_launcher.sh'
     CONDOR_FILE_NAME = 'cluster.sub'
     JOB_ID = 'job_id'
     DOC_REV = '_rev'
@@ -142,6 +143,7 @@ class ValidationHandler:
     def create_test_file(self, to_write, run_test_path, file_name):
         installer(run_test_path, care_on_existing=False, is_abs_path=True)
         test_file_path = run_test_path + '/' + file_name
+        self.logger.info('Writing %s characters to %s' % (len(to_write), test_file_path))
         try:
             with open(test_file_path, 'w') as there:
                 there.write(to_write)
@@ -164,19 +166,50 @@ class ValidationHandler:
         transfer_output_files = '_rt.xml, '.join(transfer_files)
         transfer_output_files += '_rt.xml'
         file_name = self.TEST_FILE_NAME % prepid
+        launcher_file_name = self.LAUNCHER_FILE_NAME % prepid
         to_write =  'universe              = vanilla\n'
         to_write += 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv\n'
-        to_write += 'executable            = %s\n' % file_name
+        to_write += 'executable            = %s\n' % launcher_file_name
         to_write += 'output                = %s.out\n' % file_name
         to_write += 'error                 = %s.err\n' % file_name
         to_write += 'log                   = %s.log\n' % file_name
         to_write += 'transfer_output_files = %s\n' % transfer_output_files
+        to_write += 'transfer_input_files  = %s\n' % file_name
         to_write += 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)\n'
         to_write += '+MaxRuntime           = %s\n' % timeout
         to_write += 'RequestCpus           = %s\n' % max(threads, int(math.ceil(memory / 2000.0)))  # htcondor gives 2GB per core, if you want more memory you need to request more cores
         to_write += '+AccountingGroup      = "group_u_CMS.CAF.PHYS"\n'
-        if validation_os:
-            to_write += 'requirements          = (OpSysAndVer =?= "%s")\n' % (validation_os)
+        to_write += 'requirements          = (OpSysAndVer =?= "CentOS7")\n'
+
+
+        # Nasty hasck to split executable file into two: old one and launcher
+        launcher_file_content = ['#!/bin/bash', '']
+        with open(run_test_path + '/' + file_name, 'r') as executable_file:
+           lines = [x.rstrip() for x in executable_file.read().split('\n')]
+           start_line = -1
+           end_line = -1
+
+           if 'REQUEST=%s' % (prepid) in lines:
+               start_line = lines.index('REQUEST=%s' % (prepid))
+
+           if 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"' in lines:
+               end_line = lines.index('echo "Running VALIDATION. GEN Request Checking Script returned no errors"')
+
+           if start_line != -1 and end_line != -1:
+               launcher_file_content += lines[start_line:end_line + 1]
+               del lines[start_line:end_line + 1]
+
+           launcher_file_content += ['chmod +x %s' % (file_name)]
+           if validation_os == 'SLCern6':
+               launcher_file_content += ['singularity run -B /afs -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
+           else:
+               launcher_file_content += ['source %s' % (file_name)]
+
+        with open(run_test_path + '/' + file_name, 'w') as executable_file:
+            executable_file.write('\n'.join(lines))
+
+        with open(run_test_path + '/' + launcher_file_name, 'w') as launcher_file:
+            launcher_file.write('\n'.join(launcher_file_content))
 
         to_write += 'queue'
         config_file_path = run_test_path + '/' + self.CONDOR_FILE_NAME
@@ -219,6 +252,7 @@ class ValidationHandler:
 
     def execute_command_submission(self, prepid, run_test_path):
         cmd = 'module load lxbatch/tzero && cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
+        # cmd = 'cd %s && condor_submit %s' % (run_test_path, self.CONDOR_FILE_NAME)
         self.logger.info('Executing submission command: \n%s' % cmd)
         stdin, stdout, stderr = self.ssh_exec.execute(cmd)
         message_ssh = "There was a problem with SSH remote execution of command:\n{0}!".format(cmd)
