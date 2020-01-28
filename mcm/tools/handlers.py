@@ -136,7 +136,7 @@ class SubmissionsBase(Handler):
 
     def submit_configs(self):
         # Upload all config files to config cache, with "configuration economy" already implemented
-        for req in self.requests:
+        for req_i, req in enumerate(self.requests):
             if (self.check_approval and req.get_attribute('approval') != 'approve') or req.get_attribute('status') != 'approved':
                 message = 'Request %s is in "%s"/"%s" approval/status, requires "approve"/"approved"' % (
                     self.prepid,
@@ -146,7 +146,8 @@ class SubmissionsBase(Handler):
                 return False
 
             req.check_for_collisions()
-            req.get_input_dataset_status()
+            if req_i == 0:
+                req.get_input_dataset_status()
             req.set_attribute('approval', 'submit')
             req.reload()
             self.inject_logger.info('Set %s to %s/%s' % (self.prepid,
