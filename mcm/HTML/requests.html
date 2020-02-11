@@ -302,10 +302,10 @@
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[value.db_name]}}' rel="tooltip" title="View request for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign {{data[value.db_name]}}" target="_self"><i class="icon-book"></i></a>
               </div>
-              <div ng-switch-when="Validation">
+	      <div ng-switch-when="DQM Validation">
                 <ul style="margin-bottom: 0px;">
-                  <li ng-show="data[value.db_name].valid != undefined"><i class="icon-ok" ng-show="data[value.db_name].valid"></i> <i class="icon-remove" ng-show="!data[value.db_name].valid"></i></li>
-                  <li ng-show="data[value.db_name].nEvents != undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li>
+                  <li ng-show="data[value.db_name].dqmvalid != undefined"><i class="icon-ok" ng-show="data[value.db_name].dqmvalid"></i> <i class="icon-remove" ng-show="!data[value.db_name].dqmvalid"></i></li>
+                  <!-- #PG <li ng-show="data[value.db_name].nEvents != undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li> -->
                   <li ng-show="data[value.db_name].dqm != undefined"> dqm
                     <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                     <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
