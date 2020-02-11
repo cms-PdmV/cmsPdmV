@@ -56,7 +56,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {},
+        'validation': {"valid":True,"dqm":"empty_link"},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -94,8 +94,6 @@ class request(json_base):
         'interested_pwg': [],
         'ppd_tags': [],
         'events_per_lumi': 0,
-        #PG adding flag for producing DQM in validation
-        'dqmvalid': True
     }
 
     def __init__(self, json_input=None):
@@ -1386,7 +1384,7 @@ class request(json_base):
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
             #PG: adding datatier for DQM validation
-            if(self.get_attribute('dqmvalid'):
+            if(self.get_attribute('validation')['valid']):
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 
                 dqm_eventcontent = ',VALIDATION:genvalid_all' 
