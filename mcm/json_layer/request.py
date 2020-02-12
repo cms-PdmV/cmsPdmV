@@ -56,7 +56,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {"valid":True,"dqm":"empty_link"},
+        'validation': {"valid":True,"content":"all","dqm":"empty_link"},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -1387,7 +1387,19 @@ class request(json_base):
             if(self.get_attribute('validation')['valid']):
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 
-                dqm_eventcontent = ',VALIDATION:genvalid_all' 
+
+                if(self.get_attribute('validation')['content']=='all'):
+                    dqm_eventcontent = ',VALIDATION:genvalid_all' 
+                elif(self.get_attribute('validation')['content']=='DY'):
+                    dqm_eventcontent = ',VALIDATION:dy'
+                elif(self.get_attribute('validation')['content']=='Top'):
+                    dqm_eventcontent = ',VALIDATION:top'
+                elif(self.get_attribute('validation')['content']=='W'):
+                    dqm_eventcontent = ',VALIDATION:w'
+                elif(self.get_attribute('validation')['content']=='QCD'):
+                    dqm_eventcontent = ',VALIDATION:qcd'
+                elif(self.get_attribute('validation')['content']=='Higgs'):
+                    dqm_eventcontent = ',VALIDATION:higgs'
 
                 #for GEN validation, one needs to modify the datatier
                 new_datatier = cmsd.split('--datatier ')[1].split()[0]
