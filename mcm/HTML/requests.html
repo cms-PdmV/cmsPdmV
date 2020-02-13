@@ -307,7 +307,7 @@
                   <li ng-show="data[value.db_name].valid != undefined"><i class="icon-ok" ng-show="data[value.db_name].valid"></i> <i class="icon-remove" ng-show="!data[value.db_name].valid"></i></li>
 		  <li ng-show="data[value.db_name].content != undefined"> data[value.db_name].content </li>
                   <!-- #PG <li ng-show="data[value.db_name].nEvents != undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li> -->
-                  <li ng-show="data[value.db_name].dqm != undefined"> dqm
+                  <li ng-show="data[value.db_name].valid"> DQM
                     <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                     <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
                   </li>

@@ -1384,9 +1384,10 @@ class request(json_base):
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
             if self.get_attribute('validation')['valid']:
+                self.set_attribute('validation'['dqm'], 'RelVal' + self.get_attribute('dataset_name'))
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 
-                dqm_eventcontent = ',VALIDATION:' + self.get_attribute('validation').get('content', 'all').lower()
+                dqm_eventcontent = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
 
                 #for GEN validation, one needs to modify the datatier
                 new_datatier = cmsd.split('--datatier ')[1].split()[0]
