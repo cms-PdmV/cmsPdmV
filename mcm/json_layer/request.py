@@ -56,7 +56,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {"valid":True,"content":"all","dqm":None},
+        'validation': {"valid":False,"content":"all","dqm":None},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
