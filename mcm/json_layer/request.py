@@ -56,7 +56,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {"valid":True,"content":"all","dqm":"empty_link"},
+        'validation': {"valid":True,"content":"all","dqm":None},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -1383,7 +1383,6 @@ class request(json_base):
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
-            #PG: adding datatier for DQM validation
             if(self.get_attribute('validation')['valid']):
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 
@@ -1507,13 +1506,13 @@ class request(json_base):
         # no need for directory traversal (parent stays unaffected)
 
 
-        #PG: adding cmsDriver and upload for DQM histograms
         if(for_validation):
                
                infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions '+str(self.get_attribute('sequences')[sequence_index]["conditions"])+' --filein file:'+str(output_file)+' -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n'
 
                infile += 'cmsRun harvest.py\n'
 
+               #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
                filename_dqm = 'DQM_V0001_R000000001__RelVal'+str(self.get_attribute('dataset_name'))+'__'+str(self.get_attribute('cmssw_release'))+'-'+str(self.get_attribute('sequences')[sequence_index]["conditions"])+'__DQMIO.root'
                infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root '+str(filename_dqm)+'\n'
                infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
@@ -1525,7 +1524,7 @@ class request(json_base):
         if (directory or for_validation) and not l_type.isDev():
             infile += 'rm -rf %s' % (self.get_attribute('cmssw_release'))
 
-         return infile
+        return infile
 
     def modify_priority(self, new_priority):
         self.set_attribute('priority', new_priority)
@@ -3197,11 +3196,5 @@ class request(json_base):
         result = str(os.popen(command).read())
         return result
 
-    def get_dqm_output(self):
-        #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
-        filename = 'DQM_V0001_R000000001__RelVal'+str(self.get_attribute('dataset_name'))+'__'+str(self.get_attribute('cmssw_release'))+'-'+str(self.get_attribute('sequences')[sequence_index]["eventcontent"])+'__DQMIO.root'
-        command += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root '+str(filename)
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh'
-        command += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ '+str(filename)
-        result = str(os.popen(command).read())
-        return result
+
+
