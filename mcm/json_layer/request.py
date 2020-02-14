@@ -1383,7 +1383,7 @@ class request(json_base):
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
-            if self.get_attribute('validation')['valid']:
+            if self.get_attribute('validation').get('valid', False):
                 self.set_attribute('validation'['dqm'], 'RelVal' + self.get_attribute('dataset_name'))
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 

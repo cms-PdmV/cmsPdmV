@@ -189,11 +189,15 @@ class ValidationHandler:
            start_line = -1
            end_line = -1
 
-           if 'REQUEST=%s' % (prepid) in lines:
-               start_line = lines.index('REQUEST=%s' % (prepid))
+           for i, l in enumerate(lines):
+               if l.startswith('REQUEST='):
+                   start_line = i
+                   break
 
-           if 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"' in lines:
-               end_line = lines.index('echo "Running VALIDATION. GEN Request Checking Script returned no errors"')
+           for i, l in enumerate(lines):
+               if l.startswith('echo "Running VALIDATION.'):
+                   end_line = i
+                   break
 
            if start_line != -1 and end_line != -1:
                launcher_file_content += lines[start_line:end_line + 1]
@@ -201,7 +205,7 @@ class ValidationHandler:
 
            launcher_file_content += ['chmod +x %s' % (file_name)]
            if validation_os == 'SLCern6':
-               launcher_file_content += ['singularity run -B /afs -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
+               launcher_file_content += ['singularity run -B /afs -B /eos -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
            else:
                launcher_file_content += ['source %s' % (file_name)]
 
