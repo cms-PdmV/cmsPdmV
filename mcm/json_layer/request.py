@@ -1391,16 +1391,19 @@ class request(json_base):
 
                 #for GEN validation, one needs to modify the datatier
                 new_datatier = cmsd.split('--datatier ')[1].split()[0]
+                old_datatier = new_datatier
                 new_datatier += dqm_datatier 
                 res = res.replace('--datatier %s' % (old_datatier), '--datatier %s' % (new_datatier))
 
                 #for GEN validation, one needs to modify the eventcontent
                 new_eventcontent = cmsd.split('--eventcontent ')[1].split()[0]
+                old_eventcontent = new_eventcontent
                 new_eventcontent += dqm_eventcontent 
                 res = res.replace('--eventcontent %s' % (old_eventcontent), '--eventcontent %s' % (new_eventcontent))
                 
                 #for GEN validation, one needs to modify steps
                 new_step = cmsd.split('--step ')[1].split()[0]
+                old_step = new_step
                 new_step += dqm_step 
                 res = res.replace('--step %s' % (old_step), '--step %s' % (new_step))
 
@@ -1497,15 +1500,16 @@ class request(json_base):
 
         if for_validation:
                
-               infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions %s --filein file: %s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[sequence_index]["conditions"], output_file)
-               infile += 'cmsRun harvest.py\n'
-
-               #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
-               filename_dqm = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), self.get_attribute('sequences')[sequence_index]["conditions"])
-               infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s\n' % (filename_dqm)
-               infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
-               infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/index128/bin/visDQMUpload\n'
-               infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
+            output_file = '%s_inDQM.root ' % (self.get_attribute('prepid'))
+            infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions %s --filein file: %s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[0]["conditions"], output_file)
+            infile += 'cmsRun harvest.py\n'
+            
+            #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
+            filename_dqm = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), self.get_attribute('sequences')[0]["conditions"])
+            infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s\n' % (filename_dqm)
+            infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
+            infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/index128/bin/visDQMUpload\n'
+            infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
         
         # if there was a release setup, jsut remove it
         # not in dev
