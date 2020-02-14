@@ -56,7 +56,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {},
+        'validation': {"valid":False,"content":"all","dqm":None},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -93,7 +93,7 @@ class request(json_base):
         'cadi_line': '',
         'interested_pwg': [],
         'ppd_tags': [],
-        'events_per_lumi': 0
+        'events_per_lumi': 0,
     }
 
     def __init__(self, json_input=None):
@@ -968,11 +968,14 @@ class request(json_base):
         if input_default:
             command += '--filein %s ' % input_default
 
+        output_file = ''
         if sequenceindex == len(self.get_attribute('sequences')) - 1:
             # last one
             command += '--fileout file:%s.root ' % (self.get_attribute('prepid'))
+            output_file = '%s.root ' % (self.get_attribute('prepid'))
         else:
             command += '--fileout file:%s_step%d.root ' % (self.get_attribute('prepid'), sequenceindex + 1)
+            output_file += '%s_step%d.root ' % (self.get_attribute('prepid'), sequenceindex + 1)
 
         # JR
         if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['', 'NoPileUp']):
@@ -1080,6 +1083,7 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
+        
         # the first tier is the main output : reverse it
         return list(reversed(tiers))
 
@@ -1379,6 +1383,29 @@ class request(json_base):
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
+            if self.get_attribute('validation')['valid']:
+                self.set_attribute('validation'['dqm'], 'RelVal' + self.get_attribute('dataset_name'))
+                dqm_datatier = ',DQMIO'
+                dqm_step = ',DQM' 
+                dqm_eventcontent = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
+
+                #for GEN validation, one needs to modify the datatier
+                new_datatier = cmsd.split('--datatier ')[1].split()[0]
+                new_datatier += dqm_datatier 
+                res = res.replace('--datatier %s' % (old_datatier), '--datatier %s' % (new_datatier))
+
+                #for GEN validation, one needs to modify the eventcontent
+                new_eventcontent = cmsd.split('--eventcontent ')[1].split()[0]
+                new_eventcontent += dqm_eventcontent 
+                res = res.replace('--eventcontent %s' % (old_eventcontent), '--eventcontent %s' % (new_eventcontent))
+                
+                #for GEN validation, one needs to modify steps
+                new_step = cmsd.split('--step ')[1].split()[0]
+                new_step += dqm_step 
+                res = res.replace('--step %s' % (old_step), '--step %s' % (new_step))
+
+            ##########
+
             if 'wmlhegs' in self.get_attribute('prepid').lower():
                 random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed})"'
                 if '--customise_commands ' in cmsd:
@@ -1467,6 +1494,19 @@ class request(json_base):
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
+
+        if for_validation:
+               
+               infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions %s --filein file: %s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[sequence_index]["conditions"], output_file)
+               infile += 'cmsRun harvest.py\n'
+
+               #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
+               filename_dqm = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), self.get_attribute('sequences')[sequence_index]["conditions"])
+               infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s\n' % (filename_dqm)
+               infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
+               infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/index128/bin/visDQMUpload\n'
+               infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
+        
         # if there was a release setup, jsut remove it
         # not in dev
         if (directory or for_validation) and not l_type.isDev():
@@ -3143,3 +3183,6 @@ class request(json_base):
         command += 'fi\n'
         result = str(os.popen(command).read())
         return result
+
+
+

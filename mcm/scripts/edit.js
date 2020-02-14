@@ -601,9 +601,11 @@ testApp.directive("customValidationEdit", function(){
     '        Valid:'+
     '        <input type="checkbox"  ng-model="validation_data.valid" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
     '      </div>'+
-    '      <div class="control-group" ng-show="validation_data.valid">'+
-    '        nEvents:'+
-    '        <input type="number"  ng-model="validation_data.nEvents" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
+    '      <div class="control-group" ng-show="validation_data.valid">' +
+    '        Validation Content:'+       
+    '        <select  ng-model="validation_data.content" ng-options="dqmcontent for dqmcontent in ["all","DY","Top","W","Higgs","QCD"]"></select>'+ 
+    //'        nEvents:'+
+    //'        <input type="number"  ng-model="validation_data.nEvents" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.dqm">'+
     '        DQM:'+
