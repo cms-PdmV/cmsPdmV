@@ -605,7 +605,7 @@ class ValidationHandler:
         mcm_request.set_status(with_notification=True)
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
-        mcm_request['validation']['dqm'] = 'RelVal' + mcm_request['dataset_name']
+        mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
 
         saved = self.request_db.update(mcm_request.json())
         if not saved:
