@@ -1384,7 +1384,6 @@ class request(json_base):
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
             if self.get_attribute('validation').get('valid', False):
-                self.set_attribute('validation'['dqm'], 'RelVal' + self.get_attribute('dataset_name'))
                 dqm_datatier = ',DQMIO'
                 dqm_step = ',DQM' 
                 dqm_eventcontent = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
@@ -1497,8 +1496,7 @@ class request(json_base):
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
-
-        if for_validation:
+        if for_validation and self.get_attribute('validation').get('valid', False):
                
             output_file = '%s_inDQM.root ' % (self.get_attribute('prepid'))
             infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions %s --filein file: %s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[0]["conditions"], output_file)
