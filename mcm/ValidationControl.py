@@ -605,6 +605,8 @@ class ValidationHandler:
         mcm_request.set_status(with_notification=True)
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
+        mcm_request['validation']['dqm'] = 'RelVal' + mcm_request['dataset_name']
+
         saved = self.request_db.update(mcm_request.json())
         if not saved:
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
@@ -617,8 +619,6 @@ class ValidationHandler:
         mcm_request.test_success(
                 what='Validation',
                 message='Validation was successful for %s. Request:\n%s' % (mcm_request.get_attribute('prepid'), mcm_request.textified()))
-
-        self.get_attribute('validation')['dqm'] = 'RelVal' + self.get_attribute('dataset_name')
 
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
