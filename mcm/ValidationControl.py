@@ -618,6 +618,8 @@ class ValidationHandler:
                 what='Validation',
                 message='Validation was successful for %s. Request:\n%s' % (mcm_request.get_attribute('prepid'), mcm_request.textified()))
 
+        self.get_attribute('validation')['dqm'] = 'RelVal' + self.get_attribute('dataset_name')
+
         self.logger.info('Validation job for prepid %s SUCCESSFUL!!!' % prepid)
 
     def process_finished_request_failed(self, prepid, job_out, error_out, was_exited=True, job_error_out='', out_path='', log_out=''):
