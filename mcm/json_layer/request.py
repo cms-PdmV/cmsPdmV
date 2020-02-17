@@ -1385,8 +1385,8 @@ class request(json_base):
 
             if self.get_attribute('validation').get('valid', False):
                 dqm_datatier = ',DQMIO'
-                dqm_step = ',DQM' 
-                dqm_eventcontent = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
+                dqm_eventcontent = ',DQM' 
+                dqm_step = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
 
                 #for GEN validation, one needs to modify the datatier
                 new_datatier = cmsd.split('--datatier ')[1].split()[0]
