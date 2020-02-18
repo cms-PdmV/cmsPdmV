@@ -1481,8 +1481,33 @@ class request(json_base):
                 res += 'echo CPU efficiency info:\n'
                 res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
                 res += 'grep "TotalJobTime" %s \n' % runtest_xml_file
-                # TO-DO:
-                # 1) add efficiency calc(?)
+
+                #calculating the core efficiency
+                res += ' totaljob_cpu_string=$(grep -o \'Metric Name=\"TotalJobCPU\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += ' IFS=\'\"\' read -ra totaljob_cpu_array <<< \"$totaljob_cpu_string\" \n'
+                res += ' totaljob_cpu=${totaljob_cpu_array[4]} \n' 
+
+                res += ' totaljob_time_string=$(grep -o \'Metric Name=\"TotalJobTime\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += ' IFS=\'\"\' read -ra totaljob_time_array <<< \"$totaljob_time_string\" \n'
+                res += ' totaljob_time=${totaljob_time_array[4]} \n' 
+
+                res += ' nthreads_string=$(grep -o \'Metric Name=\"NumberOfThreads\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += ' IFS=\'\"\' read -ra nthreads_array <<< \"$nthreads_string\" \n'
+                res += ' nthreads=${nthreads_array[3]} \n' 
+
+                res += ' efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\")" '
+                res += ' echo(Core efficiency for this request is $efficiency)'
+
+                #showing the memory consumption of a request
+                res += ' memory_rss_string=$(grep -o \'Metric Name=\"PeakValueRss\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += ' IFS=\'\"\' read -ra memory_rss_array <<< \"$memory_rss_string\" \n'
+                res += ' memory_rss=${memory_rss_array[3]} \n' 
+
+                res += ' memory_value_string=$(grep -o \'Metric Name=\"PeakValueVsize\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += ' IFS=\'\"\' read -ra memory_value_array <<< \"$memory_value_string\" \n'
+                res += ' memory_value=${memory_value_array[3]} \n' 
+                
+                res += ' echo \" Memory consumption of events within validation jobs is: $memory_value +/- $memory_rss  \"'
 
             cmsd_list += res + '\n'
             previous += 1
