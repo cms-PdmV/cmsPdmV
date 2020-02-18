@@ -1486,12 +1486,12 @@ class request(json_base):
                 res += '\n'
                 res += 'totaljob_cpu_string=$(grep -o \'Metric Name=\"TotalJobCPU\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
                 res += 'IFS=\'\"\' read -ra totaljob_cpu_array <<< \"$totaljob_cpu_string\" \n'
-                res += 'totaljob_cpu=${totaljob_cpu_array[4]} \n' 
+                res += 'totaljob_cpu=${totaljob_cpu_array[3]} \n' 
 
                 res += '\n'
                 res += 'totaljob_time_string=$(grep -o \'Metric Name=\"TotalJobTime\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
                 res += 'IFS=\'\"\' read -ra totaljob_time_array <<< \"$totaljob_time_string\" \n'
-                res += 'totaljob_time=${totaljob_time_array[4]} \n' 
+                res += 'totaljob_time=${totaljob_time_array[3]} \n' 
 
                 res += '\n'
                 res += 'nthreads_string=$(grep -o \'Metric Name=\"NumberOfThreads\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
@@ -1500,7 +1500,7 @@ class request(json_base):
 
                 res += '\n'
                 res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \n" '
-                res += 'echo(Core efficiency for this request is $efficiency)\n'
+                res += 'echo Core efficiency for this request is $efficiency\n'
 
                 res += '\n'
                 #showing the memory consumption of a request
