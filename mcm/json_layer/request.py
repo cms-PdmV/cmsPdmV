@@ -1483,21 +1483,26 @@ class request(json_base):
                 res += 'grep "TotalJobTime" %s \n' % runtest_xml_file
 
                 #calculating the core efficiency
-                res += ' totaljob_cpu_string=$(grep -o \'Metric Name=\"TotalJobCPU\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += ' IFS=\'\"\' read -ra totaljob_cpu_array <<< \"$totaljob_cpu_string\" \n'
-                res += ' totaljob_cpu=${totaljob_cpu_array[4]} \n' 
+                res += '\n'
+                res += 'totaljob_cpu_string=$(grep -o \'Metric Name=\"TotalJobCPU\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += 'IFS=\'\"\' read -ra totaljob_cpu_array <<< \"$totaljob_cpu_string\" \n'
+                res += 'totaljob_cpu=${totaljob_cpu_array[3]} \n' 
 
-                res += ' totaljob_time_string=$(grep -o \'Metric Name=\"TotalJobTime\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += ' IFS=\'\"\' read -ra totaljob_time_array <<< \"$totaljob_time_string\" \n'
-                res += ' totaljob_time=${totaljob_time_array[4]} \n' 
+                res += '\n'
+                res += 'totaljob_time_string=$(grep -o \'Metric Name=\"TotalJobTime\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += 'IFS=\'\"\' read -ra totaljob_time_array <<< \"$totaljob_time_string\" \n'
+                res += 'totaljob_time=${totaljob_time_array[3]} \n' 
 
-                res += ' nthreads_string=$(grep -o \'Metric Name=\"NumberOfThreads\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += ' IFS=\'\"\' read -ra nthreads_array <<< \"$nthreads_string\" \n'
-                res += ' nthreads=${nthreads_array[3]} \n' 
+                res += '\n'
+                res += 'nthreads_string=$(grep -o \'Metric Name=\"NumberOfThreads\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
+                res += 'IFS=\'\"\' read -ra nthreads_array <<< \"$nthreads_string\" \n'
+                res += 'nthreads=${nthreads_array[3]} \n' 
 
-                res += ' efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\")" '
-                res += ' echo(Core efficiency for this request is $efficiency)'
+                res += '\n'
+                res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \n" '
+                res += 'echo Core efficiency for this request is $efficiency\n'
 
+                res += '\n'
                 #showing the memory consumption of a request
                 res += ' memory_rss_string=$(grep -o \'Metric Name=\"PeakValueRss\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
                 res += ' IFS=\'\"\' read -ra memory_rss_array <<< \"$memory_rss_string\" \n'
@@ -1507,7 +1512,7 @@ class request(json_base):
                 res += ' IFS=\'\"\' read -ra memory_value_array <<< \"$memory_value_string\" \n'
                 res += ' memory_value=${memory_value_array[3]} \n' 
                 
-                res += ' echo \" Memory consumption of events within validation jobs is: $memory_value +/- $memory_rss  \"'
+                res += ' echo \" Memory consumption of events within validation jobs is: $memory_value +/- $memory_rss  \"\n'
 
             cmsd_list += res + '\n'
             previous += 1
