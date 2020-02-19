@@ -1499,13 +1499,9 @@ class request(json_base):
                 res += 'nthreads=${nthreads_array[3]} \n' 
 
                 res += '\n'
-<<<<<<< HEAD
+
                 res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \" \n '
                 res += 'echo \"Core efficiency for this request is $efficiency \" \n'
-=======
-                res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \n" '
-                res += 'echo Core efficiency for this request is $efficiency\n'
->>>>>>> 22b757f55f45b6e486ca091c2bf4da7c26165322
 
                 res += '\n'
                 #showing the memory consumption of a request
@@ -1531,21 +1527,17 @@ class request(json_base):
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> master
         if for_validation and self.get_attribute('validation').get('valid', False):
                
             output_file = '%s_inDQM.root ' % (self.get_attribute('prepid'))
-            infile += 'cmsDriver step3 --python_file harvest.py --no_exec --conditions %s --filein file: %s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[0]["conditions"], output_file)
+            infile += 'cmsDriver.py step3 --python_file harvest.py --no_exec --conditions %s --filein file:%s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[0]["conditions"], output_file)
             infile += 'cmsRun harvest.py\n'
             
             #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6-v1__DQMIO.root
             filename_dqm = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), self.get_attribute('sequences')[0]["conditions"])
             infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s\n' % (filename_dqm)
             infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
-            infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/index128/bin/visDQMUpload\n'
+            infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload\n'
             infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
 
             self.set_attribute('validation'["dqm"], "RelVal" + str(self.get_attribute('dataset_name')))
