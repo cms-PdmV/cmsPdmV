@@ -1526,6 +1526,10 @@ class request(json_base):
         # since it's all in a subshell, there is
         # no need for directory traversal (parent stays unaffected)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
         if for_validation and self.get_attribute('validation').get('valid', False):
                
             output_file = '%s_inDQM.root ' % (self.get_attribute('prepid'))
@@ -1538,6 +1542,8 @@ class request(json_base):
             infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
             infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/index128/bin/visDQMUpload\n'
             infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
+
+            self.set_attribute('validation'["dqm"], "RelVal" + str(self.get_attribute('dataset_name')))
         
         # if there was a release setup, jsut remove it
         # not in dev
