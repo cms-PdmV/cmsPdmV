@@ -1499,8 +1499,8 @@ class request(json_base):
                 res += 'nthreads=${nthreads_array[3]} \n' 
 
                 res += '\n'
-                res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \n" '
-                res += 'echo Core efficiency for this request is $efficiency\n'
+                res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \" \n '
+                res += 'echo \"Core efficiency for this request is $efficiency \" \n'
 
                 res += '\n'
                 #showing the memory consumption of a request
