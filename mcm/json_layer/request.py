@@ -1278,29 +1278,33 @@ class request(json_base):
             infile += 'wget --quiet -O request_fragment_check.py https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
             # Run script and write to log file
             if for_validation:
-                infile += 'mkdir -p $EOS_PATH\n'
+                infile += 'eos mkdir -p $EOS_PATH\n'
 
             infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
             if l_type.isDev():
                 infile += ' --dev'
 
             if for_validation:
-                infile += '> $EOS_PATH/$REQUEST_NEWEST_FILE 2>&1\n'
+                infile += '> $REQUEST_NEWEST_FILE 2>&1\n'
             else:
                 infile += '\n'
 
             # Get exit code
             infile += 'ERRORS=$?\n'
             if for_validation:
+                # Fetch existing log
+                infile += 'eos cp $EOS_PATH/$REQUEST.log . 2>/dev/null\n'
+                infile += 'touch $REQUEST.log\n'
                 # Add latest log to all logs
-                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE >> $EOS_PATH/$REQUEST.log\n'
+                infile += 'cat $REQUEST_NEWEST_FILE >> $REQUEST.log\n'
                 # Print newest log
                 infile += 'echo --BEGIN GEN Request checking script output--\n'
-                infile += 'cat $EOS_PATH/$REQUEST_NEWEST_FILE\n'
+                infile += 'cat $REQUEST_NEWEST_FILE\n'
                 infile += 'echo --END GEN Request checking script output--\n'
                 # Write a couple of empty lines to the end of a file
-                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
-                infile += 'echo "" >> $EOS_PATH/$REQUEST.log\n'
+                infile += 'echo "" >> $REQUEST.log\n'
+                infile += 'echo "" >> $REQUEST.log\n'
+                infile += 'eos cp $REQUEST.log $EOS_PATH\n'
 
             # Check exit code of script
             infile += 'if [ $ERRORS -ne 0 ]; then\n'
