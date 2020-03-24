@@ -893,7 +893,7 @@ class request(json_base):
                 fragment_retry_amount)
             # add the part to make it local
             if get:
-                get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % (name)
+                get_me += '--create-dirs -o Configuration/GenProduction/python/%s ' % (name)
                 # lets check if downloaded file actually exists and has more than 0 bytes
                 get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' % (name)
 
@@ -1230,17 +1230,252 @@ class request(json_base):
         return self.scram_arch
 
     def make_release(self):
-        makeRel = 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
-        makeRel += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
-        makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
-        makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
-        makeRel += 'fi\n'
-        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
-        makeRel += 'eval `scram runtime -sh`\n'  # setup the cmssw
+        cmssw_release = self.get_attribute('cmssw_release')
+        scram_arch = self.get_scram_arch()
+        release_command = ['export SCRAM_ARCH=%s\n' % (scram_arch),
+                           'source /cvmfs/cms.cern.ch/cmsset_default.sh',
+                           'if [ -r %s/src ] ; then' % (cmssw_release),
+                           '  echo release %s already exists' % (cmssw_release),
+                           'else',
+                           '  scram p CMSSW %s' % (cmssw_release),
+                           'fi',
+                           'cd %s/src' % (cmssw_release),
+                           'eval `scram runtime -sh`']
 
-        return makeRel
+        return '\n'.join(release_command)
+
+    def should_run_gen_script(self):
+        """
+        Return whether GEN checking script should be run during validation of this request
+        """
+        sequence_steps = []
+        for seq in self.get_attribute('sequences'):
+            for st in seq.get('step', []):
+                sequence_steps.extend([x.strip() for x in st.split(',') if x.strip()])
+
+        sequence_steps = set(sequence_steps)
+        gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
+        should_run = bool(sequence_steps & gen_script_steps)
+        prepid = self.get_attribute('prepid')
+        self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if should_run else 'NO'))
+        return should_run
+
+    def build_cmsdriver(self, sequence_dict, fragment, events):
+        command = 'cmsDriver.py %s' % (fragment)
+        for key, value in sequence_dict.items():
+            if not value or key in ('index',):
+                continue
+
+            if isinstance(value, list):
+                command += ' --%s %s' % (key, ','.join(value))
+            else:
+                command += ' --%s %s' % (key, value)
+
+        command += ' --no_exec --mc -n %s || exit $? ;' % (events)
+        return command
+
+    def get_setup_file2(self, for_validation, automatic_validation, threads=None):
+        loc = locator()
+        is_dev = loc.isDev()
+        base_url = loc.baseurl()
+        prepid = self.get_attribute('prepid')
+        member_of_campaign = self.get_attribute('member_of_campaign')
+        scram_arch = self.get_scram_arch().lower()
+        if scram_arch.startswith('slc7_'):
+            scram_arch_os = 'CentOS7'
+        else:
+            scram_arch_os = 'SLCern6'
+
+        bash_file = ['#!/bin/bash', '']
+
+        run_gen_script = for_validation and self.should_run_gen_script()
+        run_dqm_upload = for_validation and automatic_validation and (threads == 1)
+        if run_gen_script:
+            # Download the script
+            bash_file += ['# GEN Script begin',
+                          'rm -f request_fragment_check.py',
+                          'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py']
+            # Checking script invocation
+            request_fragment_check = 'python request_fragment_check.py --bypass_status --prepid %s' % (prepid)
+            if is_dev:
+                # Add --dev, so script would use McM DEV
+                request_fragment_check += ' --dev'
+
+            if automatic_validation:
+                # For automatic validation
+                if is_dev:
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
+                else:
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
+
+                # Set variables to save the script output
+                bash_file += ['eos mkdir -p %s' % (eos_path)]
+
+                # Point output to EOS
+                # Save stdout and stderr
+                request_fragment_check += ' > %s_newest.log 2>&1' % (prepid)
+
+            # Execute the GEN script
+            bash_file += [request_fragment_check]
+            # Get exit code of GEN script
+            bash_file += ['GEN_ERR=$?']
+            if automatic_validation:
+                # Add latest log to all logs
+                bash_file += ['eos cp %s/%s.log . 2>/dev/null' % (eos_path, prepid),
+                              'touch %s.log' % (prepid),
+                              'cat %s_newest.log >> %s.log' % (prepid, prepid),
+                              # Write a couple of empty lines to the end of a file
+                              'echo "" >> %s.log' % (prepid),
+                              'echo "" >> %s.log' % (prepid),
+                              'eos cp %s.log %s/%s.log' % (prepid, eos_path, prepid),
+                              # Print newest log to stdout
+                              'echo "--BEGIN GEN Request checking script output--"',
+                              'cat %s_newest.log' % (prepid),
+                              'echo "--END GEN Request checking script output--"']
+
+            # Check exit code of script
+            bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
+                          '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
+                          '  echo "Validation WILL NOT RUN"',
+                          '  echo "Please correct errors in the request and run validation again"',
+                          '  exit $GEN_ERR',
+                          'fi',
+                          # If error code is zero, continue to validation
+                          'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
+                          '# GEN Script end',
+                          # Empty line after GEN business
+                          '']
+
+        if automatic_validation:
+            test_file_name = '%s_%s_threads_test.sh' % (prepid, threads)
+        else:
+            test_file_name = '%s_test.sh' % (prepid)
+
+        bash_file += ['# Dump actual test code to a file that can be run in Singularity',
+                      'cat <<EndOfTestFile >> %s' % (test_file_name),
+                      '#!/bin/bash',
+                      '']
+
+        # Set up CMSSW environment
+        bash_file += self.make_release().strip().replace('`', '\\`').split('\n')
+        # Add proxy for submission and automatic validation
+        if not for_validation or (for_validation and automatic_validation):
+            bash_file += ['',
+                          '# Environment variable to voms proxy in order to fetch info from cmsweb',
+                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
+                          '']
+
+        # Get the fragment if need to
+        fragment_name = self.get_fragment()
+        if fragment_name:
+            fragment = self.get_attribute('fragment')
+            if fragment:
+                # Download the fragment directly from McM into a file
+                bash_file += ['# Download fragment from McM',
+                              'curl -s -k %spublic/restapi/requests/get_fragment/%s --retry 3 --create-dirs -o %s' % (base_url,
+                                                                                                                      prepid,
+                                                                                                                      fragment_name),
+                              '[ -s %s ] || exit $?;' % (fragment_name)]
+            else:
+                bash_file += ['# Retrieve fragment from github and ensure it is there']
+                bash_file += self.retrieve_fragment().strip().split('\n')
+
+            # Check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
+            if for_validation:
+                bash_file += ['',
+                              '# Check if fragment contais gridpack path ant that it is in cvmfs',
+                              'if grep -q "gridpacks" %s; then' % (fragment_name),
+                              '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then' % (fragment_name),
+                              '    echo "Gridpack inside fragment is not in cvmfs."',
+                              '    exit -1',
+                              '  fi',
+                              'fi']
+
+        bash_file += ['scram b',
+                      'cd ../..']
+        # Events to run
+        events, explanation = self.get_event_count_for_validation(with_explanation=True)
+        bash_file += ['',
+                      explanation,
+                      'EVENTS=%s' % (events)]
+
+        # Random seed for wmLHEGS requests
+        if 'wmlhegs' in self.get_attribute('prepid').lower():
+            bash_file += ['',
+                          '# Random seed between 1 and 100',
+                          'SEED=\\$((\\$(date +%s) % 100 + 1))']
+
+        # Iterate over sequences and build cmsDriver.py commands
+        for index, sequence_dict in enumerate(self.get_attribute('sequences')):
+            self.logger.info('Getting sequence %s of %s' % (index, prepid))
+            config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
+            sequence_dict['python_filename'] = config_filename
+            if sequence_dict['customise']:
+                sequence_dict['customise'] += ','
+
+            sequence_dict['customise'] += 'Configuration/DataProcessing/Utils.addMonitoring'
+            if 'wmlhegs' in prepid.lower():
+                if sequence_dict['customise_commands']:
+                    sequence_dict['customise_commands'] += '\\\\n'
+
+                sequence_dict['customise_commands'] +=  'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+
+            if threads is not None:
+                sequence_dict['nThreads'] = threads
+
+            # self.logger.info(dumps(sequence_dict, indent=4))
+            bash_file += ['',
+                          '# cmsDriver command',
+                          self.build_cmsdriver(sequence_dict, fragment_name, events)]
+
+            if for_validation:
+                if automatic_validation:
+                    report_name = '%s_%s_threads_report.xml' % (prepid, threads)
+                else:
+                    report_name = '%s_report.xml' % (prepid)
+
+                bash_file += ['',
+                              '# Run generated config',
+                              'cmsRun -e -j %s %s || exit $? ;' % (report_name, config_filename)]
+
+                # Parse report
+                bash_file += ['',
+                              '']
+
+        bash_file += ['# End of %s file' % (test_file_name),
+                      'EndOfTestFile',
+                      '',
+                      '# Make file executable',
+                      'chmod +x %s' % (test_file_name),
+                      '']
+
+        if for_validation:
+            # Validation will run on CC7 machines (HTCondor, lxplus)
+            if scram_arch_os == 'CentOS7':
+                # If scram arch has slc7, just run the file normally
+                bash_file += ['# Run the file normally',
+                              'source %s' % (test_file_name)]
+
+            elif scram_arch_os == 'SLCern6':
+                # If it's slc6, run it in slc6 singularity container
+                bash_file += ['# Run in SLC6 container',
+                              'singularity run -B /afs -B /eos -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+
+        else:
+            # Config generation for production run on SLC6 machine - vocms081
+            if scram_arch_os == 'CentOS7':
+                # If scram arch has slc7, run it in cc7 singularity container
+                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity',
+                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+
+            elif scram_arch_os == 'SLCern6':
+                # If it's slc6, just run the file normally
+                bash_file += ['source %s' % (test_file_name)]
+
+        # Empty line at the end of the file
+        bash_file += ['']
+        self.logger.info('bash_file:\n%s' % ('\n'.join(bash_file)))
+        return '\n'.join(bash_file)
 
     def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
         # run is for adding cmsRun
@@ -1609,23 +1844,6 @@ class request(json_base):
                     self.logger.error("Failed parsing wmpriotiry output: %s" % (str(ex)))
                     return False
             return self.modify_priority(new_priority)
-
-    def get_valid_and_n(self):
-        val_attributes = self.get_attribute('validation')
-        n_to_valid = self.get_n_for_valid()
-        yes_to_valid = False
-        if n_to_valid:
-            yes_to_valid = True
-        if 'valid' in val_attributes:
-            yes_to_valid = val_attributes['valid']
-        else:
-            yes_to_valid = False
-
-        bypass = settings.get_value('campaign_valid_bypass')
-        if self.get_attribute('member_of_campaign') in bypass:
-            yes_to_valid = False
-
-        return (yes_to_valid, n_to_valid)
 
     def get_first_output(self):
         eventcontentlist = []
@@ -2220,7 +2438,9 @@ class request(json_base):
         return text
 
     def target_for_test(self):
-        # could reverse engineer the target
+        """
+        Return number of max events to run in validation
+        """
         test_target = settings.get_value('test_target')
         total_events = self.get_attribute('total_events')
         return max(0, min(test_target, total_events))
@@ -2299,20 +2519,11 @@ class request(json_base):
     def get_timeout(self):
         default = settings.get_value('batch_timeout') * 60.
         # we multiply the timeout if user wants more events in validation
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+
         default = multiplier * default
         # to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
         return int(max((estimate_rt) / fraction, default))
-
-    def get_n_for_valid(self):
-        n_to_valid = settings.get_value('min_n_to_valid')
-        val_attributes = self.get_attribute('validation')
-        if 'nEvents' in val_attributes:
-            if val_attributes['nEvents'] > n_to_valid:
-                n_to_valid = val_attributes['nEvents']
-
-        return self.get_n_unfold_efficiency(n_to_valid)
 
     def get_n_for_test(self, target=1.0, adjust=True):
         # => correct for the matching and filter efficiencies
@@ -2347,6 +2558,55 @@ class request(json_base):
         else:
             # default to 0
             return int(0)
+
+    def get_validation_max_runtime(self):
+        """
+        Return maximum number of seconds that job could run for, i.e. validation duration
+        """
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
+        return max_runtime
+
+    def get_event_count_for_validation(self, with_explanation=False):
+        # Max number of events to run
+        max_events = self.target_for_test()
+        # Max number of seconds that validation can run for
+        max_runtime = self.get_validation_max_runtime()
+        # Generator efficiency
+        if self.get_attribute('generator_parameters'):
+            efficiency = self.get_efficiency()
+            if efficiency == 0:
+                efficiency = 1
+        else:
+            efficiency = 1
+
+        efficiency = float(efficiency)
+        # "Safe" margin of validation that will not be used for actual running
+        # but as a buffer in case user given time per event is slightly off
+        margin = settings.get_value('test_timeout_fraction')
+        # Sum of time per events
+        time_per_event_sum = self.get_sum_time_events()
+        # Max runtime with applied margin
+        max_runtime_with_margin = max_runtime * (1.0 - margin)
+        # How much time will it take to generate one event that passes fileters
+        time_per_event_with_efficiency = time_per_event_sum / efficiency
+        # How many events can be produced in given "safe" time
+        events = int(max_runtime_with_margin / time_per_event_with_efficiency)
+        # Try to produce at least one event
+        clamped_events = max(1, min(events, max_events))
+
+        if not with_explanation:
+            return clamped_events
+        else:
+            explanation = ['# Maximum validation duration: %ds' % (max_runtime),
+                           '# Margin for validation duration: %d%%' % (margin * 100),
+                           '# Validation duration with margin: %d * (1 - %.2f) = %ds' % (max_runtime, margin, max_runtime_with_margin),
+                           '# Sum of time per event: %.2fs' % (time_per_event_sum),
+                           '# Generator filters throughput: %.6f%%' % (efficiency * 100),
+                           '# Time needed to get one event after filter: %.2f / %.6f = %.6fs' % (time_per_event_sum, efficiency, time_per_event_with_efficiency),
+                           '# Events that can get through filters in validation: %d / %.6f = %d' % (max_runtime_with_margin, time_per_event_with_efficiency, events),
+                           '# Make sure that %d is within 1 and %d' % (events, max_events)]
+            return clamped_events, '\n'.join(explanation)
 
     def unique_string(self, step_i):
         # create a string that supposedly uniquely identifies the request configuration for step
@@ -2706,6 +2966,10 @@ class request(json_base):
 
         if memory:
             self.check_memory(memory, total_event, total_event_in)
+            validation_dict = self.get_attribute('validation')
+            validation_dict['peak_value_rss'] = memory
+            self.set_attribute('validation', validation_dict)
+            self.logger.info('Setting peak_value_rss of %s to %s' % (self.get_attribute('prepid'), memory))
 
         self.update_history({'action': 'update', 'step': what})
 
