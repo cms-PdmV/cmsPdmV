@@ -1240,7 +1240,8 @@ class request(json_base):
                            '  scram p CMSSW %s' % (cmssw_release),
                            'fi',
                            'cd %s/src' % (cmssw_release),
-                           'eval `scram runtime -sh`']
+                           'eval `scram runtime -sh`',
+                           '']
 
         return '\n'.join(release_command)
 
@@ -1260,10 +1261,18 @@ class request(json_base):
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if should_run else 'NO'))
         return should_run
 
-    def build_cmsdriver(self, sequence_dict, fragment, events):
+    def build_cmsdriver(self, sequence_dict, fragment):
         command = 'cmsDriver.py %s' % (fragment)
+        # Add pileup dataset name
+        pileup_dataset_name = self.get_attribute('pileup_dataset_name').strip()
+        seq_pileup = sequence_dict.get('pileup').strip()
+        seq_datamix = sequence_dict.get('datamix')
+        if pileup_dataset_name:
+            if (seq_pileup not in ('', 'NoPileUp')) or (seq_pileup == '' and seq_datamix == 'PreMix'):
+                sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
+
         for key, value in sequence_dict.items():
-            if not value or key in ('index',):
+            if not value or key in ('index', 'extra'):
                 continue
 
             if isinstance(value, list):
@@ -1271,8 +1280,47 @@ class request(json_base):
             else:
                 command += ' --%s %s' % (key, value)
 
-        command += ' --no_exec --mc -n %s || exit $? ;' % (events)
+        # Extras
+        if sequence_dict.get('extra'):
+            command += ' %s' % (sequence_dict['extra'].strip())
+
+        command += ' --no_exec --mc -n $EVENTS || exit $? ;'
         return command
+
+    def get_input_file_for_sequence(self, sequence_index):
+        prepid = self.get_attribute('prepid')
+        if sequence_index == 0:
+            # First sequence can have:
+            # * no input file
+            # * mcdb input
+            # * output from previous request (if any)
+            # * input_dataset attribute
+            input_dataset = self.get_attribute('input_dataset')
+            if input_dataset:
+                return '"dbs:%s"' % (input_dataset)
+
+            mcdb_id = self.get_attribute('mcdb_id')
+            if mcdb_id > 0:
+                return '"lhe:%s"' % (mcdb_id)
+
+            # Get all chained requests and look for previous request
+            member_of_chain = self.get_attribute('member_of_chain')
+            if member_of_chain:
+                chained_requests_db = database('chained_requests')
+                previouses = set()
+                # Iterate through all chained requests
+                for chained_request_prepid in member_of_chain:
+                    chained_request = chained_requests_db.get(chained_request_prepid)
+                    # Get place of this request
+                    index_in_chain = chained_request['chain'].index(prepid)
+                    # If there is something before this request, return that prepid
+                    if index_in_chain > 0:
+                        return 'file:%s.root' % (chained_request['chain'][index_in_chain - 1])
+
+        else:
+            return 'file:%s_%s.root' % (prepid, sequence_index - 1)
+
+        return ''
 
     def get_setup_file2(self, for_validation, automatic_validation, threads=None):
         loc = locator()
@@ -1288,9 +1336,10 @@ class request(json_base):
 
         bash_file = ['#!/bin/bash', '']
 
-        run_gen_script = for_validation and self.should_run_gen_script()
+        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1)
         run_dqm_upload = for_validation and automatic_validation and (threads == 1)
         if run_gen_script:
+        # if False:
             # Download the script
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',
@@ -1351,19 +1400,16 @@ class request(json_base):
         else:
             test_file_name = '%s_test.sh' % (prepid)
 
-        bash_file += ['# Dump actual test code to a file that can be run in Singularity',
-                      'cat <<EndOfTestFile >> %s' % (test_file_name),
-                      '#!/bin/bash',
-                      '']
+        # Whether to dump cmsDriver.py to a file so it could be run using singularity
+        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        if dump_test_to_file:
+            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
+                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
+                          '#!/bin/bash',
+                          '']
 
         # Set up CMSSW environment
-        bash_file += self.make_release().strip().replace('`', '\\`').split('\n')
-        # Add proxy for submission and automatic validation
-        if not for_validation or (for_validation and automatic_validation):
-            bash_file += ['',
-                          '# Environment variable to voms proxy in order to fetch info from cmsweb',
-                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
-                          '']
+        bash_file += self.make_release().split('\n')
 
         # Get the fragment if need to
         fragment_name = self.get_fragment()
@@ -1392,21 +1438,31 @@ class request(json_base):
                               'fi']
 
         bash_file += ['scram b',
-                      'cd ../..']
+                      'cd ../..',
+                      '']
+
+        # Add proxy for submission and automatic validation
+        if not for_validation or (for_validation and automatic_validation):
+            bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
+                          # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
+                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          '']
+
         # Events to run
         events, explanation = self.get_event_count_for_validation(with_explanation=True)
-        bash_file += ['',
-                      explanation,
-                      'EVENTS=%s' % (events)]
+        bash_file += [explanation,
+                      'EVENTS=%s' % (events),
+                      '']
 
         # Random seed for wmLHEGS requests
         if 'wmlhegs' in self.get_attribute('prepid').lower():
-            bash_file += ['',
-                          '# Random seed between 1 and 100',
-                          'SEED=\\$((\\$(date +%s) % 100 + 1))']
+            bash_file += ['# Random seed between 1 and 100 for externalLHEProducer',
+                          'SEED=$(($(date +%s) % 100 + 1))',
+                          '']
 
         # Iterate over sequences and build cmsDriver.py commands
-        for index, sequence_dict in enumerate(self.get_attribute('sequences')):
+        sequences = self.get_attribute('sequences')
+        for index, sequence_dict in enumerate(sequences):
             self.logger.info('Getting sequence %s of %s' % (index, prepid))
             config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
             sequence_dict['python_filename'] = config_filename
@@ -1418,21 +1474,38 @@ class request(json_base):
                 if sequence_dict['customise_commands']:
                     sequence_dict['customise_commands'] += '\\\\n'
 
-                sequence_dict['customise_commands'] +=  'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+                sequence_dict['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+
+            # TODO: add numberEventsInLuminosityBlock to customise_commands
 
             if threads is not None:
                 sequence_dict['nThreads'] = threads
 
-            # self.logger.info(dumps(sequence_dict, indent=4))
+            if index != len(sequences) - 1:
+                # Add sequence index if this is not the last index
+                sequence_dict['fileout'] = 'file:%s_%s.root' % (prepid, index)
+            else:
+                # Otherwise it is just <prepid>.root
+                sequence_dict['fileout'] = 'file:%s.root' % (prepid)
+
+            filein = self.get_input_file_for_sequence(index)
+            if filein:
+                sequence_dict['filein'] = filein
+
             bash_file += ['',
                           '# cmsDriver command',
-                          self.build_cmsdriver(sequence_dict, fragment_name, events)]
+                          self.build_cmsdriver(sequence_dict, fragment_name)]
 
             if for_validation:
+                report_name = '%s_' % (prepid)
+                # If it is not the last sequence, add sequence index to then name
+                if index != len(sequences) - 1:
+                    report_name += '%s_' % (index)
+
                 if automatic_validation:
-                    report_name = '%s_%s_threads_report.xml' % (prepid, threads)
+                    report_name += '%s_threads_report.xml' % (threads)
                 else:
-                    report_name = '%s_report.xml' % (prepid)
+                    report_name += 'report.xml'
 
                 bash_file += ['',
                               '# Run generated config',
@@ -1442,39 +1515,35 @@ class request(json_base):
                 bash_file += ['',
                               '']
 
-        bash_file += ['# End of %s file' % (test_file_name),
-                      'EndOfTestFile',
-                      '',
-                      '# Make file executable',
-                      'chmod +x %s' % (test_file_name),
-                      '']
+        if dump_test_to_file:
+            bash_file += ['# End of %s file' % (test_file_name),
+                          'EndOfTestFile',
+                          '',
+                          '# Make file executable',
+                          'chmod +x %s' % (test_file_name),
+                          '']
 
         if for_validation:
             # Validation will run on CC7 machines (HTCondor, lxplus)
-            if scram_arch_os == 'CentOS7':
-                # If scram arch has slc7, just run the file normally
-                bash_file += ['# Run the file normally',
-                              'source %s' % (test_file_name)]
-
-            elif scram_arch_os == 'SLCern6':
-                # If it's slc6, run it in slc6 singularity container
+            # If it's CC7, just run the script normally
+            # If it's SLC6, run it in slc6 singularity container
+            if scram_arch_os == 'SLCern6':
                 bash_file += ['# Run in SLC6 container',
-                              'singularity run -B /afs -B /eos -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              '# Mount afs, eos, cvmfs',
+                              '# Mount /etc/grid-security for xrootd',
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         else:
             # Config generation for production run on SLC6 machine - vocms081
+            # If it's SLC6, just run the script normally
+            # If it's CC7, run it in cc7 singularity container
             if scram_arch_os == 'CentOS7':
-                # If scram arch has slc7, run it in cc7 singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity',
                               'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
-            elif scram_arch_os == 'SLCern6':
-                # If it's slc6, just run the file normally
-                bash_file += ['source %s' % (test_file_name)]
-
         # Empty line at the end of the file
         bash_file += ['']
-        self.logger.info('bash_file:\n%s' % ('\n'.join(bash_file)))
+        # self.logger.info('bash_file:\n%s' % ('\n'.join(bash_file)))
         return '\n'.join(bash_file)
 
     def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
@@ -2563,48 +2632,47 @@ class request(json_base):
         """
         Return maximum number of seconds that job could run for, i.e. validation duration
         """
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
-        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
-        return max_runtime
+        # multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        # max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
+        # return max_runtime
+        self.logger.warning('Reduced validation to 30min = 1800s')
+        return 1800
 
     def get_event_count_for_validation(self, with_explanation=False):
         # Max number of events to run
         max_events = self.target_for_test()
         # Max number of seconds that validation can run for
         max_runtime = self.get_validation_max_runtime()
-        # Generator efficiency
-        if self.get_attribute('generator_parameters'):
-            efficiency = self.get_efficiency()
-            if efficiency == 0:
-                efficiency = 1
-        else:
-            efficiency = 1
-
-        efficiency = float(efficiency)
         # "Safe" margin of validation that will not be used for actual running
         # but as a buffer in case user given time per event is slightly off
         margin = settings.get_value('test_timeout_fraction')
-        # Sum of time per events
-        time_per_event_sum = self.get_sum_time_events()
+        # Time per event
+        time_per_event = self.get_attribute('time_event')
+        # Threads in sequences
+        sequence_threads = [int(sequence.get('nThreads', 1)) for sequence in self.get_attribute('sequences')]
+        # Time per event for single thread
+        single_thread_time_per_event = [time_per_event[i] * sequence_threads[i] for i in range(len(time_per_event))]
+        # Sum of single thread time per events
+        time_per_event_sum = sum(single_thread_time_per_event)
         # Max runtime with applied margin
         max_runtime_with_margin = max_runtime * (1.0 - margin)
-        # How much time will it take to generate one event that passes fileters
-        time_per_event_with_efficiency = time_per_event_sum / efficiency
         # How many events can be produced in given "safe" time
-        events = int(max_runtime_with_margin / time_per_event_with_efficiency)
+        events = int(max_runtime_with_margin / time_per_event_sum)
         # Try to produce at least one event
         clamped_events = max(1, min(events, max_events))
 
+        self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
         if not with_explanation:
             return clamped_events
         else:
             explanation = ['# Maximum validation duration: %ds' % (max_runtime),
                            '# Margin for validation duration: %d%%' % (margin * 100),
                            '# Validation duration with margin: %d * (1 - %.2f) = %ds' % (max_runtime, margin, max_runtime_with_margin),
-                           '# Sum of time per event: %.2fs' % (time_per_event_sum),
-                           '# Generator filters throughput: %.6f%%' % (efficiency * 100),
-                           '# Time needed to get one event after filter: %.2f / %.6f = %.6fs' % (time_per_event_sum, efficiency, time_per_event_with_efficiency),
-                           '# Events that can get through filters in validation: %d / %.6f = %d' % (max_runtime_with_margin, time_per_event_with_efficiency, events),
+                           '# Time per event for each sequence: %s' % (', '.join(['%.4fs' % (x) for x in time_per_event])),
+                           '# Threads for each sequence: %s' % (', '.join(['%s' % (x) for x in sequence_threads])),
+                           '# Time per event for single thread for each sequence: %s' % (', '.join(['%s * %.4fs = %.4fs' % (sequence_threads[i], time_per_event[i], single_thread_time_per_event[i]) for i in range(len(single_thread_time_per_event))])),
+                           '# Which adds up to %.4fs per event' % (time_per_event_sum),
+                           '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
                            '# Make sure that %d is within 1 and %d' % (events, max_events)]
             return clamped_events, '\n'.join(explanation)
 
