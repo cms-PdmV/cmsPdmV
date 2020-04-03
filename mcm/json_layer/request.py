@@ -1258,7 +1258,6 @@ class request(json_base):
         gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
         should_run = bool(sequence_steps & gen_script_steps)
         prepid = self.get_attribute('prepid')
-        self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if should_run else 'NO'))
         return should_run
 
     def build_cmsdriver(self, sequence_dict, fragment):
@@ -1277,6 +1276,9 @@ class request(json_base):
 
             if isinstance(value, list):
                 command += ' --%s %s' % (key, ','.join(value))
+            elif key == 'nThreads' and int(value) == 1:
+                # Do not add --nThreads 1 because some old CMSSW crashes
+                continue
             else:
                 command += ' --%s %s' % (key, value)
 
@@ -1291,18 +1293,10 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         if sequence_index == 0:
             # First sequence can have:
-            # * no input file
-            # * mcdb input
             # * output from previous request (if any)
+            # * mcdb input
             # * input_dataset attribute
-            input_dataset = self.get_attribute('input_dataset')
-            if input_dataset:
-                return '"dbs:%s"' % (input_dataset)
-
-            mcdb_id = self.get_attribute('mcdb_id')
-            if mcdb_id > 0:
-                return '"lhe:%s"' % (mcdb_id)
-
+            # * no input file
             # Get all chained requests and look for previous request
             member_of_chain = self.get_attribute('member_of_chain')
             if member_of_chain:
@@ -1316,6 +1310,15 @@ class request(json_base):
                     # If there is something before this request, return that prepid
                     if index_in_chain > 0:
                         return 'file:%s.root' % (chained_request['chain'][index_in_chain - 1])
+
+            input_dataset = self.get_attribute('input_dataset')
+            if input_dataset:
+                return '"dbs:%s"' % (input_dataset)
+
+            mcdb_id = self.get_attribute('mcdb_id')
+            if mcdb_id > 0:
+                return '"lhe:%s"' % (mcdb_id)
+
 
         else:
             return 'file:%s_%s.root' % (prepid, sequence_index - 1)
@@ -1336,10 +1339,10 @@ class request(json_base):
 
         bash_file = ['#!/bin/bash', '']
 
-        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1)
+        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
         run_dqm_upload = for_validation and automatic_validation and (threads == 1)
+        self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
-        # if False:
             # Download the script
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',

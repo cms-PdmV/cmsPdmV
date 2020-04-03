@@ -7,6 +7,7 @@ from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator
 import xml.etree.ElementTree as ET
+from math import ceil
 
 
 class SSHExecutor():
@@ -197,15 +198,15 @@ class ValidationControl():
         result = self.request_db.full_text_search('search', query, page=-1, include_fields='prepid')
         result = [r['prepid'] for r in result]
 
-        # result = [r for r in result if r in ('SMP-PhaseIITDRSpring19wmLHEGS-00005', 'SUS-RunIIFall17FSPremix-00065', 'SMP-RunIISummer19UL18GEN-00003')]
-        self.logger.info('Requests to be submitted:\n%s', '\n'.join(result))
+        result = [r for r in result if r in ('SMP-PhaseIITDRSpring19wmLHEGS-00005', 'SUS-RunIIFall17FSPremix-00065', 'SMP-RunIISummer19UL18GEN-00003')]
+        # self.logger.info('Requests with validation-new:\n%s', '\n'.join(result))
         return result
 
     def get_chained_requests_to_be_submitted(self):
         query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
         result = self.chained_request_db.full_text_search('search', query, page=-1, include_fields='prepid')
         result = [r['prepid'] for r in result]
-        self.logger.info('Chained requests to be submitted:\n%s', '\n'.join(result))
+        # self.logger.info('Chained requests with validate=1:\n%s', '\n'.join(result))
         return result
 
     def get_items_to_be_submitted(self, requests, chained_requests):
@@ -219,7 +220,9 @@ class ValidationControl():
 
         already_submitted = set(self.get_all_from_storage().keys())
         self.logger.info('Items that are already submitted: %s', ', '.join(already_submitted))
-        return list((requests | set(chained_requests)) - already_submitted)
+        to_be_submitted = list((requests | set(chained_requests)) - already_submitted)
+        self.logger.info('Items to be submitted:\n%s', '\n'.join(to_be_submitted))
+        return to_be_submitted
 
     def run(self):
         # Handle submitted requests and chained requests
@@ -257,7 +260,14 @@ class ValidationControl():
             running_dict = request_in_storage['running']
             all_done = len(core_dict) > 0
             for _, core_dict in running_dict.iteritems():
-                all_done = all_done and core_dict.get('condor_status') == 'DONE'
+                if core_dict.get('condor_status') != 'DONE':
+                    all_done = False
+                    break
+
+                if not core_dict.get('condor_id'):
+                    all_done = False
+                    self.validation_failed(prepid)
+                    break
 
             if all_done:
                 self.logger.info('All DONE for %s at stage %s', prepid, stage)
@@ -273,9 +283,9 @@ class ValidationControl():
                         self.validation_failed(prepid)
                         continue
 
-                    self.submit_new_request(prepid, 2)
-                    self.submit_new_request(prepid, 4)
-                    self.submit_new_request(prepid, 8)
+                    self.submit_item(prepid, 2)
+                    self.submit_item(prepid, 4)
+                    self.submit_item(prepid, 8)
                 else:
                     try:
                         request_dict['done']['2'] = self.parse_job_report(prepid, 2)
@@ -290,97 +300,142 @@ class ValidationControl():
                     self.validation_succeeded(prepid)
 
     def validation_failed(self, prepid):
-        req = self.request_db.get(prepid)
-        req['approval'] = 'none'
-        req['status'] = 'new'
-        if 'results' in req['validation']:
-            del req['validation']['results']
+        if '-chain_' in prepid:
+            chained_req = self.chained_request_db.get(prepid)
+            chained_req['validate'] = 0
+            self.chained_request_db.save(chained_req)
+            requests = self.get_requests_from_chained_request(ChainedRequest(chained_req))
+            requests = [r.json() for r in requests]
+        else:
+            requests = [self.request_db.get(prepid)]
 
-        self.request_db.save(req)
+        for request in requests:
+            request['validation']['results'] = {}
+            request['approval'] = 'none'
+            request['status'] = 'new'
+            self.logger.warning('Saving %s', request['prepid'])
+            self.request_db.save(request)
+
         self.delete_from_storage(prepid)
-        self.logger.error('Validation failed for %s', prepid)
+        self.logger.info('Validation failed for %s', prepid)
 
     def validation_succeeded(self, prepid):
-        req = self.request_db.get(prepid)
+        if '-chain_' in prepid:
+            chained_req = self.chained_request_db.get(prepid)
+            chained_req['validate'] = 0
+            self.chained_request_db.save(chained_req)
+
+        requests = {}
         request_dict = self.get_from_storage(prepid)
-        req['approval'] = 'validation'
-        req['status'] = 'validation'
-        req['validation']['results'] = request_dict['done']
-        self.request_db.save(req)
+        for core_number in request_dict['done'].keys():
+            for request_prepid in request_dict['done'][core_number].keys():
+                if request_prepid not in requests:
+                    requests[request_prepid] = self.request_db.get(request_prepid)
+                    requests[request_prepid]['validation']['results'] = {}
+
+                request = requests[request_prepid]
+                request['approval'] = 'validation'
+                request['status'] = 'validation'
+                request['validation']['results'][core_number] = request_dict['done'][core_number][request_prepid]
+
+        for _, request in requests.iteritems():
+            self.logger.warning('Saving %s', request['prepid'])
+            self.request_db.save(request)
+
         self.delete_from_storage(prepid)
         self.logger.info('Validation succeeded for %s', prepid)
 
     def parse_job_report(self, prepid, threads):
-        self.logger.info('Parsing job reports for %s with %s threads', prepid, threads)
-        report_file_name = '%s_%s_threads_report.xml' % (prepid, threads)
-        self.logger.info('Report file name: %s', report_file_name)
-        tree = ET.parse('%s%s/%s' % (self.test_directory_path, prepid, report_file_name))
-        root = tree.getroot()
-
-        total_events = root.find('.//TotalEvents')
-        if total_events is not None:
-            total_events = int(total_events.text)
+        requests_to_parse = []
+        if '-chain_' in prepid:
+            chained_request = ChainedRequest(self.chained_request_db.get(prepid))
+            requests = self.get_requests_from_chained_request(chained_request)
         else:
-            total_events = None
+            request = Request(self.request_db.get(prepid))
+            requests = [request]
 
-        # self.logger.info('TotalEvents %s', total_events)
-        event_throughput = None
-        peak_value_rss = None
-        total_size = None
-        total_job_cpu = None
-        total_job_time = None
-        for child in root.findall('.//PerformanceSummary/Metric'):
-            attr_name = child.attrib['Name']
-            attr_value = child.attrib['Value']
-            if attr_name == 'EventThroughput':
-                event_throughput = float(attr_value)
-                # self.logger.info('EventThroughput %s', event_throughput)
-            elif attr_name == 'PeakValueRss':
-                peak_value_rss = float(attr_value)
-                # self.logger.info('PeakValueRss %s', peak_value_rss)
-            elif attr_name == 'Timing-tstoragefile-write-totalMegabytes':
-                total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
-                # self.logger.info('Timing-tstoragefile-write-totalMegabytes %s', total_size)
-            elif attr_name == 'TotalJobCPU':
-                total_job_cpu = float(attr_value)
-                # self.logger.info('TotalJobCPU %s', total_job_cpu)
-            elif attr_name == 'TotalJobTime':
-                total_job_time = float(attr_value)
-                # self.logger.info('TotalJobTime %s', total_job_time)
+        results = {}
+        self.logger.info('Parsing job reports for %s with %s threads', prepid, threads)
+        item_directory = '%s%s' % (self.test_directory_path, prepid)
+        for request in requests:
+            request_prepid = request.get_attribute('prepid')
+            report_file_name = '%s_%s_threads_report.xml' % (request_prepid, threads)
+            self.logger.info('Report file name: %s', report_file_name)
+            tree = ET.parse('%s/%s' % (item_directory, report_file_name))
+            root = tree.getroot()
 
-        self.logger.info('event_throughput %s', event_throughput)
-        self.logger.info('peak_value_rss %s', peak_value_rss)
-        self.logger.info('total_size %s', total_size)
-        self.logger.info('total_job_cpu %s', total_job_cpu)
-        self.logger.info('total_job_time %s', total_job_time)
-        self.logger.info('total_events %s', total_events)
-        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
-            self.logger.error('Not all values are in %s, aborting %s with %s threads', report_file_name, prepid, threads)
-            raise Exception()
+            total_events = root.find('.//TotalEvents')
+            if total_events is not None:
+                total_events = int(total_events.text)
+            else:
+                total_events = None
 
-        req = Request(self.request_db.get(prepid))
-        events_ran = req.get_event_count_for_validation()
-        time_per_event = 1.0 / event_throughput
-        size_per_event = total_size / total_events
-        cpu_efficiency = total_job_cpu / (threads * total_job_time)
-        filter_efficiency = float(total_events) / events_ran
-        self.logger.info('Time per event %.4fs', time_per_event)
-        self.logger.info('Size per event %.4fkb', size_per_event)
-        self.logger.info('CPU efficiency %.2f%%', cpu_efficiency * 100)
-        self.logger.info('Filter efficiency %.2f%%', filter_efficiency * 100)
-        self.logger.info('Peak value RSS %.2fMB', peak_value_rss)
-        return {'time_per_event': time_per_event,
-                'size_per_event': size_per_event,
-                'cpu_efficiency': cpu_efficiency,
-                'filter_efficiency': filter_efficiency,
-                'peak_value_rss': peak_value_rss}
+            # self.logger.info('TotalEvents %s', total_events)
+            event_throughput = None
+            peak_value_rss = None
+            total_size = None
+            total_job_cpu = None
+            total_job_time = None
+            for child in root.findall('.//PerformanceSummary/Metric'):
+                attr_name = child.attrib['Name']
+                attr_value = child.attrib['Value']
+                if attr_name == 'EventThroughput':
+                    event_throughput = float(attr_value)
+                    # self.logger.info('EventThroughput %s', event_throughput)
+                elif attr_name == 'PeakValueRss':
+                    peak_value_rss = float(attr_value)
+                    # self.logger.info('PeakValueRss %s', peak_value_rss)
+                elif attr_name == 'Timing-tstoragefile-write-totalMegabytes':
+                    total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
+                    # self.logger.info('Timing-tstoragefile-write-totalMegabytes %s', total_size)
+                elif attr_name == 'TotalJobCPU':
+                    total_job_cpu = float(attr_value)
+                    # self.logger.info('TotalJobCPU %s', total_job_cpu)
+                elif attr_name == 'TotalJobTime':
+                    total_job_time = float(attr_value)
+                    # self.logger.info('TotalJobTime %s', total_job_time)
 
-    def get_htcondor_submission_file(self, prepid, scram_arch, job_length, threads, memory):
-        # HTCondor gives 2GB per core, if you want more memory you need to request more cores)
+            self.logger.info('event_throughput %s', event_throughput)
+            self.logger.info('peak_value_rss %s', peak_value_rss)
+            self.logger.info('total_size %s', total_size)
+            self.logger.info('total_job_cpu %s', total_job_cpu)
+            self.logger.info('total_job_time %s', total_job_time)
+            self.logger.info('total_events %s', total_events)
+            if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
+                self.logger.error('Not all values are in %s, aborting %s with %s threads', report_file_name, prepid, threads)
+                raise Exception()
+
+            events_ran = request.get_event_count_for_validation()
+            time_per_event = 1.0 / event_throughput
+            size_per_event = total_size / total_events
+            cpu_efficiency = total_job_cpu / (threads * total_job_time)
+            filter_efficiency = float(total_events) / events_ran
+            self.logger.info('Time per event %.4fs', time_per_event)
+            self.logger.info('Size per event %.4fkb', size_per_event)
+            self.logger.info('CPU efficiency %.2f%%', cpu_efficiency * 100)
+            self.logger.info('Filter efficiency %.2f%%', filter_efficiency * 100)
+            self.logger.info('Peak value RSS %.2fMB', peak_value_rss)
+            results[request_prepid] = {'time_per_event': time_per_event,
+                                       'size_per_event': size_per_event,
+                                       'cpu_efficiency': cpu_efficiency,
+                                       'filter_efficiency': filter_efficiency,
+                                       'peak_value_rss': peak_value_rss}
+
+        return results
+
+    def get_htcondor_submission_file(self, prepid, job_length, threads, memory, output_prepids):
         transfer_input_files = ['voms_proxy.txt']
-        transfer_output_files = ['%s_%s_threads_report.xml' % (prepid, threads)]
+        transfer_output_files = []
+        for output_prepid in output_prepids:
+            transfer_output_files.append('%s_%s_threads_report.xml' % (output_prepid, threads))
+
         transfer_output_files = ','.join(transfer_output_files)
         transfer_input_files = ','.join(transfer_input_files)
+        # HTCondor gives 2GB per core, if you want more memory you need to request more cores
+        request_cores = int(max(threads, ceil(memory / 2000.0)))
+        if request_cores != threads:
+            self.logger.warning('Will request %s cpus because memory is %s', request_cores, memory)
+
         condor_file = ['universe              = vanilla',
                        # 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv',
                        'executable            = %s_%s_threads_launcher.sh' % (prepid, threads),
@@ -391,11 +446,11 @@ class ValidationControl():
                        'transfer_input_files  = %s' % (transfer_input_files),
                        # 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)',
                        '+MaxRuntime           = %s' % (job_length),
-                       'RequestCpus           = %s' % (threads),
+                       'RequestCpus           = %s' % (request_cores),
                        '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
                        'requirements          = (OpSysAndVer =?= "CentOS7")',
-                       # Leave in queue when status is DONE for two hours - 7200 seconds
-                       'leave_in_queue        = JobStatus == 4 && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
+                       # Leave in queue when status is DONE or HOLD for 30 minutes - 1800 seconds
+                       'leave_in_queue        = (JobStatus == 4 || JobStatus == 5) && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
                        'queue']
 
         condor_file = '\n'.join(condor_file)
@@ -403,67 +458,54 @@ class ValidationControl():
         return condor_file
 
     def submit_items(self, items):
-        for item in items:
-            if '-chain_' in item:
-                self.submit_new_chained_request(item)
-            else: 
-                self.submit_new_request(item, threads=1)
+        for prepid in items:
+            # Prepare empty directory for validation
+            item_directory = '%s%s' % (self.test_directory_path, prepid)
+            command = ['rm -rf %s' % (item_directory),
+                       'mkdir -p %s' % (item_directory)]
+            _, _ = self.ssh_executor.execute_command(command)
+            self.submit_item(prepid, 1)
 
-    def submit_new_chained_request(self, prepid, threads=1):
-        chained_request = ChainedRequest(self.chained_request_db.get(prepid))
+    def submit_item(self, prepid, threads):
+        item_directory = '%s%s' % (self.test_directory_path, prepid)
+        # Get list of requests that will run in this validation
+        # Single request validation will have only that list
+        # Chained request validation might have multiple requests in sequence
+        if '-chain_' in prepid:
+            chained_request = ChainedRequest(self.chained_request_db.get(prepid))
+            requests = self.get_requests_from_chained_request(chained_request)
+        else:
+            request = Request(self.request_db.get(prepid))
+            requests = [request]
+
         job_length = 0
-        # How to handle multiple scram archs?
-        scram_archs = []
-        batch_timeout = settings.get_value('batch_timeout') * 60
-        for request_prepid in chained_request.get_attribute('chain'):
-            request = Request(self.request_db.get(request_prepid))
-            if not request.is_root:
-                continue
-
+        memory = 0
+        test_script = ''
+        request_prepids = []
+        for request in requests:
             # Max job runtime
-            multiplier = request.get_attribute('validation').get('time_multiplier', 1)
-            job_length += batch_timeout * multiplier
-            scram_archs.append(request.get_scram_arch().lower())
+            request_prepids.append(request.get_attribute('prepid'))
+            job_length += request.get_validation_max_runtime()
+            # Get max memory of all requests
+            memory = max(memory, self.get_memory(request, threads))
+            # Combine validation scripts to one long script
+            test_script += request.get_setup_file2(True, True, threads)
+            test_script += '\n'
 
-        memory = threads * 2000
-        condor_file = self.get_htcondor_submission_file(prepid,
-                                                        scram_archs[0],
-                                                        job_length,
-                                                        threads,
-                                                        memory)
-
-    def submit_new_request(self, prepid, threads=1):
-        request = Request(self.request_db.get(prepid))
-        # Max job runtime
-        job_length = request.get_validation_max_runtime()
-        # Threads
-        memory = threads * 2000
-        condor_file = self.get_htcondor_submission_file(prepid,
-                                                        request.get_scram_arch().lower(),
-                                                        job_length,
-                                                        threads,
-                                                        memory)
-        test_script = request.get_setup_file2(True, True, threads)
-
-        if threads == 1:
-            command = ['rm -rf %s%s' % (self.test_directory_path, prepid),
-                       'mkdir -p %s%s' % (self.test_directory_path, prepid)]
-            stdout, stderr = self.ssh_executor.execute_command(command)
+        # Make a HTCondor .sub file
+        condor_file = self.get_htcondor_submission_file(prepid, job_length, threads, memory, request_prepids)
 
         # Write files straight to afs
-        file_name = '%s%s/%s_%s_threads' % (self.test_directory_path, prepid, prepid, threads)
-        condor_file_name = '%s_condor.sub' % (file_name)
-        test_script_file_name = '%s_launcher.sh' % (file_name)
-        self.logger.info('Writing %s', condor_file_name)
+        condor_file_name = '%s/%s_%s_threads_condor.sub' % (item_directory, prepid, threads)
         with open(condor_file_name, 'w') as f:
             f.write(condor_file)
 
-        self.logger.info('Writing %s', test_script_file_name)
+        test_script_file_name = '%s/%s_%s_threads_launcher.sh' % (item_directory, prepid, threads)
         with open(test_script_file_name, 'w') as f:
             f.write(test_script)
 
         # Condor submit
-        command = ['cd %s%s' % (self.test_directory_path, prepid),
+        command = ['cd %s' % (item_directory),
                    'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 48',
                    'chmod +x %s' % (test_script_file_name.split('/')[-1]),
                    'module load lxbatch/tzero',
@@ -472,11 +514,11 @@ class ValidationControl():
 
         # Get condor job ID from std output
         if not stderr and '1 job(s) submitted to cluster' in stdout:
-            # output is "1 job(s) submitted to cluster 801341"
+            # output is "1 job(s) submitted to cluster xxxxxx"
             condor_id = int(float(stdout.split()[-1]))
-            self.logger.info('Submitted %s with %s threads, HTCondor ID %s' % (prepid, threads, condor_id))
+            self.logger.info('Submitted %s, HTCondor ID %s' % (test_script_file_name, condor_id))
         else:
-            self.logger.error('Error submitting %s with %s threads:\nSTDOUT: %s\nSTDERR: %s', prepid, threads, stdout, stderr)
+            self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s', test_script_file_name, stdout, stderr)
             return
 
         if threads == 1:
@@ -486,6 +528,50 @@ class ValidationControl():
             storage_dict = self.get_from_storage(prepid)
             storage_dict['running']['%s' % (threads)] = {'condor_id': condor_id}
             self.save_to_storage(prepid, storage_dict)
+
+    def get_requests_from_chained_request(self, chained_request):
+        """
+        Return list of Request objects that should be in validation
+        """
+        requests = []
+        for request_prepid in chained_request.get_attribute('chain'):
+            request = Request(self.request_db.get(request_prepid))
+            if not request.is_root:
+                continue
+
+            requests.append(request)
+
+        return requests
+
+    def get_memory(self, request, target_threads):
+        """
+        Get memory scaled accordingly to number of threads
+        """
+        prepid = request.get_attribute('prepid')
+        sequences = request.get_attribute('sequences')
+        request_memory = request.get_attribute('memory')
+        request_threads = max((int(sequence.get('nThreads', 1)) for sequence in sequences))
+        if request_threads == target_threads:
+            # Memory provided by user
+            memory = request_memory
+            self.logger.info('%s will use use %sMB for %s thread validation', prepid, memory, target_threads)
+            return memory
+
+        if request_threads == 1 and request_memory == 2300:
+            single_core_memory = 2000
+        else:
+            single_core_memory = int(request_memory / request_threads)
+            single_core_memory = max(single_core_memory, 2000)
+
+        memory = target_threads * single_core_memory
+        self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
+                         prepid,
+                         request_threads,
+                         request_memory,
+                         single_core_memory,
+                         memory,
+                         target_threads)
+        return memory
 
     def save_to_storage(self, prepid, dict_to_save):
         all_validations = self.get_all_from_storage()
@@ -511,7 +597,7 @@ class ValidationControl():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s][%(levelname)s] %(message)s',
                         datefmt='%Y-%b-%d:%H:%M:%S')
     logging.info('Starting...')
