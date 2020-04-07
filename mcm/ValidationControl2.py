@@ -2,12 +2,14 @@ import logging
 import json
 import paramiko
 import tools.settings as settings
+import os.path
 from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator
 import xml.etree.ElementTree as ET
-from math import ceil
+from xml.parsers.expat import ExpatError
+from math import ceil, sqrt
 
 
 class SSHExecutor():
@@ -161,6 +163,10 @@ class ValidationControl():
         self.logger.info('Location %s' % (self.test_directory_path))
 
     def get_jobs_in_condor(self):
+        """
+        Fetch jobs from HTCondor
+        Return a dictionary where key is job id and value is status (IDLE, RUN, DONE)
+        """
         cmd = ['module load lxbatch/tzero',
                'condor_q -af:h ClusterId JobStatus']
 
@@ -194,22 +200,37 @@ class ValidationControl():
         return jobs_dict
 
     def get_requests_to_be_submitted(self):
+        """
+        Return list of request prepids that are in status validation-new
+        """
         query = self.request_db.construct_lucene_query({'status': 'new', 'approval': 'validation'})
         result = self.request_db.full_text_search('search', query, page=-1, include_fields='prepid')
         result = [r['prepid'] for r in result]
 
-        result = [r for r in result if r in ('SMP-PhaseIITDRSpring19wmLHEGS-00005', 'SUS-RunIIFall17FSPremix-00065', 'SMP-RunIISummer19UL18GEN-00003')]
-        # self.logger.info('Requests with validation-new:\n%s', '\n'.join(result))
+        for_development = ('SMP-PhaseIITDRSpring19wmLHEGS-00005',
+                           'SUS-RunIIFall17FSPremix-00065',
+                           'SMP-RunIISummer19UL18GEN-00003')
+        result = [r for r in result if r in for_development]
         return result
 
     def get_chained_requests_to_be_submitted(self):
+        """
+        Return list of chained request prepids that have validate=1
+        """
         query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
         result = self.chained_request_db.full_text_search('search', query, page=-1, include_fields='prepid')
         result = [r['prepid'] for r in result]
-        # self.logger.info('Chained requests with validate=1:\n%s', '\n'.join(result))
         return result
 
     def get_items_to_be_submitted(self, requests, chained_requests):
+        """
+        Take list of requests - list A
+        Take list of chained requests -list B, and expand it to list of requests in that chained request - list C
+        Remove requests from list A if they are in list C, i.e. do not validate separate requests if
+        they are going to be validated together with a chain
+        Take list of requests that already had validation submitted to condor - list D
+        Add lists A and B together and remove already submitted items - list D
+        """
         requests = set(requests)
         for chained_request_prepid in chained_requests:
             chained_request = self.chained_request_db.get(chained_request_prepid)
@@ -227,77 +248,175 @@ class ValidationControl():
     def run(self):
         # Handle submitted requests and chained requests
         condor_jobs = self.get_jobs_in_condor()
-        self.process_running_jobs(condor_jobs)
+        self.update_running_jobs(condor_jobs)
+        self.process_done_jobs()
         # Handle new requests and chained requests
         requests_to_submit = self.get_requests_to_be_submitted()
         chained_requests_to_submit = self.get_chained_requests_to_be_submitted()
         items_to_submit = self.get_items_to_be_submitted(requests_to_submit, chained_requests_to_submit)
         self.submit_items(items_to_submit)
 
-    def process_running_jobs(self, condor_jobs):
+    def update_running_jobs(self, condor_jobs):
         for prepid, request_in_storage in self.get_all_from_storage().iteritems():
             self.logger.info('Looking at %s', prepid)
             stage = request_in_storage['stage']
             running_dict = request_in_storage['running']
-            self.logger.info('%s is at stage %s' % (prepid, stage))
-            for _, core_dict in running_dict.iteritems():
+            self.logger.info('%s is at stage %s. Cores in running: %s',
+                             prepid,
+                             stage,
+                             ', '.join(running_dict.keys()))
+            for core_name, core_dict in running_dict.iteritems():
                 if core_dict.get('condor_status') == 'DONE':
+                    self.logger.info('Core %s is already DONE', core_name)
                     continue
 
                 condor_id = str(core_dict['condor_id'])
-                if condor_id in condor_jobs:
-                    core_dict['condor_status'] = condor_jobs[condor_id]
-                else:
-                    # Done?
-                    core_dict['condor_status'] = 'DONE'
+                core_dict['condor_status'] = condor_jobs.get(condor_id, 'DONE')
+                self.logger.info('Core %s is %s', core_name, core_dict['condor_status'])
 
             self.save_to_storage(prepid, request_in_storage)
-            self.logger.info('%s has these jobs running: %s' % (prepid, ', '.join(['%s (%s - %s)' % (k, v['condor_id'], v.get('condor_status', '<unknown>')) for k, v in running_dict.iteritems()])))
 
+    def process_done_jobs(self):
         for prepid, request_in_storage in self.get_all_from_storage().iteritems():
             self.logger.info('Looking again at %s', prepid)
             stage = request_in_storage['stage']
             running_dict = request_in_storage['running']
-            all_done = len(core_dict) > 0
-            for _, core_dict in running_dict.iteritems():
-                if core_dict.get('condor_status') != 'DONE':
-                    all_done = False
-                    break
-
+            all_done = len(running_dict) > 0
+            for core_name, core_dict in running_dict.iteritems():
                 if not core_dict.get('condor_id'):
+                    self.logger.error('%s %s cores do not have condor_id',
+                                      prepid,
+                                      core_name)
                     all_done = False
                     self.validation_failed(prepid)
                     break
 
-            if all_done:
-                self.logger.info('All DONE for %s at stage %s', prepid, stage)
-                request_dict = self.get_from_storage(prepid)
-                request_dict['running'] = {}
-                request_dict['stage'] += 1
-                if stage == 1:
-                    try:
-                        request_dict['done'] = {'1': self.parse_job_report(prepid, 1)}
-                        self.save_to_storage(prepid, request_dict)
-                    except Exception as ex:
-                        self.logger.error(ex)
-                        self.validation_failed(prepid)
-                        continue
+                all_done = all_done and core_dict.get('condor_status') == 'DONE'
 
-                    self.submit_item(prepid, 2)
-                    self.submit_item(prepid, 4)
-                    self.submit_item(prepid, 8)
-                else:
-                    try:
-                        request_dict['done']['2'] = self.parse_job_report(prepid, 2)
-                        request_dict['done']['4'] = self.parse_job_report(prepid, 4)
-                        request_dict['done']['8'] = self.parse_job_report(prepid, 8)
-                        self.save_to_storage(prepid, request_dict)
-                    except Exception as ex:
-                        self.logger.error(ex)
-                        self.validation_failed(prepid)
-                        continue
+            if not all_done:
+                continue
 
-                    self.validation_succeeded(prepid)
+            self.logger.info('All DONE for %s at stage %s', prepid, stage)
+            self.process_done_job(prepid, request_in_storage)
+
+    def process_done_job(self, prepid, request_in_storage):
+        if 'done' not in request_in_storage:
+            request_in_storage['done'] = {}
+
+        running_dict = request_in_storage['running']
+        for running_core_name in list(running_dict.keys()):
+            running_core_dict = running_dict[running_core_name]
+            core_int = int(running_core_name)
+            report = self.parse_job_report(prepid, core_int)
+            if not report.get('reports_exist', True):
+                self.logger.error('Missing reports for %s with %s cores', prepid, running_core_name)
+                self.validation_failed(prepid)
+                return
+
+            if not report.get('all_values_present', True):
+                self.logger.error('Not all values present in %s with %s cores', prepid, running_core_name)
+                self.validation_failed(prepid)
+                return
+
+            for request_name, expected_dict in running_core_dict['expected'].items():
+                request_report = report[request_name]
+                expected_memory = expected_dict['memory']
+                actual_memory = request_report['peak_value_rss']
+                if actual_memory > expected_memory:
+                    self.logger.error('%s with %s cores. %s expected %sMB memory, measured %sMB',
+                                      prepid,
+                                      running_core_name,
+                                      request_name,
+                                      expected_memory,
+                                      actual_memory)
+                    self.validation_failed(prepid)
+                    return
+
+                expected_time_per_event = expected_dict['time_per_event']
+                actual_time_per_event = request_report['time_per_event']
+                # Use settings value
+                if not self.within(actual_time_per_event, expected_time_per_event, 0.4):
+                    self.logger.error('%s with %s cores. %s expected %ss +- 40%% time per event, measured %ss',
+                                      prepid,
+                                      running_core_name,
+                                      request_name,
+                                      expected_time_per_event,
+                                      actual_time_per_event)
+                    self.save_to_storage(prepid, request_in_storage)
+                    request = self.request_db.get(request_name)
+                    number_of_sequences = len(request.get('sequences', []))
+                    request['time_event'] = [(expected_time_per_event + actual_time_per_event) / 2] * number_of_sequences
+                    self.request_db.save(request)
+                    self.submit_item(prepid, core_int)
+                    continue
+
+                expected_size_per_event = expected_dict['size_per_event']
+                actual_size_per_event = request_report['size_per_event']
+                # Use settings value
+                if not self.within(actual_size_per_event, expected_size_per_event, 0.1):
+                    self.logger.error('%s with %s cores. %s expected %skB +- 10%% size per event, measured %skB',
+                                      prepid,
+                                      running_core_name,
+                                      request_name,
+                                      expected_size_per_event,
+                                      actual_size_per_event)
+                    self.save_to_storage(prepid, request_in_storage)
+                    request = self.request_db.get(request_name)
+                    number_of_sequences = len(request.get('sequences', []))
+                    request['size_event'] = [(expected_size_per_event + actual_size_per_event) / 2] * number_of_sequences
+                    self.request_db.save(request)
+                    self.submit_item(prepid, core_int)
+                    continue
+
+                expected_filter_efficiency = expected_dict['filter_efficiency']
+                actual_filter_efficiency = request_report['filter_efficiency']
+                sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_dict['events'])
+                sigma = 3 * max(sigma, 0.05)
+                if not (expected_filter_efficiency - sigma < actual_filter_efficiency < expected_filter_efficiency + sigma):
+                    # Bad filter efficiency
+                    self.logger.error('%s with %s cores. %s expected %.4f%% +- %.4f%% filter efficiency, measured %.4f%%',
+                                      prepid,
+                                      running_core_name,
+                                      request_name,
+                                      expected_filter_efficiency,
+                                      sigma,
+                                      actual_filter_efficiency)
+                    self.validation_failed(prepid)
+                    return
+
+                self.logger.info('Success for %s in %s validation with %s cores',
+                                 request_name,
+                                 prepid,
+                                 running_core_name)
+
+            request_in_storage['done'][running_core_name] = report
+            del running_dict[running_core_name]
+
+        request_in_storage = self.get_from_storage(prepid)
+        if request_in_storage['running']:
+            # If there is something still running, do not proceed to next stage
+            self.logger.info('%s is not proceeding to next stage because there are runnig validation', prepid)
+            return
+
+        # Proceed to next stage
+        request_in_storage['stage'] += 1
+        self.save_to_storage(prepid, request_in_storage)
+
+        if stage == 2:
+            self.submit_item(prepid, 2)
+            self.submit_item(prepid, 4)
+            self.submit_item(prepid, 8)
+        elif stage > 2:
+            self.validation_succeeded(prepid)
+
+    def within(self, value, reference, margin_percent):
+        if value < reference * (1 - margin_percent):
+            return False
+
+        if value > reference * (1 + margin_percent):
+            return False
+
+        return True
 
     def validation_failed(self, prepid):
         if '-chain_' in prepid:
@@ -359,11 +478,19 @@ class ValidationControl():
         item_directory = '%s%s' % (self.test_directory_path, prepid)
         for request in requests:
             request_prepid = request.get_attribute('prepid')
+            results[request_prepid] = {}
             report_file_name = '%s_%s_threads_report.xml' % (request_prepid, threads)
             self.logger.info('Report file name: %s', report_file_name)
-            tree = ET.parse('%s/%s' % (item_directory, report_file_name))
-            root = tree.getroot()
+            if not os.path.isfile('%s/%s' % (item_directory, report_file_name)):
+                return {'reports_exist': False}
 
+            try:
+                tree = ET.parse('%s/%s' % (item_directory, report_file_name))
+            except ExpatError:
+                # Empty or invalid XML file
+                return {'reports_exist': False}
+
+            root = tree.getroot()
             total_events = root.find('.//TotalEvents')
             if total_events is not None:
                 total_events = int(total_events.text)
@@ -394,6 +521,9 @@ class ValidationControl():
                 elif attr_name == 'TotalJobTime':
                     total_job_time = float(attr_value)
                     # self.logger.info('TotalJobTime %s', total_job_time)
+                elif attr_name == 'AvgEventTime' and event_throughput is None:
+                    # Using old way if EventThroughput does not exist
+                    event_throughput = 1 / (float(attr_value) / threads)
 
             self.logger.info('event_throughput %s', event_throughput)
             self.logger.info('peak_value_rss %s', peak_value_rss)
@@ -403,7 +533,7 @@ class ValidationControl():
             self.logger.info('total_events %s', total_events)
             if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
                 self.logger.error('Not all values are in %s, aborting %s with %s threads', report_file_name, prepid, threads)
-                raise Exception()
+                return {'all_values_present': False}
 
             events_ran = request.get_event_count_for_validation()
             time_per_event = 1.0 / event_throughput
@@ -444,13 +574,13 @@ class ValidationControl():
                        'log                   = %s_%s_threads.log' % (prepid, threads),
                        'transfer_output_files = %s' % (transfer_output_files),
                        'transfer_input_files  = %s' % (transfer_input_files),
-                       # 'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)',
+                       'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)',
                        '+MaxRuntime           = %s' % (job_length),
                        'RequestCpus           = %s' % (request_cores),
                        '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
                        'requirements          = (OpSysAndVer =?= "CentOS7")',
-                       # Leave in queue when status is DONE or HOLD for 30 minutes - 1800 seconds
-                       'leave_in_queue        = (JobStatus == 4 || JobStatus == 5) && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
+                       # Leave in queue when status is DONE for 30 minutes - 1800 seconds
+                       'leave_in_queue        = JobStatus == 4 && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
                        'queue']
 
         condor_file = '\n'.join(condor_file)
@@ -478,19 +608,27 @@ class ValidationControl():
             request = Request(self.request_db.get(prepid))
             requests = [request]
 
+        expected_dict = {}
         job_length = 0
         memory = 0
         test_script = ''
         request_prepids = []
         for request in requests:
             # Max job runtime
-            request_prepids.append(request.get_attribute('prepid'))
+            request_prepid = request.get_attribute('prepid')
+            request_prepids.append(request_prepid)
             job_length += request.get_validation_max_runtime()
             # Get max memory of all requests
-            memory = max(memory, self.get_memory(request, threads))
+            request_memory = self.get_memory(request, threads)
+            memory = max(memory, request_memory)
             # Combine validation scripts to one long script
             test_script += request.get_setup_file2(True, True, threads)
             test_script += '\n'
+            expected_dict[request_prepid] = {'time_per_event': request.get_sum_time_events(),
+                                             'size_per_event': request.get_sum_size_events(),
+                                             'memory': request_memory,
+                                             'filter_efficiency': request.get_efficiency(),
+                                             'events': request.get_event_count_for_validation()}
 
         # Make a HTCondor .sub file
         condor_file = self.get_htcondor_submission_file(prepid, job_length, threads, memory, request_prepids)
@@ -521,13 +659,21 @@ class ValidationControl():
             self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s', test_script_file_name, stdout, stderr)
             return
 
+        threads_str = '%s' % (threads)
         if threads == 1:
-            self.save_to_storage(prepid, {'stage': 1,
-                                          'running': {'1': {'condor_id': condor_id}}})
+            storage_dict = {'stage': 1,
+                            'running': {},
+                            'done': {}}
         else:
             storage_dict = self.get_from_storage(prepid)
-            storage_dict['running']['%s' % (threads)] = {'condor_id': condor_id}
-            self.save_to_storage(prepid, storage_dict)
+
+        running_dict = storage_dict.get('running', {})
+        cores_dict = running_dict.get(threads_str, {})
+        cores_dict['condor_id'] = condor_id
+        cores_dict['attempt_number'] = cores_dict.get('attempt_number', 0) + 1
+        cores_dict['expected'] = expected_dict
+        storage_dict['running'][threads_str] = cores_dict
+        self.save_to_storage(prepid, storage_dict)
 
     def get_requests_from_chained_request(self, chained_request):
         """
@@ -546,12 +692,15 @@ class ValidationControl():
     def get_memory(self, request, target_threads):
         """
         Get memory scaled accordingly to number of threads
+        Do not scale on lower number of cores
+        Scale on higher number of cores
+        Limit per core 500mb - 4gb
         """
         prepid = request.get_attribute('prepid')
         sequences = request.get_attribute('sequences')
         request_memory = request.get_attribute('memory')
         request_threads = max((int(sequence.get('nThreads', 1)) for sequence in sequences))
-        if request_threads == target_threads:
+        if target_threads <= request_threads:
             # Memory provided by user
             memory = request_memory
             self.logger.info('%s will use use %sMB for %s thread validation', prepid, memory, target_threads)
@@ -563,6 +712,8 @@ class ValidationControl():
             single_core_memory = int(request_memory / request_threads)
             single_core_memory = max(single_core_memory, 2000)
 
+        # Min 500, max 4000
+        single_core_memory = max(500, min(4000, single_core_memory))
         memory = target_threads * single_core_memory
         self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
                          prepid,

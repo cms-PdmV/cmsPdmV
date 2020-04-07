@@ -3500,6 +3500,12 @@ class request(json_base):
         """
         return sum(self.get_attribute("time_event"))
 
+    def get_sum_size_events(self):
+        """
+        return sum of size_events for request
+        """
+        return sum(self.get_attribute("size_event"))
+
     def any_negative_events(self, field):
         """
         return True if there is a negative or zero value in time_event/size_event list
