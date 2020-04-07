@@ -607,6 +607,8 @@ class ValidationHandler:
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
         mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
 
+        mcm_request.get_attribute('validation')['ref_dqm'] = '/RelValDYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_ReferenceGENValidation/CMSSW_10_6_8-106X_mc2017_realistic_v6/DQMIO' #first iteration: needs to be extended
+
         saved = self.request_db.update(mcm_request.json())
         if not saved:
             mcm_request.set_attribute(self.DOC_VALIDATION, aux_validation)
