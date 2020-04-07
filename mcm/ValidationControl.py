@@ -17,7 +17,6 @@ from json_layer.notification import notification
 from json_layer.chained_request import chained_request
 from tools.locator import locator
 
-
 class ValidationHandler:
     '''
     A class that handles everything for chained requests and requests validations, this includes constructing the command, creating related files and directories,
@@ -607,7 +606,9 @@ class ValidationHandler:
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
         mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
 
-        mcm_request.get_attribute('validation')['ref_dqm'] = '/RelValDYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_ReferenceGENValidation/CMSSW_10_6_8-106X_mc2017_realistic_v6/DQMIO' #first iteration: needs to be extended
+        dqm_references = settings.get_value('validation_dqm_references')
+
+        mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
 
         saved = self.request_db.update(mcm_request.json())
         if not saved:
