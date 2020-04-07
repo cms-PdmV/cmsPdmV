@@ -133,6 +133,9 @@ class Search(RESTResource):
         if 'keep_output' in args:
             args['keep_output'] = args['keep_output'].replace(',', '_')
 
+        if page == -1 and not args and db_name == 'requests':
+            return {"results": False, "message": "Why you stupid? Don't be stupid..."}
+
         res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
         if get_raw:
             self.representations = {'text/plain': self.output_text}

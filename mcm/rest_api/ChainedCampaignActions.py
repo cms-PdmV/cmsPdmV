@@ -247,8 +247,8 @@ class InspectChainedCampaigns(InspectChainedCampaignsRest):
             return {"results": 'Error: Incorrect argument provided'}
         is_running = settings.get_value('inspect_chained_campaigns_running')
         self.logger.info('InspectChainedRequests is running: %s' % (is_running))
-        if is_running:
-            return {"results": 'Already running inspection'}
+        # if is_running:
+        #     return {"results": 'Already running inspection'}
 
         # force pretify output in browser for multiple lines
         self.representations = {'text/plain': self.output_text}
