@@ -1,147 +1,19 @@
 import logging
 import json
-import paramiko
-import tools.settings as settings
+import sys
 import os.path
+import xml.etree.ElementTree as ET
+from math import ceil, sqrt
+from xml.parsers.expat import ExpatError
+from validation_storage import ValidationStorage
+from new_ssh_executor import SSHExecutor
+
+sys.path.append(os.path.abspath(os.path.pardir + '/../'))
+import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator
-import xml.etree.ElementTree as ET
-from xml.parsers.expat import ExpatError
-from math import ceil, sqrt
-
-
-class SSHExecutor():
-    """
-    SSH executor allows to perform remote commands and upload/download files
-    """
-
-    def __init__(self, host, credentials_path):
-        self.ssh_client = None
-        self.ftp_client = None
-        self.logger = logging.getLogger()
-        self.remote_host = host
-        self.credentials_file_path = credentials_path
-        self.timeout = 3600
-
-    def setup_ssh(self):
-        """
-        Initiate SSH connection and save it as self.ssh_client
-        """
-        self.logger.debug('Will set up ssh')
-        if self.ssh_client:
-            self.close_connections()
-
-        with open(self.credentials_file_path) as json_file:
-            credentials = json.load(json_file)
-
-        self.logger.info('Credentials loaded successfully: %s', credentials['username'])
-        self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh_client.connect(self.remote_host,
-                                username=credentials["username"],
-                                password=credentials["password"],
-                                timeout=30)
-        self.logger.debug('Done setting up ssh')
-
-    def setup_ftp(self):
-        """
-        Initiate SFTP connection and save it as self.ftp_client
-        If needed, SSH connection will be automatically set up
-        """
-        self.logger.debug('Will set up ftp')
-        if self.ftp_client:
-            self.close_connections()
-
-        if not self.ssh_client:
-            self.setup_ssh()
-
-        self.ftp_client = self.ssh_client.open_sftp()
-        self.logger.debug('Done setting up ftp')
-
-    def execute_command(self, command):
-        """
-        Execute command over SSH
-        """
-        if not self.ssh_client:
-            self.setup_ssh()
-
-        if isinstance(command, list):
-            command = '; '.join(command)
-
-        self.logger.debug('Executing %s', command)
-        (_, stdout, stderr) = self.ssh_client.exec_command(command, timeout=self.timeout)
-        self.logger.debug('Executed %s. Reading response', command)
-        stdout_list = []
-        stderr_list = []
-        for line in stdout.readlines():
-            stdout_list.append(line[0:256])
-
-        for line in stderr.readlines():
-            stderr_list.append(line[0:256])
-
-        stdout = ''.join(stdout_list).strip()
-        stderr = ''.join(stderr_list).strip()
-
-        # Read output from stdout and stderr streams
-        if stdout:
-            self.logger.debug('STDOUT (%s): %s', command, stdout)
-
-        if stderr:
-            self.logger.error('STDERR (%s): %s', command, stderr)
-
-        return stdout, stderr
-
-    def upload_file(self, copy_from, copy_to):
-        """
-        Upload a file
-        """
-        self.logger.debug('Will upload file %s to %s', copy_from, copy_to)
-        if not self.ftp_client:
-            self.setup_ftp()
-
-        try:
-            self.ftp_client.put(copy_from, copy_to)
-            self.logger.debug('Uploaded file to %s', copy_to)
-        except Exception as ex:
-            self.logger.error('Error uploading file from %s to %s. %s', copy_from, copy_to, ex)
-            return False
-
-        return True
-
-    def download_file(self, copy_from, copy_to):
-        """
-        Download file from remote host
-        """
-        self.logger.debug('Will download file %s to %s', copy_from, copy_to)
-        if not self.ftp_client:
-            self.setup_ftp()
-
-        try:
-            self.ftp_client.get(copy_from, copy_to)
-            self.logger.debug('Downloaded file to %s', copy_to)
-        except Exception as ex:
-            self.logger.error('Error downloading file from %s to %s. %s', copy_from, copy_to, ex)
-            return False
-
-        return True
-
-    def close_connections(self):
-        """
-        Close any active connections
-        """
-        if self.ftp_client:
-            self.logger.debug('Closing ftp client')
-            self.ftp_client.close()
-            self.ftp_client = None
-            self.logger.debug('Closed ftp client')
-
-        if self.ssh_client:
-            self.logger.debug('Closing ssh client')
-            self.ssh_client.close()
-            self.ssh_client = None
-            self.logger.debug('Closed ssh client')
 
 
 class ValidationControl():
@@ -155,8 +27,9 @@ class ValidationControl():
     def __init__(self):
         self.request_db = database('requests')
         self.chained_request_db = database('chained_requests')
-        self.ssh_executor = SSHExecutor('lxplus.cern.ch',
+        self.ssh_executor = SSHExecutor(settings.get_value('node_for_test'),
                                         '/afs/cern.ch/user/j/jrumsevi/private/credentials_json.txt')
+        self.storage = ValidationStorage()
         self.logger = logging.getLogger()
         locator = Locator('validation/tests', care_on_existing=False)
         self.test_directory_path = locator.location()
@@ -182,21 +55,17 @@ class ValidationControl():
         for line in lines:
             columns = line.split()
             if not len(columns):
-                break
-
-            if columns[1] == '4':
-                status = 'DONE'
-            elif columns[1] == '2':
-                status = 'RUN'
-            elif columns[1] == '1':
-                status = 'IDLE'
-            else:
                 continue
 
             job_id = columns[0]
-            jobs_dict[job_id] = status
+            if columns[1] == '4':
+                jobs_dict[job_id] = 'DONE'
+            elif columns[1] == '2':
+                jobs_dict[job_id] = 'RUN'
+            elif columns[1] == '1':
+                jobs_dict[job_id] = 'IDLE'
 
-        self.logger.info('Job status in HTCondor:%s' % (json.dumps(jobs_dict, indent=2, sort_keys=True)))
+        self.logger.info('Job status in HTCondor:%s', json.dumps(jobs_dict, indent=2, sort_keys=True))
         return jobs_dict
 
     def get_requests_to_be_submitted(self):
@@ -239,7 +108,7 @@ class ValidationControl():
                     self.logger.info('Removing %s from requests because it is in %s', request, chained_request_prepid)
                     requests.remove(request)
 
-        already_submitted = set(self.get_all_from_storage().keys())
+        already_submitted = set(self.storage.get_all().keys())
         self.logger.info('Items that are already submitted: %s', ', '.join(already_submitted))
         to_be_submitted = list((requests | set(chained_requests)) - already_submitted)
         self.logger.info('Items to be submitted:\n%s', '\n'.join(to_be_submitted))
@@ -257,126 +126,168 @@ class ValidationControl():
         self.submit_items(items_to_submit)
 
     def update_running_jobs(self, condor_jobs):
-        for prepid, request_in_storage in self.get_all_from_storage().iteritems():
-            self.logger.info('Looking at %s', prepid)
-            stage = request_in_storage['stage']
-            running_dict = request_in_storage['running']
-            self.logger.info('%s is at stage %s. Cores in running: %s',
+        """
+        Update HTCondor job status in local storage
+        """
+        for prepid, storage_item in self.storage.get_all().iteritems():
+            stage = storage_item['stage']
+            running = storage_item['running']
+            self.logger.info('%s is at stage %s. Running thread jobs: %s',
                              prepid,
                              stage,
-                             ', '.join(running_dict.keys()))
-            for core_name, core_dict in running_dict.iteritems():
-                if core_dict.get('condor_status') == 'DONE':
-                    self.logger.info('Core %s is already DONE', core_name)
+                             ', '.join(running.keys()))
+            for cores_name, cores_dict in running.iteritems():
+                if cores_dict.get('condor_status') == 'DONE':
+                    self.logger.info('%s %s threads job is already DONE', prepid, cores_name)
                     continue
 
-                condor_id = str(core_dict['condor_id'])
-                core_dict['condor_status'] = condor_jobs.get(condor_id, 'DONE')
-                self.logger.info('Core %s is %s', core_name, core_dict['condor_status'])
+                condor_id = str(cores_dict['condor_id'])
+                current_status = cores_dict.get('condor_status', '<unknown>')
+                new_status = condor_jobs.get(condor_id, 'DONE')
+                if current_status != new_status:
+                    cores_dict['condor_status'] = new_status
+                    self.logger.info('%s %s threads job changed to %s',
+                                     prepid,
+                                     cores_name,
+                                     new_status)
+                    self.storage.save(prepid, storage_item)
 
-            self.save_to_storage(prepid, request_in_storage)
+        self.logger.info('Currently running jobs:')
+        for prepid, storage_item in self.storage.get_all().iteritems():
+            stage = storage_item['stage']
+            self.logger.info('  %s is at stage %s. Running jobs:', prepid, stage)
+            running = storage_item['running']
+            for cores_name, cores_dict in running.iteritems():
+                self.logger.info('    %s threads attempt: %s, job status: %s, job ID: %s',
+                                 cores_name,
+                                 cores_dict.get('attempt_number'),
+                                 cores_dict.get('condor_status'),
+                                 cores_dict.get('condor_id'))
+
 
     def process_done_jobs(self):
-        for prepid, request_in_storage in self.get_all_from_storage().iteritems():
-            self.logger.info('Looking again at %s', prepid)
-            stage = request_in_storage['stage']
-            running_dict = request_in_storage['running']
-            all_done = len(running_dict) > 0
-            for core_name, core_dict in running_dict.iteritems():
-                if not core_dict.get('condor_id'):
-                    self.logger.error('%s %s cores do not have condor_id',
+        """
+        Iterate through all jobs in storage and check if they
+        are done - all HTCondor jobs are DONE
+        """
+        for prepid, storage_item in self.storage.get_all().iteritems():
+            self.logger.info('Checking if %s is all done', prepid)
+            stage = storage_item['stage']
+            running = storage_item['running']
+            all_done = len(running) > 0
+            for cores_name, cores_dict in running.iteritems():
+                if not cores_dict.get('condor_id'):
+                    self.logger.error('%s %s threads do not have HTCondor ID. Failing validation',
                                       prepid,
-                                      core_name)
-                    all_done = False
+                                      cores_name)
                     self.validation_failed(prepid)
                     break
 
-                all_done = all_done and core_dict.get('condor_status') == 'DONE'
+                all_done = all_done and cores_dict.get('condor_status') == 'DONE'
+            else:
+                if all_done:
+                    self.logger.info('All running jobs are DONE for %s at stage %s', prepid, stage)
+                    self.process_done_job(prepid)
 
-            if not all_done:
-                continue
-
-            self.logger.info('All DONE for %s at stage %s', prepid, stage)
-            self.process_done_job(prepid, request_in_storage)
-
-    def process_done_job(self, prepid, request_in_storage):
-        if 'done' not in request_in_storage:
-            request_in_storage['done'] = {}
-
-        running_dict = request_in_storage['running']
-        for running_core_name in list(running_dict.keys()):
-            running_core_dict = running_dict[running_core_name]
-            core_int = int(running_core_name)
-            report = self.parse_job_report(prepid, core_int)
+    def process_done_job(self, prepid):
+        """
+        Parse reports, fail, resubmit or proceed validation to next step
+        """
+        self.logger.info('Processing DONE %s', prepid)
+        storage_item = self.storage.get(prepid)
+        running = storage_item['running']
+        for cores_name in list(running.keys()):
+            cores_int = int(cores_name)
+            cores_dict = running[cores_name]
+            # Remove current item from running
+            del running[cores_name]
+            self.storage.save(prepid, storage_item)
+            # Get report
+            report = self.parse_job_report(prepid, cores_int)
             if not report.get('reports_exist', True):
-                self.logger.error('Missing reports for %s with %s cores', prepid, running_core_name)
+                self.logger.error('Missing reports for %s %s thread validation', prepid, cores_name)
                 self.validation_failed(prepid)
                 return
 
             if not report.get('all_values_present', True):
-                self.logger.error('Not all values present in %s with %s cores', prepid, running_core_name)
+                self.logger.error('Not all values present in %s %s thread reports', prepid, cores_name)
                 self.validation_failed(prepid)
                 return
 
-            for request_name, expected_dict in running_core_dict['expected'].items():
-                request_report = report[request_name]
-                expected_memory = expected_dict['memory']
-                actual_memory = request_report['peak_value_rss']
-                if actual_memory > expected_memory:
-                    self.logger.error('%s with %s cores. %s expected %sMB memory, measured %sMB',
-                                      prepid,
-                                      running_core_name,
+            for request_name, expected_dict in cores_dict['expected'].items():
+                report_dict = report[request_name]
+                self.logger.info('Checking %s report in %s %s thread validation', request_name, prepid, cores_name)
+                self.logger.info('%s %s threads:\nExpected:\n%s\nMeasureded:\n%s',
+                                 request_name,
+                                 cores_name,
+                                 json.dumps(expected_dict, indent=2, sort_keys=True),
+                                 json.dumps(report_dict, indent=2, sort_keys=True))
+
+                # Check time per event
+                expected_time_per_event = expected_dict['time_per_event']
+                actual_time_per_event = report_dict['time_per_event']
+                time_per_event_margin = settings.get_value('timing_fraction')
+                if not self.within(actual_time_per_event, expected_time_per_event, time_per_event_margin):
+                    self.logger.error('%s with %s threads expected %ss +- %.2f%% time per event, measured %ss',
                                       request_name,
+                                      cores_name,
+                                      time_per_event_margin * 100,
+                                      expected_time_per_event,
+                                      actual_time_per_event)
+                    request = self.request_db.get(request_name)
+                    number_of_sequences = len(request.get('sequences', []))
+                    request['time_event'] = [(expected_time_per_event + 3 * actual_time_per_event) / 4] * number_of_sequences
+                    self.request_db.save(request)
+                    self.logger.info('Set %s time per event to %.4fs, will resubmit with %s cores',
+                                     request_name,
+                                     sum(request['time_event']),
+                                     cores_name)
+                    self.submit_item(prepid, core_int)
+                    break
+
+                # Check size per event
+                expected_size_per_event = expected_dict['size_per_event']
+                actual_size_per_event = report_dict['size_per_event']
+                size_per_event_margin = 0.1
+                if not self.within(actual_size_per_event, expected_size_per_event, size_per_event_margin):
+                    self.logger.error('%s with %s threads expected %skB +- %.2f%% size per event, measured %skB',
+                                      request_name,
+                                      cores_name,
+                                      size_per_event_margin * 100,
+                                      expected_size_per_event,
+                                      actual_size_per_event)
+                    request = self.request_db.get(request_name)
+                    number_of_sequences = len(request.get('sequences', []))
+                    request['size_event'] = [(expected_size_per_event + 3 * actual_size_per_event) / 4] * number_of_sequences
+                    self.request_db.save(request)
+                    self.logger.info('Set %s size per event to %.4fs, will resubmit with %s cores',
+                                     request_name,
+                                     sum(request['size_event']),
+                                     cores_name)
+                    self.submit_item(prepid, core_int)
+                    break
+
+                # Check memory usage
+                expected_memory = expected_dict['memory']
+                actual_memory = report_dict['peak_value_rss']
+                if actual_memory > expected_memory:
+                    self.logger.error('%s with %s threads expected %sMB memory, measured %sMB',
+                                      request_name,
+                                      cores_name,
                                       expected_memory,
                                       actual_memory)
                     self.validation_failed(prepid)
                     return
 
-                expected_time_per_event = expected_dict['time_per_event']
-                actual_time_per_event = request_report['time_per_event']
-                # Use settings value
-                if not self.within(actual_time_per_event, expected_time_per_event, 0.4):
-                    self.logger.error('%s with %s cores. %s expected %ss +- 40%% time per event, measured %ss',
-                                      prepid,
-                                      running_core_name,
-                                      request_name,
-                                      expected_time_per_event,
-                                      actual_time_per_event)
-                    self.save_to_storage(prepid, request_in_storage)
-                    request = self.request_db.get(request_name)
-                    number_of_sequences = len(request.get('sequences', []))
-                    request['time_event'] = [(expected_time_per_event + actual_time_per_event) / 2] * number_of_sequences
-                    self.request_db.save(request)
-                    self.submit_item(prepid, core_int)
-                    continue
-
-                expected_size_per_event = expected_dict['size_per_event']
-                actual_size_per_event = request_report['size_per_event']
-                # Use settings value
-                if not self.within(actual_size_per_event, expected_size_per_event, 0.1):
-                    self.logger.error('%s with %s cores. %s expected %skB +- 10%% size per event, measured %skB',
-                                      prepid,
-                                      running_core_name,
-                                      request_name,
-                                      expected_size_per_event,
-                                      actual_size_per_event)
-                    self.save_to_storage(prepid, request_in_storage)
-                    request = self.request_db.get(request_name)
-                    number_of_sequences = len(request.get('sequences', []))
-                    request['size_event'] = [(expected_size_per_event + actual_size_per_event) / 2] * number_of_sequences
-                    self.request_db.save(request)
-                    self.submit_item(prepid, core_int)
-                    continue
-
+                # Check filter efficiency
                 expected_filter_efficiency = expected_dict['filter_efficiency']
-                actual_filter_efficiency = request_report['filter_efficiency']
+                actual_filter_efficiency = report_dict['filter_efficiency']
                 sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_dict['events'])
                 sigma = 3 * max(sigma, 0.05)
                 if not (expected_filter_efficiency - sigma < actual_filter_efficiency < expected_filter_efficiency + sigma):
-                    # Bad filter efficiency
                     self.logger.error('%s with %s cores. %s expected %.4f%% +- %.4f%% filter efficiency, measured %.4f%%',
                                       prepid,
-                                      running_core_name,
+                                      cores_name,
                                       request_name,
                                       expected_filter_efficiency,
                                       sigma,
@@ -387,22 +298,24 @@ class ValidationControl():
                 self.logger.info('Success for %s in %s validation with %s cores',
                                  request_name,
                                  prepid,
-                                 running_core_name)
+                                 cores_name)
+            else:
+                # If there was no break in the loop - nothing was resubmitted
+                storage_item['done'][cores_name] = report
+                self.storage.save(prepid, storage_item)
 
-            request_in_storage['done'][running_core_name] = report
-            del running_dict[running_core_name]
-
-        request_in_storage = self.get_from_storage(prepid)
-        if request_in_storage['running']:
+        storage_item = self.storage.get(prepid)
+        if storage_item['running']:
             # If there is something still running, do not proceed to next stage
             self.logger.info('%s is not proceeding to next stage because there are runnig validation', prepid)
             return
 
         # Proceed to next stage
-        request_in_storage['stage'] += 1
-        self.save_to_storage(prepid, request_in_storage)
-
+        stage = storage_item['stage'] + 1
+        storage_item['stage'] = stage
+        self.storage.save(prepid, storage_item)
         if stage == 2:
+            # Do not submit multicore jobs for < CMSSW 7.4 
             self.submit_item(prepid, 2)
             self.submit_item(prepid, 4)
             self.submit_item(prepid, 8)
@@ -410,13 +323,7 @@ class ValidationControl():
             self.validation_succeeded(prepid)
 
     def within(self, value, reference, margin_percent):
-        if value < reference * (1 - margin_percent):
-            return False
-
-        if value > reference * (1 + margin_percent):
-            return False
-
-        return True
+        return reference * (1 - margin_percent) <= value <= reference * (1 + margin_percent)
 
     def validation_failed(self, prepid):
         if '-chain_' in prepid:
@@ -435,7 +342,7 @@ class ValidationControl():
             self.logger.warning('Saving %s', request['prepid'])
             self.request_db.save(request)
 
-        self.delete_from_storage(prepid)
+        self.storage.delete(prepid)
         self.logger.info('Validation failed for %s', prepid)
 
     def validation_succeeded(self, prepid):
@@ -445,7 +352,7 @@ class ValidationControl():
             self.chained_request_db.save(chained_req)
 
         requests = {}
-        request_dict = self.get_from_storage(prepid)
+        request_dict = self.storage.get(prepid)
         for core_number in request_dict['done'].keys():
             for request_prepid in request_dict['done'][core_number].keys():
                 if request_prepid not in requests:
@@ -461,7 +368,7 @@ class ValidationControl():
             self.logger.warning('Saving %s', request['prepid'])
             self.request_db.save(request)
 
-        self.delete_from_storage(prepid)
+        self.storage.delete(prepid)
         self.logger.info('Validation succeeded for %s', prepid)
 
     def parse_job_report(self, prepid, threads):
@@ -508,29 +415,25 @@ class ValidationControl():
                 attr_value = child.attrib['Value']
                 if attr_name == 'EventThroughput':
                     event_throughput = float(attr_value)
-                    # self.logger.info('EventThroughput %s', event_throughput)
                 elif attr_name == 'PeakValueRss':
                     peak_value_rss = float(attr_value)
-                    # self.logger.info('PeakValueRss %s', peak_value_rss)
                 elif attr_name == 'Timing-tstoragefile-write-totalMegabytes':
                     total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
-                    # self.logger.info('Timing-tstoragefile-write-totalMegabytes %s', total_size)
                 elif attr_name == 'TotalJobCPU':
                     total_job_cpu = float(attr_value)
-                    # self.logger.info('TotalJobCPU %s', total_job_cpu)
                 elif attr_name == 'TotalJobTime':
                     total_job_time = float(attr_value)
-                    # self.logger.info('TotalJobTime %s', total_job_time)
                 elif attr_name == 'AvgEventTime' and event_throughput is None:
                     # Using old way if EventThroughput does not exist
                     event_throughput = 1 / (float(attr_value) / threads)
 
-            self.logger.info('event_throughput %s', event_throughput)
-            self.logger.info('peak_value_rss %s', peak_value_rss)
-            self.logger.info('total_size %s', total_size)
-            self.logger.info('total_job_cpu %s', total_job_cpu)
-            self.logger.info('total_job_time %s', total_job_time)
-            self.logger.info('total_events %s', total_events)
+            self.logger.info('Request %s validation with %s threads report values:', request_prepid, threads)
+            self.logger.info('  event_throughput %s', event_throughput)
+            self.logger.info('  peak_value_rss %s', peak_value_rss)
+            self.logger.info('  total_size %s', total_size)
+            self.logger.info('  total_job_cpu %s', total_job_cpu)
+            self.logger.info('  total_job_time %s', total_job_time)
+            self.logger.info('  total_events %s', total_events)
             if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
                 self.logger.error('Not all values are in %s, aborting %s with %s threads', report_file_name, prepid, threads)
                 return {'all_values_present': False}
@@ -659,21 +562,23 @@ class ValidationControl():
             self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s', test_script_file_name, stdout, stderr)
             return
 
-        threads_str = '%s' % (threads)
-        if threads == 1:
+        storage_dict = self.storage.get(prepid)
+        if not storage_dict:
             storage_dict = {'stage': 1,
                             'running': {},
                             'done': {}}
-        else:
-            storage_dict = self.get_from_storage(prepid)
 
+        threads_str = '%s' % (threads)
         running_dict = storage_dict.get('running', {})
         cores_dict = running_dict.get(threads_str, {})
         cores_dict['condor_id'] = condor_id
         cores_dict['attempt_number'] = cores_dict.get('attempt_number', 0) + 1
+        if 'condor_status' in cores_dict:
+            del cores_dict['condor_status']
+
         cores_dict['expected'] = expected_dict
         storage_dict['running'][threads_str] = cores_dict
-        self.save_to_storage(prepid, storage_dict)
+        self.storage.save(prepid, storage_dict)
 
     def get_requests_from_chained_request(self, chained_request):
         """
@@ -723,28 +628,6 @@ class ValidationControl():
                          memory,
                          target_threads)
         return memory
-
-    def save_to_storage(self, prepid, dict_to_save):
-        all_validations = self.get_all_from_storage()
-        all_validations[prepid] = dict_to_save
-        with open('validations.json', 'w') as f:
-            f.write(json.dumps(all_validations, indent=2, sort_keys=True))
-
-    def get_from_storage(self, prepid):
-        return self.get_all_from_storage().get(prepid)
-
-    def get_all_from_storage(self):
-        with open('validations.json', 'r') as f:
-            all_validations = json.loads(f.read())
-
-        return all_validations
-
-    def delete_from_storage(self, prepid):
-        all_validations = self.get_all_from_storage()
-        if prepid in all_validations:
-            del all_validations[prepid]
-            with open('validations.json', 'w') as f:
-                f.write(json.dumps(all_validations, indent=2, sort_keys=True))
 
 
 if __name__ == '__main__':
