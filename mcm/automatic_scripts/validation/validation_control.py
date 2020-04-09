@@ -174,7 +174,12 @@ class ValidationControl():
             self.logger.info('Checking if %s is all done', prepid)
             stage = storage_item['stage']
             running = storage_item['running']
-            all_done = len(running) > 0
+            if not running:
+                self.logger.error('No running jobs for %s', prepid)
+                self.validation_failed(prepid)
+                break
+
+            all_done = True
             for cores_name, cores_dict in running.iteritems():
                 if not cores_dict.get('condor_id'):
                     self.logger.error('%s %s threads do not have HTCondor ID. Failing validation',
@@ -196,12 +201,10 @@ class ValidationControl():
         self.logger.info('Processing DONE %s', prepid)
         storage_item = self.storage.get(prepid)
         running = storage_item['running']
+        cmssw_versions_of_succeeded = []
         for cores_name in list(running.keys()):
             cores_int = int(cores_name)
             cores_dict = running[cores_name]
-            # Remove current item from running
-            del running[cores_name]
-            self.storage.save(prepid, storage_item)
             # Get report
             report = self.parse_job_report(prepid, cores_int)
             if not report.get('reports_exist', True):
@@ -214,10 +217,20 @@ class ValidationControl():
                 self.validation_failed(prepid)
                 return
 
+            # Check report only for single core validation
+            if cores_int != 1:
+                storage_item['done'][cores_name] = report
+                # Remove current item from running
+                del running[cores_name]
+                self.storage.save(prepid, storage_item)
+                continue
+
+            attempt_number = cores_dict['attempt_number']
+            max_attempts = 3
             for request_name, expected_dict in cores_dict['expected'].items():
                 report_dict = report[request_name]
                 self.logger.info('Checking %s report in %s %s thread validation', request_name, prepid, cores_name)
-                self.logger.info('%s %s threads:\nExpected:\n%s\nMeasureded:\n%s',
+                self.logger.info('%s %s threads:\nExpected:\n%s\nMeasured:\n%s',
                                  request_name,
                                  cores_name,
                                  json.dumps(expected_dict, indent=2, sort_keys=True),
@@ -231,19 +244,27 @@ class ValidationControl():
                     self.logger.error('%s with %s threads expected %ss +- %.2f%% time per event, measured %ss',
                                       request_name,
                                       cores_name,
-                                      time_per_event_margin * 100,
                                       expected_time_per_event,
+                                      time_per_event_margin * 100,
                                       actual_time_per_event)
-                    request = self.request_db.get(request_name)
-                    number_of_sequences = len(request.get('sequences', []))
-                    request['time_event'] = [(expected_time_per_event + 3 * actual_time_per_event) / 4] * number_of_sequences
-                    self.request_db.save(request)
-                    self.logger.info('Set %s time per event to %.4fs, will resubmit with %s cores',
-                                     request_name,
-                                     sum(request['time_event']),
-                                     cores_name)
-                    self.submit_item(prepid, core_int)
-                    break
+                    if attempt_number >= max_attempts:
+                        self.logger.error('%s with %s threads failed after %s attempts, validation failed',
+                                          request_name,
+                                          cores_name,
+                                          attempt_number)
+                        self.validation_failed(prepid)
+                        return
+                    else:
+                        request = self.request_db.get(request_name)
+                        number_of_sequences = len(request.get('sequences', []))
+                        request['time_event'] = [(expected_time_per_event + 3 * actual_time_per_event) / 4] * number_of_sequences
+                        self.request_db.save(request)
+                        self.logger.info('Set %s time per event to %.4fs, will resubmit with %s cores',
+                                         request_name,
+                                         sum(request['time_event']),
+                                         cores_name)
+                        self.submit_item(prepid, cores_int)
+                        break
 
                 # Check size per event
                 expected_size_per_event = expected_dict['size_per_event']
@@ -253,19 +274,27 @@ class ValidationControl():
                     self.logger.error('%s with %s threads expected %skB +- %.2f%% size per event, measured %skB',
                                       request_name,
                                       cores_name,
-                                      size_per_event_margin * 100,
                                       expected_size_per_event,
+                                      size_per_event_margin * 100,
                                       actual_size_per_event)
-                    request = self.request_db.get(request_name)
-                    number_of_sequences = len(request.get('sequences', []))
-                    request['size_event'] = [(expected_size_per_event + 3 * actual_size_per_event) / 4] * number_of_sequences
-                    self.request_db.save(request)
-                    self.logger.info('Set %s size per event to %.4fs, will resubmit with %s cores',
-                                     request_name,
-                                     sum(request['size_event']),
-                                     cores_name)
-                    self.submit_item(prepid, core_int)
-                    break
+                    if attempt_number >= max_attempts:
+                        self.logger.error('%s with %s threads failed after %s attempts, validation failed',
+                                          request_name,
+                                          cores_name,
+                                          attempt_number)
+                        self.validation_failed(prepid)
+                        return
+                    else:
+                        request = self.request_db.get(request_name)
+                        number_of_sequences = len(request.get('sequences', []))
+                        request['size_event'] = [(expected_size_per_event + 3 * actual_size_per_event) / 4] * number_of_sequences
+                        self.request_db.save(request)
+                        self.logger.info('Set %s size per event to %.4fs, will resubmit with %s cores',
+                                         request_name,
+                                         sum(request['size_event']),
+                                         cores_name)
+                        self.submit_item(prepid, cores_int)
+                        break
 
                 # Check memory usage
                 expected_memory = expected_dict['memory']
@@ -283,7 +312,8 @@ class ValidationControl():
                 expected_filter_efficiency = expected_dict['filter_efficiency']
                 actual_filter_efficiency = report_dict['filter_efficiency']
                 sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_dict['events'])
-                sigma = 3 * max(sigma, 0.05)
+                sigma = 3 * max(sigma, 0.2)
+                self.logger.warning('Using %s%% as filter margin, original value 3 * 0.05', sigma)
                 if not (expected_filter_efficiency - sigma < actual_filter_efficiency < expected_filter_efficiency + sigma):
                     self.logger.error('%s with %s cores. %s expected %.4f%% +- %.4f%% filter efficiency, measured %.4f%%',
                                       prepid,
@@ -295,12 +325,15 @@ class ValidationControl():
                     self.validation_failed(prepid)
                     return
 
+                request = self.request_db.get(request_name)
+                cmssw_versions_of_succeeded.append(request.get('cmssw_release'))
                 self.logger.info('Success for %s in %s validation with %s cores',
                                  request_name,
                                  prepid,
                                  cores_name)
             else:
                 # If there was no break in the loop - nothing was resubmitted
+                del running[cores_name]
                 storage_item['done'][cores_name] = report
                 self.storage.save(prepid, storage_item)
 
@@ -314,12 +347,18 @@ class ValidationControl():
         stage = storage_item['stage'] + 1
         storage_item['stage'] = stage
         self.storage.save(prepid, storage_item)
-        if stage == 2:
+        cmssw_versions_of_succeeded = list(set(cmssw_versions_of_succeeded))
+        cmssw_versions_of_succeeded = [tuple(x.replace('CMSSW_', '').split('_')[0:3]) for x in cmssw_versions_of_succeeded]
+        cmssw_versions_of_succeeded = sorted(cmssw_versions_of_succeeded)
+        self.logger.info('CMSSW versions of requests: %s', ', '.join('_'.join(list(cmssw_versions_of_succeeded))))
+        lowest_cmssw_version = cmssw_versions_of_succeeded[0]
+        cmssw_too_low = lowest_cmssw_version[0] < 7 or (lowest_cmssw_version[0] == 7 and lowest_cmssw_version[1] < 4)
+        if stage == 2 and not cmssw_too_low:
             # Do not submit multicore jobs for < CMSSW 7.4 
             self.submit_item(prepid, 2)
             self.submit_item(prepid, 4)
             self.submit_item(prepid, 8)
-        elif stage > 2:
+        else:
             self.validation_succeeded(prepid)
 
     def within(self, value, reference, margin_percent):
@@ -557,9 +596,9 @@ class ValidationControl():
         if not stderr and '1 job(s) submitted to cluster' in stdout:
             # output is "1 job(s) submitted to cluster xxxxxx"
             condor_id = int(float(stdout.split()[-1]))
-            self.logger.info('Submitted %s, HTCondor ID %s' % (test_script_file_name, condor_id))
+            self.logger.info('Submitted %s, HTCondor ID %s' % (test_script_file_name.split('/')[-1], condor_id))
         else:
-            self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s', test_script_file_name, stdout, stderr)
+            self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s', test_script_file_name.split('/')[-1], stdout, stderr)
             return
 
         storage_dict = self.storage.get(prepid)
@@ -573,6 +612,10 @@ class ValidationControl():
         cores_dict = running_dict.get(threads_str, {})
         cores_dict['condor_id'] = condor_id
         cores_dict['attempt_number'] = cores_dict.get('attempt_number', 0) + 1
+        self.logger.info('Submitted %s %s threads attempt number %s',
+                         prepid,
+                         threads,
+                         cores_dict['attempt_number'])
         if 'condor_status' in cores_dict:
             del cores_dict['condor_status']
 
