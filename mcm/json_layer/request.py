@@ -2685,6 +2685,7 @@ class request(json_base):
             total_event_in,
             total_job_cpu,
             total_job_time))
+        self.logger.info('Validation peak RSS: %s' % (memory))
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
@@ -2706,6 +2707,10 @@ class request(json_base):
 
         if memory:
             self.check_memory(memory, total_event, total_event_in)
+            validation_dict = self.get_attribute('validation')
+            validation_dict['peak_value_rss'] = memory
+            self.set_attribute('validation', validation_dict)
+            self.logger.info('Setting peak_value_rss of %s to %s' % (self.get_attribute('prepid'), memory))
 
         self.update_history({'action': 'update', 'step': what})
 

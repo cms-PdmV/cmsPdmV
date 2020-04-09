@@ -204,7 +204,7 @@ class ValidationHandler:
 
            launcher_file_content += ['chmod +x %s' % (file_name)]
            if validation_os == 'SLCern6':
-               launcher_file_content += ['singularity run -B /afs -B /eos -B /cvmfs --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
+               launcher_file_content += ['singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
            else:
                launcher_file_content += ['source %s' % (file_name)]
 
@@ -603,6 +603,9 @@ class ValidationHandler:
 
         mcm_request.set_status(with_notification=True)
         aux_validation = mcm_request.get_attribute(self.DOC_VALIDATION)
+        if 'peak_value_rss' in aux_validation:
+            doc_validation['peak_value_rss'] = aux_validation['peak_value_rss']
+
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
         mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
 
