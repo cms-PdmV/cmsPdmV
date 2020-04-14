@@ -755,6 +755,21 @@ class request(json_base):
         rdb = database('requests')
         self.check_for_collisions()
         self.get_input_dataset_status()
+        prepid = self.get_attribute('prepid')
+        # Check if there are any unacknowledged invalidations
+        invalidations_db = database('invalidations')
+        invalidations_query = invalidations_db.construct_lucene_query({'prepid': prepid})
+        invalidations = invalidations_db.full_text_search('search', invalidations_query, page=-1)
+        invalidations = [i for i  in invalidations if i['status'] in ('new', 'announced')]
+        if invalidations:
+            self.logger.info('Unacknowledged invalidations for %s: %s' % (prepid, ', '.join([x['prepid'] for x in invalidations])))
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'approve',
+                'There are %s unacknowledged invalidations for %s' % (len(invalidations), prepid))
+        else:
+            self.logger.info('No unacknowledged invalidations for %s' % (prepid))
+
         moveon_with_single_submit = True  # for the case of chain request submission
         is_the_current_one = False
         # check on position in chains
