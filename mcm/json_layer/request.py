@@ -755,6 +755,21 @@ class request(json_base):
         rdb = database('requests')
         self.check_for_collisions()
         self.get_input_dataset_status()
+        prepid = self.get_attribute('prepid')
+        # Check if there are any unacknowledged invalidations
+        invalidations_db = database('invalidations')
+        invalidations_query = invalidations_db.construct_lucene_query({'prepid': prepid})
+        invalidations = invalidations_db.full_text_search('search', invalidations_query, page=-1)
+        invalidations = [i for i  in invalidations if i['status'] in ('new', 'announced')]
+        if invalidations:
+            self.logger.info('Unacknowledged invalidations for %s: %s' % (prepid, ', '.join([x['prepid'] for x in invalidations])))
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'approve',
+                'There are %s unacknowledged invalidations for %s' % (len(invalidations), prepid))
+        else:
+            self.logger.info('No unacknowledged invalidations for %s' % (prepid))
+
         moveon_with_single_submit = True  # for the case of chain request submission
         is_the_current_one = False
         # check on position in chains
@@ -2685,6 +2700,7 @@ class request(json_base):
             total_event_in,
             total_job_cpu,
             total_job_time))
+        self.logger.info('Validation peak RSS: %s' % (memory))
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
@@ -2706,6 +2722,10 @@ class request(json_base):
 
         if memory:
             self.check_memory(memory, total_event, total_event_in)
+            validation_dict = self.get_attribute('validation')
+            validation_dict['peak_value_rss'] = memory
+            self.set_attribute('validation', validation_dict)
+            self.logger.info('Setting peak_value_rss of %s to %s' % (self.get_attribute('prepid'), memory))
 
         self.update_history({'action': 'update', 'step': what})
 
