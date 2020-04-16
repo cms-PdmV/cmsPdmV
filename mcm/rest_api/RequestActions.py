@@ -510,7 +510,7 @@ class GetSetupForRequest(RESTResource):
         request_db = database(self.db_name)
         if request_db.document_exists(prepid):
             req = request(request_db.get(prepid))
-            output_text = req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation)
+            output_text = req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation, threads=1)
             return output_text
         else:
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)

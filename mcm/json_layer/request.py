@@ -1340,7 +1340,7 @@ class request(json_base):
         bash_file = ['#!/bin/bash', '']
 
         run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
-        run_dqm_upload = for_validation and automatic_validation and (threads == 1)
+        run_dqm_upload = for_validation and automatic_validation and (threads == 1) and self.get_attribute('validation').get('valid', False)
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
             # Download the script
@@ -1479,7 +1479,32 @@ class request(json_base):
 
                 sequence_dict['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
 
-            # TODO: add numberEventsInLuminosityBlock to customise_commands
+            if run_gen_script and index == 0 :
+                campaign_db = database('campaigns')
+                request_campaign = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
+                # CMSSW must be >= 9.3.0
+                if request_campaign.is_release_greater_or_equal_to('CMSSW_9_3_0'):
+                    member_of_chains = self.get_attribute('member_of_chain')
+                    # Request must be first in chain
+                    first_in_chain = True
+                    if len(member_of_chains) > 0:
+                        from json_layer.chained_request import chained_request
+                        chained_request_db = database('chained_requests')
+                        chained_req = chained_request(chained_request_db.get(member_of_chains[0]))
+                        chained_req_chain = chained_req.get_attribute('chain')
+                        if len(chained_req_chain) > 0 and chained_req_chain[0] != self.get_attribute('prepid'):
+                            first_in_chain = False
+
+                    self.logger.info('%s is first in chain: %s', prepid, 'YES' if first_in_chain else 'NO')
+                    if first_in_chain:
+                        events_per_lumi = self.get_events_per_lumi(threads)
+                        events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
+                        events_per_lumi /= self.get_forward_efficiency()  # this does not take its own efficiency
+                        events_per_lumi = int(events_per_lumi)
+                        if sequence_dict['customise_commands']:
+                            sequence_dict['customise_commands'] += '\\\\n'
+
+                        sequence_dict['customise_commands'] += 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
 
             if threads is not None:
                 sequence_dict['nThreads'] = threads
@@ -1494,6 +1519,12 @@ class request(json_base):
             filein = self.get_input_file_for_sequence(index)
             if filein:
                 sequence_dict['filein'] = filein
+
+            if run_dqm_upload:
+                validation_content =self.get_attribute('validation').get('content', 'all').lower()
+                sequence_dict['datatier'].append('DQMIO')
+                sequence_dict['eventcontent'].append('DQM')
+                sequence_dict['step'].append('VALIDATION:genvalid_%s' % (validation_content))
 
             bash_file += ['',
                           '# cmsDriver command',
@@ -1514,12 +1545,60 @@ class request(json_base):
                               '# Run generated config',
                               'cmsRun -e -j %s %s || exit $? ;' % (report_name, config_filename)]
 
+                if run_dqm_upload:
+                    dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
+                    harvest_config = config_filename.replace('_cfg.py', '_harvest_cfg.py')
+                    conditions = sequence_dict['conditions']
+                    dataset_name = self.get_attribute('dataset_name')
+                    cmssw_release = self.get_attribute('cmssw_release')
+                    if is_dev:
+                        dqm_url = 'https://cmsweb-testbed.cern.ch/dqm/relval-test/'
+                    else:
+                        dqm_url = 'https://cmsweb.cern.ch/dqm/relval/'
+
+                    dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (dataset_name, cmssw_release, conditions)
+                    bash_file += ['',
+                                  '# Generate harvesting config',
+                                  'cmsDriver.py step3 --python_file %s --no_exec --conditions %s --filein file:%s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1' % (harvest_config, conditions, dqm_input_file),
+                                  '# Run harvesting on %s' % (dqm_input_file),
+                                  'cmsRun %s' % (harvest_config),
+                                  'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s' % (dqm_file),
+                                  '',
+                                  '# Upload %s to %s' % (dqm_file, dqm_url),
+                                  'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh',
+                                  'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload',
+                                  'python visDQMUpload %s %s' % (dqm_url, dqm_file)]
+
                 # Parse report
                 bash_file += ['',
-                              '']
+                              '# Parse values from %s report' % (report_name),
+                              'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s)' % (report_name),
+                              'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s)' % (report_name),
+                              'if [ -z "$eventThroughput" ]; then',
+                              '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
+                              'fi',
+                              'echo "Validation report of %s sequence %s/%s"' % (prepid, index + 1, len(sequences)),
+                              'echo "Total events: $totalEvents"',
+                              'echo "Threads: $threads"',
+                              'echo "Peak value RSS: $peakValueRss MB"',
+                              'echo "Total size: $totalSize MB"',
+                              'echo "Total job time: $totalJobTime s"',
+                              'echo "Total CPU time: $totalJobCPU s"',
+                              'echo "Event throughput: $eventThroughput"',
+                              'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * $threads) / $totalJobTime * 100")" %"',
+                              'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
+                              'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"'
+                             ]
 
         if dump_test_to_file:
-            bash_file += ['# End of %s file' % (test_file_name),
+            bash_file += ['',
+                          '# End of %s file' % (test_file_name),
                           'EndOfTestFile',
                           '',
                           '# Make file executable',
@@ -2635,11 +2714,9 @@ class request(json_base):
         """
         Return maximum number of seconds that job could run for, i.e. validation duration
         """
-        # multiplier = self.get_attribute('validation').get('time_multiplier', 1)
-        # max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
-        # return max_runtime
-        self.logger.warning('Reduced validation to 30min = 1800s')
-        return 1800
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
+        return max_runtime
 
     def get_event_count_for_validation(self, with_explanation=False):
         # Max number of events to run
