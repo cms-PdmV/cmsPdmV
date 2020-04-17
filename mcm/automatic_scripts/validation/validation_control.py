@@ -346,19 +346,24 @@ class ValidationControl():
         # Proceed to next stage
         stage = storage_item['stage'] + 1
         storage_item['stage'] = stage
-        cmssw_versions_of_succeeded = [x.replace('CMSSW_', '').split('_')[0:3] for x in cmssw_versions_of_succeeded]
-        cmssw_versions_of_succeeded = sorted(cmssw_versions_of_succeeded, key=lambda x: tuple(x))
-        self.logger.info('CMSSW versions of requests: %s', cmssw_versions_of_succeeded)
-        lowest_cmssw_version = cmssw_versions_of_succeeded[0]
-        cmssw_too_low = lowest_cmssw_version[0] < 7 or (lowest_cmssw_version[0] == 7 and lowest_cmssw_version[1] < 4)
         self.storage.save(prepid, storage_item)
-        if stage == 2 and not cmssw_too_low:
-            # Do not submit multicore jobs for < CMSSW 7.4 
+        if stage == 2 and self.can_run_multicore_validations(cmssw_versions_of_succeeded):
             self.submit_item(prepid, 2)
             self.submit_item(prepid, 4)
             self.submit_item(prepid, 8)
         else:
             self.validation_succeeded(prepid)
+
+    def can_run_multicore_validations(self, list_of_cmssw):
+        # Do not submit multicore jobs for < CMSSW 7.4
+        if not list_of_cmssw:
+            return True
+
+        list_of_cmssw = [x.replace('CMSSW_', '').split('_')[0:3] for x in list_of_cmssw]
+        list_of_cmssw = sorted(list_of_cmssw, key=lambda x: tuple(x))
+        self.logger.info('CMSSW versions of requests: %s', list_of_cmssw)
+        lowest_version = list_of_cmssw[0]
+        return lowest_version[0] > 7 or (lowest_version[0] == 7 and lowest_version[1] > 3)
 
     def within(self, value, reference, margin_percent):
         return reference * (1 - margin_percent) <= value <= reference * (1 + margin_percent)
