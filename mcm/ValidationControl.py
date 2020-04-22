@@ -607,7 +607,7 @@ class ValidationHandler:
             doc_validation['peak_value_rss'] = aux_validation['peak_value_rss']
 
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
-        mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
+        dataset_dqm = 'RelVal' + mcm_request.get_attribute('dataset_name')
 
         dqm_references = settings.get_value('validation_dqm_references')
 
@@ -627,6 +627,8 @@ class ValidationHandler:
 
         elif content_dqm = 'W':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['W']
+
+        mcm_request.get_attribute('validation')['dqm'] = 'https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset='+str(dataset_dqm)+';sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=all;referencenorm=True;referenceobj1=other%3A%3A'+str(mcm_request.get_attribute('validation')['ref_dqm'])+'%3AReference%3A;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;'
 
         saved = self.request_db.update(mcm_request.json())
         if not saved:
