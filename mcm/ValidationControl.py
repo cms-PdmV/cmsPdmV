@@ -613,19 +613,19 @@ class ValidationHandler:
 
         content_dqm = mcm_request.get_attribute('validation')['content']
 
-        if content_dqm = 'all' or content_dqm = 'DY':
+        if content_dqm == 'all' or content_dqm == 'DY':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
 
-        elif content_dqm = 'Top':
+        elif content_dqm == 'Top':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['TTbar']
 
-        elif content_dqm = 'Higgs':
+        elif content_dqm == 'Higgs':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['Higgs']
 
-        elif content_dqm = 'QCD':
+        elif content_dqm == 'QCD':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['QCD']
 
-        elif content_dqm = 'W':
+        elif content_dqm == 'W':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['W']
 
         saved = self.request_db.update(mcm_request.json())
