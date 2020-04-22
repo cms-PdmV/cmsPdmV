@@ -611,21 +611,21 @@ class ValidationHandler:
 
         dqm_references = settings.get_value('validation_dqm_references')
 
-        content_dqm = mcm_request.get_attribute('validation')['content']
+        content_dqm = mcm_request.get_attribute('validation').get('content')
 
-        if content_dqm = 'all' or content_dqm = 'DY':
+        if content_dqm == 'all' or content_dqm == 'DY':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
 
-        elif content_dqm = 'Top':
+        elif content_dqm == 'Top':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['TTbar']
 
-        elif content_dqm = 'Higgs':
+        elif content_dqm == 'Higgs':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['Higgs']
 
-        elif content_dqm = 'QCD':
+        elif content_dqm == 'QCD':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['QCD']
 
-        elif content_dqm = 'W':
+        elif content_dqm == 'W':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['W']
 
         mcm_request.get_attribute('validation')['dqm'] = 'https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset='+str(dataset_dqm)+';sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=all;referencenorm=True;referenceobj1=other%3A%3A'+str(mcm_request.get_attribute('validation')['ref_dqm'])+'%3AReference%3A;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;'
