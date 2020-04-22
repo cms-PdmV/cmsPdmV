@@ -611,7 +611,7 @@ class ValidationHandler:
 
         dqm_references = settings.get_value('validation_dqm_references')
 
-        content_dqm = mcm_request.get_attribute('validation')['content']
+        content_dqm = mcm_request.get_attribute('validation').get('content')
 
         if content_dqm == 'all' or content_dqm == 'DY':
             mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
