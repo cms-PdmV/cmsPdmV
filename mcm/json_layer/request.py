@@ -3085,12 +3085,21 @@ class request(json_base):
         tasks = []
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
-        for sequence_index in range(len(self.get_attribute('sequences'))):
+        sequences = self.get_attribute('sequences')
+        for sequence_index in range(len(sequences)):
+            memory = self.get_attribute('memory')
+            validation_dict = self.get_attribute('validation')
+            if validation_dict.get('peak_value_rss', 0) > 0:
+                peak_value_rss = validation_dict['peak_value_rss']
+                if sequences[sequence_index].get('nThreads', 1) == 1 and memory == 2300:
+                    if peak_value_rss < 2000.0:
+                        memory = 2000
+
             task_dict = {
                 "TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
                 "KeepOutput": True,
                 "ConfigCacheID": None,
-                "GlobalTag": self.get_attribute('sequences')[sequence_index]['conditions'],
+                "GlobalTag": sequences[sequence_index]['conditions'],
                 "CMSSWVersion": self.get_attribute('cmssw_release'),
                 "ScramArch": self.get_scram_arch(),
                 "PrimaryDataset": self.get_attribute('dataset_name'),
@@ -3099,13 +3108,13 @@ class request(json_base):
                 "ProcessingString": self.get_processing_string(sequence_index),
                 "TimePerEvent": self.get_attribute("time_event")[sequence_index],
                 "SizePerEvent": self.get_attribute('size_event')[sequence_index],
-                "Memory": self.get_attribute('memory'),
+                "Memory": memory,
                 "FilterEfficiency": self.get_efficiency(),
                 "PrepID": self.get_attribute('prepid')}
             # check if we have multicore an it's not an empty string
-            if 'nThreads' in self.get_attribute('sequences')[sequence_index] and self.get_attribute('sequences')[sequence_index]['nThreads']:
-                task_dict["Multicore"] = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
-            __list_of_steps = self.get_list_of_steps(self.get_attribute('sequences')[sequence_index]['step'])
+            if 'nThreads' in sequences[sequence_index] and sequences[sequence_index]['nThreads']:
+                task_dict["Multicore"] = int(sequences[sequence_index]['nThreads'])
+            __list_of_steps = self.get_list_of_steps(sequences[sequence_index]['step'])
             if len(self.get_attribute('config_id')) > sequence_index:
                 task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
             if len(self.get_attribute('keep_output')) > sequence_index:
@@ -3167,8 +3176,8 @@ class request(json_base):
                         "InputFromOutputModule": tasks[-1]['output_'],
                         "InputTask": tasks[-1]['TaskName']})
             task_dict['_first_step_'] = __list_of_steps[0]
-            task_dict['_output_tiers_'] = self.get_attribute('sequences')[sequence_index]["eventcontent"]
-            task_dict['output_'] = "%soutput" % (self.get_attribute('sequences')[sequence_index]['eventcontent'][0])
+            task_dict['_output_tiers_'] = sequences[sequence_index]["eventcontent"]
+            task_dict['output_'] = "%soutput" % (sequences[sequence_index]['eventcontent'][0])
             task_dict['priority_'] = self.get_attribute('priority')
             task_dict['request_type_'] = self.get_wmagent_type()
             transient_output_modules = self.get_attribute('transient_output_modules')
