@@ -3091,7 +3091,7 @@ class request(json_base):
             validation_dict = self.get_attribute('validation')
             if validation_dict.get('peak_value_rss', 0) > 0:
                 peak_value_rss = validation_dict['peak_value_rss']
-                if sequences[sequence_index].get('nThreads', 1) == 1 and memory == 2300:
+                if int(sequences[sequence_index].get('nThreads', 1)) == 1 and memory == 2300:
                     if peak_value_rss < 2000.0:
                         memory = 2000
 
