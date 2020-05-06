@@ -201,6 +201,12 @@ class request(json_base):
                 always_editable = settings.get_value('editable_request')
                 for key in always_editable:
                     editable[key] = True
+
+            if self.current_user_level == 3 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
+                # Allow production managers to edit input dataset for
+                # "validation-validation", "define-" and "approve-" requests
+                editable['input_dataset'] = True
+
             if self.current_user_level > 3:  # only for admins
                 for key in self._json_base__schema:
                     editable[key] = True
