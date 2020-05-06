@@ -380,6 +380,19 @@ class ValidationControl():
 
         return 0
 
+    def check_events_ran(self, validation_name, expected, report):
+        min_events = settings.get_value('timing_n_limit')
+        passed_events = report['total_events']
+        if passed_events >= min_events:
+            self.logger.info('At least %s events are required and %s events were produced',
+                             min_events,
+                             passed_events)
+            return True, ''
+
+        message = 'At least %s events are required to do an accurate time per event estimation, but only %s events were produced.\n' % (min_events, passed_events)
+        self.logger.error(message)
+        return False, message
+
     def process_done_validation(self, validation_name, threads):
         """
         Parse reports, fail, resubmit or proceed validation to next step
@@ -438,6 +451,14 @@ class ValidationControl():
                 self.logger.info('Expected:\n%s\nMeasured:\n%s',
                                  self.json_dumps(expected_dict),
                                  self.json_dumps(report))
+
+                passed, message = self.check_events_ran(request_name, expected_dict, report)
+                if not passed:
+                    self.validation_failed(validation_name)
+                    message += ('Either time per event is too big or validation duration is not long enough. '
+                                'Please adjust time per event or run a longer validation.')
+                    self.notify_validation_failed(validation_name, message)
+                    return False
 
                 # Check time per event
                 passed, message = self.check_time_per_event(request_name, expected_dict, report)
@@ -680,7 +701,8 @@ class ValidationControl():
                 'size_per_event': size_per_event,
                 'cpu_efficiency': cpu_efficiency,
                 'filter_efficiency': filter_efficiency,
-                'peak_value_rss': peak_value_rss}
+                'peak_value_rss': peak_value_rss,
+                'total_events': total_events}
 
     def get_htcondor_submission_file(self, job_length, threads, memory, output_prepids):
         transfer_input_files = ['voms_proxy.txt']
