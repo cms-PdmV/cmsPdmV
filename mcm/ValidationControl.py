@@ -607,26 +607,24 @@ class ValidationHandler:
             doc_validation['peak_value_rss'] = aux_validation['peak_value_rss']
 
         mcm_request.set_attribute(self.DOC_VALIDATION, doc_validation)
-        mcm_request.get_attribute('validation')['dqm'] = 'RelVal' + mcm_request.get_attribute('dataset_name')
+        if mcm_request.get_attribute('validation').get('valid', False):
+            dataset_name = mcm_request.get_attribute('dataset_name')
+            cmssw_release = mcm_request.get_attribute('cmssw_release')
+            conditions = mcm_request.get_attribute('sequences')[0]['conditions']
+            mcm_request.get_attribute('validation')['dqm'] = '/RelVal%s/%s-%s/DQMIO' % (dataset_name, cmssw_release, conditions)
 
-        dqm_references = settings.get_value('validation_dqm_references')
-
-        content_dqm = mcm_request.get_attribute('validation')['content']
-
-        if content_dqm = 'all' or content_dqm = 'DY':
-            mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
-
-        elif content_dqm = 'Top':
-            mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['TTbar']
-
-        elif content_dqm = 'Higgs':
-            mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['Higgs']
-
-        elif content_dqm = 'QCD':
-            mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['QCD']
-
-        elif content_dqm = 'W':
-            mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['W']
+            dqm_references = settings.get_value('validation_dqm_references')
+            content_dqm = mcm_request.get_attribute('validation').get('content')
+            if content_dqm == 'all' or content_dqm == 'DY':
+                mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['DYnlo']
+            elif content_dqm == 'Top':
+                mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['TTbar']
+            elif content_dqm == 'Higgs':
+                mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['Higgs']
+            elif content_dqm == 'QCD':
+                mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['QCD']
+            elif content_dqm == 'W':
+                mcm_request.get_attribute('validation')['ref_dqm'] = dqm_references['W']
 
         saved = self.request_db.update(mcm_request.json())
         if not saved:
