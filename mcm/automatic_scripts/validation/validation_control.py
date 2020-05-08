@@ -18,10 +18,8 @@ from tools.installer import installer as Locator
 
 class ValidationControl():
     """
-    Requests for test:
-    SMP-PhaseIITDRSpring19wmLHEGS-00005 - CMSSW_10_6_0
-    SUS-RunIIFall17FSPremix-00065 - CMSSW_9_4_12
-    SMP-RunIISummer19UL18GEN-00003
+    Validation control handles submission of new and checking of already running validations
+    as well as checking reported values
     """
 
     def __init__(self):
@@ -115,6 +113,10 @@ class ValidationControl():
         already_submitted = set(self.storage.get_all().keys())
         self.logger.info('Already submitted validations:\n%s', '\n'.join(already_submitted))
         to_be_submitted = list((chained_requests | requests) - already_submitted)
+
+        self.logger.warning('Will keep only MultiValidation campaigns!')
+        to_be_submitted = [x for x in to_be_submitted if 'multivalidation' in x.lower()]
+
         self.logger.info('New validations to be submitted:\n%s', '\n'.join(to_be_submitted))
         return to_be_submitted
 
@@ -719,7 +721,7 @@ class ValidationControl():
 
         condor_file = ['universe              = vanilla',
                        # 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv',
-                       'executable            = %s_threads.sh' % (threads),
+                       'executable            = %s_%s_threads.sh' % (validation_name, threads),
                        'output                = %s_threads.out' % (threads),
                        'error                 = %s_threads.err' % (threads),
                        'log                   = %s_threads.log' % (threads),
@@ -804,7 +806,7 @@ class ValidationControl():
         with open(condor_file_name, 'w') as f:
             f.write(condor_file)
 
-        validation_script_file_name = '%s/%s_threads.sh' % (validation_directory, threads)
+        validation_script_file_name = '%s/%s_%s_threads.sh' % (validation_directory, validation_name, threads)
         with open(validation_script_file_name, 'w') as f:
             f.write(validation_script)
 

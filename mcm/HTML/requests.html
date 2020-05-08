@@ -302,10 +302,10 @@
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[value.db_name]}}' rel="tooltip" title="View request for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
                 <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign {{data[value.db_name]}}" target="_self"><i class="icon-book"></i></a>
               </div>
-	      <div ng-switch-when="Validation">
+              <div ng-switch-when="Validation">
                 <ul style="margin-bottom: 0px;">
                   <li ng-show="data[value.db_name].valid != undefined"><i class="icon-ok" ng-show="data[value.db_name].valid"></i> <i class="icon-remove" ng-show="!data[value.db_name].valid"></i></li>
-		  <li ng-show="data[value.db_name].content != undefined"> data[value.db_name].content </li>
+                  <li ng-show="data[value.db_name].content != undefined">Content: {{data[value.db_name].content}}</li>
                   <!-- #PG <li ng-show="data[value.db_name].nEvents != undefined">{{numberWithCommas(data[value.db_name].nEvents)}} events</li> -->
                   <li ng-show="data[value.db_name].valid"> DQM
                     <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/relval/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank"><i class="icon-th-large"></i></a>
@@ -314,9 +314,25 @@
                   <li ng-show="data[value.db_name].time_multiplier != undefined">
                     Length: {{data[value.db_name].time_multiplier}} * 8h = {{8 * data[value.db_name].time_multiplier}}h
                   </li>
-		              <!--<li ng-repeat="att in data[value.db_name]">
-		                {{att}}
-		              </li>-->
+                  <li ng-show="data[value.db_name].results">
+                    Results:
+                    <ul>
+                      <li ng-repeat="(threads, threadsResult) in data[value.db_name].results">
+                        Threads {{threads}}:
+                        <ul>
+                          <li>Events: {{threadsResult.total_events}}</li>
+                          <li>CPU Efficiency: {{(threadsResult.cpu_efficiency) * 100  | number:1}} %</li>
+                          <li>Peak Value RSS: {{threadsResult.peak_value_rss | number:2}} MB</li>
+                          <li>Filter efficiency: {{(threadsResult.filter_efficiency) * 100 | number:1}} %</li>
+                          <li>Time per event: {{threadsResult.time_per_event | number:4}} s</li>
+                          <li>Size per event: {{threadsResult.size_per_event | number:4}} kB</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                  <!--<li ng-repeat="att in data[value.db_name]">
+                    {{att}}
+                  </li>-->
                 </ul>
                 <!--<div ng-bind-html-unsafe="linkify(data[value.db_name])"></div>-->
               </div>
