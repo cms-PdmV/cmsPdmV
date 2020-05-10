@@ -106,7 +106,7 @@ class ValidationControl():
                 if request in requests:
                     self.logger.info('Removing %s from requests because it is in %s',
                                      request,
-                                     chained_request_prepid)
+                                     chained_request['prepid'])
                     requests.remove(request)
 
         chained_requests = set(x['prepid'] for x in chained_requests)
