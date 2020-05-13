@@ -26,7 +26,7 @@ class ValidationControl():
         self.request_db = database('requests')
         self.chained_request_db = database('chained_requests')
         self.ssh_executor = SSHExecutor(settings.get_value('node_for_test'),
-                                        '/afs/cern.ch/user/j/jrumsevi/private/credentials_json.txt')
+                                        '/home/pdmvserv/private/credentials_json.txt')
         self.storage = ValidationStorage()
         self.logger = logging.getLogger()
         locator = Locator('validation/tests', care_on_existing=False)
@@ -284,14 +284,15 @@ class ValidationControl():
         number_of_sequences = len(request.get('sequences', []))
         adjusted_time_per_event = ((expected_time_per_event + 3 * actual_time_per_event) / 4) / number_of_sequences
         request['time_event'] = [adjusted_time_per_event] * number_of_sequences
-        self.logger.info('%s expected %.4fs time per event, measured %.4fs, adjusting to %.4fs (%s sequences)',
+        self.logger.info('%s expected %.4fs time per event, measured %.4fs, adjusting to %.4fs * %s sequences = %.4fs',
                          request_name,
                          expected_time_per_event,
                          actual_time_per_event,
                          adjusted_time_per_event,
-                         number_of_sequences)
+                         number_of_sequences,
+                         adjusted_time_per_event * number_of_sequences)
         self.request_db.save(request)
-        return adjusted_time_per_event
+        return adjusted_time_per_event, number_of_sequences
 
     def adjust_size_per_event(self, request_name, expected, report):
         expected_size_per_event = expected['size_per_event']
@@ -300,14 +301,15 @@ class ValidationControl():
         number_of_sequences = len(request.get('sequences', []))
         adjusted_size_per_event = ((expected_size_per_event + 3 * actual_size_per_event) / 4) / number_of_sequences
         request['size_event'] = [adjusted_size_per_event] * number_of_sequences
-        self.logger.info('%s expected %.4fkB size per event, measured %.4fkB, adjusting to %.4fkB (%s sequences)',
+        self.logger.info('%s expected %.4fkB size per event, measured %.4fkB, adjusting to %.4fkB * %s sequences = %.4fkB',
                          request_name,
                          expected_size_per_event,
                          actual_size_per_event,
                          adjusted_size_per_event,
-                         number_of_sequences)
+                         number_of_sequences,
+                         adjusted_size_per_event * number_of_sequences)
         self.request_db.save(request)
-        return adjusted_size_per_event
+        return adjusted_size_per_event, number_of_sequences
 
     def read_output_files(self, validation_name, threads):
         item_directory = '%s%s' % (self.test_directory_path, validation_name)
@@ -466,8 +468,11 @@ class ValidationControl():
                 passed, message = self.check_time_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report)
-                        message += '\nTime per event is adjusted to %.4fs per sequence.\nValidation will be automatically retried' % (adjusted_time_per_event)
+                        adjusted_time_per_event, sequences = self.adjust_time_per_event(request_name, expected_dict, report)
+                        message += '\nTime per event is adjusted to %.4fs per sequence. %.4fs * %s sequences = %s.4fs\nValidation will be automatically retried' % (adjusted_time_per_event,
+                                                                                                                                                                    adjusted_time_per_event,
+                                                                                                                                                                    number_of_sequences,
+                                                                                                                                                                    adjusted_time_per_event * number_of_sequences)
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
@@ -481,8 +486,11 @@ class ValidationControl():
                 passed, message = self.check_size_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_size_per_event = self.adjust_size_per_event(request_name, expected_dict, report)
-                        message += '\nSize per event is adjusted to %.4fkB per sequence.\nValidation will be automatically retried' % (adjusted_size_per_event)
+                        adjusted_size_per_event, sequences = self.adjust_size_per_event(request_name, expected_dict, report)
+                        message += '\nSize per event is adjusted to %.4fkB per sequence. %.4fkB * %s sequences = %s.4fkB\nValidation will be automatically retried' % (adjusted_size_per_event,
+                                                                                                                                                                       adjusted_size_per_event,
+                                                                                                                                                                       number_of_sequences,
+                                                                                                                                                                       adjusted_size_per_event * number_of_sequences)
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
@@ -706,7 +714,7 @@ class ValidationControl():
                 'peak_value_rss': peak_value_rss,
                 'total_events': total_events}
 
-    def get_htcondor_submission_file(self, job_length, threads, memory, output_prepids):
+    def get_htcondor_submission_file(self, validation_name, job_length, threads, memory, output_prepids):
         transfer_input_files = ['voms_proxy.txt']
         transfer_output_files = []
         for output_prepid in output_prepids:
@@ -799,7 +807,7 @@ class ValidationControl():
         self.logger.info('Validation runtime: %s', validation_runtime)
         self.logger.info('Validation memory: %s', max_memory)
         # Make a HTCondor .sub file
-        condor_file = self.get_htcondor_submission_file(validation_runtime, threads, max_memory, request_prepids)
+        condor_file = self.get_htcondor_submission_file(validation_name, validation_runtime, threads, max_memory, request_prepids)
 
         # Write files straight to afs
         condor_file_name = '%s/%s_threads.sub' % (validation_directory, threads)
@@ -888,10 +896,9 @@ class ValidationControl():
             single_core_memory = 2000
         else:
             single_core_memory = int(request_memory / request_threads)
-            single_core_memory = max(single_core_memory, 2000)
+            # Min 500, max 4000
+            single_core_memory = max(500, min(4000, single_core_memory))
 
-        # Min 500, max 4000
-        single_core_memory = max(500, min(4000, single_core_memory))
         memory = target_threads * single_core_memory
         self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
                          prepid,
