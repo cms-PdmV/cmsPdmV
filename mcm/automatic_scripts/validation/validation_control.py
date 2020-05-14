@@ -257,7 +257,7 @@ class ValidationControl():
         expected_filter_efficiency = expected['filter_efficiency']
         actual_filter_efficiency = report['filter_efficiency']
         sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected['events'])
-        sigma = max(sigma, 0.05)
+        sigma = max(sigma, 0.05 * actual_filter_efficiency)
         lower_threshold = expected_filter_efficiency - 3 * sigma
         upper_threshold = expected_filter_efficiency + 3 * sigma
         message = '%s expected %.4f%% +- %.4f%% (%.4f%% - %.4f%%) filter efficiency, measured %.4f%%' % (request_name,
