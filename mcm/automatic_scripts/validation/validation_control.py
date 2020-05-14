@@ -445,6 +445,13 @@ class ValidationControl():
         self.logger.info('Reports include these requests:\n%s', '\n'.join(reports.keys()))
         if threads_int != 1:
             self.logger.info('Validation was done for %s threads, not checking the values', threads)
+            for request_name, report in reports.iteritems():
+                expected_dict = threads_dict['expected'][request_name]
+                self.logger.debug('%s expected:\n%s\n%s measured:\n%s',
+                                  request_name,
+                                  self.json_dumps(expected_dict),
+                                  request_name,
+                                  self.json_dumps(report))
         else:
             attempt_number = threads_dict['attempt_number']
             self.logger.info('This was attempt number %s for %s thread validation', attempt_number, threads)
@@ -911,7 +918,7 @@ class ValidationControl():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO,
+    logging.basicConfig(level=logging.DEBUG,
                         format='[%(asctime)s][%(levelname)s] %(message)s',
                         datefmt='%Y-%b-%d:%H:%M:%S')
     logging.info('Starting...')
