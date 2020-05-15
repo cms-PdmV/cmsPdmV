@@ -1468,6 +1468,7 @@ class request(json_base):
         for index, sequence_dict in enumerate(sequences):
             self.logger.info('Getting sequence %s of %s' % (index, prepid))
             config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
+            sequence_dict = copy.deepcopy(sequence_dict)
             sequence_dict['python_filename'] = config_filename
             if sequence_dict['customise']:
                 sequence_dict['customise'] += ','
