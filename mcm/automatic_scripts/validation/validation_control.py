@@ -475,7 +475,7 @@ class ValidationControl():
                 passed, message = self.check_time_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_time_per_event, sequences = self.adjust_time_per_event(request_name, expected_dict, report)
+                        adjusted_time_per_event, number_of_sequences = self.adjust_time_per_event(request_name, expected_dict, report)
                         message += '\nTime per event is adjusted to %.4fs per sequence. %.4fs * %s sequences = %s.4fs\nValidation will be automatically retried' % (adjusted_time_per_event,
                                                                                                                                                                     adjusted_time_per_event,
                                                                                                                                                                     number_of_sequences,
@@ -493,7 +493,7 @@ class ValidationControl():
                 passed, message = self.check_size_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_size_per_event, sequences = self.adjust_size_per_event(request_name, expected_dict, report)
+                        adjusted_size_per_event, number_of_sequences = self.adjust_size_per_event(request_name, expected_dict, report)
                         message += '\nSize per event is adjusted to %.4fkB per sequence. %.4fkB * %s sequences = %s.4fkB\nValidation will be automatically retried' % (adjusted_size_per_event,
                                                                                                                                                                        adjusted_size_per_event,
                                                                                                                                                                        number_of_sequences,
