@@ -476,10 +476,10 @@ class ValidationControl():
                 if not passed:
                     if attempt_number < self.max_attempts:
                         adjusted_time_per_event, number_of_sequences = self.adjust_time_per_event(request_name, expected_dict, report)
-                        message += '\nTime per event is adjusted to %.4fs per sequence. %.4fs * %s sequences = %s.4fs\nValidation will be automatically retried' % (adjusted_time_per_event,
-                                                                                                                                                                    adjusted_time_per_event,
-                                                                                                                                                                    number_of_sequences,
-                                                                                                                                                                    adjusted_time_per_event * number_of_sequences)
+                        message += '\nTime per event is adjusted to %.4fs per sequence. %.4fs * %s sequences = %.4fs\nValidation will be automatically retried' % (adjusted_time_per_event,
+                                                                                                                                                                   adjusted_time_per_event,
+                                                                                                                                                                   number_of_sequences,
+                                                                                                                                                                   adjusted_time_per_event * number_of_sequences)
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
@@ -494,10 +494,10 @@ class ValidationControl():
                 if not passed:
                     if attempt_number < self.max_attempts:
                         adjusted_size_per_event, number_of_sequences = self.adjust_size_per_event(request_name, expected_dict, report)
-                        message += '\nSize per event is adjusted to %.4fkB per sequence. %.4fkB * %s sequences = %s.4fkB\nValidation will be automatically retried' % (adjusted_size_per_event,
-                                                                                                                                                                       adjusted_size_per_event,
-                                                                                                                                                                       number_of_sequences,
-                                                                                                                                                                       adjusted_size_per_event * number_of_sequences)
+                        message += '\nSize per event is adjusted to %.4fkB per sequence. %.4fkB * %s sequences = %.4fkB\nValidation will be automatically retried' % (adjusted_size_per_event,
+                                                                                                                                                                      adjusted_size_per_event,
+                                                                                                                                                                      number_of_sequences,
+                                                                                                                                                                      adjusted_size_per_event * number_of_sequences)
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
