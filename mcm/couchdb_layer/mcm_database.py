@@ -109,7 +109,6 @@ class database:
         result = self.__get_from_cache(prepid)
         if result: return result
 
-        self.logger.debug('Looking for document "%s" in "%s"...' % (prepid,self.db_name))
         try:
             doc = self.db.document(id=prepid)
             self.__save_to_cache( prepid, doc)
