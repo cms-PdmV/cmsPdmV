@@ -1759,7 +1759,7 @@ class request(json_base):
             )
             self.notify(subject, message)
 
-    def get_stats(self, limit_to_set=0.05, refresh=False, forced=False):
+    def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/requests',
                                                options={'include_docs': True,
@@ -1783,6 +1783,7 @@ class request(json_base):
                                      'aborted-archived',
                                      'failed-archived',
                                      'aborted-completed'])
+        total_events = 0
         for reqmgr_name in all_reqmgr_name_list:
             stats_doc = None
             for stats_workflow in stats_workflows:
@@ -1800,6 +1801,9 @@ class request(json_base):
                 new_mcm_reqmgr_list.append({'name': reqmgr_name,
                                             'content': {}})
                 continue
+
+            if stats_doc.get('RequestType', '').lower() != 'resubmission':
+                total_events = max(total_events, stats_doc.get('TotalEvents', 0))
 
             stats_request_transition = stats_doc.get('RequestTransition', [])
             if not stats_request_transition:
@@ -1855,10 +1859,10 @@ class request(json_base):
             new_mcm_reqmgr_list.append(new_rr)
 
         new_mcm_reqmgr_list = sorted(new_mcm_reqmgr_list, key=lambda workflow: '_'.join(workflow['name'].split('_')[-3:]))
-        old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=4, sort_keys=True)
-        new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)
+        old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=2, sort_keys=True)
+        new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
-        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)))
+        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
         self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
 
         if len(new_mcm_reqmgr_list):
@@ -1872,7 +1876,7 @@ class request(json_base):
                                              skip_check=forced)
 
             self.logger.info('Collected outputs for %s: %s' % (self.get_attribute('prepid'),
-                                                               dumps(collected, indent=4, sort_keys=True)))
+                                                               dumps(collected, indent=2, sort_keys=True)))
 
             # 1st element which is not DQMIO
             completed = 0
@@ -1915,14 +1919,24 @@ class request(json_base):
                     next_request.set_attribute('input_dataset', input_dataset)
                     next_request.save()
 
-        if (len(new_mcm_reqmgr_list) and
-                'content' in new_mcm_reqmgr_list[-1] and
-                'pdmv_present_priority' in new_mcm_reqmgr_list[-1]['content'] and
-                new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
+        # Update priority if it changed
+        if new_mcm_reqmgr_list:
+            new_priority = new_mcm_reqmgr_list[-1].get('content', {}).get('pdmv_present_priority')
+        else:
+            new_priority = None
 
+        if new_priority is not None and new_priority != self.get_attribute('priority'):
             self.set_attribute('priority', new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'])
             self.update_history({'action': 'wm priority',
                                  'step': new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority']})
+
+        # Update number of expected events
+        if total_events > self.get_attribute('total_events'):
+            self.logger.info('Total events changed %s -> %s for %s',
+                             self.get_attribute('total_events'),
+                             total_events,
+                             self.get_attribute('prepid'))
+            self.set_attribute('total_events', total_events)
 
         self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
         return changes_happen

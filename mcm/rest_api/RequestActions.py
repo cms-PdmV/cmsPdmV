@@ -915,7 +915,7 @@ class UpdateStats(RESTResource):
                     "message": '%s does not exist' % request_id}
 
         mcm_r = request(rdb.get(request_id))
-        if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
+        if mcm_r.get_stats(forced=force):
             mcm_r.reload()
             return {"prepid": request_id, "results": True}
         else:
@@ -957,7 +957,7 @@ class UpdateEventsFromWorkflow(RESTResource):
         # we do not trigger stats refresh as this api will be triggered by stats
         for req in res:
             mcm_r = request(rdb.get(req["prepid"]))
-            if mcm_r.get_stats(limit_to_set=0.0, refresh=False):
+            if mcm_r.get_stats():
                 mcm_r.reload()
                 ret.append({"prepid": req["prepid"], "results": True})
             else:
