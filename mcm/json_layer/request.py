@@ -9,6 +9,7 @@ import copy
 import traceback
 import time
 import logging
+import math
 from math import sqrt
 from simplejson import loads, dumps
 from operator import itemgetter
@@ -3478,7 +3479,38 @@ class request(json_base):
         tasks = []
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
-        for sequence_index in range(len(self.get_attribute('sequences'))):
+        validation_info = self.get_attribute('validation').get('results', {})
+        for threads, thread_info in validation_info.items():
+            thread_info['threads'] = int(threads)
+            del thread_info['total_events']
+
+        validation_info = sorted(validation_info.values(), key=lambda v: v['threads'])
+        self.logger.info('Validation info %s', dumps(validation_info, indent=2, sort_keys=True))
+        if validation_info:
+            cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
+            for thread_info in reversed(validation_info):
+                if thread_info['cpu_efficiency'] >= cpu_efficiency_threshold:
+                    validation_info = thread_info
+                    break
+            else:
+                validation_info = validation_info[0]
+
+            self.logger.info('Selected validation info: %s', dumps(validation_info, indent=2, sort_keys=True))
+
+        memory = self.get_attribute('memory')
+        sequence_count = len(self.get_attribute('sequences'))
+        for sequence_index in range(sequence_count):
+            threads = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+            size_per_event = self.get_attribute('size_event')[sequence_index]
+            time_per_event = self.get_attribute('time_event')[sequence_index]
+            # If there are multi-validation results, use them
+            if validation_info:
+                self.logger.info('Using multi-validation values')
+                threads = validation_info['threads']
+                size_per_event = validation_info['size_per_event'] / sequence_count
+                time_per_event = validation_info['time_per_event'] / sequence_count
+                memory = math.ceil((validation_info['peak_value_rss'] * 1.1) / 1000.0) * 1000
+
             task_dict = {
                 "TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
                 "KeepOutput": True,
@@ -3490,14 +3522,14 @@ class request(json_base):
                 "AcquisitionEra": self.get_attribute('member_of_campaign'),
                 "Campaign": self.get_attribute('member_of_campaign'),
                 "ProcessingString": self.get_processing_string(sequence_index),
-                "TimePerEvent": self.get_attribute("time_event")[sequence_index],
-                "SizePerEvent": self.get_attribute('size_event')[sequence_index],
-                "Memory": self.get_attribute('memory'),
+                "TimePerEvent": time_per_event,
+                "SizePerEvent": size_per_event,
+                "Memory": memory,
                 "FilterEfficiency": self.get_efficiency(),
                 "PrepID": self.get_attribute('prepid')}
             # check if we have multicore an it's not an empty string
             if 'nThreads' in self.get_attribute('sequences')[sequence_index] and self.get_attribute('sequences')[sequence_index]['nThreads']:
-                task_dict["Multicore"] = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+                task_dict["Multicore"] = threads
             __list_of_steps = self.get_list_of_steps(self.get_attribute('sequences')[sequence_index]['step'])
             if len(self.get_attribute('config_id')) > sequence_index:
                 task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
