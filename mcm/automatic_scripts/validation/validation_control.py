@@ -5,6 +5,7 @@ import os.path
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
+from xml.etree.ElementTree import ParseError
 from validation_storage import ValidationStorage
 from new_ssh_executor import SSHExecutor
 
@@ -415,7 +416,11 @@ class ValidationControl():
             self.notify_validation_failed(validation_name,
                                           'Validation job was removed due to exceeded walltime. '
                                           'This usually indicates that time per event is too small and should be increased.\n'
-                                          'Job log output:\n\n%s' % (''.join(log_file)))
+                                          'Job output:\n\n%s\n\n'
+                                          'Job error stream output:\n\n%s\n\n'
+                                          'Job log output:\n\n%s' % (''.join(out_file),
+                                                                     ''.join(err_file),
+                                                                     ''.join(log_file)))
             return False
 
         exit_code = self.validation_exit_code(log_file)
@@ -439,7 +444,15 @@ class ValidationControl():
             self.logger.error('Reports are missing for %s %s thread validation', validation_name, threads)
             self.validation_failed(validation_name)
             self.notify_validation_failed(validation_name,
-                                          'Job reports - XML files are missing for %s' % (validation_name))
+                                          'Job reports - XML files are missing for %s.\n'
+                                          'Job output:\n\n%s\n\n'
+                                          'Job error stream output:\n\n%s\n\n'
+                                          'Job log output:\n\n%s' % (validation_name,
+                                                                     ''.join(out_file),
+                                                                     ''.join(err_file),
+                                                                     ''.join(log_file)))
+
+
             return False
 
         self.logger.info('Reports include these requests:\n%s', '\n'.join(reports.keys()))
@@ -666,6 +679,10 @@ class ValidationControl():
         try:
             tree = ET.parse(report_path)
         except ExpatError:
+            # Invalid XML file
+            return None
+        except ParseError as err:
+            self.logger.error('Error parsing XML: %s', err)
             # Empty or invalid XML file
             return None
 

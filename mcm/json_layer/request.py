@@ -1340,6 +1340,17 @@ class request(json_base):
 
         bash_file = ['#!/bin/bash', '']
 
+        sequences = self.get_attribute('sequences')
+        if for_validation and automatic_validation:
+            for index, sequence_dict in enumerate(sequences):
+                report_name = '%s_' % (prepid)
+                # If it is not the last sequence, add sequence index to then name
+                if index != len(sequences) - 1:
+                    report_name += '%s_' % (index)
+
+                report_name += '%s_threads_report.xml' % (threads)
+                bash_file += ['touch %s' % (report_name)]
+
         run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
         run_dqm_upload = for_validation and automatic_validation and (threads == 1) and self.get_attribute('validation').get('valid', False)
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
@@ -1465,7 +1476,6 @@ class request(json_base):
                           '']
 
         # Iterate over sequences and build cmsDriver.py commands
-        sequences = self.get_attribute('sequences')
         for index, sequence_dict in enumerate(sequences):
             self.logger.info('Getting sequence %s of %s' % (index, prepid))
             config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
