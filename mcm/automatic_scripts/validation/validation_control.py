@@ -687,9 +687,9 @@ class ValidationControl():
             return None
 
         root = tree.getroot()
-        total_events = root.find('.//TotalEvents')
+        total_events = root.findall('.//TotalEvents')
         if total_events is not None:
-            total_events = int(total_events.text)
+            total_events = int(total_events[-1].text)
         else:
             total_events = None
 
