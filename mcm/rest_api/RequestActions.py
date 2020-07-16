@@ -2076,6 +2076,9 @@ class TaskChainRequestDict(RESTResource):
 
         task_counter = 1
         for task in task_dicts:
+            if task.get('pilot_'):
+                wma['SubRequestType'] = task['pilot_']
+
             for key in task.keys():
                 if key.endswith('_'):
                     task.pop(key)

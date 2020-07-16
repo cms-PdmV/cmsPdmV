@@ -869,17 +869,25 @@ class TaskChainDict(RESTResource):
             "Multicore": 1}
 
         task = 1
+        pilot_string = None
         for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:
                     wma['RequestPriority'] = d['priority_']
                 if d['request_type_'] in ['ReDigi']:
                     wma['SubRequestType'] = 'ReDigi'
+
+                if d.get('pilot_'):
+                    pilot_string = d['pilot_']
+
                 for k in d.keys():
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d
                 task += 1
+
+        if pilot_string:
+            wma['SubRequestType'] = pilot_string
 
         wma['TaskChain'] = task - 1
         if wma['TaskChain'] == 0:

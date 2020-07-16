@@ -94,6 +94,7 @@ class request(json_base):
         'interested_pwg': [],
         'ppd_tags': [],
         'events_per_lumi': 0,
+        'pilot': False,
     }
 
     def __init__(self, json_input=None):
@@ -3148,6 +3149,9 @@ class request(json_base):
             # due to discussion in https://github.com/dmwm/WMCore/issues/7398
             if self.get_attribute('version') > 0:
                 task_dict["ProcessingVersion"] = self.get_attribute('version')
+            if self.get_attribute('pilot'):
+                task_dict['pilot_'] = 'pilot'
+
             if sequence_index == 0:
                 if base:
                     if self.get_attribute('events_per_lumi') > 0:
