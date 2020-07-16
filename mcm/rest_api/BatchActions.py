@@ -74,13 +74,14 @@ class BatchAnnouncer(RESTResource):
 
             rdb = database('requests')
             priority_coeff = settings.get_value('nanoaod_priority_increase_coefficient')
-            for wf, requests in map_wf_to_prepid.iteritems():
-                if len(requests) == 1 and 'nanoaod' in requests[0].lower():
-                    for r_prepid in requests:
-                        req = request(rdb.get(r_prepid))
-                        current_priority = req.get_attribute('priority')
-                        new_priority = int(current_priority / 1000 + priority_coeff * 1000)
-                        req.change_priority(new_priority)
+            if priority_coeff > 0:
+                for wf, requests in map_wf_to_prepid.iteritems():
+                    if len(requests) == 1 and 'nanoaod' in requests[0].lower():
+                        for r_prepid in requests:
+                            req = request(rdb.get(r_prepid))
+                            current_priority = req.get_attribute('priority')
+                            new_priority = int(current_priority / 1000 + priority_coeff * 1000)
+                            req.change_priority(new_priority)
 
             return {
                 "results": bdb.update(b.json()),

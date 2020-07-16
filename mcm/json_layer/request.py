@@ -692,7 +692,7 @@ class request(json_base):
             if other_request_json['prepid'] == my_prepid:
                 continue  # no self check
 
-            if other_request_json['approval'] in ['new', 'validation']:
+            if other_request_json['status'] in ['new', 'validation']:
                 # Not paying attention to new or validating requests
                 continue
 
@@ -1297,6 +1297,8 @@ class request(json_base):
 
             # Clone gen repo
             infile += 'wget --quiet -O request_fragment_check.py https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
+            # Download rest.py because AFS is not reliable
+            infile += 'wget --quiet -O rest.py https://raw.githubusercontent.com/cms-PdmV/mcm_scripts/master/rest.py\n'
             # Run script and write to log file
             if for_validation:
                 infile += 'eos mkdir -p $EOS_PATH\n'
@@ -1408,7 +1410,7 @@ class request(json_base):
             else:
                 res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
 
-            if self.get_attribute('validation').get('valid', False):
+            if for_validation and self.get_attribute('validation').get('valid', False):
                 dqm_datatier = ',DQMIO'
                 dqm_eventcontent = ',DQM' 
                 dqm_step = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
@@ -1768,7 +1770,8 @@ class request(json_base):
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
-        all_reqmgr_name_list = set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list))
+        all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
+        all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
         self.logger.info('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
                                                          dumps(list(stats_reqmgr_name_list), indent=2)))
         self.logger.info('McM workflows for %s: %s' % (self.get_attribute('prepid'),
@@ -1802,8 +1805,9 @@ class request(json_base):
                                             'content': {}})
                 continue
 
-            if stats_doc.get('RequestType', '').lower() != 'resubmission':
-                total_events = max(total_events, stats_doc.get('TotalEvents', 0))
+            if stats_doc.get('RequestType', '').lower() != 'resubmission' and stats_doc.get('TotalEvents', 0) > 0:
+                self.logger.info('TotalEvents %s', stats_doc['TotalEvents'])
+                total_events = stats_doc['TotalEvents']
 
             stats_request_transition = stats_doc.get('RequestTransition', [])
             if not stats_request_transition:
@@ -1931,7 +1935,7 @@ class request(json_base):
                                  'step': new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority']})
 
         # Update number of expected events
-        if total_events > self.get_attribute('total_events'):
+        if total_events != 0 and total_events != self.get_attribute('total_events'):
             self.logger.info('Total events changed %s -> %s for %s',
                              self.get_attribute('total_events'),
                              total_events,
