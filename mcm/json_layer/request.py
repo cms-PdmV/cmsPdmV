@@ -1488,60 +1488,32 @@ class request(json_base):
                         runtest_xml_file, configuration_names[-1])
 
                 if events >= 0:
-                    res += 'echo %d events were ran \n' % events
+                    res += 'echo %d events were ran\n' % events
 
-                res += 'grep "TotalEvents" %s \n' % runtest_xml_file
-                res += 'if [ $? -eq 0 ]; then\n'
-                res += '    grep "Timing-tstoragefile-write-totalMegabytes" %s \n' % runtest_xml_file
-                res += '    if [ $? -eq 0 ]; then\n'
-                res += '        events=$(grep "TotalEvents" %s | tail -1 | sed "s/.*>\(.*\)<.*/\\1/")\n' % runtest_xml_file
-                res += '        size=$(grep "Timing-tstoragefile-write-totalMegabytes" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % runtest_xml_file
-                res += '        if [ $events -gt 0 ]; then\n'
-                res += '            echo "McM Size/event: $(bc -l <<< "scale=4; $size*1024 / $events")"\n'
-                res += '        fi\n'
-                res += '    fi\n'
+                res += '\n\n'
+                res += '# Parse values from %s report\n' % (runtest_xml_file)
+                res += 'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
+                res += 'if [ -z "$eventThroughput" ]; then\n'
+                res += '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")\n'
                 res += 'fi\n'
-                res += 'grep "EventThroughput" %s \n' % runtest_xml_file
-                res += 'if [ $? -eq 0 ]; then\n'
-                res += '  var1=$(grep "EventThroughput" %s | sed "s/.* Value=\\"\(.*\)\\".*/\\1/")\n' % (runtest_xml_file)
-                res += '  echo "McM time_event value: $(bc -l <<< "scale=4; 1/$var1")"\n'
-                res += 'fi\n'
-                res += 'echo CPU efficiency info:\n'
-                res += 'grep "TotalJobCPU" %s \n' % runtest_xml_file
-                res += 'grep "TotalJobTime" %s \n' % runtest_xml_file
-
-                #calculating the core efficiency
-                res += '\n'
-                res += 'totaljob_cpu_string=$(grep -o \'Metric Name=\"TotalJobCPU\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += 'IFS=\'\"\' read -ra totaljob_cpu_array <<< \"$totaljob_cpu_string\" \n'
-                res += 'totaljob_cpu=${totaljob_cpu_array[3]} \n' 
-
-                res += '\n'
-                res += 'totaljob_time_string=$(grep -o \'Metric Name=\"TotalJobTime\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += 'IFS=\'\"\' read -ra totaljob_time_array <<< \"$totaljob_time_string\" \n'
-                res += 'totaljob_time=${totaljob_time_array[3]} \n' 
-
-                res += '\n'
-                res += 'nthreads_string=$(grep -o \'Metric Name=\"NumberOfThreads\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += 'IFS=\'\"\' read -ra nthreads_array <<< \"$nthreads_string\" \n'
-                res += 'nthreads=${nthreads_array[3]} \n' 
-
-                res += '\n'
-
-                res += 'efficiency="$(bc -l <<< \"$totaljob_cpu/$totaljob_time/$nthreads\") \" \n '
-                res += 'echo \"Core efficiency for this request is $efficiency \" \n'
-
-                res += '\n'
-                #showing the memory consumption of a request
-                res += ' memory_rss_string=$(grep -o \'Metric Name=\"PeakValueRss\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += ' IFS=\'\"\' read -ra memory_rss_array <<< \"$memory_rss_string\" \n'
-                res += ' memory_rss=${memory_rss_array[3]} \n' 
-
-                res += ' memory_value_string=$(grep -o \'Metric Name=\"PeakValueVsize\" Value=\"[^\"]*\"\'  %s)\n' % (runtest_xml_file)
-                res += ' IFS=\'\"\' read -ra memory_value_array <<< \"$memory_value_string\" \n'
-                res += ' memory_value=${memory_value_array[3]} \n' 
-                
-                res += ' echo \" Memory consumption of events within validation jobs is: $memory_value +/- $memory_rss  \"\n'
+                res += 'echo "Validation report of %s sequence %s"\n' % (self.get_attribute('prepid'), i + 1)
+                res += 'echo "Total events: $totalEvents"\n'
+                res += 'echo "Threads: $threads"\n'
+                res += 'echo "Peak value RSS: $peakValueRss MB"\n'
+                res += 'echo "Total size: $totalSize MB"\n'
+                res += 'echo "Total job time: $totalJobTime s"\n'
+                res += 'echo "Total CPU time: $totalJobCPU s"\n'
+                res += 'echo "Event throughput: $eventThroughput"\n'
+                res += 'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * $threads) / $totalJobTime * 100")" %"\n'
+                res += 'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"\n'
+                res += 'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"\n'
 
             cmsd_list += res + '\n'
             previous += 1
