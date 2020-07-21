@@ -3111,6 +3111,10 @@ class request(json_base):
             # check if we have multicore an it's not an empty string
             if 'nThreads' in sequences[sequence_index] and sequences[sequence_index]['nThreads']:
                 task_dict["Multicore"] = int(sequences[sequence_index]['nThreads'])
+
+            if 'nStreams' in sequences[sequence_index] and int(sequences[sequence_index]['nStreams']) > 0:
+                task_dict['EventStreams'] = int(sequences[sequence_index]['nStreams'])
+
             __list_of_steps = self.get_list_of_steps(sequences[sequence_index]['step'])
             if len(self.get_attribute('config_id')) > sequence_index:
                 task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
