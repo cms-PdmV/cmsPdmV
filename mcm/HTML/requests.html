@@ -6,6 +6,9 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
+        <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
+        <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
+
         <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
         <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
 
@@ -19,6 +22,7 @@
            var testApp = angular.module('testApp', ['ui.bootstrap', 'pasvaz.bindonce']).config(function($locationProvider){$locationProvider.html5Mode(true);});
           </script>
         <![endif]>
+        <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/requests_ctrl.js"></script>
   </head>
@@ -294,9 +298,7 @@
                 </div>
               </div>
               <div ng-switch-when="Fragment">
-                <a ng-href='public/restapi/requests/get_fragment/{{data.prepid}}/0' rel="tooltip" title="View fragment" ng-hide="!data[value.db_name] || data[value.db_name]=='';" target="_self">
-                  <i class="icon-fullscreen"></i>
-                </a>
+                <div fragment-display ng-model="data.prepid" rawfragment={{data[value.db_name]}}></div>
               </div>
               <div ng-switch-when="Member of campaign">
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[value.db_name]}}' rel="tooltip" title="View request for {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>

@@ -1160,3 +1160,44 @@ testApp.directive("customActorList", function($http){
    }
   }
 });
+
+testApp.directive("fragmentDisplay", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    '<div ng-show="fragment && fragment.length">'+
+    '  <a ng-show="!show_fragment" rel="tooltip" title="Show fragment" ng-click="showFragment();">'+
+    '    <i class="icon-eye-open"></i>'+
+    '  </a>'+
+    '  <a ng-show="show_fragment" rel="tooltip" title="Hide fragment" ng-click="show_fragment = false;">'+
+    '    <i class="icon-remove"></i>'+
+    '  </a>'+
+    '  <a ng-href="public/restapi/requests/get_fragment/{{prepid}}/0" rel="tooltip" title="Open fragment in new tab" target="_blank">'+
+    '    <i class="icon-fullscreen"></i>'+
+    '  </a>'+
+    '  <div ng-show="show_fragment">'+
+    '    <textarea ui-codemirror="{ theme:\'eclipse\', readOnly:true}" ui-refresh=true ng-model="fragment"></textarea>'+
+    '  </div>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_fragment = false;
+        scope.prepid = ctrl.$viewValue;
+        scope.fragment = attrs.rawfragment;
+        scope.refreshedEditor = false;
+      };
+      scope.showFragment = function() {
+        scope.show_fragment = true;
+        if (!scope.refreshedEditor) {
+          scope.refreshedEditor = true;
+          setTimeout(() => {
+            const textarea = angular.element(element)[0].querySelector('textarea');
+            const editor = CodeMirror.fromTextArea(textarea);
+            editor.setSize(null, 'auto');
+            editor.refresh();
+          }, 100);
+        }
+      };
+   }
+  }
+});
