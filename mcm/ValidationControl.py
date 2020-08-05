@@ -204,7 +204,7 @@ class ValidationHandler:
 
            launcher_file_content += ['chmod +x %s' % (file_name)]
            if validation_os == 'SLCern6':
-               launcher_file_content += ['singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
+               launcher_file_content += ['singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (file_name)]
            else:
                launcher_file_content += ['source %s' % (file_name)]
 
