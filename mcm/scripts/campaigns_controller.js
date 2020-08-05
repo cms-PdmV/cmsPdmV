@@ -301,50 +301,7 @@ testApp.directive("inlineEditable", function(){
     }
   }
 });
-testApp.directive("customHistory", function(){
-  return {
-    require: 'ngModel',
-    template:
-    '<div>'+
-    '  <div ng-hide="show_history">'+
-    '    <input type="button" value="Show" ng-click="show_history=true;">'+
-    '  </div>'+
-    '  <div ng-show="show_history">'+
-    '    <input type="button" value="Hide" ng-click="show_history=false;">'+
-    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
-    '      <thead>'+
-    '        <tr>'+
-    '          <th style="padding: 0px;">Action</th>'+
-    '          <th style="padding: 0px;">Message</th>'+
-    '          <th style="padding: 0px;">Date</th>'+
-    '          <th style="padding: 0px;">User</th>'+
-    '        </tr>'+
-    '      </thead>'+
-    '      <tbody>'+
-    '        <tr ng-repeat="elem in show_info">'+
-    '          <td style="padding: 0px;">{{elem.action}}</td>'+
-    '          <td style="padding: 0px;"><a rel="tooltip" title={{elem.message}}><i class="icon-info-sign"></i></a></td>'+
-    '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
-    '          <td style="padding: 0px;">'+
-    '              <div ng-switch="elem.updater.author_name">'+
-    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
-    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
-    '              </div>'+
-    '          </td>'+
-    '        </tr>'+
-    '      </tbody>'+
-    '    </table>'+
-    '  </div>'+
-    '</div>'+
-    '',
-    link: function(scope, element, attrs, ctrl){
-      ctrl.$render = function(){
-        scope.show_history = false;
-        scope.show_info = ctrl.$viewValue;
-      };
-    }
-  }
-});
+
 testApp.directive("sequenceDisplay", function($http){
   return {
     require: 'ngModel',

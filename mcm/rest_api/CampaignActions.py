@@ -94,23 +94,24 @@ class UpdateCampaign(RESTResource):
         except campaign.IllegalAttributeName:
             return {"results": False}
 
-        if not camp_mcm.get_attribute('prepid') and not camp_mcm.get_attribute('_id'):
+        prepid = camp_mcm.get_attribute('prepid')
+        if not prepid and not camp_mcm.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
 
+        db = database('campaigns')
+        previous_version = campaign(json_input=db.get(prepid))
         # cast schema evolution of sequences
         sequences = camp_mcm.get_attribute('sequences')
         for steps in sequences:
             for label in steps:
                 steps[label] = sequence(steps[label]).json()
+
         camp_mcm.set_attribute('sequences', sequences)
-
-        # create dedicated chained campaign
-        self.create_chained_campaign(camp_mcm.get_attribute('_id'), camp_mcm.get_attribute('root'))
-        camp_mcm.update_history({'action': 'update'})
-        return self.save_campaign(camp_mcm)
-
-    def save_campaign(self, camp_mcm):
-        db = database('campaigns')
+        difference = self.get_obj_diff(previous_version.json(),
+                                       camp_mcm.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        camp_mcm.update_history({'action': 'update', 'step': difference})
         return {"results": db.update(camp_mcm.json())}
 
     # unfortunate duplicate

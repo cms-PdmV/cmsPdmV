@@ -117,7 +117,11 @@ class UpdateMccm(RESTResource):
             new_version.update_total_events()
 
         # update history
-        new_version.update_history({'action': 'update'})
+        difference = self.get_obj_diff(previous_version.json(),
+                                       new_version.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        new_version.update_history({'action': 'update', 'step': difference})
         return {"results": db.update(new_version.json())}
 
 
