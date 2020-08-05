@@ -1625,7 +1625,7 @@ class request(json_base):
                 bash_file += ['# Run in SLC6 container',
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:/srv docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         else:
             # Config generation for production run on SLC6 machine - vocms081
