@@ -82,7 +82,7 @@ class RESTResource(Resource):
             camparable_keys = old_keys.union(new_keys) - set(ignore_keys)
             for key in camparable_keys:
                 key_with_prefix =  ('%s.%s' % (key_path, key)).strip('.')
-                self.get_obj_diff(old[key], new[key], ignore_keys, diff, key_with_prefix)
+                self.get_obj_diff(old.get(key), new.get(key), ignore_keys, diff, key_with_prefix)
 
         elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
             for index, (old_item, new_item) in enumerate(zip(old, new)):
