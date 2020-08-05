@@ -640,6 +640,53 @@ testApp.directive('selectWell', function($location) {
 
 });
 
+testApp.directive("customHistory", function(){
+  return {
+    require: 'ngModel',
+    template:
+    '<div>'+
+    '  <div ng-hide="show_history">'+
+    '    <input type="button" value="Show" ng-click="show_history=true;" style="margin: 2px;">'+
+    '  </div>'+
+    '  <div ng-show="show_history">'+
+    '    <input type="button" value="Hide" ng-click="show_history=false;" style="margin: 2px;">'+
+    '    <table class="table table-bordered">'+
+    '      <thead>'+
+    '        <tr>'+
+    '          <th style="padding: 1px;">Action</th>'+
+    '          <th style="padding: 1px;">Date</th>'+
+    '          <th style="padding: 1px;">User</th>'+
+    '          <th style="padding: 1px;">Step</th>'+
+    '        </tr>'+
+    '      </thead>'+
+    '      <tbody>'+
+    '        <tr ng-repeat="elem in show_info">'+
+    '          <td style="padding: 1px;">{{elem.action}}</td>'+
+    '          <td style="padding: 1px;">{{elem.updater.submission_date}}</td>'+
+    '          <td style="padding: 1px;">'+
+    '              <div ng-switch="elem.updater.author_name">'+
+    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
+    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
+    '              </div>'+
+    '          </td>'+
+    '          <td style="padding: 1px; min-width: 75px;">' +
+    '            <div>{{elem.step}}</div>'+
+    '          </td>'+
+    '        </tr>'+
+    '      </tbody>'+
+    '    </table>'+
+    '  </div>'+
+    '</div>'+
+    '',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_history = false;
+        scope.show_info = ctrl.$viewValue;
+      };
+    }
+  }
+});
+
 var ModalIsSureCtrl = function($scope, $modalInstance, action, prepid) {
     $scope.modal_action = action;
     $scope.toggle_prepid = prepid;

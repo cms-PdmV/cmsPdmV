@@ -96,21 +96,26 @@ class UpdateChainedCampaign(RESTResource):
         return self.update_campaign(loads(flask.request.data))
 
     def update_campaign(self, data):
-        db = database('chained_campaigns')
         if '_rev' not in data:
-            return {"results": False}
+            return {"results": False, 'message': 'There is no previous revision provided'}
         try:
             ccamp = chained_campaign(json_input=data)
-        except chained_campaign('').IllegalAttributeName:
+        except chained_campaign.IllegalAttributeName:
             return {"results": False}
 
-        if not ccamp.get_attribute("_id"):
-            self.logger.error('prepid returned was None')
-            return {"results": False}
+        prepid = ccamp.get_attribute('prepid')
+        if not prepid and not ccamp.get_attribute('_id'):
+            raise ValueError('Prepid returned was None')
 
-        self.logger.info('Updating chained_campaign %s ...' % (ccamp.get_attribute('_id')))
+        db = database('chained_campaigns')
+        previous_version = chained_campaign(json_input=db.get(prepid))
+        self.logger.info('Updating chained campaign %s', prepid)
         # update history
-        ccamp.update_history({'action': 'updated'})
+        difference = self.get_obj_diff(previous_version.json(),
+                                       ccamp.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        ccamp.update_history({'action': 'update', 'step': difference})
         return {"results": db.update(ccamp.json())}
 
 

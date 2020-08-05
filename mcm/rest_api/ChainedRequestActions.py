@@ -98,27 +98,30 @@ class UpdateChainedRequest(RESTResource):
         return self.update_request(flask.request.data)
 
     def update_request(self, data):
+        if '_rev' not in data:
+            return {"results": False, 'message': 'There is no previous revision provided'}
+
         try:
-            req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName:
             return {"results": False}
 
-        if not req.get_attribute('prepid') and not req.get_attribute('_id'):
-            self.logger.error('prepid returned was None')
+        prepid = chained_req.get_attribute('prepid')
+        if not prepid and not chained_req.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
-            # req.set_attribute('_id', req.get_attribute('prepid')
 
-        self.logger.info('Updating chained_request %s' % (req.get_attribute('_id')))
-        self.logger.info('wtf %s' % (str(req.get_attribute('approval'))))
-        # update history
-        req.update_history({'action': 'update'})
-        new_priority = req.get_attribute('action_parameters')['block_number']
-        req.set_priority(new_priority)
-        return self.save_request(req)
-
-    def save_request(self, req):
         db = database(self.db_name)
-        return {"results": db.update(req.json())}
+        previous_version = chained_request(json_input=db.get(prepid))
+        self.logger.info('Updating chained_request %s', prepid)
+        new_priority = chained_req.get_attribute('action_parameters')['block_number']
+        chained_req.set_priority(new_priority)
+        # update history
+        difference = self.get_obj_diff(previous_version.json(),
+                                       chained_req.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        chained_req.update_history({'action': 'update', 'step': difference})
+        return {"results": db.update(chained_req.json())}
 
 
 class DeleteChainedRequest(RESTResource):

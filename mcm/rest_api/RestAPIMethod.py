@@ -72,6 +72,28 @@ class RESTResource(Resource):
            except KeyError:
                RESTResource.call_counters[key] = 1
 
+    def get_obj_diff(self, old, new, ignore_keys, diff=None, key_path=''):
+        if diff is None:
+            diff = []
+
+        if isinstance(old, dict) and isinstance(new, dict):
+            old_keys = set(old.keys())
+            new_keys = set(new.keys())
+            camparable_keys = old_keys.union(new_keys) - set(ignore_keys)
+            for key in camparable_keys:
+                key_with_prefix =  ('%s.%s' % (key_path, key)).strip('.')
+                self.get_obj_diff(old[key], new[key], ignore_keys, diff, key_with_prefix)
+
+        elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+            for index, (old_item, new_item) in enumerate(zip(old, new)):
+                key_with_index = '%s[%s]' % (key_path, index)
+                self.get_obj_diff(old_item, new_item, ignore_keys, diff, key_with_index)
+
+        elif old != new:
+            diff.append(key_path)
+
+        return sorted(diff)
+
 
 class RESTResourceIndex(RESTResource):
     def __init__(self, data=None):
