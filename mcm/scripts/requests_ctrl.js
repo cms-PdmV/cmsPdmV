@@ -250,7 +250,6 @@ angular.module('testApp').controller('resultsCtrl',
       });
       $scope.upload({contents: imaginary_file.join("\n")});
       $scope.file_was_uploaded = false;
-      $scope.selectionReady = true;
     } else {
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var get_raw;
@@ -715,6 +714,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.result_status = data.status;
       $scope.got_results = true;
       $scope.parseColumns();
+      $scope.selectionReady = true;
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
