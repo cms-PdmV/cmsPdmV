@@ -1632,7 +1632,7 @@ class request(json_base):
             # If it's SLC6, just run the script normally
             # If it's CC7, run it in cc7 singularity container
             if scram_arch_os == 'CentOS7':
-                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity',
+                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                               'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
