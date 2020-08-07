@@ -1299,6 +1299,10 @@ class request(json_base):
             # * input_dataset attribute
             # * no input file
             # Get all chained requests and look for previous request
+            input_dataset = self.get_attribute('input_dataset')
+            if input_dataset:
+                return '"dbs:%s"' % (input_dataset)
+
             member_of_chain = self.get_attribute('member_of_chain')
             if member_of_chain:
                 chained_requests_db = database('chained_requests')
@@ -1312,21 +1316,16 @@ class request(json_base):
                     if index_in_chain > 0:
                         return 'file:%s.root' % (chained_request['chain'][index_in_chain - 1])
 
-            input_dataset = self.get_attribute('input_dataset')
-            if input_dataset:
-                return '"dbs:%s"' % (input_dataset)
-
             mcdb_id = self.get_attribute('mcdb_id')
             if mcdb_id > 0:
                 return '"lhe:%s"' % (mcdb_id)
-
 
         else:
             return 'file:%s_%s.root' % (prepid, sequence_index - 1)
 
         return ''
 
-    def get_setup_file2(self, for_validation, automatic_validation, threads=None):
+    def get_setup_file2(self, for_validation, automatic_validation, threads=None, configs_to_upload=None):
         loc = locator()
         is_dev = loc.isDev()
         base_url = loc.baseurl()
@@ -1457,10 +1456,15 @@ class request(json_base):
                       '']
 
         # Add proxy for submission and automatic validation
-        if not for_validation or (for_validation and automatic_validation):
+        if for_validation and automatic_validation:
+            # Automatic validation
             bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
                           # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          '']
+        elif not for_validation:
+            bash_file += ['# PdmV proxy'
+                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
         # Events to run
@@ -1607,6 +1611,13 @@ class request(json_base):
                               'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
                               'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"'
                              ]
+
+        if not for_validation and configs_to_upload:
+            test_string = '--wmtest' if is_dev else ''
+            bash_file += ['\n\n# Upload configs',
+                          'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+                          'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                          "wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;" % (test_string, " ".join(configs_to_upload))]
 
         if dump_test_to_file:
             bash_file += ['',
@@ -3007,16 +3018,8 @@ class request(json_base):
             self.set_status(step=__status_index, with_notification=True)
 
     def prepare_upload_command(self, cfgs, test_string):
-        directory = installer.build_location(self.get_attribute('prepid'))
         cmd = ''
-        scram_arch = self.get_scram_arch()
-        cmd += 'cd %s \n' % directory
-        cmd += self.get_setup_file2(False, False)
-        cmd += '\n'
-        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
+        cmd += self.get_setup_file2(False, False, configs_to_upload=cfgs)
         self.inject_logger.info('Upload command:\n\n%s\n\n' % (cmd))
         return cmd
 
