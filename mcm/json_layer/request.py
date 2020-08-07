@@ -1463,7 +1463,7 @@ class request(json_base):
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
                           '']
         elif not for_validation:
-            bash_file += ['# PdmV proxy'
+            bash_file += ['# PdmV proxy',
                           'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
