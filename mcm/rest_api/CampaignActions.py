@@ -303,15 +303,13 @@ class CampaignsRESTResource(RESTResource):
         prepids_list = map(lambda x: x['id'], all_campaigns)
         return prepids_list
 
-    def multiple_inspect(self, cid, in_statuses=('submitted', 'approved')):
+    def multiple_inspect(self, cid, in_statuses=['submitted', 'approved']):
         clist = list(set(cid.rsplit(',')))
         rdb = database('requests')
-        index = 0
-        self.logger.error("Chain inspect begin. Number of campaigns to be inspected: %s" % (len(clist)))
-        try:
-            while len(clist) > index:
-                campaign_name = clist[index]
-                yield "Current campaign (%s/%s) %s\n" % (index, len(clist), campaign_name)
+        self.logger.info('Begin campaign inspect. Campaigns to be inspected: %s' % (len(clist)))
+        for campaign_index, campaign_name in enumerate(clist):
+            try:
+                yield 'Current campaign %s %s/%s\n' % (campaign_name, campaign_index + 1, len(clist))
                 query = rdb.construct_lucene_complex_query([
                     ('member_of_campaign', {'value': campaign_name}),
                     ('status', {'value': in_statuses})
@@ -321,36 +319,34 @@ class CampaignsRESTResource(RESTResource):
                 request_res = [{}]
                 while len(request_res) > 0:
                     request_res = rdb.full_text_search('search', query, page=req_page)
-                    self.logger.info("Inspecting single requests of %s. page: %s" % (campaign_name, req_page))
-                    yield 'Inspecting single page of %s requests. Page: %s\n' % (campaign_name, req_page)
+                    self.logger.info('Inspecting requests page: %s', req_page)
+                    yield 'Inspecting %s requests on page %s\n' % (len(request_res), req_page)
                     for r in request_res:
-                        self.logger.info("Running inspect on request: %s" % (r['prepid']))
-                        yield 'Inspecting %s' % (r['prepid'])
+                        self.logger.info('Running inspect on request: %s' % (r['prepid']))
+                        yield 'Running inspect on request: %s\n' % (r['prepid'])
                         mcm_r = request(r)
                         if mcm_r:
-                            # making it as a stream
-                            yield dumps(mcm_r.inspect(), indent=2)
+                            # Making it as a stream
+                            yield '%s\n' % dumps(mcm_r.inspect(),
+                                                 indent=2)
                         else:
-                            # making it as a stream
-                            yield dumps({'prepid': r,
-                                         'results': False,
-                                         'message': '%s does not exist' % (r)},
-                                        indent=2)
+                            # Making it as a stream
+                            yield '%s\n' % dumps({"prepid": r,
+                                                  "results": False,
+                                                  'message': '%s does not exist' % (r)},
+                                                 indent=2)
 
                     req_page += 1
                     time.sleep(0.5)
 
-                yield "Finished campaign (%s/%s) %s" % (index, len(clist), campaign_name)
-                index += 1
                 time.sleep(1)
+            except Exception as e:
+                self.logger.error('Exception while inspecting %s campaign: %s\n%s',
+                                  campaign_name,
+                                  str(e),
+                                  traceback.format_exc())
 
-        except Exception as e:
-            subject = "Exception while inspecting request "
-            message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
-            self.logger.error(subject + message)
-            mcm_r.notify(subject, message, accumulate=True)
-
-        self.logger.info("Campaign inspection finished!")
+        self.logger.info('Campaign inspection finished!')
 
 
 class ListAllCampaigns(CampaignsRESTResource):

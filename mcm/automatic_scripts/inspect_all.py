@@ -1,13 +1,9 @@
 import sys
 import os
 import time
+from random import shuffle
 sys.path.append(os.path.abspath(os.path.pardir))
 from couchdb_layer.mcm_database import database
-sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
-from rest import McM
-
-
-mcm = McM(dev=False)
 
 
 def do_with_timeout(func, *args, **kwargs):
@@ -45,7 +41,7 @@ def do_with_timeout(func, *args, **kwargs):
 
 
 def inspect_campaign(campaign_prepid):
-    return mcm._McM__get('restapi/campaigns/inspect/%s' % (campaign_prepid))
+    return os.system('curl -k -L -s --cookie %s https://cms-pdmv.cern.ch/mcm/restapi/campaigns/inspect/%s' % (os.getenv('PROD_COOKIE'), campaign_prepid))
 
 
 def get_all_campaigns():
@@ -56,6 +52,7 @@ def get_all_campaigns():
     else:
         prepids_list = []
 
+    shuffle(prepids_list)
     return prepids_list
 
 
@@ -64,9 +61,9 @@ def multiple_inspect():
     print('Campaigns inspect begin. Number of campaigns to be inspected: %s' % (len(campaign_prepids)))
     for campaign_index, campaign_prepid in enumerate(campaign_prepids):
         try:
-            print('Current campaign: %s (%s/%s)' % (campaign_prepid, campaign_index + 1, len(campaign_prepids)))
+            print('*** Current campaign: %s (%s/%s) ***' % (campaign_prepid, campaign_index + 1, len(campaign_prepids)))
             result = do_with_timeout(inspect_campaign, campaign_prepid, timeout=3600)
-            print('Finished inspecting campaign %s, result %s' % (campaign_prepid, result))
+            print('*** Finished inspecting campaign %s, result %s ***' % (campaign_prepid, result))
             time.sleep(0.5)
         except Exception as e:
             print('Exception while inspecting campaign %s' % (campaign_prepid))
