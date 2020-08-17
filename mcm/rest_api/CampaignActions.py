@@ -303,55 +303,51 @@ class CampaignsRESTResource(RESTResource):
         prepids_list = map(lambda x: x['id'], all_campaigns)
         return prepids_list
 
-    def multiple_inspect(self, cid, in_statuses=['submitted', 'approved']):
+    def multiple_inspect(self, cid, in_statuses=('submitted', 'approved')):
         clist = list(set(cid.rsplit(',')))
-        res = []
         rdb = database('requests')
         index = 0
-        self.logger.error("Chain inspect begin. Number of chains to be inspected: %s" % (len(clist)))
+        self.logger.error("Chain inspect begin. Number of campaigns to be inspected: %s" % (len(clist)))
         try:
             while len(clist) > index:
-                yield dumps({"current cr element": "%s/%s" % (index, len(clist))}, indent=2)
+                campaign_name = clist[index]
+                yield "Current campaign (%s/%s) %s\n" % (index, len(clist), campaign_name)
                 query = rdb.construct_lucene_complex_query([
-                    ('member_of_campaign', {'value': clist[index: index + 1]}),
+                    ('member_of_campaign', {'value': campaign_name}),
                     ('status', {'value': in_statuses})
                 ])
-                ##do another loop over the requests themselves
+                # Do another loop over the requests themselves
                 req_page = 0
-                request_res = rdb.full_text_search('search', query, page=req_page)
-
+                request_res = [{}]
                 while len(request_res) > 0:
-                    self.logger.info("inspecting single requests. page: %s" % (req_page))
+                    request_res = rdb.full_text_search('search', query, page=req_page)
+                    self.logger.info("Inspecting single requests of %s. page: %s" % (campaign_name, req_page))
+                    yield 'Inspecting single page of %s requests. Page: %s\n' % (campaign_name, req_page)
                     for r in request_res:
-                        self.logger.info("running inspect on request: %s" % (r['prepid']))
+                        self.logger.info("Running inspect on request: %s" % (r['prepid']))
+                        yield 'Inspecting %s' % (r['prepid'])
                         mcm_r = request(r)
-
                         if mcm_r:
-                            #making it as a stream
-                            yield dumps(mcm_r.inspect(), indent=4)
+                            # making it as a stream
+                            yield dumps(mcm_r.inspect(), indent=2)
                         else:
-                            #making it as a stream
-                            yield dumps({"prepid": r, "results": False,
-                                    'message': '%s does not exist' % (r)}, indent=4)
+                            # making it as a stream
+                            yield dumps({'prepid': r,
+                                         'results': False,
+                                         'message': '%s does not exist' % (r)},
+                                        indent=2)
 
                     req_page += 1
-                    request_res = rdb.full_text_search('search', query, page=req_page)
                     time.sleep(0.5)
 
+                yield "Finished campaign (%s/%s) %s" % (index, len(clist), campaign_name)
                 index += 1
                 time.sleep(1)
+
         except Exception as e:
             subject = "Exception while inspecting request "
             message = "Request: %s \n %s traceback: \n %s" % (mcm_r.get_attribute('prepid'), str(e), traceback.format_exc())
             self.logger.error(subject + message)
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[mcm_r.get_attribute('prepid')],
-                object_type='requests',
-                base_object=mcm_r)
             mcm_r.notify(subject, message, accumulate=True)
 
         self.logger.info("Campaign inspection finished!")
@@ -383,8 +379,8 @@ class InspectRequests(CampaignsRESTResource):
         """
         Inspect the campaign or coma separated list of campaigns for completed requests
         """
-        return ["this api will be deprecated"]
-        #return self.multiple_inspect(campaign_id)
+        self.representations = {'text/plain': self.output_text}
+        return flask.Response(flask.stream_with_context(self.multiple_inspect(campaign_id)))
 
 
 class InspectCampaigns(CampaignsRESTResource):
