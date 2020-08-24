@@ -1607,7 +1607,7 @@ class request(json_base):
                               'echo "Total job time: $totalJobTime s"',
                               'echo "Total CPU time: $totalJobCPU s"',
                               'echo "Event throughput: $eventThroughput"',
-                              'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * $threads) / $totalJobTime * 100")" %"',
+                              'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
                               'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
                               'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"'
                              ]
