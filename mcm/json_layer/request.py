@@ -2433,8 +2433,12 @@ class request(json_base):
         return max_runtime
 
     def get_event_count_for_validation(self, with_explanation=False):
+        # Efficiency
+        efficiency = self.get_efficiency()
         # Max number of events to run
         max_events = self.target_for_test()
+        # Max events taking efficiency in consideration
+        max_events_with_eff = max_events / efficiency
         # Max number of seconds that validation can run for
         max_runtime = self.get_validation_max_runtime()
         # "Safe" margin of validation that will not be used for actual running
@@ -2453,7 +2457,9 @@ class request(json_base):
         # How many events can be produced in given "safe" time
         events = int(max_runtime_with_margin / time_per_event_sum)
         # Try to produce at least one event
-        clamped_events = max(1, min(events, max_events))
+        clamped_events = max(1, min(events, max_events_with_eff))
+        # Estimate produced events
+        estimate_produced = clamped_events * efficiency
 
         self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
         if not with_explanation:
@@ -2467,7 +2473,10 @@ class request(json_base):
                            '# Time per event for single thread for each sequence: %s' % (', '.join(['%s * %.4fs = %.4fs' % (sequence_threads[i], time_per_event[i], single_thread_time_per_event[i]) for i in range(len(single_thread_time_per_event))])),
                            '# Which adds up to %.4fs per event' % (time_per_event_sum),
                            '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
-                           '# Make sure that %d is within 1 and %d' % (events, max_events)]
+                           '# Produced events limit in McM is %d' % (max_events),
+                           '# According to %.4f%% efficiency, up to %d / %.4f = %d events should run' % (efficiency * 100, max_events, efficiency * 100, max_events_with_eff),
+                           '# Clamp (put value) %d within 1 and %d -> %d' % (events, max_events_with_eff, clamped_events),
+                           '# It is estimated that this validation will produce: %d * %.4f%% = %d events' % (clamped_events, efficiency * 100, estimate_produced)]
             return clamped_events, '\n'.join(explanation)
 
     def unique_string(self, step_i):
