@@ -2474,9 +2474,9 @@ class request(json_base):
                            '# Which adds up to %.4fs per event' % (time_per_event_sum),
                            '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
                            '# Produced events limit in McM is %d' % (max_events),
-                           '# According to %.4f%% efficiency, up to %d / %.4f = %d events should run' % (efficiency * 100, max_events, efficiency * 100, max_events_with_eff),
+                           '# According to %.4f efficiency, up to %d / %.4f = %d events should run' % (efficiency, max_events, efficiency, max_events_with_eff),
                            '# Clamp (put value) %d within 1 and %d -> %d' % (events, max_events_with_eff, clamped_events),
-                           '# It is estimated that this validation will produce: %d * %.4f%% = %d events' % (clamped_events, efficiency * 100, estimate_produced)]
+                           '# It is estimated that this validation will produce: %d * %.4f = %d events' % (clamped_events, efficiency, estimate_produced)]
             return clamped_events, '\n'.join(explanation)
 
     def unique_string(self, step_i):
