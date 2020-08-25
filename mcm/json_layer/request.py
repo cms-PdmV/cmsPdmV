@@ -2457,9 +2457,9 @@ class request(json_base):
         # How many events can be produced in given "safe" time
         events = int(max_runtime_with_margin / time_per_event_sum)
         # Try to produce at least one event
-        clamped_events = max(1, min(events, max_events_with_eff))
+        clamped_events = int(max(1, min(events, max_events_with_eff)))
         # Estimate produced events
-        estimate_produced = clamped_events * efficiency
+        estimate_produced = int(clamped_events * efficiency)
 
         self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
         if not with_explanation:
