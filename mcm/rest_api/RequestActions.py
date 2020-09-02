@@ -48,24 +48,6 @@ class RequestRESTResource(RESTResource):
 
         return camp
 
-    def get_req_diff(self, old, new):
-        old_keys = set(old.keys())
-        new_keys = set(new.keys())
-        camparable_keys = set(['ppd_tags'])
-        diff = {}
-        for key in camparable_keys:
-            if key in old_keys and key not in new_keys:
-                diff[key] = {'old': old[key]}
-            elif key in new_keys and key not in old_keys:
-                diff[key] = {'new': new[key]}
-            elif old.get(key) != new.get(key):
-                if isinstance(old[key], dict) and isinstance(new[key], dict):
-                    diff[key] = self.get_req_diff(old[key], new[key])
-                else:
-                    diff[key] = {'old': old[key], 'new': new[key]}
-
-        return diff
-
     def import_request(self, data, db, label='created', step=None):
 
         if '_rev' in data:
@@ -345,8 +327,8 @@ class UpdateRequest(RequestRESTResource):
             return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
 
         all_interested_pwg = set(settings.get_value('pwg'))
-        interested_pwg = mcm_req.get_attribute('interested_pwg')
-        for interested_pwg in interested_pwg:
+        req_interested_pwg = mcm_req.get_attribute('interested_pwg')
+        for interested_pwg in req_interested_pwg:
             if interested_pwg not in all_interested_pwg:
                 return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
 
@@ -363,15 +345,15 @@ class UpdateRequest(RequestRESTResource):
 
         # update history
         if self.with_trace:
-            difference = self.get_req_diff(previous_version.json(), mcm_req.json())
+            difference = self.get_obj_diff(previous_version.json(),
+                                           mcm_req.json(),
+                                           ('history', '_rev'))
+            difference = ', '.join(difference)
             if difference:
                 mcm_req.update_history({'action': 'update', 'step': difference})
             else:
                 mcm_req.update_history({'action': 'update'})
 
-        return self.save_request(mcm_req, db)
-
-    def save_request(self, mcm_req, db):
         return {"results": db.update(mcm_req.json())}
 
 
@@ -911,7 +893,7 @@ class UpdateStats(RESTResource):
                     "message": '%s does not exist' % request_id}
 
         mcm_r = request(rdb.get(request_id))
-        if mcm_r.get_stats(limit_to_set=0.0, refresh=refresh_stats, forced=force):
+        if mcm_r.get_stats(forced=force):
             mcm_r.reload()
             return {"prepid": request_id, "results": True}
         else:
@@ -953,7 +935,7 @@ class UpdateEventsFromWorkflow(RESTResource):
         # we do not trigger stats refresh as this api will be triggered by stats
         for req in res:
             mcm_r = request(rdb.get(req["prepid"]))
-            if mcm_r.get_stats(limit_to_set=0.0, refresh=False):
+            if mcm_r.get_stats():
                 mcm_r.reload()
                 ret.append({"prepid": req["prepid"], "results": True})
             else:
@@ -2072,6 +2054,9 @@ class TaskChainRequestDict(RESTResource):
 
         task_counter = 1
         for task in task_dicts:
+            if task.get('pilot_'):
+                wma['SubRequestType'] = task['pilot_']
+
             for key in task.keys():
                 if key.endswith('_'):
                     task.pop(key)

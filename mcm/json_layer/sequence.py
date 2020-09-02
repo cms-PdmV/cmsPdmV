@@ -59,6 +59,9 @@ class sequence(json_base):
         if attribute == 'nThreads':
             if int(self.get_attribute('nThreads')) <= 1:
                 return ''
+        if attribute == 'nStreams':
+            if int(self.get_attribute(attribute)) <= 0:
+                return ''
         if self.get_attribute(attribute) == '':
             return ''
         elif self.get_attribute(attribute) == True:

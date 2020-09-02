@@ -250,7 +250,6 @@ angular.module('testApp').controller('resultsCtrl',
       });
       $scope.upload({contents: imaginary_file.join("\n")});
       $scope.file_was_uploaded = false;
-      $scope.selectionReady = true;
     } else {
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       var get_raw;
@@ -715,6 +714,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.result_status = data.status;
       $scope.got_results = true;
       $scope.parseColumns();
+      $scope.selectionReady = true;
     }).error(function(status){
       $scope.update["success"] = false;
       $scope.update["fail"] = true;
@@ -921,72 +921,6 @@ testApp.directive("customApproval", function(){
   }
 });
 
-testApp.directive("customHistory", function(){
-  return {
-    require: 'ngModel',
-    template:
-    '<div>'+
-    '  <div ng-hide="show_history">'+
-    '    <input type="button" value="Show" ng-click="show_history=true;">'+
-    '  </div>'+
-    '  <div ng-show="show_history">'+
-    '    <input type="button" value="Hide" ng-click="show_history=false;">'+
-    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
-    '      <thead>'+
-    '        <tr>'+
-    '          <th style="padding: 0px;">Action</th>'+
-    '          <th style="padding: 0px;">Date</th>'+
-    '          <th style="padding: 0px;">User</th>'+
-    '          <th style="padding: 0px;">Step</th>'+ //is it needed?
-    '        </tr>'+
-    '      </thead>'+
-    '      <tbody>'+
-    '        <tr ng-repeat="elem in show_info">'+
-    '          <td style="padding: 0px;">{{elem.action}}</td>'+
-    '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
-    '          <td style="padding: 0px;">'+
-    '              <div ng-switch="elem.updater.author_name">'+
-    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
-    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
-    '              </div>'+
-    '          </td>'+
-    '          <td style="padding: 0px; white-space: normal; min-width: 150px;">' +
-    '            <div ng-switch="isJSON(elem.step).toString()">'+
-    '              <div ng-switch-when="true"><pre style="min-width:275px">{{elem.step}}</pre></div>'+
-    '              <div ng-switch-default>{{elem.step}}</div>'+
-    '            </div>'+
-    '          </td>'+ //is it needed?
-    '        </tr>'+
-    '      </tbody>'+
-    '    </table>'+
-    '  </div>'+
-    '</div>'+
-    '',
-    link: function(scope, element, attrs, ctrl){
-      ctrl.$render = function(){
-        scope.show_history = false;
-        scope.show_info = ctrl.$viewValue;
-        for (var index in scope.show_info) {
-          var entry = scope.show_info[index]
-          if (entry['action'] === 'update' && scope.isJSON(JSON.stringify(entry['step']))) {
-            entry['step'] = JSON.stringify(entry['step'], undefined, 2)
-          }
-        }
-      };
-      scope.isJSON = function(text) {
-        if (!text) {
-          return false;
-        }
-        try {
-          JSON.parse(text);
-        } catch (e) {
-          return false;
-        }
-        return true;
-      }
-    }
-  }
-});
 testApp.directive("sequenceDisplay", function($http){
   return {
     require: 'ngModel',
@@ -1223,6 +1157,47 @@ testApp.directive("customActorList", function($http){
           });
         }
       }
+   }
+  }
+});
+
+testApp.directive("fragmentDisplay", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    '<div ng-show="fragment && fragment.length">'+
+    '  <a ng-show="!show_fragment" rel="tooltip" title="Show fragment" ng-click="showFragment();">'+
+    '    <i class="icon-eye-open"></i>'+
+    '  </a>'+
+    '  <a ng-show="show_fragment" rel="tooltip" title="Hide fragment" ng-click="show_fragment = false;">'+
+    '    <i class="icon-remove"></i>'+
+    '  </a>'+
+    '  <a ng-href="public/restapi/requests/get_fragment/{{prepid}}/0" rel="tooltip" title="Open fragment in new tab" target="_blank">'+
+    '    <i class="icon-fullscreen"></i>'+
+    '  </a>'+
+    '  <div ng-show="show_fragment">'+
+    '    <textarea ui-codemirror="{ theme:\'eclipse\', readOnly:true}" ui-refresh=true ng-model="fragment"></textarea>'+
+    '  </div>'+
+    '</div>',
+    link: function(scope, element, attrs, ctrl){
+      ctrl.$render = function(){
+        scope.show_fragment = false;
+        scope.prepid = ctrl.$viewValue;
+        scope.fragment = attrs.rawfragment;
+        scope.refreshedEditor = false;
+      };
+      scope.showFragment = function() {
+        scope.show_fragment = true;
+        if (!scope.refreshedEditor) {
+          scope.refreshedEditor = true;
+          setTimeout(() => {
+            const textarea = angular.element(element)[0].querySelector('textarea');
+            const editor = CodeMirror.fromTextArea(textarea);
+            editor.setSize(null, 'auto');
+            editor.refresh();
+          }, 100);
+        }
+      };
    }
   }
 });

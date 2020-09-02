@@ -57,7 +57,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {"valid":False,"content":"all","dqm":None},
+        'validation': {"valid":False,"content":"all"},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -95,6 +95,7 @@ class request(json_base):
         'interested_pwg': [],
         'ppd_tags': [],
         'events_per_lumi': 0,
+        'pilot': False,
     }
 
     def __init__(self, json_input=None):
@@ -202,6 +203,12 @@ class request(json_base):
                 always_editable = settings.get_value('editable_request')
                 for key in always_editable:
                     editable[key] = True
+
+            if self.current_user_level == 3 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
+                # Allow production managers to edit input dataset for
+                # "validation-validation", "define-" and "approve-" requests
+                editable['input_dataset'] = True
+
             if self.current_user_level > 3:  # only for admins
                 for key in self._json_base__schema:
                     editable[key] = True
@@ -687,7 +694,7 @@ class request(json_base):
             if other_request_json['prepid'] == my_prepid:
                 continue  # no self check
 
-            if other_request_json['approval'] in ['new', 'validation']:
+            if other_request_json['status'] in ['new', 'validation']:
                 # Not paying attention to new or validating requests
                 continue
 
@@ -756,6 +763,21 @@ class request(json_base):
         rdb = database('requests')
         self.check_for_collisions()
         self.get_input_dataset_status()
+        prepid = self.get_attribute('prepid')
+        # Check if there are any unacknowledged invalidations
+        invalidations_db = database('invalidations')
+        invalidations_query = invalidations_db.construct_lucene_query({'prepid': prepid})
+        invalidations = invalidations_db.full_text_search('search', invalidations_query, page=-1)
+        invalidations = [i for i  in invalidations if i['status'] in ('new', 'announced')]
+        if invalidations:
+            self.logger.info('Unacknowledged invalidations for %s: %s' % (prepid, ', '.join([x['prepid'] for x in invalidations])))
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'approve',
+                'There are %s unacknowledged invalidations for %s' % (len(invalidations), prepid))
+        else:
+            self.logger.info('No unacknowledged invalidations for %s' % (prepid))
+
         moveon_with_single_submit = True  # for the case of chain request submission
         is_the_current_one = False
         # check on position in chains
@@ -1821,7 +1843,7 @@ class request(json_base):
             )
             self.notify(subject, message)
 
-    def get_stats(self, limit_to_set=0.05, refresh=False, forced=False):
+    def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/requests',
                                                options={'include_docs': True,
@@ -1830,7 +1852,8 @@ class request(json_base):
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
-        all_reqmgr_name_list = set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list))
+        all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
+        all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
         self.logger.info('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
                                                          dumps(list(stats_reqmgr_name_list), indent=2)))
         self.logger.info('McM workflows for %s: %s' % (self.get_attribute('prepid'),
@@ -1845,6 +1868,7 @@ class request(json_base):
                                      'aborted-archived',
                                      'failed-archived',
                                      'aborted-completed'])
+        total_events = 0
         for reqmgr_name in all_reqmgr_name_list:
             stats_doc = None
             for stats_workflow in stats_workflows:
@@ -1862,6 +1886,10 @@ class request(json_base):
                 new_mcm_reqmgr_list.append({'name': reqmgr_name,
                                             'content': {}})
                 continue
+
+            if stats_doc.get('RequestType', '').lower() != 'resubmission' and stats_doc.get('TotalEvents', 0) > 0:
+                self.logger.info('TotalEvents %s', stats_doc['TotalEvents'])
+                total_events = stats_doc['TotalEvents']
 
             stats_request_transition = stats_doc.get('RequestTransition', [])
             if not stats_request_transition:
@@ -1917,10 +1945,10 @@ class request(json_base):
             new_mcm_reqmgr_list.append(new_rr)
 
         new_mcm_reqmgr_list = sorted(new_mcm_reqmgr_list, key=lambda workflow: '_'.join(workflow['name'].split('_')[-3:]))
-        old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=4, sort_keys=True)
-        new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)
+        old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=2, sort_keys=True)
+        new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
-        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=4, sort_keys=True)))
+        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
         self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
 
         if len(new_mcm_reqmgr_list):
@@ -1934,7 +1962,7 @@ class request(json_base):
                                              skip_check=forced)
 
             self.logger.info('Collected outputs for %s: %s' % (self.get_attribute('prepid'),
-                                                               dumps(collected, indent=4, sort_keys=True)))
+                                                               dumps(collected, indent=2, sort_keys=True)))
 
             # 1st element which is not DQMIO
             completed = 0
@@ -1977,14 +2005,24 @@ class request(json_base):
                     next_request.set_attribute('input_dataset', input_dataset)
                     next_request.save()
 
-        if (len(new_mcm_reqmgr_list) and
-                'content' in new_mcm_reqmgr_list[-1] and
-                'pdmv_present_priority' in new_mcm_reqmgr_list[-1]['content'] and
-                new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'] != self.get_attribute('priority')):
+        # Update priority if it changed
+        if new_mcm_reqmgr_list:
+            new_priority = new_mcm_reqmgr_list[-1].get('content', {}).get('pdmv_present_priority')
+        else:
+            new_priority = None
 
+        if new_priority is not None and new_priority != self.get_attribute('priority'):
             self.set_attribute('priority', new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority'])
             self.update_history({'action': 'wm priority',
                                  'step': new_mcm_reqmgr_list[-1]['content']['pdmv_present_priority']})
+
+        # Update number of expected events
+        if total_events != 0 and total_events != self.get_attribute('total_events'):
+            self.logger.info('Total events changed %s -> %s for %s',
+                             self.get_attribute('total_events'),
+                             total_events,
+                             self.get_attribute('prepid'))
+            self.set_attribute('total_events', total_events)
 
         self.logger.info('Changes happen for %s - %s' % (self.get_attribute('prepid'), changes_happen))
         return changes_happen
@@ -2816,6 +2854,7 @@ class request(json_base):
             total_event_in,
             total_job_cpu,
             total_job_time))
+        self.logger.info('Validation peak RSS: %s' % (memory))
 
         geninfo = None
         if len(self.get_attribute('generator_parameters')):
@@ -3198,8 +3237,10 @@ class request(json_base):
             self.logger.info('Selected validation info: %s', dumps(validation_info, indent=2, sort_keys=True))
 
         memory = self.get_attribute('memory')
-        sequence_count = len(self.get_attribute('sequences'))
+        sequences = self.get_attribute('sequences')
+        sequence_count = len(sequences)
         for sequence_index in range(sequence_count):
+            sequence = sequences[sequence_index]
             threads = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
             size_per_event = self.get_attribute('size_event')[sequence_index]
             time_per_event = self.get_attribute('time_event')[sequence_index]
@@ -3210,12 +3251,18 @@ class request(json_base):
                 size_per_event = validation_info['size_per_event'] / sequence_count
                 time_per_event = validation_info['time_per_event'] / sequence_count
                 memory = math.ceil((validation_info['peak_value_rss'] * 1.1) / 1000.0) * 1000
+            elif self.get_attribute('validation').get('preak_value_rss', 0) > 0:
+                # Old way of getting PeakValueRSS
+                peak_value_rss = self.get_attribute('validation')['preak_value_rss']
+                if threads == 1 and memory == 2300 and peak_value_rss < 2000.0:
+                    # If it is single core with memory 2300 and peak rss value < 2000, use 2000
+                    memory = 2000
 
             task_dict = {
                 "TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
                 "KeepOutput": True,
                 "ConfigCacheID": None,
-                "GlobalTag": self.get_attribute('sequences')[sequence_index]['conditions'],
+                "GlobalTag": sequences[sequence_index]['conditions'],
                 "CMSSWVersion": self.get_attribute('cmssw_release'),
                 "ScramArch": self.get_scram_arch(),
                 "PrimaryDataset": self.get_attribute('dataset_name'),
@@ -3228,9 +3275,13 @@ class request(json_base):
                 "FilterEfficiency": self.get_efficiency(),
                 "PrepID": self.get_attribute('prepid')}
             # check if we have multicore an it's not an empty string
-            if 'nThreads' in self.get_attribute('sequences')[sequence_index] and self.get_attribute('sequences')[sequence_index]['nThreads']:
+            if 'nThreads' in sequence and sequence['nThreads']:
                 task_dict["Multicore"] = threads
-            __list_of_steps = self.get_list_of_steps(self.get_attribute('sequences')[sequence_index]['step'])
+
+            if 'nStreams' in sequence and int(sequence['nStreams']) > 0:
+                task_dict['EventStreams'] = int(sequence['nStreams'])
+
+            __list_of_steps = self.get_list_of_steps(sequences[sequence_index]['step'])
             if len(self.get_attribute('config_id')) > sequence_index:
                 task_dict["ConfigCacheID"] = self.get_attribute('config_id')[sequence_index]
             if len(self.get_attribute('keep_output')) > sequence_index:
@@ -3240,6 +3291,9 @@ class request(json_base):
             # due to discussion in https://github.com/dmwm/WMCore/issues/7398
             if self.get_attribute('version') > 0:
                 task_dict["ProcessingVersion"] = self.get_attribute('version')
+            if self.get_attribute('pilot'):
+                task_dict['pilot_'] = 'pilot'
+
             if sequence_index == 0:
                 if base:
                     if self.get_attribute('events_per_lumi') > 0:
@@ -3292,8 +3346,8 @@ class request(json_base):
                         "InputFromOutputModule": tasks[-1]['output_'],
                         "InputTask": tasks[-1]['TaskName']})
             task_dict['_first_step_'] = __list_of_steps[0]
-            task_dict['_output_tiers_'] = self.get_attribute('sequences')[sequence_index]["eventcontent"]
-            task_dict['output_'] = "%soutput" % (self.get_attribute('sequences')[sequence_index]['eventcontent'][0])
+            task_dict['_output_tiers_'] = sequences[sequence_index]["eventcontent"]
+            task_dict['output_'] = "%soutput" % (sequences[sequence_index]['eventcontent'][0])
             task_dict['priority_'] = self.get_attribute('priority')
             task_dict['request_type_'] = self.get_wmagent_type()
             transient_output_modules = self.get_attribute('transient_output_modules')

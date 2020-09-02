@@ -25,6 +25,7 @@ angular.module('testApp').controller('resultCtrl',
         promise.then(function(data){
           $scope.parseEditableObject(data.data.results);
         });
+        $scope.type_list = ["MCReproc","Prod","LHE"];
         break;
       case "chained_requests":
         $scope.not_editable_list = ["Prepid", "Chain","Approval","Member of campaign","Pwg"];

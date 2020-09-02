@@ -269,7 +269,11 @@ class UpdateFlow(FlowRESTResource):
         self.set_default_request_parameters(nc, cdb, f)
 
         # update history
-        f.update_history({'action': 'update'})
+        difference = self.get_obj_diff(old,
+                                       f.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        f.update_history({'action': 'update', 'step': difference})
 
         # save to db
         if not db.update(f.json()):

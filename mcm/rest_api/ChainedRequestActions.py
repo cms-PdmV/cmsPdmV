@@ -98,27 +98,30 @@ class UpdateChainedRequest(RESTResource):
         return self.update_request(flask.request.data)
 
     def update_request(self, data):
+        if '_rev' not in data:
+            return {"results": False, 'message': 'There is no previous revision provided'}
+
         try:
-            req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=loads(data))
         except chained_request.IllegalAttributeName:
             return {"results": False}
 
-        if not req.get_attribute('prepid') and not req.get_attribute('_id'):
-            self.logger.error('prepid returned was None')
+        prepid = chained_req.get_attribute('prepid')
+        if not prepid and not chained_req.get_attribute('_id'):
             raise ValueError('Prepid returned was None')
-            # req.set_attribute('_id', req.get_attribute('prepid')
 
-        self.logger.info('Updating chained_request %s' % (req.get_attribute('_id')))
-        self.logger.info('wtf %s' % (str(req.get_attribute('approval'))))
-        # update history
-        req.update_history({'action': 'update'})
-        new_priority = req.get_attribute('action_parameters')['block_number']
-        req.set_priority(new_priority)
-        return self.save_request(req)
-
-    def save_request(self, req):
         db = database(self.db_name)
-        return {"results": db.update(req.json())}
+        previous_version = chained_request(json_input=db.get(prepid))
+        self.logger.info('Updating chained_request %s', prepid)
+        new_priority = chained_req.get_attribute('action_parameters')['block_number']
+        chained_req.set_priority(new_priority)
+        # update history
+        difference = self.get_obj_diff(previous_version.json(),
+                                       chained_req.json(),
+                                       ('history', '_rev'))
+        difference = ', '.join(difference)
+        chained_req.update_history({'action': 'update', 'step': difference})
+        return {"results": db.update(chained_req.json())}
 
 
 class DeleteChainedRequest(RESTResource):
@@ -869,17 +872,25 @@ class TaskChainDict(RESTResource):
             "Multicore": 1}
 
         task = 1
+        pilot_string = None
         for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:
                     wma['RequestPriority'] = d['priority_']
                 if d['request_type_'] in ['ReDigi']:
                     wma['SubRequestType'] = 'ReDigi'
+
+                if d.get('pilot_'):
+                    pilot_string = d['pilot_']
+
                 for k in d.keys():
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d
                 task += 1
+
+        if pilot_string:
+            wma['SubRequestType'] = pilot_string
 
         wma['TaskChain'] = task - 1
         if wma['TaskChain'] == 0:

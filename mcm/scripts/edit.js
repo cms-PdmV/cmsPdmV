@@ -419,50 +419,6 @@ testApp.directive("sequenceEdit", function($http){
     }
   }
 });
-testApp.directive("customHistory", function(){
-  return {
-    require: 'ngModel',
-    template:
-    '<div>'+
-    '  <div ng-hide="show_history">'+
-    '    <input type="button" value="Show" ng-click="show_history=true;">'+
-    '  </div>'+
-    '  <div ng-show="show_history">'+
-    '    <input type="button" value="Hide" ng-click="show_history=false;">'+
-    '    <table class="table table-bordered" style="margin-bottom: 0px;">'+
-    '      <thead>'+
-    '        <tr>'+
-    '          <th style="padding: 0px;">Action</th>'+
-    '          <th style="padding: 0px;">Date</th>'+
-    '          <th style="padding: 0px;">User</th>'+
-    '          <th style="padding: 0px;">Step</th>'+
-    '        </tr>'+
-    '      </thead>'+
-    '      <tbody>'+
-    '        <tr ng-repeat="elem in show_info">'+
-    '          <td style="padding: 0px;">{{elem.action}}</td>'+
-    '          <td style="padding: 0px;">{{elem.updater.submission_date}}</td>'+
-    '          <td style="padding: 0px;">'+
-    '              <div ng-switch="elem.updater.author_name">'+
-    '                <div ng-switch-when="">{{elem.updater.author_username}}</div>'+
-    '                <div ng-switch-default>{{elem.updater.author_name}}</div>'+
-    '              </div>'+
-    '          </td>'+
-    '          <td style="padding: 0px;">{{elem.step}}</td>'+
-    '        </tr>'+
-    '      </tbody>'+
-    '    </table>'+
-    '  </div>'+
-    '</div>'+
-    '',
-    link: function(scope, element, attr, ctrl){
-      ctrl.$render = function(){
-        scope.show_history = false;
-        scope.show_info = ctrl.$viewValue;
-      };
-    }
-  }
-});
 testApp.directive("selectCampaign", function(){
   return{
       require: 'ngModel',
@@ -612,7 +568,7 @@ testApp.directive("customValidationEdit", function(){
     '        <a ng-show="isDevMachine()" href="https://cmsweb-testbed.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank">'+
     '          <i class="icon-th-large"></i>'+
     '        </a>'+
-    '        <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};workspace=Everything;root=Generator;sampletype=offline_relval" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank">'+
+    '        <a ng-show="!isDevMachine()" href="https://cmsweb.cern.ch/dqm/dev/start?runnr=1;dataset={{data[value.db_name].dqm}};sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=all;referencenorm=True;referenceobj1=other%3A1%3A{{data[value.db_name].ref_dqm}}%3AReference%3A;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;" rel="tooltip" title="Go to the DQM gui for {{data[value.db_name].dqm}}" target="_blank">'+
     '          <i class="icon-th-large"></i>'+
     '        </a>'+
     '      </div>'+
