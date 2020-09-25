@@ -1,6 +1,6 @@
 angular.module('testApp').controller('resultCtrl',
-  ['$scope', '$http', '$location', '$window',
-  function resultCtrl($scope, $http, $location, $window){
+  ['$scope', '$http', '$location', '$window', '$modal',
+  function resultCtrl($scope, $http, $location, $window, $modal){
 
     $scope.defaults = [];
     $scope.underscore = _;
@@ -224,7 +224,21 @@ angular.module('testApp').controller('resultCtrl',
       });
     };
     $scope.delete_edit = function(id){
-      $scope.delete_object($location.search()["db_name"], id);
+      var isSure = $modal.open({
+        templateUrl: 'isSureModal.html',
+        controller: ModalIsSureCtrl,
+        resolve: {
+          prepid: function() {
+            return id;
+          },
+          action: function() {
+            return 'delete';
+          }
+        }
+      });
+      isSure.result.then(function() {
+        $scope.delete_object($location.search()["db_name"], id);
+      });
     };
     $scope.display_approvals = function(data){
     };
