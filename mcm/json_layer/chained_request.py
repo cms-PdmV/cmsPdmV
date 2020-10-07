@@ -964,23 +964,6 @@ class chained_request(json_base):
         # this should probably be a bit more subtle
         return t * requests_to_validate, max_memory, max_threads
 
-    def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False, for_validation=False, gen_script=False):
-        if scratch:
-            req_ids = self.get_attribute('chain')
-        else:
-            req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
-        rdb = database('requests')
-        rdb = database('requests')
-        setup_file = ''
-        for (index, req_id) in enumerate(req_ids):
-            req = request(rdb.get(req_id))
-            if not req.is_root and 'validation' not in req._json_base__status:  # do it only for root or possible root request
-                break
-            setup_file += req.get_setup_file(directory=directory, events=events, run=run, do_valid=validation, for_validation=for_validation, gen_script=gen_script)
-            if run and validation:
-                req.reload()
-        return setup_file
-
     def reset_requests(self, message, what='Chained validation run test', notify_one=None, except_requests=[]):
         request_db = database('requests')
         for request_prepid in self.get_attribute('chain')[self.get_attribute('step'):]:

@@ -9,6 +9,7 @@ import copy
 import traceback
 import time
 import logging
+import math
 from math import sqrt
 from simplejson import loads, dumps
 from operator import itemgetter
@@ -915,7 +916,7 @@ class request(json_base):
                 fragment_retry_amount)
             # add the part to make it local
             if get:
-                get_me += '--create-dirs -o  Configuration/GenProduction/python/%s ' % (name)
+                get_me += '--create-dirs -o Configuration/GenProduction/python/%s ' % (name)
                 # lets check if downloaded file actually exists and has more than 0 bytes
                 get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' % (name)
 
@@ -1252,24 +1253,25 @@ class request(json_base):
         return self.scram_arch
 
     def make_release(self):
-        makeRel = 'export SCRAM_ARCH=%s\n' % (self.get_scram_arch())
-        makeRel += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\n'
-        makeRel += 'if [ -r %s/src ] ; then \n' % (self.get_attribute('cmssw_release'))
-        makeRel += ' echo release %s already exists\n' % (self.get_attribute('cmssw_release'))
-        makeRel += 'else\n'
-        makeRel += 'scram p CMSSW ' + self.get_attribute('cmssw_release') + '\n'
-        makeRel += 'fi\n'
-        makeRel += 'cd ' + self.get_attribute('cmssw_release') + '/src\n'
-        makeRel += 'eval `scram runtime -sh`\n'  # setup the cmssw
+        cmssw_release = self.get_attribute('cmssw_release')
+        scram_arch = self.get_scram_arch()
+        release_command = ['export SCRAM_ARCH=%s\n' % (scram_arch),
+                           'source /cvmfs/cms.cern.ch/cmsset_default.sh',
+                           'if [ -r %s/src ] ; then' % (cmssw_release),
+                           '  echo release %s already exists' % (cmssw_release),
+                           'else',
+                           '  scram p CMSSW %s' % (cmssw_release),
+                           'fi',
+                           'cd %s/src' % (cmssw_release),
+                           'eval `scram runtime -sh`',
+                           '']
 
-        return makeRel
+        return '\n'.join(release_command)
 
-    def get_setup_file(self, directory='', events=None, run=False, do_valid=False, for_validation=False, gen_script=False):
-        # run is for adding cmsRun
-        # do_valid id for adding the file upload
-        l_type = locator()
-        infile = '#!/bin/bash\n'
-
+    def should_run_gen_script(self):
+        """
+        Return whether GEN checking script should be run during validation of this request
+        """
         sequence_steps = []
         for seq in self.get_attribute('sequences'):
             for st in seq.get('step', []):
@@ -1277,275 +1279,399 @@ class request(json_base):
 
         sequence_steps = set(sequence_steps)
         gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
-        if not (sequence_steps & gen_script_steps):
-            gen_script = False
+        should_run = bool(sequence_steps & gen_script_steps)
+        prepid = self.get_attribute('prepid')
+        return should_run
 
-        self.logger.info('Steps for %s are %s. Run GEN script: %s' % (self.get_attribute('prepid'),
-                                                                      sequence_steps,
-                                                                      'YES' if gen_script else 'NO'))
-        # GEN checking script
-        if gen_script:
-            eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
-            if l_type.isDev():
-                eos_path += '_dev'
+    def build_cmsdriver(self, sequence_dict, fragment):
+        command = 'cmsDriver.py %s' % (fragment)
+        # Add pileup dataset name
+        pileup_dataset_name = self.get_attribute('pileup_dataset_name').strip()
+        seq_pileup = sequence_dict.get('pileup').strip()
+        seq_datamix = sequence_dict.get('datamix')
+        if pileup_dataset_name:
+            if (seq_pileup not in ('', 'NoPileUp')) or (seq_pileup == '' and seq_datamix == 'PreMix'):
+                sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
 
-            infile += '\n'
-            infile += 'REQUEST=%s\n' % self.get_attribute('prepid')
-            if for_validation:
-                infile += 'REQUEST_NEWEST_FILE=%s_newest.log\n' % self.get_attribute('prepid')
-                infile += 'CAMPAIGN=%s\n' % self.get_attribute('member_of_campaign')
-                infile += 'EOS_PATH=%s/$CAMPAIGN\n' % (eos_path)
+        for key, value in sequence_dict.items():
+            if not value or key in ('index', 'extra'):
+                continue
 
-            # Clone gen repo
-            infile += 'wget --quiet -O request_fragment_check.py https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py\n'
-            # Download rest.py because AFS is not reliable
-            infile += 'wget --quiet -O rest.py https://raw.githubusercontent.com/cms-PdmV/mcm_scripts/master/rest.py\n'
-            # Run script and write to log file
-            if for_validation:
-                infile += 'eos mkdir -p $EOS_PATH\n'
-
-            infile += 'python request_fragment_check.py --bypass_status --prepid $REQUEST'
-            if l_type.isDev():
-                infile += ' --dev'
-
-            if for_validation:
-                infile += '> $REQUEST_NEWEST_FILE 2>&1\n'
+            if isinstance(value, list):
+                command += ' --%s %s' % (key, ','.join(value))
+            elif key == 'nThreads' and int(value) == 1:
+                # Do not add --nThreads 1 because some old CMSSW crashes
+                continue
             else:
-                infile += '\n'
+                command += ' --%s %s' % (key, value)
 
-            # Get exit code
-            infile += 'ERRORS=$?\n'
-            if for_validation:
-                # Fetch existing log
-                infile += 'eos cp $EOS_PATH/$REQUEST.log . 2>/dev/null\n'
-                infile += 'touch $REQUEST.log\n'
+        # Extras
+        if sequence_dict.get('extra'):
+            command += ' %s' % (sequence_dict['extra'].strip())
+
+        command += ' --no_exec --mc -n $EVENTS || exit $? ;'
+        return command
+
+    def get_input_file_for_sequence(self, sequence_index):
+        prepid = self.get_attribute('prepid')
+        if sequence_index == 0:
+            # First sequence can have:
+            # * output from previous request (if any)
+            # * mcdb input
+            # * input_dataset attribute
+            # * no input file
+            # Get all chained requests and look for previous request
+            input_dataset = self.get_attribute('input_dataset')
+            if input_dataset:
+                return '"dbs:%s"' % (input_dataset)
+
+            member_of_chain = self.get_attribute('member_of_chain')
+            if member_of_chain:
+                chained_requests_db = database('chained_requests')
+                previouses = set()
+                # Iterate through all chained requests
+                for chained_request_prepid in member_of_chain:
+                    chained_request = chained_requests_db.get(chained_request_prepid)
+                    # Get place of this request
+                    index_in_chain = chained_request['chain'].index(prepid)
+                    # If there is something before this request, return that prepid
+                    if index_in_chain > 0:
+                        return 'file:%s.root' % (chained_request['chain'][index_in_chain - 1])
+
+            mcdb_id = self.get_attribute('mcdb_id')
+            if mcdb_id > 0:
+                return '"lhe:%s"' % (mcdb_id)
+
+        else:
+            return 'file:%s_%s.root' % (prepid, sequence_index - 1)
+
+        return ''
+
+    def get_setup_file2(self, for_validation, automatic_validation, threads=None, configs_to_upload=None):
+        loc = locator()
+        is_dev = loc.isDev()
+        base_url = loc.baseurl()
+        prepid = self.get_attribute('prepid')
+        member_of_campaign = self.get_attribute('member_of_campaign')
+        scram_arch = self.get_scram_arch().lower()
+        if scram_arch.startswith('slc7_'):
+            scram_arch_os = 'CentOS7'
+        else:
+            scram_arch_os = 'SLCern6'
+
+        bash_file = ['#!/bin/bash', '']
+
+        sequences = self.get_attribute('sequences')
+        if for_validation and automatic_validation:
+            for index, sequence_dict in enumerate(sequences):
+                report_name = '%s_' % (prepid)
+                # If it is not the last sequence, add sequence index to then name
+                if index != len(sequences) - 1:
+                    report_name += '%s_' % (index)
+
+                report_name += '%s_threads_report.xml' % (threads)
+                bash_file += ['touch %s' % (report_name)]
+
+        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
+        run_dqm_upload = for_validation and automatic_validation and (threads == 1) and self.get_attribute('validation').get('valid', False)
+        self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
+        if run_gen_script:
+            # Download the script
+            bash_file += ['# GEN Script begin',
+                          'rm -f request_fragment_check.py',
+                          'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py']
+            # Checking script invocation
+            request_fragment_check = 'python request_fragment_check.py --bypass_status --prepid %s' % (prepid)
+            if is_dev:
+                # Add --dev, so script would use McM DEV
+                request_fragment_check += ' --dev'
+
+            if automatic_validation:
+                # For automatic validation
+                if is_dev:
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
+                else:
+                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
+
+                # Set variables to save the script output
+                bash_file += ['eos mkdir -p %s' % (eos_path)]
+
+                # Point output to EOS
+                # Save stdout and stderr
+                request_fragment_check += ' > %s_newest.log 2>&1' % (prepid)
+
+            # Execute the GEN script
+            bash_file += [request_fragment_check]
+            # Get exit code of GEN script
+            bash_file += ['GEN_ERR=$?']
+            if automatic_validation:
                 # Add latest log to all logs
-                infile += 'cat $REQUEST_NEWEST_FILE >> $REQUEST.log\n'
-                # Print newest log
-                infile += 'echo --BEGIN GEN Request checking script output--\n'
-                infile += 'cat $REQUEST_NEWEST_FILE\n'
-                infile += 'echo --END GEN Request checking script output--\n'
-                # Write a couple of empty lines to the end of a file
-                infile += 'echo "" >> $REQUEST.log\n'
-                infile += 'echo "" >> $REQUEST.log\n'
-                infile += 'eos cp $REQUEST.log $EOS_PATH\n'
+                bash_file += ['eos cp %s/%s.log . 2>/dev/null' % (eos_path, prepid),
+                              'touch %s.log' % (prepid),
+                              'cat %s_newest.log >> %s.log' % (prepid, prepid),
+                              # Write a couple of empty lines to the end of a file
+                              'echo "" >> %s.log' % (prepid),
+                              'echo "" >> %s.log' % (prepid),
+                              'eos cp %s.log %s/%s.log' % (prepid, eos_path, prepid),
+                              # Print newest log to stdout
+                              'echo "--BEGIN GEN Request checking script output--"',
+                              'cat %s_newest.log' % (prepid),
+                              'echo "--END GEN Request checking script output--"']
 
             # Check exit code of script
-            infile += 'if [ $ERRORS -ne 0 ]; then\n'
-            infile += '    echo "GEN Request Checking Script returned exit code $ERRORS which means there are $ERRORS errors"\n'
-            infile += '    echo "Validation WILL NOT RUN"\n'
-            infile += '    echo "Please correct errors in the request and run validation again"\n'
-            infile += '    exit $ERRORS\n'
-            infile += 'fi\n'
-            # If error code is zero, continue to validation
-            infile += 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"\n'
-            infile += '\n'
+            bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
+                          '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
+                          '  echo "Validation WILL NOT RUN"',
+                          '  echo "Please correct errors in the request and run validation again"',
+                          '  exit $GEN_ERR',
+                          'fi',
+                          # If error code is zero, continue to validation
+                          'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
+                          '# GEN Script end',
+                          # Empty line after GEN business
+                          '']
 
-        if directory or for_validation:
-            infile += self.make_release()
+        if automatic_validation:
+            test_file_name = '%s_%s_threads_test.sh' % (prepid, threads)
         else:
-            infile += self.make_release()
+            test_file_name = '%s_test.sh' % (prepid)
 
-        # get the fragment if need be
-        infile += self.retrieve_fragment()
+        # Whether to dump cmsDriver.py to a file so it could be run using singularity
+        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        if dump_test_to_file:
+            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
+                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
+                          '#!/bin/bash',
+                          '']
 
-        infile += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert\n'
-        fragment_retry_amount = 2
-        # copy the fragment directly from the DB into a file
-        if self.get_attribute('fragment'):
-            infile += 'curl -s --insecure %spublic/restapi/requests/get_fragment/%s --retry %s --create-dirs -o %s \n' % (
-                l_type.baseurl(), self.get_attribute('prepid'),
-                fragment_retry_amount, self.get_fragment())
+        # Set up CMSSW environment
+        bash_file += self.make_release().split('\n')
 
-            # lets check if downloaded file actually exists and has more than 0 bytes
-            infile += '[ -s %s ] || exit $?;\n' % (self.get_fragment())
-
-        ##check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
-        if run and self.get_fragment():
-            infile += '\n'
-            infile += 'if grep -q "gridpacks" %s; then\n' % (self.get_fragment())
-            infile += '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then\n ' % (self.get_fragment())
-            infile += '    echo "Gridpack inside fragment is not in cvmfs."\n'
-            infile += '    exit -1\n'
-            infile += '  fi\n'
-            infile += 'fi\n'
-
-        # previous counter
-        previous = 0
-
-        # validate and build cmsDriver commands
-        cmsd_list = ''
-
-        configuration_names = []
-        if events is None:
-            events = self.get_n_for_test(self.target_for_test())
-
-        for i, cmsd in enumerate(self.build_cmsDrivers()):
-            inline_c = ''
-            # check if customization is needed to check it out from cvs
-            if '--customise ' in cmsd:
-                cust = cmsd.split('--customise ')[1].split(' ')[0]
-                toks = cust.split('.')
-                cname = toks[0] + '.py'
-                # add customization
-                if 'GenProduction' in cname:
-                    # this works for back-ward compatiblity
-                    infile += self.retrieve_fragment(name=cname)
-                    # force inline the customisation fragment in that case.
-                    # if user sets inlinde_custom to 0 we dont set it
-                    if int(self.get_attribute("sequences")[-1]["inline_custom"]) != 0:
-                        inline_c = '--inline_custom 1 '
-
-            # tweak a bit more finalize cmsDriver command
-            res = cmsd
-            configuration_names.append(os.path.join(directory,
-                    self.get_attribute('prepid') + "_" + str(previous + 1) + '_cfg.py'))
-
-            res += '--python_filename %s --no_exec ' % (configuration_names[-1])
-            # add monitoring at all times...
-            if '--customise ' in cmsd:
-                old_cust = cmsd.split('--customise ')[1].split()[0]
-                new_cust = old_cust
-                new_cust += ',Configuration/DataProcessing/Utils.addMonitoring'
-                res = res.replace('--customise %s' % (old_cust), '--customise %s' % (new_cust))
+        # Get the fragment if need to
+        fragment_name = self.get_fragment()
+        if fragment_name:
+            fragment = self.get_attribute('fragment')
+            if fragment:
+                # Download the fragment directly from McM into a file
+                bash_file += ['# Download fragment from McM',
+                              'curl -s -k %spublic/restapi/requests/get_fragment/%s --retry 3 --create-dirs -o %s' % (base_url,
+                                                                                                                      prepid,
+                                                                                                                      fragment_name),
+                              '[ -s %s ] || exit $?;' % (fragment_name)]
             else:
-                res += '--customise Configuration/DataProcessing/Utils.addMonitoring '
+                bash_file += ['# Retrieve fragment from github and ensure it is there']
+                bash_file += self.retrieve_fragment().strip().split('\n')
 
-            if for_validation and self.get_attribute('validation').get('valid', False):
-                dqm_datatier = ',DQMIO'
-                dqm_eventcontent = ',DQM' 
-                dqm_step = ',VALIDATION:genvalid_' + self.get_attribute('validation').get('content', 'all').lower()
+            # Check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
+            if for_validation:
+                bash_file += ['',
+                              '# Check if fragment contais gridpack path ant that it is in cvmfs',
+                              'if grep -q "gridpacks" %s; then' % (fragment_name),
+                              '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then' % (fragment_name),
+                              '    echo "Gridpack inside fragment is not in cvmfs."',
+                              '    exit -1',
+                              '  fi',
+                              'fi']
 
-                #for GEN validation, one needs to modify the datatier
-                new_datatier = cmsd.split('--datatier ')[1].split()[0]
-                old_datatier = new_datatier
-                new_datatier += dqm_datatier 
-                res = res.replace('--datatier %s' % (old_datatier), '--datatier %s' % (new_datatier))
+        bash_file += ['scram b',
+                      'cd ../..',
+                      '']
 
-                #for GEN validation, one needs to modify the eventcontent
-                new_eventcontent = cmsd.split('--eventcontent ')[1].split()[0]
-                old_eventcontent = new_eventcontent
-                new_eventcontent += dqm_eventcontent 
-                res = res.replace('--eventcontent %s' % (old_eventcontent), '--eventcontent %s' % (new_eventcontent))
-                
-                #for GEN validation, one needs to modify steps
-                new_step = cmsd.split('--step ')[1].split()[0]
-                old_step = new_step
-                new_step += dqm_step 
-                res = res.replace('--step %s' % (old_step), '--step %s' % (new_step))
+        # Add proxy for submission and automatic validation
+        if for_validation and automatic_validation:
+            # Automatic validation
+            bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
+                          # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
+                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          '']
+        elif not for_validation:
+            bash_file += ['# PdmV proxy',
+                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
+                          '']
 
-            ##########
+        # Events to run
+        events, explanation = self.get_event_count_for_validation(with_explanation=True)
+        bash_file += [explanation,
+                      'EVENTS=%s' % (events),
+                      '']
 
-            if 'wmlhegs' in self.get_attribute('prepid').lower():
-                random_seed_command = 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${seed})"'
-                if '--customise_commands ' in cmsd:
-                    res = res.replace('--customise_commands ',
-                                      '--customise_commands %s\\\\n' % (random_seed_command))
-                else:
-                    res += '--customise_commands %s ' % (random_seed_command)
-
-            if run and i == 0 and (sequence_steps & gen_script_steps):
-                cdb = database('campaigns')
-                camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
-                if camp.is_release_greater_or_equal_to('CMSSW_9_3_0'):
-                    member_of_chains = self.get_attribute('member_of_chain')
-                    if len(member_of_chains) > 0:
-                        crdb = database('chained_requests')
-                        from json_layer.chained_request import chained_request
-                        chained_req = chained_request(crdb.get(member_of_chains[0]))
-                        chained_req_chain = chained_req.get_attribute('chain')
-                        if len(chained_req_chain) > 0 and chained_req_chain[0] == self.get_attribute('prepid'):
-                            num_cores = self.get_attribute('sequences')[i].get('nThreads', None)
-                            if not num_cores:
-                                num_cores = 1
-
-                            events_per_lumi = self.get_events_per_lumi(num_cores)
-                            max_forward_eff = self.get_forward_efficiency()
-                            events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
-                            events_per_lumi /= max_forward_eff # this does not take its own efficiency
-                            events_per_lumi = int(events_per_lumi)
-                            events_per_lumi_command = 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
-                            if '--customise_commands ' in res:
-                                res = res.replace('--customise_commands ',
-                                                  '--customise_commands %s\\\\n' % (events_per_lumi_command))
-                            else:
-                                res += '--customise_commands %s ' % (events_per_lumi_command)
-
-            res += inline_c
-
-            res += '-n ' + str(events) + ' || exit $? ; \n'
-            if run:
-
-                if previous:
-                    runtest_xml_file = os.path.join(directory, "%s_%s_rt.xml" % (
-                            self.get_attribute('prepid'), previous + 1))
-
-                else:
-                    runtest_xml_file = os.path.join(directory, "%s_rt.xml" % (
-                            self.get_attribute('prepid')))
-
-                res += 'cmsRun -e -j %s %s || exit $? ; \n' % (
-                        runtest_xml_file, configuration_names[-1])
-
-                if events >= 0:
-                    res += 'echo %d events were ran\n' % events
-
-                res += '\n\n'
-                res += '# Parse values from %s report\n' % (runtest_xml_file)
-                res += 'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)\n' % (runtest_xml_file)
-                res += 'if [ -z "$eventThroughput" ]; then\n'
-                res += '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")\n'
-                res += 'fi\n'
-                res += 'echo "Validation report of %s sequence %s"\n' % (self.get_attribute('prepid'), i + 1)
-                res += 'echo "Total events: $totalEvents"\n'
-                res += 'echo "Threads: $threads"\n'
-                res += 'echo "Peak value RSS: $peakValueRss MB"\n'
-                res += 'echo "Total size: $totalSize MB"\n'
-                res += 'echo "Total job time: $totalJobTime s"\n'
-                res += 'echo "Total CPU time: $totalJobCPU s"\n'
-                res += 'echo "Event throughput: $eventThroughput"\n'
-                res += 'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"\n'
-                res += 'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"\n'
-                res += 'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"\n'
-
-            cmsd_list += res + '\n'
-            previous += 1
-
-        infile += '\nscram b\n'
-        infile += 'cd ../../\n'
+        # Random seed for wmLHEGS requests
         if 'wmlhegs' in self.get_attribute('prepid').lower():
-            infile += 'seed=$(($(date +%s) % 100 + 1))\n'
+            bash_file += ['# Random seed between 1 and 100 for externalLHEProducer',
+                          'SEED=$(($(date +%s) % 100 + 1))',
+                          '']
 
-        infile += cmsd_list
-        # since it's all in a subshell, there is
-        # no need for directory traversal (parent stays unaffected)
+        # Iterate over sequences and build cmsDriver.py commands
+        for index, sequence_dict in enumerate(sequences):
+            self.logger.info('Getting sequence %s of %s' % (index, prepid))
+            config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
+            sequence_dict = copy.deepcopy(sequence_dict)
+            sequence_dict['python_filename'] = config_filename
+            if sequence_dict['customise']:
+                sequence_dict['customise'] += ','
 
-        if for_validation and self.get_attribute('validation').get('valid', False):
-        
-            output_file = '%s_inDQM.root ' % (self.get_attribute('prepid'))
-            infile += 'cmsDriver.py step3 --python_file harvest.py --no_exec --conditions %s --filein file:%s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1\n' % (self.get_attribute('sequences')[0]["conditions"], output_file)
-            infile += 'cmsRun harvest.py\n'
-            
-            #Example: RelValDYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8__CMSSW_10_6_5-106X_mc2017_realistic_v6__DQMIO.root
-            filename_dqm = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (self.get_attribute('dataset_name'), self.get_attribute('cmssw_release'), self.get_attribute('sequences')[0]["conditions"])
-            infile += 'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s\n' % (filename_dqm)
-            infile += 'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh \n'
-            infile += 'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload\n'
-            infile += 'python visDQMUpload https://cmsweb-testbed.cern.ch/dqm/relval/ %s\n' % (filename_dqm) 
+            sequence_dict['customise'] += 'Configuration/DataProcessing/Utils.addMonitoring'
+            if 'wmlhegs' in prepid.lower():
+                if sequence_dict['customise_commands']:
+                    sequence_dict['customise_commands'] += '\\\\n'
 
-        # if there was a release setup, jsut remove it
-        # not in dev
-        if (directory or for_validation) and not l_type.isDev():
-            infile += 'rm -rf %s' % (self.get_attribute('cmssw_release'))
+                sequence_dict['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
 
-        return infile
+            if run_gen_script and index == 0 :
+                campaign_db = database('campaigns')
+                request_campaign = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
+                # CMSSW must be >= 9.3.0
+                if request_campaign.is_release_greater_or_equal_to('CMSSW_9_3_0'):
+                    member_of_chains = self.get_attribute('member_of_chain')
+                    # Request must be first in chain
+                    first_in_chain = True
+                    if len(member_of_chains) > 0:
+                        from json_layer.chained_request import chained_request
+                        chained_request_db = database('chained_requests')
+                        chained_req = chained_request(chained_request_db.get(member_of_chains[0]))
+                        chained_req_chain = chained_req.get_attribute('chain')
+                        if len(chained_req_chain) > 0 and chained_req_chain[0] != self.get_attribute('prepid'):
+                            first_in_chain = False
+
+                    self.logger.info('%s is first in chain: %s', prepid, 'YES' if first_in_chain else 'NO')
+                    if first_in_chain:
+                        events_per_lumi = self.get_events_per_lumi(threads)
+                        events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
+                        events_per_lumi /= self.get_forward_efficiency()  # this does not take its own efficiency
+                        events_per_lumi = int(events_per_lumi)
+                        if sequence_dict['customise_commands']:
+                            sequence_dict['customise_commands'] += '\\\\n'
+
+                        sequence_dict['customise_commands'] += 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
+
+            if threads is not None:
+                sequence_dict['nThreads'] = threads
+
+            if index != len(sequences) - 1:
+                # Add sequence index if this is not the last index
+                sequence_dict['fileout'] = 'file:%s_%s.root' % (prepid, index)
+            else:
+                # Otherwise it is just <prepid>.root
+                sequence_dict['fileout'] = 'file:%s.root' % (prepid)
+
+            filein = self.get_input_file_for_sequence(index)
+            if filein:
+                sequence_dict['filein'] = filein
+
+            if run_dqm_upload:
+                validation_content =self.get_attribute('validation').get('content', 'all').lower()
+                sequence_dict['datatier'].append('DQMIO')
+                sequence_dict['eventcontent'].append('DQM')
+                sequence_dict['step'].append('VALIDATION:genvalid_%s' % (validation_content))
+
+            bash_file += ['',
+                          '# cmsDriver command',
+                          self.build_cmsdriver(sequence_dict, fragment_name)]
+
+            if for_validation:
+                report_name = '%s_' % (prepid)
+                # If it is not the last sequence, add sequence index to then name
+                if index != len(sequences) - 1:
+                    report_name += '%s_' % (index)
+
+                if automatic_validation:
+                    report_name += '%s_threads_report.xml' % (threads)
+                else:
+                    report_name += 'report.xml'
+
+                bash_file += ['',
+                              '# Run generated config',
+                              'cmsRun -e -j %s %s || exit $? ;' % (report_name, config_filename)]
+
+                if run_dqm_upload:
+                    dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
+                    harvest_config = config_filename.replace('_cfg.py', '_harvest_cfg.py')
+                    conditions = sequence_dict['conditions']
+                    dataset_name = self.get_attribute('dataset_name')
+                    cmssw_release = self.get_attribute('cmssw_release')
+                    if is_dev:
+                        dqm_url = 'https://cmsweb-testbed.cern.ch/dqm/relval-test/'
+                    else:
+                        dqm_url = 'https://cmsweb.cern.ch/dqm/relval/'
+
+                    dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (dataset_name, cmssw_release, conditions)
+                    bash_file += ['',
+                                  '# Generate harvesting config',
+                                  'cmsDriver.py step3 --python_file %s --no_exec --conditions %s --filein file:%s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1' % (harvest_config, conditions, dqm_input_file),
+                                  '# Run harvesting on %s' % (dqm_input_file),
+                                  'cmsRun %s' % (harvest_config),
+                                  'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s' % (dqm_file),
+                                  '',
+                                  '# Upload %s to %s' % (dqm_file, dqm_url),
+                                  'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh',
+                                  'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload',
+                                  'python visDQMUpload %s %s' % (dqm_url, dqm_file)]
+
+                # Parse report
+                bash_file += ['',
+                              '# Parse values from %s report' % (report_name),
+                              'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s | tail -n 1)' % (report_name),
+                              'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'if [ -z "$eventThroughput" ]; then',
+                              '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
+                              'fi',
+                              'echo "Validation report of %s sequence %s/%s"' % (prepid, index + 1, len(sequences)),
+                              'echo "Total events: $totalEvents"',
+                              'echo "Threads: $threads"',
+                              'echo "Peak value RSS: $peakValueRss MB"',
+                              'echo "Total size: $totalSize MB"',
+                              'echo "Total job time: $totalJobTime s"',
+                              'echo "Total CPU time: $totalJobCPU s"',
+                              'echo "Event throughput: $eventThroughput"',
+                              'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
+                              'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
+                              'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"'
+                             ]
+
+        if not for_validation and configs_to_upload:
+            test_string = '--wmtest' if is_dev else ''
+            bash_file += ['\n\n# Upload configs',
+                          'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+                          'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                          "wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;" % (test_string, " ".join(configs_to_upload))]
+
+        if dump_test_to_file:
+            bash_file += ['',
+                          '# End of %s file' % (test_file_name),
+                          'EndOfTestFile',
+                          '',
+                          '# Make file executable',
+                          'chmod +x %s' % (test_file_name),
+                          '']
+
+        if for_validation:
+            # Validation will run on CC7 machines (HTCondor, lxplus)
+            # If it's CC7, just run the script normally
+            # If it's SLC6, run it in slc6 singularity container
+            if scram_arch_os == 'SLCern6':
+                bash_file += ['# Run in SLC6 container',
+                              '# Mount afs, eos, cvmfs',
+                              '# Mount /etc/grid-security for xrootd',
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+
+        else:
+            # Config generation for production run on SLC6 machine - vocms081
+            # If it's SLC6, just run the script normally
+            # If it's CC7, run it in cc7 singularity container
+            if scram_arch_os == 'CentOS7':
+                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+
+        # Empty line at the end of the file
+        bash_file += ['']
+        # self.logger.info('bash_file:\n%s' % ('\n'.join(bash_file)))
+        return '\n'.join(bash_file)
 
     def modify_priority(self, new_priority):
         self.set_attribute('priority', new_priority)
@@ -1605,23 +1731,6 @@ class request(json_base):
                     self.logger.error("Failed parsing wmpriotiry output: %s" % (str(ex)))
                     return False
             return self.modify_priority(new_priority)
-
-    def get_valid_and_n(self):
-        val_attributes = self.get_attribute('validation')
-        n_to_valid = self.get_n_for_valid()
-        yes_to_valid = False
-        if n_to_valid:
-            yes_to_valid = True
-        if 'valid' in val_attributes:
-            yes_to_valid = val_attributes['valid']
-        else:
-            yes_to_valid = False
-
-        bypass = settings.get_value('campaign_valid_bypass')
-        if self.get_attribute('member_of_campaign') in bypass:
-            yes_to_valid = False
-
-        return (yes_to_valid, n_to_valid)
 
     def get_first_output(self):
         eventcontentlist = []
@@ -2232,7 +2341,9 @@ class request(json_base):
         return text
 
     def target_for_test(self):
-        # could reverse engineer the target
+        """
+        Return number of max events to run in validation
+        """
         test_target = settings.get_value('test_target')
         total_events = self.get_attribute('total_events')
         return max(0, min(test_target, total_events))
@@ -2311,20 +2422,11 @@ class request(json_base):
     def get_timeout(self):
         default = settings.get_value('batch_timeout') * 60.
         # we multiply the timeout if user wants more events in validation
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+
         default = multiplier * default
         # to get the contribution from runtest
         (fraction, estimate_rt) = self.get_timeout_for_runtest()
         return int(max((estimate_rt) / fraction, default))
-
-    def get_n_for_valid(self):
-        n_to_valid = settings.get_value('min_n_to_valid')
-        val_attributes = self.get_attribute('validation')
-        if 'nEvents' in val_attributes:
-            if val_attributes['nEvents'] > n_to_valid:
-                n_to_valid = val_attributes['nEvents']
-
-        return self.get_n_unfold_efficiency(n_to_valid)
 
     def get_n_for_test(self, target=1.0, adjust=True):
         # => correct for the matching and filter efficiencies
@@ -2359,6 +2461,61 @@ class request(json_base):
         else:
             # default to 0
             return int(0)
+
+    def get_validation_max_runtime(self):
+        """
+        Return maximum number of seconds that job could run for, i.e. validation duration
+        """
+        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
+        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
+        return max_runtime
+
+    def get_event_count_for_validation(self, with_explanation=False):
+        # Efficiency
+        efficiency = self.get_efficiency()
+        # Max number of events to run
+        max_events = self.target_for_test()
+        # Max events taking efficiency in consideration
+        max_events_with_eff = max_events / efficiency
+        # Max number of seconds that validation can run for
+        max_runtime = self.get_validation_max_runtime()
+        # "Safe" margin of validation that will not be used for actual running
+        # but as a buffer in case user given time per event is slightly off
+        margin = settings.get_value('test_timeout_fraction')
+        # Time per event
+        time_per_event = self.get_attribute('time_event')
+        # Threads in sequences
+        sequence_threads = [int(sequence.get('nThreads', 1)) for sequence in self.get_attribute('sequences')]
+        # Time per event for single thread
+        single_thread_time_per_event = [time_per_event[i] * sequence_threads[i] for i in range(len(time_per_event))]
+        # Sum of single thread time per events
+        time_per_event_sum = sum(single_thread_time_per_event)
+        # Max runtime with applied margin
+        max_runtime_with_margin = max_runtime * (1.0 - margin)
+        # How many events can be produced in given "safe" time
+        events = int(max_runtime_with_margin / time_per_event_sum)
+        # Try to produce at least one event
+        clamped_events = int(max(1, min(events, max_events_with_eff)))
+        # Estimate produced events
+        estimate_produced = int(clamped_events * efficiency)
+
+        self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
+        if not with_explanation:
+            return clamped_events
+        else:
+            explanation = ['# Maximum validation duration: %ds' % (max_runtime),
+                           '# Margin for validation duration: %d%%' % (margin * 100),
+                           '# Validation duration with margin: %d * (1 - %.2f) = %ds' % (max_runtime, margin, max_runtime_with_margin),
+                           '# Time per event for each sequence: %s' % (', '.join(['%.4fs' % (x) for x in time_per_event])),
+                           '# Threads for each sequence: %s' % (', '.join(['%s' % (x) for x in sequence_threads])),
+                           '# Time per event for single thread for each sequence: %s' % (', '.join(['%s * %.4fs = %.4fs' % (sequence_threads[i], time_per_event[i], single_thread_time_per_event[i]) for i in range(len(single_thread_time_per_event))])),
+                           '# Which adds up to %.4fs per event' % (time_per_event_sum),
+                           '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
+                           '# Produced events limit in McM is %d' % (max_events),
+                           '# According to %.4f efficiency, up to %d / %.4f = %d events should run' % (efficiency, max_events, efficiency, max_events_with_eff),
+                           '# Clamp (put value) %d within 1 and %d -> %d' % (events, max_events_with_eff, clamped_events),
+                           '# It is estimated that this validation will produce: %d * %.4f = %d events' % (clamped_events, efficiency, estimate_produced)]
+            return clamped_events, '\n'.join(explanation)
 
     def unique_string(self, step_i):
         # create a string that supposedly uniquely identifies the request configuration for step
@@ -2909,29 +3066,8 @@ class request(json_base):
             self.set_status(step=__status_index, with_notification=True)
 
     def prepare_upload_command(self, cfgs, test_string):
-        directory = installer.build_location(self.get_attribute('prepid'))
         cmd = ''
-        scram_arch = self.get_scram_arch()
-        executable_file_name = '%supload_script_%s.sh' % (directory, self.get_attribute('prepid'))
-        if 'slc7_' in scram_arch:
-            cmd += '#!/bin/bash\n'
-            cmd += 'cd %s \n' % directory
-            cmd += 'cat > %s << \'EOF\'\n' % (executable_file_name)
-            cmd += '#!/bin/bash\n'
-
-        cmd += 'cd %s \n' % directory
-        cmd += self.get_setup_file(directory, gen_script=False)
-        cmd += '\n'
-        cmd += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
-        cmd += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        cmd += "wmupload.py {1} -u pdmvserv -g ppd {0} || exit $? ;".format(" ".join(cfgs), test_string)
-        if 'slc7_' in scram_arch:
-            cmd += '\n\nEOF\n'
-            cmd += 'chmod +x %s\n' % (executable_file_name)
-            cmd += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            cmd += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest %s\n' % (executable_file_name)
-
+        cmd += self.get_setup_file2(False, False, configs_to_upload=cfgs)
         self.inject_logger.info('Upload command:\n\n%s\n\n' % (cmd))
         return cmd
 
@@ -3082,15 +3218,45 @@ class request(json_base):
         tasks = []
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
+        validation_info = self.get_attribute('validation').get('results', {})
+        for threads, thread_info in validation_info.items():
+            thread_info['threads'] = int(threads)
+            del thread_info['total_events']
+
+        validation_info = sorted(validation_info.values(), key=lambda v: v['threads'])
+        self.logger.info('Validation info %s', dumps(validation_info, indent=2, sort_keys=True))
+        if validation_info:
+            cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
+            for thread_info in reversed(validation_info):
+                if thread_info['cpu_efficiency'] >= cpu_efficiency_threshold:
+                    validation_info = thread_info
+                    break
+            else:
+                validation_info = validation_info[0]
+
+            self.logger.info('Selected validation info: %s', dumps(validation_info, indent=2, sort_keys=True))
+
+        memory = self.get_attribute('memory')
         sequences = self.get_attribute('sequences')
-        for sequence_index in range(len(sequences)):
-            memory = self.get_attribute('memory')
-            validation_dict = self.get_attribute('validation')
-            if validation_dict.get('peak_value_rss', 0) > 0:
-                peak_value_rss = validation_dict['peak_value_rss']
-                if int(sequences[sequence_index].get('nThreads', 1)) == 1 and memory == 2300:
-                    if peak_value_rss < 2000.0:
-                        memory = 2000
+        sequence_count = len(sequences)
+        for sequence_index in range(sequence_count):
+            sequence = sequences[sequence_index]
+            threads = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+            size_per_event = self.get_attribute('size_event')[sequence_index]
+            time_per_event = self.get_attribute('time_event')[sequence_index]
+            # If there are multi-validation results, use them
+            if validation_info:
+                self.logger.info('Using multi-validation values')
+                threads = validation_info['threads']
+                size_per_event = validation_info['size_per_event'] / sequence_count
+                time_per_event = validation_info['time_per_event'] / sequence_count
+                memory = math.ceil((validation_info['peak_value_rss'] * 1.1) / 1000.0) * 1000
+            elif self.get_attribute('validation').get('preak_value_rss', 0) > 0:
+                # Old way of getting PeakValueRSS
+                peak_value_rss = self.get_attribute('validation')['preak_value_rss']
+                if threads == 1 and memory == 2300 and peak_value_rss < 2000.0:
+                    # If it is single core with memory 2300 and peak rss value < 2000, use 2000
+                    memory = 2000
 
             task_dict = {
                 "TaskName": "%s_%d" % (self.get_attribute('prepid'), sequence_index),
@@ -3103,17 +3269,17 @@ class request(json_base):
                 "AcquisitionEra": self.get_attribute('member_of_campaign'),
                 "Campaign": self.get_attribute('member_of_campaign'),
                 "ProcessingString": self.get_processing_string(sequence_index),
-                "TimePerEvent": self.get_attribute("time_event")[sequence_index],
-                "SizePerEvent": self.get_attribute('size_event')[sequence_index],
+                "TimePerEvent": time_per_event,
+                "SizePerEvent": size_per_event,
                 "Memory": memory,
                 "FilterEfficiency": self.get_efficiency(),
                 "PrepID": self.get_attribute('prepid')}
             # check if we have multicore an it's not an empty string
-            if 'nThreads' in sequences[sequence_index] and sequences[sequence_index]['nThreads']:
-                task_dict["Multicore"] = int(sequences[sequence_index]['nThreads'])
+            if 'nThreads' in sequence and sequence['nThreads']:
+                task_dict["Multicore"] = threads
 
-            if 'nStreams' in sequences[sequence_index] and int(sequences[sequence_index]['nStreams']) > 0:
-                task_dict['EventStreams'] = int(sequences[sequence_index]['nStreams'])
+            if 'nStreams' in sequence and int(sequence['nStreams']) > 0:
+                task_dict['EventStreams'] = int(sequence['nStreams'])
 
             __list_of_steps = self.get_list_of_steps(sequences[sequence_index]['step'])
             if len(self.get_attribute('config_id')) > sequence_index:
@@ -3197,6 +3363,12 @@ class request(json_base):
         return sum of time_events for request
         """
         return sum(self.get_attribute("time_event"))
+
+    def get_sum_size_events(self):
+        """
+        return sum of size_events for request
+        """
+        return sum(self.get_attribute("size_event"))
 
     def any_negative_events(self, field):
         """

@@ -465,39 +465,35 @@ class GetFragmentForRequest(RESTResource):
 class GetSetupForRequest(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
-        if 'setup' in flask.request.path:
+        path = flask.request.path
+        if 'get_setup' in path:
             self.opt = 'setup'
-        elif 'test' in flask.request.path:
+        elif 'get_test' in path:
             self.opt = 'test'
-        elif 'valid' in flask.request.path:
+        elif 'get_valid' in path:
             self.opt = 'valid'
             access_limit = access_rights.administrator
         else:
-            raise Exception("Cannot create this resource with mode %s" % self.opt)
+            raise Exception('Cannot create this resource with mode %s' % path)
+
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
     def get(self, prepid, events=None):
         """
-            Retrieve the script necessary to setup and test a given request
+        Retrieve the script necessary to setup and test a given request
+        get_setup - returns file for config generation for submission
+        get_test - returns file for user validation
+        get_valid - returns file for automatic validation
         """
-        run = False
-        do_valid = False
-        if self.opt == 'test' or self.opt == 'valid':
-            run = True
-        if self.opt == 'valid':
-            do_valid = True
-        db = database(self.db_name)
-        if db.document_exists(prepid):
-            try:
-                mcm_req = request(db.get(prepid))
-            except request.IllegalAttributeName:
-                return dumps({"results": False})
-            setupText = mcm_req.get_setup_file(run=run, do_valid=do_valid, events=events, gen_script=run)
-            # delete certificate line
-            setupText = setupText.replace('export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert\n', '')
-            return setupText
+        for_validation = self.opt in ('test', 'valid')
+        automatic_validation = self.opt == 'valid'
+        request_db = database(self.db_name)
+        if request_db.document_exists(prepid):
+            req = request(request_db.get(prepid))
+            output_text = req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation, threads=1)
+            return output_text
         else:
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
 
