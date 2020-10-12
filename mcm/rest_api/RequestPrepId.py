@@ -3,7 +3,7 @@
 from json_layer.request import request
 from json_layer.campaign import campaign
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 
 

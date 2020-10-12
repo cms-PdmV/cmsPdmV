@@ -3,10 +3,10 @@
 import flask
 import time
 
-from simplejson import dumps, loads
+from json import dumps, loads
 from random import shuffle
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign

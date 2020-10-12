@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 from json_layer.chained_request import chained_request
 

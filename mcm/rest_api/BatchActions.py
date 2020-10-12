@@ -2,7 +2,7 @@
 
 import flask
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request
@@ -12,7 +12,7 @@ import tools.settings as settings
 from tools.locator import locator
 from tools.user_management import access_rights
 from tools.handlers import RequestApprover
-from simplejson import loads
+from json import loads
 
 
 class GetBatch(RESTResource):

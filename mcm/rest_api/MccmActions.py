@@ -1,7 +1,7 @@
 import flask
 import time
 
-from simplejson import dumps, loads
+from json import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
 from rest_api.RequestActions import RequestLister

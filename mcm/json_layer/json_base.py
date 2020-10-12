@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import logging
 import traceback
 
@@ -338,12 +339,7 @@ class json_base:
         return cls.__schema
 
     def print_self(self):
-        try:
-            import simplejson
-        except ImportError:
-            self.logger.error('Error: Could not import "json" module')
-            print self.__json
-        print simplejson.dumps(self.__json, indent=4)
+        print json.dumps(self.__json, indent=4)
 
     def keys(self):
         return self.__schema.keys()

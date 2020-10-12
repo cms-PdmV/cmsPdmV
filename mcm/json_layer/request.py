@@ -11,7 +11,7 @@ import time
 import logging
 import math
 from math import sqrt
-from simplejson import loads, dumps
+from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database

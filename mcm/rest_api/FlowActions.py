@@ -3,10 +3,10 @@
 import flask
 import traceback
 
-from simplejson import loads
+from json import loads
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
 from json_layer.flow import flow
 from tools.user_management import access_rights

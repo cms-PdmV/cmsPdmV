@@ -2,9 +2,9 @@
 
 import flask
 
-from simplejson import dumps, loads
+from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm

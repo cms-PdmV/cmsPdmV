@@ -23,7 +23,7 @@ from tools.communicator import communicator
 from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
-from simplejson import dumps
+from json import dumps
 from urllib2 import unquote
 from tools.ssh_executor import ssh_executor
 

@@ -5,14 +5,14 @@ import time
 import traceback
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import campaign
 from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
 from json_layer.notification import notification
 from tools.user_management import access_rights
-from simplejson import loads, dumps
+from json import loads, dumps
 import tools.settings as settings
 
 
