@@ -32,7 +32,7 @@ class user_pack:
         """
         if not has_request_context():
             return defaultdict(lambda: None)
-        user_dict = defaultdict(lambda: None, [(key.lower().replace('-', '_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.iteritems()])
+        user_dict = defaultdict(lambda: None, [(key.lower().replace('-', '_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.items()])
         return user_dict
 
     def __getattr__(self, name):

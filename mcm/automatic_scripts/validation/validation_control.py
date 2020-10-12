@@ -127,10 +127,10 @@ class ValidationControl():
         """
         self.logger.info('Will update job info in the local storage')
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             self.logger.info('Updating %s information in local storage', validation_name)
             running = storage_item['running']
-            for threads, threads_dict in running.iteritems():
+            for threads, threads_dict in running.items():
                 if threads_dict.get('condor_status') == 'DONE':
                     continue
 
@@ -147,7 +147,7 @@ class ValidationControl():
 
         self.logger.info('Updated local storage:')
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             stage = storage_item['stage']
             self.logger.info('  %s is at stage %s:', validation_name, stage)
             running = storage_item['running']
@@ -165,7 +165,7 @@ class ValidationControl():
         are done - all HTCondor jobs are DONE
         """
         self.logger.info('Will check if any validations changed to DONE')
-        for validation_name, storage_item in self.storage.get_all().iteritems():
+        for validation_name, storage_item in self.storage.get_all().items():
             stage = storage_item['stage']
             self.logger.info('Checking %s at stage %s', validation_name, stage)
             running = storage_item['running']
@@ -180,7 +180,7 @@ class ValidationControl():
 
     def get_reports(self, validation_name, threads, expected):
         reports = {}
-        for request_prepid, expected_dict in expected.iteritems():
+        for request_prepid, expected_dict in expected.items():
             report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
                                                              validation_name,
                                                              request_prepid,
@@ -458,7 +458,7 @@ class ValidationControl():
         self.logger.info('Reports include these requests:\n%s', '\n'.join(reports.keys()))
         if threads_int != 1:
             self.logger.info('Validation was done for %s threads, not checking the values', threads)
-            for request_name, report in reports.iteritems():
+            for request_name, report in reports.items():
                 expected_dict = threads_dict['expected'][request_name]
                 self.logger.debug('%s expected:\n%s\n%s measured:\n%s',
                                   request_name,
@@ -468,7 +468,7 @@ class ValidationControl():
         else:
             attempt_number = threads_dict['attempt_number']
             self.logger.info('This was attempt number %s for %s thread validation', attempt_number, threads)
-            for request_name, report in reports.iteritems():
+            for request_name, report in reports.items():
                 # Check report only for single core validation
                 expected_dict = threads_dict['expected'][request_name]
                 self.logger.info('Checking %s report', request_name)
@@ -584,7 +584,7 @@ class ValidationControl():
 
     def move_validations_to_next_stage(self):
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             stage = storage_item['stage']
             running = storage_item['running']
             self.logger.info('%s is at stage %s and has %s validations in running',
@@ -662,7 +662,7 @@ class ValidationControl():
                 request['status'] = 'validation'
                 request['validation']['results'][core_number] = request_dict['done'][core_number][request_prepid]
 
-        for _, request in requests.iteritems():
+        for _, request in requests.items():
             self.logger.warning('Saving %s', request['prepid'])
             self.request_db.save(request)
 

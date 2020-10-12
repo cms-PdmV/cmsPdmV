@@ -616,7 +616,7 @@ class MccMReminderGenContacts(RESTResource):
             base_url = locator().baseurl()
             mail_communicator = communicator()
             service_account = settings.get_value('service_account')
-            for author_email, ticket_prepids in authors_tickets_dict.iteritems():
+            for author_email, ticket_prepids in authors_tickets_dict.items():
                 num_tickets = len(ticket_prepids)
                 subject = subject_template % (num_tickets, '' if num_tickets == 1 else 's')
                 message = message_template % (num_tickets, '' if num_tickets == 1 else 's')
