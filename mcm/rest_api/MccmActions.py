@@ -11,7 +11,6 @@ from json_layer.user import user
 from json_layer.chained_campaign import chained_campaign
 from json_layer.chained_request import chained_request
 from json_layer.request import request
-from json_layer.notification import notification
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
@@ -675,14 +674,6 @@ Dear Production Managers,
 
         to_who = [settings.get_value('service_account')]
         to_who.extend(map(lambda u: u['email'], udb.query(query="role==production_manager", page_num=-1)))
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.REMINDERS,
-            action_objects=mccm_prepids,
-            object_type='mccms',
-            target_role='production_manager')
         com.sendMail(
             to_who,
             subject,

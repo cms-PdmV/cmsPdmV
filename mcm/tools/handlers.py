@@ -15,7 +15,6 @@ from tools.communicator import communicator
 from json_layer.request import request, AFSPermissionError
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
-from json_layer.notification import notification
 from rest_api.BatchPrepId import BatchPrepId
 from tools.logger import InjectionLogAdapter
 
@@ -334,31 +333,12 @@ class SubmissionsBase(Handler):
     def notify(self, subject, message, req):
         self.inject_logger.info('Notify:\n  Subject: %s\n\n  Message: %s' % (subject, message))
         if req is not None:
-            if req.__class__ == request:
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[req.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=req)
-            elif req.__class__ == chained_request:
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.CHAINED_REQUESTS,
-                    action_objects=[req.get_attribute('prepid')],
-                    object_type='chained_requests',
-                    base_object=req)
+            if req.__class__ == request or req.__class__ == chained_request:
+                req.notify(subject, message)
             else:
                 self.inject_logger.error('Could not notify. Unsupported type: %s.\nSubject: %s\nMessage: %s' % (type(req),
                                                                                                                 subject,
                                                                                                                 message))
-                return
-
-            req.notify(subject, message)
         else:
             self.logger.error('Could not notify because request object is None. Subject: %s' % (subject))
 
@@ -503,12 +483,6 @@ class RequestApprover(Handler):
         production_managers = users_db.full_text_search('search', query, page=-1)
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
-        notification(
-            subject,
-            text,
-            [],
-            group=notification.REQUEST_OPERATIONS,
-            target_role="production_manager")
         com.sendMail(
             map(lambda u: u['email'], production_managers),
             subject,

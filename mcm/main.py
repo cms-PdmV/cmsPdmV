@@ -15,7 +15,6 @@ from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLog
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
-from rest_api.NotificationActions import CheckNotifications, FetchNotifications, SaveSeen, FetchActionObjects, FetchGroupActionObjects, SearchNotifications, MarkAsSeen
 from rest_api.ListActions import GetList, UpdateList
 
 from json_layer.sequence import sequence  # to get campaign sequences
@@ -152,7 +151,6 @@ api.add_resource(
     '/restapi/settings',
     '/restapi/tags',
     '/restapi/control',
-    '/restapi/notifications',
     '/restapi/lists',
     '/public',
     '/public/restapi',
@@ -427,14 +425,6 @@ api.add_resource(
     '/restapi/control/communicate/<string:message_number>')
 api.add_resource(CacheInfo, '/restapi/control/cache_info')
 api.add_resource(CacheClear, '/restapi/control/cache_clear')
-# REST notification Actions
-api.add_resource(CheckNotifications, '/restapi/notifications/check')
-api.add_resource(FetchNotifications, '/restapi/notifications/fetch')
-api.add_resource(SaveSeen, '/restapi/notifications/seen')
-api.add_resource(FetchActionObjects, '/restapi/notifications/fetch_actions')
-api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_actions')
-api.add_resource(SearchNotifications, '/restapi/notifications/search')
-api.add_resource(MarkAsSeen, '/restapi/notifications/mark_as_seen')
 # Define loggers
 error_logger = app.logger
 max_bytes = getattr(error_logger, "rot_maxBytes", 10000000)
