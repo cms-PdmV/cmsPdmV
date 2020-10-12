@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from json_base import json_base
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database
 
 

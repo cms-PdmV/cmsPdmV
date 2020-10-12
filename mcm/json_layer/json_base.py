@@ -339,16 +339,16 @@ class json_base:
         return cls.__schema
 
     def print_self(self):
-        print json.dumps(self.__json, indent=4)
+        print(json.dumps(self.__json, indent=4))
 
     def keys(self):
         return self.__schema.keys()
 
     def print_schema(self):
-        print '{'
+        print('{')
         for key in self.__json:
-            print key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')'
-        print '}'
+            print(key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')')
+        print('}')
 
     def get_approval_steps(self):
         return self.__approvalsteps

@@ -8,7 +8,7 @@ from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from tools.enum import Enum
 from flask import request, has_request_context
-from werkzeug.contrib.cache import SimpleCache
+from tools.countdown_cache import CountdownCache
 
 
 class user_pack:
@@ -66,10 +66,7 @@ class authenticator:
 
     # roles list is a list of valid roles for a page
     __db = database('users')
-    __users_roles_cache = SimpleCache()
-
-    # Cache timeout in seconds
-    CACHE_TIMEOUT = 30 * 60
+    __users_roles_cache = CountdownCache()
 
     # get the roles that are registered to a specific username
     @classmethod
@@ -97,7 +94,7 @@ class authenticator:
                 except Exception:
                     cls.logger.error('Error getting role for user "' + username + '". Will use default value "' + user_role + '"')
 
-            cls.__users_roles_cache.set(cache_key, user_role, timeout=cls.CACHE_TIMEOUT)
+            cls.__users_roles_cache.set(cache_key, user_role)
             return user_role
 
     @classmethod
@@ -108,7 +105,7 @@ class authenticator:
     @classmethod
     def set_user_role(cls, username, role):
         with locker.lock(username):
-            cls.__users_roles_cache.set(username, role, timeout=cls.CACHE_TIMEOUT)
+            cls.__users_roles_cache.set(username, role)
 
     @classmethod
     def can_access(cls, username, limit):
@@ -129,7 +126,7 @@ class authenticator:
         """
         Return number of elements in cache and cache size in bytes
         """
-        return len(cls.__users_roles_cache._cache), sys.getsizeof(cls.__users_roles_cache._cache)
+        return cls.__users_roles_cache.get_length(), cls.__users_roles_cache.get_size()
 
     @classmethod
     def clear_cache(cls):

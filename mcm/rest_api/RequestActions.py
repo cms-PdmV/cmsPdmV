@@ -2,14 +2,14 @@
 import flask
 import traceback
 import time
-import urllib2
+import re
 from json import dumps, loads
 from collections import defaultdict
-import re
 
+import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from rest_api.RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
+from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
@@ -18,7 +18,6 @@ from json_layer.user import user
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
-import tools.settings as settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
@@ -1672,43 +1671,6 @@ class UpdateMany(RequestRESTResource):
                 return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
-
-
-class GetAllRevisions(RequestRESTResource):
-    def __init__(self):
-        RequestRESTResource.__init__(self)
-        self.before_request()
-        self.count_call()
-        self.db_url = locator().dbLocation()
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
-        self.db_name = 'requests'
-
-    def get(self, request_id):
-        """
-        Getting All AVAILABLE revisions for request document
-        """
-        return self.get_all_revs(request_id)
-
-    def get_all_revs(self, prepid):
-        list_of_revs = []
-        doc_id = prepid
-        all_revs_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?revs_info=true"
-        single_rev_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?rev="
-        http_request = urllib2.Request(all_revs_url)
-        http_request.add_header('Content-Type', 'text/plain')
-        http_request.get_method = lambda: 'GET'
-        result = self.opener.open(http_request)
-        revision_data = loads(result.read())
-        for revision in revision_data["_revs_info"]:
-            if revision["status"] == "available":
-                single_request = urllib2.Request(single_rev_url + revision["rev"])
-                single_request.add_header('Content-Type', 'text/plain')
-                single_request.get_method = lambda: 'GET'
-                single_result = self.opener.open(single_request)
-                single_doc = single_result.read()
-                list_of_revs.append(loads(single_doc))
-        self.logger.info('Getting all revisions for: %s' % doc_id)
-        return {"results": list_of_revs}
 
 
 class ListRequestPrepids(RequestRESTResource):

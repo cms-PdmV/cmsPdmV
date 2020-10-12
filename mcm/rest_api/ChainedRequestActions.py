@@ -11,7 +11,7 @@ from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):

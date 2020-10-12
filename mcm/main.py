@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -23,7 +23,7 @@ from tools.logger import UserFilter, MemoryFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 from json import dumps
-from urllib2 import unquote
+from urllib.request import unquote
 from tools.ssh_executor import ssh_executor
 
 import signal
@@ -34,7 +34,6 @@ import datetime
 import sys
 
 
-RESTResource.counter = shelve.open('.mcm_rest_counter')
 start_time = datetime.datetime.now().strftime("%c")
 app = Flask(__name__)
 app.config.update(LOGGER_NAME="mcm_error")
@@ -269,7 +268,6 @@ api.add_resource(
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>')
 api.add_resource(UpdateMany, '/restapi/requests/update_many')
-api.add_resource(GetAllRevisions, '/restapi/requests/all_revs/<string:request_id>')
 api.add_resource(ListRequestPrepids, '/restapi/requests/search_view')
 api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:request_ids>')
 api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
@@ -501,14 +499,10 @@ def log_access():
 
 
 def run_flask():
-    print('Will do dummy ssh connection in order to initialize ssh_executor. Wait!')
-    ssh_executor().execute('echo pippo')
-    print('Finished ssh, McM will start shortly...')
-    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt', '/etc/pki/tls/private/localhost.key'))
+    app.run(host='0.0.0.0', port=8000, threaded=True, debug=True)
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
-    RESTResource.counter.close()
     com = communicator()
     com.flush(0)
 

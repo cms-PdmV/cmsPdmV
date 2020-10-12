@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from json_base import json_base
-from json_base import submission_details
+from json_layer.json_base import json_base
+from json_layer.json_base import submission_details
 
 
 class generator_parameters(json_base):
