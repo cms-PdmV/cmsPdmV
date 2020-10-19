@@ -24,13 +24,13 @@
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns"></select-well>
     </div>
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
-	          <div ng-switch-when="Actions">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" ng-switch on="column.text">
+            <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -41,8 +41,8 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
-	          <div ng-switch-default>
+            </div>
+            <div ng-switch-default>
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -53,19 +53,19 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
-      	<tr ng-repeat="user_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
-      	    <div ng-switch on="data.text">
-	            <div ng-switch-when="UserName">
+        <tr ng-repeat="user_info in result | orderBy:sort.column: sort.descending">
+          <td ng-repeat="data in dataColumns" ng-if="data.select" style="white-space: nowrap;">
+            <div ng-switch on="data.text">
+              <div ng-switch-when="UserName">
                 <a ng-href='users?username={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View only user {{user_info[data.db_name]}}">{{user_info[data.db_name]}}</a>
                 <a ng-href='requests?actor={{user_info[data.db_name]}}' target="_self" rel="tooltip" title="View requests operated by {{user_info[data.db_name]}}"><i class="icon-folder-open"></i></a>
                 <a ng-href="admin/_utils/document.html?users/{{user_info[data.db_name]}}" rel="tooltip" title="Admin view of {{user_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
-	            </div>
+              </div>
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Increase user role" ng-click="changeRole(user_info['username'],1)" ng-hide="role(3);">
                   <i class="icon-thumbs-up"></i>

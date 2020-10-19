@@ -2,6 +2,7 @@
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
 <head>
   <title>McM</title>
+  <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
@@ -53,11 +54,8 @@
   <div class="container">
     <div align="middle">
       <h2>McM Home page</h2>
-      <p> Updated to use HTML5 links: exclude <b>#</b> from URL's </p>
       Welcome to the McM Monte-Carlo Request Management
       <p> Brought to you by <a href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmV">PdmV</a></p>
-      <p> Current McM version is <a href="https://github.com/cms-PdmV/cmsPdmV/tree/{{mcm_revision}}/mcm"> {{mcm_revision}}</a></p>
-      <p> <a href="https://github.com/cms-PdmV/cmsPdmV/compare/{{mcm_revision}}...master"> Upcoming developments </a></p>
       <p> Up since {{start_time}}</p>
     </div>
   </div><!--End of container -->

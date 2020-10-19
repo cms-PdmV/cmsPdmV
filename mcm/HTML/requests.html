@@ -32,12 +32,12 @@
     <div class="container" >
       <tabs>
         <pane heading="Select View" active="tabsettings.view.active">
-          <select-well ng-if="selectionReady" database="{{dbName}}" selection="requests_defaults" always-show="true"></select-well>
+          <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns" always-show="true"></select-well>
         </pane>
         <pane heading="List from file" active="tabsettings.file.active">
           <div class="control-group">
             List request from a list file: <ddl-file-reader ng-model="cf"> </ddl-file-reader>
-            <button class="btn btn-mini" align="middle" ng-click="upload(cf);">Upload</button>
+            <button class="btn btn-mini" align="middle" ng-click="uploadFile(cf);">Upload</button>
             <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Lists_Requests" rel="tooltip" title="Help on listing from file"><i class="icon-question-sign"></i></a>
           </div>
         </pane>
@@ -57,7 +57,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in requests_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
@@ -89,7 +89,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" style="white-space: nowrap;">
-          <td ng-repeat="value in requests_defaults" ng-if="value.select">
+          <td ng-repeat="value in dataColumns" ng-if="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <a ng-click="open_isSureModal('delete', data.prepid)" rel="tooltip" ng-hide="role(1);" title="Delete request" ng-href="#">

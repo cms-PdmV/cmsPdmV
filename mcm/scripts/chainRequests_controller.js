@@ -1,7 +1,7 @@
 angular.module('testApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window',
   function resultsCtrl($scope, $http, $location, $window){
-    $scope.defaults = [
+    $scope.dataColumns = [
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:true, db_name:''},
       {text:'Approval',select:true, db_name:'approval'},
@@ -189,77 +189,12 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.selectionReady = true;
     };
 
-    $scope.getData = function(){
-      if ( $location.search()['searchByRequests'] )
-      {
-        $scope.superSearch();
-      }else {
-        var query = ""
-        _.each($location.search(), function(value,key){
-          if (key!= 'shown' && key != 'fields'){
-            query += "&"+key+"="+value;
-          }
-        });
-        $scope.got_results = false; //to display/hide the 'found n results' while reloading
-        var parameters = "";
-        if ($location.search()["from_notification"]){
-          notification = $location.search()["from_notification"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          parameters = "restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit;
-        }else if($location.search()["from_notification_group"]){
-          group = $location.search()["from_notification_group"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          parameters = "restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit;
-        }else if ($location.search()["from_ticket"]){
-          ticket = $location.search()["from_ticket"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          parameters = "restapi/chained_requests/from_ticket?ticket=" + ticket + "&page=" + page + "&limit=" + limit;
-        } else {
-          parameters = "search?db_name="+$scope.dbName+query+"&get_raw"
-        }
-        var promise = $http.get(parameters);
-        promise.then(function(data){
-          $scope.result_status = data.status;
-          $scope.got_results = true;
-          if (data.data.rows === undefined){
-            $scope.result = data.data;
-          }else{
-            $scope.result = _.pluck(data.data.rows, 'doc');
-          }
-          $scope.parseColumns();
-        },function(){
-           alert("Error getting information");
-        });
-      }
-    };
-
     $scope.$watch(function () {
           var loc_dict = $location.search();
           return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
         },
         function () {
-            $scope.getData();
+            $scope.getData($scope);
             $scope.selected_prepids = [];
         });
 
@@ -361,46 +296,9 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.update["success"] = true;
       $scope.update["fail"] = false;
       $scope.update["status_code"] = status;
-      $scope.getData();
+      $scope.getData($scope);
     };
 
-    $scope.superSearch = function(){
-      var search_data={
-          searches: [
-              {
-                  db_name: 'requests',
-                  return_field: 'member_of_chain',
-                  search: {}
-              },
-              {
-                  db_name: $scope.dbName,
-                  use_previous_as: 'prepid',
-                  search: {}
-              }
-          ]
-      };
-      _.each($location.search(),function(elem,key){
-        if (key != "shown" && key != "searchByRequests" && key != "fields")
-        {
-            if(key == 'page' || key == 'limit' || key == 'get_raw') {
-              search_data[key] = elem;
-            } else {
-                search_data.searches[0].search[key] = elem;
-            }
-        }
-      });
-      /*submit method*/
-      $http({method:'POST', url:'multi_search', data: search_data}).success(function(data,status){
-        $scope.result = data.results;
-        $scope.result_status = data.status;
-        $scope.got_results = true;
-        $scope.parseColumns();
-      }).error(function(data, status){
-        $scope.update["success"] = false;
-        $scope.update["fail"] = true;
-        $scope.update["status_code"] = data.status;
-      });
-    };
 
     $scope.upload = function(file){
       /*Upload a file to server*/
@@ -584,7 +482,7 @@ testApp.directive("loadFields", function($http, $location){
             $location.search(key,null);//.remove(key);
           }
         });
-        scope.getData();
+        scope.getData($scope);
       };
       scope.loadSuggestions = function (fieldValue, fieldName) {
         if (fieldValue == '') {
@@ -659,7 +557,7 @@ testApp.directive("loadRequestsFields", function($http, $location){
           }
         });
         $location.search("searchByRequests", true);
-        scope.getData();
+        scope.getData($scope);
       };
       scope.toggleSelectOption = function(option){
         if (scope.showOption[option])

@@ -1,7 +1,7 @@
 angular.module('testApp').controller('resultsCtrl',
   ['$scope', '$http', '$modal', '$location', '$window',
   function resultsCtrl($scope, $http, $modal, $location, $window){
-    $scope.flows_defaults = [
+    $scope.dataColumns = [
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:true, db_name:''},
       {text:'Approval',select:true, db_name:'approval'},
@@ -41,7 +41,7 @@ angular.module('testApp').controller('resultsCtrl',
   	  $scope.update["success"] = true;
   	  $scope.update["fail"] = false;
   	  $scope.update["status_code"] = status;
-  	  $scope.getData();
+  	  $scope.getData($scope);
     };
 
     $scope.delete_object = function(db, value){
@@ -93,57 +93,6 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
-    $scope.getData = function(){
-      var query = ""
-      _.each($location.search(), function(value,key){
-        if (key!= 'shown' && key != 'fields'){
-          query += "&"+key+"="+value;
-        }
-      });
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
-      promise.then(function(data){
-        $scope.result_status = data.status;
-        $scope.got_results = true;
-        $scope.result = _.pluck(data.data.rows, 'doc');
-        if ($scope.result === undefined ){
-          alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
-          return; //stop doing anything if results are undefined
-        }
-        if ($scope.result.length != 0){
-          columns = _.keys($scope.result[0]);
-          rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-          $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-          _.each(rejected, function(v){
-            add = true;
-            _.each($scope.flows_defaults, function(column){
-              if (column.db_name == v){
-                add = false;
-              }
-            });
-            if (add){
-              $scope.flows_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
-          });
-          if ( _.keys($location.search()).indexOf('fields') != -1)
-          {
-            _.each($scope.flows_defaults, function(elem){
-              elem.select = false;
-            });
-            _.each($location.search()['fields'].split(','), function(column){
-              _.each($scope.flows_defaults, function(elem){
-                if ( elem.db_name == column )
-                {
-                  elem.select = true;
-                }
-              });
-            });
-          }
-        }
-          $scope.selectionReady = true;
-      }, function(){ alert("Error getting information"); });
-    };
-
     $scope.openCloneModal = function(id)
     {
       var cloneModal = $modal.open({
@@ -184,7 +133,7 @@ angular.module('testApp').controller('resultsCtrl',
       var loc_dict = $location.search();
       return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
     },function(){
-      $scope.getData();
+      $scope.getData($scope);
     });
   }]);
 

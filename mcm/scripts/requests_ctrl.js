@@ -1,7 +1,7 @@
 angular.module('testApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window', '$modal',
   function resultsCtrl($scope, $http, $location, $window, $modal){
-    $scope.requests_defaults = [
+    $scope.dataColumns = [
         {text:'PrepId',select:true, db_name:'prepid'},
         {text:'Actions',select:true, db_name:''},
         {text:'Approval',select:true, db_name:'approval'},
@@ -13,9 +13,9 @@ angular.module('testApp').controller('resultsCtrl',
         {text:'History',select:true, db_name:'history'},
         {text:'Tags',select:true, db_name:'tags'}
     ];
-    $scope.requests_renames = {
-        'ppd_tags': 'PPD tags',
-        'interested_pwg':'Interested PWGs',
+    $scope.dataColumnRename = {
+      'ppd_tags': 'PPD tags',
+      'interested_pwg':'Interested PWGs',
     };
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
 
@@ -66,7 +66,7 @@ angular.module('testApp').controller('resultsCtrl',
 	  $scope.update["success"] = true;
 	  $scope.update["fail"] = false;
 	  $scope.update["status_code"] = status;
-	  $scope.getData();
+	  $scope.getData($scope);
   };
 
   $scope.parse_one = function( report ){
@@ -114,7 +114,7 @@ angular.module('testApp').controller('resultsCtrl',
 		      $scope.update["fail"] = false;
 		      $scope.update["status_code"] = data["results"];
 		      $scope.action_report[prepid] = 'OK';
-	        $scope.getData();
+	        $scope.getData($scope);
 	      } else{
 	        $scope.update["fail"] = true;
 	        $scope.update["status_code"] = data['message'];
@@ -187,134 +187,12 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
-    $scope.parseColumns = function () {
-        if ($scope.result.length != 0) {
-            columns = _.keys($scope.result[0]);
-            columns.push("filter_efficiency");
-            columns.sort();
-            rejected = _.reject(columns, function (v) {
-                return v[0] == "_";
-            }); //check if charat[0] is _ which is couchDB value to not be shown
-
-            $scope.columns = _.sortBy(rejected, function (v) {
-                return v;
-            });  //sort array by ascending order
-            _.each(rejected, function (v) {
-                add = true;
-                _.each($scope.requests_defaults, function (column) {
-                    if (column.db_name == v) {
-                        add = false;
-                    }
-                });
-                if (add) {
-                    if (v in $scope.requests_renames) {
-                        $scope.requests_defaults.push({text: $scope.requests_renames[v], select: false, db_name: v});
-                    } else {
-                        $scope.requests_defaults.push({text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v});
-                    }
-                }
-            });
-            if (_.keys($location.search()).indexOf('fields') != -1) {
-                _.each($scope.requests_defaults, function (elem) {
-                    elem.select = false;
-                });
-                _.each($location.search()['fields'].split(','), function (column) {
-                  _.each($scope.requests_defaults, function (elem) {
-                    if (elem.db_name == column) {
-                      elem.select = true;
-                    }
-                  });
-                });
-            }
-        }
-    };
-
-  $scope.getData = function(){
-    if ($scope.file_was_uploaded)
-    {
-      $scope.upload($scope.uploaded_file);
-    }
-    else if ($location.search()['range']!=undefined)
-    {
-      var tmp = $location.search()['range'].split(";");
-      var imaginary_file = [];
-      _.each(tmp, function (elem) {
-        var ranges = elem.split(",");
-        if (ranges.length > 1 )
-        {
-          imaginary_file.push(ranges[0] + " -> " + ranges[1]);
-        }else
-        {
-          imaginary_file.push(ranges[0]);
-        }
-      });
-      $scope.upload({contents: imaginary_file.join("\n")});
-      $scope.file_was_uploaded = false;
-    } else {
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      var get_raw;
-      if ($location.search()['allRevisions'])
-      {
-        $scope.requests_defaults.splice(1, 1, {text:'Revision', select:true, db_name:'_rev'});
-        var promise = $http.get("restapi/"+$scope.dbName+"/all_revs/"+$location.search()['prepid']);
-      } else if($location.search()["from_notification"]){
-          notification = $location.search()["from_notification"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
-      }else if($location.search()["from_notification_group"]){
-          group = $location.search()["from_notification_group"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
-      }else{
-          var query = ""
-          _.each($location.search(), function(value,key){
-            if (key!= 'shown' && key != 'fields'){
-                query += "&"+key+"="+value;
-            }
-          });
-          var get_raw=true;
-          var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
-      }
-      promise.then(function(data){
-        if (data.data.rows === undefined){
-            $scope.result = data.data;
-        }else{
-            $scope.result = _.pluck(data.data.rows, 'doc');
-        }
-        $scope.result_status = data.status;
-        $scope.got_results = true;
-        if ($scope.result === undefined ){
-          alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
-          return; //stop doing anything if results are undefined
-        }
-        $scope.parseColumns();
-        $scope.selectionReady = true;
-      },function(){
-        alert("Error getting information");
-      });
-    }
-  };
-
    $scope.$watch(function() {
       var loc_dict = $location.search();
       return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
     },
     function(){
-        $scope.getData();
+        $scope.getData($scope);
         $scope.selected_prepids = [];
     });
 
@@ -463,7 +341,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.update["fail"] = false;
       $scope.update["status_code"] = data["results"];
       $window.open("edit?db_name=requests&query="+data["prepid"]);
-      $scope.getData();
+      $scope.getData($scope);
       }).error(function(status){
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
@@ -704,24 +582,6 @@ angular.module('testApp').controller('resultsCtrl',
     }
   };
 
-  $scope.upload = function(file){
-    $scope.file_was_uploaded = true;
-    $scope.uploaded_file = file;
-    /*Upload a file to server*/
-    $scope.got_results = false;
-    $http({method:'PUT', url:'restapi/'+$scope.dbName+'/listwithfile', data: file}).success(function(data,status){
-      $scope.result = data.results;
-      $scope.result_status = data.status;
-      $scope.got_results = true;
-      $scope.parseColumns();
-      $scope.selectionReady = true;
-    }).error(function(status){
-      $scope.update["success"] = false;
-      $scope.update["fail"] = true;
-      $scope.update["status_code"] = status;
-    });
-  };
-
   $scope.findToken = function(tok){
     $window.location.href = "requests?&tags="+tok.value
   };
@@ -735,7 +595,7 @@ angular.module('testApp').controller('resultsCtrl',
       {
         imaginary_file.push(elem);
       });
-      $scope.upload({"contents": imaginary_file.join("\n")});
+      $scope.upload($scope, {"contents": imaginary_file.join("\n")});
       $scope.file_was_uploaded = false;
     }
   };
@@ -754,7 +614,7 @@ angular.module('testApp').controller('resultsCtrl',
       if ($scope.update["success"])
       {
         // reload the data to display history changes
-        $scope.getData();
+        $scope.getData($scope);
       }
     }).error(function(status){
       $scope.update["success"] = false;
@@ -787,6 +647,10 @@ angular.module('testApp').controller('resultsCtrl',
     }
   };
 
+  $scope.uploadFile = function(file) {
+    $scope.upload($scope, file);
+  }
+
   $scope.reserveAndApprove = function(chainID){
     console.log("about to reserve and approve chain", chainID);
 
@@ -802,7 +666,7 @@ angular.module('testApp').controller('resultsCtrl',
       if ($scope.update["success"])
       {
         // reload the data to display history changes
-        $scope.getData();
+        $scope.getData($scope);
       }
     }).error(function(status){
       $scope.update["success"] = false;
@@ -1084,7 +948,7 @@ testApp.directive("loadFields", function($http, $location){
           lastnumber = parseInt(prepid.substring(prepid.length-5))+increment;
           var new_prepid = prepid.substring(0,prepid.length-5)+scope.zeroPad(lastnumber, 5);
           $location.search("prepid", new_prepid);
-          scope.getData();
+          scope.getData($scope);
         }
       };
 
@@ -1106,7 +970,7 @@ testApp.directive("loadFields", function($http, $location){
             $location.search(key,null);//.remove(key);
           }
         });
-        scope.getData();
+        scope.getData($scope);
       };
 
       scope.loadSuggestions = function (fieldValue, fieldName) {

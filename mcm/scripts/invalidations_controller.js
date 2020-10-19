@@ -1,7 +1,7 @@
 angular.module('testApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window',
   function resultsCtrl($scope, $http, $location, $window){
-    $scope.defaults = [
+    $scope.dataColumns = [
       {text:'Object', select:true, db_name:'object'},
       {text:'Actions', select:false, db_name:''},
       {text:'Type', select:true, db_name:'type'},
@@ -36,55 +36,6 @@ angular.module('testApp').controller('resultsCtrl',
       }
     };
 
-    $scope.getData = function(){
-      var query = ""
-      _.each($location.search(), function(value,key){
-        if (key!= 'shown' && key != 'fields'){
-          query += "&"+key+"="+value;
-        }
-      });
-      var promise = $http.get("search?db_name="+$scope.dbName+query+"&get_raw");
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      promise.then(function(data){
-        $scope.result = _.pluck(data.data.rows, 'doc');
-        $scope.result_status = data.status;
-        $scope.got_results = true;
-        if ($scope.result.length != 0){
-          columns = _.keys($scope.result[0]);
-          rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-  //         $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-          _.each(rejected, function(v){
-            add = true;
-            _.each($scope.defaults, function(column){
-              if (column.db_name == v){
-                add = false;
-              }
-            });
-            if (add){
-              $scope.defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-            }
-          });
-          if ( _.keys($location.search()).indexOf('fields') != -1)
-          {
-            _.each($scope.defaults, function(elem){
-              elem.select = false;
-            });
-            _.each($location.search()['fields'].split(','), function(column){
-              _.each($scope.defaults, function(elem){
-                if ( elem.db_name == column )
-                {
-                  elem.select = true;
-                }
-              });
-            });
-          }
-        }
-          $scope.selectionReady = true;
-      },function(){
-         alert("Error getting information");
-      });
-    };
-
     $scope.delete = function(id)
     {
       $http({method:'DELETE', url:'restapi/'+$scope.dbName+'/delete/'+id})
@@ -92,7 +43,7 @@ angular.module('testApp').controller('resultsCtrl',
           $scope.update["success"] = true;
           $scope.update["fail"] = false;
           $scope.update["status_code"] = status;
-          $scope.getData();
+          $scope.getData($scope);
       }).error(function(data, status){
           $scope.update["success"] = false;
           $scope.update["fail"] = true;
@@ -121,7 +72,7 @@ angular.module('testApp').controller('resultsCtrl',
           $scope.update["success"] = data["results"];
           $scope.update["fail"] = !data["results"];
           $scope.update["status_code"] = status;
-          $scope.getData();
+          $scope.getData($scope);
       }).error(function(data, status){
           $scope.update["success"] = false;
           $scope.update["fail"] = true;
@@ -154,7 +105,7 @@ angular.module('testApp').controller('resultsCtrl',
       return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
     },
      function(){
-        $scope.getData();
+        $scope.getData($scope);
         $scope.selected_prepids = [];
     });
 

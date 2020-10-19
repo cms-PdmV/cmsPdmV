@@ -7,7 +7,6 @@ angular.module('testApp').controller('mainCtrl',
   function mainCtrl($scope, $http, $location, $window, $modal){
   $scope.stats_cache = {};
   $scope.full_details = {};
-  $scope.mcm_revision = "";
   $scope.user = {name: "guest", role:"user",roleIndex:0};
   $scope.start_time = "";
   $scope.turn_on_button_clicked = false;
@@ -29,13 +28,6 @@ angular.module('testApp').controller('mainCtrl',
       get_rev = false;
     }
   });
-  if (get_rev && $window.document.title != "McM maintenance")
-  {
-    promise = $http.get("restapi/dashboard/get_revision");
-    promise.then(function (data) {
-      $scope.mcm_revision = data.data;
-    });
-  }
   if ($scope.start_time == "" && $window.document.title !="McM maintenance")
   {
     promise = $http.get("restapi/dashboard/get_start_time");
@@ -126,6 +118,97 @@ angular.module('testApp').controller('mainCtrl',
     });
   };
 
+  $scope.upload = function(scope, file){
+    scope.file_was_uploaded = true;
+    scope.uploaded_file = file;
+    /*Upload a file to server*/
+    scope.got_results = false;
+    $http({method:'PUT', url:'restapi/'+scope.dbName+'/listwithfile', data: file}).success(function(data,status){
+      scope.result = data.results;
+      scope.result_status = data.status;
+      scope.got_results = true;
+      if (scope.result.length != 0){
+        columns = _.keys(scope.result[0]).filter(x => x[0] != '_').sort();
+        let existingDefaults = scope.dataColumns.map(def => def.db_name);
+        columns.forEach(columnName => {
+          if (existingDefaults.indexOf(columnName) < 0) {
+            let name = columnName[0].toUpperCase() + columnName.substring(1).replace(/\_/g,' ');
+            if (scope.dataColumnRename && columnName in scope.dataColumnRename) {
+              name = scope.dataColumnRename[columnName];
+            }
+            scope.dataColumns.push({text:name,
+                                  select:false,
+                                  db_name:columnName});
+            existingDefaults.push(columnName);
+          }
+        });
+      }
+      scope.update["success"] = true;
+      scope.update["fail"] = false;
+      scope.update["status_code"] = status;
+      scope.selectionReady = true;
+    }).error(function(status){
+      scope.update["success"] = false;
+      scope.update["fail"] = true;
+      scope.update["status_code"] = status;
+    });
+  };
+
+  $scope.getData = function(scope){
+    if ($location.search()['range'] != undefined) {
+      let ranges = $location.search()['range'].split(';');
+      let imaginaryFile = [];
+      _.each(ranges, function (range) {
+        var splitRange = range.split(',');
+        if (splitRange.length > 1 )        {
+          imaginaryFile.push(splitRange[0] + ' -> ' + splitRange[1]);
+        } else {
+          imaginaryFile.push(splitRange[0]);
+        }
+      });
+      $scope.upload(scope, {contents: imaginaryFile.join('\n')});
+      $scope.file_was_uploaded = false;
+      return;
+    } 
+
+    let query = '';
+    _.each($location.search(), function(value, key) {
+      if ((key != 'shown') && (key != 'fields')) {
+        query += '&' + key + '=' + value;
+      }
+    });
+    scope.got_results = false; //to display/hide the 'found n results' while reloading
+    let promise = $http.get('search?db_name=' + scope.dbName + query);
+    promise.then(function(data) {
+      scope.result_status = data.status;
+      scope.got_results = true;
+      scope.result = data.data.results;
+      if (scope.result === undefined ){
+        alert('The following url-search key(s) is/are not valid: ' + _.keys(data.data));
+        return; //stop doing anything if results are undefined
+      }
+      if (scope.result.length != 0){
+        columns = _.keys(scope.result[0]).filter(x => x[0] != '_').sort();
+        let existingDefaults = scope.dataColumns.map(def => def.db_name);
+        columns.forEach(columnName => {
+          if (existingDefaults.indexOf(columnName) < 0) {
+            let name = columnName[0].toUpperCase() + columnName.substring(1).replace(/\_/g,' ');
+            if (scope.dataColumnRename && columnName in scope.dataColumnRename) {
+              name = scope.dataColumnRename[columnName];
+            }
+            scope.dataColumns.push({text:name,
+                                  select:false,
+                                  db_name:columnName});
+            existingDefaults.push(columnName);
+          }
+        });
+      }
+      scope.selectionReady = true;
+    }, function(error){
+      console.error(error);
+      alert('Error fetching ' + scope.dbName);
+    });
+  };
 }
 ]);
 

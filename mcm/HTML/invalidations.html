@@ -24,13 +24,13 @@
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns"></select-well>
     </div>
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
-	          <div ng-switch-when="Actions">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" ng-switch on="column.text">
+            <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -41,8 +41,8 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
-	          <div ng-switch-default>
+              </div>
+              <div ng-switch-default>
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
@@ -53,21 +53,21 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-	          </div>
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
-      	<tr ng-repeat="invalidations_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
-      	    <div ng-switch on="data.text">
-	            <div ng-switch-when="Object">
+        <tr ng-repeat="invalidations_info in result | orderBy:sort.column: sort.descending">
+          <td ng-repeat="data in dataColumns" ng-if="data.select" style="white-space: nowrap;">
+            <div ng-switch on="data.text">
+              <div ng-switch-when="Object">
                 <!--<a ng-href='invalidations?object={{invalidations_info[data.db_name]}}' target="_self" rel="tooltip" title="View only invalidation {{invalidations_info[data.db_name]}}">{{invalidations_info[data.db_name]}}</a>-->
                 <a ng-show="invalidations_info.type=='dataset'" ng-href='https://cmsweb.cern.ch/das/request?input={{invalidations_info[data.db_name]}}'  rel="tooltip" title="View dataset in DAS" target="_self" >{{invalidations_info[data.db_name]}}</a>
                 <a ng-show="invalidations_info.type=='request' && isDevMachine();" ng-href='https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid={{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
                 <a ng-show="invalidations_info.type=='request' && !isDevMachine();" ng-href='https://cmsweb.cern.ch/reqmgr2/fetch?rid={{invalidations_info[data.db_name]}}' rel="tooltip" title="View request details" target="_self" >{{invalidations_info[data.db_name]}}</a>
                 <a ng-href="admin/_utils/document.html?invalidations/{{objectToId(invalidations_info[data.db_name])}}" rel="tooltip" title="Admin view of {{invalidations_info[data.db_name]}}" ng-hide="role(4);" target="_self" ><i class="icon-star"></i></a>
-	            </div>
+              </div>
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Remove invalidation" ng-click="delete(invalidations_info['_id']);" ng-hide="role(4);" ng-href="#">
                   <i class="icon-minus-sign"></i>

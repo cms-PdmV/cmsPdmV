@@ -15,7 +15,7 @@ angular.module('testApp').controller('resultsCtrl',
     $scope.underscore = _;
     $scope.selected_prepids = [];
 
-    $scope.batches_defaults = [
+    $scope.dataColumns = [
       {text:'PrepId',select:true, db_name:'prepid'},
       {text:'Actions',select:false, db_name:''},
       {text:'Status',select:true, db_name:'status'},
@@ -48,87 +48,11 @@ angular.module('testApp').controller('resultsCtrl',
        $scope.pendingHTTP = !(v==0);
     });
 
-    $scope.getData = function(){
-      if($location.search()["from_notification"]){
-        notification = $location.search()["from_notification"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
-      }else if($location.search()["from_notification_group"]){
-          group = $location.search()["from_notification_group"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
-      }else{
-        var query = "";
-        _.each($location.search(), function(value,key){
-          if (key!= 'shown' && key != 'fields'){
-            query += "&"+key+"="+value;
-          }
-        });
-        var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
-      }
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      promise.then(function(data){
-        $scope.result_status = data.status;
-        $scope.got_results = true;
-        if (data.data.rows === undefined){
-            $scope.result = data.data;
-        }else{
-            $scope.result = _.pluck(data.data.rows, 'doc');
-        }
-        if ($scope.result.length != 0){
-          columns = _.keys($scope.result[0]);
-          rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown
-          _.each(rejected, function(v){
-              add = true;
-              _.each($scope.batches_defaults, function(column){
-              if (column.db_name == v){
-                  add = false;
-              }
-           });
-              if (add){
-                  $scope.batches_defaults.push({text:v[0].toUpperCase()+v.substring(1).replace(/\_/g,' '), select:false, db_name:v});
-              }
-          });
-          if ( _.keys($location.search()).indexOf('fields') != -1)
-          {
-            _.each($scope.batches_defaults, function(elem){
-              elem.select = false;
-            });
-            _.each($location.search()['fields'].split(','), function(column){
-              _.each($scope.batches_defaults, function(elem){
-                if ( elem.db_name == column )
-                {
-                  elem.select = true;
-                }
-              });
-            });
-          }
-          }
-          $scope.selectionReady = true;
-      }, function(){
-         alert("Error getting main information");
-        });
-    };
-
     $scope.$watch(function() {
        var loc_dict = $location.search();
        return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
     },function(){
-      $scope.getData();
+      $scope.getData($scope);
     });
 
     $scope.announce = function(prepid){
@@ -137,7 +61,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.resetBatch = function (batch_id) {
       $http({method: 'GET', url: 'restapi/batches/reset/' + batch_id}).success(function (data, status) {
-        $scope.getData();
+        $scope.getData($scope);
         alert('Successfully resetted the batch');
       }).error(function (status) {
         console.log(status);
@@ -171,7 +95,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.inspect = function(batchid){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/inspect/'+batchid}).success(function(data,status){
-        $scope.getData();
+        $scope.getData($scope);
       }).error(function(status){
         alert('Cannot inspect '+batchid);
       });
@@ -179,7 +103,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.hold = function(batchid){
       $http({method:'GET', url:'restapi/'+$scope.dbName+'/hold/'+batchid}).success(function(data,status){
-        $scope.getData();
+        $scope.getData($scope);
       }).error(function(status){
         alert('Cannot hold or release '+batchid);
       });
@@ -287,7 +211,7 @@ angular.module('testApp').controller('ModalDemoCtrl',
           $scope.update["fail"] = false;
           $scope.update["results"] = data.results;
           $scope.update["status_code"] = status;
-          $scope.getData();
+          $scope.getData($scope);
           //   $window.location.href ="edit?db_name=requests&query="+data.results;
         }).error(function(data,status){
           alert("Error:"+ status);

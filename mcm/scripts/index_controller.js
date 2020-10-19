@@ -24,7 +24,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.preloadUniques = function(viewValue, search_by)
     {
-      var promise = $http.get("restapi/requests/unique_values/"+search_by+"?limit=10&startkey=" + viewValue);
+      var promise = $http.get("restapi/requests/unique_values/"+search_by+"?limit=10&startkey=\"" + viewValue + "\"");
       return promise.then(function(data){
       	return data.data.results;
       }, function(data){
