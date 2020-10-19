@@ -14,13 +14,19 @@ class locator:
 
     def isProd(self):
         host = os.environ['HOSTNAME']
-        return host in ['vocms093.cern.ch']  # Prod machine
+        return host in ['vocms093.cern.ch', 'vocms0493.cern.ch']  # Prod machine
 
-    def dbLocation(self):
+    def database_url(self):
         if self.isDev():
-            return 'http://vocms085.cern.ch:5984/'  # dev instance
+            return 'http://vocms0485.cern.ch:5984/'  # dev instance
         else:
-            return 'http://vocms090.cern.ch:5984/'  # prod instance
+            return 'http://vocms0490.cern.ch:5984/'  # prod instance
+
+    def lucene_url(self):
+        if self.isDev():
+            return 'http://vocms0485.cern.ch:5985/'  # dev instance
+        else:
+            return 'http://vocms0490.cern.ch:5985/'  # prod instance
 
     def workLocation(self):
         if self.isDev():

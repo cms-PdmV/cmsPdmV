@@ -43,7 +43,7 @@ class BatchPrepId():
                     "descending": "true", "limit": 1}
 
             max_in_batch = settings.get_value('max_in_batch')
-            top_batch = self.bdb.raw_query("prepid", __query_options)
+            top_batch = self.bdb.query_view("prepid", options=__query_options)
             new_batch = True
 
             if len(top_batch) != 0:

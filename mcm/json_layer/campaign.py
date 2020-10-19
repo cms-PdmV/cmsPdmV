@@ -158,14 +158,7 @@ class campaign(json_base):
             raise self.CampaignExistsException(cid)
 
     def is_release_greater_or_equal_to(self, cmssw_release):
-        my_release = filter(None, re.sub("[^0-9_]", "", self.get_attribute('cmssw_release')).split('_'))
-        other_release = filter(None, re.sub("[^0-9_]", "", cmssw_release).split('_'))
-        try:
-            for i in range(2 if len(my_release) > 2 else len(my_release)):
-                if int(my_release[i]) < int(other_release[i]):
-                    return False
-                elif int(my_release[i]) > int(other_release[i]):
-                    return True
-        except IndexError:
-            return True
-        return True
+        my_release = self.get_attribute('cmssw_release')
+        my_release = [int(x) for x in re.sub('[^0-9_]', '', my_release).strip('_').split('_')]
+        cmssw_release = [int(x) for x in re.sub('[^0-9_]', '', cmssw_release).strip('_').split('_')]
+        return my_release >= cmssw_release

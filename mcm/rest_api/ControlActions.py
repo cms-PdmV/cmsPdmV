@@ -110,55 +110,40 @@ class Search(RESTResource):
 
     def get(self):
         args = flask.request.args.to_dict()
-        db_name = 'requests'
-        page = 0
-        limit = 20
-        get_raw = False
         include_fields = ''
-        if 'db_name' in args:
-            db_name = args['db_name']
-            args.pop('db_name')
-        if 'page' in args:
-            page = int(args['page'])
-            args.pop('page')
-        if 'limit' in args:
-            limit = int(args['limit'])
-            args.pop('limit')
-        if 'get_raw' in args:
-            get_raw = True
-            args.pop('get_raw')
-        if 'include_fields' in args:
-            include_fields = args['include_fields']
-            args.pop('include_fields')
+        db_name = args.pop('db_name', 'requests').strip()
+        page = int(args.pop('page', 0))
+        limit = int(args.pop('limit', 20))
+        get_raw = args.pop('get_raw', False) # Unused
+        include_fields = args.pop('include_fields', '').strip()
         if 'keep_output' in args:
             args['keep_output'] = args['keep_output'].replace(',', '_')
 
         if page == -1 and not args and db_name == 'requests':
-            return {"results": False, "message": "Why you stupid? Don't be stupid..."}
+            return {'results': False, 'message': 'Why you stupid? Don\'t be stupid...'}
 
-        res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
-        if get_raw:
-            self.representations = {'text/plain': self.output_text}
-            return res
-        else:
-            return {"results": res}
+        res = self.search(args, db_name=db_name, page=page, limit=limit, include_fields=include_fields)
+        return {'results': res}
 
-    def search(self, args, db_name, page=-1, limit=0, get_raw=False, include_fields=''):
-        odb = database(db_name)
+    def search(self, args, db_name, page=-1, limit=0, include_fields=''):
+        db = database(db_name)
         if args:
             args = self.prepare_typed_args(args, db_name)
-            lucene_query = odb.construct_lucene_query(args)
-            self.logger.info("lucene url: %s" % (lucene_query))
-            res = odb.full_text_search("search", lucene_query, page=page,
-                limit=limit, get_raw=get_raw, include_fields=str(include_fields))
-
+            lucene_query = db.construct_lucene_query(args)
+            res = db.full_text_search('search',
+                                      lucene_query,
+                                      page=page,
+                                      limit=limit,
+                                      include_fields=str(include_fields))
         else:
-            res = odb.get_all(page, limit, get_raw=get_raw)
+            res = db.get_all(page, limit)
+
         return res
 
     def prepare_typed_args(self, args, db_name):
         for arg in args:
             args[arg + self.casting[db_name][arg]] = args.pop(arg)
+
         return args
 
 

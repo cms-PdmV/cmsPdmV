@@ -298,7 +298,7 @@ class CampaignsRESTResource(RESTResource):
 
     def listAll(self):
         cdb = database('campaigns')
-        all_campaigns = cdb.raw_query("prepid")
+        all_campaigns = cdb.query_view("prepid")
         prepids_list = map(lambda x: x['id'], all_campaigns)
         return prepids_list
 

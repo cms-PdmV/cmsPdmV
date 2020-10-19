@@ -17,7 +17,7 @@ class RequestPrepId(RESTResourceIndex):
             return None
         with locker.lock("{0}-{1}".format(pwg, camp)):
             db = database(self.db_name)
-            query_results = db.raw_query('serial_number', {'group': True, 'key': [camp, pwg]})
+            query_results = db.query_view('serial_number', options={'group': True, 'key': [camp, pwg]})
             sn = 1
             if query_results:
                 sn = query_results[0]['value'] + 1

@@ -47,7 +47,7 @@ def do_with_timeout(func, *args, **kwargs):
 
 def get_all_chained_campaigns():
     chained_campaigns_db = database('chained_campaigns')
-    all_chained_campaigns_result = do_with_timeout(chained_campaigns_db.raw_query, 'prepid', timeout=300)
+    all_chained_campaigns_result = do_with_timeout(chained_campaigns_db.query_view, 'prepid', timeout=300)
     if all_chained_campaigns_result:
         return [x['id'] for x in all_chained_campaigns_result]
     else:

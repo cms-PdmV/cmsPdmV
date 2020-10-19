@@ -1149,4 +1149,4 @@ class GetUniqueChainedRequestValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        return db.query_view_uniques(view_name=field_name, options=kwargs)

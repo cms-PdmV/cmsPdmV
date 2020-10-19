@@ -516,6 +516,8 @@ class DeleteRequest(RESTResource):
         crdb = database('chained_requests')
         mcm_r = request(db.get(pid))
 
+        self.logger.info(mcm_r.current_user_level)
+
         if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
             # if request has a member_of_campaign we user role to be equal or more than
             # prod_manager, so we have to do check manually and return False
@@ -1219,7 +1221,7 @@ class RequestLister():
         return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
-        all_campaigns = map(lambda x: x['id'], cdb.raw_query("prepid"))
+        all_campaigns = map(lambda x: x['id'], cdb.query_view("prepid"))
         if word.count('-') == 2:
             (pwg, campaign, serial) = word.split('-')
             if len(pwg) != 3:
@@ -1766,7 +1768,7 @@ class GetUniqueValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        return db.query_view_uniques(view_name=field_name, options=kwargs)
 
 
 class PutToForceComplete(RESTResource):

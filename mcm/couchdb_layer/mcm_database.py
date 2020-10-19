@@ -1,24 +1,18 @@
-#!/usr/bin/env python
-
 import time
 import os
 import ast
 import logging
 import sys
-
-from simplejson import dumps
+import json
+import urllib
 from tools.locator import locator
 from collections import defaultdict
-from couchDB_interface import *
-from tools.locker import locker
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
-from werkzeug.contrib.cache import SimpleCache
 
 class database:
     logger = logging.getLogger("mcm_error")
-    # Cache timeout in seconds
-    CACHE_TIMEOUT = 60 * 60
-    cache = SimpleCache()
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
@@ -52,192 +46,174 @@ class database:
         def __str__(self):
             return 'Error: Invalid query "' + self.query + '"'
 
-    class InvalidOperatorError(Exception):
-        def __init__(self,  op=''):
-            self.op = str(op)
-        def __str__(self):
-            return 'Error: Operator "' + self.op + '" is invalid.'
-
-    class InvalidParameterError(Exception):
-        def __init__(self,  param=''):
-            self.param = str(param)
-        def __str__(self):
-            return 'Error: Invalid Parameter: ' + self.param
-
-    def __init__(self,  db_name='',url=None, cache_enabled=False):
-        host = os.environ['HOSTNAME']
-        if url is None:
-            url = locator().dbLocation()
+    def __init__(self, db_name, url=None, lucene_url=None):
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
+
+        if url is None:
+            url = locator().database_url()
+
+        url = url.rstrip('/')
+        if lucene_url is None:
+            lucene_url = locator().lucene_url()
+
+        lucene_url = lucene_url.rstrip('/')
         self.db_name = db_name
-        self.cache_enabled = cache_enabled
-        if self.db_name in ['campaigns','chained_campaigns']:
-            ## force cache for those.
-            self.cache_enabled=True
-
-        try:
-            self.db = Database(db_name, url=url)
-        except ValueError as ex:
-            raise self.DatabaseAccessError(db_name)
-
+        self.couchdb_url = '%s/%s' % (url, db_name)
+        self.lucene_url = '%s/local/%s' % (lucene_url, db_name)
+        self.auth_header = None
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
 
-    def __is_number(self, s):
+    def __make_request(self, url, data=None, method='GET', get_raw=False):
+        """
+        Make a HTTP request to the actual database api
+        """
+        if data is not None:
+            data = json.dumps(data)
+
+        req = Request(url, data=data, method=method)
+        if method in ('POST', 'PUT') and data is not None:
+            data = data.encode("utf-8")
+            req.add_header('Content-Type', 'application/json')
+
+        if self.auth_header:
+            req.add_header('Authorization', self.auth_header)
+
+        self.logger.info('Will make %s request to %s', method, url)
+        response = urlopen(req, data=data).read().decode('utf-8')
+        # self.logger.info(response)
+        if get_raw:
+            return response
+
+        # Parse string and return JSON
+        response = json.loads(response)
+        return response
+
+    def get(self, prepid):
         try:
-            float(s)
-            return True
-        except ValueError:
-            return False
-
-    def cache_size(self):
-        """
-        Return number of elements in cache and cache size in bytes
-        """
-        return len(self.cache._cache), sys.getsizeof(self.cache._cache)
-
-    def clear_cache(self):
-        """
-        Clear cache
-        """
-        size = self.cache_size()
-        self.cache.clear()
-        return size
-
-    def get(self,  prepid=''):
-
-        result = self.__get_from_cache(prepid)
-        if result: return result
-
-        try:
-            doc = self.db.document(id=prepid)
-            self.__save_to_cache( prepid, doc)
+            url = '%s/%s' % (self.couchdb_url, prepid)
+            doc = self.__make_request(url)
             return doc
         except Exception as ex:
-            self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
+            self.logger.warning('Document "%s" was not found. Reason: %s' % (prepid, ex))
             return {}
 
-    def __save_to_cache(self, key, value):
-        if self.cache_enabled:
-            with locker.lock(key):
-                cache_key = 'mcm_database_' + key
-                self.cache.set(cache_key, value, timeout = self.CACHE_TIMEOUT)
-
-    def __get_from_cache(self, key):
-        if self.cache_enabled:
-            with locker.lock(key):
-                cache_key = 'mcm_database_' + key
-                return self.cache.get(cache_key)
-        else:
-            return None
-
-    def __document_exists(self,  doc):
-        if not doc:
-            self.logger.info('Trying to locate empty string.')
-            return False
-        id = ''
-        if 'prepid' not in doc:
-            if '_id' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.')
-
-                return False
-            id = doc['_id']
-        elif '_id' not in doc:
-            if 'prepid' not in doc:
-                self.logger.error('Document does not have an "_id" parameter.')
-
-                return False
-            id = doc['prepid']
-        id = doc['_id']
-        return self.__id_exists(prepid=id)
-
-    def document_exists(self, prepid=''):
-        return self.__id_exists(prepid)
-
-    def __id_exists(self,  prepid=''):
+    def document_exists(self, prepid):
         try:
-            if self.__get_from_cache(prepid) or self.db.documentExists(id=prepid):
-                return True
-            self.logger.error('Document "%s" does not exist.' % (prepid))
-            return False
-        except Exception as ex:
-            self.logger.error('Document "%s" was not found on CouchError Reason: %s trying a second time with a time out' % (prepid, ex))
-            time.sleep(0.5)
-            return self.__id_exists(prepid)
-        except Exception as ex:
-            self.logger.error('Document "%s" was not found. Reason: %s' % (prepid, ex))
-            return False
-
-    def delete(self, prepid=''):
-        if not prepid:
-            return False
-        if not self.__id_exists(prepid):
-            return False
-
-        self.logger.info('Trying to delete document "%s"...' % (prepid))
-        try:
-            self.db.delete_doc(id=prepid)
-            self.__save_to_cache(prepid, None)
-
+            # Do only HEAD request
+            url = '%s/%s' % (self.couchdb_url, prepid)
+            doc = self.__make_request(url, method='HEAD', get_raw=True)
             return True
         except Exception as ex:
-            self.logger.error('Could not delete document: %s . Reason: %s ' % (prepid, ex))
+            self.logger.debug('Document exist check threw an exception: %s', (ex))
             return False
 
-    def update(self,  doc={}):
-        if '_id' in doc:
-            self.logger.info('Updating document "%s" in "%s"' % (doc['_id'], self.db_name))
-        if self.__document_exists(doc):
-            ##JR the revision in the cache is not the one in the DB at this point
-            # will be retaken at next get
-            self.__save_to_cache(doc['_id'], None)
-            return self.save(doc)
-        self.logger.error('Failed to update document: %s' % (dumps(doc)))
-        return False
-
-    def update_all(self,  docs=[]):
-        if not docs:
-            return False
-
-        for doc in docs:
-            if self.__document_exists(doc):
-                self.db.queue(doc)
+    def delete(self, prepid):
+        self.logger.info('Will delete document "%s"' % (prepid))
         try:
-            self.db.commit()
-            return True
+            doc = self.get(prepid)
+            doc['_deleted'] = True
+            return self.update(doc)
         except Exception as ex:
-            self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
+            self.logger.error('Could not delete document %s. Reason: %s ' % (prepid, ex))
             return False
+
+    def update(self, doc):
+        try:
+            prepid = doc['prepid']
+            doc['_id'] = prepid
+            url = '%s/%s' % (self.couchdb_url, prepid)
+            response = self.__make_request(url, doc, method='PUT')
+            return bool(response)
+        except Exception as ex:
+            self.logger.error('Could not update document %s. Reason: %s' % (doc.get('prepid', '<unknown>'), ex))
+            return False
+
+    def save(self, doc):
+        try:
+            prepid = doc['prepid']
+            doc['_id'] = prepid
+            url = '%s/%s' % (self.couchdb_url, prepid)
+            response = self.__make_request(url, doc, method='PUT')
+            return bool(response)
+        except Exception as ex:
+            self.logger.error('Could not save document %s. Reason: %s' % (doc.get('prepid', '<unknown>'), ex))
+            return False
+
+    def query_view(self, view_name, view_doc=None, options=None, get_raw=False):
+        if not view_doc:
+            view_doc = self.db_name
+
+        # Link to view
+        url = '%s/_design/%s/_view/%s' % (self.couchdb_url, view_doc, view_name)
+        # Add query arguments
+        if options:
+            if options.get('startkey') and options['startkey'][0] != '"':
+                options['startkey'] = '"%s' % (options['startkey'])
+
+            if options.get('startkey') and options['startkey'][-1] != '"':
+                options['startkey'] = '%s"' % (options['startkey'])
+
+            if options.get('endkey') and options['endkey'][0] != '"':
+                options['endkey'] = '"%s' % (options['endkey'])
+
+            if options.get('endkey') and options['endkey'][-1] != '"':
+                options['endkey'] = '%s"' % (options['endkey'])
+
+            url += '?%s' % (self.dict_to_query(options))
+
+        results = self.__make_request(url, get_raw=get_raw)
+        if get_raw:
+            return results
+
+        results = results['rows']
+        if options and options.get('include_docs', False):
+            return [x['doc'] for x in results]
+
+        return results
 
     def get_all(self, page_num=-1, limit=20, get_raw=False):
         try:
-            limit, skip = self.__pagify(page_num, limit=limit)
-            url = "_design/%s/_view/%s" % (self.db_name, "all")
-            if limit >= 0 and skip >= 0:
-                result = self.db.loadView(url, options={'limit': limit,
-                        'skip': skip, 'include_docs': True}, get_raw=get_raw)
-
-            else:
-                result = self.db.loadView(url, options={'include_docs': True},
-                        get_raw=get_raw)
-
-            return result if get_raw else map(lambda r: r['doc'], result['rows'])
+            limit, skip = self.__pagify(page_num, limit)
+            options = {'limit': limit, 'skip': skip, 'include_docs': True}
+            return self.query_view('all', options=options, get_raw=get_raw)
         except Exception as ex:
-            self.logger.error('Could not access view. Reason: %s' % (ex))
+            self.logger.error('Error getting all for %s. Reason: %s' % (self.db_name, ex))
             return []
 
-    def query(self,  query='', page_num=0, limit=20):
-        if not query:
-            result = self.get_all(page_num, limit=limit)
-            return result
-        try:
-            self.logger.error('Executing query view code. shouldnt happen')
-            result = self.__query(query, page=page_num, limit=limit)
-            return result
-        except Exception as ex:
-            self.logger.error('Could not load view for query: <%s> . Reason: %s' % (
-                        query, ex))
+    def query_view_uniques(self, view_name, options=None):
+        results = self.query_view(view_name=view_name,
+                                  view_doc='unique',
+                                  options=options)
+        return {'results': [str(x['key']) for x in results]}
 
+    def query(self, query=None, page_num=0, limit=20):
+        if not query:
+            result = self.get_all(page_num, limit)
+            return result
+
+        try:
+            self.logger.debug('Executing query view code')
+            try:
+                tokens = self.__extract_operators(query)
+            except Exception as ex:
+                self.logger.error('Could not parse query %s. Reason: %s', query, ex)
+                return []
+
+            if not tokens:
+                return []
+
+            view_name, view_opts = self.__build_query(tokens)
+            if not view_name or not view_opts:
+                return []
+
+            limit, skip = self.__pagify(page_num, limit)
+            view_opts['limit'] = limit
+            view_opts['skip'] = skip
+            view_opts['include_docs']=True
+            return self.query_view(view_name, options=view_opts)
+        except Exception as ex:
+            self.logger.error('Could not load view for query: <%s> . Reason: %s' % (query, ex))
             return []
 
     def __extract_operators(self,  query=''):
@@ -261,79 +237,15 @@ class database:
         raise self.MapReduceSyntaxError(query)
 
     def __pagify(self, page_num=0, limit=20):
-        if page_num < 0:         ##couchdb-lucene dy default return limited resutlts
-            return 1000000000, 0 ## we set it to very high numer
-        skip = limit * page_num
-        return limit, skip
+        """
+        Return page size and number of documents to skip
+        For page < 0 return first page and large page size
+        """
+        if page_num < 0:
+            return 1499, 0
 
-    def __execute_query(self, tokenized_query='', page=-1, limit=20):
-            tokens = []
-            try:
-                tokens = self.__extract_operators(tokenized_query)
-            except Exception as ex:
-                self.logger.error('Could not parse query. Reason: %s' % (ex))
-                return []
-            if tokens:
-                view_name, view_opts = self.__build_query(tokens)
-                if not view_name or not view_opts:
-                    return []
-                if page > -1:
-                    view_opts['limit'] = limit
-                    view_opts['skip'] = page*limit
-                view_opts['include_docs']=True
-                url = "_design/%s/_view/%s"%(self.db_name, view_name)
-                result = self.db.loadView(url, options=view_opts)['rows']
-                res = map(lambda r: r['doc'], result)
-                return res
-            else:
-                return []
-
-    def raw_query(self, view_name, options={}):
-        url = "_design/%s/_view/%s"%(self.db_name, view_name)
-        return self.db.loadView(url, options)['rows']
-
-    def __get_op(self, oper):
-        if oper == '>':
-            return lambda x,y: x > y
-        elif oper == '>=':
-            return lambda x,y: x >= y
-        elif oper == '<':
-            return lambda x,y: x < y
-        elif oper == '<=':
-            return lambda x,y: x <= y
-        elif oper == '==':
-            return lambda x,y: x == y
-        else:
-            return None
-
-    def __filter(self, tokenized_query=[], view_results=[]):
-        if len(tokenized_query) != 3:
-            return view_results
-        prn = tokenized_query[0]
-        op = tokenized_query[1]
-        if self.__is_number(tokenized_query[2]):
-            val = float(tokenized_query[2])
-        else:
-            val = tokenized_query[2]
-        f = self.__get_op(op)
-        return filter(lambda x: f(x[prn], val), view_results)
-
-    def __query(self, query='', page=0, limit=20):
-        t_par = []
-        results = []
-        if not t_par:
-             t_par = [query]
-        if len(t_par) == 1:
-            return self.__execute_query(t_par[0], page, limit)
-        elif len(t_par) == 0:
-            return []
-        res = self.__execute_query(t_par[0])
-        if len(res) == 0:
-            return []
-        for i in range(1,len(t_par)):
-            tq = self.__extract_operators(t_par[i])
-            res = self.__filter(tq, res)
-        return res[page*limit:page*limit+20]
+        limit = max(1, limit)
+        return limit, limit * page_num
 
     def __build_query(self, tokens=[]):
         if not tokens:
@@ -376,8 +288,10 @@ class database:
         if is_number(val):
             num_flag = True
             kval = float(val)
-        else:
+        elif isinstance(val, bytes):
             kval = val.decode('ascii')
+        else:
+            kval = str(val)
         if '>' in op:
             if '=' in op:
                 opts['startkey'] = kval
@@ -410,39 +324,6 @@ class database:
                 opts['startkey'] = kval[:len(kval)-1]
                 opts['endkey'] = kval[:len(kval)-1]+u'\u9999'
         return opts
-
-    def save_all(self, docs=[]):
-        if not docs:
-            return False
-        for doc in docs:
-            self.db.queue(doc)
-        try:
-            self.db.commit()
-            return True
-        except Exception as ex:
-            self.logger.error('Could not save_all changes to database. Reason: %s' % (ex))
-            return False
-
-    def save(self, doc={}):
-        if not doc:
-            self.logger.error('Tried to save empty document.')
-            return False
-        try:
-            saved = self.db.commitOne(doc)
-            return True
-        except Exception as ex:
-            ##display _rev id for doc we are saving so to ease debugging
-            self.logger.error('Could not save changes %s to database. Reason: %s' % (
-                    doc['_id'], ex))
-
-            return False
-
-    def count(self):
-        try:
-            return len(self.db.allDocs())
-        except Exception as ex:
-            self.logger.error('Could not count documents in database. Reason: %s' % (ex))
-            return -1
 
     def escapedSeq(self, term):
         """ Yield the next string based on the
@@ -544,76 +425,62 @@ class database:
             constructed_query += close_parenthesis
         return constructed_query
 
-    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields='', sort=''):
+    def full_text_search(self, index_name, query, page=0, limit=20, include_fields=None, sort=None):
         """
         queries loadView method with lucene interface for full text search
         """
-        __retries = 3
-        limit, skip = self.__pagify(int(page), limit=int(limit))
-        url = "_design/lucene/%s?q=%s" % (index_name, query)
-        data = {'rows': []}
-        for i in xrange(1, __retries + 1):
-            try:
-                options = {
-                    'limit': limit,
-                    'include_docs': True,
-                    'skip': skip,
-                    'sort': '_id'
-                }
-                if include_fields != '':
-                    options['include_fields'] = include_fields
-                if sort != '':
-                    options['sort'] = sort
-                data = self.db.FtiSearch(url, options=options, get_raw=get_raw)  # we sort ascending by doc._id field
-                break
-            except Exception as ex:
-                self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (url,
-                                                                                             ex,
-                                                                                             i,
-                                                                                             __retries))
-            # if we are retrying we should wait little bit
-            time.sleep(0.5)
-
-        if include_fields != '':
-            return [elem["fields"] for elem in data['rows']]
-
-        return data if get_raw else [elem["doc"] for elem in data['rows']]
-
-    def raw_view_query(self, view_doc, view_name, options={}, cache=True):
-        sequence_id = "%s/%s" % (view_doc, view_name)
-        current_update_seq = self.update_sequence()
-        cache_id = "_design/%s/_view/%s" % (view_doc, view_name)
-        if cache:
-            cached_sequence = self.__get_from_cache(sequence_id)
-            if cached_sequence == current_update_seq:
-                result = self.__get_from_cache(cache_id)
-                self.logger.info('Accessing cache for:%s. Results : %s' % (
-                        cache_id, len(result)))
-
-                if result: return result
-            else:
-                self.__save_to_cache(sequence_id, current_update_seq)
+        self.logger.info('%s %s %s %s', index_name, query, page, limit)
+        limit, skip = self.__pagify(page, limit)
         try:
-            self.logger.info('Raw query to the view. Accessed view: %s/%s' % (
-                    view_doc, view_name))
+            options = {'limit': limit,
+                       'skip': skip,
+                       'include_docs': True,
+                       'sort': '_id<string>'}
+            options.pop('sort', None)
+            if include_fields:
+                options['include_fields'] = include_fields
 
-            url = "_design/%s/_view/%s" % (view_doc, view_name)
-            result = self.db.loadView(url, options)['rows']
-            self.__save_to_cache(cache_id, result)
-            return result
+            if sort:
+                options['sort'] = sort
+
+            data = self.load_lucene_view(query, view_name=index_name, options=options)
         except Exception as ex:
-            self.logger.error('Document "%s" was not found. Reason: %s' % (cache_id, ex))
-            return {}
+            self.logger.error('DB: %s Index: %s lucene query: %s error: %s',
+                              self.db_name,
+                              index_name,
+                              query,
+                              ex)
+            return []
 
-    def raw_view_query_uniques(self, view_name, options={}, cache=True):
-        result = self.raw_view_query("unique", view_name, options, cache)
-        if "results" in result:
-            return result
-        parsedResult = {"results": [str(elem["key"]) for elem in result]}
-        cache_id = "_design/unique/_view/%s" % (view_name)
-        self.__save_to_cache(cache_id, parsedResult)
-        return parsedResult
+        if include_fields:
+            return [x['fields'] for x in data['rows']]
 
-    def update_sequence(self, options={}):
-        result = self.db.UpdateSequence()
-        return result
+        return [x['doc'] for x in data['rows']]
+
+    def dict_to_query(self, args):
+        options_str = dict()
+        for key, value in args.items():
+            if isinstance(value, str):
+                options_str[key] = value
+            else:
+                options_str[key] = json.dumps(value)
+
+        return urllib.parse.urlencode(options_str)
+
+    def load_lucene_view(self, query, view_doc=None, view_name=None, options=None):
+        """
+        Example: localhost:5985/local/campaigns/_design/lucene/search?q=prepid:Run3*&include_docs=true
+        """
+        if view_doc is None:
+            view_doc = 'lucene'
+
+        if view_name is None:
+            view_name = 'search'
+
+        url = '%s/_design/%s/%s?q=%s' % (self.lucene_url, view_doc, view_name, query)
+
+        if options:
+            url += '&%s' % (self.dict_to_query(options))
+
+        results = self.__make_request(url)
+        return results

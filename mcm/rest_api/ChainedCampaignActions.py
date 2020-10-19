@@ -29,12 +29,13 @@ class CreateChainedCampaign(RESTResource):
         return self.create_campaign(flask.request.data)
 
     def create_campaign(self, data):
-        db = database('chained_campaigns')
+        data = loads(data)
         if '_rev' in data:
             return {"results": " cannot create from a json with _rev"}
 
+        db = database('chained_campaigns')
         try:
-            ccamp = chained_campaign(json_input=loads(data))
+            ccamp = chained_campaign(json_input=data)
         except chained_campaign('').IllegalAttributeName as ex:
             return {"results": False, "message": str(ex)}
 
@@ -182,7 +183,7 @@ class InspectChainedCampaignsRest(RESTResource):
 
     def listAll(self):
         ccdb = database('chained_campaigns')
-        all_cc = ccdb.raw_query("prepid")
+        all_cc = ccdb.query_view("prepid")
         prepids_list = map(lambda x: x['id'], all_cc)
         return prepids_list
 

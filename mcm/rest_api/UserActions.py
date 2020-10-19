@@ -232,7 +232,7 @@ class NotifyPWG(RESTResource):
     def notify(self, body):
         db = database('users')
         data = loads(body)
-        list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
+        list_of_mails = [x["value"] for x in db.query_view('pwg-mail', options={'key': data["pwg"]})]
         com = communicator()
         com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
         return {'results': True, 'message': 'Sent message to {0}'.format(list_of_mails)}
