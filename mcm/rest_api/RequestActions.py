@@ -1349,7 +1349,7 @@ class StalledReminder(RESTResource):
         """
         rdb = database('requests')
         bdb = database('batches')
-        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+        statsDB = database('requests', url='http://vocms074.cern.ch:5984/')
         __query = rdb.construct_lucene_query({'status': 'submitted'})
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)

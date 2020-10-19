@@ -1826,10 +1826,10 @@ class request(json_base):
 
     def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
-        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/requests',
-                                               options={'include_docs': True,
-                                                        'key': '"%s"' % self.get_attribute('prepid')})['rows']
-        stats_workflows = [stats_wf['doc'] for stats_wf in stats_workflows]
+        stats_workflows = stats_db.query_view(view_name='requests',
+                                              view_doc='_designDoc',
+                                              options={'include_docs': True,
+                                                       'key': '"%s"' % self.get_attribute('prepid')})
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
@@ -2014,16 +2014,17 @@ class request(json_base):
             return
 
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
-        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/outputDatasets',
-                                               options={'include_docs': True,
-                                                        'limit': 1,
-                                                        'key': '"%s"' % input_dataset})['rows']
+        stats_workflows = stats_db.query_view(view_name='outputDatasets',
+                                              view_doc='_designDoc',
+                                              options={'include_docs': True,
+                                                       'limit': 1,
+                                                       'key': '"%s"' % input_dataset})
         status = None
         prepid = self.get_attribute('prepid')
         self.logger.info('Found %s workflows with %s as output dataset' % (len(stats_workflows), input_dataset))
         if stats_workflows:
             workflow = stats_workflows[0]
-            dataset_info = workflow.get('doc', {}).get('EventNumberHistory', [])
+            dataset_info = workflow.get('EventNumberHistory', [])
             dataset_info = [x for x in dataset_info if input_dataset in x.get('Datasets', {})]
             dataset_info = sorted(dataset_info, key=lambda x: x.get('Time', 0))
             for entry in reversed(dataset_info):
