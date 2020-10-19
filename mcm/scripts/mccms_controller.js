@@ -1,7 +1,7 @@
 angular.module('testApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window', '$modal',
   function resultsCtrl($scope, $http, $location, $window, $modal){
-    $scope.defaults = [
+    $scope.dataColumns = [
       {text:'Prepid', select:true, db_name:'prepid'},
       {text:'Actions', select:true, db_name:''},
       {text:'Meeting', select:true, db_name:'meeting'},
@@ -38,35 +38,6 @@ angular.module('testApp').controller('resultsCtrl',
         sort.column = column;
         sort.descending = false;
       }
-    };
-
-    $scope.getData = function(){
-      if($location.search()["from_notification"]){
-        notification = $location.search()["from_notification"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
-      }else{
-        var query = "";
-        _.each($location.search(), function(value,key){
-          if (key!= 'shown' && key != 'fields'){
-            query += "&"+key+"="+value;
-          }
-        });
-        var promise = $http.get("search?db_name="+$scope.dbName+query+"&get_raw");
-      }
-      $scope.got_results = false; //to display/hide the 'found n results' while reloading
-      promise.then(function(data){
-        $scope.processFetchedData(data);
-      },function(){
-         alert("Error getting information");
-      });
     };
 
     $scope.processFetchedData = function (data){
@@ -114,7 +85,7 @@ angular.module('testApp').controller('resultsCtrl',
        return "page" + loc_dict["page"] + "limit" +  loc_dict["limit"];
      },
      function(){
-         $scope.getData();
+         $scope.getData($scope);
          $scope.selected_prepids = [];
      });
 
@@ -122,7 +93,7 @@ angular.module('testApp').controller('resultsCtrl',
       $http({method:'GET', url:'restapi/mccms/cancel/'+ mccm_id}).success(function(data,status){
         if (data.results){
           alert("Ticket canceled");
-          $scope.getData();
+          $scope.getData($scope);
         }else{
           alert(data.message);
         }
@@ -135,7 +106,7 @@ angular.module('testApp').controller('resultsCtrl',
       $http({method:'DELETE', url:'restapi/mccms/delete/'+ mccm_id}).success(function(data,status){
         if (data.results){
           alert("Ticket deleted");
-          $scope.getData();
+          $scope.getData($scope);
         }else{
           alert(data.message);
         }
@@ -250,7 +221,7 @@ angular.module('testApp').controller('resultsCtrl',
       var promise= $http.get("restapi/mccms/update_total_events/"+prepid);
       promise.then(function(data){
         if (data.data.results){
-          $scope.getData();
+          $scope.getData($scope);
         }
         else{
           alert(data.data.message);
