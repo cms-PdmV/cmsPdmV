@@ -25,7 +25,7 @@ class RenewCertificate(RESTResource):
         Renew certificates on our request upload/injection machines
         """
         # machines = ["cms-pdmv-op.cern.ch"]
-        machines = ["vocms081.cern.ch"]
+        machines = ["vocms0481.cern.ch"]
         for elem in machines:
             ssh_exec = SSHExecutor(elem)
             try:

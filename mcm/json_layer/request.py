@@ -1435,8 +1435,14 @@ class request(json_base):
         else:
             test_file_name = '%s_test.sh' % (prepid)
 
+        if not for_validation:
+            bash_file += ['# Make a proxy for submission',
+                          'voms-proxy-init --voms cms --out $(pwd)/%s_voms_proxy.txt --hours 1' % (prepid),
+                          'export X509_USER_PROXY=$(pwd)/%s_voms_proxy.txt' % (prepid)]
+
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        # If it is SLC6, then dump, otherwise CC7
+        dump_test_to_file = scram_arch_os == 'SLCern6'
         if dump_test_to_file:
             bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
@@ -1482,10 +1488,6 @@ class request(json_base):
             bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
                           # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
-                          '']
-        elif not for_validation:
-            bash_file += ['# PdmV proxy',
-                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
         # Events to run
@@ -1648,24 +1650,27 @@ class request(json_base):
                           '# Make file executable',
                           'chmod +x %s' % (test_file_name),
                           '']
-
-        if for_validation:
             # Validation will run on CC7 machines (HTCondor, lxplus)
+            # Config generation for production run on CC7 machine - vocms0481
             # If it's CC7, just run the script normally
             # If it's SLC6, run it in slc6 singularity container
             if scram_arch_os == 'SLCern6':
-                bash_file += ['# Run in SLC6 container',
-                              '# Mount afs, eos, cvmfs',
-                              '# Mount /etc/grid-security for xrootd',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                if for_validation:
+                    bash_file += ['# Run in SLC6 container',
+                                  '# Mount afs, eos, cvmfs',
+                                  '# Mount /etc/grid-security for xrootd',
+                                  'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
+                else:
+                    bash_file += ['# Run in SLC6 container',
+                                  '# Mount afs, cvmfs',
+                                  '# Mount /etc/grid-security for xrootd',
+                                  'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
 
-        else:
-            # Config generation for production run on SLC6 machine - vocms081
-            # If it's SLC6, just run the script normally
-            # If it's CC7, run it in cc7 singularity container
-            if scram_arch_os == 'CentOS7':
-                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+        if not for_validation:
+            if dump_test_to_file:
+                bash_file += ['rm -f $(pwd)/%s' % (test_file_name)]
+
+            bash_file += ['rm -f $(pwd)/%s_voms_proxy.txt' % (prepid)]
 
         # Empty line at the end of the file
         bash_file += ['']
@@ -1697,8 +1702,10 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = SSHExecutor('vocms081.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+                prepid = self.get_attribute('prepid')
+                ssh_exec = SSHExecutor('vocms0481.cern.ch')
+                cmd = 'voms-proxy-init --voms cms --out /tmp/%s_voms_proxy.txt --hours 1\n\n' % (prepid)
+                cmd += 'export X509_USER_PROXY=/tmp/%s_voms_proxy.txt\n' % (prepid)
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
@@ -1707,6 +1714,7 @@ class request(json_base):
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
 
+                cmd += 'rm -f /tmp/%s_voms_proxy.txt\n' % (prepid)
                 stdout, stderr = ssh_exec.execute_command(cmd)
                 self.logger.info(cmd)
                 if not stdout and not stderr:
@@ -2403,15 +2411,6 @@ class request(json_base):
             timeout = self.get_n_unfold_efficiency(settings.get_value('test_target_fallback')) * self.get_sum_time_events()
         return (fraction, timeout)
 
-    def get_timeout(self):
-        default = settings.get_value('batch_timeout') * 60.
-        # we multiply the timeout if user wants more events in validation
-
-        default = multiplier * default
-        # to get the contribution from runtest
-        (fraction, estimate_rt) = self.get_timeout_for_runtest()
-        return int(max((estimate_rt) / fraction, default))
-
     def get_n_for_test(self, target=1.0, adjust=True):
         # => correct for the matching and filter efficiencies
         events = self.get_n_unfold_efficiency(target)
@@ -3073,7 +3072,7 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
+                        machine_name = "vocms0481.cern.ch"
                         executor = SSHExecutor(machine_name)
                         stdout, stderr = executor.execute_command(command)
                         if not stdout and not stderr:
