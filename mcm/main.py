@@ -24,7 +24,6 @@ from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 from json import dumps
 from urllib.request import unquote
-from tools.ssh_executor import ssh_executor
 
 import signal
 import logging
@@ -36,7 +35,7 @@ import sys
 
 start_time = datetime.datetime.now().strftime("%c")
 app = Flask(__name__)
-app.config.update(LOGGER_NAME="mcm_error")
+# app.config.update(LOGGER_NAME="mcm_error")
 api = Api(app)
 app.url_map.strict_slashes = False
 
@@ -423,55 +422,51 @@ api.add_resource(
     '/restapi/control/communicate/<string:message_number>')
 api.add_resource(CacheInfo, '/restapi/control/cache_info')
 api.add_resource(CacheClear, '/restapi/control/cache_clear')
+
 # Define loggers
-error_logger = app.logger
-max_bytes = getattr(error_logger, "rot_maxBytes", 10000000)
-backup_count = getattr(error_logger, "rot_backupCount", 1000)
-logger = logging.getLogger()
-logger.setLevel(0)
-user_filter = UserFilter()
-memory_filter = MemoryFilter()
-logging.getLogger('werkzeug').disabled = True
-console_logging = False
-console_handler = logging.StreamHandler(sys.stdout)
-# Error logger
-if console_logging:
-    error_handler = console_handler
-else:
-    error_log_filename = getattr(error_logger, "rot_error_file", "logs/error.log")
-    error_handler = logging.handlers.RotatingFileHandler(error_log_filename, 'a', max_bytes, backup_count)
+def setup_loggers(console_logging):
+    # 10 MB
+    max_bytes = 10000000
+    logger = logging.getLogger()
+    logger.setLevel(0)
+    user_filter = UserFilter()
+    memory_filter = MemoryFilter()
+    logging.getLogger('werkzeug').disabled = True
+    # Error logger
+    error_logger = logging.getLogger('mcm_error')
+    if console_logging:
+        error_handler = logging.StreamHandler(sys.stdout)
+    else:
+        error_handler = logging.handlers.RotatingFileHandler("logs/error.log", 'a', max_bytes, 1000)
 
-error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-error_handler.setFormatter(error_formatter)
-error_handler.addFilter(user_filter)
-error_logger.addHandler(error_handler)
+    error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+    error_handler.setFormatter(error_formatter)
+    error_handler.addFilter(user_filter)
+    error_logger.handlers = [error_handler]
 
-# Injection logger
-# due to LogAdapter empty space for message will be added inside of it
-injection_logger = logging.getLogger("mcm_inject")
-if console_logging:
-    injection_handler = console_handler
-else:
-    injection_handler = logging.FileHandler('logs/inject.log', 'a')
+    # Injection logger
+    injection_logger = logging.getLogger("mcm_inject")
+    if console_logging:
+        injection_handler = logging.StreamHandler(sys.stdout)
+    else:
+        injection_handler = logging.handlers.RotatingFileHandler("logs/inject.log", 'a', max_bytes, 20)
 
-injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-injection_handler.setFormatter(injection_formatter)
-injection_logger.addHandler(injection_handler)
+    injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+    injection_handler.setFormatter(injection_formatter)
+    injection_logger.handlers = [injection_handler]
 
-# Access log file
-access_logger = logging.getLogger("access_log")
-access_log_filename = getattr(access_logger, "rot_access_file", "logs/access.log")
-if console_logging:
-    access_handler = console_handler
-else:
-    access_handler = logging.handlers.RotatingFileHandler(access_log_filename, 'a', max_bytes, backup_count)
+    # Access log file
+    access_logger = logging.getLogger("access_log")
+    if console_logging:
+        access_handler = logging.StreamHandler(sys.stdout)
+    else:
+        access_handler = logging.handlers.RotatingFileHandler("logs/access.log", 'a', max_bytes, 1000)
 
-access_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-access_handler.setLevel(logging.DEBUG)
-access_handler.setFormatter(access_formatter)
-access_handler.addFilter(user_filter)
-access_handler.addFilter(memory_filter)
-access_logger.addHandler(access_handler)
+    access_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
+    access_handler.setFormatter(access_formatter)
+    access_handler.addFilter(user_filter)
+    access_handler.addFilter(memory_filter)
+    access_logger.handlers = [access_handler]
 
 # Log accesses
 def after_this_request(f):
@@ -488,13 +483,13 @@ def call_after_request_callbacks(response):
 
 @app.before_request
 def log_access():
-    query = "?" + request.query_string if request.query_string else ""
-    full_url = request.path + unquote(query).decode('utf-8').encode('ascii', 'ignore')
+    query = "?%s" % (request.query_string.decode('ascii'))
+    full_url = '%s%s' % (request.path, unquote(query))
     message = "%s %s %s %s" % (request.method, full_url, "%s", request.headers['User-Agent'])
     @after_this_request
     def after_request(response):
         g.message = g.message % response.status_code
-        access_logger.info(g.message)
+        logging.getLogger("access_log").info(g.message)
     g.message = message
 
 
@@ -508,4 +503,5 @@ def at_flask_exit(*args):
 
 signal.signal(signal.SIGTERM, at_flask_exit)
 if __name__ == '__main__':
+    setup_loggers('--dev' in sys.argv)
     run_flask()
