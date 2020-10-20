@@ -21,7 +21,7 @@ from json_layer.flow import flow
 from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.installer import installer
 import tools.settings as settings
@@ -1697,21 +1697,23 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='vocms081.cern.ch')
+                ssh_exec = SSHExecutor('vocms081.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
                     test = '-u cmsweb-testbed.cern.ch'
+
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
-                _, stdout, stderr = ssh_exec.execute(cmd)
+
+                stdout, stderr = ssh_exec.execute_command(cmd)
                 self.logger.info(cmd)
                 if not stdout and not stderr:
                     self.logger.error('SSH error while changing priority of {0}'.format(
                         self.get_attribute('prepid')))
                     return False
-                output_text = stdout.read()
+                output_text = stdout
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
                 try:
                     __out = loads(output_text)
@@ -2503,7 +2505,7 @@ class request(json_base):
         # create a string that supposedly uniquely identifies the request configuration for step
         uniqueString = ''
         if self.get_attribute('fragment'):
-            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            fragment_hash = hashlib.sha224(self.get_attribute('fragment').encode('utf-8')).hexdigest()
             uniqueString += fragment_hash
         if self.get_attribute('fragment_tag'):
             uniqueString += self.get_attribute('fragment_tag')
@@ -2519,7 +2521,7 @@ class request(json_base):
     def configuration_identifier(self, step_i):
         uniqueString = self.unique_string(step_i)
         # create a hash value that supposedly uniquely defines the configuration
-        hash_id = hashlib.sha224(uniqueString).hexdigest()
+        hash_id = hashlib.sha224(uniqueString.encode('utf-8')).hexdigest()
         return hash_id
 
     def pickup_all_performance(self, directory):
@@ -3072,16 +3074,16 @@ class request(json_base):
                             return False
 
                         machine_name = "vocms081.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
+                        executor = SSHExecutor(machine_name)
+                        stdout, stderr = executor.execute_command(command)
                         if not stdout and not stderr:
                             self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                             self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                             self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                               what='Configuration upload')
                             return False
-                        output = stdout.read()
-                        error = stderr.read()
+                        output = stdout
+                        error = stderr
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')

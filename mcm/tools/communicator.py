@@ -2,7 +2,7 @@ import smtplib
 import logging
 
 from email.message import EmailMessage
-from email.utils import make_msgid
+from email.utils import make_msgid, formatdate
 from tools.locator import locator
 import tools.settings as settings
 from tools.locker import locker
@@ -28,7 +28,7 @@ class communicator:
                 msg = EmailMessage()
                 msg['From'] = sender
                 msg['To'] = addressee
-                # msg['Date'] = formatdate(localtime=True)
+                msg['Date'] = formatdate(localtime=True)
                 new_msg_ID = make_msgid()
                 msg['Message-ID'] = new_msg_ID
                 msg['Subject'] = subject
@@ -74,7 +74,7 @@ class communicator:
         else:
             msg['Subject'] = '[McM] ' + subject
 
-        msg['To'] = COMMASPACE.join(destination)
+        msg['To'] = ', '.join(destination)
         msg['Date'] = formatdate(localtime=True)
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID

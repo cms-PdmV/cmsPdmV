@@ -26,8 +26,7 @@ class ValidationControl():
     def __init__(self):
         self.request_db = database('requests')
         self.chained_request_db = database('chained_requests')
-        self.ssh_executor = SSHExecutor(settings.get_value('node_for_test'),
-                                        '/home/pdmvserv/private/credentials_json.txt')
+        self.ssh_executor = SSHExecutor(settings.get_value('node_for_test'))
         self.storage = ValidationStorage()
         self.logger = logging.getLogger()
         locator = Locator('validation/tests', care_on_existing=False)

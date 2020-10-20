@@ -367,7 +367,7 @@ class json_base:
                reply_msg_ID=None,
                accumulate=False):
 
-        dest = map(lambda i: i, who)
+        dest = who
         if actors:
             auth = authenticator()
             # add the actors to the object

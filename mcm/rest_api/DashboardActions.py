@@ -2,7 +2,7 @@
 import os
 
 from rest_api.RestAPIMethod import RESTResource
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.user_management import access_rights
 import subprocess
 
@@ -19,16 +19,16 @@ class GetBjobs(RESTResource):
         """
         Get bjobs information regarding the condor clusters
         """
-        ssh_exec = ssh_executor()
+        ssh_exec = SSHExecutor('lxplus.cern.ch')
         try:
-            stdin, stdout, stderr = ssh_exec.execute(self.create_command(options))
-            out = stdout.read()
-            err = stderr.read()
+            stdout, stderr = ssh_exec.execute_command(self.create_command(options))
+            out = stdout
+            err = stderr
             if err:
                 return {"results": err}
             return {"results": out}
         finally:
-            ssh_exec.close_executor()
+            ssh_exec.close_connections()
 
     def create_command(self, options):
         bcmd = 'module load lxbatch/tzero && condor_q -nobatch '

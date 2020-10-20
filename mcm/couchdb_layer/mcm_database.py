@@ -484,3 +484,6 @@ class database:
 
         results = self.__make_request(url)
         return results
+
+    def cache_size(self):
+        return 0, 0

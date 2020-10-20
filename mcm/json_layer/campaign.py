@@ -107,7 +107,7 @@ class campaign(json_base):
 
     def add_request(self, req_json={}):
         try:
-            from request import request
+            from json_layer.request import request
             req = request(json_input=req_json)
         except ImportError as ex:
             self.logger.error('Could not import \'request\' module. Reason: %s' % (ex))

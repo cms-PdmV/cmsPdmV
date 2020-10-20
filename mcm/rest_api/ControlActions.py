@@ -3,7 +3,7 @@ import flask
 from collections import defaultdict
 
 from rest_api.RestAPIMethod import RESTResource
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.user_management import access_rights, authenticator
 import tools.settings as settings
 from json import dumps, loads
@@ -27,13 +27,13 @@ class RenewCertificate(RESTResource):
         # machines = ["cms-pdmv-op.cern.ch"]
         machines = ["vocms081.cern.ch"]
         for elem in machines:
-            ssh_exec = ssh_executor(server=elem)
+            ssh_exec = SSHExecutor(elem)
             try:
                 self.logger.info("Renewing certificate for: %s" % (elem))
-                stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
+                stdout, stderr = ssh_exec.execute_command(self.create_command(elem))
                 self.logger.info("Certificate renewed:\n{0}".format(stdout.read()))
             finally:
-                ssh_exec.close_executor()
+                ssh_exec.close_connections()
 
     def create_command(self, machine):
             # crab setup

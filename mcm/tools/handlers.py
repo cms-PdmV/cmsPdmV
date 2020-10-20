@@ -6,7 +6,7 @@ from random import randint
 from threading import Thread, Lock
 from queue import Queue
 
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
 import tools.settings as settings
@@ -172,34 +172,32 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms081.cern.ch') as ssh:
+            with SSHExecutor('vocms081.cern.ch') as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
-                _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
-                if error:
-                    self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
-                    if '.bashrc: Permission denied' in error:
-                        raise AFSPermissionError(error)
+                stdout, stderr = ssh.execute_command(cmd)
+                if stderr:
+                    self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, stderr))
+                    if '.bashrc: Permission denied' in stderr:
+                        raise AFSPermissionError(stderr)
 
-                if output:
-                    self.inject_logger.info('Output for %s injection. %s' % (self.prepid, output))
+                if stdout:
+                    self.inject_logger.info('Output for %s injection. %s' % (self.prepid, stdout))
 
-                if error and not output:  # money on the table that it will break as well?
+                if stderr and not stdout:  # money on the table that it will break as well?
                     self.notify('Request injection failed for %s' % (self.prepid),
-                                'Error in wmcontrol: %s' % (error),
+                                'Error in wmcontrol: %s' % (stderr),
                                 mcm_r)
                     return False
 
-                output_lines = output.split('\n')
+                output_lines = stdout.split('\n')
                 injected_workflows = [line.split()[-1] for line in output_lines if line.startswith('Injected workflow:')]
                 if not injected_workflows:
                     # No workflows were created
                     self.notify('Request injection happened but no request manager names for %s' % (self.prepid),
                                 'Injection has succeeded but no request manager names were registered. ' +
-                                'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (output, error),
+                                'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (stdout, stderr),
                                 mcm_r)
                     return False
                 else:
@@ -490,27 +488,26 @@ class RequestApprover(Handler):
 
     def internal_run(self):
         command = self.make_command()
-        executor = ssh_executor(server='vocms081.cern.ch')
+        executor = SSHExecutor('vocms081.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                _, stdout, stderr = executor.execute(command)
+                stdout, stderr = executor.execute_command(command)
                 if not stdout and not stderr:
                     self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
                     return
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.info('Wmapprove output: %s' % output)
-                if not error and 'Something went wrong' not in output:
+
+                self.logger.info('Wmapprove output: %s' % stdout)
+                if not stderr and 'Something went wrong' not in stdout:
                     break
                 time.sleep(3)
                 trails += 1
-            if error or 'Something went wrong' in output:
-                message = 'Error in wmapprove: %s' % (output if 'Something went wrong' in output else error)
+            if stderr or 'Something went wrong' in stdout:
+                message = 'Error in wmapprove: %s' % (stdout if 'Something went wrong' in stdout else stderr)
                 self.logger.error(message)
-                self.send_email_failure(output, error)
+                self.send_email_failure(stdout, stderr)
                 return {
                     'results': False,
                     'message': message}

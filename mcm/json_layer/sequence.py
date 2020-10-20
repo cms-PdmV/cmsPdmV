@@ -77,7 +77,7 @@ class sequence(json_base):
 
     def to_string(self):
         text = ''
-        keys = self.json().keys()
+        keys = list(self.json().keys())
         keys.sort()
         for key in keys:
             if key in []:
