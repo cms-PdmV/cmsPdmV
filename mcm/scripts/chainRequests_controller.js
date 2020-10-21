@@ -598,7 +598,7 @@ var ModalDropdownCtrl = function($scope, $modalInstance, $http, prepid, member_o
        member_of_campaign)
 
     promiseDeep.then(function(d){
-      d.data.rows[0].doc.campaigns.forEach(function(c) {
+      d.data.results[0].campaigns.forEach(function(c) {
         $scope.campaignListDropdown.push(c[0]);
       });
       $scope.loadingData = false;

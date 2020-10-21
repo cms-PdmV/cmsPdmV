@@ -172,13 +172,18 @@ angular.module('testApp').controller('mainCtrl',
     } 
 
     let query = '';
+    let url = 'search?db_name=' + scope.dbName;
     _.each($location.search(), function(value, key) {
-      if ((key != 'shown') && (key != 'fields')) {
+      if ((key != 'shown') && (key != 'fields') && (key != 'from_ticket')) {
         query += '&' + key + '=' + value;
       }
     });
+    if ($location.search()["from_ticket"]){
+      ticket = $location.search()["from_ticket"];
+      url = 'restapi/chained_requests/from_ticket?ticket=' + ticket;
+    }
     scope.got_results = false; //to display/hide the 'found n results' while reloading
-    let promise = $http.get('search?db_name=' + scope.dbName + query);
+    let promise = $http.get(url + query);
     promise.then(function(data) {
       scope.result_status = data.status;
       scope.got_results = true;

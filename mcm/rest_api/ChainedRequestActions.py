@@ -251,7 +251,7 @@ class FlowToNextStep(RESTResource):
                 flow_results.pop('generated_requests')
             res.append(flow_results)
         if len(chains_requests_dict):
-            chain_id = chains_requests_dict.iterkeys().next()
+            chain_id = list(chains_requests_dict.keys())[0]
             mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
             if mccm_ticket is not None:
                 mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
@@ -703,7 +703,7 @@ class ChainsFromTicket(RESTResource):
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
             return {}
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
-        generated_chains = list(result[0]['generated_chains'].iterkeys())
+        generated_chains = list(result[0]['generated_chains'].keys())
         generated_chains.sort()
         start = page * limit
         if start > len(generated_chains):
@@ -717,7 +717,7 @@ class ChainsFromTicket(RESTResource):
             chained_request_query = chained_requests_db.construct_lucene_query({'prepid': generated_chains[start:fetch_till]}, boolean_operator="OR")
             chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
             start += 20
-        return chained_request_list
+        return {'results': chained_request_list}
 
 
 class TaskChainDict(RESTResource):

@@ -342,9 +342,9 @@ angular.module('testApp').controller('resultsCtrl',
         }
         var promiseDeep = $http.get(url);
         promiseDeep.then(function(d){
-          d.data.rows[0].doc.campaigns.forEach(function(c) {
-            var prepid = d.data.rows[0].doc.prepid;
-            var alias = d.data.rows[0].doc.alias;
+          d.data.results[0].campaigns.forEach(function(c) {
+            var prepid = d.data.results[0].prepid;
+            var alias = d.data.results[0].alias;
             if (prepid in $scope.campaignListDropdown) {
               $scope.campaignListDropdown[prepid].push(c[0]);
             } else {

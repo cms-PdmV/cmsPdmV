@@ -192,7 +192,7 @@
               <br>
             </span>
             <span title="Silently skip already existing chained requests"><input type="checkbox" ng-model="skipExistingChains"> Generate only non-existing chained requests</span><br>
-            <span title="Generate all chained requests for all requests and chained campaings. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests</span>
+            <span title="Generate all chained requests for all requests and chained campaings in the ticket without checking if such chained request already exists. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests without checking for existing ones</span>
           </div>
           <div class="modal-footer">
             <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, skipExistingChains, generateAllChains)">Confirm</button>

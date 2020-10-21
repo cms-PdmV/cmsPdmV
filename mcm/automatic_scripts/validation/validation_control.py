@@ -636,6 +636,7 @@ class ValidationControl():
             request['validation']['results'] = {}
             request['approval'] = 'none'
             request['status'] = 'new'
+            request.update_history({'action': 'failed'})
             self.logger.warning('Saving %s', request['prepid'])
             self.request_db.save(request)
 
@@ -669,6 +670,7 @@ class ValidationControl():
 
         for _, request in requests.items():
             self.logger.warning('Saving %s', request['prepid'])
+            request.update_history({'action': 'succeeded'})
             self.request_db.save(request)
 
         self.notify_validation_suceeded(validation_name)

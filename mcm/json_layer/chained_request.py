@@ -337,6 +337,21 @@ class chained_request(json_base):
             block_white_list = []
         return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)['result']
 
+    def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False, for_validation=False, gen_script=False):
+        if scratch:
+            req_ids = self.get_attribute('chain')
+        else:
+            req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
+        rdb = database('requests')
+        setup_file = ''
+        for (index, req_id) in enumerate(req_ids):
+            req = request(rdb.get(req_id))
+            if not req.is_root and 'validation' not in req._json_base__status:  # do it only for root or possible root request
+                break
+            setup_file += req.get_setup_file2(for_validation=for_validation, automatic_validation=False)
+            if run and validation:
+                req.reload()
+        return setup_file
 
     def test_output_ds(self):
         req_db = database("requests")

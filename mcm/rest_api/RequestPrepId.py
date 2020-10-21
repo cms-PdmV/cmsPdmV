@@ -24,7 +24,7 @@ class RequestPrepId(RESTResourceIndex):
             pid = '%s-%s-%05d' % (pwg, camp, sn)
             if sn == 1:
                 self.logger.info('Beginning new prepid family: %s-%s' % (pwg, camp))
-            db_camp = database('campaigns', cache_enabled=True)
+            db_camp = database('campaigns')
             req_camp = campaign(db_camp.get(camp))
             new_request = request(req_camp.add_request({'_id': pid, 'prepid': pid,
                 'pwg': pwg, 'member_of_campaign': camp}))
