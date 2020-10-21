@@ -1361,6 +1361,10 @@ class request(json_base):
 
         bash_file = ['#!/bin/bash', '']
 
+        if not for_validation and not automatic_validation:
+            directory = installer.build_location(prepid)
+            bash_file += ['cd %s' % (directory), '']
+
         sequences = self.get_attribute('sequences')
         if for_validation and automatic_validation:
             for index, sequence_dict in enumerate(sequences):
@@ -1483,6 +1487,7 @@ class request(json_base):
             bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
                           # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          'export HOME=$(pwd)',
                           '']
         elif not for_validation:
             bash_file += ['# PdmV proxy',

@@ -5,7 +5,7 @@ import os.path
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
-from xml.etree.ElementTree import ParseError
+# from xml.etree.ElementTree import ParseError
 from validation_storage import ValidationStorage
 from new_ssh_executor import SSHExecutor
 
@@ -115,8 +115,8 @@ class ValidationControl():
         self.logger.info('Already submitted validations:\n%s', '\n'.join(already_submitted))
         to_be_submitted = list((chained_requests | requests) - already_submitted)
 
-        self.logger.warning('Will keep only MultiValidation campaigns!')
-        to_be_submitted = [x for x in to_be_submitted if 'multivalidation' in x.lower()]
+        # self.logger.warning('Will keep only MultiValidation campaigns!')
+        # to_be_submitted = [x for x in to_be_submitted if 'multivalidation' in x.lower()]
 
         self.logger.info('New validations to be submitted:\n%s', '\n'.join(to_be_submitted))
         return to_be_submitted
@@ -615,8 +615,10 @@ class ValidationControl():
             return True
 
         list_of_cmssw = [x.replace('CMSSW_', '').split('_')[0:3] for x in list_of_cmssw]
+        # Convert to integers
+        list_of_cmssw = [[int(y) for y in x] for x in list_of_cmssw]
         list_of_cmssw = sorted(list_of_cmssw, key=lambda x: tuple(x))
-        self.logger.info('CMSSW versions of %s: %s', validation_name, ', '.join(['_'.join(x) for x in list_of_cmssw]))
+        self.logger.info('CMSSW versions of %s: %s', validation_name, ', '.join(['_'.join([str(y) for y in x]) for x in list_of_cmssw]))
         lowest_version = list_of_cmssw[0]
         return lowest_version[0] > 7 or (lowest_version[0] == 7 and lowest_version[1] > 3)
 
@@ -639,6 +641,10 @@ class ValidationControl():
             self.request_db.save(request)
 
         self.storage.delete(validation_name)
+        # Delete validation directory
+        item_directory = '%s%s' % (self.test_directory_path, validation_name)
+        command = ['rm -rf %s' % (item_directory)]
+        _, _ = self.ssh_executor.execute_command(command)
         self.logger.info('Validation failed for %s', validation_name)
 
     def validation_succeeded(self, validation_name):
@@ -668,6 +674,10 @@ class ValidationControl():
 
         self.notify_validation_suceeded(validation_name)
         self.storage.delete(validation_name)
+        # Delete validation directory
+        item_directory = '%s%s' % (self.test_directory_path, validation_name)
+        command = ['rm -rf %s' % (item_directory)]
+        _, _ = self.ssh_executor.execute_command(command)
         self.logger.info('Validation succeeded for %s', validation_name)
 
     def parse_job_report(self, report_path, threads, expected_events):
@@ -681,14 +691,14 @@ class ValidationControl():
         except ExpatError:
             # Invalid XML file
             return None
-        except ParseError as err:
+        except Exception as err:
             self.logger.error('Error parsing XML: %s', err)
             # Empty or invalid XML file
             return None
 
         root = tree.getroot()
         total_events = root.findall('.//TotalEvents')
-        if total_events is not None:
+        if total_events:
             total_events = int(total_events[-1].text)
         else:
             total_events = None
@@ -714,18 +724,21 @@ class ValidationControl():
                 total_job_time = float(attr_value)
             elif attr_name == 'AvgEventTime' and event_throughput is None:
                 # Using old way if EventThroughput does not exist
-                event_throughput = 1 / (float(attr_value) / threads)
+                attr_value = float(attr_value)
+                if attr_value != 0 and threads != 0:
+                    event_throughput = 1 / (attr_value / threads)
 
-        self.logger.debug('%s values:', report_file_name)
-        self.logger.debug('  event_throughput %s', event_throughput)
-        self.logger.debug('  peak_value_rss %s', peak_value_rss)
-        self.logger.debug('  total_size %s', total_size)
-        self.logger.debug('  total_job_cpu %s', total_job_cpu)
-        self.logger.debug('  total_job_time %s', total_job_time)
-        self.logger.debug('  total_events %s', total_events)
         if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
-            self.logger.error('Not all values are in %s, aborting %s with %s threads', report_file_name, prepid, threads)
-            return {'all_values_present': False}
+            self.logger.error('Not all values are in %s, aborting validation with %s threads', report_file_name, threads)
+            self.logger.info('%s values:', report_file_name)
+            self.logger.info('  event_throughput %s', event_throughput)
+            self.logger.info('  peak_value_rss %s', peak_value_rss)
+            self.logger.info('  total_size %s', total_size)
+            self.logger.info('  total_job_cpu %s', total_job_cpu)
+            self.logger.info('  total_job_time %s', total_job_time)
+            self.logger.info('  total_events %s', total_events)
+            # What are we supposed to do?!
+            return None
 
         time_per_event = 1.0 / event_throughput
         size_per_event = total_size / total_events
