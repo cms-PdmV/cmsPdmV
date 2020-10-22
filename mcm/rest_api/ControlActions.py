@@ -93,7 +93,7 @@ class Search(RESTResource):
     def __init__(self):
         self.before_request()
         self.casting = defaultdict(lambda: defaultdict(lambda: ""))
-        self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))
+        self.type_dict = defaultdict(lambda: defaultdict(lambda: str))
         import json_layer
         for module in json_layer.__all__:
             mod_obj = getattr(json_layer, module)

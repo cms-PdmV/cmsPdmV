@@ -79,7 +79,7 @@ class database:
         if self.auth_header:
             req.add_header('Authorization', self.auth_header)
 
-        self.logger.info('Will make %s request to %s', method, url)
+        # self.logger.info('Will make %s request to %s', method, url)
         response = urlopen(req, data=data).read().decode('utf-8')
         # self.logger.info(response)
         if get_raw:

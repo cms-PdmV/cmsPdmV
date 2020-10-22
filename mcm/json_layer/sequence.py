@@ -44,8 +44,8 @@ class sequence(json_base):
                     self._json_base__json[key] = deepcopy(self._json_base__schema[key])
 
     def srepr(self, arg):
-        if isinstance(arg, basestring):  # Python 3: isinstance(arg, str)
-            return arg.decode('utf-8')
+        if isinstance(arg, str):  # Python 3: isinstance(arg, str)
+            return arg
         elif isinstance(arg, int):  # in case we have int we should make it string for cmsDriver construction
             return str(arg)
         try:

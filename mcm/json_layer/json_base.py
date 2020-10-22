@@ -433,7 +433,7 @@ class json_base:
             # check if "step" is a string -> some DR requests has single step string with , in it...
             # some DR requests has it.... most probably the generated ones
 
-            if isinstance(__seq[0]["step"], basestring):
+            if isinstance(__seq[0]["step"], str):
                 __step = __seq[0]["step"].split(",")[0].split(":")[0]
             else:
                 __step = __seq[0]["step"][0].split(":")[0]

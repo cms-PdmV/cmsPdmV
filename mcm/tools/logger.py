@@ -11,7 +11,7 @@ class InjectionLogAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         # TO-DO:
         # inject logger replaces \n with <breakline> in msg
-        return '[%s] %s' % (self.extra['handle'], msg.replace('\n', '<breakline>')), kwargs
+        return '[%s] %s' % (self.extra['handle'], msg), kwargs
 
 
 class UserFilter(logging.Filter):

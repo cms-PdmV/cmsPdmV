@@ -1362,7 +1362,8 @@ class request(json_base):
 
         if not for_validation and not automatic_validation:
             directory = installer.build_location(prepid)
-            bash_file += ['cd %s' % (directory), '']
+            bash_file += ['mkdir -p %s' % (directory),
+                          'cd %s' % (directory), '']
 
         sequences = self.get_attribute('sequences')
         if for_validation and automatic_validation:
@@ -1664,11 +1665,13 @@ class request(json_base):
                     bash_file += ['# Run in SLC6 container',
                                   '# Mount afs, eos, cvmfs',
                                   '# Mount /etc/grid-security for xrootd',
+                                  'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                                   'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
                 else:
                     bash_file += ['# Run in SLC6 container',
                                   '# Mount afs, cvmfs',
                                   '# Mount /etc/grid-security for xrootd',
+                                  'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                                   'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
 
         if not for_validation:
@@ -3070,7 +3073,7 @@ class request(json_base):
 
                 command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
-                    with installer(prepid, care_on_existing=False):
+                    # with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
                         if not request_arch:
                             self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
@@ -3161,7 +3164,7 @@ class request(json_base):
         return int(num)
 
     def get_list_of_steps(self, in_string):
-        if isinstance(in_string, basestring):
+        if isinstance(in_string, str):
             # in case sequence is defined as string -> legacy support
             return [el.split(":")[0] for el in in_string.split(",")]
         else:
