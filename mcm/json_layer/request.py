@@ -1362,7 +1362,8 @@ class request(json_base):
 
         if not for_validation and not automatic_validation:
             directory = installer.build_location(prepid)
-            bash_file += ['mkdir -p %s' % (directory),
+            bash_file += ['rm -rf %s' % (directory),
+                          'mkdir -p %s' % (directory),
                           'cd %s' % (directory), '']
 
         sequences = self.get_attribute('sequences')
@@ -3127,6 +3128,7 @@ class request(json_base):
                                     'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
 
                         self.inject_logger.info("Full upload result: {0}".format(output))
+                        executor.execute_command(['rm -rf %s' % (installer.build_location(prepid))])
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))
