@@ -3119,7 +3119,7 @@ class request(json_base):
                             additional_config_ids[i] = docid
                             hash_id = self.configuration_identifier(i)
                             saved = config_db.save({"_id": hash_id, "docid": docid,
-                                    "prepid": prepid, "unique_string": self.unique_string(i)})
+                                    "prepid": hash_id, "unique_string": self.unique_string(i)})
 
                             to_release.remove(hash_id)
                             locker.release(hash_id)

@@ -299,9 +299,10 @@ class SubmissionsBase(Handler):
         scram_arch = mcm_r.get_scram_arch()
         command = '#!/bin/bash\n'
         directory = locator_type.workLocation()
+        command += 'cd %s\n' % (directory)
         command += '# Make a proxy for submission\n'
-        command += 'voms-proxy-init --voms cms --out $(pwd)/%s_voms_proxy.txt --hours 1\n\n' % (self.prepid)
-        command += 'export X509_USER_PROXY=$(pwd)/%s_voms_proxy.txt\n' % (self.prepid)
+        command += 'voms-proxy-init --voms cms --out %s%s_voms_proxy.txt --hours 1\n\n' % (directory, self.prepid)
+        command += 'export X509_USER_PROXY=%s%s_voms_proxy.txt\n' % (directory, self.prepid)
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
         if 'slc6_' in scram_arch:
             command += 'cat > %s << \'EOF\'\n' % (executable_file_name)
@@ -326,7 +327,7 @@ class SubmissionsBase(Handler):
             command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
             command += 'rm -f %s\n' % (executable_file_name)
 
-        command += 'rm -f $(pwd)/%s_voms_proxy.txt\n' % (self.prepid)
+        command += 'rm -f %s%s_voms_proxy.txt\n' % (directory, self.prepid)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
 
