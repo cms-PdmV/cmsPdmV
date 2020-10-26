@@ -120,8 +120,15 @@ class database:
 
     def update(self, doc):
         try:
-            prepid = doc['prepid']
-            doc['_id'] = prepid
+            if 'prepid' in doc:
+                prepid = doc['prepid']
+                doc['_id'] = prepid
+            else:
+                prepid = doc['_id']
+
+            if not doc.get('_id'):
+                raise Exception('Missing _id!')
+
             url = '%s/%s' % (self.couchdb_url, prepid)
             response = self.__make_request(url, doc, method='PUT')
             return bool(response)
@@ -131,8 +138,13 @@ class database:
 
     def save(self, doc):
         try:
-            prepid = doc['prepid']
-            doc['_id'] = prepid
+            if 'prepid' in doc:
+                prepid = doc['prepid']
+                doc['_id'] = prepid
+
+            if not doc.get('_id'):
+                raise Exception('Missing _id!')
+
             url = '%s/%s' % (self.couchdb_url, prepid)
             response = self.__make_request(url, doc, method='PUT')
             return bool(response)
