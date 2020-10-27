@@ -105,7 +105,7 @@ class database:
             doc = self.__make_request(url, method='HEAD', get_raw=True)
             return True
         except Exception as ex:
-            self.logger.debug('Document exist check threw an exception: %s', (ex))
+            self.logger.debug('Document exist check for %s threw an exception: %s', prepid, ex)
             return False
 
     def delete(self, prepid):

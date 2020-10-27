@@ -70,7 +70,7 @@ class UpdateMccm(RESTResource):
                 return True
             else:
                 frequency[req] -= 1
-        for value in frequency.itervalues():
+        for _, value in frequency.items():
             if value != 0:
                 return True
         return False

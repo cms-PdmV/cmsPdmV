@@ -494,14 +494,14 @@ def log_access():
 
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8000, threaded=True, debug=True)
+    app.run(host='0.0.0.0', port=8000, threaded=True, debug=False)
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
     com = communicator()
     com.flush(0)
 
-signal.signal(signal.SIGTERM, at_flask_exit)
+# signal.signal(signal.SIGTERM, at_flask_exit)
 if __name__ == '__main__':
     setup_loggers('--dev' in sys.argv)
     run_flask()

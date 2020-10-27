@@ -94,14 +94,14 @@ class UpdateChainedRequest(RESTResource):
         """
         Update a chained request from the provided json content
         """
-        return self.update_request(flask.request.data)
+        return self.update_request(loads(flask.request.data))
 
     def update_request(self, data):
         if '_rev' not in data:
             return {"results": False, 'message': 'There is no previous revision provided'}
 
         try:
-            chained_req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=data)
         except chained_request.IllegalAttributeName:
             return {"results": False}
 

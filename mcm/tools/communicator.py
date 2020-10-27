@@ -18,7 +18,7 @@ class communicator:
     def flush(self, Nmin):
         res = []
         with locker.lock('accumulating_notifcations'):
-            for key in self.cache.keys():
+            for key in list(self.cache.keys()):
                 (subject, sender, addressee) = key
                 if self.cache[key]['N'] <= Nmin:
                     # flush only above a certain amount of messages
