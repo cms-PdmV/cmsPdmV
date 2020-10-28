@@ -874,7 +874,7 @@ class TaskChainDict(RESTResource):
                 if d.get('pilot_'):
                     pilot_string = d['pilot_']
 
-                for k in d.keys():
+                for k in list(d.keys()):
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d

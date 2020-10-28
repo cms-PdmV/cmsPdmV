@@ -677,7 +677,7 @@ class ApproveRequest(RESTResource):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
         """
-        return self.multiple_approve(flask.request.data)
+        return self.multiple_approve(flask.request.data.decode('utf-8'))
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:

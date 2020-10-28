@@ -141,6 +141,8 @@ class database:
             if 'prepid' in doc:
                 prepid = doc['prepid']
                 doc['_id'] = prepid
+            else:
+                prepid = doc['_id']
 
             if not doc.get('_id'):
                 raise Exception('Missing _id!')
@@ -171,6 +173,12 @@ class database:
 
             if options.get('endkey') and options['endkey'][-1] != '"':
                 options['endkey'] = '%s"' % (options['endkey'])
+
+            if options.get('key') and options['key'][0] != '"':
+                options['key'] = '"%s' % (options['key'])
+
+            if options.get('key') and options['key'][-1] != '"':
+                options['key'] = '%s"' % (options['key'])
 
             url += '?%s' % (self.dict_to_query(options))
 
