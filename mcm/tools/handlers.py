@@ -173,7 +173,7 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms081.cern.ch') as ssh:
+            with ssh_executor(server='vocms0481.cern.ch') as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
@@ -300,16 +300,15 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         scram_arch = mcm_r.get_scram_arch()
-        command = ''
         directory = locator_type.workLocation()
+        command = '#!/bin/bash\n'
+        command += 'cd %s \n' % directory
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-        if 'slc7_' in scram_arch:
+        if 'slc6_' in scram_arch:
+            command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
             command += '#!/bin/bash\n'
-            command += 'cd %s \n' % directory
-            command += 'cat > %s << \'EOF\'\n' % (executable_file_name)
-            command += '#!/bin/bash\n'
+            command += 'cd %s \n' % (directory)
 
-        command += 'cd %s \n' % (directory)
         command += mcm_r.make_release()
         command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
@@ -322,11 +321,12 @@ class SubmissionsBase(Handler):
                                                                                                      self.database_name,
                                                                                                      self.prepid,
                                                                                                      test_params)
-        if 'slc7_' in scram_arch:
-            command += '\n\nEOF\n'
+        if 'slc6_' in scram_arch:
+            command += '\n\nEndOfInjectFile\n'
             command += 'chmod +x %s\n' % (executable_file_name)
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
+            command += 'rm -f %s\n' % (executable_file_name)
 
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
@@ -516,7 +516,7 @@ class RequestApprover(Handler):
 
     def internal_run(self):
         command = self.make_command()
-        executor = ssh_executor(server='vocms081.cern.ch')
+        executor = ssh_executor(server='vocms0481.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1

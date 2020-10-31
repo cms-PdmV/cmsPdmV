@@ -1441,7 +1441,7 @@ class request(json_base):
             test_file_name = '%s_test.sh' % (prepid)
 
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        dump_test_to_file = (scram_arch_os == 'SLCern6')
         if dump_test_to_file:
             bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
@@ -1655,23 +1655,22 @@ class request(json_base):
                           'chmod +x %s' % (test_file_name),
                           '']
 
-        if for_validation:
-            # Validation will run on CC7 machines (HTCondor, lxplus)
-            # If it's CC7, just run the script normally
-            # If it's SLC6, run it in slc6 singularity container
-            if scram_arch_os == 'SLCern6':
+        if scram_arch_os == 'SLCern6':
+            if for_validation:
+                # Validation will run on CC7 machines (HTCondor, lxplus)
+                # If it's CC7, just run the script normally
+                # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['# Run in SLC6 container',
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
+                              'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                               'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
-
-        else:
-            # Config generation for production run on SLC6 machine - vocms081
-            # If it's SLC6, just run the script normally
-            # If it's CC7, run it in cc7 singularity container
-            if scram_arch_os == 'CentOS7':
+            else:
+                # Config generation for production run on CC7 machine - vocms0481
+                # If it's CC7, just run the script normally
+                # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run B /afs -B /eos -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']
@@ -1703,7 +1702,7 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='vocms081.cern.ch')
+                ssh_exec = ssh_executor(server='vocms0481.cern.ch')
                 cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
@@ -3113,7 +3112,7 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
+                        machine_name = "vocms0481.cern.ch"
                         executor = ssh_executor(server=machine_name)
                         _, stdout, stderr = executor.execute(command)
                         if not stdout and not stderr:
