@@ -35,7 +35,6 @@ import datetime
 import sys
 
 
-RESTResource.counter = shelve.open('.mcm_rest_counter')
 start_time = datetime.datetime.now().strftime("%c")
 app = Flask(__name__)
 app.config.update(LOGGER_NAME="mcm_error")
@@ -436,7 +435,7 @@ api.add_resource(FetchGroupActionObjects, '/restapi/notifications/fetch_group_ac
 api.add_resource(SearchNotifications, '/restapi/notifications/search')
 api.add_resource(MarkAsSeen, '/restapi/notifications/mark_as_seen')
 # Define loggers
-error_logger = app.logger
+error_logger = logging.getLogger('mcm_error')
 max_bytes = getattr(error_logger, "rot_maxBytes", 10000000)
 backup_count = getattr(error_logger, "rot_backupCount", 1000)
 logger = logging.getLogger()
@@ -444,7 +443,7 @@ logger.setLevel(0)
 user_filter = UserFilter()
 memory_filter = MemoryFilter()
 logging.getLogger('werkzeug').disabled = True
-console_logging = False
+console_logging = '--debug' in sys.argv
 console_handler = logging.StreamHandler(sys.stdout)
 # Error logger
 if console_logging:
@@ -511,10 +510,8 @@ def log_access():
 
 
 def run_flask():
-    print('Will do dummy ssh connection in order to initialize ssh_executor. Wait!')
-    ssh_executor().execute('echo pippo')
-    print('Finished ssh, McM will start shortly...')
-    app.run(host='0.0.0.0', port=443, threaded=True, ssl_context=('/etc/pki/tls/certs/localhost.crt', '/etc/pki/tls/private/localhost.key'))
+    debug = '--debug' in sys.argv
+    app.run(host='0.0.0.0', port=8000, threaded=True, debug=debug)
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
