@@ -64,10 +64,12 @@ class database:
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
 
-    def __init__(self,  db_name='',url=None, cache_enabled=False):
+    def __init__(self,  db_name='',url=None, lucene_url=None, cache_enabled=False):
         host = os.environ['HOSTNAME']
         if url is None:
             url = locator().dbLocation()
+        if lucene_url is None:
+            lucene_url = locator().lucene_url()
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
@@ -77,7 +79,7 @@ class database:
             self.cache_enabled=True
 
         try:
-            self.db = Database(db_name, url=url)
+            self.db = Database(db_name, url=url, lucene_url=lucene_url)
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
 
@@ -262,7 +264,7 @@ class database:
 
     def __pagify(self, page_num=0, limit=20):
         if page_num < 0:         ##couchdb-lucene dy default return limited resutlts
-            return 1000000000, 0 ## we set it to very high numer
+            return 16384, 0 ## we set it to very high numer
         skip = limit * page_num
         return limit, skip
 
@@ -558,11 +560,12 @@ class database:
                     'limit': limit,
                     'include_docs': True,
                     'skip': skip,
-                    'sort': '_id'
+                    'sort': '_id<string>'
                 }
                 if include_fields != '':
                     options['include_fields'] = include_fields
                 if sort != '':
+                    self.logger.warning('Setting sort to %s', sort)
                     options['sort'] = sort
                 data = self.db.FtiSearch(url, options=options, get_raw=get_raw)  # we sort ascending by doc._id field
                 break

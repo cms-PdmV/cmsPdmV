@@ -2,19 +2,22 @@ from json import dumps, loads
 
 import urllib
 import urllib2
+import logging
 
 class Database():
     """
     CoucDB interface class
     TO-DO: custom view queries; Error parsing ???
     """
-    def __init__(self, dbname = 'database', url = 'http://localhost:5984/', size = 1000):
+    def __init__(self, dbname = 'database', url = 'http://localhost:5984/', lucene_url = 'http://localhost:5985', size = 1000):
         self.__dbname = dbname
         self.__dburl = url
+        self.__luceneurl = lucene_url
         self.__queuesize = size
         self.opener = urllib2.build_opener(urllib2.HTTPHandler)
 
         self.reset_queue()
+        self.logger = logging.getLogger('mcm_error')
 
     def reset_queue(self):
         self.__queue = []
@@ -23,10 +26,25 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
+        self.logger.info('Build request: %s', self.__dburl + url)
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
             request = urllib2.Request(self.__dburl + url, data=dumps(data))
+        request.get_method = lambda: method
+        for key in headers:
+            request.add_header(key, headers[key])
+        return request
+
+    def construct_lucene_request(self, url, method='GET', headers={'Content-Type': 'application/json'}, data=None):
+        """
+        method to construct a HTTP reuqest to couchDB
+        """
+        self.logger.info('Build lucene request: %s', self.__luceneurl + url)
+        if data is None:
+            request = urllib2.Request(self.__luceneurl + url)
+        else:
+            request = urllib2.Request(self.__luceneurl + url, data=dumps(data))
         request.get_method = lambda: method
         for key in headers:
             request.add_header(key, headers[key])
@@ -130,7 +148,7 @@ class Database():
         """
         if "key" in options:
             options["key"] = '"'+str(options["key"])+'"'
-        db_request = self.construct_request("_fti/local/%s/%s&%s" %(self.__dbname, viewname, self.to_json_query(options)))
+        db_request = self.construct_lucene_request('local/%s/%s&%s' % (self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
         return data.read() if get_raw else loads(data.read())
 
