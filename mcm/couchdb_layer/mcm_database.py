@@ -12,7 +12,7 @@ from collections import defaultdict
 from couchDB_interface import *
 from tools.locker import locker
 
-from werkzeug.contrib.cache import SimpleCache
+from cachelib import SimpleCache
 
 class database:
     logger = logging.getLogger("mcm_error")

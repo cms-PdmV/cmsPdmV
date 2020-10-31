@@ -8,7 +8,7 @@ from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from tools.enum import Enum
 from flask import request, has_request_context
-from werkzeug.contrib.cache import SimpleCache
+from cachelib import SimpleCache
 
 
 class user_pack:
