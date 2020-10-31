@@ -2,7 +2,7 @@
 
 from download import downloader
 from transform import convert
-from simplejson import dumps
+from json import dumps
 
 class prep_scraper:
     def __init__(self, prep='http://cms.cern.ch/iCMS/prep/'):

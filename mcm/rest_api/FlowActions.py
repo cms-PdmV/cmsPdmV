@@ -3,7 +3,7 @@
 import flask
 import traceback
 
-from simplejson import loads
+from json import loads
 
 from couchdb_layer.mcm_database import database
 from RestAPIMethod import RESTResource

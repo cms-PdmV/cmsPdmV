@@ -6,7 +6,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights, authenticator
 import tools.settings as settings
-from simplejson import dumps, loads
+from json import dumps, loads
 
 from tools.communicator import communicator
 from couchdb_layer.mcm_database import database

@@ -6,7 +6,7 @@ import ast
 import logging
 import sys
 
-from simplejson import dumps
+from json import dumps
 from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *

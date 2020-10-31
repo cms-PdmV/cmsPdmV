@@ -2,7 +2,7 @@
 
 import itertools
 
-from simplejson import loads
+from json import loads
 from flask import request
 
 from RestAPIMethod import RESTResource

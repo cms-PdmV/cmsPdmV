@@ -1,4 +1,4 @@
-from simplejson import dumps, loads
+from json import dumps, loads
 
 import urllib
 import urllib2
