@@ -1,6 +1,7 @@
 import time
 import traceback
 import logging
+import random
 
 from random import randint
 from threading import Thread, Lock
@@ -303,6 +304,12 @@ class SubmissionsBase(Handler):
         directory = locator_type.workLocation()
         command = '#!/bin/bash\n'
         command += 'cd %s \n' % directory
+        prepid = mcm_r.get_attribute('prepid')
+        proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)
+        command += '# Make voms proxy\n'
+        command += 'voms-proxy-init --voms cms --out %s --hours 4\n' % (proxy_file_name)
+        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
+
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
         if 'slc6_' in scram_arch:
             command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
@@ -310,7 +317,6 @@ class SubmissionsBase(Handler):
             command += 'cd %s \n' % (directory)
 
         command += mcm_r.make_release()
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
         if locator_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
@@ -328,6 +334,7 @@ class SubmissionsBase(Handler):
             command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
             command += 'rm -f %s\n' % (executable_file_name)
 
+        command += 'rm -f %s' % (proxy_file_name)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
 
@@ -486,7 +493,10 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
-        command = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        command = ''
+        proxy_file_name = '/tmp/%032x_voms_proxy.txt' % (random.getrandbits(128))
+        command += 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
+        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
         command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         test_path = ''
         test_params = ''
@@ -494,6 +504,7 @@ class RequestApprover(Handler):
             test_path = '_testful'
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
         command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
+        command += 'rm -f %s\n' % (proxy_file_name)
         return command
 
     def send_email_failure(self, output, error):

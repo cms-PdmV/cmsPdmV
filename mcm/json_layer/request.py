@@ -10,6 +10,7 @@ import traceback
 import time
 import logging
 import math
+import random
 from math import sqrt
 from json import loads, dumps
 from operator import itemgetter
@@ -1440,6 +1441,12 @@ class request(json_base):
         else:
             test_file_name = '%s_test.sh' % (prepid)
 
+        if not for_validation:
+            bash_file += ['# Make voms proxy',
+                          'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 4',
+                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          '']
+
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
         dump_test_to_file = (scram_arch_os == 'SLCern6')
         if dump_test_to_file:
@@ -1485,13 +1492,8 @@ class request(json_base):
         if for_validation and automatic_validation:
             # Automatic validation
             bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
-                          # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
                           'export HOME=$(pwd)',
-                          '']
-        elif not for_validation:
-            bash_file += ['# PdmV proxy',
-                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
         # Events to run
@@ -1670,7 +1672,7 @@ class request(json_base):
                 # If it's CC7, just run the script normally
                 # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run B /afs -B /eos -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']
@@ -1703,13 +1705,17 @@ class request(json_base):
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
                 ssh_exec = ssh_executor(server='vocms0481.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+                proxy_file_name = '/tmp/%s_%032x_voms_proxy.txt' % (self.get_attribute('prepid'), random.getrandbits(128))
+                cmd = 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
+                cmd += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
                     test = '-u cmsweb-testbed.cern.ch'
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
+
+                cmd += 'rm -f %s\n' % (proxy_file_name)
                 _, stdout, stderr = ssh_exec.execute(cmd)
                 self.logger.info(cmd)
                 if not stdout and not stderr:
