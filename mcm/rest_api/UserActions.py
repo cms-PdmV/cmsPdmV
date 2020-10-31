@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
-from simplejson import loads
+from json import loads
 from flask import request
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 import tools.settings as settings
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.user import user
-from json_layer.notification import notification
 from tools.user_management import user_pack, roles, access_rights, authenticator
 
 
@@ -133,14 +132,6 @@ class AskRole(RESTResource):
             mcm_u.get_attribute('username'),
             l_type.baseurl(),
             mcm_u.get_attribute('username'))
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.USERS,
-            action_objects=[mcm_u.get_attribute('prepid')],
-            object_type='users',
-            target_role='production_manager')
         com.sendMail(to_who, subject, message)
 
         return {"results": True, "message": "user %s in for %s" % (mcm_u.get_attribute('username'), current)}
@@ -241,7 +232,7 @@ class NotifyPWG(RESTResource):
     def notify(self, body):
         db = database('users')
         data = loads(body)
-        list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
+        list_of_mails = [x["value"] for x in db.query_view('pwg-mail', options={'key': data["pwg"]})]
         com = communicator()
         com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
         return {'results': True, 'message': 'Sent message to {0}'.format(list_of_mails)}

@@ -2,17 +2,16 @@
 
 import flask
 
-from simplejson import dumps, loads
+from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm
-from json_layer.notification import notification
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):
@@ -95,14 +94,14 @@ class UpdateChainedRequest(RESTResource):
         """
         Update a chained request from the provided json content
         """
-        return self.update_request(flask.request.data)
+        return self.update_request(loads(flask.request.data))
 
     def update_request(self, data):
         if '_rev' not in data:
             return {"results": False, 'message': 'There is no previous revision provided'}
 
         try:
-            chained_req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=data)
         except chained_request.IllegalAttributeName:
             return {"results": False}
 
@@ -252,7 +251,7 @@ class FlowToNextStep(RESTResource):
                 flow_results.pop('generated_requests')
             res.append(flow_results)
         if len(chains_requests_dict):
-            chain_id = chains_requests_dict.iterkeys().next()
+            chain_id = list(chains_requests_dict.keys())[0]
             mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
             if mccm_ticket is not None:
                 mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
@@ -582,14 +581,6 @@ class TestChainedRequest(RESTResource):
                 text = 'Within chain %s \n' % mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
                 subject = 'Approval %s in chain %s for request %s' % ('validation', mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid'))
-                notification(
-                    subject,
-                    text,
-                    [],
-                    group=notification.REQUEST_APPROVALS,
-                    action_objects=[mcm_r.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=mcm_r)
                 mcm_r.notify(subject, text, accumulate=True)
             except Exception as e:
                 mcm_cr.reset_requests(str(e), notify_one=rid)
@@ -712,7 +703,7 @@ class ChainsFromTicket(RESTResource):
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
             return {}
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
-        generated_chains = list(result[0]['generated_chains'].iterkeys())
+        generated_chains = list(result[0]['generated_chains'].keys())
         generated_chains.sort()
         start = page * limit
         if start > len(generated_chains):
@@ -726,7 +717,7 @@ class ChainsFromTicket(RESTResource):
             chained_request_query = chained_requests_db.construct_lucene_query({'prepid': generated_chains[start:fetch_till]}, boolean_operator="OR")
             chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
             start += 20
-        return chained_request_list
+        return {'results': chained_request_list}
 
 
 class TaskChainDict(RESTResource):
@@ -883,7 +874,7 @@ class TaskChainDict(RESTResource):
                 if d.get('pilot_'):
                     pilot_string = d['pilot_']
 
-                for k in d.keys():
+                for k in list(d.keys()):
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d
@@ -1158,4 +1149,4 @@ class GetUniqueChainedRequestValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        return db.query_view_uniques(view_name=field_name, options=kwargs)

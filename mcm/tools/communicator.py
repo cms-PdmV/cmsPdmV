@@ -1,10 +1,8 @@
 import smtplib
 import logging
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email.utils import make_msgid
+from email.message import EmailMessage
+from email.utils import make_msgid, formatdate
 from tools.locator import locator
 import tools.settings as settings
 from tools.locker import locker
@@ -20,14 +18,14 @@ class communicator:
     def flush(self, Nmin):
         res = []
         with locker.lock('accumulating_notifcations'):
-            for key in self.cache.keys():
+            for key in list(self.cache.keys()):
                 (subject, sender, addressee) = key
                 if self.cache[key]['N'] <= Nmin:
                     # flush only above a certain amount of messages
                     continue
-                destination = addressee.split(COMMASPACE)
+                destination = addressee.split(', ')
                 text = self.cache[key]['Text']
-                msg = MIMEMultipart()
+                msg = EmailMessage()
                 msg['From'] = sender
                 msg['To'] = addressee
                 msg['Date'] = formatdate(localtime=True)
@@ -39,7 +37,7 @@ class communicator:
                 text += 'McM Announcing service'
                 # self.logger.info('Sending a message from cache \n%s'% (text))
                 try:
-                    msg.attach(MIMEText(text))
+                    msg.set_content(text)
                     smtpObj = smtplib.SMTP()
                     smtpObj.connect()
                     smtpObj.sendmail(sender, destination, msg.as_string())
@@ -47,7 +45,7 @@ class communicator:
                     self.cache.pop(key)
                     res.append(subject)
                 except Exception as e:
-                    print "Error: unable to send email", e.__class__
+                    communicator.logger.error("Error: unable to send email %s", e.__class__)
             return res
 
     def sendMail(self,
@@ -59,11 +57,11 @@ class communicator:
                  accumulate=False):
 
         if not isinstance(destination, list):
-            print "Cannot send email. destination should be a list of strings"
+            communicator.logger.error("Cannot send email. destination should be a list of strings")
             return
 
         destination.sort()
-        msg = MIMEMultipart()
+        msg = EmailMessage()
         # it could happen that message are send after forking, threading and there's no current user anymore
         msg['From'] = sender if sender else 'pdmvserv@cern.ch'
 
@@ -76,7 +74,7 @@ class communicator:
         else:
             msg['Subject'] = '[McM] ' + subject
 
-        msg['To'] = COMMASPACE.join(destination)
+        msg['To'] = ', '.join(destination)
         msg['Date'] = formatdate(localtime=True)
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID
@@ -110,11 +108,11 @@ class communicator:
         text += 'McM Announcing service'
 
         try:
-            msg.attach(MIMEText(text))
+            msg.set_content(text)
             smtpObj = smtplib.SMTP()
             smtpObj.connect()
             smtpObj.sendmail(sender, destination, msg.as_string())
             smtpObj.quit()
             return new_msg_ID
         except Exception as e:
-            print "Error: unable to send email", e.__class__
+            communicator.logger.error("Error: unable to send email %s", e.__class__)

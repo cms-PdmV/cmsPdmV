@@ -2,17 +2,16 @@
 
 import flask
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request
-from json_layer.notification import notification
 from tools.locker import semaphore_events
 import tools.settings as settings
 from tools.locator import locator
 from tools.user_management import access_rights
 from tools.handlers import RequestApprover
-from simplejson import loads
+from json import loads
 
 
 class GetBatch(RESTResource):
@@ -75,7 +74,7 @@ class BatchAnnouncer(RESTResource):
             rdb = database('requests')
             priority_coeff = settings.get_value('nanoaod_priority_increase_coefficient')
             if priority_coeff > 0:
-                for wf, requests in map_wf_to_prepid.iteritems():
+                for wf, requests in map_wf_to_prepid.items():
                     if len(requests) == 1 and 'nanoaod' in requests[0].lower():
                         for r_prepid in requests:
                             req = request(rdb.get(r_prepid))
@@ -307,16 +306,7 @@ class NotifyBatch(RESTResource):
         else:
             result = single_batch.notify(subject, message, who=to_who, sender=None)
             self.logger.info('result if False : %s' % result)
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.BATCHES,
-            target_role='production_manager',
-            action_objects=[single_batch.get_attribute('prepid')],
-            object_type='batches',
-            base_object=single_batch
-        )
+
         single_batch.update_history({'action': 'notify', 'step': message})
         single_batch.reload()
         return {'results': result}

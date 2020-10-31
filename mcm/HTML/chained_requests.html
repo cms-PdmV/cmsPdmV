@@ -27,7 +27,7 @@
     <div class="container" >
       <tabs>
         <pane heading="Select View" active="tabsettings.view.active">
-          <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults" always-show="true"></select-well>
+          <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns" always-show="true"></select-well>
         </pane>
         <pane heading="Navigation" active="tabsettings.navigation.active">
           <load-fields></load-fields>
@@ -40,7 +40,7 @@
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text">
             <div ng-switch-when="Actions" ng-hide="role(1);">
               {{'Actions'}}
               <!-- SORTING lines -->
@@ -72,7 +72,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in defaults" ng-if="value.select" style="white-space: nowrap;">
+          <td ng-repeat="value in dataColumns" ng-if="value.select" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">
                 <div ng-controller="ModalDemoCtrl">

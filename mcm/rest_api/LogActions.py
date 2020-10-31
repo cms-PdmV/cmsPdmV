@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.user_management import access_rights
 
 

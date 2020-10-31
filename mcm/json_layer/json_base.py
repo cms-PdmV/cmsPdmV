@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import logging
 import traceback
 
@@ -338,21 +339,16 @@ class json_base:
         return cls.__schema
 
     def print_self(self):
-        try:
-            import simplejson
-        except ImportError:
-            self.logger.error('Error: Could not import "json" module')
-            print self.__json
-        print simplejson.dumps(self.__json, indent=4)
+        print(json.dumps(self.__json, indent=4))
 
     def keys(self):
         return self.__schema.keys()
 
     def print_schema(self):
-        print '{'
+        print('{')
         for key in self.__json:
-            print key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')'
-        print '}'
+            print(key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')')
+        print('}')
 
     def get_approval_steps(self):
         return self.__approvalsteps
@@ -371,7 +367,7 @@ class json_base:
                reply_msg_ID=None,
                accumulate=False):
 
-        dest = map(lambda i: i, who)
+        dest = who
         if actors:
             auth = authenticator()
             # add the actors to the object
@@ -437,7 +433,7 @@ class json_base:
             # check if "step" is a string -> some DR requests has single step string with , in it...
             # some DR requests has it.... most probably the generated ones
 
-            if isinstance(__seq[0]["step"], basestring):
+            if isinstance(__seq[0]["step"], str):
                 __step = __seq[0]["step"].split(",")[0].split(":")[0]
             else:
                 __step = __seq[0]["step"][0].split(":")[0]

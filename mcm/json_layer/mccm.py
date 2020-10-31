@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from json_base import json_base
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database
 
 
@@ -84,7 +84,7 @@ class mccm(json_base):
 
     def update_mccm_generated_chains(self, chains_requests_dict):
         generated_chains = self.get_attribute('generated_chains')
-        for chain, requests in chains_requests_dict.iteritems():
+        for chain, requests in chains_requests_dict.items():
             if chain in generated_chains:
                 for request in chains_requests_dict[chain]:
                     generated_chains[chain].append(request)

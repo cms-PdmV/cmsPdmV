@@ -8,13 +8,22 @@ class SSHExecutor():
     SSH executor allows to perform remote commands and upload/download files
     """
 
-    def __init__(self, host, credentials_path):
+    def __init__(self, host, credentials_path=None):
         self.ssh_client = None
         self.ftp_client = None
         self.logger = logging.getLogger()
         self.remote_host = host
+        if not credentials_path:
+            credentials_path = '/home/pdmvserv/private/credentials_json.txt'
+
         self.credentials_file_path = credentials_path
         self.timeout = 3600
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, value, traceback):
+        self.close_connections()
 
     def setup_ssh(self):
         """
@@ -67,10 +76,10 @@ class SSHExecutor():
         stdout_list = []
         stderr_list = []
         for line in stdout.readlines():
-            stdout_list.append(line[0:256])
+            stdout_list.append(line[:512])
 
         for line in stderr.readlines():
-            stderr_list.append(line[0:256])
+            stderr_list.append(line[:512])
 
         stdout = ''.join(stdout_list).strip()
         stderr = ''.join(stderr_list).strip()

@@ -1,7 +1,7 @@
 import flask
 import time
 
-from simplejson import dumps, loads
+from json import dumps, loads
 
 from rest_api.RestAPIMethod import RESTResource
 from rest_api.RequestActions import RequestLister
@@ -11,7 +11,6 @@ from json_layer.user import user
 from json_layer.chained_campaign import chained_campaign
 from json_layer.chained_request import chained_request
 from json_layer.request import request
-from json_layer.notification import notification
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
@@ -71,7 +70,7 @@ class UpdateMccm(RESTResource):
                 return True
             else:
                 frequency[req] -= 1
-        for value in frequency.itervalues():
+        for _, value in frequency.items():
             if value != 0:
                 return True
         return False
@@ -617,7 +616,7 @@ class MccMReminderGenContacts(RESTResource):
             base_url = locator().baseurl()
             mail_communicator = communicator()
             service_account = settings.get_value('service_account')
-            for author_email, ticket_prepids in authors_tickets_dict.iteritems():
+            for author_email, ticket_prepids in authors_tickets_dict.items():
                 num_tickets = len(ticket_prepids)
                 subject = subject_template % (num_tickets, '' if num_tickets == 1 else 's')
                 message = message_template % (num_tickets, '' if num_tickets == 1 else 's')
@@ -675,14 +674,6 @@ Dear Production Managers,
 
         to_who = [settings.get_value('service_account')]
         to_who.extend(map(lambda u: u['email'], udb.query(query="role==production_manager", page_num=-1)))
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.REMINDERS,
-            action_objects=mccm_prepids,
-            object_type='mccms',
-            target_role='production_manager')
         com.sendMail(
             to_who,
             subject,
@@ -738,7 +729,7 @@ class CheckIfAllApproved(RESTResource):
         req_db = database('requests')
         query = ''
         for root_request in mccm_doc.get('requests', []):
-            if isinstance(root_request, str) or isinstance(root_request, unicode):
+            if isinstance(root_request, str):
                 query += '%s\n' % (root_request)
             elif isinstance(root_request, list):
                 # List always contains two elements - start and end of a range

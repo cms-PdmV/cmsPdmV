@@ -24,12 +24,12 @@
     <span ng-controller="resultsCtrl">
     <div ng-include src="'HTML/navbar_template.html'"></div>
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="batches_defaults"></select-well>
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns"></select-well>
     </div>
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in batches_defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
             <div ng-switch-when="Actions" > <!-- ng-hide="role(1);"> -->
               {{column.text}}
               <!-- SORTING lines -->
@@ -61,7 +61,7 @@
       </thead>
       <tbody>
         <tr ng-repeat="data in result  | orderBy:sort.column: sort.descending | filter: filt">
-          <td ng-repeat="value in batches_defaults" ng-if="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
+          <td ng-repeat="value in dataColumns" ng-if="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions" > <!--ng-hide="role(1);">-->
                 <div ng-controller="ModalDemoCtrl">

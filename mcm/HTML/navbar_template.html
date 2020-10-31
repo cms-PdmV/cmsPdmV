@@ -34,7 +34,7 @@
       </li>
       <li class="divider-vertical" ng-hide="role(1);"></li>
       <li ng-class='{ "active": dbName=="mccms"}' ng-hide="role(1);">
-        <a ng-href='mccms' target="_self">Mccm <i class="icon-tasks"></i></a>
+        <a ng-href='mccms' target="_self">MccM <i class="icon-tasks"></i></a>
       </li>
       <li class="divider-vertical" ng-hide="role(3);"></li>
       <li ng-class='{ "active": dbName=="dashboard"}' ng-hide="role(3);">
@@ -55,11 +55,6 @@
       <li class="divider-vertical" ng-hide="role(4);"></li>
       <li ng-hide="role(4);">
         <a ng-href='admin/_utils/' target="_self">Admin <i class="icon-star"></i></a>
-      </li>
-      <li ng-show="isDevMachine();" class="divider-vertical" ></li>
-      <li ng-show="isDevMachine();">
-        <!--<a ng-hide="isDevMachine();" ng-href='http://cms-pdmv.web.cern.ch/cms-pdmv/McM/prod' target="_blank">Status</a>-->
-        <a ng-show="isDevMachine();" ng-href='http://cms-pdmv.web.cern.ch/cms-pdmv/McM/prod-dev' target="_blank">Status</a>
       </li>
       <li class="divider-vertical" ></li>
       <li> 

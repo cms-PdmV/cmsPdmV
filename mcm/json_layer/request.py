@@ -11,7 +11,7 @@ import time
 import logging
 import math
 from math import sqrt
-from simplejson import loads, dumps
+from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
@@ -21,8 +21,7 @@ from json_layer.flow import flow
 from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
-from json_layer.notification import notification
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.installer import installer
 import tools.settings as settings
@@ -1363,7 +1362,9 @@ class request(json_base):
 
         if not for_validation and not automatic_validation:
             directory = installer.build_location(prepid)
-            bash_file += ['cd %s' % (directory), '']
+            bash_file += ['rm -rf %s' % (directory),
+                          'mkdir -p %s' % (directory),
+                          'cd %s' % (directory), '']
 
         sequences = self.get_attribute('sequences')
         if for_validation and automatic_validation:
@@ -1440,8 +1441,14 @@ class request(json_base):
         else:
             test_file_name = '%s_test.sh' % (prepid)
 
+        if not for_validation:
+            bash_file += ['# Make a proxy for submission',
+                          'voms-proxy-init --voms cms --out $(pwd)/%s_voms_proxy.txt --hours 1' % (prepid),
+                          'export X509_USER_PROXY=$(pwd)/%s_voms_proxy.txt' % (prepid)]
+
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        # If it is SLC6, then dump, otherwise CC7
+        dump_test_to_file = scram_arch_os == 'SLCern6'
         if dump_test_to_file:
             bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
@@ -1488,10 +1495,6 @@ class request(json_base):
                           # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
                           'export HOME=$(pwd)',
-                          '']
-        elif not for_validation:
-            bash_file += ['# PdmV proxy',
-                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
         # Events to run
@@ -1654,24 +1657,29 @@ class request(json_base):
                           '# Make file executable',
                           'chmod +x %s' % (test_file_name),
                           '']
-
-        if for_validation:
             # Validation will run on CC7 machines (HTCondor, lxplus)
+            # Config generation for production run on CC7 machine - vocms0481
             # If it's CC7, just run the script normally
             # If it's SLC6, run it in slc6 singularity container
             if scram_arch_os == 'SLCern6':
-                bash_file += ['# Run in SLC6 container',
-                              '# Mount afs, eos, cvmfs',
-                              '# Mount /etc/grid-security for xrootd',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                if for_validation:
+                    bash_file += ['# Run in SLC6 container',
+                                  '# Mount afs, eos, cvmfs',
+                                  '# Mount /etc/grid-security for xrootd',
+                                  'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+                                  'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
+                else:
+                    bash_file += ['# Run in SLC6 container',
+                                  '# Mount afs, cvmfs',
+                                  '# Mount /etc/grid-security for xrootd',
+                                  'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+                                  'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(pwd)/%s' % (test_file_name)]
 
-        else:
-            # Config generation for production run on SLC6 machine - vocms081
-            # If it's SLC6, just run the script normally
-            # If it's CC7, run it in cc7 singularity container
-            if scram_arch_os == 'CentOS7':
-                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+        if not for_validation:
+            if dump_test_to_file:
+                bash_file += ['rm -f $(pwd)/%s' % (test_file_name)]
+
+            bash_file += ['rm -f $(pwd)/%s_voms_proxy.txt' % (prepid)]
 
         # Empty line at the end of the file
         bash_file += ['']
@@ -1703,21 +1711,26 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='vocms081.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+                prepid = self.get_attribute('prepid')
+                ssh_exec = SSHExecutor('vocms0481.cern.ch')
+                cmd = 'voms-proxy-init --voms cms --out /tmp/%s_voms_proxy.txt --hours 1\n\n' % (prepid)
+                cmd += 'export X509_USER_PROXY=/tmp/%s_voms_proxy.txt\n' % (prepid)
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
                     test = '-u cmsweb-testbed.cern.ch'
+
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
-                _, stdout, stderr = ssh_exec.execute(cmd)
+
+                cmd += 'rm -f /tmp/%s_voms_proxy.txt\n' % (prepid)
+                stdout, stderr = ssh_exec.execute_command(cmd)
                 self.logger.info(cmd)
                 if not stdout and not stderr:
                     self.logger.error('SSH error while changing priority of {0}'.format(
                         self.get_attribute('prepid')))
                     return False
-                output_text = stdout.read()
+                output_text = stdout
                 self.logger.error('wmpriority output:\n{0}'.format(output_text))
                 try:
                     __out = loads(output_text)
@@ -1821,15 +1834,6 @@ class request(json_base):
         self.update_history({'action': 'failed'})
         if with_notification:
             subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self
-            )
             self.notify(subject, message)
 
         self.reload()
@@ -1837,23 +1841,14 @@ class request(json_base):
     def test_success(self, message, what='Submission', with_notification=True):
         if with_notification:
             subject = '%s succeeded for request %s' % (what, self.get_attribute('prepid'))
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self
-            )
             self.notify(subject, message)
 
     def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
-        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/requests',
-                                               options={'include_docs': True,
-                                                        'key': '"%s"' % self.get_attribute('prepid')})['rows']
-        stats_workflows = [stats_wf['doc'] for stats_wf in stats_workflows]
+        stats_workflows = stats_db.query_view(view_name='requests',
+                                              view_doc='_designDoc',
+                                              options={'include_docs': True,
+                                                       'key': '"%s"' % self.get_attribute('prepid')})
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
@@ -1921,7 +1916,7 @@ class request(json_base):
             open_evts_in_das = 0
             if event_number_history:
                 event_number_history = event_number_history[-1]
-                for dataset, content in event_number_history.get('Datasets', {}).iteritems():
+                for dataset, content in event_number_history.get('Datasets', {}).items():
                     dataset_statuses[dataset] = {'pdmv_evts_in_DAS': content.get('Events', 0),
                                                  'pdmv_status_in_DAS': content.get('Type', 'NONE'),
                                                  'pdmv_open_evts_in_DAS': 0}
@@ -2038,16 +2033,17 @@ class request(json_base):
             return
 
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
-        stats_workflows = stats_db.db.loadView(viewname='_design/_designDoc/_view/outputDatasets',
-                                               options={'include_docs': True,
-                                                        'limit': 1,
-                                                        'key': '"%s"' % input_dataset})['rows']
+        stats_workflows = stats_db.query_view(view_name='outputDatasets',
+                                              view_doc='_designDoc',
+                                              options={'include_docs': True,
+                                                       'limit': 1,
+                                                       'key': '"%s"' % input_dataset})
         status = None
         prepid = self.get_attribute('prepid')
         self.logger.info('Found %s workflows with %s as output dataset' % (len(stats_workflows), input_dataset))
         if stats_workflows:
             workflow = stats_workflows[0]
-            dataset_info = workflow.get('doc', {}).get('EventNumberHistory', [])
+            dataset_info = workflow.get('EventNumberHistory', [])
             dataset_info = [x for x in dataset_info if input_dataset in x.get('Datasets', {})]
             dataset_info = sorted(dataset_info, key=lambda x: x.get('Time', 0))
             for entry in reversed(dataset_info):
@@ -2424,15 +2420,6 @@ class request(json_base):
             timeout = self.get_n_unfold_efficiency(settings.get_value('test_target_fallback')) * self.get_sum_time_events()
         return (fraction, timeout)
 
-    def get_timeout(self):
-        default = settings.get_value('batch_timeout') * 60.
-        # we multiply the timeout if user wants more events in validation
-
-        default = multiplier * default
-        # to get the contribution from runtest
-        (fraction, estimate_rt) = self.get_timeout_for_runtest()
-        return int(max((estimate_rt) / fraction, default))
-
     def get_n_for_test(self, target=1.0, adjust=True):
         # => correct for the matching and filter efficiencies
         events = self.get_n_unfold_efficiency(target)
@@ -2526,7 +2513,7 @@ class request(json_base):
         # create a string that supposedly uniquely identifies the request configuration for step
         uniqueString = ''
         if self.get_attribute('fragment'):
-            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            fragment_hash = hashlib.sha224(self.get_attribute('fragment').encode('utf-8')).hexdigest()
             uniqueString += fragment_hash
         if self.get_attribute('fragment_tag'):
             uniqueString += self.get_attribute('fragment_tag')
@@ -2542,7 +2529,7 @@ class request(json_base):
     def configuration_identifier(self, step_i):
         uniqueString = self.unique_string(step_i)
         # create a hash value that supposedly uniquely defines the configuration
-        hash_id = hashlib.sha224(uniqueString).hexdigest()
+        hash_id = hashlib.sha224(uniqueString.encode('utf-8')).hexdigest()
         return hash_id
 
     def pickup_all_performance(self, directory):
@@ -2710,15 +2697,6 @@ class request(json_base):
 
             # self.set_attribute('sequences', seq)
             # self.reload()
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
@@ -2770,16 +2748,6 @@ class request(json_base):
                             memory,
                             events_pass,
                             events_ran)
-
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=self)
-
                 self.notify(subject, message, accumulate=True)
 
             self.set_attribute('memory', memory)
@@ -3106,24 +3074,24 @@ class request(json_base):
 
                 command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
-                    with installer(prepid, care_on_existing=False):
+                    # with installer(prepid, care_on_existing=False):
                         request_arch = self.get_scram_arch()
                         if not request_arch:
                             self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
+                        machine_name = "vocms0481.cern.ch"
+                        executor = SSHExecutor(machine_name)
+                        stdout, stderr = executor.execute_command(command)
                         if not stdout and not stderr:
                             self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                             self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                             self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                               what='Configuration upload')
                             return False
-                        output = stdout.read()
-                        error = stderr.read()
+                        output = stdout
+                        error = stderr
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
@@ -3151,7 +3119,7 @@ class request(json_base):
                             additional_config_ids[i] = docid
                             hash_id = self.configuration_identifier(i)
                             saved = config_db.save({"_id": hash_id, "docid": docid,
-                                    "prepid": prepid, "unique_string": self.unique_string(i)})
+                                    "prepid": hash_id, "unique_string": self.unique_string(i)})
 
                             to_release.remove(hash_id)
                             locker.release(hash_id)
@@ -3160,6 +3128,7 @@ class request(json_base):
                                     'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
 
                         self.inject_logger.info("Full upload result: {0}".format(output))
+                        executor.execute_command(['rm -rf %s' % (installer.build_location(prepid))])
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))
@@ -3197,7 +3166,7 @@ class request(json_base):
         return int(num)
 
     def get_list_of_steps(self, in_string):
-        if isinstance(in_string, basestring):
+        if isinstance(in_string, str):
             # in case sequence is defined as string -> legacy support
             return [el.split(":")[0] for el in in_string.split(",")]
         else:

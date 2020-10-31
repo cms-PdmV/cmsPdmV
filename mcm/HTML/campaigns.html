@@ -25,12 +25,12 @@
   <span ng-controller="resultsCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
         <div style='margin-bottom: 5px' class="container">
-          <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+          <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns"></select-well>
         </div>
   <table class="table table-bordered table-stripped">
     <thead>
       <tr>
-        <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
+        <th ng-repeat="column in dataColumns" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
 	        <div ng-switch-when="Actions">
             {{column.text}}
                 <!-- SORTING lines -->
@@ -60,7 +60,7 @@
     </thead>
     <tbody>
       <tr ng-repeat="data in result | orderBy:sort.column: sort.descending">
-        <td ng-repeat="value in defaults" ng-if="value.select" style="white-space: nowrap;">
+        <td ng-repeat="value in dataColumns" ng-if="value.select" style="white-space: nowrap;">
           <div ng-switch on="value.text">
 	          <div ng-switch-when="PrepId">
 	           <a ng-href='campaigns?prepid={{data.prepid}}&page=0' rel="tooltip" title="Show only {{data.prepid}}" target="_self">{{data.prepid}}<i class="icon-book"></i></a>

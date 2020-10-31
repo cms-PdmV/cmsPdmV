@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from chained_request import chained_request
-from json_base import json_base
+from json_layer.chained_request import chained_request
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 

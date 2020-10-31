@@ -25,12 +25,12 @@
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+        <select-well ng-if="selectionReady" database="{{dbName}}" selection="dataColumns"></select-well>
     </div>
     <table class="table table-bordered table-stripped">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
+          <th ng-repeat="column in dataColumns" ng-if="column.select" ng-switch on="column.text">
 	          <div ng-switch-when="Actions">
               {{column.text}}
               <!-- SORTING lines -->
@@ -60,7 +60,7 @@
       </thead>
       <tbody>
       	<tr ng-repeat="mccm_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
+      	  <td ng-repeat="data in dataColumns" ng-if="data.select" style="white-space: nowrap;">
       	    <div ng-switch on="data.text">
               <div ng-switch-when="Actions">
                 <a rel="tooltip" title="Delete ticket" ng-click="open_isSureModal('delete', mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
@@ -192,7 +192,7 @@
               <br>
             </span>
             <span title="Silently skip already existing chained requests"><input type="checkbox" ng-model="skipExistingChains"> Generate only non-existing chained requests</span><br>
-            <span title="Generate all chained requests for all requests and chained campaings. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests</span>
+            <span title="Generate all chained requests for all requests and chained campaings in the ticket without checking if such chained request already exists. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests without checking for existing ones</span>
           </div>
           <div class="modal-footer">
             <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, skipExistingChains, generateAllChains)">Confirm</button>

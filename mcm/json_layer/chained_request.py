@@ -1,11 +1,10 @@
 import time
 
-from json_base import json_base
+from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
-from json_layer.notification import notification
 from json_layer.mccm import mccm
-from flow import flow
+from json_layer.flow import flow
 from couchdb_layer.mcm_database import database
 from tools.priority import priority
 from tools.locker import locker
@@ -338,6 +337,21 @@ class chained_request(json_base):
             block_white_list = []
         return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)['result']
 
+    def get_setup(self, directory='', events=None, run=False, validation=False, scratch=False, for_validation=False, gen_script=False):
+        if scratch:
+            req_ids = self.get_attribute('chain')
+        else:
+            req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
+        rdb = database('requests')
+        setup_file = ''
+        for (index, req_id) in enumerate(req_ids):
+            req = request(rdb.get(req_id))
+            if not req.is_root and 'validation' not in req._json_base__status:  # do it only for root or possible root request
+                break
+            setup_file += req.get_setup_file2(for_validation=for_validation, automatic_validation=False)
+            if run and validation:
+                req.reload()
+        return setup_file
 
     def test_output_ds(self):
         req_db = database("requests")
@@ -578,16 +592,6 @@ class chained_request(json_base):
                             self.get_attribute('prepid'))
 
                         subject = 'Flowing %s with not enough statistics' % (current_request.get_attribute('prepid'))
-
-                        notification(
-                            subject,
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[self.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=self)
-
                         current_request.notify(subject,
                                                message,
                                                accumulate=True)
@@ -761,7 +765,7 @@ class chained_request(json_base):
                     next_request.get_attribute("sequences"))
             else:
                 self.logger.debug("\tget from stats")
-                statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+                statsDB = database('requests', url='http://vocms074.cern.ch:5984/')
                 if statsDB.document_exists(last_wma['name']):
                     latestStatus = statsDB.get(last_wma['name'])
                     input_dataset = self.get_ds_input(
@@ -939,31 +943,6 @@ class chained_request(json_base):
     def inspect_done(self):
         return self.flow_trial()
 
-    def get_timeout_memory_threads(self):
-        req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
-        rdb = database('requests')
-        t = 0
-        requests_to_validate = 0
-        max_memory = 0
-        max_threads = 1
-        for (index, req_id) in enumerate(req_ids):
-            mcm_r = request(rdb.get(req_id))
-            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status:  # do it only for root or possible root request
-                break
-            requests_to_validate += 1
-            onet = mcm_r.get_timeout()
-            if onet > t:
-                t = onet
-            current_memory = mcm_r.get_attribute("memory")
-            if current_memory > max_memory:
-                max_memory = current_memory
-            threads = mcm_r.get_core_num()
-            if threads > max_threads:
-                max_threads = threads
-        # get the max and apply to all as a conservative estimation
-        # this should probably be a bit more subtle
-        return t * requests_to_validate, max_memory, max_threads
-
     def reset_requests(self, message, what='Chained validation run test', notify_one=None, except_requests=[]):
         request_db = database('requests')
         for request_prepid in self.get_attribute('chain')[self.get_attribute('step'):]:
@@ -975,14 +954,6 @@ class chained_request(json_base):
             # If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
                 subject = '%s failed for request %s' % (what, mcm_request.get_attribute('prepid'))
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.CHAINED_REQUESTS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='chained_requests',
-                    base_object=self)
                 mcm_request.notify(subject, message)
                 continue
             notify = True
@@ -994,14 +965,6 @@ class chained_request(json_base):
         if not chained_requests_db.update(self.json()):
             subject = 'Chained validation run test'
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid')
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.CHAINED_REQUESTS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='chained_requests',
-                base_object=self)
             self.notify(subject, message)
 
     def add_to_nonflowing_list(self, reason):

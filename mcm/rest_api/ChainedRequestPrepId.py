@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 from json_layer.chained_request import chained_request
 
@@ -31,7 +31,7 @@ class ChainedRequestPrepId(RESTResourceIndex):
                 sn = self.serial_number_cache[(campaign, pwg)] + 1
             else:
                 sn = 1
-                serial_number_lookup = creq_db.raw_query('serial_number', {'group': True, 'key': [campaign, pwg]})
+                serial_number_lookup = creq_db.query_view('serial_number', options={'group': True, 'key': [campaign, pwg]})
                 if serial_number_lookup:
                     sn = serial_number_lookup[0]['value'] + 1
 

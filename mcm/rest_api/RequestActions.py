@@ -2,24 +2,22 @@
 import flask
 import traceback
 import time
-import urllib2
-from simplejson import dumps, loads
-from collections import defaultdict
 import re
+from json import dumps, loads
+from collections import defaultdict
 
+import tools.settings as settings
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
+from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
 from json_layer.campaign import campaign
 from json_layer.user import user
-from json_layer.notification import notification
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
-import tools.settings as settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
@@ -518,6 +516,8 @@ class DeleteRequest(RESTResource):
         crdb = database('chained_requests')
         mcm_r = request(db.get(pid))
 
+        self.logger.info(mcm_r.current_user_level)
+
         if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
             # if request has a member_of_campaign we user role to be equal or more than
             # prod_manager, so we have to do check manually and return False
@@ -677,7 +677,7 @@ class ApproveRequest(RESTResource):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
         """
-        return self.multiple_approve(flask.request.data)
+        return self.multiple_approve(flask.request.data.decode('utf-8'))
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
@@ -1109,14 +1109,6 @@ class NotifyUser(RESTResource):
             # notify the actors of the request
             subject = 'Communication about request %s' % pid
             message = '%s \n\n %srequests?prepid=%s\n' % (message, l_type.baseurl(), pid)
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[req.get_attribute('prepid')],
-                object_type='requests',
-                base_object=req)
             req.notify(subject, message, accumulate=True)
 
             # update history with "notification"
@@ -1229,7 +1221,7 @@ class RequestLister():
         return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
-        all_campaigns = map(lambda x: x['id'], cdb.raw_query("prepid"))
+        all_campaigns = map(lambda x: x['id'], cdb.query_view("prepid"))
         if word.count('-') == 2:
             (pwg, campaign, serial) = word.split('-')
             if len(pwg) != 3:
@@ -1357,7 +1349,7 @@ class StalledReminder(RESTResource):
         """
         rdb = database('requests')
         bdb = database('batches')
-        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+        statsDB = database('requests', url='http://vocms074.cern.ch:5984/')
         __query = rdb.construct_lucene_query({'status': 'submitted'})
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
@@ -1432,14 +1424,6 @@ class StalledReminder(RESTResource):
         people_list = production_managers + gen_conveners
         subject = "Gentle reminder of %d requests that appear stalled" % (reminded)
         if reminded != 0:
-            notification(
-                subject,
-                text,
-                map(lambda u: u['username'], production_managers),
-                group=notification.REMINDERS,
-                action_objects=request_prepids,
-                object_type='requests',
-                target_role='generator_convener')
             com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')], subject, text)
 
 
@@ -1537,12 +1521,6 @@ class RequestsReminder(RESTResource):
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
                     subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REMINDERS,
-                        target_role='production_manager')
                     com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_conveners' in what or 'generator_convener' in what:
@@ -1556,12 +1534,6 @@ class RequestsReminder(RESTResource):
                     message = 'A few requests need your approvals \n\n'
                     message += prepare_text_for(ids_for_gen_conveners, 'defined')
                     subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REMINDERS,
-                        target_role='generator_convener')
                     com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
@@ -1659,11 +1631,6 @@ class RequestsReminder(RESTResource):
                             if mcm_u['fullname']:
                                 name = mcm_u['fullname']
                             subject = 'Gentle reminder on %s requests to be looked at by %s' % (count_entries(campaigns_and_ids), name)
-                            notification(
-                                subject,
-                                message,
-                                [contact],
-                                group=notification.REMINDERS,)
                             com.sendMail(to_who, subject, message)
                             yield '.'
 
@@ -1706,43 +1673,6 @@ class UpdateMany(RequestRESTResource):
                 return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
-
-
-class GetAllRevisions(RequestRESTResource):
-    def __init__(self):
-        RequestRESTResource.__init__(self)
-        self.before_request()
-        self.count_call()
-        self.db_url = locator().dbLocation()
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
-        self.db_name = 'requests'
-
-    def get(self, request_id):
-        """
-        Getting All AVAILABLE revisions for request document
-        """
-        return self.get_all_revs(request_id)
-
-    def get_all_revs(self, prepid):
-        list_of_revs = []
-        doc_id = prepid
-        all_revs_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?revs_info=true"
-        single_rev_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?rev="
-        http_request = urllib2.Request(all_revs_url)
-        http_request.add_header('Content-Type', 'text/plain')
-        http_request.get_method = lambda: 'GET'
-        result = self.opener.open(http_request)
-        revision_data = loads(result.read())
-        for revision in revision_data["_revs_info"]:
-            if revision["status"] == "available":
-                single_request = urllib2.Request(single_rev_url + revision["rev"])
-                single_request.add_header('Content-Type', 'text/plain')
-                single_request.get_method = lambda: 'GET'
-                single_result = self.opener.open(single_request)
-                single_doc = single_result.read()
-                list_of_revs.append(loads(single_doc))
-        self.logger.info('Getting all revisions for: %s' % doc_id)
-        return {"results": list_of_revs}
 
 
 class ListRequestPrepids(RequestRESTResource):
@@ -1838,7 +1768,7 @@ class GetUniqueValues(RESTResource):
         if 'limit' in kwargs:
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        return db.query_view_uniques(view_name=field_name, options=kwargs)
 
 
 class PutToForceComplete(RESTResource):
@@ -2057,7 +1987,7 @@ class TaskChainRequestDict(RESTResource):
             if task.get('pilot_'):
                 wma['SubRequestType'] = task['pilot_']
 
-            for key in task.keys():
+            for key in list(task.keys()):
                 if key.endswith('_'):
                     task.pop(key)
             wma['Task%d' % task_counter] = task

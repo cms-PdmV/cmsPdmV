@@ -4,9 +4,9 @@ import logging
 
 from random import randint
 from threading import Thread, Lock
-from Queue import Queue
+from queue import Queue
 
-from tools.ssh_executor import ssh_executor
+from automatic_scripts.validation.new_ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
 import tools.settings as settings
@@ -15,7 +15,6 @@ from tools.communicator import communicator
 from json_layer.request import request, AFSPermissionError
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
-from json_layer.notification import notification
 from rest_api.BatchPrepId import BatchPrepId
 from tools.logger import InjectionLogAdapter
 
@@ -38,7 +37,7 @@ class Worker(Thread):
             try:
                 self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Exception in '%s' thread: %s Traceback:\n%s" % (
                     self.worker_name, str(e), traceback.format_exc()))
 
@@ -173,34 +172,32 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms081.cern.ch') as ssh:
+            with SSHExecutor('vocms0481.cern.ch') as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
-                _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
-                if error:
-                    self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
-                    if '.bashrc: Permission denied' in error:
-                        raise AFSPermissionError(error)
+                stdout, stderr = ssh.execute_command(cmd)
+                if stderr:
+                    self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, stderr))
+                    if '.bashrc: Permission denied' in stderr:
+                        raise AFSPermissionError(stderr)
 
-                if output:
-                    self.inject_logger.info('Output for %s injection. %s' % (self.prepid, output))
+                if stdout:
+                    self.inject_logger.info('Output for %s injection. %s' % (self.prepid, stdout))
 
-                if error and not output:  # money on the table that it will break as well?
+                if stderr and not stdout:  # money on the table that it will break as well?
                     self.notify('Request injection failed for %s' % (self.prepid),
-                                'Error in wmcontrol: %s' % (error),
+                                'Error in wmcontrol: %s' % (stderr),
                                 mcm_r)
                     return False
 
-                output_lines = output.split('\n')
+                output_lines = stdout.split('\n')
                 injected_workflows = [line.split()[-1] for line in output_lines if line.startswith('Injected workflow:')]
                 if not injected_workflows:
                     # No workflows were created
                     self.notify('Request injection happened but no request manager names for %s' % (self.prepid),
                                 'Injection has succeeded but no request manager names were registered. ' +
-                                'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (output, error),
+                                'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (stdout, stderr),
                                 mcm_r)
                     return False
                 else:
@@ -300,18 +297,19 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         scram_arch = mcm_r.get_scram_arch()
-        command = ''
+        command = '#!/bin/bash\n'
         directory = locator_type.workLocation()
+        command += 'cd %s\n' % (directory)
+        command += '# Make a proxy for submission\n'
+        command += 'voms-proxy-init --voms cms --out %s%s_voms_proxy.txt --hours 1\n\n' % (directory, self.prepid)
+        command += 'export X509_USER_PROXY=%s%s_voms_proxy.txt\n' % (directory, self.prepid)
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-        if 'slc7_' in scram_arch:
-            command += '#!/bin/bash\n'
-            command += 'cd %s \n' % directory
+        if 'slc6_' in scram_arch:
             command += 'cat > %s << \'EOF\'\n' % (executable_file_name)
             command += '#!/bin/bash\n'
 
         command += 'cd %s \n' % (directory)
         command += mcm_r.make_release()
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
         if locator_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
@@ -322,43 +320,26 @@ class SubmissionsBase(Handler):
                                                                                                      self.database_name,
                                                                                                      self.prepid,
                                                                                                      test_params)
-        if 'slc7_' in scram_arch:
+        if 'slc6_' in scram_arch:
             command += '\n\nEOF\n'
             command += 'chmod +x %s\n' % (executable_file_name)
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
+            command += 'rm -f %s\n' % (executable_file_name)
 
+        command += 'rm -f %s%s_voms_proxy.txt\n' % (directory, self.prepid)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
 
     def notify(self, subject, message, req):
         self.inject_logger.info('Notify:\n  Subject: %s\n\n  Message: %s' % (subject, message))
         if req is not None:
-            if req.__class__ == request:
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[req.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=req)
-            elif req.__class__ == chained_request:
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.CHAINED_REQUESTS,
-                    action_objects=[req.get_attribute('prepid')],
-                    object_type='chained_requests',
-                    base_object=req)
+            if req.__class__ == request or req.__class__ == chained_request:
+                req.notify(subject, message)
             else:
                 self.inject_logger.error('Could not notify. Unsupported type: %s.\nSubject: %s\nMessage: %s' % (type(req),
                                                                                                                 subject,
                                                                                                                 message))
-                return
-
-            req.notify(subject, message)
         else:
             self.logger.error('Could not notify because request object is None. Subject: %s' % (subject))
 
@@ -486,7 +467,8 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
-        command = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        command = 'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 1'
+        command += 'export X509_USER_PROXY=$(pwd)/voms_proxy.txt\n'
         command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         test_path = ''
         test_params = ''
@@ -503,12 +485,6 @@ class RequestApprover(Handler):
         production_managers = users_db.full_text_search('search', query, page=-1)
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
-        notification(
-            subject,
-            text,
-            [],
-            group=notification.REQUEST_OPERATIONS,
-            target_role="production_manager")
         com.sendMail(
             map(lambda u: u['email'], production_managers),
             subject,
@@ -516,27 +492,26 @@ class RequestApprover(Handler):
 
     def internal_run(self):
         command = self.make_command()
-        executor = ssh_executor(server='vocms081.cern.ch')
+        executor = SSHExecutor('vocms0481.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                _, stdout, stderr = executor.execute(command)
+                stdout, stderr = executor.execute_command(command)
                 if not stdout and not stderr:
                     self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
                     return
-                output = stdout.read()
-                error = stderr.read()
-                self.logger.info('Wmapprove output: %s' % output)
-                if not error and 'Something went wrong' not in output:
+
+                self.logger.info('Wmapprove output: %s' % stdout)
+                if not stderr and 'Something went wrong' not in stdout:
                     break
                 time.sleep(3)
                 trails += 1
-            if error or 'Something went wrong' in output:
-                message = 'Error in wmapprove: %s' % (output if 'Something went wrong' in output else error)
+            if stderr or 'Something went wrong' in stdout:
+                message = 'Error in wmapprove: %s' % (stdout if 'Something went wrong' in stdout else stderr)
                 self.logger.error(message)
-                self.send_email_failure(output, error)
+                self.send_email_failure(stdout, stderr)
                 return {
                     'results': False,
                     'message': message}
