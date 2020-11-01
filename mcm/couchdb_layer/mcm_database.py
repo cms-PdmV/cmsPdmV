@@ -5,6 +5,7 @@ import os
 import ast
 import logging
 import sys
+import socket
 
 from json import dumps
 from tools.locator import locator
@@ -18,7 +19,9 @@ class database:
     logger = logging.getLogger("mcm_error")
     # Cache timeout in seconds
     CACHE_TIMEOUT = 60 * 60
+    IP_CACHE_TIMEOUT = 15 * 60
     cache = SimpleCache()
+    ip_cache = SimpleCache()
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
@@ -70,6 +73,9 @@ class database:
             url = locator().dbLocation()
         if lucene_url is None:
             lucene_url = locator().lucene_url()
+
+        url = self.resolve_hostname_to_ip(url)
+        lucene_url = self.resolve_hostname_to_ip(lucene_url)
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
@@ -84,6 +90,18 @@ class database:
             raise self.DatabaseAccessError(db_name)
 
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
+
+    def resolve_hostname_to_ip(self, hostname):
+        cached = self.ip_cache.get(hostname)
+        if cached:
+            return cached
+
+        host = hostname.split('//', 1)[-1].split(':', 1)[0].split('/', 1)[0]
+        ip = socket.gethostbyname(host)
+        with_ip = hostname.replace(host, ip)
+        self.ip_cache.set(hostname, with_ip, timeout=self.IP_CACHE_TIMEOUT)
+        self.logger.info('Will cache %s as %s', hostname, with_ip)
+        return with_ip
 
     def __is_number(self, s):
         try:
