@@ -38,13 +38,16 @@ class BatchPrepId():
 
             # find the max batch with similar name, descending guarantees that
             # the returned one will be biggest
-            __query_options = {"endkey": '"%s-00001"' % (batchName),
-                    "startkey": '"%s-99999"' % (batchName),
-                    "descending": "true", "limit": 1}
+            __query_options = {"endkey": str('"%s-00001"' % (batchName)),
+                               "startkey": str('"%s-99999"' % (batchName)),
+                               "descending": "true",
+                               "limit": 1}
 
+            self.bdb.logger.debug('Batch query options: %s', __query_options)
             max_in_batch = settings.get_value('max_in_batch')
             top_batch = self.bdb.raw_query("prepid", __query_options)
             new_batch = True
+            self.bdb.logger.debug('Top batch: %s', top_batch)
 
             if len(top_batch) != 0:
                 # we already have some existing batch, check if its fine for appending

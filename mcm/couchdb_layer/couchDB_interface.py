@@ -26,6 +26,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
+        self.logger.debug('Request: %s', self.__dburl + url)
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
@@ -39,6 +40,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
+        self.logger.debug('Lucene request: %s', self.__luceneurl + url)
         if data is None:
             request = urllib2.Request(self.__luceneurl + url)
         else:

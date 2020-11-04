@@ -460,10 +460,11 @@ error_logger.addHandler(error_handler)
 # Injection logger
 # due to LogAdapter empty space for message will be added inside of it
 injection_logger = logging.getLogger("mcm_inject")
+inject_log_filename = getattr(injection_logger, "rot_access_file", "logs/inject.log")
 if console_logging:
     injection_handler = console_handler
 else:
-    injection_handler = logging.FileHandler('logs/inject.log', 'a')
+    injection_handler = logging.handlers.RotatingFileHandler(inject_log_filename, 'a', max_bytes, 250)
 
 injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
 injection_handler.setFormatter(injection_formatter)
