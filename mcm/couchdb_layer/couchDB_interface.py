@@ -9,11 +9,12 @@ class Database():
     CoucDB interface class
     TO-DO: custom view queries; Error parsing ???
     """
-    def __init__(self, dbname = 'database', url = 'http://localhost:5984/', lucene_url = 'http://localhost:5985', size = 1000):
+    def __init__(self, dbname='database', url='http://localhost:5984/', lucene_url='http://localhost:5985', size=1000, auth_header=None):
         self.__dbname = dbname
         self.__dburl = url
         self.__luceneurl = lucene_url
         self.__queuesize = size
+        self.__auth_header = auth_header
         self.opener = urllib2.build_opener(urllib2.HTTPHandler)
 
         self.reset_queue()
@@ -34,6 +35,10 @@ class Database():
         request.get_method = lambda: method
         for key in headers:
             request.add_header(key, headers[key])
+
+        if self.__auth_header:
+            request.add_header('Authorization', self.__auth_header)
+
         return request
 
     def construct_lucene_request(self, url, method='GET', headers={'Content-Type': 'application/json'}, data=None):

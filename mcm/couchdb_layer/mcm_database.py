@@ -6,8 +6,10 @@ import ast
 import logging
 import sys
 import socket
+import base64
 
 from json import dumps
+from json import load as json_load
 from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *
@@ -69,8 +71,10 @@ class database:
 
     def __init__(self,  db_name='',url=None, lucene_url=None, cache_enabled=False):
         host = os.environ['HOSTNAME']
+        auth_header = None
         if url is None:
             url = locator().dbLocation()
+            auth_header = self.get_auth_header()
         if lucene_url is None:
             lucene_url = locator().lucene_url()
 
@@ -85,11 +89,19 @@ class database:
             self.cache_enabled=True
 
         try:
-            self.db = Database(db_name, url=url, lucene_url=lucene_url)
+            self.db = Database(db_name, url=url, lucene_url=lucene_url, auth_header=auth_header)
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
 
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
+
+    def get_auth_header(self):
+        with open('/home/pdmvserv/private/couchdb_credentials_json.txt') as json_file:
+            credentials = json_load(json_file)
+
+        b64 = '%s:%s' % (credentials['username'], credentials['password'])
+        b64 = base64.b64encode(b64)
+        return 'Basic %s' % (b64)
 
     def resolve_hostname_to_ip(self, hostname):
         cached = self.ip_cache.get(hostname)
