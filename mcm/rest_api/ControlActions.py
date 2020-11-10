@@ -27,13 +27,10 @@ class RenewCertificate(RESTResource):
         # machines = ["cms-pdmv-op.cern.ch"]
         machines = ["vocms0481.cern.ch"]
         for elem in machines:
-            ssh_exec = ssh_executor(server=elem)
-            try:
+            with ssh_executor(server=elem) as ssh_exec:
                 self.logger.info("Renewing certificate for: %s" % (elem))
                 stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
                 self.logger.info("Certificate renewed:\n{0}".format(stdout.read()))
-            finally:
-                ssh_exec.close_executor()
 
     def create_command(self, machine):
             # crab setup

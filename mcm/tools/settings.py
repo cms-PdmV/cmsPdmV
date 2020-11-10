@@ -2,7 +2,7 @@ from couchdb_layer.mcm_database import database
 from tools.locker import locker
 from tools.countdown_cache import CountdownCache
 
-__cache = CountdownCache()
+__cache = CountdownCache(200)
 __db = database('settings')
 
 def get(label):

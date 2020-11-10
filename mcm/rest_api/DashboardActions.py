@@ -19,16 +19,13 @@ class GetBjobs(RESTResource):
         """
         Get bjobs information regarding the condor clusters
         """
-        ssh_exec = ssh_executor()
-        try:
+        with ssh_executor() as ssh_exec:
             stdin, stdout, stderr = ssh_exec.execute(self.create_command(options))
             out = stdout.read()
             err = stderr.read()
             if err:
                 return {"results": err}
             return {"results": out}
-        finally:
-            ssh_exec.close_executor()
 
     def create_command(self, options):
         bcmd = 'module load lxbatch/tzero && condor_q -nobatch '

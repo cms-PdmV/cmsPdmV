@@ -527,18 +527,19 @@ class RequestApprover(Handler):
 
     def internal_run(self):
         command = self.make_command()
-        executor = ssh_executor(server='vocms0481.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                _, stdout, stderr = executor.execute(command)
-                if not stdout and not stderr:
-                    self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
-                    return
-                output = stdout.read()
-                error = stderr.read()
+                with ssh_executor(server='vocms0481.cern.ch') as executor:
+                    _, stdout, stderr = executor.execute(command)
+                    if not stdout and not stderr:
+                        self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
+                        return
+                    output = stdout.read()
+                    error = stderr.read()
+
                 self.logger.info('Wmapprove output: %s' % output)
                 if not error and 'Something went wrong' not in output:
                     break

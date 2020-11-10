@@ -1704,7 +1704,6 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='vocms0481.cern.ch')
                 proxy_file_name = '/tmp/%s_%032x_voms_proxy.txt' % (self.get_attribute('prepid'), random.getrandbits(128))
                 cmd = 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
                 cmd += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
@@ -1716,7 +1715,9 @@ class request(json_base):
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
 
                 cmd += 'rm -f %s\n' % (proxy_file_name)
-                _, stdout, stderr = ssh_exec.execute(cmd)
+                with ssh_executor(server='vocms0481.cern.ch') as ssh_exec:
+                    _, stdout, stderr = ssh_exec.execute(cmd)
+
                 self.logger.info(cmd)
                 if not stdout and not stderr:
                     self.logger.error('SSH error while changing priority of {0}'.format(
@@ -3119,16 +3120,18 @@ class request(json_base):
                             return False
 
                         machine_name = "vocms0481.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
-                        if not stdout and not stderr:
-                            self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
-                                              what='Configuration upload')
-                            return False
-                        output = stdout.read()
-                        error = stderr.read()
+                        with ssh_executor(server=machine_name) as executor:
+                            _, stdout, stderr = executor.execute(command)
+
+                            if not stdout and not stderr:
+                                self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
+                                self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
+                                self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                                                what='Configuration upload')
+                                return False
+                            output = stdout.read()
+                            error = stderr.read()
+
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')

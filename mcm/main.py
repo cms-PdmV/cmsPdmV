@@ -25,7 +25,6 @@ from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 from json import dumps
 from urllib2 import unquote
-from tools.ssh_executor import ssh_executor
 
 import signal
 import logging
