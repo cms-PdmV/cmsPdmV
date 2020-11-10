@@ -10,8 +10,9 @@ import traceback
 import time
 import logging
 import math
+import random
 from math import sqrt
-from simplejson import loads, dumps
+from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
@@ -1440,8 +1441,14 @@ class request(json_base):
         else:
             test_file_name = '%s_test.sh' % (prepid)
 
+        if not for_validation:
+            bash_file += ['# Make voms proxy',
+                          'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 4',
+                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                          '']
+
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (for_validation and scram_arch_os == 'SLCern6') or (not for_validation and scram_arch_os == 'CentOS7')
+        dump_test_to_file = (scram_arch_os == 'SLCern6')
         if dump_test_to_file:
             bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
@@ -1485,13 +1492,8 @@ class request(json_base):
         if for_validation and automatic_validation:
             # Automatic validation
             bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
-                          # 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert',
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
                           'export HOME=$(pwd)',
-                          '']
-        elif not for_validation:
-            bash_file += ['# PdmV proxy',
-                          'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert',
                           '']
 
         # Events to run
@@ -1655,23 +1657,22 @@ class request(json_base):
                           'chmod +x %s' % (test_file_name),
                           '']
 
-        if for_validation:
-            # Validation will run on CC7 machines (HTCondor, lxplus)
-            # If it's CC7, just run the script normally
-            # If it's SLC6, run it in slc6 singularity container
-            if scram_arch_os == 'SLCern6':
+        if scram_arch_os == 'SLCern6':
+            if for_validation:
+                # Validation will run on CC7 machines (HTCondor, lxplus)
+                # If it's CC7, just run the script normally
+                # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['# Run in SLC6 container',
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
+                              'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                               'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
-
-        else:
-            # Config generation for production run on SLC6 machine - vocms081
-            # If it's SLC6, just run the script normally
-            # If it's CC7, run it in cc7 singularity container
-            if scram_arch_os == 'CentOS7':
+            else:
+                # Config generation for production run on CC7 machine - vocms0481
+                # If it's CC7, just run the script normally
+                # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']
@@ -1703,15 +1704,20 @@ class request(json_base):
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
             self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
             if len(reqmgr_names):
-                ssh_exec = ssh_executor(server='vocms081.cern.ch')
-                cmd = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+                proxy_file_name = '/tmp/%s_%032x_voms_proxy.txt' % (self.get_attribute('prepid'), random.getrandbits(128))
+                cmd = 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
+                cmd += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
                 cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
                 test = ""
                 if loc.isDev():
                     test = '-u cmsweb-testbed.cern.ch'
                 for req_name in reqmgr_names:
                     cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
-                _, stdout, stderr = ssh_exec.execute(cmd)
+
+                cmd += 'rm -f %s\n' % (proxy_file_name)
+                with ssh_executor(server='vocms0481.cern.ch') as ssh_exec:
+                    _, stdout, stderr = ssh_exec.execute(cmd)
+
                 self.logger.info(cmd)
                 if not stdout and not stderr:
                     self.logger.error('SSH error while changing priority of {0}'.format(
@@ -3113,17 +3119,19 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms081.cern.ch"
-                        executor = ssh_executor(server=machine_name)
-                        _, stdout, stderr = executor.execute(command)
-                        if not stdout and not stderr:
-                            self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
-                            self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
-                                              what='Configuration upload')
-                            return False
-                        output = stdout.read()
-                        error = stderr.read()
+                        machine_name = "vocms0481.cern.ch"
+                        with ssh_executor(server=machine_name) as executor:
+                            _, stdout, stderr = executor.execute(command)
+
+                            if not stdout and not stderr:
+                                self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
+                                self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
+                                self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
+                                                what='Configuration upload')
+                                return False
+                            output = stdout.read()
+                            error = stderr.read()
+
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
                             self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')

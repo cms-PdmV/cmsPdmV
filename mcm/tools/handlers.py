@@ -1,6 +1,7 @@
 import time
 import traceback
 import logging
+import random
 
 from random import randint
 from threading import Thread, Lock
@@ -173,7 +174,7 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms081.cern.ch') as ssh:
+            with ssh_executor(server='vocms0481.cern.ch') as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
@@ -300,18 +301,22 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         scram_arch = mcm_r.get_scram_arch()
-        command = ''
         directory = locator_type.workLocation()
-        executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-        if 'slc7_' in scram_arch:
-            command += '#!/bin/bash\n'
-            command += 'cd %s \n' % directory
-            command += 'cat > %s << \'EOF\'\n' % (executable_file_name)
-            command += '#!/bin/bash\n'
+        command = '#!/bin/bash\n'
+        command += 'cd %s \n' % directory
+        prepid = mcm_r.get_attribute('prepid')
+        proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)
+        command += '# Make voms proxy\n'
+        command += 'voms-proxy-init --voms cms --out %s --hours 4\n' % (proxy_file_name)
+        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
 
-        command += 'cd %s \n' % (directory)
+        executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
+        if 'slc6_' in scram_arch:
+            command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
+            command += '#!/bin/bash\n'
+            command += 'cd %s \n' % (directory)
+
         command += mcm_r.make_release()
-        command += 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
         test_params = ''
         if locator_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
@@ -322,12 +327,14 @@ class SubmissionsBase(Handler):
                                                                                                      self.database_name,
                                                                                                      self.prepid,
                                                                                                      test_params)
-        if 'slc7_' in scram_arch:
-            command += '\n\nEOF\n'
+        if 'slc6_' in scram_arch:
+            command += '\n\nEndOfInjectFile\n'
             command += 'chmod +x %s\n' % (executable_file_name)
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/cc7:latest %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
+            command += 'rm -f %s\n' % (executable_file_name)
 
+        command += 'rm -f %s' % (proxy_file_name)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
 
@@ -486,7 +493,10 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
-        command = 'export X509_USER_PROXY=/afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert\n'
+        command = ''
+        proxy_file_name = '/tmp/%032x_voms_proxy.txt' % (random.getrandbits(128))
+        command += 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
+        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
         command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
         test_path = ''
         test_params = ''
@@ -494,6 +504,7 @@ class RequestApprover(Handler):
             test_path = '_testful'
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
         command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
+        command += 'rm -f %s\n' % (proxy_file_name)
         return command
 
     def send_email_failure(self, output, error):
@@ -516,18 +527,19 @@ class RequestApprover(Handler):
 
     def internal_run(self):
         command = self.make_command()
-        executor = ssh_executor(server='vocms081.cern.ch')
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                _, stdout, stderr = executor.execute(command)
-                if not stdout and not stderr:
-                    self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
-                    return
-                output = stdout.read()
-                error = stderr.read()
+                with ssh_executor(server='vocms0481.cern.ch') as executor:
+                    _, stdout, stderr = executor.execute(command)
+                    if not stdout and not stderr:
+                        self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
+                        return
+                    output = stdout.read()
+                    error = stderr.read()
+
                 self.logger.info('Wmapprove output: %s' % output)
                 if not error and 'Something went wrong' not in output:
                     break

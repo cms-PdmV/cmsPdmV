@@ -6,7 +6,7 @@ from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights, authenticator
 import tools.settings as settings
-from simplejson import dumps, loads
+from json import dumps, loads
 
 from tools.communicator import communicator
 from couchdb_layer.mcm_database import database
@@ -25,15 +25,12 @@ class RenewCertificate(RESTResource):
         Renew certificates on our request upload/injection machines
         """
         # machines = ["cms-pdmv-op.cern.ch"]
-        machines = ["vocms081.cern.ch"]
+        machines = ["vocms0481.cern.ch"]
         for elem in machines:
-            ssh_exec = ssh_executor(server=elem)
-            try:
+            with ssh_executor(server=elem) as ssh_exec:
                 self.logger.info("Renewing certificate for: %s" % (elem))
                 stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
                 self.logger.info("Certificate renewed:\n{0}".format(stdout.read()))
-            finally:
-                ssh_exec.close_executor()
 
     def create_command(self, machine):
             # crab setup

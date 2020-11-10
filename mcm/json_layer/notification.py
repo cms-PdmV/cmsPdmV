@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
-from simplejson import dumps
+from json import dumps
 
 from json_base import json_base
 from couchdb_layer.mcm_database import database

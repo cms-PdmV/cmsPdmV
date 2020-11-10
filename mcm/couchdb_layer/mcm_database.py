@@ -5,20 +5,25 @@ import os
 import ast
 import logging
 import sys
+import socket
+import base64
 
-from simplejson import dumps
+from json import dumps
+from json import load as json_load
 from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *
 from tools.locker import locker
 
-from werkzeug.contrib.cache import SimpleCache
+from cachelib import SimpleCache
 
 class database:
     logger = logging.getLogger("mcm_error")
     # Cache timeout in seconds
     CACHE_TIMEOUT = 60 * 60
+    IP_CACHE_TIMEOUT = 15 * 60
     cache = SimpleCache()
+    ip_cache = SimpleCache()
 
     class DatabaseNotFoundException(Exception):
         def __init__(self,  db=''):
@@ -64,10 +69,17 @@ class database:
         def __str__(self):
             return 'Error: Invalid Parameter: ' + self.param
 
-    def __init__(self,  db_name='',url=None, cache_enabled=False):
+    def __init__(self,  db_name='',url=None, lucene_url=None, cache_enabled=False):
         host = os.environ['HOSTNAME']
+        auth_header = None
         if url is None:
             url = locator().dbLocation()
+            auth_header = self.get_auth_header()
+        if lucene_url is None:
+            lucene_url = locator().lucene_url()
+
+        url = self.resolve_hostname_to_ip(url)
+        lucene_url = self.resolve_hostname_to_ip(lucene_url)
         if not db_name:
             raise self.DatabaseNotFoundException(db_name)
         self.db_name = db_name
@@ -77,11 +89,31 @@ class database:
             self.cache_enabled=True
 
         try:
-            self.db = Database(db_name, url=url)
+            self.db = Database(db_name, url=url, lucene_url=lucene_url, auth_header=auth_header)
         except ValueError as ex:
             raise self.DatabaseAccessError(db_name)
 
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
+
+    def get_auth_header(self):
+        with open('/home/pdmvserv/private/couchdb_credentials_json.txt') as json_file:
+            credentials = json_load(json_file)
+
+        b64 = '%s:%s' % (credentials['username'], credentials['password'])
+        b64 = base64.b64encode(b64)
+        return 'Basic %s' % (b64)
+
+    def resolve_hostname_to_ip(self, hostname):
+        cached = self.ip_cache.get(hostname)
+        if cached:
+            return cached
+
+        host = hostname.split('//', 1)[-1].split(':', 1)[0].split('/', 1)[0]
+        ip = socket.gethostbyname(host)
+        with_ip = hostname.replace(host, ip)
+        self.ip_cache.set(hostname, with_ip, timeout=self.IP_CACHE_TIMEOUT)
+        self.logger.info('Will cache %s as %s', hostname, with_ip)
+        return with_ip
 
     def __is_number(self, s):
         try:
@@ -262,7 +294,7 @@ class database:
 
     def __pagify(self, page_num=0, limit=20):
         if page_num < 0:         ##couchdb-lucene dy default return limited resutlts
-            return 1000000000, 0 ## we set it to very high numer
+            return 16384, 0 ## we set it to very high numer
         skip = limit * page_num
         return limit, skip
 
@@ -558,11 +590,12 @@ class database:
                     'limit': limit,
                     'include_docs': True,
                     'skip': skip,
-                    'sort': '_id'
+                    'sort': '_id<string>'
                 }
                 if include_fields != '':
                     options['include_fields'] = include_fields
                 if sort != '':
+                    self.logger.warning('Setting sort to %s', sort)
                     options['sort'] = sort
                 data = self.db.FtiSearch(url, options=options, get_raw=get_raw)  # we sort ascending by doc._id field
                 break

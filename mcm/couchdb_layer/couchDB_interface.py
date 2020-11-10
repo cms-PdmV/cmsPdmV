@@ -1,20 +1,24 @@
-from simplejson import dumps, loads
+from json import dumps, loads
 
 import urllib
 import urllib2
+import logging
 
 class Database():
     """
     CoucDB interface class
     TO-DO: custom view queries; Error parsing ???
     """
-    def __init__(self, dbname = 'database', url = 'http://localhost:5984/', size = 1000):
+    def __init__(self, dbname='database', url='http://localhost:5984/', lucene_url='http://localhost:5985', size=1000, auth_header=None):
         self.__dbname = dbname
         self.__dburl = url
+        self.__luceneurl = lucene_url
         self.__queuesize = size
+        self.__auth_header = auth_header
         self.opener = urllib2.build_opener(urllib2.HTTPHandler)
 
         self.reset_queue()
+        self.logger = logging.getLogger('mcm_error')
 
     def reset_queue(self):
         self.__queue = []
@@ -23,10 +27,29 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
+        self.logger.debug('Request: %s', self.__dburl + url)
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
             request = urllib2.Request(self.__dburl + url, data=dumps(data))
+        request.get_method = lambda: method
+        for key in headers:
+            request.add_header(key, headers[key])
+
+        if self.__auth_header:
+            request.add_header('Authorization', self.__auth_header)
+
+        return request
+
+    def construct_lucene_request(self, url, method='GET', headers={'Content-Type': 'application/json'}, data=None):
+        """
+        method to construct a HTTP reuqest to couchDB
+        """
+        self.logger.debug('Lucene request: %s', self.__luceneurl + url)
+        if data is None:
+            request = urllib2.Request(self.__luceneurl + url)
+        else:
+            request = urllib2.Request(self.__luceneurl + url, data=dumps(data))
         request.get_method = lambda: method
         for key in headers:
             request.add_header(key, headers[key])
@@ -54,7 +77,16 @@ class Database():
             db_request = self.construct_request("%s/%s" % (self.__dbname, doc_id))
         else:
             db_request = self.construct_request("%s/%s?rev=%s" %(self.__dbname, doc_id, rev))
-        data = self.opener.open(db_request)
+
+        for i in range(3):
+            try:
+                data = self.opener.open(db_request)
+            except Exception as ex:
+                if i == 2:
+                    raise
+                else:
+                    time.sleep(3)
+
         return loads(data.read())
 
     def loadView(self, viewname, options=None, get_raw=False):
@@ -130,7 +162,7 @@ class Database():
         """
         if "key" in options:
             options["key"] = '"'+str(options["key"])+'"'
-        db_request = self.construct_request("_fti/local/%s/%s&%s" %(self.__dbname, viewname, self.to_json_query(options)))
+        db_request = self.construct_lucene_request('local/%s/%s&%s' % (self.__dbname, viewname, self.to_json_query(options)))
         data = self.opener.open(db_request)
         return data.read() if get_raw else loads(data.read())
 

@@ -48,6 +48,8 @@ class ValidationControl():
         items_to_submit = self.get_items_to_be_submitted()
         # Submit new items to validation
         self.submit_items(items_to_submit)
+        # Close SSH connection
+        control.ssh_executor.close_executor()
 
     def json_dumps(self, obj):
         return json.dumps(obj, indent=2, sort_keys=True)

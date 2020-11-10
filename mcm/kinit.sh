@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 while [ 1 ]; do
-    grep password  /home/mcm/credentials | cut -f2 -d: | kinit pdmvserv
-    ##klist  | mailx -s "kinit for pdmvserv" pdmvserv@cern.ch 
+    grep password /home/pdmvserv/private/credentials | cut -f2 -d: | kinit pdmvserv
     aklog
-    sleep 60
+    sleep 120
 done

@@ -3,7 +3,7 @@ import flask
 import traceback
 import time
 import urllib2
-from simplejson import dumps, loads
+from json import dumps, loads
 from collections import defaultdict
 import re
 
