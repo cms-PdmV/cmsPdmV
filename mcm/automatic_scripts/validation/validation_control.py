@@ -49,7 +49,7 @@ class ValidationControl():
         # Submit new items to validation
         self.submit_items(items_to_submit)
         # Close SSH connection
-        control.ssh_executor.close_executor()
+        control.ssh_executor.close_connections()
 
     def json_dumps(self, obj):
         return json.dumps(obj, indent=2, sort_keys=True)
@@ -179,6 +179,17 @@ class ValidationControl():
                     should_continue = self.process_done_validation(validation_name, threads)
                     if not should_continue:
                         break
+
+    def get_report_paths(self, validation_name, threads, expected):
+        paths = []
+        for request_prepid, expected_dict in expected.iteritems():
+            report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
+                                                             validation_name,
+                                                             request_prepid,
+                                                             threads)
+            paths.append(report_path)
+
+        return paths
 
     def get_reports(self, validation_name, threads, expected):
         reports = {}
@@ -443,16 +454,32 @@ class ValidationControl():
         # Get reports
         reports = self.get_reports(validation_name, threads_int, threads_dict['expected'])
         if not reports:
-            self.logger.error('Reports are missing for %s %s thread validation', validation_name, threads)
+            report_paths = self.get_report_paths(validation_name, threads_int, threads_dict['expected'])
+            report_text = '\n\nJob report files:'
+            for report_path in report_paths:
+                file_name = path.split('/')[-1]
+                file_contents = '<Report file does not exist>'
+                if os.path.isfile(report_path):
+                    try:
+                        with open(path, 'r') as report_file:
+                            file_contents = report_file.read()
+                    except Exception as ex:
+                        file_contents = '<Error reading report file %s>' % (ex)
+
+                report_text += '\n\n%s:\n\n%s' % (file_name, file_contents)
+
+            self.logger.error('Reports are missing or not complete for %s %s thread validation', validation_name, threads)
             self.validation_failed(validation_name)
             self.notify_validation_failed(validation_name,
-                                          'Job reports - XML files are missing for %s.\n'
+                                          'Job reports - XML files are either missing or not complete for %s.\n'
                                           'Job output:\n\n%s\n\n'
                                           'Job error stream output:\n\n%s\n\n'
-                                          'Job log output:\n\n%s' % (validation_name,
-                                                                     ''.join(out_file),
-                                                                     ''.join(err_file),
-                                                                     ''.join(log_file)))
+                                          'Job log output:\n\n%s'
+                                          '%s' % (validation_name,
+                                                  ''.join(out_file),
+                                                  ''.join(err_file),
+                                                  ''.join(log_file),
+                                                  report_text))
 
 
             return False

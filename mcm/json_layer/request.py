@@ -1362,6 +1362,20 @@ class request(json_base):
 
         bash_file = ['#!/bin/bash', '']
 
+        if not for_validation or automatic_validation:
+            bash_file += ['#############################################################',
+                          '#   This script is used by McM when it performs automatic   #',
+                          '#  validation in HTCondor or submits requests to computing  #',
+                          '#                                                           #',
+                          '#      !!! THIS FILE IS NOT MEANT TO BE RUN BY YOU !!!      #',
+                          '# If you want to run validation script yourself you need to #',
+                          '#     get a "Get test" script which can be retrieved by     #',
+                          '#  clicking a button next to one you just clicked. It will  #',
+                          '# say "Get test command" when you hover your mouse over it  #',
+                          '#      If you try to run this, you will have a bad time     #',
+                          '#############################################################',
+                          '']
+
         if not for_validation and not automatic_validation:
             directory = installer.build_location(prepid)
             bash_file += ['cd %s' % (directory), '']
@@ -1616,15 +1630,23 @@ class request(json_base):
 
                 # Parse report
                 bash_file += ['',
+                              '# Report %s' % (report_name),
+                              'cat %s' % (report_name),
+                              '',
                               '# Parse values from %s report' % (report_name),
                               'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s | tail -n 1)' % (report_name),
                               'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'if [ -z "$threads" ]; then',
+                              '  echo "Could not find NumberOfThreads in report, defaulting to %s"' % (threads),
+                              '  threads=%s' % (threads),
+                              'fi',
                               'if [ -z "$eventThroughput" ]; then',
                               '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
                               'fi',
@@ -1632,13 +1654,16 @@ class request(json_base):
                               'echo "Total events: $totalEvents"',
                               'echo "Threads: $threads"',
                               'echo "Peak value RSS: $peakValueRss MB"',
+                              'echo "Peak value Vsize: $peakValueVsize MB"',
                               'echo "Total size: $totalSize MB"',
                               'echo "Total job time: $totalJobTime s"',
                               'echo "Total CPU time: $totalJobCPU s"',
                               'echo "Event throughput: $eventThroughput"',
                               'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
                               'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
-                              'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"'
+                              'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"',
+                              'echo "Filter efficiency percent: "$(bc -l <<< "scale=8; ($totalEvents * 100) / $EVENTS")" %"',
+                              'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($totalEvents) / $EVENTS")'
                              ]
 
         if not for_validation and configs_to_upload:
