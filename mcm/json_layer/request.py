@@ -1639,6 +1639,7 @@ class request(json_base):
                               'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'totalSizeAlt=$(grep -Po "(?<=<Metric Name=\\"Timing-file-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
                               'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
@@ -1649,6 +1650,9 @@ class request(json_base):
                               'fi',
                               'if [ -z "$eventThroughput" ]; then',
                               '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
+                              'fi',
+                              'if [ -z "$totalSize" ]; then',
+                              '  totalSize=$totalSizeAlt',
                               'fi',
                               'echo "Validation report of %s sequence %s/%s"' % (prepid, index + 1, len(sequences)),
                               'echo "Total events: $totalEvents"',
@@ -3288,10 +3292,18 @@ class request(json_base):
                 threads = validation_info['threads']
                 size_per_event = validation_info['size_per_event'] / sequence_count
                 time_per_event = validation_info['time_per_event'] / sequence_count
-                memory = math.ceil((validation_info['peak_value_rss'] * 1.1) / 1000.0) * 1000
-            elif self.get_attribute('validation').get('preak_value_rss', 0) > 0:
+                peak_value_rss = validation_info['peak_value_rss']
+                if peak_value_rss < 4000:
+                    peak_value_rss *= 1.45
+                elif peak_value_rss < 8000:
+                    peak_value_rss *= 1.3
+                else:
+                    peak_value_rss *= 1.15
+
+                memory = int(math.ceil(peak_value_rss / 1000.0) * 1000)
+            elif self.get_attribute('validation').get('peak_value_rss', 0) > 0:
                 # Old way of getting PeakValueRSS
-                peak_value_rss = self.get_attribute('validation')['preak_value_rss']
+                peak_value_rss = self.get_attribute('validation')['peak_value_rss']
                 if threads == 1 and memory == 2300 and peak_value_rss < 2000.0:
                     # If it is single core with memory 2300 and peak rss value < 2000, use 2000
                     memory = 2000

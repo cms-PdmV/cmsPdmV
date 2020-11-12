@@ -457,11 +457,11 @@ class ValidationControl():
             report_paths = self.get_report_paths(validation_name, threads_int, threads_dict['expected'])
             report_text = '\n\nJob report files:'
             for report_path in report_paths:
-                file_name = path.split('/')[-1]
+                file_name = report_path.split('/')[-1]
                 file_contents = '<Report file does not exist>'
                 if os.path.isfile(report_path):
                     try:
-                        with open(path, 'r') as report_file:
+                        with open(report_path, 'r') as report_file:
                             file_contents = report_file.read()
                     except Exception as ex:
                         file_contents = '<Error reading report file %s>' % (ex)
@@ -756,6 +756,9 @@ class ValidationControl():
                 attr_value = float(attr_value)
                 if attr_value != 0 and threads != 0:
                     event_throughput = 1 / (attr_value / threads)
+            elif attr_name == 'Timing-file-write-totalMegabytes' and total_size is None:
+                # Fallback for getting total size
+                total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
 
         if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
             self.logger.error('Not all values are in %s, aborting validation with %s threads', report_file_name, threads)
