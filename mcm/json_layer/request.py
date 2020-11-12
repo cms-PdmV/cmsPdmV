@@ -2526,6 +2526,9 @@ class request(json_base):
         time_per_event = self.get_attribute('time_event')
         # Threads in sequences
         sequence_threads = [int(sequence.get('nThreads', 1)) for sequence in self.get_attribute('sequences')]
+        while len(sequence_threads) > len(time_per_event):
+            time_per_event = sequence_threads[:-1]
+
         # Time per event for single thread
         single_thread_time_per_event = [time_per_event[i] * sequence_threads[i] for i in range(len(time_per_event))]
         # Sum of single thread time per events
