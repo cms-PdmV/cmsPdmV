@@ -1,18 +1,21 @@
+import sys
 from couchdb_layer.mcm_database import database
 from tools.locker import locker
-from tools.countdown_cache import CountdownCache
+from cachelib import SimpleCache
 
-__cache = CountdownCache(200)
+__cache = SimpleCache()
 __db = database('settings')
+# Cache timeout in seconds
+CACHE_TIMEOUT = 30 * 60
 
 def get(label):
+    cached_value = __cache.get(label)
+    if cached_value is not None:
+        return cached_value
+
     with locker.lock(label):
-        cache_key = 'settings_' + label
-        cached_value = __cache.get(cache_key)
-        if cached_value is not None:
-            return cached_value
         setting = __db.get(label)
-        __cache.set(cache_key, setting)
+        __cache.set(label, setting, timeout=CACHE_TIMEOUT)
         return setting
 
 def get_value(label):
@@ -25,8 +28,8 @@ def add(label, setting):
     with locker.lock(label):
         result = __db.save(setting)
         if result:
-            cache_key = 'settings_' + label
-            __cache.set(cache_key, setting)
+            __cache.set(label, setting, timeout=CACHE_TIMEOUT)
+
         return result
 
 def set_value(label, value):
@@ -39,15 +42,12 @@ def set(label, setting):
     with locker.lock(label):
         result = __db.update(setting)
         if result:
-            # Maybe it's a better idea to cache the setting immediately instead
-            # getting it from database?
-            new_value = __db.get(label)
-            cache_key = 'settings_' + label
-            __cache.set(cache_key, new_value)
+            __cache.set(label, setting, timeout=CACHE_TIMEOUT)
+
         return result
 
 def cache_size():
-    return __cache.get_length(), __cache.get_size()
+    return len(__cache._cache), sys.getsizeof(__cache._cache)
 
 def clear_cache():
     size = cache_size()

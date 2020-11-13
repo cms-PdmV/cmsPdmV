@@ -4,36 +4,30 @@ class CountdownCache:
     def __init__(self, count=25):
         self.count = count
         self.__cache = {}
-        self.__counter = {}
 
     def set(self, key, value, count=0):
         if count <= 0:
-            self.__counter[key] = self.count
-        else:
-            self.__counter[key] = count
+            count = self.count
 
-        self.__cache[key] = value
+        self.__cache[key] = {'value': value, 'count': count}
 
     def get(self, key):
-        if key in self.__counter and self.__counter[key] <= 0:
-            del self.__counter[key]
-            if key in self.__cache:
-                del self.__cache[key]
-
+        cached_pair = self.__cache.get(key)
+        if not cached_pair:
             return None
 
-        if key in self.__cache:
-            self.__counter[key] = self.__counter[key] - 1
-            return self.__cache[key]
+        cached_pair['count'] -= 1
+        if cached_pair['count'] < 0:
+            self.__cache.pop(key, None)
+            return None
 
-        return None
+        return cached_pair['value']
 
     def get_size(self):
-        return sys.getsizeof(self.__cache) + sys.getsizeof(self.__counter)
+        return sys.getsizeof(self.__cache)
 
     def get_length(self):
         return len(self.__cache)
 
     def clear(self):
         self.__cache.clear()
-        self.__counter.clear()

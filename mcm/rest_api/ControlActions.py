@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
-from tools.user_management import access_rights, authenticator
+from tools.user_management import access_rights, authenticator, user_pack
 import tools.settings as settings
 from json import dumps, loads
 
@@ -262,13 +262,16 @@ class CacheInfo(RESTResource):
         db = database('requests')
         db_cache_length, db_cache_size = db.cache_size()
         settings_cache_length, settings_cache_size = settings.cache_size()
-        user_cache_length, user_cache_size = authenticator.cache_size()
+        user_cache_length, user_cache_size = user_pack.cache_size()
+        user_role_cache_length, user_role_cache_size = authenticator.cache_size()
         return {'results': {'db_cache_length': db_cache_length,
                             'db_cache_size': db_cache_size,
                             'settings_cache_length': settings_cache_length,
                             'settings_cache_size': settings_cache_size,
                             'user_cache_length': user_cache_length,
-                            'user_cache_size': user_cache_size}}
+                            'user_cache_size': user_cache_size,
+                            'user_role_cache_length': user_role_cache_length,
+                            'user_role_cache_size': user_role_cache_size}}
 
 class CacheClear(RESTResource):
 
@@ -286,13 +289,16 @@ class CacheClear(RESTResource):
         db.clear_cache()
         settings.clear_cache()
         authenticator.clear_cache()
+        user_pack.clear_cache()
         db_cache_length, db_cache_size = db.cache_size()
         settings_cache_length, settings_cache_size = settings.cache_size()
-        user_cache_length, user_cache_size = settings.cache_size()
-        return {'message': 'Cleared caches',
-                'results': {'db_cache_length': db_cache_length,
+        user_cache_length, user_cache_size = user_pack.cache_size()
+        user_role_cache_length, user_role_cache_size = authenticator.cache_size()
+        return {'results': {'db_cache_length': db_cache_length,
                             'db_cache_size': db_cache_size,
                             'settings_cache_length': settings_cache_length,
                             'settings_cache_size': settings_cache_size,
                             'user_cache_length': user_cache_length,
-                            'user_cache_size': user_cache_size}}
+                            'user_cache_size': user_cache_size,
+                            'user_role_cache_length': user_role_cache_length,
+                            'user_role_cache_size': user_role_cache_size}}

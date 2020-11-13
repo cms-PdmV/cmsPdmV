@@ -27,7 +27,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
-        self.logger.debug('Request: %s', self.__dburl + url)
+        self.logger.debug('Request: %s %s', method, self.__dburl + url)
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
@@ -45,7 +45,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
-        self.logger.debug('Lucene request: %s', self.__luceneurl + url)
+        self.logger.debug('Lucene request: %s %s', method, self.__luceneurl + url)
         if data is None:
             request = urllib2.Request(self.__luceneurl + url)
         else:
@@ -146,7 +146,7 @@ class Database():
         """
         Check if a document exists by ID. If specified check that the revision rev exists.
         """
-        uri = "/%s/%s" % (self.__dbname, id)
+        uri = "%s/%s" % (self.__dbname, id)
         if rev:
             uri += '?rev=%s' %(rev)
         try:

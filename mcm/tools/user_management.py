@@ -15,15 +15,26 @@ class user_pack:
     """
     Class used for transmission between user representation in requests and packed user representation
     """
+    __db = database('users')
+    __user_cache = SimpleCache()
+
+    # Cache timeout in seconds
+    CACHE_TIMEOUT = 30 * 60
+
     def __init__(self, db=False):
         self.user_dict = user_pack.get_request_header_dictionary()
         if db:
-            if self.get_username():
+            username = self.get_username()
+            if username:
                 # the user name could be not provided in case of public/ apis
-                udb = database('users')
-                u = udb.get(self.get_username())
-                if "email" in u:  # we take email from DB if user is registered, else we use ADFS
-                    self.user_dict['email'] = u['email']
+                user = self.__user_cache.get(username)
+                if not user:
+                    user = self.__db.get(username)
+                    self.__user_cache.set(username, user, timeout=self.CACHE_TIMEOUT)
+
+                # we take email from DB if user is registered, else we use ADFS
+                if user and "email" in user:
+                    self.user_dict['email'] = user['email']
 
     @staticmethod
     def get_request_header_dictionary():
@@ -42,20 +53,40 @@ class user_pack:
             return self.user_dict[name]
 
     def get_username(self):
-        return self.get_login()
+        return self.user_dict['login']
 
     def get_email(self):
         return self.email if self.email else self.remote_user
 
     def get_name(self):
-        return self.get_firstname()
+        return self.user_dict.get('firstname')
 
     def get_surname(self):
-        return self.get_lastname()
+        return self.user_dict.get('lastname')
 
     def get_fullname(self):
-        return self.get_firstname() + " " + self.get_lastname() if self.get_firstname() and self.get_lastname() else None
+        first_name = self.get_name()
+        last_name = self.get_surname()
+        if first_name and last_name:
+            return '%s %s' % (first_name, last_name)
+        else:
+            return None
 
+    @classmethod
+    def cache_size(cls):
+        """
+        Return number of elements in cache and cache size in bytes
+        """
+        return len(cls.__user_cache._cache), sys.getsizeof(cls.__user_cache._cache)
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Clear cache
+        """
+        size = cls.cache_size()
+        cls.__user_cache.clear()
+        return size
 
 roles = ('user', 'generator_contact', 'generator_convener', 'production_manager', 'administrator')
 access_rights = Enum(*roles)
@@ -78,26 +109,19 @@ class authenticator:
             return 'user'
 
         with locker.lock(username):
-            cache_key = 'authenticator_user_role_' + username
-            cached_value = cls.__users_roles_cache.get(cache_key)
-
-            if cached_value is not None:
+            cached_value = cls.__users_roles_cache.get(username)
+            if cached_value:
                 return cached_value
 
             user_role = 'user'
-            if cls.__db.document_exists(username):
-                user = cls.__db.get(username)
-
-                if email and ('email' not in user or user['email'] != email):
+            user = cls.__db.get(username)
+            if user:
+                user_role = user.get('role', roles[0])
+                if email and user.get('email') != email:
                     user['email'] = email
                     cls.__db.update(user)
 
-                try:
-                    user_role = user['role']
-                except Exception:
-                    cls.logger.error('Error getting role for user "' + username + '". Will use default value "' + user_role + '"')
-
-            cls.__users_roles_cache.set(cache_key, user_role, timeout=cls.CACHE_TIMEOUT)
+            cls.__users_roles_cache.set(username, user_role, timeout=cls.CACHE_TIMEOUT)
             return user_role
 
     @classmethod
