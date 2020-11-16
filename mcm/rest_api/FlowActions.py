@@ -445,7 +445,8 @@ class CloneFlow(RESTResource):
         new_json = db.get(pid)
         new_json['prepid'] = new_pid
         new_json['_id'] = new_pid
-        del new_json['history']
+        for attr in ('history', '_rev'):
+            new_json.pop(attr, None)
 
         new_flow = flow()
         new_flow.update(new_json)
