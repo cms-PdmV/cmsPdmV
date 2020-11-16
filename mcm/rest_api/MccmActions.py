@@ -238,8 +238,20 @@ class DeleteMccm(RESTResource):
         mcm_mccm = db.get(mccm_id)
         if mcm_mccm['status'] == 'done':
             return {"results": False, "message": "Cannot delete a ticket that is done"}
-        return {"results": db.delete(mccm_id)}
 
+        inactivity_email = flask.request.args.get('because_inactive', 'False').lower() == 'true'
+        if inactivity_email:
+            subject = 'MccM ticket %s was deleted due to inactivity' % (mccm_id)
+            message = 'MccM ticket %s was deleted because it was not touched for 100 days.\n' % (mccm_id)
+            message += 'If you still need this ticket, you can recreate it using information below:\n'
+            ticket_copy = dict(mcm_mccm)
+            for attribute_to_delete in ('_id', '_rev', 'prepid', 'message_id', 'meeting', 'approval', 'generated_chains'):
+                ticket_copy.pop(attribute_to_delete, None)
+
+            message += dumps(mcm_mccm, indent=4, sort_keys=True)
+            mccm(mcm_mccm).notify(subject, message, accumulate=False)
+
+        return {"results": db.delete(mccm_id)}
 
 class GetEditableMccmFields(RESTResource):
 
