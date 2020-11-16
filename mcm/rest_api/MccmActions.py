@@ -239,19 +239,34 @@ class DeleteMccm(RESTResource):
         if mcm_mccm['status'] == 'done':
             return {"results": False, "message": "Cannot delete a ticket that is done"}
 
-        inactivity_email = flask.request.args.get('because_inactive', 'False').lower() == 'true'
-        if inactivity_email:
-            subject = 'MccM ticket %s was deleted due to inactivity' % (mccm_id)
-            message = 'MccM ticket %s was deleted because it was not touched for 100 days.\n' % (mccm_id)
-            message += 'If you still need this ticket, you can recreate it using information below:\n'
-            ticket_copy = dict(mcm_mccm)
-            for attribute_to_delete in ('_id', '_rev', 'prepid', 'message_id', 'meeting', 'approval', 'generated_chains'):
-                ticket_copy.pop(attribute_to_delete, None)
-
-            message += dumps(mcm_mccm, indent=4, sort_keys=True)
-            mccm(mcm_mccm).notify(subject, message, accumulate=False)
-
         return {"results": db.delete(mccm_id)}
+
+
+class NotifyMccm(RESTResource):
+
+    access_limit = access_rights.production_manager
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def put(self):
+        """
+        Sends the prodived posted text to the users who acted on MccM ticket
+        """
+        data = loads(flask.request.data.strip())
+        # read a message from data
+        message = data['message'].strip()
+        prepid = data['prepid']
+        subject = data.get('subject', 'Communication about %s' % (prepid)).strip()
+        db = database('mccms')
+        mcm_mccm = db.get(prepid)
+        if not mcm_mccm:
+            return {"results": False, "message": "Could not find %s" % (prepid)}
+
+        mccm(mcm_mccm).notify(subject, message, accumulate=False)
+        return {"results": True}
+
 
 class GetEditableMccmFields(RESTResource):
 
