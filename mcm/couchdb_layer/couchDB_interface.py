@@ -3,6 +3,7 @@ from json import dumps, loads
 import urllib
 import urllib2
 import logging
+import time
 
 class Database():
     """
@@ -85,7 +86,7 @@ class Database():
                 if i == 2:
                     raise
                 else:
-                    time.sleep(3)
+                    time.sleep(1.5)
 
         return loads(data.read())
 
