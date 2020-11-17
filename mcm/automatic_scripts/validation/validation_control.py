@@ -772,10 +772,10 @@ class ValidationControl():
             # What are we supposed to do?!
             return None
 
-        time_per_event = 1.0 / event_throughput
-        size_per_event = total_size / total_events
+        time_per_event = (1.0 / event_throughput) if event_throughput > 0 else 0
+        size_per_event = (total_size / total_events) if total_events > 0 else 0
         cpu_efficiency = total_job_cpu / (threads * total_job_time)
-        filter_efficiency = float(total_events) / expected_events
+        filter_efficiency = (float(total_events) / expected_events) if expected_events > 0 else 0
         return {'time_per_event': time_per_event,
                 'size_per_event': size_per_event,
                 'cpu_efficiency': cpu_efficiency,
