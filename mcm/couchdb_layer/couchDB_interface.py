@@ -82,13 +82,14 @@ class Database():
         for i in range(3):
             try:
                 data = self.opener.open(db_request)
+                return loads(data.read())
             except Exception as ex:
                 if i == 2:
                     raise
                 else:
                     time.sleep(1.5)
 
-        return loads(data.read())
+        return None
 
     def loadView(self, viewname, options=None, get_raw=False):
         """
