@@ -1,4 +1,5 @@
 import time
+import json
 
 from json_base import json_base
 from json_layer.request import request
@@ -282,7 +283,7 @@ class chained_request(json_base):
 
     def reserve(self, limit=None, save_requests=True):
         steps = 0
-        count_limit = None
+        count_limit = 35
         campaign_limit = None
         if limit:
             self.logger.info('limit: %s was passed on to reservation.' % (limit))
@@ -680,13 +681,47 @@ class chained_request(json_base):
                         continue
                     if mcm_cr.get_attribute('chain')[next_step] in vetoed_last:
                         continue
-                    next_id = mcm_cr.get_attribute('chain')[next_step]
+
+                    candidate_chain = mcm_cr.get_attribute('chain')
+                    self.logger.info('Found candidate for %s: %s\nCandidate chain: %s',
+                                     self.get_attribute('prepid'),
+                                     mcm_cr.get_attribute('prepid'),
+                                     '->'.join(candidate_chain))
+                    # Candidate's chained campaign
+                    mcm_cr_cc = ccdb.get(mcm_cr.get_attribute('member_of_campaign'))
+                    common_steps = []
+                    for i in range(min(len(mcm_cc['campaigns']), len(mcm_cr_cc['campaigns']))):
+                        if mcm_cc['campaigns'][i] == mcm_cr_cc['campaigns'][i]:
+                            common_steps.append(mcm_cc['campaigns'][i])
+
+                    self.logger.info('Common steps: %s', json.dumps(common_steps, indent=2))
+                    further_steps_keep_output = False
+                    for i in range(next_step, min(len(common_steps), len(candidate_chain))):
+                        candidate_request = rdb.get(candidate_chain[i])
+                        candidate_request_keep_output = True in candidate_request['keep_output']
+                        self.logger.info('Checking step %s, %s->%s request %s keeps output: %s',
+                                         i,
+                                         common_steps[i][1],
+                                         common_steps[i][0],
+                                         candidate_chain[i],
+                                         candidate_request_keep_output)
+                        if candidate_request_keep_output:
+                            further_steps_keep_output = True
+
+                    if not further_steps_keep_output:
+                        self.logger.info('None of following common requests keep output, bad candidate')
+                        continue
+
+                    next_id = candidate_chain[next_step]
                     break
             if next_id:
                 approach = 'use'
             else:
                 approach = 'create'
 
+        self.logger.info('%s approach is to: %s',
+                         self.get_attribute('prepid'),
+                         approach)
         if approach == 'create':
             from rest_api.RequestPrepId import RequestPrepId
 
