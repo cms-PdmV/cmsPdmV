@@ -2,6 +2,7 @@ import logging
 import json
 import sys
 import os.path
+import os
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
@@ -33,7 +34,7 @@ class ValidationControl():
         locator = Locator('validation/tests', care_on_existing=False)
         self.test_directory_path = locator.location()
         self.logger.info('Location %s' % (self.test_directory_path))
-        self.max_attempts = 3
+        self.max_attempts = 2
 
     def run(self):
         # Get status of validations in HTCondor
@@ -114,8 +115,16 @@ class ValidationControl():
 
         chained_requests = set(x['prepid'] for x in chained_requests)
         already_submitted = set(self.storage.get_all().keys())
+        already_submitted_count = len(already_submitted)
         self.logger.info('Already submitted validations:\n%s', '\n'.join(already_submitted))
         to_be_submitted = list((chained_requests | requests) - already_submitted)
+        to_be_submitted_count = len(to_be_submitted)
+        to_be_submitted = to_be_submitted[:500-min(500,already_submitted_count)]
+
+        self.logger.info('Already submitted - %s, to be submitted - %s, will be submitted - %s',
+                         already_submitted_count,
+                         to_be_submitted_count,
+                         len(to_be_submitted))
 
         # self.logger.warning('Will keep only MultiValidation campaigns!')
         # to_be_submitted = [x for x in to_be_submitted if 'multivalidation' in x.lower()]
@@ -176,9 +185,15 @@ class ValidationControl():
                 status = threads_dict.get('condor_status')
                 self.logger.info('%s thread validation is %s', threads, status)
                 if status == 'DONE':
-                    should_continue = self.process_done_validation(validation_name, threads)
-                    if not should_continue:
-                        break
+                    try:
+                        should_continue = self.process_done_validation(validation_name, threads)
+                        if not should_continue:
+                            break
+                    except Exception as ex:
+                        self.logger.info('Exception while processing done %s with %s threads: %s',
+                                         validation_name,
+                                         threads,
+                                         ex)
 
     def get_report_paths(self, validation_name, threads, expected):
         paths = []
@@ -296,7 +311,7 @@ class ValidationControl():
         actual_time_per_event = report['time_per_event']
         request = self.request_db.get(request_name)
         number_of_sequences = len(request.get('sequences', []))
-        adjusted_time_per_event = ((expected_time_per_event + 3 * actual_time_per_event) / 4) / number_of_sequences
+        adjusted_time_per_event = ((expected_time_per_event + 9 * actual_time_per_event) / 10) / number_of_sequences
         request['time_event'] = [adjusted_time_per_event] * number_of_sequences
         self.logger.info('%s expected %.4fs time per event, measured %.4fs, adjusting to %.4fs * %s sequences = %.4fs',
                          request_name,
@@ -313,7 +328,7 @@ class ValidationControl():
         actual_size_per_event = report['size_per_event']
         request = self.request_db.get(request_name)
         number_of_sequences = len(request.get('sequences', []))
-        adjusted_size_per_event = ((expected_size_per_event + 3 * actual_size_per_event) / 4) / number_of_sequences
+        adjusted_size_per_event = ((expected_size_per_event + 9 * actual_size_per_event) / 10) / number_of_sequences
         request['size_event'] = [adjusted_size_per_event] * number_of_sequences
         self.logger.info('%s expected %.4fkB size per event, measured %.4fkB, adjusting to %.4fkB * %s sequences = %.4fkB',
                          request_name,
@@ -367,6 +382,11 @@ class ValidationControl():
         if start_line > 0 and end_line > 0 and end_line > start_line:
             del err_file[start_line:end_line]
             err_file.insert(start_line, '...\n')
+
+        try:
+           os.remove(out_file_name)
+        except Exception as ex:
+           self.logger.warning(ex)
 
         return log_file, out_file, err_file
 
@@ -505,6 +525,10 @@ class ValidationControl():
                                  self.json_dumps(expected_dict),
                                  self.json_dumps(report))
 
+                if not self.request_db.get(request_name):
+                    self.logger.error('Could not find %s', request_name)
+                    return False
+
                 passed, message = self.check_events_ran(request_name, expected_dict, report)
                 if not passed:
                     self.validation_failed(validation_name)
@@ -579,9 +603,15 @@ class ValidationControl():
     def notify_validation_failed(self, validation_name, message):
         if '-chain_' in validation_name:
             item = self.chained_request_db.get(validation_name)
+            if not item:
+                return
+
             item = ChainedRequest(item)
         else:
             item = self.request_db.get(validation_name)
+            if not item:
+                return
+
             item = Request(item)
 
         subject = 'Validation failed for %s' % (validation_name)
@@ -662,6 +692,7 @@ class ValidationControl():
             request = self.request_db.get(validation_name)
             requests = [request]
 
+        requests = [r for r in requests if r]
         for request in requests:
             request['validation']['results'] = {}
             request['approval'] = 'none'
