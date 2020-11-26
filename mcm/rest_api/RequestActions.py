@@ -218,7 +218,14 @@ class CloneRequest(RequestRESTResource):
             new_json['generator_parameters'][0]['version'] = 0
             # remove some of the parameters to get then fresh from a new request.
             for w in to_wipe:
-                del new_json[w]
+                # Delete if exists
+                new_json.pop(w, None)
+
+            if 'interested_pwg' not in new_json:
+                new_json['interested_pwg'] = []
+
+            if new_json['pwg'] not in new_json['interested_pwg']:
+                new_json['interested_pwg'].append(new_json['pwg'])
 
             if old_validation_multiplier != 1:
                 new_json['validation'] = {'time_multiplier': old_validation_multiplier}
