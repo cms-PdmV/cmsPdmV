@@ -28,7 +28,7 @@ class GetBjobs(RESTResource):
             return {"results": out}
 
     def create_command(self, options):
-        bcmd = 'module load lxbatch/tzero && condor_q -nobatch '
+        bcmd = 'module load lxbatch/tzero && condor_q -nobatch | grep -v RELMON_ '
         for opt in options.split(','):
             bcmd += opt
         return bcmd

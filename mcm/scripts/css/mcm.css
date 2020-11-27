@@ -186,7 +186,7 @@ div.notification-groups:hover {
 
 .well.batch-info{
     overflow-y: scroll;
-    height: 300px;
+    max-height: 600px;
 }
 
 #help {
