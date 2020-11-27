@@ -603,6 +603,7 @@ class TestChainedRequest(RESTResource):
                 "message": "No validation required",
                 "prepid": chained_request_id}
         mcm_cr.set_attribute('validate', 1)
+        mcm_cr.update_history({'action': 'validate'})
         if not crdb.update(mcm_cr.json()):
             return {
                 "results": False,

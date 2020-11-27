@@ -3,6 +3,7 @@ import json
 import sys
 import os.path
 import os
+import math
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
@@ -683,22 +684,30 @@ class ValidationControl():
 
     def validation_failed(self, validation_name):
         if '-chain_' in validation_name:
-            chained_req = self.chained_request_db.get(validation_name)
-            chained_req['validate'] = 0
-            self.chained_request_db.save(chained_req)
-            requests = self.get_requests_from_chained_request(ChainedRequest(chained_req))
-            requests = [r.json() for r in requests]
+            chained_req = ChainedRequest(self.chained_request_db.get(validation_name))
+            chained_req_json = chained_req.json()
+            chained_req_json['validate'] = 0
+            chained_req.update_history({'action': 'validation', 'step': 'failed'})
+            self.chained_request_db.save(chained_req_json)
+            requests = self.get_requests_from_chained_request(mcm_chained_req)
+            chain_validation = True
         else:
-            request = self.request_db.get(validation_name)
+            request = Request(self.request_db.get(validation_name))
             requests = [request]
+            chain_validation = False
 
-        requests = [r for r in requests if r]
         for request in requests:
-            request['validation']['results'] = {}
-            request['approval'] = 'none'
-            request['status'] = 'new'
-            self.logger.warning('Saving %s', request['prepid'])
-            self.request_db.save(request)
+            request_json = request.json()
+            request_json['validation']['results'] = {}
+            request_json['approval'] = 'none'
+            request_json['status'] = 'new'
+            if chain_validation:
+                request.update_history({'action': 'validation', 'step': 'failed (chain)'})
+            else:
+                request.update_history({'action': 'validation', 'step': 'failed'})
+
+            self.logger.warning('Saving %s', request_json['prepid'])
+            self.request_db.save(request_json)
 
         self.storage.delete(validation_name)
         # Delete validation directory
@@ -709,11 +718,14 @@ class ValidationControl():
 
     def validation_succeeded(self, validation_name):
         if '-chain_' in validation_name:
-            chained_req = self.chained_request_db.get(validation_name)
-            chained_req['validate'] = 0
-            self.chained_request_db.save(chained_req)
+            chained_req = ChainedRequest(self.chained_request_db.get(validation_name))
+            chained_req_json = chained_req.json()
+            chained_req_json['validate'] = 0
+            chained_req.update_history({'action': 'validation', 'step': 'succeeded'})
+            self.chained_request_db.save(chained_req_json)
+            chain_validation = True
         else:
-            request = self.request_db.get(validation_name)
+            chain_validation = False
 
         requests = {}
         request_dict = self.storage.get(validation_name)
@@ -728,9 +740,15 @@ class ValidationControl():
                 request['status'] = 'validation'
                 request['validation']['results'][core_number] = request_dict['done'][core_number][request_prepid]
 
-        for _, request in requests.iteritems():
-            self.logger.warning('Saving %s', request['prepid'])
-            self.request_db.save(request)
+        for _, request_json in requests.iteritems():
+            request = Request(request_json)
+            if chain_validation:
+                request.update_history({'action': 'validation', 'step': 'succeeded (chain)'})
+            else:
+                request.update_history({'action': 'validation', 'step': 'succeeded'})
+
+            self.logger.warning('Saving %s', request_json['prepid'])
+            self.request_db.save(request.json())
 
         self.notify_validation_suceeded(validation_name)
         self.storage.delete(validation_name)
@@ -827,6 +845,9 @@ class ValidationControl():
         if request_cores != threads:
             self.logger.warning('Will request %s cpus because memory is %s', request_cores, memory)
 
+        # Try to push out bigger jobs sooner
+        # 1 core - 0, 2 core - 1, 4 core - 2, 8 core - 3
+        condor_prio = int(math.log(8, 2))
         condor_file = ['universe              = vanilla',
                        # 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv',
                        'executable            = %s_%s_threads.sh' % (validation_name, threads),
@@ -839,6 +860,7 @@ class ValidationControl():
                        '+MaxRuntime           = %s' % (job_length),
                        'RequestCpus           = %s' % (request_cores),
                        '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
+                       '+JobPrio              = %s' % (condor_prio),
                        'requirements          = (OpSysAndVer =?= "CentOS7")',
                        # Leave in queue when status is DONE for 30 minutes - 1800 seconds
                        'leave_in_queue        = JobStatus == 4 && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
