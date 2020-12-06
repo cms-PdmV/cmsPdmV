@@ -689,7 +689,7 @@ class ValidationControl():
             chained_req_json['validate'] = 0
             chained_req.update_history({'action': 'validation', 'step': 'failed'})
             self.chained_request_db.save(chained_req_json)
-            requests = self.get_requests_from_chained_request(mcm_chained_req)
+            requests = self.get_requests_from_chained_request(chained_req)
             chain_validation = True
         else:
             request = Request(self.request_db.get(validation_name))
@@ -942,7 +942,7 @@ class ValidationControl():
 
         # Condor submit
         command = ['cd %s' % (validation_directory),
-                   'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 48',
+                   'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 168',
                    'chmod +x %s' % (validation_script_file_name.split('/')[-1]),
                    'module load lxbatch/tzero',
                    'condor_submit %s' % (condor_file_name.split('/')[-1])]
