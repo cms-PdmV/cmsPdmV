@@ -431,6 +431,11 @@ class chained_request(json_base):
         if next_step >= len(mcm_cc['campaigns']):
             if reserve:
                 return {'result': False}
+
+            if current_request.get_attribute('status') == 'done':
+                self.set_attribute('status', 'done')
+                self.reload()
+
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'chained_campaign %s does not allow any further flowing.' % (self.get_attribute('member_of_campaign')))
