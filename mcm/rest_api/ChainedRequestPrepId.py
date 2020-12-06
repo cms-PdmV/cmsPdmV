@@ -23,7 +23,8 @@ class ChainedRequestPrepId(RESTResourceIndex):
         if not campaign:
             self.logger.error('Campaign id provided is None.')
             return None
-        with locker.lock("{0}-{1}".format(pwg, campaign)):
+
+        with locker.lock('%s-%s' %(pwg, campaign)):
             if not ccamp_db.document_exists(campaign):
                 self.logger.error('Campaign id {0} does not exist.'.format(campaign))
                 return None
@@ -36,7 +37,16 @@ class ChainedRequestPrepId(RESTResourceIndex):
                     sn = serial_number_lookup[0]['value'] + 1
 
             # construct the new id
-            new_prepid = pwg + '-' + campaign + '-' + str(sn).zfill(5)
+            new_prepid = '%s-%s-%05d' % (pwg, campaign, sn)
+            while ccamp_db.db.prepid_is_used(new_prepid):
+                self.logger.info('PrepID %s is already used, will try +1', new_prepid)
+                sn += 1
+                new_prepid = '%s-%s-%05d' % (pwg, campaign, sn)
+                if sn == 99999:
+                    self.logger.error('Something went horribly wrong, cannot proceed')
+                    raise Exception('Could not assign a new prepid')
+
+            self.logger.info('Chose PrepID: %s' % (new_prepid))
             if sn == 1:
                 self.logger.info('Beginning new prepid family: %s' % (new_prepid))
 

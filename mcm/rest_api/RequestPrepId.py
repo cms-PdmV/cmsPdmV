@@ -15,15 +15,27 @@ class RequestPrepId(RESTResourceIndex):
     def next_prepid(self, pwg, camp):
         if not pwg or not camp:
             return None
-        with locker.lock("{0}-{1}".format(pwg, camp)):
+
+        with locker.lock("%s-%s" % (pwg, camp)):
             db = database(self.db_name)
             query_results = db.raw_query('serial_number', {'group': True, 'key': [camp, pwg]})
             sn = 1
             if query_results:
                 sn = query_results[0]['value'] + 1
+
             pid = '%s-%s-%05d' % (pwg, camp, sn)
+            while db.db.prepid_is_used(pid):
+                self.logger.info('PrepID %s is already used, will try +1', pid)
+                sn += 1
+                pid = '%s-%s-%05d' % (pwg, camp, sn)
+                if sn == 99999:
+                    self.logger.error('Something went horribly wrong, cannot proceed')
+                    raise Exception('Could not assign a new prepid')
+
+            self.logger.info('Chose PrepID: %s' % (pid))
             if sn == 1:
                 self.logger.info('Beginning new prepid family: %s-%s' % (pwg, camp))
+
             db_camp = database('campaigns', cache_enabled=True)
             req_camp = campaign(db_camp.get(camp))
             new_request = request(req_camp.add_request({'_id': pid, 'prepid': pid,

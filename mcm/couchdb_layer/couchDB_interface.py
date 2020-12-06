@@ -83,13 +83,77 @@ class Database():
             try:
                 data = self.opener.open(db_request)
                 return loads(data.read())
+            except urllib2.HTTPError as e:
+                code = e.code
+                if code == 404:
+                    return None
+
+                if i == 2:
+                    raise
+
+                time.sleep(1.5)
             except Exception as ex:
+                if i == 2:
+                    raise
+
+                time.sleep(1.5)
+
+        return None
+
+    def prepid_is_used(self, doc_id):
+        """
+        Return whether such prepid is already used - either such document
+        exists or it was deleted
+        """
+        request = self.construct_request('%s/%s' % (self.__dbname, doc_id))
+
+        for i in range(3):
+            try:
+                response = self.opener.open(request)
+                data = response.read()
+                data = loads(data)
+                exists = '_id' in data
+                self.logger.debug('%s exists, code %s', doc_id, response.code)
+                return True
+            except urllib2.HTTPError as e:
+                data = e.read()
+                code = e.code
+                if code == 404:
+                    # If never existed: "error":"not_found","reason":"missing"
+                    # If was deleted: "error":"not_found","reason":"deleted"
+                    data_json = loads(data)
+                    if data_json['error'] == 'not_found':
+                        if data_json['reason'] == 'deleted':
+                            # Document was deleted, but prepid is used
+                            return True
+                        if data_json['reason'] == 'missing':
+                            # Document never existed, prepid is unused
+                            return False
+
+                elif code == 500:
+                    self.logger.warning('Code %s, cannot check if %s is used', code, doc_id)
+                    if i == 2:
+                        raise
+
+                    self.logger.info('Sleep and try %s again', doc_id)
+                    time.sleep(3)
+                    continue
+
+                reason = e.reason
+                self.logger.warning('HTTP error, doc_id: %s, code: %s reason: %s, response: %s',
+                                    doc_id,
+                                    code,
+                                    e.reason,
+                                    data)
+            except Exception as ex:
+                self.logger.warning('Exception %s', ex)
                 if i == 2:
                     raise
                 else:
                     time.sleep(1.5)
 
-        return None
+        return False
+
 
     def loadView(self, viewname, options=None, get_raw=False):
         """

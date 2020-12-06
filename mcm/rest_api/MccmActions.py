@@ -518,7 +518,7 @@ class GenerateChains(RESTResource):
             mcm_chained_campaign.reload(save_current=False)
             generated_chained_request = chained_request(mcm_chained_campaign.generate_request(request_prepid))
         except Exception as e:
-            message = "Unable to generate chained request for ticket %s request %s, message: " % (mccm_ticket.get_attribute('prepid'), request_prepid, str(e))
+            message = "Unable to generate chained request for ticket %s request %s, message: %s" % (mccm_ticket.get_attribute('prepid'), request_prepid, str(e))
             self.logger.error(message)
             return {
                 "results": False,
