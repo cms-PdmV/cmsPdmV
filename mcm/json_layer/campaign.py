@@ -43,7 +43,7 @@ class campaign(json_base):
         'sequences': [],  # list of jsons of jsons
         'approval': '',
         'history': [],
-        'memory': 2300,
+        'memory': 2000,
         'no_output': False,
         'on_hold': 0}
 

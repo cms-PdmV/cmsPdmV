@@ -75,7 +75,7 @@ class request(json_base):
         'flown_with': '',
         'time_event': [float(-1)],
         'size_event': [-1],
-        'memory': 2300,  # the default until now
+        'memory': 2000,  # the default until now
         'name_of_fragment': '',
         'fragment': '',
         'config_id': [],
@@ -282,8 +282,8 @@ class request(json_base):
                 'validation',
                 'bad user admin level %s' % (self.current_user_level))
 
-        if self.get_attribute('memory') < 2300:
-            raise self.BadParameterValue('Memory (%sMB) is lower than threshold (2300MB)' % (self.get_attribute('memory')))
+        if self.get_attribute('memory') < 1000:
+            raise self.BadParameterValue('Memory (%sMB) is lower than threshold (1000MB)' % (self.get_attribute('memory')))
 
         if not self.correct_types():
             raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(self.get_attribute('prepid')))
@@ -385,11 +385,11 @@ class request(json_base):
                     'validation',
                     'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
 
-        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 2300:
+        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 4000:
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
-                'Single core request should use <= 2.3GB memory')
+                'Single core request should use <= 4GB memory')
 
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
