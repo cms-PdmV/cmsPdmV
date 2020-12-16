@@ -825,9 +825,12 @@ class ValidationControl():
         size_per_event = (total_size / total_events) if total_events > 0 else 0
         cpu_efficiency = total_job_cpu / (threads * total_job_time)
         filter_efficiency = (float(total_events) / expected_events) if expected_events > 0 else 0
+        # Estimated events per lumi based on filter efficiency and measured time per event
+        estimated_events_per_lumi = (28800 * filter_efficiency / time_per_event) if time_per_event > 0 else 0
         return {'time_per_event': time_per_event,
                 'size_per_event': size_per_event,
                 'cpu_efficiency': cpu_efficiency,
+                'estimated_events_per_lumi': estimated_events_per_lumi,
                 'filter_efficiency': filter_efficiency,
                 'peak_value_rss': peak_value_rss,
                 'total_events': total_events}
