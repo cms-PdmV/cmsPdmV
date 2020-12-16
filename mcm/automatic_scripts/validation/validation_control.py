@@ -847,7 +847,7 @@ class ValidationControl():
 
         # Try to push out bigger jobs sooner
         # 1 core - 0, 2 core - 1, 4 core - 2, 8 core - 3
-        condor_prio = int(math.log(8, 2))
+        condor_prio = int(math.log(threads, 2))
         condor_file = ['universe              = vanilla',
                        # 'environment           = HOME=/afs/cern.ch/user/p/pdmvserv',
                        'executable            = %s_%s_threads.sh' % (validation_name, threads),
