@@ -391,6 +391,9 @@ class request(json_base):
                 'validation',
                 'Single core request should use <= 4GB memory')
 
+        # Do not allow to validate if there are collisions
+        self.check_for_collisions()
+
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
@@ -695,8 +698,8 @@ class request(json_base):
             if other_request_json['prepid'] == my_prepid:
                 continue  # no self check
 
-            if other_request_json['status'] in ['new', 'validation']:
-                # Not paying attention to new or validating requests
+            if other_request_json['approval'] == 'none' and other_request_json['status'] == 'new':
+                # Not paying attention to new requests
                 continue
 
             other_request = request(other_request_json)
@@ -1177,6 +1180,9 @@ class request(json_base):
             # so we work on json object
             __cc_id = self.get_attribute("member_of_chain")[0].split("-")[1]
             __cc = ccDB.get(__cc_id)
+            if 'campaigns' not in __cc:
+                raise Exception('Chained campaign %s is missing from database, needed for %s!' % (__cc_id, self.get_attribute('prepid')))
+
             for camp, mcm_flow in __cc["campaigns"]:
                 if mcm_flow != None:
                     f = fdb.get(mcm_flow)
