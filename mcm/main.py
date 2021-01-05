@@ -448,9 +448,11 @@ console_handler = logging.StreamHandler(sys.stdout)
 # Error logger
 if console_logging:
     error_handler = console_handler
+    error_handler.setLevel(logging.DEBUG)
 else:
     error_log_filename = getattr(error_logger, "rot_error_file", "logs/error.log")
     error_handler = logging.handlers.RotatingFileHandler(error_log_filename, 'a', max_bytes, backup_count)
+    error_handler.setLevel(logging.INFO)
 
 error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
 error_handler.setFormatter(error_formatter)
@@ -463,8 +465,10 @@ injection_logger = logging.getLogger("mcm_inject")
 inject_log_filename = getattr(injection_logger, "rot_access_file", "logs/inject.log")
 if console_logging:
     injection_handler = console_handler
+    injection_handler.setLevel(logging.DEBUG)
 else:
     injection_handler = logging.handlers.RotatingFileHandler(inject_log_filename, 'a', max_bytes, 250)
+    injection_handler.setLevel(logging.INFO)
 
 injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
 injection_handler.setFormatter(injection_formatter)
@@ -475,11 +479,12 @@ access_logger = logging.getLogger("access_log")
 access_log_filename = getattr(access_logger, "rot_access_file", "logs/access.log")
 if console_logging:
     access_handler = console_handler
+    access_handler.setLevel(logging.DEBUG)
 else:
     access_handler = logging.handlers.RotatingFileHandler(access_log_filename, 'a', max_bytes, backup_count)
+    access_handler.setLevel(logging.INFO)
 
 access_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-access_handler.setLevel(logging.DEBUG)
 access_handler.setFormatter(access_formatter)
 access_handler.addFilter(user_filter)
 access_handler.addFilter(memory_filter)
