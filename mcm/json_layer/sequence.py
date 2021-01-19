@@ -57,15 +57,15 @@ class sequence(json_base):
         if attribute == 'index':
             return ''
         value = self.get_attribute(attribute)
-        if isinstance(value, str) and not value.strip():
+        if isinstance(value, basestring) and not value.strip():
             return ''
         if attribute == 'nThreads':
-            if not value.isdigit():
+            if isinstance(value, basestring) and not value.isdigit():
                 return ''
             if int(value) <= 1:
                 return ''
         if attribute == 'nStreams':
-            if not value.isdigit():
+            if isinstance(value, basestring) and not value.isdigit():
                 return ''
             if int(value) <= 0:
                 return ''
