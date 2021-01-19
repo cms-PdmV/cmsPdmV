@@ -56,22 +56,27 @@ class sequence(json_base):
     def to_command_line(self, attribute):
         if attribute == 'index':
             return ''
+        value = self.get_attribute(attribute)
+        if isinstance(value, str) and not value.strip():
+            return ''
         if attribute == 'nThreads':
-            if int(self.get_attribute('nThreads')) <= 1:
+            if not value.isdigit():
+                return ''
+            if int(value) <= 1:
                 return ''
         if attribute == 'nStreams':
-            if int(self.get_attribute(attribute)) <= 0:
+            if not value.isdigit():
                 return ''
-        if self.get_attribute(attribute) == '':
-            return ''
-        elif self.get_attribute(attribute) == True:
+            if int(value) <= 0:
+                return ''
+        elif value == True:
             return "--" + str(attribute)
-        elif self.get_attribute(attribute) == False:
+        elif value == False:
             return ''
-        elif attribute == 'extra' and self.get_attribute(attribute):
-            return self.get_attribute(attribute)
-        elif self.get_attribute(attribute):
-            return "--" + attribute + " " + self.srepr(self.get_attribute(attribute))
+        elif attribute == 'extra' and value.strip():
+            return value.strip()
+        elif value:
+            return "--" + attribute + " " + self.srepr(value)
         else:
             return ''
 
