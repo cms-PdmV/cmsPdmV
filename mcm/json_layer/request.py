@@ -3285,16 +3285,40 @@ class request(json_base):
             thread_info['threads'] = int(threads)
             del thread_info['total_events']
 
-        validation_info = sorted(validation_info.values(), key=lambda v: v['threads'])
-        self.logger.info('Validation info %s', dumps(validation_info, indent=2, sort_keys=True))
+        self.logger.info('Validation info available for cores: %s', list(validation_info.keys()))
+        filter_efficiency = self.get_efficiency()
         if validation_info:
-            cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
-            for thread_info in reversed(validation_info):
-                if thread_info['cpu_efficiency'] >= cpu_efficiency_threshold:
-                    validation_info = thread_info
-                    break
+            filter_efficiency_threshold = 0.001
+            if filter_efficiency < filter_efficiency_threshold:
+                # If filter eff < 10^-3, then filter based on events/lumi first and choose highest cpu efficiency
+                self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on evens/lumi',
+                                 filter_efficiency_threshold,
+                                 filter_efficiency)
+                validation_info = sorted(validation_info.values(), key=lambda v: v['cpu_efficiency'])
+                for thread_info in validation_info:
+                    time_per_event = thread_info.get('time_per_event', 0)
+                    thread_info['events_per_lumi'] = (28800 * filter_efficiency / time_per_event) if time_per_event else 0
+
+                self.logger.info('Validation info before events/lumi filter %s', dumps(validation_info, indent=2, sort_keys=True))
+                events_per_lumi_threshold = 45
+                validation_info = [v for v in validation_info if v['events_per_lumi'] >= events_per_lumi_threshold]
+                self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
+                if validation_info:
+                    validation_info = validation_info[-1]
+                else:
+                    raise Exception('Cannot choose number of cores: %s' % (self.get_attribute('validation')))
+
             else:
-                validation_info = validation_info[0]
+                # If filter eff >= 10^-3, then choose highest number of threads where cpu efficiency is >= 70%
+                validation_info = sorted(validation_info.values(), key=lambda v: v['threads'])
+                self.logger.info('Validation info (by threads) %s', dumps(validation_info, indent=2, sort_keys=True))
+                cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
+                for thread_info in reversed(validation_info):
+                    if thread_info['cpu_efficiency'] >= cpu_efficiency_threshold:
+                        validation_info = thread_info
+                        break
+                else:
+                    validation_info = validation_info[0]
 
             self.logger.info('Selected validation info: %s', dumps(validation_info, indent=2, sort_keys=True))
 
@@ -3306,8 +3330,8 @@ class request(json_base):
             threads = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
             size_per_event = self.get_attribute('size_event')[sequence_index]
             time_per_event = self.get_attribute('time_event')[sequence_index]
-            # If there are multi-validation results, use them
             if validation_info:
+                # If there are multi-validation results, use them
                 self.logger.info('Using multi-validation values')
                 threads = validation_info['threads']
                 size_per_event = validation_info['size_per_event'] / sequence_count
@@ -3342,7 +3366,7 @@ class request(json_base):
                 "TimePerEvent": time_per_event,
                 "SizePerEvent": size_per_event,
                 "Memory": memory,
-                "FilterEfficiency": self.get_efficiency(),
+                "FilterEfficiency": filter_efficiency,
                 "PrepID": self.get_attribute('prepid')}
             # check if we have multicore an it's not an empty string
             if 'nThreads' in sequence and sequence['nThreads']:
