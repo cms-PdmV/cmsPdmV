@@ -682,6 +682,19 @@ class ValidationControl():
 
         item.notify(subject, message)
 
+    def get_events_per_lumi(self, storage_item):
+        max_events_lumi = 0
+        for threads, threads_dict in storage_item['done'].iteritems():
+            for request, request_dict in threads_dict.iteritems():
+                events_lumi = request_dict['estimated_events_per_lumi']
+                self.logger.info('Request %s in %s core validation estimate %s events/lumi',
+                                 request,
+                                 threads,
+                                 events_lumi)
+                max_events_lumi = max(max_events_lumi, events_lumi)
+
+        return max_events_lumi
+
     def move_validations_to_next_stage(self):
         all_items = self.storage.get_all()
         for validation_name, storage_item in all_items.iteritems():
@@ -705,6 +718,22 @@ class ValidationControl():
                 self.submit_item(validation_name, 4)
                 self.submit_item(validation_name, 8)
             else:
+                min_events_per_lumi = 45
+                max_events_per_lumi = self.get_events_per_lumi(storage_item)
+                self.logger.info('Validation max events per lumi: %s, need at least %s', max_events_per_lumi, min_events_per_lumi)
+                if max_events_per_lumi < min_events_per_lumi:
+                    self.logger.warning('%s did not produce enough events per lumi (%s/%s) with either CPU core count, failed validation',
+                                        validation_name,
+                                        max_events_per_lumi,
+                                        min_events_per_lumi)
+                    self.notify_validation_failed(validation_name,
+                                                  'None of the different CPU core count validations produced at least %s events per lumi.\n'
+                                                  'Highest event per lumi that were produced is %s.\n'
+                                                  'Please contact PdmV or GEN for more information and assistance.' % (min_events_per_lumi,
+                                                                                                                       max_events_per_lumi))
+                    self.validation_failed(validation_name)
+                    continue
+
                 self.validation_succeeded(validation_name)
 
     def can_run_multicore_validations(self, validation_name):
