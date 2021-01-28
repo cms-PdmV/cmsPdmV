@@ -221,6 +221,10 @@ class request(json_base):
                 for key in not_editable:
                     editable[key] = False
 
+        if self.current_user_level < 3:
+            editable['memory'] = False
+            editable['sequences'] = False
+
         return editable
 
     def get_events_for_dataset(self, workflows, dataset):
