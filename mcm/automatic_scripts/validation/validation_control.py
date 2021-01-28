@@ -207,18 +207,58 @@ class ValidationControl():
 
         return paths
 
+    def list_prod(self, l):
+        product = 1
+        for i in l:
+            product *= i
+
+        return product
+
     def get_reports(self, validation_name, threads, expected):
         reports = {}
         for request_prepid, expected_dict in expected.iteritems():
-            report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
-                                                             validation_name,
-                                                             request_prepid,
-                                                             threads)
+            req = self.request_db.get(request_prepid)
+            number_of_sequences = len(req.get('sequences', []))
+            self.logger.info('Will check %s reports, it has %s sequences',
+                             request_prepid,
+                             number_of_sequences)
             expected_events = expected_dict['events']
-            report = self.parse_job_report(report_path, threads, expected_events)
-            if not report:
-                return None
+            request_reports = []
+            for sequence_number in range(number_of_sequences):
+                if sequence_number == number_of_sequences - 1:
+                    report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
+                                                                     validation_name,
+                                                                     request_prepid,
+                                                                     threads)
+                else:
+                    report_path = '%s%s/%s_%s_%s_threads_report.xml' % (self.test_directory_path,
+                                                                        validation_name,
+                                                                        request_prepid,
+                                                                        sequence_number,
+                                                                        threads)
 
+                self.logger.debug('Report %s', report_path)
+                sequence_report = self.parse_job_report(report_path, threads, expected_events)
+                if not sequence_report:
+                    return None
+
+                self.logger.debug('Values %s', self.json_dumps(sequence_report))
+                request_reports.append(sequence_report)
+
+            sum_time_per_event = sum([r['time_per_event'] for r in request_reports])
+            sum_size_per_event = sum([r['size_per_event'] for r in request_reports])
+            sum_cpu_efficiency = sum([(r['time_per_event'] / sum_time_per_event) * r['cpu_efficiency'] for r in request_reports])
+            prod_filter_efficiency = self.list_prod([r['filter_efficiency'] for r in request_reports])
+            estimated_events_per_lumi = (28800 * prod_filter_efficiency / sum_time_per_event) if sum_time_per_event > 0 else 0
+            max_peak_value_rss = max([r['peak_value_rss'] for r in request_reports])
+            min_total_events = min([r['total_events'] for r in request_reports])
+            report = {'time_per_event': sum_time_per_event,
+                      'size_per_event': sum_size_per_event,
+                      'cpu_efficiency': sum_cpu_efficiency,
+                      'estimated_events_per_lumi': estimated_events_per_lumi,
+                      'filter_efficiency': prod_filter_efficiency,
+                      'peak_value_rss': max_peak_value_rss,
+                      'total_events': min_total_events}
             reports[request_prepid] = report
 
         return reports
@@ -762,6 +802,7 @@ class ValidationControl():
         report_file_name = report_path.split('/')[-1]
 
         if not os.path.isfile(report_path):
+            self.logger.error('%s does not exist', report_path)
             return None
 
         try:
