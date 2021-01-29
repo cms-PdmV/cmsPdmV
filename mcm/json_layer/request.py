@@ -3287,7 +3287,6 @@ class request(json_base):
         validation_info = self.get_attribute('validation').get('results', {})
         for threads, thread_info in validation_info.items():
             thread_info['threads'] = int(threads)
-            del thread_info['total_events']
 
         self.logger.info('Validation info available for cores: %s', list(validation_info.keys()))
         filter_efficiency = self.get_efficiency()
@@ -3341,6 +3340,22 @@ class request(json_base):
                 size_per_event = validation_info['size_per_event'] / sequence_count
                 time_per_event = validation_info['time_per_event'] / sequence_count
                 peak_value_rss = validation_info['peak_value_rss']
+                # In case time per event decreased with higher number of cores,
+                # we have to accound that more events will fit in 8h job and
+                # increase memory accordingly
+                events_ran = validation_info['total_events']
+                memory_per_event = float(peak_value_rss) / events_ran
+                self.logger.info('Measured PeakValueRSS: %.4fMB, events ran: %s, memory per event: %.6fMB',
+                                 peak_value_rss,
+                                 events_ran,
+                                 memory_per_event)
+                events_to_be_run = int(28800 / time_per_event)
+                # In case we predict lower than measured
+                peak_value_rss = max(peak_value_rss, events_to_be_run * memory_per_event)
+                self.logger.info('Events to be run: %s, predicted memory %.4fMB',
+                                 events_to_be_run,
+                                 peak_value_rss)
+                # Safety margin +45%, +30%, +15%
                 if peak_value_rss < 4000:
                     peak_value_rss *= 1.45
                 elif peak_value_rss < 8000:
@@ -3348,6 +3363,7 @@ class request(json_base):
                 else:
                     peak_value_rss *= 1.15
 
+                # Rounding up to next thousand MB
                 memory = int(math.ceil(peak_value_rss / 1000.0) * 1000)
             elif self.get_attribute('validation').get('peak_value_rss', 0) > 0:
                 # Old way of getting PeakValueRSS
