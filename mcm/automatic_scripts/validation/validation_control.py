@@ -909,7 +909,18 @@ class ValidationControl():
         transfer_input_files = ['voms_proxy.txt']
         transfer_output_files = []
         for output_prepid in output_prepids:
-            transfer_output_files.append('%s_%s_threads_report.xml' % (output_prepid, threads))
+            output_req = self.request_db.get(output_prepid)
+            number_of_sequences = len(output_req.get('sequences', []))
+            self.logger.info('Will fetch %s %s reports',
+                             number_of_sequences,
+                             output_prepid)
+            for sequence_number in range(number_of_sequences):
+                if sequence_number == number_of_sequences - 1:
+                    report_name = '%s_%s_threads_report.xml' % (output_prepid, threads)
+                else:
+                    report_name = '%s_%s_%s_threads_report.xml' % (output_prepid, sequence_number, threads)
+
+                transfer_output_files.append(report_name)
 
         transfer_output_files = ','.join(transfer_output_files)
         transfer_input_files = ','.join(transfer_input_files)

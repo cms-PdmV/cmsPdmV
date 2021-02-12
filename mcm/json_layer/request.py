@@ -3349,7 +3349,7 @@ class request(json_base):
                                  peak_value_rss,
                                  events_ran,
                                  memory_per_event)
-                events_to_be_run = int(28800 / time_per_event)
+                events_to_be_run = int(28800 / time_per_event) * filter_efficiency
                 # In case we predict lower than measured
                 peak_value_rss = max(peak_value_rss, events_to_be_run * memory_per_event)
                 self.logger.info('Events to be run: %s, predicted memory %.4fMB',
