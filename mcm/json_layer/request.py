@@ -3406,7 +3406,7 @@ class request(json_base):
             if self.get_attribute('version') > 0:
                 task_dict["ProcessingVersion"] = self.get_attribute('version')
             if self.get_attribute('pilot'):
-                task_dict['pilot_'] = 'pilot'
+                task_dict['pilot_'] = 'Pilot'
 
             if sequence_index == 0:
                 if base:
