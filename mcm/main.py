@@ -32,6 +32,7 @@ import logging.handlers
 import shelve
 import datetime
 import sys
+import os
 
 
 start_time = datetime.datetime.now().strftime("%c")
@@ -517,6 +518,13 @@ def log_access():
 
 def run_flask():
     debug = '--debug' in sys.argv
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        # Do only once, before the reloader
+        pid = os.getpid()
+        error_logger.info('PID: %s', pid)
+        with open('mcm.pid', 'w') as pid_file:
+            pid_file.write(str(pid))
+
     app.run(host='0.0.0.0', port=8000, threaded=True, debug=debug)
 
 # Execute this function when stopping flask
