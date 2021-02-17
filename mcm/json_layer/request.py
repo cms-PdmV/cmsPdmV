@@ -3365,6 +3365,12 @@ class request(json_base):
 
                 # Rounding up to next thousand MB
                 memory = int(math.ceil(peak_value_rss / 1000.0) * 1000)
+                if memory > 2000 * threads:
+                    self.logger.info('Limiting memory to 2000MB/core %.2fMB -> %.2fMB',
+                                     memory,
+                                     threads * 2000)
+                    memory = 2000 * threads
+
             elif self.get_attribute('validation').get('peak_value_rss', 0) > 0:
                 # Old way of getting PeakValueRSS
                 peak_value_rss = self.get_attribute('validation')['peak_value_rss']
