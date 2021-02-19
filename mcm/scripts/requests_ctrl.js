@@ -19,7 +19,6 @@ angular.module('testApp').controller('resultsCtrl',
     };
     //$scope.searchable_fields= [{"name":"generators", "value":""},{"name":"energy", "value":""},{"name":"notes", "value":""},{"name":"dataset_name", "value":""},{"name":"pwg","value":""},{"name":"status", "value":""},{"name":"approval","value":""}];
 
-    $scope.filt = {}; //define an empty filter
     $scope.update = {};
     $scope.chained_campaigns = [];
     $scope.stats_cache = {};
@@ -665,12 +664,6 @@ angular.module('testApp').controller('resultsCtrl',
   };
 
   /* --Modals actions END--*/
-
-  $scope.update_filtered = function(){
-    $scope.test_display = _.clone($scope.result);
-      _.each($scope.filt, function(filter_column, key){
-    });
-  };
 
   $scope.linkify = function(inputText) {
     var replaceText, replacePattern1, replacePattern2, replacePattern3;

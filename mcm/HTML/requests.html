@@ -69,7 +69,6 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-              <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
             </div>
             <div ng-switch-default>
               {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#requests_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
@@ -82,13 +81,12 @@
                 <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
-              <input type="text" class="input-mini" ng-model="filt[column['db_name']]">
             </div>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending | filter: filt" style="white-space: nowrap;">
+        <tr ng-repeat="data in result | orderBy:sort.column: sort.descending" style="white-space: nowrap;">
           <td ng-repeat="value in requests_defaults" ng-if="value.select">
             <div ng-switch on="value.text">
               <div ng-switch-when="Actions">

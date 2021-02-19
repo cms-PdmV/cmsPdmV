@@ -9,7 +9,6 @@ angular.module('testApp').controller('resultsCtrl',
     ];
     $scope.update = [];
     $scope.chained_campaigns = [];
-    $scope.filt = {};
     if ($location.search()["db_name"] === undefined){
       $scope.dbName = "chained_requests";
     }else{

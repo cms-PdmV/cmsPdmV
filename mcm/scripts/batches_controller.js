@@ -10,7 +10,6 @@ angular.module('testApp').controller('resultsCtrl',
     $scope.puce = {};
     $scope.r_status = {};
     $scope.update = [];
-    $scope.filt = {}; //define an empty filter
     $scope.local_requests = {};
     $scope.underscore = _;
     $scope.selected_prepids = [];
