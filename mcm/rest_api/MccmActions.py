@@ -777,6 +777,9 @@ class CheckIfAllApproved(RESTResource):
         allowed_approvals = set(['approve', 'submit'])
         for request_prepid in requests:
             req = req_db.get(request_prepid)
+            if not req:
+                return {'results': False, 'message': 'Request %s does not exist' % (request_prepid)}
+
             approval = req.get('approval')
             if approval not in allowed_approvals:
                 return {'results': False}

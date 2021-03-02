@@ -267,6 +267,9 @@ angular.module('testApp').controller('resultsCtrl',
           if (_.keys($scope.allRequestsApproved).indexOf(prepid) == -1 || $scope.allRequestsApproved[prepid] == undefined) {
             $http({method:'GET', url: 'restapi/mccms/check_all_approved/' + prepid}).success(function(data,status){
               $scope.allRequestsApproved[prepid] = data.results;
+              if (data.message) {
+                alert(data.message);
+              }
             }).error(function(status){
               alert('Cannot get information for ' + prepid);
             });
