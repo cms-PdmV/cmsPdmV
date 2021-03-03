@@ -1915,12 +1915,12 @@ class request(json_base):
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
         all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
         all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
-        self.logger.info('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                         dumps(list(stats_reqmgr_name_list), indent=2)))
-        self.logger.info('McM workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                       dumps(list(mcm_reqmgr_name_list), indent=2)))
-        self.logger.info('All workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                       dumps(list(all_reqmgr_name_list), indent=2)))
+        self.logger.debug('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                          dumps(list(stats_reqmgr_name_list), indent=2)))
+        self.logger.debug('McM workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                        dumps(list(mcm_reqmgr_name_list), indent=2)))
+        self.logger.debug('All workflows for %s: %s' % (self.get_attribute('prepid'),
+                                                        dumps(list(all_reqmgr_name_list), indent=2)))
         new_mcm_reqmgr_list = []
         skippable_transitions = set(['rejected',
                                      'aborted',
@@ -2009,12 +2009,12 @@ class request(json_base):
         old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=2, sort_keys=True)
         new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
-        self.logger.info('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
+        self.logger.debug('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
         self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
 
         if len(new_mcm_reqmgr_list):
             tiers_expected = self.get_tiers()
-            self.logger.info('%s tiers expected: %s' % (self.get_attribute('prepid'), tiers_expected))
+            self.logger.debug('%s tiers expected: %s' % (self.get_attribute('prepid'), tiers_expected))
             collected = self.collect_outputs(new_mcm_reqmgr_list,
                                              tiers_expected,
                                              self.get_processing_strings(),
@@ -2022,8 +2022,8 @@ class request(json_base):
                                              self.get_attribute('member_of_campaign'),
                                              skip_check=forced)
 
-            self.logger.info('Collected outputs for %s: %s' % (self.get_attribute('prepid'),
-                                                               dumps(collected, indent=2, sort_keys=True)))
+            self.logger.debug('Collected outputs for %s: %s' % (self.get_attribute('prepid'),
+                                                                dumps(collected, indent=2, sort_keys=True)))
 
             # 1st element which is not DQMIO
             completed = 0
@@ -3340,28 +3340,17 @@ class request(json_base):
                 size_per_event = validation_info['size_per_event'] / sequence_count
                 time_per_event = validation_info['time_per_event'] / sequence_count
                 peak_value_rss = validation_info['peak_value_rss']
-                # In case time per event decreased with higher number of cores,
-                # we have to accound that more events will fit in 8h job and
-                # increase memory accordingly
-                events_ran = validation_info['total_events']
-                memory_per_event = float(peak_value_rss) / events_ran
-                self.logger.info('Measured PeakValueRSS: %.4fMB, events ran: %s, memory per event: %.6fMB',
-                                 peak_value_rss,
-                                 events_ran,
-                                 memory_per_event)
-                events_to_be_run = int(28800 / time_per_event) * filter_efficiency
-                # In case we predict lower than measured
-                peak_value_rss = max(peak_value_rss, events_to_be_run * memory_per_event)
-                self.logger.info('Events to be run: %s, predicted memory %.4fMB',
-                                 events_to_be_run,
-                                 peak_value_rss)
-                # Safety margin +45%, +30%, +15%
+                # Safety margin +60%, +50%, +40%, +30%, +20%
                 if peak_value_rss < 4000:
-                    peak_value_rss *= 1.45
+                    peak_value_rss *= 1.6
+                elif peak_value_rss < 6000:
+                    peak_value_rss *= 1.5
                 elif peak_value_rss < 8000:
+                    peak_value_rss *= 1.4
+                elif peak_value_rss < 10000:
                     peak_value_rss *= 1.3
                 else:
-                    peak_value_rss *= 1.15
+                    peak_value_rss *= 1.2
 
                 # Rounding up to next thousand MB
                 memory = int(math.ceil(peak_value_rss / 1000.0) * 1000)
