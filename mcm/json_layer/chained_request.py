@@ -352,7 +352,7 @@ class chained_request(json_base):
             if not req.is_root and 'validation' not in req._json_base__status:  # do it only for root or possible root request
                 break
 
-            setup_file += req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation)
+            setup_file += req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation, threads=1)
 
         return setup_file
 
