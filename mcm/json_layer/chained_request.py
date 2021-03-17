@@ -699,6 +699,9 @@ class chained_request(json_base):
                     for i in range(min(len(mcm_cc['campaigns']), len(mcm_cr_cc['campaigns']))):
                         if mcm_cc['campaigns'][i] == mcm_cr_cc['campaigns'][i]:
                             common_steps.append(mcm_cc['campaigns'][i])
+                        else:
+                             # Stop comparing the candidates when chained campaigns become different
+                             break
 
                     self.logger.info('Common steps: %s', json.dumps(common_steps, indent=2))
                     further_steps_keep_output = False
