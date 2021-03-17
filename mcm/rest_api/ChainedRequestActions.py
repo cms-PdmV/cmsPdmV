@@ -918,39 +918,42 @@ class GetSetupForChains(RESTResource):
 
     def __init__(self):
         path = flask.request.path
-        if 'setup' in path:
+        if 'get_setup' in path:
             self.opt = 'setup'
-        elif 'test' in path:
+        elif 'get_test' in path:
             self.opt = 'test'
-        else:
+        elif 'get_valid' in path:
             self.opt = 'valid'
             access_limit = access_rights.administrator
+        else:
+            raise Exception('Cannot create this resource with mode %s' % path)
+
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('events', type=int)
         self.parser.add_argument('scratch', type=str, default='')
-        self.parser.add_argument('directory', type=str, default='')
+        self.kwargs = self.parser.parse_args()
         self.representations = {'text/plain': self.output_text}
 
     def get(self, chained_request_id):
-        kwargs = self.parser.parse_args()
+        """
+        Retrieve the script necessary to setup and test a given chained request
+        get_setup - returns file for config generation for submission
+        get_test - returns file for user validation
+        get_valid - returns file for automatic validation
+        """
         crdb = database('chained_requests')
         if not crdb.document_exists(chained_request_id):
             return {"results": False,
                     "message": "Chained request with prepid {0} does not exist".format(chained_request_id)}
-        cr = chained_request(crdb.get(chained_request_id))
-        events = None
-        run = False
-        valid = False
-        directory = ''
-        __scratch = kwargs["scratch"].lower() == 'true'
-        if self.opt == 'test' or self.opt == 'valid':
-            run = True
-        if self.opt == 'valid':
-            valid = True
-        return cr.get_setup(directory=kwargs['directory'], run=run, events=kwargs['events'],
-                validation=valid, scratch=__scratch, gen_script=run)
+
+        chained_req = chained_request(crdb.get(chained_request_id))
+        from_scratch = self.kwargs.get('scratch', '').lower() == 'true'
+        for_validation = self.opt in ('test', 'valid')
+        automatic_validation = self.opt == 'valid'
+        return chained_req.get_setup(for_validation=for_validation,
+                                     automatic_validation=automatic_validation,
+                                     scratch=from_scratch)
 
 
 class ForceChainReqToDone(RESTResource):
