@@ -96,7 +96,7 @@ class database:
         self.allowed_operators = ['<=',  '<',  '>=',  '>',  '==',  '~=']
 
     def get_auth_header(self):
-        with open('/home/pdmvserv/private/couchdb_credentials_json1.txt') as json_file:
+        with open('/home/pdmvserv/private/couchdb_credentials_json.txt') as json_file:
             credentials = json_load(json_file)
 
         b64 = '%s:%s' % (credentials['username'], credentials['password'])
