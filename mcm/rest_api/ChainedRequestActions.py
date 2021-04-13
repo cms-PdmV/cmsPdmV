@@ -8,7 +8,6 @@ from RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm
-from json_layer.notification import notification
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
@@ -582,14 +581,6 @@ class TestChainedRequest(RESTResource):
                 text = 'Within chain %s \n' % mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()
                 subject = 'Approval %s in chain %s for request %s' % ('validation', mcm_cr.get_attribute('prepid'), mcm_r.get_attribute('prepid'))
-                notification(
-                    subject,
-                    text,
-                    [],
-                    group=notification.REQUEST_APPROVALS,
-                    action_objects=[mcm_r.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=mcm_r)
                 mcm_r.notify(subject, text, accumulate=True)
             except Exception as e:
                 mcm_cr.reset_requests(str(e), notify_one=rid)

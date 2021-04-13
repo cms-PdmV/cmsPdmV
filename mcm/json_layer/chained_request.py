@@ -4,7 +4,6 @@ import json
 from json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
-from json_layer.notification import notification
 from json_layer.mccm import mccm
 from flow import flow
 from couchdb_layer.mcm_database import database
@@ -601,15 +600,6 @@ class chained_request(json_base):
 
                         subject = 'Flowing %s with not enough statistics' % (current_request.get_attribute('prepid'))
 
-                        notification(
-                            subject,
-                            message,
-                            [],
-                            group=notification.CHAINED_REQUESTS,
-                            action_objects=[self.get_attribute('prepid')],
-                            object_type='chained_requests',
-                            base_object=self)
-
                         current_request.notify(subject,
                                                message,
                                                accumulate=True)
@@ -1034,14 +1024,6 @@ class chained_request(json_base):
             # If somebody changed a request during validation, let's keep the changes
             if mcm_request.get_attribute('status') != 'new':
                 subject = '%s failed for request %s' % (what, mcm_request.get_attribute('prepid'))
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.CHAINED_REQUESTS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='chained_requests',
-                    base_object=self)
                 mcm_request.notify(subject, message)
                 continue
             notify = True
@@ -1053,14 +1035,6 @@ class chained_request(json_base):
         if not chained_requests_db.update(self.json()):
             subject = 'Chained validation run test'
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid')
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.CHAINED_REQUESTS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='chained_requests',
-                base_object=self)
             self.notify(subject, message)
 
     def add_to_nonflowing_list(self, reason):

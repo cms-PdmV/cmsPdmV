@@ -4,7 +4,6 @@ from couchdb_layer.mcm_database import database
 from json_layer.json_base import json_base
 from tools.locator import locator
 import tools.settings as settings
-from json_layer.notification import notification
 
 class batch(json_base):
 
@@ -151,15 +150,7 @@ class batch(json_base):
             to_who.append(settings.get_value('hypernews_test'))
         else:
             to_who.append(settings.get_value('dataops_announce'))
-        notification(
-            subject,
-            message,
-            [],
-            group=notification.BATCHES,
-            target_role='production_manager',
-            action_objects=[self.get_attribute('prepid')],
-            object_type='batches',
-            base_object=self)
+
         returned_id = self.notify(
             subject,
             message,

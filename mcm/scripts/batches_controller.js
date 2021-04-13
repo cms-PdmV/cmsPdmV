@@ -48,37 +48,13 @@ angular.module('testApp').controller('resultsCtrl',
     });
 
     $scope.getData = function(){
-      if($location.search()["from_notification"]){
-        notification = $location.search()["from_notification"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_actions?notification_id=" + notification + "&page=" + page + "&limit=" + limit);
-      }else if($location.search()["from_notification_group"]){
-          group = $location.search()["from_notification_group"];
-          page = $location.search()["page"]
-          limit = $location.search()["limit"]
-          if(page === undefined){
-            page = 0
-          }
-          if(limit === undefined){
-            limit = 20
-          }
-          var promise = $http.get("restapi/notifications/fetch_group_actions?group=" + group + "&page=" + page + "&limit=" + limit);
-      }else{
-        var query = "";
-        _.each($location.search(), function(value,key){
-          if (key!= 'shown' && key != 'fields'){
-            query += "&"+key+"="+value;
-          }
-        });
-        var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
-      }
+      var query = "";
+      _.each($location.search(), function(value,key){
+        if (key!= 'shown' && key != 'fields'){
+          query += "&"+key+"="+value;
+        }
+      });
+      var promise = $http.get("search?"+ "db_name="+$scope.dbName+query+"&get_raw");
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       promise.then(function(data){
         $scope.result_status = data.status;

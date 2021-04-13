@@ -15,7 +15,6 @@ from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
 from json_layer.campaign import campaign
 from json_layer.user import user
-from json_layer.notification import notification
 from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
@@ -1116,14 +1115,6 @@ class NotifyUser(RESTResource):
             # notify the actors of the request
             subject = 'Communication about request %s' % pid
             message = '%s \n\n %srequests?prepid=%s\n' % (message, l_type.baseurl(), pid)
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[req.get_attribute('prepid')],
-                object_type='requests',
-                base_object=req)
             req.notify(subject, message, accumulate=True)
 
             # update history with "notification"
@@ -1439,14 +1430,6 @@ class StalledReminder(RESTResource):
         people_list = production_managers + gen_conveners
         subject = "Gentle reminder of %d requests that appear stalled" % (reminded)
         if reminded != 0:
-            notification(
-                subject,
-                text,
-                map(lambda u: u['username'], production_managers),
-                group=notification.REMINDERS,
-                action_objects=request_prepids,
-                object_type='requests',
-                target_role='generator_convener')
             com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')], subject, text)
 
 
@@ -1544,12 +1527,6 @@ class RequestsReminder(RESTResource):
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
                     subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REMINDERS,
-                        target_role='production_manager')
                     com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_conveners' in what or 'generator_convener' in what:
@@ -1563,12 +1540,6 @@ class RequestsReminder(RESTResource):
                     message = 'A few requests need your approvals \n\n'
                     message += prepare_text_for(ids_for_gen_conveners, 'defined')
                     subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
-                    notification(
-                        subject,
-                        message,
-                        [],
-                        group=notification.REMINDERS,
-                        target_role='generator_convener')
                     com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
@@ -1666,11 +1637,6 @@ class RequestsReminder(RESTResource):
                             if mcm_u['fullname']:
                                 name = mcm_u['fullname']
                             subject = 'Gentle reminder on %s requests to be looked at by %s' % (count_entries(campaigns_and_ids), name)
-                            notification(
-                                subject,
-                                message,
-                                [contact],
-                                group=notification.REMINDERS,)
                             com.sendMail(to_who, subject, message)
                             yield '.'
 
