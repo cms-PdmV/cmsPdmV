@@ -1014,38 +1014,6 @@ class TestRequest(RESTResource):
         return outs
 
 
-class InjectRequest(RESTResource):
-
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        # set user access to administrator
-        self.db_name = 'requests'
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_ids):
-        """
-        Perform the thread preparation, injection of a request, or coma separated list of requests.
-        """
-        ids = request_ids.split(',')
-        res = []
-        for r_id in ids:
-            self.logger.info('Forking the injection of request {0} '.format(r_id))
-            _q_lock = locker.thread_lock(r_id)
-            if not locker.thread_acquire(r_id, blocking=False):
-                res.append({"prepid": r_id, "results": False,
-                        "message": "The request {0} request is being handled already".format(r_id)})
-                continue
-
-            _submit = RequestInjector(prepid=r_id, lock=locker.lock(r_id), queue_lock=_q_lock)
-            submit_pool.add_task(_submit.internal_run)
-            res.append({"prepid": r_id, "results": True,
-                        "message": "The request {0} will be forked unless same request is being handled already".format(r_id)})
-
-        return res
-
-
 class GetEditable(RESTResource):
     def __init__(self):
         self.db_name = 'requests'
@@ -1679,43 +1647,6 @@ class UpdateMany(RequestRESTResource):
                 return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
-
-
-class GetAllRevisions(RequestRESTResource):
-    def __init__(self):
-        RequestRESTResource.__init__(self)
-        self.before_request()
-        self.count_call()
-        self.db_url = locator().dbLocation()
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
-        self.db_name = 'requests'
-
-    def get(self, request_id):
-        """
-        Getting All AVAILABLE revisions for request document
-        """
-        return self.get_all_revs(request_id)
-
-    def get_all_revs(self, prepid):
-        list_of_revs = []
-        doc_id = prepid
-        all_revs_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?revs_info=true"
-        single_rev_url = self.db_url + "/" + self.db_name + "/" + doc_id + "?rev="
-        http_request = urllib2.Request(all_revs_url)
-        http_request.add_header('Content-Type', 'text/plain')
-        http_request.get_method = lambda: 'GET'
-        result = self.opener.open(http_request)
-        revision_data = loads(result.read())
-        for revision in revision_data["_revs_info"]:
-            if revision["status"] == "available":
-                single_request = urllib2.Request(single_rev_url + revision["rev"])
-                single_request.add_header('Content-Type', 'text/plain')
-                single_request.get_method = lambda: 'GET'
-                single_result = self.opener.open(single_request)
-                single_doc = single_result.read()
-                list_of_revs.append(loads(single_doc))
-        self.logger.info('Getting all revisions for: %s' % doc_id)
-        return {"results": list_of_revs}
 
 
 class ListRequestPrepids(RequestRESTResource):
