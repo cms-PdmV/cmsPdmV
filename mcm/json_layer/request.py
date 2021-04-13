@@ -1184,7 +1184,7 @@ class request(json_base):
             # so we work on json object
             __cc_id = self.get_attribute("member_of_chain")[0].split("-")[1]
             __cc = ccDB.get(__cc_id)
-            if 'campaigns' not in __cc:
+            if not __cc or 'campaigns' not in __cc:
                 raise Exception('Chained campaign %s is missing from database, needed for %s!' % (__cc_id, self.get_attribute('prepid')))
 
             for camp, mcm_flow in __cc["campaigns"]:
