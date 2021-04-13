@@ -22,7 +22,6 @@ from json_layer.flow import flow
 from json_layer.batch import batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import sequence
-from json_layer.notification import notification
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
@@ -1877,15 +1876,6 @@ class request(json_base):
         self.update_history({'action': 'failed'})
         if with_notification:
             subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self
-            )
             self.notify(subject, message)
 
         self.reload()
@@ -1893,15 +1883,6 @@ class request(json_base):
     def test_success(self, message, what='Submission', with_notification=True):
         if with_notification:
             subject = '%s succeeded for request %s' % (what, self.get_attribute('prepid'))
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self
-            )
             self.notify(subject, message)
 
     def get_stats(self, forced=False):
@@ -2762,22 +2743,6 @@ class request(json_base):
                         __test_eff,
                         cpu_eff_threshold)
 
-            # we do not set the nThreads because we also need a process string in request to be set.
-            # seq = self.get_attribute("sequences")
-            # for el in seq:
-            #     el['nThreads'] = 1
-
-            # self.set_attribute('sequences', seq)
-            # self.reload()
-            notification(
-                subject,
-                message,
-                [],
-                group=notification.REQUEST_OPERATIONS,
-                action_objects=[self.get_attribute('prepid')],
-                object_type='requests',
-                base_object=self)
-
             self.notify(subject, message, accumulate=True)
             raise Exception(message)
 
@@ -2829,15 +2794,6 @@ class request(json_base):
                             memory,
                             events_pass,
                             events_ran)
-
-                notification(
-                    subject,
-                    message,
-                    [],
-                    group=notification.REQUEST_OPERATIONS,
-                    action_objects=[self.get_attribute('prepid')],
-                    object_type='requests',
-                    base_object=self)
 
                 self.notify(subject, message, accumulate=True)
 

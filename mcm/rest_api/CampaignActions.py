@@ -10,7 +10,6 @@ from json_layer.campaign import campaign
 from json_layer.request import request
 from json_layer.sequence import sequence
 from json_layer.chained_campaign import chained_campaign
-from json_layer.notification import notification
 from tools.user_management import access_rights
 from json import loads, dumps
 import tools.settings as settings
