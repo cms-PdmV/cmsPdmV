@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, MultiSearch, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
+from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -74,10 +74,6 @@ def index_html():
 @app.route('/create')
 def create_html():
     return send_from_directory('HTML', 'create.html')
-
-@app.route('/injectAndLog')
-def injectAndLog_html():
-    return send_from_directory('HTML', 'injectAndLog.html')
 
 @app.route('/users')
 def users_html():
@@ -229,7 +225,6 @@ api.add_resource(
     SetStatus,
     '/restapi/requests/status/<string:request_ids>',
     '/restapi/requests/status/<string:request_ids>/<int:step>')
-api.add_resource(InjectRequest, '/restapi/requests/inject/<string:request_ids>')
 api.add_resource(GetEditable, '/restapi/requests/editable/<string:request_id>')
 api.add_resource(GetDefaultGenParams, '/restapi/requests/default_generator_params/<string:request_id>')
 api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
@@ -262,7 +257,6 @@ api.add_resource(
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>')
 api.add_resource(UpdateMany, '/restapi/requests/update_many')
-api.add_resource(GetAllRevisions, '/restapi/requests/all_revs/<string:request_id>')
 api.add_resource(ListRequestPrepids, '/restapi/requests/search_view')
 api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:request_ids>')
 api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')

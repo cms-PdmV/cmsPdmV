@@ -171,7 +171,6 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.$watch('tabsettings.logs.active', function(){
       getLog();
-      $scope.getVerbosity()
       $scope.getLogs();
     });
 
@@ -191,28 +190,6 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.selectValue = function() {
       return document.getElementById("selectFont").value;
-    };
-
-    $scope.getVerbosity = function() {
-      var promise = $http.get("restapi/dashboard/get_verbosities");
-      promise.then(function(data){
-        var verbosities = data.data.results[0];
-        var selected_verb = data.data.results[1];
-        var max = Math.max.apply(null, Object.keys(verbosities));
-        var min = Math.min.apply(null, Object.keys(verbosities));
-        if(selected_verb > max)
-        {
-          selected_verb = max;
-        }
-        else if (selected_verb < min)
-        {
-          selected_verb = min;
-        }
-        $scope.logs.verbosities = verbosities;
-        $scope.logs.verbosity =  verbosities[selected_verb];
-      }, function(data){
-        alert("Error getting verbosity information: " +data.status);
-      });
     };
 
     function checkDisplayLog() {

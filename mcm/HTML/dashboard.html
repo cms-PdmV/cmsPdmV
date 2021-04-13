@@ -86,13 +86,6 @@
             <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
           </div>
         </pane>
-        <pane heading="Control" active="tabsettings.control.active">
-          <div class="row-fluid">
-            <div class="well span4 offset4">
-              <button type="button" ng-click="openPage('http://sls.cern.ch/lrf-lsf/info.php?user=pdmvserv')" class="btn btn-info btn-block"><i class="icon-info-sign icon-white"></i> Check LSF usage for pdmvserv <i class="icon-info-sign icon-white"></i></button>
-            </div>
-          </div>
-        </pane>
         <pane ng-if="!role(4)" heading="Cache info" active="tabsettings.cache.active">
           <div class="row-fluid">
             <pre><div class="well batch-info">Length is number of entries. Size is sys.getsizeof(...) info (in bytes)
