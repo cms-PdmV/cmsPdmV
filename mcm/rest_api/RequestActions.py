@@ -1406,7 +1406,7 @@ class StalledReminder(RESTResource):
                     if len(r['reqmgr_name']):
                         wma_name = r['reqmgr_name'][-1]['name']
                         stats = statsDB.get(wma_name)
-                        if 'pdmv_status_from_reqmngr' in stats:
+                        if stats and 'pdmv_status_from_reqmngr' in stats:
                             wma_status = stats['pdmv_status_from_reqmngr']
 
                     line = "%30s: %4.1f days since submission: %8s = %5.1f%% completed, remains %6.1f days, status %s, priority %s \n" % (

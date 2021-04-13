@@ -1,4 +1,4 @@
-from rest_api.ControlActions import Search, MultiSearch, RenewCertificate, Communicate, ChangeVerbosity, CacheInfo, CacheClear
+from rest_api.ControlActions import Search, MultiSearch, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, InjectRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, TestRequest, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, GetAllRevisions, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
@@ -7,7 +7,6 @@ from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneT
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.RequestPrepId import RequestPrepId
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
-from rest_api.LogActions import ReadInjectionLog, GetVerbosities
 from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, NotifyPWG
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
@@ -141,7 +140,6 @@ api.add_resource(
     '/restapi/campaigns',
     '/restapi/chained_requests',
     '/restapi/chained_campaigns',
-    '/restapi/actions',
     '/restapi/flows',
     '/restapi/users',
     '/restapi/batches',
@@ -234,10 +232,6 @@ api.add_resource(
     '/restapi/requests/status/<string:request_ids>',
     '/restapi/requests/status/<string:request_ids>/<int:step>')
 api.add_resource(InjectRequest, '/restapi/requests/inject/<string:request_ids>')
-api.add_resource(
-    ReadInjectionLog,
-    '/restapi/requests/injectlog/<string:request_id>',
-    '/restapi/requests/injectlog/<string:request_id>/<int:lines>')
 api.add_resource(GetEditable, '/restapi/requests/editable/<string:request_id>')
 api.add_resource(GetDefaultGenParams, '/restapi/requests/default_generator_params/<string:request_id>')
 api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
@@ -381,7 +375,6 @@ api.add_resource(
 api.add_resource(GetLogs, '/restapi/dashboard/get_logs')
 api.add_resource(GetRevision, '/restapi/dashboard/get_revision')
 api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time', resource_class_kwargs={'start_time': start_time})
-api.add_resource(GetVerbosities, '/restapi/dashboard/get_verbosities')
 api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
 api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
 # REST mccms Actions
@@ -419,8 +412,6 @@ api.add_resource(GetTags, '/restapi/tags/get_all')
 api.add_resource(AddTag, '/restapi/tags/add')
 api.add_resource(RemoveTag, '/restapi/tags/remove')
 # REST control Actions
-api.add_resource(RenewCertificate, '/restapi/control/renew_cert')
-api.add_resource(ChangeVerbosity, '/restapi/control/set_verbosity/<int:level>')
 api.add_resource(
     Communicate,
     '/restapi/control/communicate',

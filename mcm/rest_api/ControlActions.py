@@ -12,57 +12,6 @@ from tools.communicator import communicator
 from couchdb_layer.mcm_database import database
 
 
-class RenewCertificate(RESTResource):
-
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self):
-        """
-        Renew certificates on our request upload/injection machines
-        """
-        # machines = ["cms-pdmv-op.cern.ch"]
-        machines = ["vocms0481.cern.ch"]
-        for elem in machines:
-            with ssh_executor(server=elem) as ssh_exec:
-                self.logger.info("Renewing certificate for: %s" % (elem))
-                stdin, stdout, stderr = ssh_exec.execute(self.create_command(elem))
-                self.logger.info("Certificate renewed:\n{0}".format(stdout.read()))
-
-    def create_command(self, machine):
-            # crab setup
-            command = 'source /cvmfs/cms.cern.ch/crab3/crab.sh \n'
-            # certificate
-            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/$HOSTNAME/voms_proxy.cert 2> /dev/null \n'
-            command += 'cat /afs/cern.ch/user/p/pdmvserv/private/PdmVService.txt | voms-proxy-init -voms cms --valid 240:00 -pwstdin --key /afs/cern.ch/user/p/pdmvserv/private/personal/userkey.pem --cert /afs/cern.ch/user/p/pdmvserv/private/personal/usercert.pem --out /afs/cern.ch/user/p/pdmvserv/private/personal/voms_proxy.cert 2> /dev/null \n'
-            return command
-
-
-class ChangeVerbosity(RESTResource):
-
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, level):
-        """
-        Change verbosity of logger
-        """
-        if settings.set_value('log_verbosity', level):
-            # TO-DO:
-            # do we really need this?
-            self.logger.info("We want to set log verbosity to: %s" % (level))
-            # self.logger.set_verbosity(level)
-        else:
-            return {"results": False, "message": "Couldn't save new verbosity to database"}
-        return {"results": True, "message": "New verbosity for logger: {0}".format(level)}
-
-
 class Communicate(RESTResource):
 
     access_limit = access_rights.administrator
@@ -275,7 +224,7 @@ class CacheInfo(RESTResource):
 
 class CacheClear(RESTResource):
 
-    access_limit = access_rights.administrator
+    access_limit = access_rights.user
 
     def __init__(self):
         self.before_request()

@@ -681,7 +681,8 @@ class request(json_base):
 
     def check_for_collisions(self):
         request_db = database('requests')
-        dataset_query = request_db.construct_lucene_query({'dataset_name': self.get_attribute('dataset_name')})
+        dataset_query = request_db.construct_lucene_query({'dataset_name': self.get_attribute('dataset_name'),
+                                                           'member_of_campaign': self.get_attribute('member_of_campaign')})
         same_dataset_requests = request_db.full_text_search('search', dataset_query, page=-1)
         if len(same_dataset_requests) == 0:
             raise self.BadParameterValue('It seems that database is down, could not check for duplicates')
