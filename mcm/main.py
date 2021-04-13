@@ -515,7 +515,7 @@ def run_flask():
         with open('mcm.pid', 'w') as pid_file:
             pid_file.write(str(pid))
 
-    app.run(host='0.0.0.0', port=5005, threaded=True, debug=debug)
+    app.run(host='0.0.0.0', port=8000, threaded=True, debug=debug)
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
