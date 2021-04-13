@@ -485,7 +485,7 @@ class GenerateChains(RESTResource):
                         generated_dict = self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special)
                         res.append(generated_dict)
                         # for now we put a small delay to not crash index with a lot of action
-                        time.sleep(1)
+                        time.sleep(0.25)
                         if not generated_dict['results']:
                             return {"prepid": mid,
                                     "results": False,
@@ -496,7 +496,7 @@ class GenerateChains(RESTResource):
                         mcm_m.set_attribute("generated_chains", generated_chains)
                         mdb.update(mcm_m.json())
                         mcm_m.reload(save_current=False)
-                        time.sleep(0.5)
+                        time.sleep(0.125)
                     else:
                         self.logger.info('Skipping %s and %s' % (request_prepid, mcm_chained_campaign.get_attribute('prepid')))
 
