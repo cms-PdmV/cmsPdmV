@@ -200,7 +200,21 @@ angular.module('testApp').controller('resultsCtrl',
           }
         });
         $scope.got_results = false; //to display/hide the 'found n results' while reloading
-        var parameters = parameters = "search?db_name="+$scope.dbName+query+"&get_raw";
+        var parameters = "";
+        if ($location.search()["from_ticket"]){
+          ticket = $location.search()["from_ticket"];
+          page = $location.search()["page"]
+          limit = $location.search()["limit"]
+          if(page === undefined){
+            page = 0
+          }
+          if(limit === undefined){
+            limit = 20
+          }
+          parameters = "restapi/chained_requests/from_ticket?ticket=" + ticket + "&page=" + page + "&limit=" + limit;
+        } else {
+          parameters = "search?db_name="+$scope.dbName+query+"&get_raw"
+        }
         var promise = $http.get(parameters);
         promise.then(function(data){
           $scope.result_status = data.status;
