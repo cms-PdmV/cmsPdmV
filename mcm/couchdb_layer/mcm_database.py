@@ -263,7 +263,6 @@ class database:
             result = self.get_all(page_num, limit=limit)
             return result
         try:
-            self.logger.error('Executing query view code. shouldnt happen')
             result = self.__query(query, page=page_num, limit=limit)
             return result
         except Exception as ex:

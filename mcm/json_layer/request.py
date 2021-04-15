@@ -1900,12 +1900,12 @@ class request(json_base):
         stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
         all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
         all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
-        self.logger.debug('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                          dumps(list(stats_reqmgr_name_list), indent=2)))
-        self.logger.debug('McM workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                        dumps(list(mcm_reqmgr_name_list), indent=2)))
-        self.logger.debug('All workflows for %s: %s' % (self.get_attribute('prepid'),
-                                                        dumps(list(all_reqmgr_name_list), indent=2)))
+        # self.logger.debug('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
+        #                                                   dumps(list(stats_reqmgr_name_list), indent=2)))
+        # self.logger.debug('McM workflows for %s: %s' % (self.get_attribute('prepid'),
+        #                                                 dumps(list(mcm_reqmgr_name_list), indent=2)))
+        # self.logger.debug('All workflows for %s: %s' % (self.get_attribute('prepid'),
+        #                                                 dumps(list(all_reqmgr_name_list), indent=2)))
         new_mcm_reqmgr_list = []
         skippable_transitions = set(['rejected',
                                      'aborted',
@@ -1994,7 +1994,7 @@ class request(json_base):
         old_mcm_reqmgr_list_string = dumps(mcm_reqmgr_list, indent=2, sort_keys=True)
         new_mcm_reqmgr_list_string = dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)
         changes_happen = old_mcm_reqmgr_list_string != new_mcm_reqmgr_list_string
-        self.logger.debug('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
+        # self.logger.debug('New workflows: %s' % (dumps(new_mcm_reqmgr_list, indent=2, sort_keys=True)))
         self.set_attribute('reqmgr_name', new_mcm_reqmgr_list)
 
         if len(new_mcm_reqmgr_list):
@@ -2022,8 +2022,9 @@ class request(json_base):
 
             keep_output = self.get_attribute("keep_output").count(True) > 0
             if keep_output:
-                self.set_attribute('completed_events', completed)
-                changes_happen = True
+                if self.get_attribute('completed_events') != completed:
+                    self.set_attribute('completed_events', completed)
+                    changes_happen = True
 
             self.logger.info('Completed events for %s: %s' % (self.get_attribute('prepid'),
                                                               completed))
