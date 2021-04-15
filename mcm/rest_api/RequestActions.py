@@ -994,26 +994,6 @@ class SetStatus(RESTResource):
         return {"prepid": rid, "results": db.update(req.json())}
 
 
-class TestRequest(RESTResource):
-    # a rest api to make a creation test of a request
-    def __init__(self):
-        self.counter = 0
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_id):
-        """
-        this is test for admins only
-        """
-        rdb = database('requests')
-
-        mcm_r = request(rdb.get(request_id))
-
-        outs = mcm_r.get_outputs()
-
-        return outs
-
-
 class GetEditable(RESTResource):
     def __init__(self):
         self.db_name = 'requests'

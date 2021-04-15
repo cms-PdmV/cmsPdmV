@@ -576,7 +576,6 @@ class TestChainedRequest(RESTResource):
                 mcm_r.ok_to_move_to_approval_validation(for_chain=True)
                 mcm_r.update_history({'action': 'approve', 'step': 'validation'})
                 mcm_r.set_attribute('approval', 'validation')
-                mcm_r.reset_validations_counter()
                 mcm_r.reload()
                 text = 'Within chain %s \n' % mcm_cr.get_attribute('prepid')
                 text += mcm_r.textified()

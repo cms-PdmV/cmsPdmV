@@ -355,27 +355,6 @@ class chained_request(json_base):
 
         return setup_file
 
-    def test_output_ds(self):
-        req_db = database("requests")
-        ret = ""
-        res = ""
-        output_ds = None
-        for req_id in self.get_attribute("chain"):
-            req = request(req_db.get(req_id))
-            if output_ds is not None:
-                self.logger.info("Working for request: %s, sequence: %s" % (req.get_attribute("prepid"), req.get_attribute("sequences")))
-                ret = self.get_ds_input(output_ds, req.get_attribute("sequences"))
-                res += "%s input DS: %s\n" % (req_id, ret)
-            else:
-                res += "%s input DS: %s\n" % (req_id, ret)
-            # for test purposes to migrate DS selection
-            if req.get_attribute("input_dataset") != ret:
-                res += "input DS differs!\nis:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret)
-                self.logger.info("chain %s request:%s" % (self.get_attribute("prepid"), req_id))
-                self.logger.info("input DS differs!\n is:%s\nto-be:%s\n" % (req.get_attribute("input_dataset"), ret))
-            output_ds = req.get_attribute("output_dataset")
-        return res
-
     def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, stop_at_campaign=None):
         if not block_white_list:
             block_white_list = []
@@ -987,31 +966,6 @@ class chained_request(json_base):
 
     def inspect_done(self):
         return self.flow_trial()
-
-    def get_timeout_memory_threads(self):
-        req_ids = self.get_attribute('chain')[self.get_attribute('step'):]
-        rdb = database('requests')
-        t = 0
-        requests_to_validate = 0
-        max_memory = 0
-        max_threads = 1
-        for (index, req_id) in enumerate(req_ids):
-            mcm_r = request(rdb.get(req_id))
-            if not mcm_r.is_root and 'validation' not in mcm_r._json_base__status:  # do it only for root or possible root request
-                break
-            requests_to_validate += 1
-            onet = mcm_r.get_timeout()
-            if onet > t:
-                t = onet
-            current_memory = mcm_r.get_attribute("memory")
-            if current_memory > max_memory:
-                max_memory = current_memory
-            threads = mcm_r.get_core_num()
-            if threads > max_threads:
-                max_threads = threads
-        # get the max and apply to all as a conservative estimation
-        # this should probably be a bit more subtle
-        return t * requests_to_validate, max_memory, max_threads
 
     def reset_requests(self, message, what='Chained validation run test', notify_one=None, except_requests=[]):
         request_db = database('requests')

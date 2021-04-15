@@ -1153,27 +1153,6 @@ class request(json_base):
 
         return transient_tiers
 
-    def get_outputs(self):
-        outs = []
-        keeps = self.get_attribute('keep_output')
-
-        camp = self.get_attribute('member_of_campaign')
-        dsn = self.get_attribute('dataset_name')
-        v = self.get_attribute('version')
-
-        for (i, s) in enumerate(self.get_attribute('sequences')):
-            if i < len(keeps) and not keeps[i]:
-                continue
-            proc = self.get_processing_string(i)
-            tiers = s['datatier']
-            if isinstance(tiers, str):
-                # only for non-migrated requests
-                tiers = tiers.split(',')
-            for t in tiers:
-                outs.append('/%s/%s-%s-v%s/%s' % (dsn, camp, proc, v, t))
-
-        return outs
-
     def get_processing_string(self, i):
         ingredients = []
         if self.get_attribute('flown_with'):
@@ -1221,10 +1200,6 @@ class request(json_base):
                 continue
             p_and_t.extend([(campaign, self.get_processing_string(i), tier) for tier in self.get_tier(i)])
         return p_and_t
-
-    def little_release(self):
-        release_to_find = self.get_attribute('cmssw_release')
-        return release_to_find.replace('CMSSW_', '').replace('_', '')
 
     def get_scram_arch(self):
         # economise to call many times.
@@ -1796,15 +1771,6 @@ class request(json_base):
 
             return self.modify_priority(new_priority)
 
-    def get_first_output(self):
-        eventcontentlist = []
-        for cmsDriver in self.build_cmsDrivers():
-            eventcontent = cmsDriver.split('--eventcontent')[1].split()[0] + 'output'
-            if ',' in eventcontent:
-                eventcontent = eventcontent.split(',')[0] + 'output'
-            eventcontentlist.append(eventcontent)
-        return eventcontentlist
-
     def get_wmagent_type(self):
         if self.get_attribute('type') == 'Prod':
             if self.get_attribute('mcdb_id') == -1:
@@ -1820,24 +1786,6 @@ class request(json_base):
             return 'ReDigi'
 
         return ''
-
-    def verify_sanity(self):
-        # check whether there are missing bits and pieces in the request
-        # maybe raise instead of just returning false
-        wma_type = self.get_wmagent_type()
-        if wma_type in ['MonteCarloFromGEN', 'ReDigi'] and not self.get_attribute('input_dataset'):
-            # raise Exception('Input Dataset name is not defined.')
-            return True
-        if wma_type in ['MonteCarlo', 'MonteCarloFromGEN', 'LHEStepZero']:
-            if not self.get_attribute('fragment_tag') and not self.get_attribute('fragment') and not self.get_attribute(
-                    'name_of_fragment'):
-                if wma_type == 'LHEStepZero' and self.get_attribute('mcdb_id') <= 0:
-                    raise Exception('No CVS Production Tag is defined. No fragement name, No fragment text')
-        for cmsDriver in self.build_cmsDrivers():
-            if 'conditions' not in cmsDriver:
-                raise Exception('Conditions are not defined in %s' % (cmsDriver))
-
-        return True
 
     def get_actors(self, N=-1, what='author_username', Nchild=-1):
         # get the actors from itself, and all others it is related to
@@ -1883,11 +1831,6 @@ class request(json_base):
             self.notify(subject, message)
 
         self.reload()
-
-    def test_success(self, message, what='Submission', with_notification=True):
-        if with_notification:
-            subject = '%s succeeded for request %s' % (what, self.get_attribute('prepid'))
-            self.notify(subject, message)
 
     def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
@@ -2456,59 +2399,6 @@ class request(json_base):
                 target /= eff
         return int(target)
 
-    def get_timeout_for_runtest(self):
-        fraction = settings.get_value('test_timeout_fraction')
-        timeout = settings.get_value('batch_timeout') * 60. * fraction
-
-        # if by default it is not possible to run a test => 0 events in
-        if self.get_n_for_test(self.target_for_test(), adjust=False) == 0:
-            # adjust the timeout for 10 events !
-            timeout = self.get_n_unfold_efficiency(settings.get_value('test_target_fallback')) * self.get_sum_time_events()
-        return (fraction, timeout)
-
-    def get_timeout(self):
-        default = settings.get_value('batch_timeout') * 60.
-        # we multiply the timeout if user wants more events in validation
-
-        default = multiplier * default
-        # to get the contribution from runtest
-        (fraction, estimate_rt) = self.get_timeout_for_runtest()
-        return int(max((estimate_rt) / fraction, default))
-
-    def get_n_for_test(self, target=1.0, adjust=True):
-        # => correct for the matching and filter efficiencies
-        events = self.get_n_unfold_efficiency(target)
-
-        # => estimate how long it will take
-        total_test_time = self.get_sum_time_events() * events
-        if adjust:
-            fraction, timeout = self.get_timeout_for_runtest()
-        else:
-            fraction = settings.get_value('test_timeout_fraction')
-            timeout = settings.get_value('batch_timeout') * 60. * fraction
-
-        # we multiply the timeout if user wants more events in validation
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
-        timeout = multiplier * timeout
-
-        # check that it is not going to time-out
-        # either the batch test time-out is set accordingly, or we limit the events
-        self.logger.info('running %s means running for %s s, and timeout is %s' % (events, total_test_time, timeout))
-        if total_test_time > timeout:
-            # reduce the n events for test to fit in 75% of the timeout
-            if self.get_sum_time_events():
-                events = timeout / self.get_sum_time_events()
-                self.logger.info('N for test was lowered to %s to not exceed %s * %s min time-out' % (
-                    events, fraction, settings.get_value('batch_timeout')))
-            else:
-                self.logger.error('time per event is set to 0 !')
-
-        if events >= 1:
-            return int(events)
-        else:
-            # default to 0
-            return int(0)
-
     def get_validation_max_runtime(self):
         """
         Return maximum number of seconds that job could run for, i.e. validation duration
@@ -2589,324 +2479,6 @@ class request(json_base):
         # create a hash value that supposedly uniquely defines the configuration
         hash_id = hashlib.sha224(uniqueString).hexdigest()
         return hash_id
-
-    def pickup_all_performance(self, directory):
-        return self.pickup_performance(directory, 'perf')
-
-    def pickup_performance(self, directory, what):
-        whatToArgs = {'perf': 'rt'}
-        try:
-            xml = directory + '%s_%s.xml' % (self.get_attribute('prepid'), whatToArgs[what])
-            if os.path.exists(xml):
-                self.update_performance(open(xml).read(), what)
-            return (True, "")
-        except self.WrongTimeEvent as wte:
-            raise wte
-        except Exception:
-            trace = traceback.format_exc()
-            self.logger.error('Failed to get %s reports for %s \n %s' % (what,
-                    self.get_attribute('prepid'), trace))
-            return (False, trace)
-
-    def check_gen_efficiency(self, geninfo, events_produced, events_ran):
-        measured_efficiency = float(events_produced) / events_ran
-        user_efficiency = self.get_efficiency()
-        sigma = sqrt((measured_efficiency * (1 - measured_efficiency)) / events_ran)
-        if sigma < measured_efficiency * 0.05:
-            sigma = measured_efficiency * 0.05
-
-        three_sigma = sigma * 3
-        subject = 'Runtest for %s: efficiency is incorrect' % (self.get_attribute('prepid'))
-        if measured_efficiency > 1:
-            message = ('For the request %s measured efficiency was more than 1.\n'
-                       'McM validation test measured %.8f efficiency.\n'
-                       'There were %s trial events, of which %s passed filter/matching.\n'
-                       'User provided efficiency %.8f * %.8f = %.8f.\n'
-                       'Efficiency cannot be more than 1.\n'
-                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
-                                                                                      measured_efficiency,
-                                                                                      events_ran,
-                                                                                      events_produced,
-                                                                                      geninfo['filter_efficiency'],
-                                                                                      geninfo['match_efficiency'],
-                                                                                      user_efficiency)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-        if measured_efficiency < user_efficiency - three_sigma or measured_efficiency > user_efficiency + three_sigma:
-            message = ('For the request %s measured efficiency was not withing set threshold.\n'
-                       'McM validation test measured %.8f efficiency.\n'
-                       'There were %s trial events, of which %s passed filter/matching.\n'
-                       'User provided efficiency %.8f * %.8f = %.8f.\n'
-                       'McM threshold is %.8f +- %.8f.\n'
-                       'Please check, adjust and reset the request if necessary.') % (self.get_attribute('prepid'),
-                                                                                      measured_efficiency,
-                                                                                      events_ran,
-                                                                                      events_produced,
-                                                                                      geninfo['filter_efficiency'],
-                                                                                      geninfo['match_efficiency'],
-                                                                                      user_efficiency,
-                                                                                      user_efficiency,
-                                                                                      three_sigma)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-    def check_time_event(self, evts_pass, evts_ran, measured_time_evt):
-        timing_n_limit = settings.get_value('timing_n_limit')
-        timing_fraction = settings.get_value('timing_fraction')
-        prepid = self.get_attribute('prepid')
-        number_of_sequences = len(self.get_attribute('sequences'))
-        sum_of_current_time_event = self.get_sum_time_events()
-
-        # check if we ran a meaninful number of events and that measured time_event is above threshold
-        # makes sense for cases where time per event is very big
-        if evts_pass < timing_n_limit:
-            subject = 'Runtest for %s: too few events for estimate' % (prepid)
-            message = 'For the request %s, time per event %ss was given. Ran %s events - too few to do accurate estimation' % (
-                       prepid,
-                       sum_of_current_time_event,
-                       evts_pass)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-        # TO-DO: change the 0.2 to value from settings DB
-        if (measured_time_evt < sum_of_current_time_event * (1 - timing_fraction)):
-            all_values = self.get_attribute('time_event') + [measured_time_evt]
-            mean_value = [float(sum(all_values)) / len(all_values)] * number_of_sequences
-            subject = 'Runtest for %s: time per event over-estimate' % (prepid)
-            message = 'For the request %s, time per event %ss was given, %ss was measured from %s events (ran %s). Not within %d%%. Setting to: %s.' % (
-                       prepid,
-                       sum_of_current_time_event,
-                       measured_time_evt,
-                       evts_pass,
-                       evts_ran,
-                       timing_fraction * 100,
-                       mean_value)
-
-            self.set_attribute('time_event', mean_value)
-            self.reload()
-            self.notify(subject, message, accumulate=True)
-            raise self.WrongTimeEvent(message)
-
-        elif (measured_time_evt > sum_of_current_time_event * (1 + timing_fraction)):
-            all_values = self.get_attribute('time_event') + [measured_time_evt]
-            mean_value = [float(sum(all_values)) / len(all_values)] * number_of_sequences
-            subject = 'Runtest for %s: time per event under-estimate.' % (prepid)
-            message = 'For the request %s, time per event %ss was given, %ss was measured from %s events (ran %s). Not within %d%%. Setting to: %s.' % (
-                       prepid,
-                       sum_of_current_time_event,
-                       measured_time_evt,
-                       evts_pass,
-                       evts_ran,
-                       timing_fraction * 100,
-                       mean_value)
-
-            self.set_attribute('time_event', mean_value)
-            self.reload()
-            self.notify(subject, message, accumulate=True)
-            raise self.WrongTimeEvent(message)
-
-        else:
-            # fine tune the value
-            self.logger.info('Validation for %s time per event fine tune. Previously: %ss measured:%ss, events:%ss' % (
-                              prepid,
-                              sum_of_current_time_event,
-                              measured_time_evt,
-                              evts_pass))
-
-            self.set_attribute('time_event', [measured_time_evt] * number_of_sequences)
-
-    def check_cpu_efficiency(self, cpu_time, total_time):
-        # check if cpu efficiency is < 0.4 (400%) then we fail validation and set nThreads to 1
-        # <TotalJobCPU>/(nThreads*<TotalJobTime>) < 0.4
-        cpu_eff_threshold = settings.get_value('cpu_efficiency_threshold')
-        efficinecy_exceptions = settings.get_value('cpu_eff_threshold_exceptions')
-        campaign = self.get_attribute('member_of_campaign')
-        prepid = self.get_attribute('prepid')
-        if prepid in efficinecy_exceptions:
-            cpu_eff_threshold = efficinecy_exceptions.get(prepid, 0.0)
-            self.logger.info('Found %s in CPU efficiency exceptions' % (prepid))
-        elif campaign in efficinecy_exceptions:
-            cpu_eff_threshold = efficinecy_exceptions.get(campaign, 0.0)
-            self.logger.info('Found %s in CPU efficiency exceptions' % (campaign))
-
-        self.logger.info("Checking CPU efficinecy. Threshold: %s" % (cpu_eff_threshold))
-
-        __test_eff = cpu_time / (self.get_core_num() * total_time)
-
-        self.logger.info("CPU efficinecy for %s is %s" % (prepid, __test_eff))
-        if  __test_eff < cpu_eff_threshold:
-            self.logger.error("checking cpu efficinecy. Didnt passed the cpu efficiency check")
-            subject = 'Runtest for %s: CPU efficiency too low' % (self.get_attribute('prepid'))
-            message = ('For the request %s, with %s cores, CPU efficiency %s < %s.'
-                    ' You should lower number of cores and memory accordingly.') % (
-                        self.get_attribute('prepid'),
-                        self.get_core_num(),
-                        __test_eff,
-                        cpu_eff_threshold)
-
-            self.notify(subject, message, accumulate=True)
-            raise Exception(message)
-
-    def check_file_size(self, file_size, events_pass, events_ran):
-        # size check
-        number_of_sequences = len(self.get_attribute('sequences'))
-        sum_of_current_size_event = sum(self.get_attribute('size_event'))
-        prepid = self.get_attribute('prepid')
-        if file_size > int(1.1 * sum_of_current_size_event):
-            # Measured size is >10% bigger
-            subject = 'Runtest for %s: size per event under-estimate.' % (prepid)
-            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
-                       prepid,
-                       sum_of_current_size_event,
-                       file_size,
-                       events_pass,
-                       events_ran)
-
-            self.notify(subject, message, accumulate=True)
-        elif file_size < int(0.9 * sum_of_current_size_event):
-            # Measured size is > 10% smaller
-            subject = 'Runtest for %s: size per event over-estimate' % (self.get_attribute('prepid'))
-            message = 'For the request %s, size per event %skB was given, but %skB was measured from %s events (ran %s).' % (
-                       prepid,
-                       sum_of_current_size_event,
-                       file_size,
-                       events_pass,
-                       events_ran)
-
-            self.notify(subject, message, accumulate=True)
-
-        # Correct the value from the test run
-        self.set_attribute('size_event', [float(file_size) / number_of_sequences] * number_of_sequences)
-        self.reload()
-
-    def check_memory(self, memory, events_pass, events_ran):
-        if memory > self.get_attribute('memory'):
-            safe_margin = 1.05
-            memory *= safe_margin
-            if memory > 4000:
-                self.logger.error("Request %s has a %s requirement of %s MB in memory exceeding 4GB." % (
-                        self.get_attribute('prepid'), safe_margin, memory))
-
-                subject = 'Runtest for %s: memory over-usage' % (self.get_attribute('prepid'))
-                message = ('For the request %s, the memory usage is found to be large.'
-                        ' Requiring %s MB measured from %s events (ran %s). Setting'
-                        ' to high memory queue') % (
-                            self.get_attribute('prepid'),
-                            memory,
-                            events_pass,
-                            events_ran)
-
-                self.notify(subject, message, accumulate=True)
-
-            self.set_attribute('memory', memory)
-            self.reload()
-
-    def update_performance(self, xml_doc, what):
-        total_event_in = self.get_n_for_test(self.target_for_test())
-
-        xml_data = xml.dom.minidom.parseString(xml_doc)
-
-        if not len(xml_data.documentElement.getElementsByTagName("TotalEvents")):
-            self.logger.error("There are no TotalEvents reported, bailing out from performnace test")
-            total_event = 0
-        else:
-            total_event = int(float(xml_data.documentElement.getElementsByTagName("TotalEvents")[-1].lastChild.data))
-
-        if len(xml_data.documentElement.getElementsByTagName("InputFile")):
-            for infile in xml_data.documentElement.getElementsByTagName("InputFile"):
-                if str(infile.getElementsByTagName("InputType")[0].lastChild.data) != 'primaryFiles':
-                    continue
-                events_read = int(float(infile.getElementsByTagName("EventsRead")[0].lastChild.data))
-                total_event_in = events_read
-                break
-
-        # check if we produced any events at all. If not there is no point for efficiency calc
-        if total_event == 0 and total_event_in != 0:
-            # fail it !
-            self.logger.error("For %s the total number of events in output of the %s test %s is 0. ran %s" % (
-                self.get_attribute('prepid'),
-                what,
-                total_event,
-                total_event_in))
-            raise Exception(
-                "The test should have ran %s events in input, and produced 0 events: there is certainly something wrong with the request" % (total_event_in ))
-
-        memory = None
-        timing = None
-        total_job_cpu = None
-        total_job_time = None
-        timing_dict = {}
-        timing_methods = settings.get_value('timing_method')
-        file_size = None
-        for item in xml_data.documentElement.getElementsByTagName("PerformanceReport"):
-            for summary in item.getElementsByTagName("PerformanceSummary"):
-                for perf in summary.getElementsByTagName("Metric"):
-                    name = perf.getAttribute('Name')
-                    if name == 'AvgEventTime' and name in timing_methods:
-                        timing_dict['legacy'] = float(perf.getAttribute('Value')) / self.get_core_num()
-                    if name == 'AvgEventCPU' and name in timing_methods:
-                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
-                    if name == 'TotalJobCPU' and name in timing_methods:
-                        timing_dict['legacy'] = float(perf.getAttribute('Value'))
-                        timing_dict['legacy'] = timing_dict['legacy'] / total_event_in
-                    if name == 'EventThroughput' and name in timing_methods:
-                        # new timing method as discussed here:
-                        # https://github.com/cms-PdmV/cmsPdmV/issues/868
-                        timing_dict['current'] = 1 / float(perf.getAttribute('Value'))
-
-                    if name == 'Timing-tstoragefile-write-totalMegabytes':
-                        file_size = float(perf.getAttribute('Value')) * 1024.  # MegaBytes -> kBytes
-                        file_size = int(file_size / total_event)
-                    if name == 'PeakValueRss':
-                        memory = float(perf.getAttribute('Value'))
-                    # cpu efficiency valued
-                    if name == "TotalJobCPU":
-                        total_job_cpu = float(perf.getAttribute('Value'))
-                    if name == "TotalJobTime":
-                        total_job_time = float(perf.getAttribute('Value'))
-
-        if 'current' in timing_dict:
-            timing = timing_dict['current']
-        else:
-            timing = timing_dict['legacy']
-
-        self.logger.info("validation parsing values. events_passed:%s events_ran:%s total_job_cpu:%s total_job_time:%s" % (
-            total_event,
-            total_event_in,
-            total_job_cpu,
-            total_job_time))
-        self.logger.info('Validation peak RSS: %s' % (memory))
-
-        geninfo = None
-        if len(self.get_attribute('generator_parameters')):
-            geninfo = generator_parameters(self.get_attribute('generator_parameters')[-1]).json()
-
-        self.check_gen_efficiency(geninfo, total_event, total_event_in)
-        # we check cpu_eff ONLY if request is multicore
-        number_of_cores = self.get_core_num()
-        if number_of_cores > 1:
-            self.check_cpu_efficiency(total_job_cpu, total_job_time)
-        else:
-            self.logger.debug("Not doing cpu efficiency check for %s core request" % (number_of_cores))
-
-        self.check_time_event(total_event, total_event_in, timing)
-
-        # some checks if we succeeded in parsing the values
-        if file_size:
-            self.check_file_size(file_size, total_event, total_event_in)
-
-        if memory:
-            self.check_memory(memory, total_event, total_event_in)
-            validation_dict = self.get_attribute('validation')
-            validation_dict['peak_value_rss'] = memory
-            self.set_attribute('validation', validation_dict)
-            self.logger.info('Setting peak_value_rss of %s to %s' % (self.get_attribute('prepid'), memory))
-
-        self.update_history({'action': 'update', 'step': what})
 
     @staticmethod
     # another copy/paste
@@ -3445,35 +3017,6 @@ class request(json_base):
         return True if there is a negative or zero value in time_event/size_event list
         """
         return any(n <= 0 for n in self.get_attribute(field))
-
-    def reset_validations_counter(self):
-        """
-        Set validation.validations_count to 0
-        """
-        self.get_attribute('validation')['validations_count'] = 0
-
-    def inc_validations_counter(self):
-        """
-        Increment validation.validations_count by 1
-        """
-        validations_count = self.get_validations_count() + 1
-        self.get_attribute('validation')['validations_count'] = validations_count
-        request_db = database('requests')
-        saved = request_db.update(self.json())
-        if not saved:
-            self.logger.error('Could not save ' + self.get_attribute('prepid'))
-
-        self.reload(save_current=False)
-
-    def get_validations_count(self):
-        """
-        Return validation.validations_count
-        """
-        validations_count = self.get_attribute('validation').get('validations_count')
-        if validations_count is None:
-            validations_count = 0
-
-        return validations_count
 
     def get_gen_script_output(self):
         prepid = self.get_attribute('prepid')

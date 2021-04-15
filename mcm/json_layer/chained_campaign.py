@@ -144,12 +144,3 @@ class chained_campaign(json_base):
 
         # save to database
         return creq.json()
-
-    def __remove_request_parameters(self, rootid=None):
-        ob = self.get_attribute('action_parameters')
-        res = {}
-        for key in ob:
-            if key == rootid:
-                continue
-            res[key] = ob[key]
-        self.set_attribute('action_parameters', res)

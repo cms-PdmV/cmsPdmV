@@ -319,14 +319,6 @@ class json_base:
         self.__json['status'] = self.__status[next_step]
         self.update_history({'action': 'set status', 'step': self.__json['status']})
 
-    def add_comment(self, comment=''):
-        if not comment:
-            return
-        comm = {'action': 'comment', 'step': comment}
-        self.update_history(comm)
-
-        return comm
-
     def json(self):
         return self.__json
 
