@@ -222,7 +222,6 @@ class ValidationControl():
             self.logger.info('Will check %s reports, it has %s sequences',
                              request_prepid,
                              number_of_sequences)
-            expected_events = expected_dict['events']
             request_reports = []
             for sequence_number in range(number_of_sequences):
                 if sequence_number == number_of_sequences - 1:
@@ -238,7 +237,7 @@ class ValidationControl():
                                                                         threads)
 
                 self.logger.debug('Report %s', report_path)
-                sequence_report = self.parse_job_report(report_path, threads, expected_events)
+                sequence_report = self.parse_job_report(report_path, threads)
                 if not sequence_report:
                     return None
 
@@ -252,13 +251,15 @@ class ValidationControl():
             estimated_events_per_lumi = (28800 * prod_filter_efficiency / sum_time_per_event) if sum_time_per_event > 0 else 0
             max_peak_value_rss = max([r['peak_value_rss'] for r in request_reports])
             min_total_events = min([r['total_events'] for r in request_reports])
+            min_expected_events = min([r['expected_events'] for r in request_reports])
             report = {'time_per_event': sum_time_per_event,
                       'size_per_event': sum_size_per_event,
                       'cpu_efficiency': sum_cpu_efficiency,
                       'estimated_events_per_lumi': estimated_events_per_lumi,
                       'filter_efficiency': prod_filter_efficiency,
                       'peak_value_rss': max_peak_value_rss,
-                      'total_events': min_total_events}
+                      'total_events': min_total_events,
+                      'expected_events': min_expected_events}
             reports[request_prepid] = report
 
         return reports
@@ -326,7 +327,8 @@ class ValidationControl():
     def check_filter_efficiency(self, request_name, expected, report):
         expected_filter_efficiency = expected['filter_efficiency']
         actual_filter_efficiency = report['filter_efficiency']
-        sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected['events'])
+        expected_events = report['expected_events']
+        sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_events)
         sigma = max(sigma, 0.05 * actual_filter_efficiency)
         lower_threshold = expected_filter_efficiency - 3 * sigma
         upper_threshold = expected_filter_efficiency + 3 * sigma
@@ -827,7 +829,7 @@ class ValidationControl():
         _, _ = self.ssh_executor.execute_command(command)
         self.logger.info('Validation succeeded for %s', validation_name)
 
-    def parse_job_report(self, report_path, threads, expected_events):
+    def parse_job_report(self, report_path, threads):
         report_file_name = report_path.split('/')[-1]
 
         if not os.path.isfile(report_path):
@@ -850,6 +852,12 @@ class ValidationControl():
             total_events = int(total_events[-1].text)
         else:
             total_events = None
+
+        expected_events = root.findall('.//PerformanceReport/PerformanceSummary/Metric[@Name="NumberEvents"]')
+        if expected_events:
+            expected_events = int(expected_events[0].attrib['Value'])
+        else:
+            expected_events = None
 
         # self.logger.info('TotalEvents %s', total_events)
         event_throughput = None
@@ -879,7 +887,7 @@ class ValidationControl():
                 # Fallback for getting total size
                 total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
 
-        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
+        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events, expected_events):
             self.logger.error('Not all values are in %s, aborting validation with %s threads', report_file_name, threads)
             self.logger.info('%s values:', report_file_name)
             self.logger.info('  event_throughput %s', event_throughput)
@@ -888,6 +896,7 @@ class ValidationControl():
             self.logger.info('  total_job_cpu %s', total_job_cpu)
             self.logger.info('  total_job_time %s', total_job_time)
             self.logger.info('  total_events %s', total_events)
+            self.logger.info('  expected_events %s', expected_events)
             # What are we supposed to do?!
             return None
 
@@ -903,7 +912,8 @@ class ValidationControl():
                 'estimated_events_per_lumi': estimated_events_per_lumi,
                 'filter_efficiency': filter_efficiency,
                 'peak_value_rss': peak_value_rss,
-                'total_events': total_events}
+                'total_events': total_events,
+                'expected_events': expected_events}
 
     def get_htcondor_submission_file(self, validation_name, job_length, threads, memory, output_prepids):
         transfer_input_files = ['voms_proxy.txt']
@@ -1005,8 +1015,7 @@ class ValidationControl():
             expected_dict[request_prepid] = {'time_per_event': request.get_sum_time_events(),
                                              'size_per_event': request.get_sum_size_events(),
                                              'memory': request_memory,
-                                             'filter_efficiency': request.get_efficiency(),
-                                             'events': request.get_event_count_for_validation()}
+                                             'filter_efficiency': request.get_efficiency()}
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))

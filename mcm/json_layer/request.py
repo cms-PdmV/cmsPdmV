@@ -1612,7 +1612,8 @@ class request(json_base):
 
                 bash_file += ['',
                               '# Run generated config',
-                              'cmsRun -e -j %s %s || exit $? ;' % (report_name, config_filename)]
+                              'REPORT_NAME=%s' % (report_name),
+                              'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename)]
 
                 if run_dqm_upload:
                     dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
@@ -1640,20 +1641,21 @@ class request(json_base):
 
                 # Parse report
                 bash_file += ['',
-                              '# Report %s' % (report_name),
-                              'cat %s' % (report_name),
+                              # '# Report %s' % (report_name),
+                              # 'cat $REPORT_NAME',
                               '',
                               '# Parse values from %s report' % (report_name),
-                              'totalEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" %s | tail -n 1)' % (report_name),
-                              'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'totalSizeAlt=$(grep -Po "(?<=<Metric Name=\\"Timing-file-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
-                              'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" %s | tail -n 1)' % (report_name),
+                              'processedEvents=$(grep -Po "(?<=<Metric Name=\\"NumberEvents\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'producedEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" $REPORT_NAME | tail -n 1)',
+                              'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'totalSizeAlt=$(grep -Po "(?<=<Metric Name=\\"Timing-file-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
+                              'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
                               'if [ -z "$threads" ]; then',
                               '  echo "Could not find NumberOfThreads in report, defaulting to %s"' % (threads),
                               '  threads=%s' % (threads),
@@ -1665,7 +1667,8 @@ class request(json_base):
                               '  totalSize=$totalSizeAlt',
                               'fi',
                               'echo "Validation report of %s sequence %s/%s"' % (prepid, index + 1, len(sequences)),
-                              'echo "Total events: $totalEvents"',
+                              'echo "Processed events: $processedEvents"',
+                              'echo "Produced events: $producedEvents"',
                               'echo "Threads: $threads"',
                               'echo "Peak value RSS: $peakValueRss MB"',
                               'echo "Peak value Vsize: $peakValueVsize MB"',
@@ -1674,10 +1677,10 @@ class request(json_base):
                               'echo "Total CPU time: $totalJobCPU s"',
                               'echo "Event throughput: $eventThroughput"',
                               'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
-                              'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $totalEvents)")" kB"',
+                              'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $producedEvents)")" kB"',
                               'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"',
-                              'echo "Filter efficiency percent: "$(bc -l <<< "scale=8; ($totalEvents * 100) / $EVENTS")" %"',
-                              'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($totalEvents) / $EVENTS")'
+                              'echo "Filter efficiency percent: "$(bc -l <<< "scale=8; ($producedEvents * 100) / $processedEvents")" %"',
+                              'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($producedEvents) / $processedEvents")'
                              ]
 
         if not for_validation and configs_to_upload:
