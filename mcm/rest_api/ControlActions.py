@@ -82,6 +82,7 @@ class Search(RESTResource):
         if page == -1 and not args and db_name == 'requests':
             return {"results": False, "message": "Why you stupid? Don't be stupid..."}
 
+        args = {k: v.split(',')[0] for k, v in args.items()}
         res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
         if get_raw:
             self.representations = {'text/plain': self.output_text}
