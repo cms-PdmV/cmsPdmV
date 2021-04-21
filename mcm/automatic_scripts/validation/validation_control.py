@@ -222,6 +222,7 @@ class ValidationControl():
             self.logger.info('Will check %s reports, it has %s sequences',
                              request_prepid,
                              number_of_sequences)
+            default_expected_events = expected_dict['events']
             request_reports = []
             for sequence_number in range(number_of_sequences):
                 if sequence_number == number_of_sequences - 1:
@@ -237,7 +238,7 @@ class ValidationControl():
                                                                         threads)
 
                 self.logger.debug('Report %s', report_path)
-                sequence_report = self.parse_job_report(report_path, threads)
+                sequence_report = self.parse_job_report(report_path, threads, default_expected_events)
                 if not sequence_report:
                     return None
 
@@ -829,7 +830,7 @@ class ValidationControl():
         _, _ = self.ssh_executor.execute_command(command)
         self.logger.info('Validation succeeded for %s', validation_name)
 
-    def parse_job_report(self, report_path, threads):
+    def parse_job_report(self, report_path, threads, default_expected_events):
         report_file_name = report_path.split('/')[-1]
 
         if not os.path.isfile(report_path):
@@ -857,7 +858,7 @@ class ValidationControl():
         if expected_events:
             expected_events = int(expected_events[0].attrib['Value'])
         else:
-            expected_events = None
+            expected_events = default_expected_events
 
         # self.logger.info('TotalEvents %s', total_events)
         event_throughput = None
@@ -887,7 +888,7 @@ class ValidationControl():
                 # Fallback for getting total size
                 total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
 
-        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events, expected_events):
+        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
             self.logger.error('Not all values are in %s, aborting validation with %s threads', report_file_name, threads)
             self.logger.info('%s values:', report_file_name)
             self.logger.info('  event_throughput %s', event_throughput)
@@ -896,7 +897,6 @@ class ValidationControl():
             self.logger.info('  total_job_cpu %s', total_job_cpu)
             self.logger.info('  total_job_time %s', total_job_time)
             self.logger.info('  total_events %s', total_events)
-            self.logger.info('  expected_events %s', expected_events)
             # What are we supposed to do?!
             return None
 
