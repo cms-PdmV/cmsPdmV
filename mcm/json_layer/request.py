@@ -556,7 +556,6 @@ class request(json_base):
         if not do_runtest:
             self.set_status()
 
-        self.reset_validations_counter()
         if message:
             return message
 
