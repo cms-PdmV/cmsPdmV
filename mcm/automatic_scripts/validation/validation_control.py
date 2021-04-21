@@ -222,7 +222,7 @@ class ValidationControl():
             self.logger.info('Will check %s reports, it has %s sequences',
                              request_prepid,
                              number_of_sequences)
-            default_expected_events = expected_dict['events']
+            default_expected_events = expected_dict.get('events', 0)
             request_reports = []
             for sequence_number in range(number_of_sequences):
                 if sequence_number == number_of_sequences - 1:
@@ -1015,7 +1015,8 @@ class ValidationControl():
             expected_dict[request_prepid] = {'time_per_event': request.get_sum_time_events(),
                                              'size_per_event': request.get_sum_size_events(),
                                              'memory': request_memory,
-                                             'filter_efficiency': request.get_efficiency()}
+                                             'filter_efficiency': request.get_efficiency(),
+                                             'events': request.get_event_count_for_validation()}
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))
