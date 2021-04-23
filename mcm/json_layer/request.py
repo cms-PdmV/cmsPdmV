@@ -1587,8 +1587,27 @@ class request(json_base):
 
                 bash_file += ['',
                               '# Run generated config',
-                              'REPORT_NAME=%s' % (report_name),
-                              'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename)]
+                              'REPORT_NAME=%s' % (report_name)]
+
+                if automatic_validation:
+                    # Have a 45 minute buffer for GEN script, cmsDriver, report parsing, etc.
+                    validation_timeout = int(self.get_validation_max_runtime() - 45 * 60)
+                    bash_file += ['# Sleeping killer',
+                                  'TIMEOUT=%s' % (validation_timeout),
+                                  'MY_PID=$$',
+                                  '(sleep $TIMEOUT && kill -s SIGINT $(ps --ppid $MY_PID | grep cmsRun | awk \'{print $1}\'))&',
+                                  'SLEEP_PID=$!',
+                                  '',
+                                  '# Run the cmsRun',
+                                  'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
+                                  '',
+                                  '# Kill the killer if it did not kill cmsRun',
+                                  'pkill -P $SLEEP_PID &> /dev/null',
+                                  '']
+                else:
+                    bash_file += ['# Run the cmsRun',
+                                  'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
+                                  '']
 
                 if run_dqm_upload:
                     dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
@@ -1612,13 +1631,13 @@ class request(json_base):
                                   '# Upload %s to %s' % (dqm_file, dqm_url),
                                   'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh',
                                   'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload',
-                                  'python visDQMUpload %s %s' % (dqm_url, dqm_file)]
+                                  'python visDQMUpload %s %s' % (dqm_url, dqm_file),
+                                  '']
 
                 # Parse report
-                bash_file += ['',
-                              # '# Report %s' % (report_name),
+                bash_file += [# '# Report %s' % (report_name),
                               # 'cat $REPORT_NAME',
-                              '',
+                              # '',
                               '# Parse values from %s report' % (report_name),
                               'processedEvents=$(grep -Po "(?<=<Metric Name=\\"NumberEvents\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
                               'producedEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" $REPORT_NAME | tail -n 1)',
@@ -2455,8 +2474,8 @@ class request(json_base):
                            '# Which adds up to %.4fs per event' % (time_per_event_sum),
                            '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
                            '# Produced events limit in McM is %d' % (max_events),
-                           '# According to %.4f efficiency, up to %d / %.4f = %d events should run' % (efficiency, max_events, efficiency, max_events_with_eff),
-                           '# Clamp (put value) %d within 1 and %d -> %d' % (events, max_events_with_eff, clamped_events),
+                           '# According to %.4f efficiency, validation should run %d / %.4f = %d events to reach the limit of %s' % (efficiency, max_events, efficiency, max_events_with_eff, max_events),
+                           '# Take the minimum of %d and %d, but more than 0 -> %d' % (events, max_events_with_eff, clamped_events),
                            '# It is estimated that this validation will produce: %d * %.4f = %d events' % (clamped_events, efficiency, estimate_produced)]
             return clamped_events, '\n'.join(explanation)
 
