@@ -1704,13 +1704,13 @@ class request(json_base):
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
                               'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
             else:
                 # Config generation for production run on CC7 machine - vocms0481
                 # If it's CC7, just run the script normally
                 # If it's SLC6, run it in slc6 singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home docker://cmssw/slc6:latest $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']

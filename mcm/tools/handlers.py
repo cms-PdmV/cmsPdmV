@@ -330,7 +330,7 @@ class SubmissionsBase(Handler):
             command += '\n\nEndOfInjectFile\n'
             command += 'chmod +x %s\n' % (executable_file_name)
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home docker://cmssw/slc6:latest %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 %s\n' % (executable_file_name)
             command += 'rm -f %s\n' % (executable_file_name)
 
         command += 'rm -f %s' % (proxy_file_name)
