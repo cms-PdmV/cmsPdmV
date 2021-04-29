@@ -191,6 +191,8 @@ class ValidationControl():
                         if not should_continue:
                             break
                     except Exception as ex:
+                        import traceback
+                        traceback.print_exc()
                         self.logger.info('Exception while processing done %s with %s threads: %s',
                                          validation_name,
                                          threads,
@@ -218,11 +220,15 @@ class ValidationControl():
         reports = {}
         for request_prepid, expected_dict in expected.iteritems():
             req = self.request_db.get(request_prepid)
+            if not req:
+                # Request deleted?
+                return None
+
             number_of_sequences = len(req.get('sequences', []))
             self.logger.info('Will check %s reports, it has %s sequences',
                              request_prepid,
                              number_of_sequences)
-            default_expected_events = expected_dict['events']
+            default_expected_events = expected_dict.get('events')
             request_reports = []
             for sequence_number in range(number_of_sequences):
                 if sequence_number == number_of_sequences - 1:
@@ -658,6 +664,7 @@ class ValidationControl():
 
             item = Request(item)
 
+        self.logger.info(item)
         subject = 'Validation failed for %s' % (validation_name)
         message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
         item.notify(subject, message)
@@ -764,10 +771,16 @@ class ValidationControl():
             requests = self.get_requests_from_chained_request(chained_req)
             chain_validation = True
         else:
-            request = Request(self.request_db.get(validation_name))
-            requests = [request]
+            request_json = self.request_db.get(validation_name)
+            if request_json:
+                request = Request(request_json)
+                requests = [request]
+            else:
+                requests = []
+
             chain_validation = False
 
+        requests = [r for r in requests if r]
         for request in requests:
             request_json = request.json()
             request_json['validation']['results'] = {}
@@ -888,7 +901,7 @@ class ValidationControl():
                 # Fallback for getting total size
                 total_size = float(attr_value) * 1024  # Megabytes to Kilobytes
 
-        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events):
+        if None in (event_throughput, peak_value_rss, total_size, total_job_cpu, total_job_time, total_events, default_expected_events):
             self.logger.error('Not all values are in %s, aborting validation with %s threads', report_file_name, threads)
             self.logger.info('%s values:', report_file_name)
             self.logger.info('  event_throughput %s', event_throughput)
@@ -897,6 +910,7 @@ class ValidationControl():
             self.logger.info('  total_job_cpu %s', total_job_cpu)
             self.logger.info('  total_job_time %s', total_job_time)
             self.logger.info('  total_events %s', total_events)
+            self.logger.info('  default_expected_events %s', default_expected_events)
             # What are we supposed to do?!
             return None
 
@@ -1015,7 +1029,8 @@ class ValidationControl():
             expected_dict[request_prepid] = {'time_per_event': request.get_sum_time_events(),
                                              'size_per_event': request.get_sum_size_events(),
                                              'memory': request_memory,
-                                             'filter_efficiency': request.get_efficiency()}
+                                             'filter_efficiency': request.get_efficiency(),
+                                             'events': request.get_event_count_for_validation()}
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))
