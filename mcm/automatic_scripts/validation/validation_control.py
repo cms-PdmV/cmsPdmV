@@ -666,7 +666,7 @@ class ValidationControl():
 
         self.logger.info(item)
         subject = 'Validation failed for %s' % (validation_name)
-        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
+        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message.decode('utf-8'))
         item.notify(subject, message)
 
     def notify_validation_suceeded(self, validation_name):

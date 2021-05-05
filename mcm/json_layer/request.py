@@ -1591,27 +1591,10 @@ class request(json_base):
 
                 bash_file += ['',
                               '# Run generated config',
-                              'REPORT_NAME=%s' % (report_name)]
-
-                if automatic_validation:
-                    # Have a 45 minute buffer for GEN script, cmsDriver, report parsing, etc.
-                    validation_timeout = int(self.get_validation_max_runtime() - 45 * 60)
-                    bash_file += ['# Sleeping killer',
-                                  'TIMEOUT=%s' % (validation_timeout),
-                                  'MY_PID=$$',
-                                  '(sleep $TIMEOUT && kill -s SIGINT $(ps --ppid $MY_PID | grep cmsRun | awk \'{print $1}\'))&',
-                                  'SLEEP_PID=$!',
-                                  '',
-                                  '# Run the cmsRun',
-                                  'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
-                                  '',
-                                  '# Kill the killer if it did not kill cmsRun',
-                                  'pkill -P $SLEEP_PID &> /dev/null',
-                                  '']
-                else:
-                    bash_file += ['# Run the cmsRun',
-                                  'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
-                                  '']
+                              'REPORT_NAME=%s' % (report_name),
+                              '# Run the cmsRun',
+                              'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
+                              '']
 
                 if run_dqm_upload:
                     dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
