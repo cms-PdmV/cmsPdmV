@@ -208,6 +208,7 @@ class request(json_base):
                 # Allow production managers to edit input dataset for
                 # "validation-validation", "define-" and "approve-" requests
                 editable['input_dataset'] = True
+                editable['extension'] = True
 
             if self.current_user_level == 2 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
                 # Allow generator conveners to edit dataset name for
