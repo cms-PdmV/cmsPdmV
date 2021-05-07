@@ -264,6 +264,7 @@ angular.module('testApp').controller('resultsCtrl',
         }else{
             $scope.result = _.pluck(data.data.rows, 'doc');
         }
+        $scope.total_results = data.data.total_rows;
         $scope.result_status = data.status;
         $scope.got_results = true;
         if ($scope.result === undefined ){

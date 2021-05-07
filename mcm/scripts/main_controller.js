@@ -11,6 +11,7 @@ angular.module('testApp').controller('mainCtrl',
   $scope.user = {name: "guest", role:"user",roleIndex:0};
   $scope.start_time = "";
   $scope.turn_on_button_clicked = false;
+  $scope.math = Math;
 
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){

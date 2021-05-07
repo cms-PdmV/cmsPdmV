@@ -63,22 +63,7 @@
         </tbody>
       </table>
       <div class="row-fluid custom-footer-priority">
-        <div class="span5" style="margin-top:20px;">
-        </div>
-        <div class="span2" style="margin-top:20px;">
-          <span ng-show="got_results && result_status == 200 && result_status">
-            Found {{result.length}} results
-          </span>
-          <span class="alert alert-error" ng-show="got_results && result_status != 200 && result_status">
-            <strong>HTTP Error {{result_status}}</strong>
-          </span>
-          <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-          <div ng-show="update['success']">
-            Success. Status code: <font color="green">{{update['status_code']}}</font>
-          </div>
-          <div ng-show="update['fail']">
-            Fail. Status code: <font color="red">{{update['status_code']}}</font>
-          </div>
+        <div class="span4">
         </div>
       </div>
     </span>

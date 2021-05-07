@@ -49,6 +49,7 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.result = _.pluck(data.data.rows, 'doc');
         $scope.result_status = data.status;
         $scope.got_results = true;
+        $scope.total_results = data.data.total_rows;
         if ($scope.result.length != 0){
           columns = _.keys($scope.result[0]);
           rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown

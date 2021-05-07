@@ -224,6 +224,7 @@ angular.module('testApp').controller('resultsCtrl',
           }else{
             $scope.result = _.pluck(data.data.rows, 'doc');
           }
+          $scope.total_results = data.data.total_rows;
           $scope.parseColumns();
         },function(){
            alert("Error getting information");

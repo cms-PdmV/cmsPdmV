@@ -1,7 +1,4 @@
-<div class="span2" style="margin-top:20px;">
-  <span ng-show="got_results && result_status == 200 && result_status">
-    Found {{result.length}} results
-  </span>
+<div class="span4" style="margin-top: 10px; text-align: center;">
   <span class="alert alert-error" ng-show="got_results && result_status != 200 && result_status">
     <strong>
       Sorry, HTTP Error {{result_status}}
@@ -21,7 +18,10 @@
     </font>
   </div>
 </div>
-<div class="span5 pagination pagination-right" >
+<div class="span4 pagination pagination-right">
+  <span ng-show="total_results != undefined">
+    Showing {{total_results == 0 ? 0 : math.max(0, custom_footer_list_page) * custom_footer_limit + 1}} - {{math.min(total_results, (math.max(0, custom_footer_list_page) + 1) * custom_footer_limit)}} of {{total_results}} results
+  </span>
   <ul>
     <li ng-class="{ disabled: custom_footer_list_page <= -1 }">
       <a ng-click="custom_footer_previous_page(custom_footer_list_page)" ng-href="#" ng-show="custom_footer_list_page>0">
@@ -48,7 +48,7 @@
     </a>
     </li>
     <li>
-      <select ng-model="custom_footer_limit" ng-options="elem for elem in custom_footer_limit_opts;" style="width: 60px;" ng-change="custom_footer_new_limit();" ng-show="custom_footer_list_page>=0">
+      <select ng-model="custom_footer_limit" ng-options="elem for elem in custom_footer_limit_opts;" style="width: 60px; margin-bottom: 0" ng-change="custom_footer_new_limit();" ng-show="custom_footer_list_page>=0">
       </select>
     </li>
 </ul>

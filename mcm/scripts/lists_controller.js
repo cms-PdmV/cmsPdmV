@@ -38,6 +38,7 @@ angular.module('testApp').controller('resultsCtrl',
         } else {
           $scope.result = data.data.results.value;
         }
+        $scope.total_results = data.data.total_rows;
         if ($scope.result === undefined ){
           alert("Error getting information");
           return; //stop doing anything if results are undefined

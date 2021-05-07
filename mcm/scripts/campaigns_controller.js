@@ -121,6 +121,7 @@ angular.module('testApp').controller('resultsCtrl',
           alert('The following url-search key(s) is/are not valid : '+_.keys(data.data));
           return; //stop doing anything if results are undefined
         }
+        $scope.total_results = data.data.total_rows;
         if ($scope.result.length != 0){
           columns = _.keys($scope.result[0]);
           rejected = _.reject(columns, function(v){return v[0] == "_";}); //check if charat[0] is _ which is couchDB value to not be shown

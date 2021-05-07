@@ -46,6 +46,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       promise.then(function(data){
         $scope.result = _.pluck(data.data.rows, 'doc');
+        $scope.total_results = data.data.total_rows;
         $scope.result_status = data.status;
         $scope.got_results = true;
         if ($scope.result.length != 0){
