@@ -4,6 +4,7 @@ import sys
 import os.path
 import os
 import math
+import random
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
@@ -120,7 +121,8 @@ class ValidationControl():
         self.logger.info('Already submitted validations:\n%s', '\n'.join(already_submitted))
         to_be_submitted = list((chained_requests | requests) - already_submitted)
         to_be_submitted_count = len(to_be_submitted)
-        to_be_submitted = to_be_submitted[:500-min(500,already_submitted_count)]
+        random.shuffle(to_be_submitted)
+        to_be_submitted = to_be_submitted[:300-min(300,already_submitted_count)]
 
         self.logger.info('Already submitted - %s, to be submitted - %s, will be submitted - %s',
                          already_submitted_count,
@@ -296,7 +298,7 @@ class ValidationControl():
     def check_size_per_event(self, request_name, expected, report):
         expected_size_per_event = expected['size_per_event']
         actual_size_per_event = report['size_per_event']
-        size_per_event_margin = 0.1
+        size_per_event_margin = 0.5
         lower_threshold = expected_size_per_event * (1 - size_per_event_margin)
         upper_threshold = expected_size_per_event * (1 + size_per_event_margin)
         message = '%s expected %.4fkB +- %.2f%% (%.4fkB - %.4fkB) size per event, measured %.4fkB' % (request_name,
@@ -337,11 +339,11 @@ class ValidationControl():
         expected_events = report['expected_events']
         sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_events)
         sigma = max(sigma, 0.05 * actual_filter_efficiency)
-        lower_threshold = expected_filter_efficiency - 3 * sigma
-        upper_threshold = expected_filter_efficiency + 3 * sigma
+        lower_threshold = expected_filter_efficiency - 5 * sigma
+        upper_threshold = expected_filter_efficiency + 5 * sigma
         message = '%s expected %.4f%% +- %.4f%% (%.4f%% - %.4f%%) filter efficiency, measured %.4f%%' % (request_name,
                                                                                                          expected_filter_efficiency * 100,
-                                                                                                         3 * sigma * 100,
+                                                                                                         5 * sigma * 100,
                                                                                                          lower_threshold * 100,
                                                                                                          upper_threshold * 100,
                                                                                                          actual_filter_efficiency * 100)
@@ -1057,7 +1059,7 @@ class ValidationControl():
         stdout, stderr = self.ssh_executor.execute_command(command)
 
         # Get condor job ID from std output
-        if not stderr and '1 job(s) submitted to cluster' in stdout:
+        if stdout and '1 job(s) submitted to cluster' in stdout:
             # output is "1 job(s) submitted to cluster xxxxxx"
             condor_id = int(float(stdout.split()[-1]))
             self.logger.info('Submitted %s, HTCondor ID %s',
@@ -1112,32 +1114,33 @@ class ValidationControl():
         Scale on higher number of cores
         Limit per core 500mb - 4gb
         """
-        prepid = request.get_attribute('prepid')
-        sequences = request.get_attribute('sequences')
-        request_memory = request.get_attribute('memory')
-        request_threads = max((int(sequence.get('nThreads', 1)) for sequence in sequences))
-        if target_threads <= request_threads:
-            # Memory provided by user
-            memory = request_memory
-            self.logger.info('%s will use use %sMB for %s thread validation', prepid, memory, target_threads)
-            return memory
+        return target_threads * 2000
+        # prepid = request.get_attribute('prepid')
+        # sequences = request.get_attribute('sequences')
+        # request_memory = request.get_attribute('memory')
+        # request_threads = max((int(sequence.get('nThreads', 1)) for sequence in sequences))
+        # if target_threads <= request_threads:
+        #     # Memory provided by user
+        #     memory = request_memory
+        #     self.logger.info('%s will use use %sMB for %s thread validation', prepid, memory, target_threads)
+        #     return memory
 
-        if request_threads == 1 and request_memory == 2300:
-            single_core_memory = 2000
-        else:
-            single_core_memory = int(request_memory / request_threads)
-            # Min 500, max 4000
-            single_core_memory = max(500, min(4000, single_core_memory))
+        # if request_threads == 1 and request_memory == 2300:
+        #     single_core_memory = 2000
+        # else:
+        #     single_core_memory = int(request_memory / request_threads)
+        #     # Min 500, max 4000
+        #     single_core_memory = max(500, min(4000, single_core_memory))
 
-        memory = target_threads * single_core_memory
-        self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
-                         prepid,
-                         request_threads,
-                         request_memory,
-                         single_core_memory,
-                         memory,
-                         target_threads)
-        return memory
+        # memory = target_threads * single_core_memory
+        # self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
+        #                  prepid,
+        #                  request_threads,
+        #                  request_memory,
+        #                  single_core_memory,
+        #                  memory,
+        #                  target_threads)
+        # return memory
 
 
 if __name__ == '__main__':
