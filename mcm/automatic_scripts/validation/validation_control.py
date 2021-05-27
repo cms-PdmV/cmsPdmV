@@ -571,6 +571,12 @@ class ValidationControl():
             self.logger.info('Validation was done for %s threads, not checking the values', threads)
             for request_name, report in reports.iteritems():
                 expected_dict = threads_dict['expected'][request_name]
+                # Add CPU name
+                cpu_name = self.extract_cpu_name(out_file)
+                if cpu_name:
+                    self.logger.info('CPU name %s', cpu_name)
+                    report['cpu_name'] = cpu_name
+
                 self.logger.debug('%s expected:\n%s\n%s measured:\n%s',
                                   request_name,
                                   self.json_dumps(expected_dict),
