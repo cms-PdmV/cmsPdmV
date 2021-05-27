@@ -453,6 +453,16 @@ class ValidationControl():
 
         return False
 
+    def extract_cpu_name(self, stdout):
+        if not stdout:
+            return ''
+
+        for line in stdout.split('\n'):
+            if line.startswith('CPU_NAME='):
+                return line.replace('CPU_NAME=', '', 1)
+
+        return ''
+
     def validation_exit_code(self, log_file):
         if not log_file:
             return 0
@@ -640,6 +650,12 @@ class ValidationControl():
                     message += '\nPlease check and adjust generator filter parameter and retry validation.'
                     self.notify_validation_failed(validation_name, message)
                     return False
+
+                # Add CPU name
+                cpu_name = self.extract_cpu_name(out_file)
+                if cpu_name:
+                    self.logger.info('CPU name %s', cpu_name)
+                    report['cpu_name'] = cpu_name
 
                 self.logger.info('Success for %s in %s thread validation',
                                  request_name,

@@ -1451,6 +1451,13 @@ class request(json_base):
                           'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
                           '']
 
+        if automatic_validation:
+            bash_file += ['# Extract and print CPU name and hypervisor name',
+                          'cpu_name=$(lscpu | grep "Model name" | head -n 1 | sed "s/Model name: *//g")',
+                          'hypervisor_name=$(lscpu | grep "Hypervisor vendor" | head -n 1 | sed "s/Hypervisor vendor: *//g")',
+                          'echo "CPU_NAME=$cpu_name ($hypervisor_name)"',
+                          '']
+
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
         dump_test_to_file = (scram_arch_os == 'SLCern6')
         if dump_test_to_file:
