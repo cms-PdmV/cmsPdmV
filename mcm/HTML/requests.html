@@ -325,6 +325,7 @@
                           <li>Filter efficiency: {{(threadsResult.filter_efficiency) * 100 | number:1}} %</li>
                           <li>Time per event: {{threadsResult.time_per_event | number:4}} s</li>
                           <li>Size per event: {{threadsResult.size_per_event | number:4}} kB</li>
+                          <li ng-if="threadsResult.cpu_name">CPU Name: {{threadsResult.cpu_name}}</li>
                         </ul>
                       </li>
                     </ul>
