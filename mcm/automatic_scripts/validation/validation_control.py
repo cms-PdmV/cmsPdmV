@@ -457,9 +457,9 @@ class ValidationControl():
         if not stdout:
             return ''
 
-        for line in stdout.split('\n'):
+        for line in stdout:
             if line.startswith('CPU_NAME='):
-                return line.replace('CPU_NAME=', '', 1)
+                return line.replace('CPU_NAME=', '', 1).strip()
 
         return ''
 
