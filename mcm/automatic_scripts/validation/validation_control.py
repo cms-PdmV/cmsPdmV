@@ -122,7 +122,7 @@ class ValidationControl():
         to_be_submitted = list((chained_requests | requests) - already_submitted)
         to_be_submitted_count = len(to_be_submitted)
         random.shuffle(to_be_submitted)
-        to_be_submitted = to_be_submitted[:300-min(300,already_submitted_count)]
+        to_be_submitted = to_be_submitted[:500-min(500,already_submitted_count)]
 
         self.logger.info('Already submitted - %s, to be submitted - %s, will be submitted - %s',
                          already_submitted_count,
