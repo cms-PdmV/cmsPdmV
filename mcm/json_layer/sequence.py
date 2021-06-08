@@ -69,7 +69,8 @@ class sequence(json_base):
                 return ''
             if int(value) <= 0:
                 return ''
-        elif value == True:
+
+        if value == True:
             return "--" + str(attribute)
         elif value == False:
             return ''
