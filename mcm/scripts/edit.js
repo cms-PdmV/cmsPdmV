@@ -554,7 +554,7 @@ testApp.directive("customValidationEdit", function(){
     '  <form ng-switch-when="requests">'+
     '    <fieldset>'+
     '      <div class="control-group">'+
-    '        Valid:'+
+    '        Add VALIDATION step and upload output to DQM GUI:'+
     '        <input type="checkbox"  ng-model="validation_data.valid" ng-disabled="not_editable_list.indexOf(\'Validation\')!=-1">'+
     '      </div>'+
     '      <div class="control-group" ng-show="validation_data.valid">' +
@@ -573,7 +573,7 @@ testApp.directive("customValidationEdit", function(){
     '        </a>'+
     '      </div>'+
     '      <div class="control-group">'+
-    '        Validation length: '+
+    '        Validation length (use only when validation produce <10 events in 8h): '+
     '        <span ng-hide="!role(3)">' +
     '          <select style="width:50px; margin-bottom:0" ng-disabled="not_editable_list.indexOf(\'Validation\') != -1" ng-model="validation_data.time_multiplier" ng-options="key as key for key in [1,2]">' +
     '            <option hidden disabled selected value>{{ validation_data.time_multiplier ? validation_data.time_multiplier : 1 }}</option>' +
