@@ -2850,7 +2850,7 @@ class request(json_base):
                 validation_info = sorted(validation_info.values(), key=lambda v: v['cpu_efficiency'])
                 for thread_info in validation_info:
                     time_per_event = thread_info.get('time_per_event', 0)
-                    thread_info['events_per_lumi'] = (28800 * filter_efficiency / time_per_event) if time_per_event else 0
+                    thread_info['events_per_lumi'] = (28800 * thread_info['filter_efficiency'] / time_per_event) if time_per_event else 0
 
                 self.logger.info('Validation info before events/lumi filter %s', dumps(validation_info, indent=2, sort_keys=True))
                 events_per_lumi_threshold = 45
@@ -2890,6 +2890,7 @@ class request(json_base):
                 size_per_event = validation_info['size_per_event'] / sequence_count
                 time_per_event = validation_info['time_per_event'] / sequence_count
                 peak_value_rss = validation_info['peak_value_rss']
+                filter_efficiency = validation_info['filter_efficiency']
                 # Safety margin +60%, +50%, +40%, +30%, +20%
                 if peak_value_rss < 4000:
                     peak_value_rss *= 1.6
