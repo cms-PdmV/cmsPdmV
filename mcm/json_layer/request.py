@@ -229,6 +229,7 @@ class request(json_base):
         if self.current_user_level < 3:
             editable['memory'] = False
             editable['sequences'] = False
+            editable['pileup_dataset_name'] = False
 
         return editable
 
