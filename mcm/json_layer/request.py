@@ -823,6 +823,10 @@ class request(json_base):
                 self.logger.info('Chained campaign %s flag is off, skipping check' % (chained_campaign.get('prepid', '???')))
                 continue
 
+            if not mcm_cr.get('action_parameters', {}).get('flag', True):
+                self.logger.info('Chained request %s flag is off, skipping check' % (mcm_cr.get('prepid', '???')))
+                continue
+
             for r in chain:
                 if r == self.get_attribute('prepid'):
                     # No self checking
