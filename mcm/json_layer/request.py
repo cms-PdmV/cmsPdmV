@@ -352,6 +352,22 @@ class request(json_base):
                 'validation',
                 'The time per event or size per event are invalid: negative or null')
 
+        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'approve',
+                'Number of time_event entries: %s are different from number of sequences: %s' % (
+                    len(self.get_attribute("time_event")),
+                    len(self.get_attribute("sequences"))))
+
+        if len(self.get_attribute('size_event')) != len(self.get_attribute("sequences")):
+            raise self.WrongApprovalSequence(
+                self.get_attribute('status'),
+                'approve',
+                'Number of size_event entries: %s are different from number of sequences: %s' % (
+                    len(self.get_attribute("size_event")),
+                    len(self.get_attribute("sequences"))))
+
         if not self.get_attribute('fragment') and (not (self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'))):
             if self.get_attribute('mcdb_id') > 0 and not self.get_attribute('input_dataset'):
                 # this case is OK
