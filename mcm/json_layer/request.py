@@ -1557,7 +1557,7 @@ class request(json_base):
 
                 sequence_dict['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
 
-            if run_gen_script and index == 0 :
+            if for_validation and self.should_run_gen_script() and index == 0 :
                 campaign_db = database('campaigns')
                 request_campaign = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
                 # CMSSW must be >= 9.3.0
