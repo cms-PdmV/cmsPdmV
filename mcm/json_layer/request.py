@@ -1702,7 +1702,12 @@ class request(json_base):
             bash_file += ['\n\n# Upload configs',
                           'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
                           'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
-                          "wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;" % (test_string, " ".join(configs_to_upload))]
+                          'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
+                          '  python3 wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
+                          'else',
+                          '  wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
+                          'fi',
+                         ]
 
         if dump_test_to_file:
             bash_file += ['',
