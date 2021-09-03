@@ -1703,7 +1703,7 @@ class request(json_base):
                           'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
                           'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
                           'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
-                          '  python3 wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
+                          '  python3 `which wmupload.py` %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
                           'else',
                           '  wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
                           'fi',
