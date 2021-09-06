@@ -1619,12 +1619,28 @@ class request(json_base):
                 else:
                     report_name += 'report.xml'
 
+                if automatic_validation:
+                    kill_timeout = self.get_validation_max_runtime() - 1800 # 30 minutes
+                    bash_file += ['',
+                                  '# Sleeping killer',
+                                  'export VALIDATION_RUN=1',
+                                  'KILL_TIMEOUT=%s' % (int(kill_timeout)),
+                                  'PARENT_PID=$$',
+                                  'echo "Starting at "$(date)',
+                                  'echo "Will kill at "$(date -d "+$KILL_TIMEOUT seconds")',
+                                  '(sleep $KILL_TIMEOUT && cmsRunPid=$(ps --ppid $PARENT_PID | grep cmsRun | awk \'{print $1}\') && echo "Killing PID $cmsRunPid" && kill -s SIGINT $cmsRunPid)&',
+                                  'SLEEP_PID=$!']
+
                 bash_file += ['',
                               '# Run generated config',
                               'REPORT_NAME=%s' % (report_name),
                               '# Run the cmsRun',
                               'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
                               '']
+
+                if automatic_validation:
+                    bash_file += ['kill $SLEEP_PID',
+                                  '']
 
                 if run_dqm_upload:
                     dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
