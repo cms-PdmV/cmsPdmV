@@ -1639,7 +1639,7 @@ class request(json_base):
                               '']
 
                 if automatic_validation:
-                    bash_file += ['kill $SLEEP_PID',
+                    bash_file += ['kill $SLEEP_PID > /dev/null 2>& 1',
                                   '']
 
                 if run_dqm_upload:
@@ -2873,31 +2873,52 @@ class request(json_base):
             # return empty values if nothing found
             return "", ""
 
+    def sequences_cpu_efficiency(self, sequences):
+        self.logger.info('Calculating eff %s', sequences)
+        numerator = 0
+        denominator = 0
+        for seq in sequences:
+            numerator += seq['cpu_efficiency'] * seq['time_per_event']
+            denominator += seq['time_per_event']
+
+        efficiency = float(numerator) / denominator
+        self.logger.info('Eff %s', efficiency)
+        return efficiency
+
+    def sequences_filter_efficiency(self, sequences):
+        efficiency = 1
+        for seq in sequences:
+            efficiency *= seq['filter_efficiency']
+
+        return efficiency
+
     def request_to_tasks(self, base, depend):
         tasks = []
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
-        validation_info = self.get_attribute('validation').get('results', {})
-        for threads, thread_info in validation_info.items():
-            thread_info['threads'] = int(threads)
+        validation_info = []
+        for threads, sequences in self.get_attribute('validation').get('results', {}).items():
+            if not isinstance(sequences, list):
+                sequences = [sequences]
 
-        self.logger.info('Validation info available for cores: %s', list(validation_info.keys()))
+            validation_info.append({'threads': int(threads),
+                                    'cpu_efficiency': self.sequences_cpu_efficiency(sequences),
+                                    'filter_efficiency': self.sequences_filter_efficiency(sequences),
+                                    'events_per_lumi': min([s['estimated_events_per_lumi'] for s in sequences]),
+                                    'sequences': sequences})
+
+        self.logger.info('Validation info of %s:\n%s', self.get_attribute('prepid'), dumps(validation_info, indent=2, sort_keys=True))
         filter_efficiency = self.get_efficiency()
         if validation_info:
+            # Average filter efficiency
+            filter_efficiency = sum([x['filter_efficiency'] for x in validation_info]) / len(validation_info)
             filter_efficiency_threshold = 0.001
             if filter_efficiency < filter_efficiency_threshold:
                 # If filter eff < 10^-3, then filter based on events/lumi first and choose highest cpu efficiency
                 self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on evens/lumi',
                                  filter_efficiency_threshold,
                                  filter_efficiency)
-                validation_info = sorted(validation_info.values(), key=lambda v: v['cpu_efficiency'])
-                for thread_info in validation_info:
-                    time_per_event = thread_info.get('time_per_event', 0)
-                    thread_info['events_per_lumi'] = (28800 * thread_info['filter_efficiency'] / time_per_event) if time_per_event else 0
-
-                self.logger.info('Validation info before events/lumi filter %s', dumps(validation_info, indent=2, sort_keys=True))
-                events_per_lumi_threshold = 45
-                validation_info = [v for v in validation_info if v['events_per_lumi'] >= events_per_lumi_threshold]
+                validation_info = sorted([v for v in validation_info if v['events_per_lumi'] >= 45], key=lambda v: v['cpu_efficiency'])
                 self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
                 if validation_info:
                     validation_info = validation_info[-1]
@@ -2906,7 +2927,7 @@ class request(json_base):
 
             else:
                 # If filter eff >= 10^-3, then choose highest number of threads where cpu efficiency is >= 70%
-                validation_info = sorted(validation_info.values(), key=lambda v: v['threads'])
+                validation_info = sorted(validation_info, key=lambda v: v['threads'])
                 self.logger.info('Validation info (by threads) %s', dumps(validation_info, indent=2, sort_keys=True))
                 cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
                 for thread_info in reversed(validation_info):
@@ -2921,20 +2942,25 @@ class request(json_base):
         memory = self.get_attribute('memory')
         sequences = self.get_attribute('sequences')
         sequence_count = len(sequences)
+        # Add missing validation info for all sequences
+        while validation_info and len(validation_info['sequences']) < sequence_count:
+            validation_info['sequences'].append(validation_info['sequences'][-1])
+
         for sequence_index in range(sequence_count):
             sequence = sequences[sequence_index]
-            threads = int(self.get_attribute('sequences')[sequence_index]['nThreads'])
+            threads = int(self.get_attribute('sequences')[sequence_index].get('nThreads', 1))
             size_per_event = self.get_attribute('size_event')[sequence_index]
             time_per_event = self.get_attribute('time_event')[sequence_index]
             if validation_info:
                 # If there are multi-validation results, use them
                 self.logger.info('Using multi-validation values')
                 threads = validation_info['threads']
-                size_per_event = validation_info['size_per_event'] / sequence_count
-                time_per_event = validation_info['time_per_event'] / sequence_count
-                peak_value_rss = validation_info['peak_value_rss']
-                filter_efficiency = validation_info['filter_efficiency']
+                size_per_event = validation_info['sequences'][sequence_index]['size_per_event'] / sequence_count
+                time_per_event = validation_info['sequences'][sequence_index]['time_per_event'] / sequence_count
+                peak_value_rss = validation_info['sequences'][sequence_index]['peak_value_rss']
+                filter_efficiency = validation_info['sequences'][sequence_index]['filter_efficiency']
                 # Safety margin +60%, +50%, +40%, +30%, +20%
+                self.logger.info('Adding memory safety margin')
                 if peak_value_rss < 4000:
                     peak_value_rss *= 1.6
                 elif peak_value_rss < 6000:
@@ -2948,11 +2974,7 @@ class request(json_base):
 
                 # Rounding up to next thousand MB
                 memory = int(math.ceil(peak_value_rss / 1000.0) * 1000)
-                if memory > 2000 * threads:
-                    self.logger.info('Limiting memory to 2000MB/core %.2fMB -> %.2fMB',
-                                     memory,
-                                     threads * 2000)
-                    memory = 2000 * threads
+                self.logger.info('Rounding up memory GBs %.2fMB -> %.2fMB', peak_value_rss, memory)
 
             elif self.get_attribute('validation').get('peak_value_rss', 0) > 0:
                 # Old way of getting PeakValueRSS
