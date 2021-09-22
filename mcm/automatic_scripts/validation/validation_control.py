@@ -202,7 +202,7 @@ class ValidationControl():
 
     def get_report_paths(self, validation_name, threads, expected):
         paths = []
-        for request_prepid, expected_dict in expected.iteritems():
+        for request_prepid, _ in expected.iteritems():
             report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
                                                              validation_name,
                                                              request_prepid,
@@ -230,7 +230,7 @@ class ValidationControl():
             self.logger.info('Will check %s reports, it has %s sequences',
                              request_prepid,
                              number_of_sequences)
-            default_expected_events = expected_dict.get('events')
+            default_expected_events = expected_dict[0].get('events')
             request_reports = []
             for sequence_number in range(number_of_sequences):
                 if sequence_number == number_of_sequences - 1:
@@ -253,90 +253,86 @@ class ValidationControl():
                 self.logger.debug('Values %s', self.json_dumps(sequence_report))
                 request_reports.append(sequence_report)
 
-            sum_time_per_event = sum([r['time_per_event'] for r in request_reports])
-            sum_size_per_event = sum([r['size_per_event'] for r in request_reports])
-            sum_cpu_efficiency = sum([(r['time_per_event'] / sum_time_per_event) * r['cpu_efficiency'] for r in request_reports])
-            prod_filter_efficiency = self.list_prod([r['filter_efficiency'] for r in request_reports])
-            estimated_events_per_lumi = (28800 * prod_filter_efficiency / sum_time_per_event) if sum_time_per_event > 0 else 0
-            max_peak_value_rss = max([r['peak_value_rss'] for r in request_reports])
-            min_total_events = min([r['total_events'] for r in request_reports])
-            min_expected_events = min([r['expected_events'] for r in request_reports])
-            report = {'time_per_event': sum_time_per_event,
-                      'size_per_event': sum_size_per_event,
-                      'cpu_efficiency': sum_cpu_efficiency,
-                      'estimated_events_per_lumi': estimated_events_per_lumi,
-                      'filter_efficiency': prod_filter_efficiency,
-                      'peak_value_rss': max_peak_value_rss,
-                      'total_events': min_total_events,
-                      'expected_events': min_expected_events}
-            reports[request_prepid] = report
+            reports[request_prepid] = request_reports
 
         return reports
 
     def check_time_per_event(self, request_name, expected, report):
-        expected_time_per_event = expected['time_per_event']
-        actual_time_per_event = report['time_per_event']
         time_per_event_margin = settings.get_value('timing_fraction')
-        lower_threshold = expected_time_per_event * (1 - time_per_event_margin)
-        upper_threshold = expected_time_per_event * (1 + time_per_event_margin)
-        message = '%s expected %.4fs +- %.2f%% (%.4fs - %.4fs) time per event, measured %.4fs' % (request_name,
-                                                                                                  expected_time_per_event,
-                                                                                                  time_per_event_margin * 100,
-                                                                                                  lower_threshold,
-                                                                                                  upper_threshold,
-                                                                                                  actual_time_per_event)
-        self.logger.info(message)
-        if lower_threshold <= actual_time_per_event <= upper_threshold:
-            return True, ''
+        for sequence_index in range(len(expected)):
+            expected_time_per_event = expected[sequence_index]['time_per_event']
+            actual_time_per_event = report[sequence_index]['time_per_event']
+            lower_threshold = expected_time_per_event * (1 - time_per_event_margin)
+            upper_threshold = expected_time_per_event * (1 + time_per_event_margin)
+            message = ('%s sequence %s/%s expected %.4fs +- %.2f%% (%.4fs - %.4fs) time per '
+                       'event, measured %.4fs' % (request_name,
+                                                  sequence_index + 1,
+                                                  len(expected),
+                                                  expected_time_per_event,
+                                                  time_per_event_margin * 100,
+                                                  lower_threshold,
+                                                  upper_threshold,
+                                                  actual_time_per_event))
 
-        self.logger.error('Time per event %.4fs not within expected range %.4fs - %.4fs',
+            self.logger.info(message)
+            if actual_time_per_event < lower_threshold or actual_time_per_event > upper_threshold:
+                self.logger.error('Time per event %.4fs not within expected range %.4fs - %.4fs',
                           actual_time_per_event,
                           lower_threshold,
                           upper_threshold)
-        return False, message
+                return False, message
+
+        return True, ''
 
     def check_size_per_event(self, request_name, expected, report):
-        expected_size_per_event = expected['size_per_event']
-        actual_size_per_event = report['size_per_event']
         size_per_event_margin = 0.5
-        lower_threshold = expected_size_per_event * (1 - size_per_event_margin)
-        upper_threshold = expected_size_per_event * (1 + size_per_event_margin)
-        message = '%s expected %.4fkB +- %.2f%% (%.4fkB - %.4fkB) size per event, measured %.4fkB' % (request_name,
-                                                                                                      expected_size_per_event,
-                                                                                                      size_per_event_margin * 100,
-                                                                                                      lower_threshold,
-                                                                                                      upper_threshold,
-                                                                                                      actual_size_per_event)
-        self.logger.info(message)
-        if lower_threshold <= actual_size_per_event <= upper_threshold:
-            return True, ''
+        for sequence_index in range(len(expected)):
+            expected_size_per_event = expected[sequence_index]['size_per_event']
+            actual_size_per_event = report[sequence_index]['size_per_event']
+            lower_threshold = expected_size_per_event * (1 - size_per_event_margin)
+            upper_threshold = expected_size_per_event * (1 + size_per_event_margin)
+            message = ('%s sequence %s/%s expected %.4fkB +- %.2f%% (%.4fkB - %.4fkB) size per '
+                       'event, measured %.4fkB' % (request_name,
+                                                   sequence_index + 1,
+                                                   len(expected),
+                                                   expected_size_per_event,
+                                                   size_per_event_margin * 100,
+                                                   lower_threshold,
+                                                   upper_threshold,
+                                                   actual_size_per_event))
+            self.logger.info(message)
+            if actual_size_per_event < lower_threshold or actual_size_per_event > upper_threshold:
+                self.logger.error('Size per event %.4fkB not within expected range %.4fkB - %.4fkB',
+                                actual_size_per_event,
+                                lower_threshold,
+                                upper_threshold)
+                return False, message
 
-        self.logger.error('Size per event %.4fkB not within expected range %.4fkB - %.4fkB',
-                          actual_size_per_event,
-                          lower_threshold,
-                          upper_threshold)
-        return False, message
+        return True, ''
 
     def check_memory(self, request_name, expected, report):
-        expected_memory = expected['memory']
-        actual_memory = report['peak_value_rss']
-        message = '%s expected up to %sMB memory, measured %sMB' % (request_name,
-                                                                    expected_memory,
-                                                                    actual_memory)
-        self.logger.info(message)
-        if actual_memory < expected_memory:
-            return True, ''
+        for sequence_index in range(len(expected)):
+            expected_memory = expected[sequence_index]['memory']
+            actual_memory = report[sequence_index]['peak_value_rss']
+            message = '%s expected up to %sMB memory, measured %sMB' % (request_name,
+                                                                        expected_memory,
+                                                                        actual_memory)
+            self.logger.info(message)
+            if actual_memory > expected_memory:
+                message += ('. Peak memory in sequence %s %sMB is above '
+                            'expected %sMB by %sMB' % (sequence_index + 1,
+                                                       actual_memory,
+                                                       expected_memory,
+                                                       actual_memory - expected_memory))
 
-        message += '. Peak memory %sMB is above expected %sMB by %sMB' % (actual_memory,
-                                                                          expected_memory,
-                                                                          actual_memory - expected_memory)
+                return False, message
 
-        return False, message
+        return True, ''
 
     def check_filter_efficiency(self, request_name, expected, report):
-        expected_filter_efficiency = expected['filter_efficiency']
-        actual_filter_efficiency = report['filter_efficiency']
-        expected_events = report['expected_events']
+        expected_filter_efficiency = expected[0]['filter_efficiency']  # Because all have same expected eff
+        actual_filter_efficiency = self.list_prod([r['filter_efficiency'] for r in report])
+        expected_events = report[0]['expected_events']
         sigma = sqrt((actual_filter_efficiency * (1 - actual_filter_efficiency)) / expected_events)
         sigma = max(sigma, 0.05 * actual_filter_efficiency)
         lower_threshold = expected_filter_efficiency - 5 * sigma
@@ -359,38 +355,38 @@ class ValidationControl():
         return False, message
 
     def adjust_time_per_event(self, request_name, expected, report):
-        expected_time_per_event = expected['time_per_event']
-        actual_time_per_event = report['time_per_event']
+        adjusted_time_per_event = []
+        for sequence_index in range(len(expected)):
+            expected_time_per_event = expected[sequence_index]['time_per_event']
+            actual_time_per_event = report[sequence_index]['time_per_event']
+            adjusted_time_per_event.append((expected_time_per_event + 9 * actual_time_per_event) / 10)
+
         request = self.request_db.get(request_name)
-        number_of_sequences = len(request.get('sequences', []))
-        adjusted_time_per_event = ((expected_time_per_event + 9 * actual_time_per_event) / 10) / number_of_sequences
-        request['time_event'] = [adjusted_time_per_event] * number_of_sequences
-        self.logger.info('%s expected %.4fs time per event, measured %.4fs, adjusting to %.4fs * %s sequences = %.4fs',
+        request['time_event'] = adjusted_time_per_event
+        self.logger.info('%s expected %s time per event, measured %s, adjusting to %s',
                          request_name,
-                         expected_time_per_event,
-                         actual_time_per_event,
-                         adjusted_time_per_event,
-                         number_of_sequences,
-                         adjusted_time_per_event * number_of_sequences)
+                         ', '.join(['%.4fs' % (e['time_per_event']) for e in expected]),
+                         ', '.join(['%.4fs' % (r['time_per_event']) for r in report]),
+                         ', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
         self.request_db.save(request)
-        return adjusted_time_per_event, number_of_sequences
+        return adjusted_time_per_event
 
     def adjust_size_per_event(self, request_name, expected, report):
-        expected_size_per_event = expected['size_per_event']
-        actual_size_per_event = report['size_per_event']
+        adjusted_size_per_event = []
+        for sequence_index in range(len(expected)):
+            expected_size_per_event = expected[sequence_index]['size_per_event']
+            actual_size_per_event = report[sequence_index]['size_per_event']
+            adjusted_size_per_event.append((expected_size_per_event + 9 * actual_size_per_event) / 10)
+
         request = self.request_db.get(request_name)
-        number_of_sequences = len(request.get('sequences', []))
-        adjusted_size_per_event = ((expected_size_per_event + 9 * actual_size_per_event) / 10) / number_of_sequences
-        request['size_event'] = [adjusted_size_per_event] * number_of_sequences
-        self.logger.info('%s expected %.4fkB size per event, measured %.4fkB, adjusting to %.4fkB * %s sequences = %.4fkB',
+        request['size_event'] = adjusted_size_per_event
+        self.logger.info('%s expected %s size per event, measured %s, adjusting to %s',
                          request_name,
-                         expected_size_per_event,
-                         actual_size_per_event,
-                         adjusted_size_per_event,
-                         number_of_sequences,
-                         adjusted_size_per_event * number_of_sequences)
+                         ', '.join(['%.4fkB' % (e['size_per_event']) for e in expected]),
+                         ', '.join(['%.4fkB' % (r['size_per_event']) for r in report]),
+                         ', '.join(['%.4fkB' % (a) for a in adjusted_size_per_event]))
         self.request_db.save(request)
-        return adjusted_size_per_event, number_of_sequences
+        return adjusted_size_per_event
 
     def read_output_files(self, validation_name, threads):
         item_directory = '%s%s' % (self.test_directory_path, validation_name)
@@ -482,16 +478,18 @@ class ValidationControl():
 
     def check_events_ran(self, validation_name, expected, report):
         min_events = settings.get_value('timing_n_limit')
-        passed_events = report['total_events']
-        if passed_events >= min_events:
-            self.logger.info('At least %s events are required and %s events were produced',
-                             min_events,
-                             passed_events)
-            return True, ''
+        for one_report in report:
+            passed_events = one_report['total_events']
+            if passed_events < min_events:
+                message = 'At least %s events are required to do an accurate time per event estimation, but only %s events were produced.\n' % (min_events, passed_events)
+                self.logger.error(message)
+                return False, message
 
-        message = 'At least %s events are required to do an accurate time per event estimation, but only %s events were produced.\n' % (min_events, passed_events)
-        self.logger.error(message)
-        return False, message
+            self.logger.info('At least %s events are required and %s events were produced',
+                            min_events,
+                            passed_events)
+
+        return True, ''
 
     def process_done_validation(self, validation_name, threads):
         """
@@ -575,7 +573,8 @@ class ValidationControl():
                 cpu_name = self.extract_cpu_name(out_file)
                 if cpu_name:
                     self.logger.info('CPU name %s', cpu_name)
-                    report['cpu_name'] = cpu_name
+                    for one_report in report:
+                        one_report['cpu_name'] = cpu_name
 
                 self.logger.debug('%s expected:\n%s\n%s measured:\n%s',
                                   request_name,
@@ -609,11 +608,8 @@ class ValidationControl():
                 passed, message = self.check_time_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_time_per_event, number_of_sequences = self.adjust_time_per_event(request_name, expected_dict, report)
-                        message += '\nTime per event is adjusted to %.4fs per sequence. %.4fs * %s sequences = %.4fs\nValidation will be automatically retried' % (adjusted_time_per_event,
-                                                                                                                                                                   adjusted_time_per_event,
-                                                                                                                                                                   number_of_sequences,
-                                                                                                                                                                   adjusted_time_per_event * number_of_sequences)
+                        adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report)
+                        message += '\nTime per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
@@ -627,11 +623,8 @@ class ValidationControl():
                 passed, message = self.check_size_per_event(request_name, expected_dict, report)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_size_per_event, number_of_sequences = self.adjust_size_per_event(request_name, expected_dict, report)
-                        message += '\nSize per event is adjusted to %.4fkB per sequence. %.4fkB * %s sequences = %.4fkB\nValidation will be automatically retried' % (adjusted_size_per_event,
-                                                                                                                                                                      adjusted_size_per_event,
-                                                                                                                                                                      number_of_sequences,
-                                                                                                                                                                      adjusted_size_per_event * number_of_sequences)
+                        adjusted_size_per_event = self.adjust_size_per_event(request_name, expected_dict, report)
+                        message += '\nSize per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fkB' % (a) for a in adjusted_size_per_event]))
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed(validation_name, message)
                         return True
@@ -661,7 +654,8 @@ class ValidationControl():
                 cpu_name = self.extract_cpu_name(out_file)
                 if cpu_name:
                     self.logger.info('CPU name %s', cpu_name)
-                    report['cpu_name'] = cpu_name
+                    for one_report in report:
+                        one_report['cpu_name'] = cpu_name
 
                 self.logger.info('Success for %s in %s thread validation',
                                  request_name,
@@ -710,9 +704,11 @@ class ValidationControl():
             for request in sorted(threads_dict.keys()):
                 request_dict = threads_dict[request]
                 message += '  %s\n' % (request)
-                for key in sorted(request_dict.keys()):
-                    value = request_dict[key]
-                    message += '    %s: %s\n' % (key, value)
+                for sequence_index,sequence in enumerate(request_dict):
+                    message += '    Sequence %s:\n' % (sequence_index + 1)
+                    for key in sorted(sequence.keys()):
+                        value = sequence[key]
+                        message += '      %s: %s\n' % (key, value)
 
         item.notify(subject, message)
 
@@ -720,12 +716,13 @@ class ValidationControl():
         max_events_lumi = 0
         for threads, threads_dict in storage_item['done'].iteritems():
             for request, request_dict in threads_dict.iteritems():
-                events_lumi = request_dict['estimated_events_per_lumi']
-                self.logger.info('Request %s in %s core validation estimate %s events/lumi',
-                                 request,
-                                 threads,
-                                 events_lumi)
-                max_events_lumi = max(max_events_lumi, events_lumi)
+                for sequence in request_dict:
+                    events_lumi = sequence['estimated_events_per_lumi']
+                    self.logger.info('Request %s in %s core validation estimate %s events/lumi',
+                                    request,
+                                    threads,
+                                    events_lumi)
+                    max_events_lumi = max(max_events_lumi, events_lumi)
 
         return max_events_lumi
 
@@ -1042,19 +1039,22 @@ class ValidationControl():
             request_prepids.append(request_prepid)
             # Sum all run times
             validation_runtime += int(request.get_validation_max_runtime())
-            # Get max memory of all requests
-            request_memory = self.get_memory(request, threads)
+            # Get max memory of all requests, round it up to next GB
+            request_memory = int(math.ceil(request.get_attribute('memory') / 1000.0) * 1000)
             max_memory = max(max_memory, request_memory)
             # Combine validation scripts to one long script
             validation_script += request.get_setup_file2(for_validation=True,
                                                          automatic_validation=True,
                                                          threads=threads)
             validation_script += '\n'
-            expected_dict[request_prepid] = {'time_per_event': request.get_sum_time_events(),
-                                             'size_per_event': request.get_sum_size_events(),
-                                             'memory': request_memory,
-                                             'filter_efficiency': request.get_efficiency(),
-                                             'events': request.get_event_count_for_validation()}
+            expected_dict[request_prepid] = []
+            sequences = request.get_attribute('sequences')
+            for sequence_index in range(len(sequences)):
+                expected_dict[request_prepid].append({'time_per_event': request.get_attribute('time_event')[sequence_index],
+                                                      'size_per_event': request.get_attribute('size_event')[sequence_index],
+                                                      'memory': request_memory,
+                                                      'filter_efficiency': request.get_efficiency(),
+                                                      'events': request.get_event_count_for_validation()})
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))
@@ -1128,41 +1128,6 @@ class ValidationControl():
             requests.append(request)
 
         return requests
-
-    def get_memory(self, request, target_threads):
-        """
-        Get memory scaled accordingly to number of threads
-        Do not scale on lower number of cores
-        Scale on higher number of cores
-        Limit per core 500mb - 4gb
-        """
-        return target_threads * 2000
-        # prepid = request.get_attribute('prepid')
-        # sequences = request.get_attribute('sequences')
-        # request_memory = request.get_attribute('memory')
-        # request_threads = max((int(sequence.get('nThreads', 1)) for sequence in sequences))
-        # if target_threads <= request_threads:
-        #     # Memory provided by user
-        #     memory = request_memory
-        #     self.logger.info('%s will use use %sMB for %s thread validation', prepid, memory, target_threads)
-        #     return memory
-
-        # if request_threads == 1 and request_memory == 2300:
-        #     single_core_memory = 2000
-        # else:
-        #     single_core_memory = int(request_memory / request_threads)
-        #     # Min 500, max 4000
-        #     single_core_memory = max(500, min(4000, single_core_memory))
-
-        # memory = target_threads * single_core_memory
-        # self.logger.info('%s has %s nThreads and %sMB memory. Single core memory %sMB, so will use %sMB for %s thread validation',
-        #                  prepid,
-        #                  request_threads,
-        #                  request_memory,
-        #                  single_core_memory,
-        #                  memory,
-        #                  target_threads)
-        # return memory
 
 
 if __name__ == '__main__':
