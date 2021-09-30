@@ -323,7 +323,7 @@
                             <ul>
                               <li>Events: {{sequence.total_events}}</li>
                               <li>CPU Efficiency: {{(sequence.cpu_efficiency) * 100  | number:1}} %</li>
-                              <li ng-if="sequence.time_per_event > 0" title="Estimated events per lumi">Est. events/lumi: {{(28800 * sequence.cpu_efficiency) / sequence.time_per_event | number:1}}</li>
+                              <li>Est. events/lumi: {{sequence.estimated_events_per_lumi | number:1}}</li>
                               <li>Peak Value RSS: {{sequence.peak_value_rss | number:2}} MB</li>
                               <li>Filter efficiency: {{(sequence.filter_efficiency) * 100 | number:1}} %</li>
                               <li>Time per event: {{sequence.time_per_event | number:4}} s</li>
@@ -332,11 +332,20 @@
                             </ul>
                           </li>
                         </ul>
-
-                        <ul  ng-if="threadsResult.length === undefined || threadsResult.length == 1">
+                        <ul ng-if="threadsResult.length !== undefined || threadsResult.length == 1">
+                          <li>Events: {{threadsResult[0].total_events}}</li>
+                          <li>CPU Efficiency: {{(threadsResult[0].cpu_efficiency) * 100  | number:1}} %</li>
+                          <li>Est. events/lumi: {{threadsResult[0].estimated_events_per_lumi | number:1}}</li>
+                          <li>Peak Value RSS: {{threadsResult[0].peak_value_rss | number:2}} MB</li>
+                          <li>Filter efficiency: {{(threadsResult[0].filter_efficiency) * 100 | number:1}} %</li>
+                          <li>Time per event: {{threadsResult[0].time_per_event | number:4}} s</li>
+                          <li>Size per event: {{threadsResult[0].size_per_event | number:4}} kB</li>
+                          <li ng-if="threadsResult[0].cpu_name">CPU Name: {{threadsResult[0].cpu_name}}</li>
+                        </ul>
+                        <ul ng-if="threadsResult.length === undefined">
                           <li>Events: {{threadsResult.total_events}}</li>
                           <li>CPU Efficiency: {{(threadsResult.cpu_efficiency) * 100  | number:1}} %</li>
-                          <li ng-if="threadsResult.time_per_event > 0" title="Estimated events per lumi">Est. events/lumi: {{(28800 * threadsResult.cpu_efficiency) / threadsResult.time_per_event | number:1}}</li>
+                          <li>Est. events/lumi: {{threadsResult.estimated_events_per_lumi | number:1}}</li>
                           <li>Peak Value RSS: {{threadsResult.peak_value_rss | number:2}} MB</li>
                           <li>Filter efficiency: {{(threadsResult.filter_efficiency) * 100 | number:1}} %</li>
                           <li>Time per event: {{threadsResult.time_per_event | number:4}} s</li>
