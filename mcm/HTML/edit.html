@@ -50,15 +50,12 @@
   <body ng-controller="mainCtrl">
     <span ng-controller="resultCtrl">
       <div ng-include="'HTML/navbar_template.html'"></div>
-      <div class="container" ng-show="role(1);">
-        <b>You have not enough permission to access this resource.</b>
-      </div>
       <div class="container">
         <div class="row">
           <div class="col-md-2 col-sm-12 bs-docs-sidebar ">
             <!--  sidebar span -->
             <ul class="nav nav-list bs-docs-sidenav" style="position: sticky; top: 20px">
-              <li class="" ng-hide="role(1);">
+              <li class="">
                 <a ng-click="submit_edit()" ng-href="#">
                 <i class="icon-chevron-right"></i>
                 Commit
@@ -93,7 +90,7 @@
             </ul>
           </div>
 
-          <div class="col-md-8 col-sm-12 " ng-hide="role(1);">
+          <div class="col-md-8 col-sm-12 ">
             <table class="table table-bordered table-stripped" style="margin: 30px auto 0 auto">
               <thead>
               </thead>

@@ -252,6 +252,9 @@ class ImportRequest(RequestRESTResource):
 
 
 class UpdateRequest(RequestRESTResource):
+
+    access_limit = access_rights.user
+
     def __init__(self):
         RequestRESTResource.__init__(self)
         self.before_request()

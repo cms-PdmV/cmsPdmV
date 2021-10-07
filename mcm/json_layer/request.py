@@ -226,6 +226,8 @@ class request(json_base):
                 for key in not_editable:
                     editable[key] = False
 
+        # Tags are editable by everone
+        editable['tags'] = True
         if self.current_user_level < 3:
             editable['memory'] = False
             editable['sequences'] = False
