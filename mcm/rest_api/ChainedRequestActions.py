@@ -359,7 +359,7 @@ class RewindToPreviousStep(RESTResource):
             chained_req_id = chained_req.get_attribute('prepid')
             chained_req_step = chained_req.get_attribute('step')
             chained_req_chain = chained_req.get_attribute('chain')
-            if chained_req_chain[chained_req_step] != current_prepid:
+            if chained_req_chain.index(current_prepid) < chained_req_step:
                 return {'results': False,
                         'message': 'Rewind %s first' % (chained_req_id),
                         'prepid': crid}
@@ -368,7 +368,10 @@ class RewindToPreviousStep(RESTResource):
         for chained_req in chained_reqs:
             chained_req_id = chained_req.get_attribute('prepid')
             chained_req_step = chained_req.get_attribute('step')
-            for next_req_id in reversed(chained_req.get_attribute('chain')[chained_req_step + 1:]):
+            chained_req_chain = chained_req.get_attribute('chain')
+            # Only leave requests after the "current" request
+            chained_req_chain = chained_req_chain[chained_req_chain.index(current_prepid) + 1:]
+            for next_req_id in reversed(chained_req_chain):
                 # what if that next one is not in the db
                 if not rdb.document_exists(next_req_id):
                     raise Exception('%s is part of %s but does not exist' % (next_req_id,

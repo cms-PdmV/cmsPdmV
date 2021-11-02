@@ -260,8 +260,8 @@ class request(json_base):
 
         self.logger.debug("Possible input for validation:%s events: %s" % (input_ds, previous_events))
         total_events_should_be = previous_events * self.get_efficiency()
-        margin = int(total_events_should_be * 1.2)
-        if self.get_attribute('total_events') > margin:  # safety factor of 20%
+        margin = int(total_events_should_be * 1.5)
+        if self.get_attribute('total_events') > margin:  # safety factor of 50%
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 what,
