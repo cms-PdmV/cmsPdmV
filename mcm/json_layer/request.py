@@ -821,7 +821,7 @@ class request(json_base):
 
             # check everything that comes after for something !=new to block automatic submission.
             for r in chain:
-                if r == self.get_attribute('prepid'):
+                if r == prepid:
                     continue  # no self checking
 
                 mcm_r = request(rdb.get(r))
@@ -853,13 +853,9 @@ class request(json_base):
                 mcm_r = request(rdb.get(r))
                 mcm_r_flow = flow(fdb.get(mcm_r.get_attribute('flown_with')))
                 if mcm_r_flow.get_attribute('approval') in ['submit', 'tasksubmit'] and mcm_r.get_attribute('status') in ['new']:
-                    raise self.WrongApprovalSequence(
-                        self.get_attribute('status'),
-                        'submit',
-                        'The request %s could not be submitted because following request %s is none-new and flow is "%s". Approve following requests first.' % (
-                            self.get_attribute('prepid'),
-                            mcm_r.get_attribute('prepid'),
-                            mcm_r_flow.get_attribute('approval')))
+                    # Automatically approve because flow is submit or tasksubmit
+                    mcm_r.approve()
+                    mcm_r.reload(save_current=True)
 
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
@@ -873,55 +869,30 @@ class request(json_base):
                         self.get_attribute('prepid'),
                         mcm_cr['step'], c))
 
-        sync_submission = True
-        self.logger.debug("sync submission:%s single_submit:%s" % (sync_submission, moveon_with_single_submit))
-        if sync_submission and moveon_with_single_submit:
-            # remains to the production manager to announce the batch the requests are part of
-            self.logger.info("Doing single request submission for:%s" % (self.get_attribute('prepid')))
-            from tools.handlers import RequestInjector, submit_pool
+        if is_the_current_one:
+            self.logger.info('Doing TaskChain submission for %s', prepid)
+            from tools.handlers import ChainRequestInjector, submit_pool
 
-            _q_lock = locker.thread_lock(self.get_attribute('prepid'))
-            if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
-                return {
-                    "prepid": self.get_attribute('prepid'),
-                    "results": False,
-                    "message": "The request {0} request is being handled already".format(
-                        self.get_attribute('prepid'))}
+            _q_lock = locker.thread_lock(prepid)
+            if not locker.thread_acquire(prepid, blocking=False):
+                return {'prepid': self.get_attribute('prepid'),
+                        'results': False,
+                        'message': 'Request %s is being handled already' % (prepid)}
 
-            threaded_submission = RequestInjector(prepid=self.get_attribute('prepid'),
-                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
-                    queue_lock=_q_lock)
+            threaded_submission = ChainRequestInjector(prepid=prepid,
+                                                       check_approval=False,
+                                                       lock=locker.lock(prepid),
+                                                       queue_lock=_q_lock)
 
             submit_pool.add_task(threaded_submission.internal_run)
         else:
-            # not settting any status forward
-            # the production manager would go and submit those by hand via McM : the status is set automatically upon proper injection
-
-            # N.B. send the submission of the chain automatically from submit approval of the request at the processing point of a chain already approved for chain processing : dangerous for commissioning. to be used with care
-            if not moveon_with_single_submit and is_the_current_one:
-                self.logger.info("Doing TaskChain submission for:%s" % (self.get_attribute('prepid')))
-                from tools.handlers import ChainRequestInjector, submit_pool
-
-                _q_lock = locker.thread_lock(self.get_attribute('prepid'))
-                if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
-                    return {
-                    "prepid": self.get_attribute('prepid'),
-                    "results": False,
-                    "message": "The request {0} request is being handled already".format(
-                        self.get_attribute('prepid'))}
-
-                threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
-                        check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
-                        queue_lock=_q_lock)
-
-                submit_pool.add_task(threaded_submission.internal_run)
-            else:
-                self.logger.error("Not doing anything for submission. moveon_with_single_submit:%s is_the_current_one:%s" % (
-                        moveon_with_single_submit, is_the_current_one))
-                return {
-                    "prepid": self.get_attribute('prepid'),
-                    "results": False,
-                    "message": "The request was not submitted"}
+            self.logger.error('Not submitting %s. moveon_with_single_submit:%s is_the_current_one:%s',
+                              prepid,
+                              moveon_with_single_submit,
+                              is_the_current_one)
+            return {'prepid': prepid,
+                    'results': False,
+                    'message': 'The request was not submitted, it is not the current step of chain'}
 
     def has_at_least_an_action(self):
         crdb = database('chained_requests')
