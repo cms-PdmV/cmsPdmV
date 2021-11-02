@@ -295,6 +295,15 @@
                         <div ng-switch-when="Pilot">
                           <input type="checkbox" ng-model="result[column.db_name]">
                         </div>
+                        <div ng-switch-when="Generated chains">
+                          <small>
+                            <ul>
+                              <li ng-repeat="(chain, _) in result[column.db_name]">
+                                <a href="chained_requests?prepid={{chain}}" target="_blank">{{chain}}</a>
+                              </li>
+                            </ul>
+                          </small>
+                        </div>
                       </div>
                     </ng-form>
                   </td>
