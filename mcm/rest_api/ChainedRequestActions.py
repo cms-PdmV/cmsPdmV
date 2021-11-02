@@ -332,49 +332,83 @@ class RewindToPreviousStep(RESTResource):
 
     def rewind_one(self, crid):
         crdb = database('chained_requests')
-        rdb = database('requests')
         if not crdb.document_exists(crid):
-            return {"results": False, "message": "does not exist", "prepid": crid}
+            return {'results': False,
+                    'message': '%s does not exist' % (crid),
+                    'prepid': crid}
+
         mcm_cr = chained_request(crdb.get(crid))
         current_step = mcm_cr.get_attribute('step')
         if current_step == 0:
-            # or should it be possible to cancel the initial requests of a chained request
-            return {"results": False, "message": "already at the root", "prepid": crid}
+            return {'results': False,
+                    'message': '%s already at the root' % (crid),
+                    'prepid': crid}
 
-        # supposedly all the other requests were already reset!
-        for next in mcm_cr.get_attribute('chain')[current_step + 1:]:
-            # what if that next one is not in the db
-            if not rdb.document_exists(next):
-                self.logger.error('%s is part of %s but does not exist' % (next, crid))
+        rdb = database('requests')
+        current_prepid = mcm_cr.get_attribute('chain')[current_step]
+        # Check if all other requests at all other chains are already reset
+        # Check if all other chains have same request as current step
+        current_request = request(rdb.get(current_prepid))
+        chain_prepids = current_request.get_attribute('member_of_chain')
+        chained_reqs = [chained_request(crdb.get(cr)) for cr in chain_prepids]
+        # Simple check first
+        for chained_req in chained_reqs:
+            if chained_req.get_attribute('prepid') == crid:
                 continue
-            mcm_r = request(rdb.get(next))
-            if mcm_r.get_attribute('status') != 'new':
-                # this cannot be right!
-                self.logger.error('%s is after the current request and is not new: %s' % (next, mcm_r.get_attribute('status')))
-                return {"results": False, "message": "%s is not new" % (next), "prepid": crid}
 
-        # get the one to be reset
-        current_id = mcm_cr.get_attribute('chain')[current_step]
-        mcm_r = request(rdb.get(current_id))
-        mcm_r.reset()
-        saved = rdb.update(mcm_r.json())
+            chained_req_id = chained_req.get_attribute('prepid')
+            chained_req_step = chained_req.get_attribute('step')
+            chained_req_chain = chained_req.get_attribute('chain')
+            if chained_req_chain[chained_req_step] != current_prepid:
+                return {'results': False,
+                        'message': 'Rewind %s first' % (chained_req_id),
+                        'prepid': crid}
+
+        # More demanding request check
+        for chained_req in chained_reqs:
+            chained_req_id = chained_req.get_attribute('prepid')
+            chained_req_step = chained_req.get_attribute('step')
+            for next_req_id in reversed(chained_req.get_attribute('chain')[chained_req_step + 1:]):
+                # what if that next one is not in the db
+                if not rdb.document_exists(next_req_id):
+                    raise Exception('%s is part of %s but does not exist' % (next_req_id,
+                                                                             chained_req_id))
+
+                req = rdb.get(next_req_id)
+                req_status = req['status']
+                if req_status != 'new':
+                    message = '%s is after the %s and is not "new", but "%s"' % (next_req_id,
+                                                                                 current_prepid,
+                                                                                 req_status)
+                    self.logger.error(message)
+                    return {'results': False,
+                            'message': message,
+                            'prepid': crid}
+
+        # Move step back in all chained requests
+        for chained_req in chained_reqs:
+            chained_req_id = chained_req.get_attribute('prepid')
+            chained_req_step = chained_req.get_attribute('step')
+            chained_req_chain = chained_req.get_attribute('chain')
+            chained_req.set_attribute('step', chained_req_chain.index(current_prepid) - 1)
+            chained_req.set_last_status()
+            chained_req.set_attribute('status', 'processing')
+            saved = crdb.update(chained_req.json())
+            if not saved:
+                return {
+                    "results": False,
+                    "message": "could not save %s" % (chained_req_id),
+                    "prepid": crid}
+
+        current_request.reset()
+        saved = rdb.update(current_request.json())
         if not saved:
-            {"results": False, "message": "could not save the last request of the chain", "prepid": crid}
-        # the current chained request has very likely been updated :
-        # reload it as you have not changed anything to it yet
-        mcm_cr = chained_request(crdb.get(crid))
-        mcm_cr.set_attribute('step', current_step - 1)
-        # set status, last status
-        mcm_cr.set_last_status()
-        mcm_cr.set_attribute('status', 'processing')
-        saved = crdb.update(mcm_cr.json())
-        if saved:
-            return {"results": True, "prepid": crid}
-        else:
-            return {
-                "results": False,
-                "message": "could not save chained requests. the DB is going to be inconsistent !",
-                "prepid": crid}
+            return {'results': False,
+                    'message': 'could not save %s' % (current_prepid),
+                    'prepid': crid}
+
+
+        return {"results": True, "prepid": crid}
 
 
 class RewindToRoot(RewindToPreviousStep):
