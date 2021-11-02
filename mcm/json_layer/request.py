@@ -870,29 +870,29 @@ class request(json_base):
                         mcm_cr['step'], c))
 
         if is_the_current_one:
-            self.logger.info("Doing TaskChain submission for:%s" % (self.get_attribute('prepid')))
+            self.logger.info('Doing TaskChain submission for %s', prepid)
             from tools.handlers import ChainRequestInjector, submit_pool
 
-            _q_lock = locker.thread_lock(self.get_attribute('prepid'))
-            if not locker.thread_acquire(self.get_attribute('prepid'), blocking=False):
-                return {
-                "prepid": self.get_attribute('prepid'),
-                "results": False,
-                "message": "The request {0} request is being handled already".format(
-                    self.get_attribute('prepid'))}
+            _q_lock = locker.thread_lock(prepid)
+            if not locker.thread_acquire(prepid, blocking=False):
+                return {'prepid': self.get_attribute('prepid'),
+                        'results': False,
+                        'message': 'Request %s is being handled already' % (prepid)}
 
-            threaded_submission = ChainRequestInjector(prepid=self.get_attribute('prepid'),
-                    check_approval=False, lock=locker.lock(self.get_attribute('prepid')),
-                    queue_lock=_q_lock)
+            threaded_submission = ChainRequestInjector(prepid=prepid,
+                                                       check_approval=False,
+                                                       lock=locker.lock(prepid),
+                                                       queue_lock=_q_lock)
 
             submit_pool.add_task(threaded_submission.internal_run)
         else:
-            self.logger.error("Not doing anything for submission. moveon_with_single_submit:%s is_the_current_one:%s" % (
-                    moveon_with_single_submit, is_the_current_one))
-            return {
-                "prepid": self.get_attribute('prepid'),
-                "results": False,
-                "message": "The request was not submitted"}
+            self.logger.error('Not submitting %s. moveon_with_single_submit:%s is_the_current_one:%s',
+                              prepid,
+                              moveon_with_single_submit,
+                              is_the_current_one)
+            return {'prepid': prepid,
+                    'results': False,
+                    'message': 'The request was not submitted, it is not the current step of chain'}
 
     def has_at_least_an_action(self):
         crdb = database('chained_requests')
