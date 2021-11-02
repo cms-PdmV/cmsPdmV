@@ -760,6 +760,17 @@ class chained_request(json_base):
         else:
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'Unrecognized approach %s' % approach)
 
+        # Move current step in other chains to this request too
+        for other_chained_request_prepid in next_request.get_attribute('member_of_chain'):
+            if other_chained_request_prepid == self.get_attribute('prepid'):
+                # Skipping itself
+                continue
+
+            other_chained_request = crdb.get(other_chained_request_prepid)
+            if other_chained_request['chain'].index(next_id) > other_chained_request['step']:
+                other_chained_request['step'] = other_chained_request['chain'].index(next_id)
+                crdb.save(other_chained_request)
+
         # set blocks restriction if any
         if block_black_list:
             next_request.set_attribute('block_black_list', block_black_list)
