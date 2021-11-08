@@ -1,7 +1,7 @@
 from rest_api.ControlActions import Search, MultiSearch, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
 from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
@@ -272,16 +272,9 @@ api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
 api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:campaign_id>')
 api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:campaign_id>')
-api.add_resource(
-    ApproveCampaign,
-    '/restapi/campaigns/approve/<string:campaign_ids>',
-    '/restapi/campaigns/approve/<string:campaign_ids>/<int:index>')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campaign_id>')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
-api.add_resource(ListAllCampaigns, '/restapi/campaigns/listall')
-api.add_resource(InspectRequests, '/restapi/campaigns/inspect/<string:campaign_id>')
-api.add_resource(InspectCampaigns, '/restapi/campaigns/inspectall/<string:group>')
-api.add_resource(HoldCampaigns, '/restapi/campaigns/on_hold')
+api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
 api.add_resource(
