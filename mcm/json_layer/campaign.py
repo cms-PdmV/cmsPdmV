@@ -1,7 +1,4 @@
-#!/usr/bin/env python
 import re
-
-from enum import IntEnum
 from json_base import json_base
 from sequence import sequence
 
@@ -31,16 +28,13 @@ class campaign(json_base):
         'no_output': False}
 
     _json_base__status = ['stopped', 'started']
-    _json_base__approvalsteps = ['stop', 'start'] # UNUSED!
 
     _prepid_pattern = '[a-zA-Z0-9]{3,60}'
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
 
-        # set campaign status and approval step
         self._json_base__schema['status'] = self.get_status_steps()[0]
-        self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         # update self according to json_input
         self.update(json_input)

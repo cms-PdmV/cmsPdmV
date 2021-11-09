@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import logging
+import re
 
 from tools.user_management import access_rights, roles
 from tools.user_management import authenticator, user_pack
@@ -93,6 +94,9 @@ class RESTResource(Resource):
             diff.append(key_path)
 
         return sorted(diff)
+
+    def fullmatch(self, pattern, string):
+        return re.match("(?:" + pattern + r")\Z", string)
 
 
 class RESTResourceIndex(RESTResource):

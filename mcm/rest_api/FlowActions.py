@@ -1,14 +1,10 @@
-#!/usr/bin/env python
-
 import flask
-import traceback
+import json
 
-from json import loads
-
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResource
-from json_layer.campaign import campaign
-from json_layer.flow import flow
+from json_layer.campaign import campaign as Campaign
+from json_layer.flow import flow as Flow
 from tools.user_management import access_rights
 
 
@@ -16,361 +12,332 @@ class FlowRESTResource(RESTResource):
 
     access_limit = access_rights.production_manager
 
-    def __init__(self):
-        self.db_name = 'flows'
-
-    # takes  a 2 lists and returns a tuple of what is present in the second and not in the first and
-    # what was present in the first and not in the second
-    # ( in_new_not_old, in_old_not_new)
-    def __compare_list(self, old, new):
-        # compute diff of two lists ( a - b )
-        def diff(a, b):
-            b = set(b)
-            return [aa for aa in a if aa not in b]
-
-        # init
-        to_be_removed, to_be_created = [], []
-
-        # compute old - new
-        to_be_removed = diff(old, new)
-
-        # compute new - old
-        to_be_created = diff(new, old)
-
-        # return the tuple
-        return to_be_created, to_be_removed
-
-    def set_default_request_parameters(self, nc, cdb, f):
-        # add a skeleton of the sequences of the next (landing) campaign
-        # in the new flow (allows for dynamic changing of sequences upon flowing)
-        rp = f.get_attribute('request_parameters')
-        if nc:
-            camp = cdb.get(nc)
-            # that erase all previous values in the flows requests parameters ...
-            if not 'sequences' in rp or len(rp['sequences']) != len(camp['sequences']):
-                rp['sequences'] = []
-                for seq in camp['sequences']:
-                    # rp['sequences'].append({})
-                    rp['sequences'].append({"default": {}})
-                f.set_attribute('request_parameters', rp)
-
-
-    # def __compare_json(self, old, new):
-    #    return self.update_derived_objects(old, new)
-
-    def update_derived_objects(self, old, new):
-
-        cdb = database('campaigns')
-        next_c = new['next_campaign']
-        allowed = new['allowed_campaigns']
-
-        # get the changes
-        tbc, tbr = self.__compare_list(old['allowed_campaigns'], new['allowed_campaigns'])
-
-        # check to see if you need to update a campaign (if next_c is altered, or a new allowed campaign)
-        if old['next_campaign'] != new['next_campaign'] or tbc:
-            try:
-                self.update_campaigns(next_c, allowed, cdb)
-            except Exception as ex:
-                self.logger.error('Could not update campaigns. Reason: %s' % ex)
-                return {"results": 'Error: update_campaigns returned:' + str(ex)}
-
-        # create new chained campaigns
-        try:
-            # self.update_chained_campaigns(next_c,  tbc)
-            self.update_chained_campaigns(next_c, allowed)  # JR. to make sure everything gets propagated
-        except Exception as ex:
-            self.logger.error('Could not build derived chained_campaigns. Reason: %s' % ex)
-            self.logger.error(traceback.format_exc())
-            return {"results": 'Error while creating derived chained_campaigns: ' + str(ex)}
-
-        # TODO: delete all chained_campaigns that contain the to_be_removed (tbr) campaigns and
-        #               use this flow.
-
-        # if reached, then successful
-        return {'results': True}
-
-    def update_campaigns(self, next_c, allowed, cdb):
-        # switch off and defered to when a chained campaign is actually created
-        return
-        # check to see if next_c is legal
-        # if not cdb.document_exists(next_c):
-        #    raise ValueError('Campaign ' + str(next_c) + ' does not exist.')
-
-        # if not next_c:
-        #    return
-
-        # n = cdb.get(next_c)
-        # if n['root'] == 0:
-        #    raise ValueError('Campaign ' + str(next_c) + ' is a root campaign.')
-
-        # iterate through all allowed campaigns and update the next_c field
-        # for c in allowed:
-        #    camp = campaign(json_input=cdb.get(c))
-        #    try:
-        #        # append campaign
-        #        camp.add_next(next_c)
-        #    except campaign.CampaignExistsException:
-        #        pass
-
-        #   # save to database
-        #    cdb.update(camp.json())
-
-    def is_energy_consistent(self, next_c, allowed_c, cdb):
+    def update_derived_objects(self, old_flow, new_flow):
         """
-        Checks if the energy of campaigns is consistent (it cannot differ)
+        Update campaigns' "Next" attribute
         """
-        next_energy = next_c.get_attribute('energy')
-        for camp in allowed_c:
-            mcm_c = campaign(cdb.get(camp))
-            if mcm_c.get_attribute('energy') != next_energy:
-                return False
+        old_allowed_ids = set(old_flow.get_attribute('allowed_campaigns') if old_flow else [])
+        old_next_id = old_flow.get_attribute('next_campaign') if old_flow else None
+        new_allowed_ids = set(new_flow.get_attribute('allowed_campaigns') if new_flow else [])
+        new_next_id = new_flow.get_attribute('next_campaign') if new_flow else None
+
+        if old_next_id == new_next_id and old_allowed_ids == new_allowed_ids:
+            # Nothing changed
+            return
+
+        # Something changed
+        campaign_db = Database('campaigns')
+        # If next campaign is different, remove from all old allowed, add to all
+        # new allowed campaigns
+        # If next campaign is the same, remove from removed allowed and add to
+        # added allowed
+        next_changed = old_next_id != new_next_id
+        remove_from = old_allowed_ids - (set() if next_changed else new_allowed_ids)
+        add_to = new_allowed_ids - (set() if next_changed else old_allowed_ids)
+        # Remove
+        if old_next_id:
+            for old_allowed_id in remove_from:
+                campaign = Campaign(json_input=campaign_db.get(old_allowed_id))
+                next_campaigns = campaign.get_attribute('next')
+                if old_next_id in next_campaigns:
+                    next_campaigns.remove(old_next_id)
+                    campaign.set_attribute('next', next_campaigns)
+                    campaign.save()
+
+        # Add
+        if new_next_id:
+            for new_allowed_id in add_to:
+                campaign = Campaign(json_input=campaign_db.get(new_allowed_id))
+                next_campaigns = campaign.get_attribute('next')
+                if new_next_id not in next_campaigns:
+                    next_campaigns.append(new_next_id)
+                    next_campaigns.sort()
+                    campaign.set_attribute('next', next_campaigns)
+                    campaign.save()
+
+    def set_default_request_parameters(self, flow):
+        """
+        Add a skeleton of the sequences of the next campaign
+        """
+        next_campaign_id = flow.get_attribute('next_campaign')
+        if not next_campaign_id:
+            return True
+
+        parameters = flow.get_attribute('request_parameters')
+        if 'sequences' not in parameters:
+            parameters['sequences'] = []
+
+        campaign_db = Database('campaigns')
+        next_campaign = campaign_db.get(next_campaign_id)
+        if len(parameters['sequences']) > len(next_campaign['sequences']):
+            return {'results': False,
+                    'message': 'Flow has more sequences than "%s" campaign' % (next_campaign_id)}
+
+        while len(parameters['sequences']) < len(next_campaign['sequences']):
+            parameters['sequences'].append({'default': {}})
+
+        flow.set_attribute('request_parameters', parameters)
         return True
 
-    def are_campaigns_correct(self, next_c, allowed_c, cdb):
-        if next_c:
-            if not cdb.document_exists(next_c):
-                return {"results": False, "message": '{0} is not a valid campaign for next'.format(next_c)}
-            next_mcm_c = campaign(cdb.get(next_c))
-            if not self.is_energy_consistent(next_mcm_c, allowed_c, cdb):
-                return {"results": False,
-                        "message": 'Next campaign {0} and allowed campaigns have inconsistent energies'.format(next_c)}
-            # consistency check
-            if next_c in allowed_c:
-                return {"results": False, "message": "Cannot have next campaign in the allowed campaign"}
-        return True
+    def check_campaigns(self, flow):
+        """
+        Check if flow's allowed and next campaigns exist
+        Check if next is not in allowed campaigns
+        Check if energy is the same among allowed and next campaigns
+        """
+        allowed_campaign_ids = flow.get_attribute('allowed_campaigns')
+        next_campaign_id = flow.get_attribute('next_campaign')
+        if next_campaign_id in allowed_campaign_ids:
+            return {'results': False,
+                    'message': 'Next campaign cannot be among allowed campaigns'}
 
-    # create all possible chained campaigns going from allowed.member to next
-    def update_chained_campaigns(self, next_c, allowed):
-        #  we can switch this method off in order to not generate godzillions of chained campaigns
-        # we have the SelectChainedCampaigns ability for that
-        return
+        campaign_db = Database('campaigns')
+        next_campaign = campaign_db.get(next_campaign_id)
+        if not next_campaign:
+            return {'results': False,
+                    'message': 'Next campaign "%s" does not exist' % (next_campaign_id)}
+
+        for allowed_campaign_id in allowed_campaign_ids:
+            allowed_campaign = campaign_db.get(allowed_campaign_id)
+            if not allowed_campaign:
+                return {'results': False,
+                        'message': 'Allowed campaign "%s" does not exist' % allowed_campaign}
+
+            if allowed_campaign['energy'] != next_campaign['energy']:
+                return {'results': False,
+                        'message': '"%s" energy %sTeV is not equal to "%s" energy %sTeV' % (
+                            allowed_campaign_id,
+                            allowed_campaign['energy'],
+                            next_campaign_id,
+                            next_campaign['energy'],
+                        )}
+
+        return True
 
 
 class CreateFlow(FlowRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        FlowRESTResource.__init__(self)
         self.before_request()
         self.count_call()
 
     def put(self):
         """
-        Create a flow from the provided json content
+        Create a flow with the provided json content
         """
-        return self.create_flow(flask.request.data)
+        data = json.loads(flask.request.data)
+        flow_db = Database('flows')
+        flow = Flow(json_input=data)
+        prepid = flow.get_attribute('prepid')
+        if not prepid:
+            self.logger.error('Invalid prepid "%s"', prepid)
+            return {'results': False,
+                    'message': 'Invalid prepid "%s"' % (prepid)}
 
-    def create_flow(self, jsdata):
-        cdb = database('campaigns')
-        db = database(self.db_name)
-        data = loads(jsdata)
-        if '_rev' in data:
-            return {"results": 'Cannot create a flow with _rev'}
-        try:
-            f = flow(json_input=data)
-        except flow.IllegalAttributeName as ex:
-            return {"results": False}
-        except ValueError as ex:
-            self.logger.error('Could not initialize flow object. Reason: %s' % ex)
-            return {"results": False}
+        if not self.fullmatch(Flow._prepid_pattern, prepid):
+            self.logger.error('Invalid flow name %s', prepid)
+            return {'results': False,
+                    'message': 'Invalid flow name "%s"' % (prepid)}
 
-        __prepid = f.get_attribute('prepid')
-        if not __prepid:
-            self.logger.error('prepid is not defined.')
-            return {"results": False, 'message': 'Error: PrepId was not defined.'}
+        if flow_db.document_exists(prepid):
+            self.logger.error('Flow "%s" already exists', prepid)
+            return {'results': False,
+                    'message': 'Flow "%s" already exists' % (prepid)}
 
-        if __prepid.find("_") != -1:
-            self.logger.error('Flow prepID has an "_" character')
-            return {"results": False, 'message': 'Error: PrepId should not have "_" in it.'}
-        f.set_attribute('_id', f.get_attribute('prepid'))
+        # Make allowed campaigns unique
+        allowed_campaigns = sorted(list(set(flow.get_attribute('allowed_campaigns'))))
+        flow.set_attribute('allowed_campaigns', allowed_campaigns)
+        # Check if allowed and next campaigns exist
+        campaign_check = self.check_campaigns(flow)
+        if campaign_check is not True:
+            return campaign_check
 
-        # uniquing the allowed campaigns if passed duplicates by mistake
-        if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
-            f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
+        # Adjust the request parameters based on next campaign
+        parameter_check = self.set_default_request_parameters(flow)
+        if parameter_check is not True:
+            return parameter_check
 
-        self.logger.info('Creating new flow %s ...' % (f.get_attribute('_id')))
+        flow.set_attribute('_id', prepid)
+        flow.update_history({'action': 'created'})
+        # Save to DB
+        if not flow_db.save(flow.json()):
+            self.logger.error('Could not save flow %s to database', prepid)
+            return {'results': False,
+                    'message': 'Could not save flow %s to database' % (prepid)}
 
-        nc = f.get_attribute('next_campaign')
+        # Update relevant campaigns' "Next" parameter
+        self.update_derived_objects(None, flow)
 
-        result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
-        if result is not True:
-            return result
-
-        # adjust the requests parameters based on what was provided as next campaign
-        self.set_default_request_parameters(nc, cdb, f)
-
-        # update history
-        f.update_history({'action': 'created'})
-
-        # save the flow to db
-        if not db.save(f.json()):
-            self.logger.error('Could not save newly created flow %s to database.' % (f.get_attribute('_id')))
-            return {"results": False}
-
-        # return right away instead of trying and failing on missing next or allowed
-        if not nc or not len(f.get_attribute('allowed_campaigns')):
-            return {"results": True}
-
-        # update all relevant campaigns with the "Next" parameter
-        return self.update_derived_objects(flow().json(), f.json())
+        return {'results': True}
 
 
 class UpdateFlow(FlowRESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        FlowRESTResource.__init__(self)
         self.before_request()
         self.count_call()
 
     def put(self):
         """
-        Update a flow with the provided content
+        Update a campaign with the provided json content
         """
-        return self.update_flow(flask.request.data)
-
-    def update_flow(self, jsdata):
-
-        cdb = database('campaigns')
-        rdb = database('requests')
-        db = database(self.db_name)
-        data = loads(jsdata)
+        data = json.loads(flask.request.data)
         if '_rev' not in data:
-            return {"results": "Cannot update without _rev"}
-        try:
-            f = flow(json_input=data)
-        except flow.IllegalAttributeName as ex:
-            return {"results": str(ex)}
+            return {'results': False,
+                    'message': 'No revision provided'}
 
-        if not f.get_attribute('prepid') and not f.get_attribute('_id'):
-            self.logger.error('prepid returned was None')
-            raise ValueError('Prepid returned was None')
+        flow_db = Database('flows')
+        flow = Flow(json_input=data)
+        prepid = flow.get_attribute('prepid')
+        if not prepid:
+            self.logger.error('Invalid prepid "%s"', prepid)
+            return {'results': False,
+                    'message': 'Invalid prepid "%s"' % (prepid)}
+
+        if not flow_db.document_exists(prepid):
+            self.logger.error('Cannot update, %s does not exist', prepid)
+            return {'results': False,
+                    'message': 'Cannot update, "%s" does not exist' % (prepid)}
 
         # find out what is the change
-        old = db.get(f.get_attribute('_id'))
+        old_flow = Flow(json_input=flow_db.get(prepid))
 
-        new_process_string = data.get('request_parameters', {}).get('process_string', None)
-        old_process_string = old.get('request_parameters', {}).get('process_string', None)
-        if new_process_string != old_process_string:
-            query = rdb.construct_lucene_query({'status': 'submitted',
-                                                'flown_with': data['prepid']})
-            query_result = rdb.full_text_search("search", query, page=-1, include_fields='prepid')
-            if len(query_result) > 0:
-                return {"results": False,
-                        "message": "Cannot change process string because there are requests in 'submitted' status that are flown with %s" % (data['prepid'])}
+        old_ps = old_flow.get_attribute('request_parameters').get('process_string', None)
+        new_ps = flow.get_attribute('request_parameters').get('process_string', None)
+        if old_ps != new_ps:
+            request_db = Database('requests')
+            request_query = request_db.construct_lucene_query({'status': 'submitted',
+                                                               'flown_with': prepid})
+            requests = request_db.full_text_search('search',
+                                                   request_query,
+                                                   limit=1,
+                                                   include_fields='prepid')
+            if requests:
+                return {'results': False,
+                        'message': ('Cannot change process string because there are requests in '
+                                    'status "submitted" that are flown with "%s"' % (prepid))}
 
-        # uniquing the allowed campaigns if passed duplicates by mistake
-        if len(list(set(f.get_attribute('allowed_campaigns')))) != f.get_attribute('allowed_campaigns'):
-            f.set_attribute('allowed_campaigns', list(set(f.get_attribute('allowed_campaigns'))))
+        # Make allowed campaigns unique
+        allowed_campaigns = sorted(list(set(flow.get_attribute('allowed_campaigns'))))
+        flow.set_attribute('allowed_campaigns', allowed_campaigns)
+        # Check if allowed and next campaigns exist
+        campaign_check = self.check_campaigns(flow)
+        if campaign_check is not True:
+            return campaign_check
 
-        nc = f.get_attribute('next_campaign')
-        result = self.are_campaigns_correct(nc, f.get_attribute('allowed_campaigns'), cdb)
-        if result is not True:
-            return result
+        # Adjust the request parameters based on next campaign
+        parameter_check = self.set_default_request_parameters(flow)
+        if parameter_check is not True:
+            return parameter_check
 
-        # adjust the requests parameters based on what was provided as next campaign
-        self.set_default_request_parameters(nc, cdb, f)
+        previous_version = Flow(json_input=flow_db.get(prepid))
+        previous_allowed_campaigns = previous_version.get_attribute('allowed_campaigns')
+        removed_campaigns = set(previous_allowed_campaigns) - set(allowed_campaigns)
+        if removed_campaigns:
+            chained_campaign_db = Database('chained_campaigns')
+            # Check if there are chained campaigns that are made with this flow
+            # and was using the removed campaigns
+            for removed_campaign in removed_campaigns:
+                contains = {'contains': [prepid, removed_campaign]}
+                chained_campaign_query = chained_campaign_db.construct_lucene_query(contains)
+                chained_campaigns = chained_campaign_db.full_text_search('search',
+                                                                         chained_campaign_query,
+                                                                         limit=1,
+                                                                         include_fields='prepid')
+                if chained_campaigns:
+                    return {'results': False,
+                            'message': ('Campaign "%s" cannot be removed because there are chained '
+                                        'campaigns using "%s" and "%s" ' % (removed_campaign,
+                                                                            prepid,
+                                                                            removed_campaign))}
 
-        # update history
-        difference = self.get_obj_diff(old,
-                                       f.json(),
+        difference = self.get_obj_diff(previous_version.json(),
+                                       flow.json(),
                                        ('history', '_rev'))
         difference = ', '.join(difference)
-        f.update_history({'action': 'update', 'step': difference})
+        flow.update_history({'action': 'update', 'step': difference})
 
-        # save to db
-        if not db.update(f.json()):
-            self.logger.error('Could not update flow {0}.'.format(f.get_attribute('_id')))
-            return {'results': False}
+        # Save to DB
+        if not flow_db.update(flow.json()):
+            self.logger.error('Could not save flow %s to database', prepid)
+            return {'results': False,
+                    'message': 'Could not save flow %s to database' % (prepid)}
 
-        return self.update_derived_objects(old, f.json())
+        # Update relevant campaigns' "Next" parameter
+        self.update_derived_objects(old_flow, flow)
+
+        return {'results': True}
 
 
 class DeleteFlow(RESTResource):
+
+    access_limit = access_rights.production_manager
+
     def __init__(self):
-        self.db_name = 'flows'
         self.before_request()
         self.count_call()
 
     def delete(self, flow_id):
         """
-        Delete a flow and all related objects
+        Delete a flow
         """
-        return self.delete_flow(flow_id)
+        flow_db = Database('flows')
+        if not flow_db.document_exists(flow_id):
+            self.logger.error('Cannot delete, %s does not exist', flow_id)
+            return {'results': False,
+                    'message': 'Cannot delete, %s does not exist' % (flow_id)}
 
-    def delete_flow(self, fid):
+        # Check chained campaigns...
+        chained_campaign_db = Database('chained_campaigns')
+        chained_campaigns = chained_campaign_db.query('contains==%s' % (flow_id), limit=3)
+        if chained_campaigns:
+            chained_campaign_ids = ', '.join(x['_id'] for x in chained_campaigns)
+            message = 'Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
+                                                                             flow_id)
+            self.logger.error(message)
+            return {'results': False,
+                    'message': message}
 
-        fdb = database(self.db_name)
-        ccdb = database('chained_campaigns')
-        cdb = database('campaigns')
-        # delete all chained campaigns with this flow
-        # exception can be thrown on impossibility of removing
-        try:
-            self.delete_chained_campaigns(fid, ccdb)
-        except Exception as ex:
-            return {'results': str(ex)}
+        # Check requests...
+        request_db = Database('requests')
+        requests = request_db.query('flown_with==%s' % (flow_id), limit=3)
+        if requests:
+            request_ids = ', '.join(x['_id'] for x in requests)
+            message = 'Request(s) %s are flown with %s, delete them first' % (request_ids,
+                                                                              flow_id)
+            self.logger.error(message)
+            return {'results': False,
+                    'message': message}
 
-        # update relevant campaigns
-        try:
-            self.update_campaigns(fid, fdb, cdb, ccdb)
-        except Exception as ex:
-            return {'results': str(ex)}
+        # Delete to DB
+        flow = Flow(json_input=flow_db.get(flow_id))
+        if not flow_db.delete(flow_id):
+            self.logger.error('Could not delete flow %s from database', flow_id)
+            return {'results': False,
+                    'message': 'Could not delete flow %s from database' % (flow_id)}
 
-        return {"results": fdb.delete(fid)}
+        # Update relevant campaigns' "Next" parameter
+        self.update_derived_objects(flow, None)
 
-    def delete_chained_campaigns(self, fid, ccdb):
-        # get all campaigns that contain the flow : fid
-        __query = ccdb.construct_lucene_query({'contains': fid})
-        ccamps = ccdb.full_text_search('search', __query, page=-1)
-
-        # check that all relelvant chained campaigns are empty
-        for cc in ccamps:
-            __query2 = ccdb.construct_lucene_query({'member_of_campaign': cc['prepid']})
-            mcm_crs = ccdb.full_text_search('search', __query2)
-            if len(mcm_crs) != 0:
-                raise Exception('Impossible to delete flow %s, since %s is not an empty chained campaign' % (fid, cc['prepid']))
-
-        # all chained campaigns are empty :
-        # => remove them one by one
-        for cc in ccamps:
-            ccdb.delete(cc['prepid'])
-
-
-    def update_campaigns(self, fid, fdb, cdb, ccdb):
-        # get the flow
-        f = fdb.get(fid)
-
-        next_c = f['next_campaign']
-        # get all campaigns that contain the flow's next campaign in the campaign's next
-        __query = cdb.construct_lucene_query({'next': next_c})
-        camps = cdb.full_text_search('search', __query, page=-1)
-
-        for c in camps:
-            # check that nothing allows to flow in it
-            # get the list of chained campaign that still contain both
-            __query2 = ccdb.construct_lucene_query({'contains': [c['prepid'], next_c]})
-            mcm_ccs = ccdb.full_text_search('search', __query2, page=-1)
-            if not len(mcm_ccs):
-                # there a no chained campaign left, that uses both that campaign and next_c
-                c['next'].remove(next_c)
-                try:
-                    cdb.update(c)
-                except Exception as ex:
-                    return {'results': str(ex)}
+        return {'results': True}
 
 
 class GetFlow(RESTResource):
+
     def __init__(self):
-        self.db_name = 'flows'
         self.before_request()
         self.count_call()
 
     def get(self, flow_id):
         """
-        Retrieve the json content of a given flow id
+        Retrieve the flow for given id
         """
-        return self.get_request(flow_id)
-
-    def get_request(self, data):
-        db = database(self.db_name)
-        return {"results": db.get(prepid=data)}
+        flow_db = Database('flows')
+        return {'results': flow_db.get(prepid=flow_id)}
 
 
 class ApproveFlow(RESTResource):
@@ -381,34 +348,35 @@ class ApproveFlow(RESTResource):
         self.before_request()
         self.count_call()
 
-    def get(self, flow_ids, step=-1):
+    def get(self, flow_id):
         """
-        Move the given flow id to the next approval /flow_id , or the provided index /flow_id/index
+        Move the given flow(s) id to the next approval
         """
-        return self.multiple_approve(flow_ids, step)
+        flow_db = Database('flows')
+        flow_ids = list(set(flow_id.split(',')))
+        res = []
+        for one_flow_id in flow_ids:
+            if not flow_db.document_exists(one_flow_id):
+                res.append({'prepid': one_flow_id,
+                            'results': False,
+                            'message': 'The flow "%s" does not exist' % (one_flow_id)})
+                continue
 
-    def multiple_approve(self, rid, val):
-        if ',' in rid:
-            rlist = rid.rsplit(',')
-            res = []
-            for r in rlist:
-                res.append(self.approve(r, val))
-            return res
-        else:
-            return self.approve(rid, val)
+            flow = Flow(json_input=flow_db.get(one_flow_id))
+            try:
+                flow.approve()
+                saved = flow.save()
+                res.append({'prepid': one_flow_id,
+                            'results': saved})
+            except Exception as ex:
+                self.logger.error('Error approving flow "%s": %s', one_flow_id, ex)
+                res.append({'prepid': one_flow_id,
+                            'results': False})
 
-    def approve(self, rid, val):
-        db = database('flows')
-        if not db.document_exists(rid):
-            return {"prepid": rid, "results": 'Error: The given flow id does not exist.'}
-        f = flow(json_input=db.get(rid))
+        if len(res) == 1:
+            return res[0]
 
-        try:
-            f.approve(int(val))
-        except Exception:
-            return {"prepid": rid, "results": False}
-
-        return {"prepid": rid, "results": db.update(f.json())}
+        return res
 
 
 class CloneFlow(RESTResource):
@@ -421,40 +389,43 @@ class CloneFlow(RESTResource):
 
     def put(self):
         """
-        Make a clone with specific requirements
+        Make a clone of flow
         """
-        data = loads(flask.request.data.strip())
-        pid = data['prepid']
-        new_pid = data['new_prepid']
-        if not pid or not new_pid:
+        data = json.loads(flask.request.data)
+        flow_id = data['prepid']
+        new_flow_id = data['new_prepid']
+        if not flow_id or not new_flow_id:
+            self.logger.error('Invalid prepid "%s" or "%s"', flow_id, new_flow_id)
             return {'results': False,
-                    'message': 'Invalid flow name'}
+                    'message': 'Invalid prepid "%s" or "%s"' % (flow_id, new_flow_id)}
 
-        return self.clone_flow(pid, new_pid)
-
-    def clone_flow(self, pid, new_pid):
-        db = database("flows")
-        if not db.document_exists(pid):
+        if not self.fullmatch(Flow._prepid_pattern, new_flow_id):
+            self.logger.error('Invalid new flow name %s', new_flow_id)
             return {'results': False,
-                    'message': 'Flow %s does not exist' % (pid)}
+                    'message': 'Invalid new flow name "%s"' % (new_flow_id)}
 
-        if db.document_exists(new_pid):
+        flow_db = Database('flows')
+        if not flow_db.document_exists(flow_id):
             return {'results': False,
-                    'message': 'Flow %s already exist' % (new_pid)}
+                    'message': 'Flow "%s" does not exist' % (flow_id)}
 
-        new_json = db.get(pid)
-        new_json['prepid'] = new_pid
-        new_json['_id'] = new_pid
+        if flow_db.document_exists(new_flow_id):
+            return {'results': False,
+                    'message': 'Flow "%s" already exist' % (new_flow_id)}
+
+        new_json = flow_db.get(flow_id)
+        new_json['prepid'] = new_flow_id
+        new_json['_id'] = new_flow_id
         for attr in ('history', '_rev'):
             new_json.pop(attr, None)
 
-        new_flow = flow()
+        new_flow = Flow()
         new_flow.update(new_json)
-        new_flow.update_history({'action': 'clone', 'step': pid})
+        new_flow.update_history({'action': 'clone', 'step': flow_id})
         if new_flow.save():
             return {'results': True,
-                    'message': 'Created %s' % (new_pid),
-                    'prepid': new_pid}
-        else:
-            return {'results': False,
-                    'message': 'Error saving new flow'}
+                    'message': 'Created %s' % (new_flow_id),
+                    'prepid': new_flow_id}
+
+        return {'results': False,
+                'message': 'Error saving new flow'}

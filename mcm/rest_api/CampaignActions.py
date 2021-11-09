@@ -1,10 +1,7 @@
-#!/usr/bin/env python
-
 import flask
 import time
 import traceback
 import json
-import re
 
 from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResource
@@ -23,9 +20,6 @@ class CreateCampaign(RESTResource):
     def __init__(self):
         self.before_request()
         self.count_call()
-
-    def fullmatch(self, pattern, string):
-        return re.match("(?:" + pattern + r")\Z", string)
 
     def put(self):
         """
@@ -124,7 +118,6 @@ class UpdateCampaign(RESTResource):
         campaign.update_history({'action': 'update', 'step': difference})
 
         # Save to DB
-        self.logger.info(campaign.json())
         if not campaign_db.update(campaign.json()):
             self.logger.error('Could not save campaign %s to database', prepid)
             return {'results': False,
