@@ -1,12 +1,10 @@
 from rest_api.ControlActions import Search, MultiSearch, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 from rest_api.RequestActions import ImportRequest, ManageRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, PPDTags, GENLogOutput
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
-from rest_api.ChainedCampaignActions import ChainedCampaignsPriorityChange, CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign, InspectChainedRequests, InspectChainedCampaigns
+from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, ApproveCampaign, GetCmsDriverForCampaign, ListAllCampaigns, InspectRequests, InspectCampaigns, HoldCampaigns
+from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
-from rest_api.RequestPrepId import RequestPrepId
-from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, NotifyPWG
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
@@ -277,15 +275,9 @@ api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<st
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
-api.add_resource(
-    DeleteChainedCampaign,
-    '/restapi/chained_campaigns/delete/<string:chained_campaign_id>',
-    '/restapi/chained_campaigns/delete/<string:chained_campaign_id>/<string:force>')
+api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:chained_campaign_id>')
 api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:chained_campaign_id>')
 api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
-api.add_resource(InspectChainedRequests, '/restapi/chained_campaigns/inspect/<string:chained_campaign_ids>')
-api.add_resource(InspectChainedCampaigns, '/restapi/chained_campaigns/inspectall/<string:action>')
-api.add_resource(ChainedCampaignsPriorityChange, '/restapi/chained_campaigns/priority_change')
 # REST Chained Request Actions
 api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
 api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')

@@ -1,27 +1,10 @@
-#!/usr/bin/env python
-
-from chained_request import chained_request
+from chained_request import chained_request as ChainedRequest
 from json_base import json_base
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class chained_campaign(json_base):
-    class CampaignDoesNotExistException(Exception):
-        def __init__(self, campid):
-            self.c = str(campid)
-            chained_campaign.logger.error('Campaign %s does not exist' % (self.c))
-
-        def __str__(self):
-            return 'Error: Campaign ' + self.c + ' does not exist.'
-
-    class FlowDoesNotExistException(Exception):
-        def __init__(self, flowid):
-            self.f = str(flowid)
-            chained_campaign.logger.error('Flow %s does not exist' % (self.f))
-
-        def __str__(self):
-            return 'Error: Flow ' + self.f + ' does not exist.'
 
     _json_base__schema = {
         '_id': '',
@@ -48,99 +31,48 @@ class chained_campaign(json_base):
         self.update(json_input)
         self.validate()
 
-    # start() makes the chained campaign visible to the actions page
-    def start(self):
-        if self._json_base__json['valid']:
-            return
-        self.update_history({'action': 'start'})
-        self._json_base__json['valid'] = True
-
-    # stop() makes the chained campaign invisible to the actions page
-    def stop(self):
-        if not self._json_base__json['valid']:
-            return
-        self.update_history({'action': 'stop'})
-        self._json_base__json['valid'] = False
-
-    def add_campaign(self, campaign_id, flow_name=None):
-        self.logger.info('Adding a new campaign %s to chained campaign %s' % (campaign_id, self.get_attribute('_id')))
-        camp_db = database('campaigns')
-        flow_db = database('flows')
-        if not camp_db.document_exists(campaign_id):
-            raise self.CampaignDoesNotExistException(campaign_id)
-
-        # check to see if flow_name is none (campaign_id = root)
-        if flow_name is not None:
-            if not flow_db.document_exists(flow_name):
-                raise self.FlowDoesNotExistException(flow_name)
-
-        camps = self.get_attribute('campaigns')
-        if not camps or camps is None:
-            camps = []
-        camps.append([campaign_id, flow_name])
-        self.set_attribute('campaigns', camps)
-
-        return True
-
-    def remove_campaign(self, cid):
-        self.logger.info('Removing campaign %s from chained_campaign %s' % (cid, self.get_attribute('_id')))
-        camps = self.get_attribute('campaigns')
-        new_camps = []
-        if not camps or camps is None:
-            camps = []
-        else:
-            for c, f in camps:
-                if cid in c:
-                    continue
-                new_camps.append((c, f))
-
-        self.set_attribute('campaigns', new_camps)
-
-    # create a chained request spawning from root_request_id
     def generate_request(self, root_request_id):
-        self.logger.info('Building a new chained_request for chained_campaign %s. Root request: %s' % (self.get_attribute('_id'), root_request_id))
-        try:
-            rdb = database('requests')
-            crdb = database('chained_requests')
-        except database.DatabaseAccessError:
-            return {}
+        """
+        Create a new chained request using this chained campaign and given
+        root request prepid
+        """
+        prepid = self.get_attribute('prepid')
+        self.logger.info('Building a new chained request using %s and %s as root',
+                         prepid,
+                         root_request_id)
 
+        request_db = Database('requests')
+        root_request = request_db.get(root_request_id)
         # check to see if root request id exists
-        if not rdb.document_exists(root_request_id):
+        if not root_request:
             return {}
-
-        # init new creq
 
         # parse request id
-        tok = root_request_id.split('-')
-        pwg = tok[0]
+        pwg = root_request['pwg']
         # generate new chain id
-        cid = ChainedRequestPrepId().next_id(pwg, self.get_attribute('prepid'))
-
-        creq = chained_request(crdb.get(cid))
-
-        # set values
-        creq.set_attribute('pwg', pwg)
-        creq.set_attribute('member_of_campaign', self.get_attribute('prepid'))
-        creq.set_attribute('action_parameters', self.get_attribute('action_parameters'))
-        creq.set_attribute('chain_type', self.get_attribute('chain_type'))
-        # By default flag should be true
-        creq.get_attribute('action_parameters')['flag'] = True
-        if not creq.get_attribute('prepid'):
+        chained_request_id = ChainedRequestPrepId().next_id(pwg, prepid)
+        if chained_request_id:
             raise ValueError('Prepid returned was None')
 
-        # set the default values that will be carried over to the next step in the chain
-        req = rdb.get(root_request_id)
+        chained_request_db = Database('chained_requests')
+        chained_request = ChainedRequest(chained_request_db.get(chained_request_id))
 
-        creq.set_attribute("dataset_name", req["dataset_name"])
-        creq.set_attribute("pwg", req["pwg"])
+        # set values
+        chained_request.set_attribute('pwg', pwg)
+        chained_request.set_attribute('member_of_campaign', self.get_attribute('prepid'))
+        chained_request.set_attribute('action_parameters', self.get_attribute('action_parameters'))
+        chained_request.set_attribute('chain_type', self.get_attribute('chain_type'))
+        # By default flag should be true
+        chained_request.get_attribute('action_parameters')['flag'] = True
+
+        # set the default values that will be carried over to the next step in the chain
+        chained_request.set_attribute("dataset_name", root_request["dataset_name"])
+        chained_request.set_attribute("pwg", pwg)
 
         # add root request to chain
-        creq.set_attribute('chain', [root_request_id])
+        chained_request.set_attribute('chain', [root_request_id])
 
         # update history
-        creq.update_history({'action': 'created'})
-        self.update_history({'action': 'add request', 'step': creq.get_attribute('_id')})
-
-        # save to database
-        return creq.json()
+        chained_request.update_history({'action': 'created'})
+        self.update_history({'action': 'add request', 'step': chained_request_id})
+        return chained_request.json()
