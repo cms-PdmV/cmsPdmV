@@ -1376,7 +1376,6 @@ class request(json_base):
                 bash_file += ['touch %s' % (report_name)]
 
         run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
-        run_dqm_upload = for_validation and automatic_validation and (threads == 1) and self.get_attribute('validation').get('valid', False)
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
             # Download the script
@@ -1571,12 +1570,6 @@ class request(json_base):
             if filein:
                 sequence_dict['filein'] = filein
 
-            if run_dqm_upload:
-                validation_content =self.get_attribute('validation').get('content', 'all').lower()
-                sequence_dict['datatier'].append('DQMIO')
-                sequence_dict['eventcontent'].append('DQM')
-                sequence_dict['step'].append('VALIDATION:genvalid_%s' % (validation_content))
-
             bash_file += ['',
                           '# cmsDriver command',
                           self.build_cmsdriver(sequence_dict, fragment_name)]
@@ -1613,31 +1606,6 @@ class request(json_base):
 
                 if automatic_validation:
                     bash_file += ['kill $SLEEP_PID > /dev/null 2>& 1',
-                                  '']
-
-                if run_dqm_upload:
-                    dqm_input_file = sequence_dict['fileout'].replace('file:', '', 1).replace('.root', '_inDQM.root')
-                    harvest_config = config_filename.replace('_cfg.py', '_harvest_cfg.py')
-                    conditions = sequence_dict['conditions']
-                    dataset_name = self.get_attribute('dataset_name')
-                    cmssw_release = self.get_attribute('cmssw_release')
-                    if is_dev:
-                        dqm_url = 'https://cmsweb-testbed.cern.ch/dqm/relval-test/'
-                    else:
-                        dqm_url = 'https://cmsweb.cern.ch/dqm/relval/'
-
-                    dqm_file = 'DQM_V0001_R000000001__RelVal%s__%s-%s__DQMIO.root' % (dataset_name, cmssw_release, conditions)
-                    bash_file += ['',
-                                  '# Generate harvesting config',
-                                  'cmsDriver.py step3 --python_file %s --no_exec --conditions %s --filein file:%s -s HARVESTING:genHarvesting --harvesting AtRunEnd --filetype DQM --mc -n -1' % (harvest_config, conditions, dqm_input_file),
-                                  '# Run harvesting on %s' % (dqm_input_file),
-                                  'cmsRun %s' % (harvest_config),
-                                  'mv DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root %s' % (dqm_file),
-                                  '',
-                                  '# Upload %s to %s' % (dqm_file, dqm_url),
-                                  'source /afs/cern.ch/cms/PPD/PdmV/tools/subSetupAuto.sh',
-                                  'wget https://raw.githubusercontent.com/rovere/dqmgui/master/bin/visDQMUpload',
-                                  'python visDQMUpload %s %s' % (dqm_url, dqm_file),
                                   '']
 
                 # Parse report
