@@ -57,19 +57,19 @@
         <a ng-href='admin/_utils/' target="_self">Admin <i class="icon-star"></i></a>
       </li>
       <li class="divider-vertical" ></li>
-      <li> 
+      <li>
         <a ng-href='https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM' target="_blank">Help <i class="icon-question-sign"></i></a>
       </li>
-      <li> 
+      <li>
         <a ng-href='/pmp' target="_blank">pMp <i class="icon-film"></i></a>
       </li>
       <li class="divider-vertical" ></li>
-      <li> 
+      <li>
         <a ng-click="openSupportModal();" ng-href="#">
           Support <i class="icon-envelope"></i></a>
       </li>
       <li class="divider-vertical" ></li>
-      <li> 
+      <li>
         <a ng-href="/mcm" target="_self">
           Home <i class="icon-home"></i>
         </a>
@@ -115,7 +115,7 @@
 <!-- Error MODAL-->
 <script type="text/ng-template" id="errorModal.html">
   <div class="modal-header">
-    <h4>Error for "{{prepid}}"</h4>
+    <h4>Error <span ng-show="prepid">for "{{prepid}}"</span></h4>
   </div>
   <div class="modal-body">
     {{message}}
@@ -125,3 +125,33 @@
   </div>
 </script>
 <!-- END of isSure MODAL-->
+
+<!-- Create item MODAL -->
+<script type="text/ng-template" id="createItemModal.html">
+  <div class="modal-header">
+    <h4>Create new {{database.substr(0, database.length - 1).replaceAll('_', ' ')}}</h4>
+  </div>
+  <div class="modal-body">
+    New PrepID: <input type="text" ng-model="vars.prepid" />
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="save()">Create</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+  </div>
+</script>
+<!-- End of Create item MODAL -->
+
+<!-- Clone item MODAL -->
+<script type="text/ng-template" id="cloneItemModal.html">
+  <div class="modal-header">
+    <h4>Clone {{prepid}}</h4>
+  </div>
+  <div class="modal-body">
+    New PrepID: <input type="text" ng-model="vars.newPrepid" />
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="clone()">Clone</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Close</button>
+  </div>
+</script>
+<!-- End of Clone item MODAL -->

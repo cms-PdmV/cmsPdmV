@@ -318,7 +318,7 @@ api.add_resource(GetFlow, '/restapi/flows/get/<string:flow_id>')
 api.add_resource(CreateFlow, '/restapi/flows/save')
 api.add_resource(UpdateFlow, '/restapi/flows/update')
 api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:flow_id>')
-api.add_resource(ApproveFlow, '/restapi/flows/approve/<string:flow_ids>')
+api.add_resource(ApproveFlow, '/restapi/flows/approve/<string:flow_id>')
 api.add_resource(CloneFlow, '/restapi/flows/clone')
 # REST Batches Actions
 api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')

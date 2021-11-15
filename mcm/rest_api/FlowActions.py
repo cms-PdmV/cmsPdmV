@@ -273,7 +273,7 @@ class UpdateFlow(FlowRESTResource):
         return {'results': True}
 
 
-class DeleteFlow(RESTResource):
+class DeleteFlow(FlowRESTResource):
 
     access_limit = access_rights.production_manager
 
@@ -353,30 +353,21 @@ class ApproveFlow(RESTResource):
         Move the given flow(s) id to the next approval
         """
         flow_db = Database('flows')
-        flow_ids = list(set(flow_id.split(',')))
-        res = []
-        for one_flow_id in flow_ids:
-            if not flow_db.document_exists(one_flow_id):
-                res.append({'prepid': one_flow_id,
-                            'results': False,
-                            'message': 'The flow "%s" does not exist' % (one_flow_id)})
-                continue
+        if not flow_db.document_exists(flow_id):
+            return {'prepid': flow_id,
+                    'results': False,
+                    'message': 'The flow "%s" does not exist' % (flow_id)}
 
-            flow = Flow(json_input=flow_db.get(one_flow_id))
-            try:
-                flow.approve()
-                saved = flow.save()
-                res.append({'prepid': one_flow_id,
-                            'results': saved})
-            except Exception as ex:
-                self.logger.error('Error approving flow "%s": %s', one_flow_id, ex)
-                res.append({'prepid': one_flow_id,
-                            'results': False})
-
-        if len(res) == 1:
-            return res[0]
-
-        return res
+        flow = Flow(json_input=flow_db.get(flow_id))
+        try:
+            flow.toggle_approval()
+            saved = flow.save()
+            return {'prepid': flow_id,
+                    'results': saved}
+        except Exception as ex:
+            self.logger.error('Error approving flow "%s": %s', flow_id, ex)
+            return {'prepid': flow_id,
+                    'results': False}
 
 
 class CloneFlow(RESTResource):

@@ -246,7 +246,12 @@ class ToggleCampaignStatus(RESTResource):
                     'message': 'Campaign "%s" does not exist' % (campaign_id)}
 
         campaign = Campaign(json_input=campaign_db.get(campaign_id))
-        campaign.toggle_status()
+        try:
+            campaign.toggle_status()
+        except Exception as ex:
+            return {'results': False,
+                    'message': str(ex)}
+
         if not campaign.save():
             self.logger.error('Could not save campaign "%s" to database', campaign_id)
             return {'results': False,

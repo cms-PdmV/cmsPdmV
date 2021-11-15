@@ -46,8 +46,14 @@
                    ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="">
+                <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(4);" ng-href="#">
+                  <i class="icon-minus-sign"></i>
+                </a>
                 <!-- MODAL -->
-                <div ng-controller="CreateRequestModal" style="display: inline-block;">
+                <div style="display: inline-block;">
                   <a ng-click="openRequestCreator(data['prepid'])"
                      title="Create new request"
                      ng-hide="role(3) || data['root'] == 1;"
@@ -71,26 +77,20 @@
                   </script>
                 </div>
                 <!-- END OF MODAL -->
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
-                  <i class="icon-align-right"></i>
-                </a>
-                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self">
-                  <i class="icon-magnet"></i>
-                </a>
-                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
-                  <i class="icon-folder-open"></i>
-                </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete campaign" ng-hide="role(4);" ng-href="#">
-                  <i class="icon-minus-sign"></i>
-                </a>
-                <a ng-href='edit?db_name=campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
-                  <i class="icon-wrench"></i>
-                </a>
                 <a ng-click="nextStatus(data.prepid)"
                    title="Toggle status"
                    ng-hide="role(3);"
                    ng-href="#">
                   <i class="icon-flag"></i>
+                </a>
+                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self">
+                  <i class="icon-magnet"></i>
+                </a>
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
+                  <i class="icon-align-right"></i>
+                </a>
+                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
+                  <i class="icon-folder-open"></i>
                 </a>
                 <a ng-href="/pmp/present?m=false&r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
@@ -168,28 +168,14 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span4">
-        <!-- MODAL -->
-        <div ng-controller="CreateCampaignModal">
+        <div class="span4">
           <input type="button"
-                 class="btn"
-                 ng-click="openCampaignCreator()"
-                 value="Create new campaign"
-                 ng-hide="role(3);"
-                 align="left"/>
-          <script type="text/ng-template" id="createCampaignModal.html">
-          <div class="modal-header">
-            <h4>Create new campaign</h4>
-          </div>
-          <div class="modal-body">
-            Campaign name: <input type="text" ng-model="vars.newPrepid" />
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-success" ng-click="save()">Create</button>
-            <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-          </div>
-          </script>
+                  class="btn"
+                  ng-click="openCreateItemModal(dbName)"
+                  value="Create new campaign"
+                  ng-hide="role(1);"
+                  align="left"/>
         </div>
-        <!-- END OF MODAL -->
       </div>
     </div>
   </span>

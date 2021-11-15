@@ -26,3 +26,9 @@ class flow(json_base):
         # update self according to json_input
         self.update(json_input)
         self.validate()
+
+    def toggle_approval(self):
+        approval_steps = self.get_approval_steps()
+        approval = self.get_attribute('approval')
+        index = approval_steps.index(approval)
+        self.approve(to_approval=approval_steps[(index + 1) % (len(approval_steps))])
