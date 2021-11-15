@@ -101,15 +101,27 @@
 <!--     END OF MODAL  -->
 
 <!-- Are you Sure MODAL-->
-<script type="text/ng-template" id="isSureModal.html"> <!--hidden modal template-->
+<script type="text/ng-template" id="isSureModal.html">
   <div class="modal-header">
-    <h4>Are you sure to {{modal_action}} {{toggle_prepid}}?</h4>
-  </div>  <!--end of modal header-->
-  <div class="modal-footer" style="background-color:{{modal_color}}">
-    <!-- <img ng-show="loadNotify" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/> -->
+    <h4>Are you sure to {{action}} "{{prepid}}"?</h4>
+  </div>
+  <div class="modal-footer" style="background-color:{{color}}">
     <button class="btn btn-warning" ng-click="yes()">Yes</button>
     <button class="btn btn-success" ng-click="no()">No</button>
-  </div> <!--end of modal footer-->
+  </div>
 </script>
+<!-- END of isSure MODAL-->
 
+<!-- Error MODAL-->
+<script type="text/ng-template" id="errorModal.html">
+  <div class="modal-header">
+    <h4>Error for "{{prepid}}"</h4>
+  </div>
+  <div class="modal-body">
+    {{message}}
+  </div> <!--end of modal body-->
+  <div class="modal-footer" style="background-color: red">
+    <button class="btn btn-warning" ng-click="ok()">OK</button>
+  </div>
+</script>
 <!-- END of isSure MODAL-->

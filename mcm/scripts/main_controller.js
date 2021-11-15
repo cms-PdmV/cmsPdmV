@@ -1,7 +1,3 @@
-testApp.config(['$compileProvider', function ($compileProvider) {
-  $compileProvider.debugInfoEnabled(false);
-}]);
-
 angular.module('testApp').controller('mainCtrl',
   ['$scope','$http', '$location', '$window', '$modal',
   function mainCtrl($scope, $http, $location, $window, $modal){
@@ -12,6 +8,8 @@ angular.module('testApp').controller('mainCtrl',
   $scope.start_time = "";
   $scope.turn_on_button_clicked = false;
   $scope.math = Math;
+  $scope.update = {};
+
 
   var browserName=navigator.appName;
   if (browserName == 'Microsoft Internet Explorer'){
@@ -76,7 +74,7 @@ angular.module('testApp').controller('mainCtrl',
     if (is_dev){
       body = document.getElementsByTagName("body");
      _.each(body, function(v){
-      v.style.backgroundImage = "url(HTML/draft.png)"
+      // v.style.backgroundImage = "url(HTML/draft.png)"
       });
     }
     return is_dev;
@@ -124,6 +122,92 @@ angular.module('testApp').controller('mainCtrl',
                 $modalInstance.close();
             }
         }
+    });
+  };
+
+  $scope.openIsSureModal = function(database, prepid, action, callback){
+    const modal = $modal.open({
+      templateUrl: 'isSureModal.html',
+      controller: function($scope, $modalInstance, database, prepid, action) {
+        $scope.database = database;
+        $scope.prepid = prepid;
+        $scope.action = action;
+        var stringToColor = function(str) {
+          //converts any string to hexadecimal color format
+          let hash = 0;
+          for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          let color = '#';
+          for (i = 0; i < 3; i++) {
+            let value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+          }
+          return color;
+        };
+        $scope.color = stringToColor(action);
+        $scope.yes = function(database, prepid, action) {
+          $modalInstance.close(database, prepid, action);
+        };
+        $scope.no = function() {
+          $modalInstance.dismiss();
+        };
+      },
+      resolve: {
+        database: function() {
+          return database;
+        },
+        prepid: function() {
+          return prepid;
+        },
+        action: function() {
+          return action;
+        }
+      }
+    });
+    modal.result.then(function() {
+      callback(database, prepid, action)
+    });
+  };
+
+
+  $scope.openErrorModal = function(prepid, message){
+    const modal = $modal.open({
+      templateUrl: 'errorModal.html',
+      controller: function($scope, $modalInstance, prepid, message) {
+        $scope.prepid = prepid;
+        $scope.message = message;
+        $scope.ok = function() {
+          $modalInstance.dismiss();
+        };
+      },
+      resolve: {
+        prepid: function() {
+          return prepid;
+        },
+        message: function() {
+          return message;
+        }
+      }
+    });
+  };
+
+  $scope.setSuccess = function(success, code) {
+    $scope.update['success'] = !!success;
+    $scope.update['status_code'] = code;
+  }
+
+  $scope.deleteObject = function (db, prepid) {
+    $http({ method: 'DELETE', url: 'restapi/' + db + '/delete/' + prepid }).success(function (data, status) {
+      $scope.setSuccess(data["results"]);
+      if (data["results"]) {
+        $scope.getData();
+      } else {
+        $scope.openErrorModal(prepid, data['message']);
+      }
+    }).error(function (status) {
+      $scope.openErrorModal(prepid, data['message']);
+      $scope.setSuccess(false, status);
     });
   };
 
@@ -688,31 +772,44 @@ testApp.directive("customHistory", function(){
   }
 });
 
-var ModalIsSureCtrl = function($scope, $modalInstance, action, prepid) {
-    $scope.modal_action = action;
-    $scope.toggle_prepid = prepid;
-
-    var stringToColour = function(str) {
-        //converts any string to hexadecimal color format
-        var hash = 0;
-        for (var i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+testApp.directive("sequenceDisplay", function ($http) {
+  return {
+    require: 'ngModel',
+    template:
+      '<div>' +
+      '  <div ng-hide="show_sequence">' +
+      '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();show_sequence=true;">' +
+      '     <i class="icon-eye-open"></i>' +
+      '    </a>' +
+      '  </div>' +
+      '  <div ng-show="show_sequence">' +
+      '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">' +
+      '     <i class="icon-remove"></i>' +
+      '    </a>' +
+      '    <ul>' +
+      '      <li ng-repeat="sequence in driver">' +
+      '        <ul ng-repeat="(key,value) in sequence">' +
+      '          <li><b>{{key}}</b>: <div style="width:600px;overflow:auto"><pre>{{value}}</pre></div></li>' +
+      '        </ul>' +
+      '      </li>' +
+      '    </ul>' +
+      '  </div>' +
+      '</div>',
+    link: function (scope, element, attrs, ctrl) {
+      ctrl.$render = function () {
+        scope.show_sequence = false;
+        scope.sequencePrepId = ctrl.$viewValue;
+      };
+      scope.getCmsDriver = function () {
+        if (scope.driver === undefined) {
+          var promise = $http.get("restapi/" + scope.dbName + "/get_cmsDrivers/" + scope.sequencePrepId);
+          promise.then(function (data) {
+            scope.driver = data.data.results;
+          }, function (data) {
+            alert("Error: ", data.status);
+          });
         }
-        var colour = '#';
-        for (i = 0; i < 3; i++) {
-            var value = (hash >> (i * 8)) & 0xFF;
-            colour += ('00' + value.toString(16)).substr(-2);
-        }
-        return colour;
-    };
-
-    $scope.modal_color = stringToColour(action);
-
-    $scope.yes = function() {
-        $modalInstance.close();
-    };
-
-    $scope.no = function() {
-        $modalInstance.dismiss();
-    };
-};
+      };
+    }
+  }
+});

@@ -62,7 +62,7 @@ class CreateCampaign(RESTResource):
 
         root = campaign.get_attribute('root')
         # If campaign is maybe root or root, create dedicated chained campaign
-        if root in (Campaign.Root.POSSIBLE, Campaign.Root.POSSIBLE):
+        if root in (-1, 0):
             chained_campaign_db = Database('chained_campaigns')
             chained_campaign = ChainedCampaign({'prepid': 'chain_%s' % (prepid),
                                                 '_id': 'chain_%s' % (prepid)})
