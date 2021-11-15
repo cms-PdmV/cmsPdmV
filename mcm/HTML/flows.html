@@ -1,52 +1,62 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-  <head>
-        <base href="/mcm/">
-        <title>Flows page McM</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
-        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-        <!--[IF IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-          </script>
-        <![endif]-->
-        <![if !IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-          </script>
-        <![endif]>
-        <script src="scripts/main_controller.js"></script>
-        <script src="scripts/flows_controller.js"></script>
-  </head>
+<head>
+  <title>McM - Flows</title>
+  <base href="/mcm/">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/flows_controller.js"></script>
+</head>
 
-  <body ng-controller="mainCtrl">
-    <span ng-controller="resultsCtrl">
-    <div ng-include="'HTML/navbar_template.html'"></div>
+<body ng-controller="mainCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="flows_defaults"></select-well>
+      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
     </div>
-    <table class="table table-bordered table-stripped">
+    <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in flows_defaults" ng-if="column.select" ng-switch on="column.text" style="white-space: nowrap;">
-            <div ng-switch-when="Actions">
-              {{column.text}}
-            </div>
-            <div ng-switch-default>
-              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#flows_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-            </div>
+          <th ng-repeat="column in columns"
+              ng-if="column.select"
+              style="white-space: nowrap; text-align: center;">
+            {{column.text}}
           </th>
         </tr>
       </thead>
       <tbody>
         <tr ng-repeat="data in result">
-          <td ng-repeat="value in flows_defaults" ng-if="value.select" style="white-space: nowrap;">
-            <div ng-switch on="value.text">
-              <div ng-switch-when="Actions">
-                <a ng-click='delete_object("flows", data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(4);" ng-href="#">
+          <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
+            <div ng-switch on="column.db_name">
+              <div ng-switch-when="prepid">
+                <a ng-href='flows?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/flows/{{data[column.db_name]}}"
+                   rel="tooltip"
+                   title="Admin view of {{data[column.db_name]}}"
+                   ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/flows/{{data[column.db_name]}}"
+                   rel="tooltip"
+                   title="Admin view of {{data[column.db_name]}}"
+                   ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
+              </div>
+              <div ng-switch-when="">
+                <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(3);" ng-href="#">
                   <i class="icon-minus-sign"></i>
+                </a>
+                <a ng-click="openCloneItemModal('flows', data.prepid)" title="Clone flow" ng-hide="role(1);" ng-href="#">
+                  <i class="icon-share-alt"></i>
+                </a>
+                <a ng-click="nextApproval(data.prepid)" rel="tooltip" title="Next approval" ng-hide="role(3);" ng-href="#">
+                  <i class="icon-chevron-right"></i>
                 </a>
                 <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
                   <i class="icon-align-right"></i>
@@ -54,91 +64,61 @@
                 <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
-                <a ng-href="edit?db_name=flows&prepid={{data.prepid}}" rel="tooltip" title="Edit details" target="_self" ng-hide="role(3);">
-                  <i class="icon-wrench"></i>
-                </a>
-                <a ng-click="openCloneModal(data.prepid)" rel="tooltip" ng-hide="role(1);" title="Clone Flow" ng-href="#">
-                  <i class="icon-share-alt"></i>
-                </a>
-                <a ng-click="reset_flow(data.prepid)" rel="tooltip" title="Reset" ng-hide="role(3);" ng-href="#">
-                  <i class="icon-repeat"></i>
-                </a>
-                <a ng-click="next_step(data.prepid)" rel="tooltip" title="Next step" ng-hide="role(3);" ng-href="#">
-                  <i class="icon-chevron-right"></i>
-                </a>
-                <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-picture"></i>
-                </a>
-                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-film"></i>
-                </a>
-                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-facetime-video"></i>
-                </a>
               </div>
-              <div ng-switch-when="PrepId">
-                <a ng-href='flows?prepid={{data[value.db_name]}}&page=0' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/flows/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
+              <div ng-switch-when="approval" align="center">
+                <i class="{{approvalIcon(data[column.db_name])}}" rel="tooltip" title="{{data[column.db_name]}}"></i>
+                <a ng-href='flows?approval={{data[column.db_name]}}&page=0' rel="tooltip" title="Show all flows in approval {{data[column.db_name]}}">{{data[column.db_name]}}</a>
               </div>
-              <div ng-switch-when="Approval" align="center">
-                <i class="{{approvalIcon(data[value.db_name])}}" rel="tooltip" title="{{data[value.db_name]}}"></i>
-                <a ng-href='flows?approval={{data[value.db_name]}}&page=0' rel="tooltip" title="Show all flows in approval {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Allowed Campaigns">
+              <div ng-switch-when="allowed_campaigns">
                 <ul>
-                  <li ng-repeat="value in data[value.db_name]">
-                    <a ng-href='flows?allowed_campaigns={{value}}' rel="tooltip" title="View flows starting from {{value}}" target="_self">{{value}}<i class="icon-magnet"></i></a>
-                    <a ng-href='campaigns?prepid={{value}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
+                  <li ng-repeat="campaign_id in data[column.db_name]">
+                    <a ng-href='flows?allowed_campaigns={{campaign_id}}' rel="tooltip" title="View flows starting from {{campaign_id}}">{{campaign_id}}<i class="icon-magnet"></i></a>
+                    <a ng-href='campaigns?prepid={{campaign_id}}' rel="tooltip" title="View details of the campaign"><i class="icon-book"></i></a>
                   </li>
                 </ul>
               </div>
-              <div ng-switch-when="Next Campaign">
-                <a ng-href='flows?next_campaign={{data[value.db_name]}}' rel="tooltip" title="View flows going into {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}<i class="icon-magnet"></i></a>
-                <a ng-href='campaigns?prepid={{data[value.db_name]}}' rel="tooltip" title="View details of the campaign" target="_self"><i class="icon-book"></i></a>
+              <div ng-switch-when="next_campaign">
+                <a ng-href='flows?next_campaign={{data[column.db_name]}}' rel="tooltip" title="View flows going into {{data[column.db_name]}}">{{data[column.db_name]}}<i class="icon-magnet"></i></a>
+                <a ng-href='campaigns?prepid={{data[column.db_name]}}' rel="tooltip" title="View details of the campaign"><i class="icon-book"></i></a>
               </div>
-              <div ng-switch-when="Submission details">
-                <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in data[value.db_name]">
-                    <dt>{{key}}</dt>
-                    <dd>{{value}}</dd>
-                </dl>
+              <div ng-switch-when="notes">
+                <div style="width:400px">
+                  <pre class="notes">{{data[column.db_name]}}</pre>
+                </div>
               </div>
-              <div ng-switch-when="Notes">
-                <div style="width:400px"><pre class="notes">{{data[value.db_name]}}</pre></div>
-              </div>
-               <div ng-switch-when="Request parameters">
+              <div ng-switch-when="request_parameters">
                 <ul>
-                  <li ng-repeat="(key, param) in data[value.db_name]">
+                  <li ng-repeat="(key, param) in data[column.db_name]">
                     <div ng-switch on="key">
-                    <div ng-switch-when="sequences">
-                      {{key}}
-                      <ul ng-repeat="el in param">
-                        <div ng-switch on="underscore.size(el)">
-                          <div ng-switch-when="1">
-                            <li>Default</li>
-                          </div>
-                          <div ng-switch-default>
-                            <li ng-repeat="(sequence,variable) in el">
-                             {{sequence}}
+                      <div ng-switch-when="sequences">
+                        {{key}}
+                        <ul ng-repeat="el in param">
+                          <div ng-switch on="underscore.size(el)">
+                            <li ng-repeat="(sequence, variable) in el">
+                              {{sequence}}
                               <ul>
-                                 <li ng-repeat="(x, y) in variable">{{x}} : {{y}}</li>
+                                <li ng-repeat="(x, y) in variable">{{x}} : {{y}}</li>
                               </ul>
                             </li>
                           </div>
-                        </div>
-                      </ul>
+                        </ul>
+                      </div>
+                      <div ng-switch-default>
+                        {{key}} : {{param}}
+                      </div>
                     </div>
-                    <div ng-switch-default>
-                      {{key}} : {{param}}
-                    </div>
-                  </div>
                   </li>
                 </ul>
               </div>
-              <div ng-switch-when="History">
-                <div custom-history ng-model="data[value.db_name]"></div>
+              <div ng-switch-when="history">
+                <div custom-history ng-model="data[column.db_name]"></div>
               </div>
-              <div ng-switch-default>{{data[value.db_name]}}</div>
+              <div ng-switch-default>
+                <a ng-href='flows?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all flows where {{column.text}} is {{data[column.db_name]}}">
+                   {{data[column.db_name]}}
+                </a>
+              </div>
             </div>
           </td>
         </tr>
@@ -146,38 +126,15 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span4">
-    <!--     MODAL -->
-          <div ng-controller="ModalDemoCtrl">
-            <input type="button" class="btn" ng-click="open()" value="Create new flow" ng-hide="role(3);" align="left"/>
-            <script type="text/ng-template" id="flowCreateModal.html">
-              <div class="modal-header">
-                <h4>Create a flow</h4>
-              </div>  <!--end of modal header-->
-              <div class="modal-body">
-                  Flow name: <input type="text" ng-model="flow.flowId"/>
-              </div> <!--end of modal body-->
-              <div class="modal-footer">
-                <font color="red" ng-if="flow.flowId.indexOf('_') != -1">Flow name should not have "_" in it</font>
-                <button class="btn btn-success" ng-click="save()" ng-disabled="flow.flowId.indexOf('_') != -1">Create</button>
-                <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-              </div> <!--end of modal footer-->
-            </script>
-            <script type="text/ng-template" id="cloneModal.html"> <!--hidden modal template-->
-              <div class="modal-header">
-                <h4>Clone flow: {{data.prepid}}</h4>
-              </div>  <!--end of modal header-->
-              <div class="modal-body">
-                New Flow name: <input type="text" ng-model="data.newPrepid"/>
-              </div> <!--end of modal body-->
-              <div class="modal-footer">
-                <button class="btn btn-success" ng-click="clone()" >Clone!</button>
-                <button class="btn btn-warning cancel" ng-click="close()">Close</button>
-              </div> <!--end of modal footer-->
-            </script>
-          </div> <!--end of modalControler DIV-->
-    <!--     END OF MODAL  -->
+        <input type="button"
+                class="btn"
+                ng-click="openCreateItemModal(dbName)"
+                value="Create new flow"
+                ng-hide="role(1);"
+                align="left"/>
       </div>
     </div>
   </span>
-  </body>
+</body>
+
 </html>

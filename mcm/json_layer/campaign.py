@@ -1,27 +1,9 @@
-#!/usr/bin/env python
 import re
-
 from json_base import json_base
 from sequence import sequence
 
 
 class campaign(json_base):
-
-    class DuplicateApprovalStep(Exception):
-        def __init__(self, approval=None):
-            self.__approval = repr(approval)
-            campaign.logger.error('Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved')
-
-        def __str__(self):
-            return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
-
-    class CampaignExistsException(Exception):
-        def __init__(self, cid):
-            self.c = cid
-            campaign.logger.error('Error: Campaign ' + self.c + ' already in "next" list.')
-
-        def __str__(self):
-            return 'Error: Campaign ' + self.c + ' already in "next" list.'
 
     _json_base__schema = {
         '_id': '',
@@ -33,7 +15,6 @@ class campaign(json_base):
         'input_dataset': '',
         'notes': '',
         'status': '',
-        'validation': '',
         'pileup_dataset_name': '',
         'generators': [],
         'www': '',
@@ -44,38 +25,20 @@ class campaign(json_base):
         'approval': '',
         'history': [],
         'memory': 2000,
-        'no_output': False,
-        'on_hold': 0}
+        'no_output': False}
 
     _json_base__status = ['stopped', 'started']
 
-    _json_base__approvalsteps = ['stop', 'start']
+    _prepid_pattern = '[a-zA-Z0-9]{3,60}'
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
 
-        # set campaign status and approval step
         self._json_base__schema['status'] = self.get_status_steps()[0]
-        self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         # update self according to json_input
         self.update(json_input)
         self.validate()
-
-    def add_sequence(self, seq_json=None, step=-1, name='default'):
-        seq_json = seq_json if seq_json else {}
-        seq = sequence(json_input=seq_json)
-        sequences = self.get_attribute('sequences')
-
-        if step == -1:
-            index = len(sequences) + 1
-        elif step <= len(sequences):
-            index = step
-        else:
-            return
-
-        sequences[index].update({name: seq.json()})
-        self.set_attribute('sequences', sequences)
 
     def build_cmsDrivers(self):
         cds = []
@@ -105,37 +68,19 @@ class campaign(json_base):
             cds.append(stepcd)
         return cds
 
-    def add_request(self, req_json={}):
-        try:
-            from request import request
-            req = request(json_input=req_json)
-        except ImportError as ex:
-            self.logger.error('Could not import \'request\' module. Reason: %s' % (ex))
-            return {}
-        except self.IllegalAttributeName() as ex:
-            return {}
-
+    def add_request(self, req_json):
+        from request import request
+        req = request(json_input=req_json)
         req.transfer_from(self)
         return req.json()
 
-    def toggle_approval(self):
-        appsteps = self.get_approval_steps()
-        app = self.get_attribute('approval')
-
-        if appsteps.index(app) == 1:
-            self.approve(0)
-        elif appsteps.index(app) == 0:
-            self.approve(1)
-        else:
-            raise NotImplementedError('Could not toggle approval for object %s' % (self.get_attribute('_id')))
-
     def toggle_status(self):
-        ststeps = self.get_status_steps()
-        st = self.get_attribute('status')
+        status_steps = self.get_status_steps()
+        status = self.get_attribute('status')
 
-        if ststeps.index(st) == 1:
+        if status_steps.index(status) == 1:
             self.set_status(0)
-        elif ststeps.index(st) == 0:
+        elif status_steps.index(status) == 0:
             # make a few checks here
             if self.get_attribute('energy') < 0:
                 raise Exception('Cannot start a campaign with negative energy')
@@ -146,26 +91,16 @@ class campaign(json_base):
 
             self.set_status(1)
         else:
-            raise NotImplementedError('Could not toggle status for object %s' % (self.get_attribute('_id')))
-
-    def add_next(self, cid):
-        if cid not in self.get_attribute('next'):
-            new_next = self.get_attribute('next')
-            new_next.append(cid)
-            new_next.sort()
-            self.set_attribute('next', new_next)
-        else:
-            raise self.CampaignExistsException(cid)
+            campaign_id = self.get_attribute('_id')
+            raise NotImplementedError('Could not toggle status for %s' % (campaign_id))
 
     def is_release_greater_or_equal_to(self, cmssw_release):
-        my_release = filter(None, re.sub("[^0-9_]", "", self.get_attribute('cmssw_release')).split('_'))
-        other_release = filter(None, re.sub("[^0-9_]", "", cmssw_release).split('_'))
-        try:
-            for i in range(2 if len(my_release) > 2 else len(my_release)):
-                if int(my_release[i]) < int(other_release[i]):
-                    return False
-                elif int(my_release[i]) > int(other_release[i]):
-                    return True
-        except IndexError:
-            return True
-        return True
+        my_release = self.get_attribute('cmssw_release')
+        my_release = tuple(int(x) for x in re.sub('[^0-9_]', '', my_release).split('_') if x)
+        other_release = tuple(int(x) for x in re.sub('[^0-9_]', '', cmssw_release).split('_') if x)
+        # It only compares major and minor version, does not compare the build,
+        # i.e. CMSSW_X_Y_Z, it compares only X and Y parts
+        # Why? Because it was like this for ever
+        my_release = my_release[:2]
+        other_release = other_release[:2]
+        return my_release >= other_release

@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-
 from json_base import json_base
+
 
 class flow(json_base):
 
@@ -15,59 +14,21 @@ class flow(json_base):
         'approval': ''
     }
 
-    _json_base__approvalsteps = ['none', 'flow', 'submit', "tasksubmit"]
+    _json_base__approvalsteps = ['none', 'flow', 'submit', 'tasksubmit']
+
+    _prepid_pattern = 'flow[a-zA-Z0-9]{2,60}'
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
 
         self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
-        # JR. would that function ? self.__approvalsteps = [ 'flow' , 'inject' ]
         # update self according to json_input
         self.update(json_input)
         self.validate()
 
-    def add_allowed_campaign(self, cid):
-        self.logger.info('Adding new allowed campaign to flow %s' % (self.get_attribute('_id')))
-
-        try:
-            from couchdb_layer.mcm_database import database
-        except ImportError as ex:
-            self.logger.error('Could not import database connector class. Reason: %s' % (ex))
-            return False
-
-        # initialize database connector
-        try:
-            cdb = database('campaigns')
-        except database.DatabaseAccessError as ex:
-            return False
-
-        # check campaign exists
-        if not cdb.document_exists(cid):
-            raise self.CampaignDoesNotExistException(cid)
-
-        # check for duplicate
-        allowed = self.get_attribute('allowed_campaigns')
-        if cid in allowed:
-            raise self.DuplicateCampaignEntry(cid)
-
-        # append and make persistent
-        allowed.append(cid)
-        self.set_attribute('allowed_campaigns', allowed)
-
-        # update history
-        self.update_history({'action': 'add allowed campaign', 'step': cid})
-
-        return True
-
-    def remove_allowed_campaign(self, cid):
-        allowed = self.get_attribute('allowed_campaigns')
-        if cid not in allowed:
-            raise self.CampaignDoesNotExistException(cid)
-
-        # remove it and make persistent
-        allowed.remove(cid)
-        self.set_attribute('allowed_campaigns', allowed)
-
-        # update history
-        self.update_history({'action': 'remove allowed campaign', 'step': cid})
+    def toggle_approval(self):
+        approval_steps = self.get_approval_steps()
+        approval = self.get_attribute('approval')
+        index = approval_steps.index(approval)
+        self.approve(to_approval=approval_steps[(index + 1) % (len(approval_steps))])

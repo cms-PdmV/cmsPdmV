@@ -36,15 +36,12 @@ angular.module('testApp').controller('resultCtrl',
       case "flows":
         $scope.not_editable_list = ["Prepid", "Approval"];
         $scope.allCampaigns = []
-        var promise = $http.get("restapi/campaigns/listall"); //get list of all campaigns for flow editing
-          promise.then(function(data){
-          $scope.allCampaigns = data.data.results;
+        var promise = $http.get("search?db_name=campaigns&page=-1"); //get list of all campaigns for flow editing
+        promise.then(function(data){
+          $scope.allCampaigns = data.data.results.map(x => x.prepid);
         },function(){
           alert("Error getting all campaign list for flows");
         });
-        break;
-      case "news":
-        $scope.not_editable_list = ["Author", "Date"];
         break;
       case "settings":
         $scope.not_editable_list = ["Prepid"];

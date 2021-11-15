@@ -1,64 +1,79 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+
 <head>
   <title>McM</title>
+  <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript">
+    const testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/index_controller.js"></script>
+  <style>
+    .main-search-row {
+      display: block;
+      margin: 8px;
+      text-align: right;
+    }
 
-  <!--[IF IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-    </script>
-  <![endif]-->
-  <![if !IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-    </script>
-  <![endif]>
+    .main-search-row>* {
+      display: inline-block;
+    }
 
-<script src="scripts/main_controller.js"></script>
-<script src="scripts/index_controller.js"></script>
+    .main-search-row>ul {
+      text-align: left;
+    }
+
+    .main-search-row>label {
+      margin-right: 4px;
+    }
+  </style>
 </head>
+
 <body ng-controller="mainCtrl">
   <div ng-include="'HTML/navbar_template.html'"></div>
-  <div class="container" >
-    <span ng-controller="resultsCtrl">
-      <tabs>
-        <pane heading="Navigation" active="is_navigation_active">
-          <form class="form-inline">
-            <span >
-              <label style="width: 80px">Request</label>
-              <input type="text" ng-model="form_data.request" style="margin-right: 50px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue, 'requests')">
-            </span>
-            <span class="control-group navigation-form">
-              <label style="width: 100px">Dataset name</label>
-              <input type="text" ng-model="form_data.dataset" style="margin-right: 50px" type="text" class="input-large" typeahead="dataset for dataset in preloadUniques($viewValue, 'dataset_name')">
-            </span>
-            <span class="control-group navigation-form">
-              <label style="width: 95px">Request tags</label>
-              <input type="text" ng-model="form_data.tags" type="text" class="input-large" typeahead="tag for tag in preloadUniques($viewValue, 'tags')">
-            </span>
-            <br><br>
-            <span class="control-group navigation-form">
-              <label style="width: 80px">Mccm ticket</label>
-              <input type="text" ng-model="form_data.ticket" style="margin-right: 225px" type="text" class="input-large" typeahead="prepid for prepid in preloadPrepids($viewValue, 'mccms')">
-            </span>
-            <button ng-click="redirect()" class="btn btn-medium">Search</button>
-          </form>
-        </pane>
-      </tabs>
-    </span>
-  </div><!--End of container-->
   <div class="container">
     <div align="middle">
       <h2>McM Home page</h2>
-      <p> Updated to use HTML5 links: exclude <b>#</b> from URL's </p>
       Welcome to the McM Monte-Carlo Request Management
-      <p> Brought to you by <a href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmV">PdmV</a></p>
-      <p> Current McM version is <a href="https://github.com/cms-PdmV/cmsPdmV/tree/{{mcm_revision}}/mcm"> {{mcm_revision}}</a></p>
-      <p> <a href="https://github.com/cms-PdmV/cmsPdmV/compare/{{mcm_revision}}...master"> Upcoming developments </a></p>
+      <p> Brought to you by <a href="https://cms-pdmv.cern.ch/">PdmV</a></p>
       <p> Up since {{start_time}}</p>
     </div>
-  </div><!--End of container -->
+  </div>
+  <!--End of container -->
+  <div class="container">
+    <div ng-controller="resultsCtrl" style="text-align: center;">
+      <form style="display: inline-block;">
+        <h4>Request search</h4>
+        <div class="main-search-row">
+          <label for="requestSearchField">...by PrepID</label>
+          <input type="text" id="requestSearchField" ng-model="searchForm.prepid" class="input-large"
+            typeahead="prepid for prepid in preloadPrepids($viewValue, 'requests')">
+        </div>
+        <div class="main-search-row">
+          <label for="datasetSearchField">...by dataset name</label>
+          <input type="text" id="datasetSearchField" ng-model="searchForm.dataset" class="input-large"
+            typeahead="dataset for dataset in preloadUniques($viewValue, 'dataset_name')">
+        </div>
+        <div class="main-search-row">
+          <label for="tagsSearchField">...by tags</label>
+          <input type="text" id="tagsSearchField" ng-model="searchForm.tags" class="input-large"
+            typeahead="tag for tag in preloadUniques($viewValue, 'tags')">
+        </div>
+        <button ng-click="searchRequests()" class="btn btn-medium">Search</button>
+        <h4>MccM ticket search</h4>
+        <div class="main-search-row">
+          <label for="ticketSearchField">...by PrepID</label>
+          <input type="text" id="ticketSearchField" ng-model="searchForm.ticket" class="input-large"
+            typeahead="prepid for prepid in preloadPrepids($viewValue, 'mccms')">
+        </div>
+        <button ng-click="searchTickets()" class="btn btn-medium">Search</button>
+      </form>
+    </div>
+  </div>
+  <!--End of container-->
+
 </body>

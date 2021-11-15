@@ -5,17 +5,9 @@
     </strong>
   </span>
   <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-  <div ng-show="update['success']">
-    Success. Status code:
-    <font color="green">
-      {{update['status_code']}}
-    </font>
-  </div>
-  <div ng-show="update['fail']">
-    Fail. Status code:
-    <font color="red">
-      {{update['status_code']}}
-    </font>
+  <div>
+    <b ng-show="!pendingHTTP && update['success'] === true" style="color: green">Success</b>
+    <b ng-show="!pendingHTTP && update['success'] === false" style="color: red">Failure</b>
   </div>
 </div>
 <div class="span4 pagination pagination-right">
