@@ -164,7 +164,6 @@ angular.module('testApp').controller('mainCtrl',
         });
       };
 
-
       $scope.openErrorModal = function (prepid, message) {
         const modal = $modal.open({
           templateUrl: 'errorModal.html',
@@ -193,55 +192,56 @@ angular.module('testApp').controller('mainCtrl',
       };
 
       $scope.getData = function () {
-        var query = ""
-        _.each($location.search(), function (value, key) {
-          if ((key != 'shown') && (key != 'fields')) {
-            query += "&" + key + "=" + value;
-          }
-        });
-        $scope.got_results = false; //to display/hide the 'found n results' while reloading
-        var promise = $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw")
-        promise.then(function (data) {
-          $scope.result_status = data.status;
-          $scope.got_results = true;
-          $scope.result = _.pluck(data.data.rows, 'doc');
-          if ($scope.result === undefined) {
-            alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
-            return; //stop doing anything if results are undefined
-          }
-          $scope.total_results = data.data.total_rows;
-          if ($scope.result.length != 0) {
-            columns = _.keys($scope.result[0]);
-            rejected = _.reject(columns, function (v) { return v[0] == "_"; }); //check if charat[0] is _ which is couchDB value to not be shown
-            //           $scope.columns = _.sortBy(rejected, function(v){return v;});  //sort array by ascending order
-            _.each(rejected, function (v) {
-              add = true;
-              _.each($scope.columns, function (column) {
-                if (column.db_name == v) {
-                  add = false;
-                }
-              });
-              if (add) {
-                $scope.columns.push({ text: v[0].toUpperCase() + v.substring(1).replace(/\_/g, ' '), select: false, db_name: v });
-              }
-            });
-            if (_.keys($location.search()).indexOf('fields') != -1) {
-              _.each($scope.columns, function (elem) {
-                elem.select = false;
-              });
-              _.each($location.search()['fields'].split(','), function (column) {
-                _.each($scope.columns, function (elem) {
-                  if (elem.db_name == column) {
-                    elem.select = true;
-                  }
-                });
-              });
+        if ($scope.file_was_uploaded) {
+          $scope.upload($scope.uploaded_file);
+        }
+        else if ($location.search()['range'] != undefined) {
+          var tmp = $location.search()['range'].split(";");
+          var imaginary_file = [];
+          _.each(tmp, function (elem) {
+            var ranges = elem.split(",");
+            if (ranges.length > 1) {
+              imaginary_file.push(ranges[0] + " -> " + ranges[1]);
+            } else {
+              imaginary_file.push(ranges[0]);
             }
-          }
-          $scope.selectionReady = true;
-        }, function () {
-          alert("Error getting information");
-        });
+          });
+          $scope.upload({ contents: imaginary_file.join("\n") });
+          $scope.file_was_uploaded = false;
+        } else {
+          let query = "";
+          _.each($location.search(), function (value, key) {
+            if ((key != 'shown') && (key != 'fields')) {
+              query += "&" + key + "=" + value;
+            }
+          });
+          $scope.got_results = false; //to display/hide the 'found n results' while reloading
+          $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw").then(function (data) {
+            $scope.got_results = true;
+            $scope.result = _.pluck(data.data.rows, 'doc');
+            if ($scope.result === undefined) {
+              alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
+              return; //stop doing anything if results are undefined
+            }
+            $scope.total_results = data.data.total_rows;
+            if ($scope.result.length != 0) {
+              columns = Object.keys($scope.result[0]);
+              let newColumns = [];
+              let defaultColumns = new Set($scope.columns.map(x => x.db_name))
+              for (let column of columns) {
+                if (column[0] != '_' && !defaultColumns.has(column)) {
+                  newColumns.push(column);
+                }
+              }
+              newColumns = newColumns.sort().map(x => Object({'text': x[0].toUpperCase() + x.substring(1).replaceAll('_', ' '),
+                                                              'select': false,
+                                                              'db_name': x })).map(function(c) { $scope.columns.push(c)});
+            }
+            $scope.selectionReady = true;
+          }, function () {
+            alert("Error getting information");
+          });
+        }
       };
 
       $scope.$watch(function () {
