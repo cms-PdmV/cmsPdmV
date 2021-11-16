@@ -815,20 +815,16 @@ class GetStatusAndApproval(RESTResource):
 
     def get(self, prepid):
         """
-        Get the status and approval of given prepid
+        Get the status and approval of given prepid(s)
         """
-        return self.status(prepid)
+        prepids = list(set(x.strip() for x in prepid.split(',') if x.strip()))
+        if not prepids:
+            return {'results': False,
+                    'message': 'No prepids given'}
 
-    def status(self, rid):
-        if rid == "":
-            return {"results": "You shouldnt be looking for empty prepid"}
-
-        db = database('requests')
-        if not db.document_exists(rid):
-            return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
-
-        mcm_r = db.get(rid)
-        return {rid: '%s-%s' % (mcm_r['approval'], mcm_r['status'])}
+        request_db = database('requests')
+        results = request_db.db.bulk_get(prepids)
+        return {req['prepid']: '%s-%s' % (req['approval'], req['status']) for req in results}
 
 
 class InspectStatus(RESTResource):

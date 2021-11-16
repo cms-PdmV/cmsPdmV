@@ -407,7 +407,6 @@
               <div ng-switch-when="interested_pwg">
                 <ul>
                   <li ng-repeat="elem in data[column.db_name]">
-                    <!-- <a ng-href='{{getLocation()}}&interested_pwg={{elem}}' rel="tooltip" title="Show all requests where {{elem}} is interested PWG" target="_self">{{elem}}</a> -->
                     {{elem}}
                   </li>
                 </ul>
@@ -437,35 +436,6 @@
     <!--end of modal footer-->
     </script>
     <!-- END of Notify MODAL-->
-    <!--   Submission  MODAL -->
-    <script type="text/ng-template" id="submissionModal.html"> <!--hidden modal template-->
-    <div class="modal-header">
-      <h4>Submitted requests</h4>
-    </div>
-    <!--end of modal header-->
-    <div class="modal-body">
-      <text>
-        <div ng-repeat="elem in data.injectModalData">
-          <span>Prepid: {{elem["prepid"]}}</span>
-          <span>Message: {{elem["message"]}}</span>
-          <span ng-switch="elem['results']">
-            <img ng-switch-when="false" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-red.gif"
-              rel="tooltip" title="Fail" />
-            <img ng-switch-when="true" ng-src="http://twiki.org/p/pub/TWiki05x01/TWikiDocGraphics/led-green.gif"
-              rel="tooltip" title="Success" />
-          </span>
-        </div>
-      </text>
-    </div>
-    <!--end of modal body-->
-    <div class="modal-footer">
-      <button class="btn btn-success" ng-click="openInjectStatus()" ng-disabled="!data.anySuccessful">See successful
-        requests status</button>
-      <button class="btn btn-warning cancel" ng-click="close()">Close</button>
-    </div>
-    <!--end of modal footer-->
-    </script>
-    <!--     END OF MODAL  -->
 
     <!--     Clone MODAL -->
     <script type="text/ng-template" id="cloneRequestModal.html"> <!--hidden modal template-->
@@ -535,7 +505,6 @@
       </div>
 
     </div>
-    <!-- <a ng-href='/mcm' target='_self'><div class="navbar-fixed-bottom" id="news_banner"></div></a> -->
   </span>
 </body>
 

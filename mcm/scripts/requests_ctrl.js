@@ -14,7 +14,6 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.dbName = "requests";
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
 
-      $scope.stats_cache = {};
       $scope.actionMessage = {};
       $scope.underscore = _;
       $scope.file_was_uploaded = false;

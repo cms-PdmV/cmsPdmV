@@ -28,7 +28,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
-        self.logger.debug('Request: %s %s', method, self.__dburl + url)
+        # self.logger.debug('Request: %s %s', method, self.__dburl + url)
         if data is None:
             request = urllib2.Request(self.__dburl + url)
         else:
@@ -46,7 +46,7 @@ class Database():
         """
         method to construct a HTTP reuqest to couchDB
         """
-        self.logger.debug('Lucene request: %s %s', method, self.__luceneurl + url)
+        # self.logger.debug('Lucene request: %s %s', method, self.__luceneurl + url)
         if data is None:
             request = urllib2.Request(self.__luceneurl + url)
         else:
@@ -100,6 +100,16 @@ class Database():
 
         return None
 
+    def bulk_get(self, ids):
+        db_request = self.construct_request("%s/_bulk_get" % (self.__dbname),
+                                            method='POST',
+                                            data={'docs': [{'id': x} for x in ids]})
+        data = self.opener.open(db_request)
+        results = loads(data.read())
+        results = [r['docs'][0] for r in results['results']]
+        results = [r['ok'] for r in results if r.get('ok')]
+        return results
+
     def prepid_is_used(self, doc_id):
         """
         Return whether such prepid is already used - either such document
@@ -113,7 +123,7 @@ class Database():
                 data = response.read()
                 data = loads(data)
                 exists = '_id' in data
-                self.logger.debug('%s exists, code %s', doc_id, response.code)
+                # self.logger.debug('%s exists, code %s', doc_id, response.code)
                 return True
             except urllib2.HTTPError as e:
                 data = e.read()

@@ -305,7 +305,9 @@ api.add_resource(
     '/restapi/chained_requests/inject/<string:chained_request_id>',
     '/restapi/chained_requests/get_inject/<string:chained_request_id>')
 api.add_resource(SoftResetChainedRequest, '/restapi/chained_requests/soft_reset/<string:chained_request_id>')
-api.add_resource(TestChainedRequest, '/restapi/chained_requests/test/<string:chained_request_id>')
+api.add_resource(TestChainedRequest,
+                 '/restapi/chained_requests/test/<string:chained_request_id>',
+                 '/restapi/chained_requests/validate/<string:chained_request_id>')
 api.add_resource(ForceChainReqToDone, '/restapi/chained_requests/force_done/<string:chained_request_ids>')
 api.add_resource(ForceStatusDoneToProcessing, '/restapi/chained_requests/back_forcedone/<string:chained_request_ids>')
 api.add_resource(ToForceFlowList, '/restapi/chained_requests/force_flow/<string:chained_request_ids>')
