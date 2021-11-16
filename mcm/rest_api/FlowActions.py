@@ -255,6 +255,25 @@ class UpdateFlow(FlowRESTResource):
                                                                             prepid,
                                                                             removed_campaign))}
 
+        next_campaign = flow.get_attribute('next_campaign')
+        previous_next_campaign = previous_version.get_attribute('next_campaign')
+        if previous_next_campaign and previous_next_campaign != next_campaign:
+            chained_campaign_db = Database('chained_campaigns')
+            # Check if there are chained campaigns that are made with this flow
+            # and was using the changed next campaign
+            contains = {'contains': [prepid, previous_next_campaign]}
+            chained_campaign_query = chained_campaign_db.construct_lucene_query(contains)
+            chained_campaigns = chained_campaign_db.full_text_search('search',
+                                                                     chained_campaign_query,
+                                                                     limit=1,
+                                                                     include_fields='prepid')
+            if chained_campaigns:
+                return {'results': False,
+                        'message': ('Campaign "%s" cannot be removed because there are chained '
+                                    'campaigns using "%s" and "%s" ' % (previous_next_campaign,
+                                                                        prepid,
+                                                                        previous_next_campaign))}
+
         difference = self.get_obj_diff(previous_version.json(),
                                        flow.json(),
                                        ('history', '_rev'))
