@@ -11,10 +11,13 @@
   </div>
 </div>
 <div class="span4 pagination pagination-right">
-  <span ng-show="total_results != undefined">
+  <span ng-show="total_results != undefined && !resultsFromFile">
     Showing {{total_results == 0 ? 0 : math.max(0, custom_footer_list_page) * custom_footer_limit + 1}} - {{math.min(total_results, (math.max(0, custom_footer_list_page) + 1) * custom_footer_limit)}} of {{total_results}} results
   </span>
-  <ul>
+  <span ng-show="total_results != undefined && resultsFromFile">
+    Showing {{total_results == 0 ? 0 : 1}} - {{total_results}} of {{total_results}} results
+  </span>
+  <ul ng-hide="resultsFromFile">
     <li ng-class="{ disabled: custom_footer_list_page <= -1 }">
       <a ng-click="custom_footer_previous_page(custom_footer_list_page)" ng-href="#" ng-show="custom_footer_list_page>0">
         Prev

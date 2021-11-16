@@ -194,10 +194,12 @@ angular.module('testApp').controller('mainCtrl',
       $scope.upload = function (file) {
         /*Upload a file to server*/
         $scope.got_results = false;
+        $scope.resultsFromFile = true;
         $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/listwithfile', data: file }).success(function (data, status) {
           $scope.result = data.results;
           $scope.result_status = data.status;
           $scope.got_results = true;
+          $scope.total_results = data.results.length;
           if ($scope.result.length != 0) {
             columns = Object.keys($scope.result[0]);
             let defaultColumns = new Set($scope.columns.map(x => x.db_name));
@@ -209,6 +211,7 @@ angular.module('testApp').controller('mainCtrl',
                                      'db_name': x }))
                    .map(function(c) { $scope.columns.push(c)});
           }
+
           $scope.selectionReady = true;
         }).error(function (data, status) {
           $scope.setSuccess(false, data.message);
@@ -240,6 +243,7 @@ angular.module('testApp').controller('mainCtrl',
             }
           });
           $scope.got_results = false; //to display/hide the 'found n results' while reloading
+          $scope.resultsFromFile = false;
           $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw").then(function (data) {
             $scope.got_results = true;
             $scope.result = _.pluck(data.data.rows, 'doc');
