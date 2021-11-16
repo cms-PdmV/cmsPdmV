@@ -191,6 +191,30 @@ angular.module('testApp').controller('mainCtrl',
         });
       };
 
+      $scope.upload = function (file) {
+        /*Upload a file to server*/
+        $scope.got_results = false;
+        $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/listwithfile', data: file }).success(function (data, status) {
+          $scope.result = data.results;
+          $scope.result_status = data.status;
+          $scope.got_results = true;
+          if ($scope.result.length != 0) {
+            columns = Object.keys($scope.result[0]);
+            let defaultColumns = new Set($scope.columns.map(x => x.db_name));
+
+            columns.filter(x => x[0] != '_' && !defaultColumns.has(x))
+                   .sort()
+                   .map(x => Object({'text': x[0].toUpperCase() + x.substring(1).replaceAll('_', ' '),
+                                     'select': false,
+                                     'db_name': x }))
+                   .map(function(c) { $scope.columns.push(c)});
+          }
+          $scope.selectionReady = true;
+        }).error(function (data, status) {
+          $scope.setSuccess(false, data.message);
+        });
+      };
+
       $scope.getData = function () {
         if ($scope.file_was_uploaded) {
           $scope.upload($scope.uploaded_file);
@@ -226,20 +250,18 @@ angular.module('testApp').controller('mainCtrl',
             $scope.total_results = data.data.total_rows;
             if ($scope.result.length != 0) {
               columns = Object.keys($scope.result[0]);
-              let newColumns = [];
               let defaultColumns = new Set($scope.columns.map(x => x.db_name))
-              for (let column of columns) {
-                if (column[0] != '_' && !defaultColumns.has(column)) {
-                  newColumns.push(column);
-                }
-              }
-              newColumns = newColumns.sort().map(x => Object({'text': x[0].toUpperCase() + x.substring(1).replaceAll('_', ' '),
-                                                              'select': false,
-                                                              'db_name': x })).map(function(c) { $scope.columns.push(c)});
+
+              columns.filter(x => x[0] != '_' && !defaultColumns.has(x))
+                     .sort()
+                     .map(x => Object({'text': x[0].toUpperCase() + x.substring(1).replaceAll('_', ' '),
+                                       'select': false,
+                                       'db_name': x }))
+                     .map(function(c) { $scope.columns.push(c)});
             }
             $scope.selectionReady = true;
-          }, function () {
-            alert("Error getting information");
+          }, function (data, status) {
+            $scope.setSuccess(false, data.message);
           });
         }
       };

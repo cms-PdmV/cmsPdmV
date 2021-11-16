@@ -208,24 +208,6 @@ angular.module('testApp').controller('resultsCtrl',
 
       /* --Modals actions END--*/
 
-      $scope.upload = function (file) {
-        $scope.file_was_uploaded = true;
-        $scope.uploaded_file = file;
-        /*Upload a file to server*/
-        $scope.got_results = false;
-        $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/listwithfile', data: file }).success(function (data, status) {
-          $scope.result = data.results;
-          $scope.result_status = data.status;
-          $scope.got_results = true;
-          $scope.parseColumns();
-          $scope.selectionReady = true;
-        }).error(function (status) {
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
-          $scope.update["status_code"] = status;
-        });
-      };
-
       $scope.findToken = function (tok) {
         $window.location.href = "requests?&tags=" + tok.value
       };
