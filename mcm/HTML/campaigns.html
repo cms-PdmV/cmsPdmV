@@ -111,7 +111,7 @@
                 </div>
               </div>
               <div ng-switch-when="sequences">
-                <div sequence-display ng-model="data.prepid"></div>
+                <sequence-display ng-model="data.prepid" database="'campaigns'" prepid="data.prepid"></sequence-display>
               </div>
               <div ng-switch-when="generators">
                 <ul style="margin-bottom: 0px;">
@@ -140,9 +140,9 @@
                   title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
               </div>
               <div ng-switch-when="root">
-                <i class="icon-ok" ng-show="data[column.db_name]==0" rel="tooltip" title="Yes"></i>
-                <i class="icon-ok-sign" ng-show="data[column.db_name]==-1" rel="tooltip" title="Possible"></i>
-                <i class="icon-remove" ng-show="data[column.db_name]==1" rel="tooltip" title="No"></i>
+                <i class="icon-ok" ng-if="data[column.db_name]==0" rel="tooltip" title="Yes"></i>
+                <i class="icon-ok-sign" ng-if="data[column.db_name]==-1" rel="tooltip" title="Possible"></i>
+                <i class="icon-remove" ng-if="data[column.db_name]==1" rel="tooltip" title="No"></i>
               </div>
               <div ng-switch-when="events_per_lumi">
                 <ul style="margin-bottom: 0px;">
@@ -153,7 +153,7 @@
               </div>
               <div ng-switch-when="memory">
                 {{data[column.db_name]}}
-                <span class="label label-info" ng-show="data[column.db_name]" title="Megabytes">MB<span>
+                <span class="label label-info" ng-if="data[column.db_name]" title="Megabytes">MB<span>
               </div>
               <div ng-switch-default>
                 <a ng-href='campaigns?{{column.db_name}}={{data[column.db_name]}}'

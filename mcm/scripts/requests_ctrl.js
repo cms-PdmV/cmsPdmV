@@ -274,45 +274,6 @@ var NotifyModalInstance = function ($scope, $modalInstance) {
   };
 };
 
-testApp.directive("sequenceDisplay", function ($http) {
-  return {
-    require: 'ngModel',
-    template:
-      '<div>' +
-      '  <div ng-hide="show_sequence">' +
-      '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();show_sequence=true;">' +
-      '     <i class="icon-eye-open"></i>' +
-      '    </a>' +
-      '  </div>' +
-      '  <div ng-show="show_sequence">' +
-      '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">' +
-      '     <i class="icon-remove"></i>' +
-      '    </a>' +
-      '    <ul>' +
-      '      <li ng-repeat="sequence in driver"><div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div></li>' +
-      '    </ul>' +
-      '  </div>' +
-      '</div>',
-    link: function (scope, element, attrs, ctrl) {
-      ctrl.$render = function () {
-        scope.show_sequence = false;
-        scope.sequencePrepId = ctrl.$viewValue;
-      };
-
-      scope.getCmsDriver = function () {
-        if (scope.driver === undefined) {
-          var promise = $http.get("restapi/" + scope.dbName + "/get_cmsDrivers/" + scope.sequencePrepId);
-          promise.then(function (data) {
-            scope.driver = data.data.results;
-          }, function (data) {
-            alert("Error: ", data.status);
-          });
-        }
-      };
-    }
-  }
-});
-
 testApp.directive("generatorParams", function ($http) {
   return {
     require: 'ngModel',

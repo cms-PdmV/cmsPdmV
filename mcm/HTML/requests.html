@@ -70,7 +70,7 @@
               <div ng-switch-when="prepid">
                 <a ng-href='requests?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
                 <custom-actor-list prepid="data[column.db_name]"></custom-actor-list>
-                <a ng-show='data.reqmgr_name.length'
+                <a ng-if='data.reqmgr_name.length'
                    ng-href='batches?contains={{data.prepid}}'
                    rel="tooltip"
                    title="View batches containing {{data.prepid}}"
@@ -204,7 +204,7 @@
                 </div>
               </div>
               <div ng-switch-when="sequences">
-                <div sequence-display ng-model="data.prepid"></div>
+                <sequence-display ng-model="data.prepid" database="'requests'" prepid="data.prepid"></sequence-display>
               </div>
               <div ng-switch-when="extension" ng-show="data[column.db_name]" align="center">
                 <i class="icon-ok"></i> Number: {{data[column.db_name]}}
@@ -212,20 +212,28 @@
               <div ng-switch-when="keep_output" align="center">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="keep in data[column.db_name] track by $index">
-                    <i class="icon-ok-sign" ng-show="keep"></i>
-                    <i class="icon-remove-sign" ng-show="!keep"></i>
+                    <i class="icon-ok-sign" ng-if="keep"></i>
+                    <i class="icon-remove-sign" ng-if="!keep"></i>
                   </li>
                 </ul>
               </div>
               <div ng-switch-when="config_id">
                 <ul style="margin-bottom: 0px;">
-                  <li ng-show="isDevMachine();" ng-repeat="configid in data[column.db_name]"> <a
-                      ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile'
-                      rel="tooltip" title="View production configuration file {{configid}}" target="_self"><i
-                        class="icon-th"></i></a></li>
-                  <li ng-show="!isDevMachine();" ng-repeat="configid in data[column.db_name]"> <a
-                      ng-href='https://cmsweb.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile' rel="tooltip"
-                      title="View production configuration file {{configid}}" target="_self"><i class="icon-th"></i></a>
+                  <li ng-if="isDevMachine();" ng-repeat="configid in data[column.db_name]">
+                    <a ng-href='https://cmsweb-testbed.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile'
+                       rel="tooltip"
+                       title="View production configuration file {{configid}}"
+                       target="_self">
+                       <i class="icon-th"></i>
+                    </a>
+                  </li>
+                  <li ng-if="!isDevMachine();" ng-repeat="configid in data[column.db_name]">
+                    <a ng-href='https://cmsweb.cern.ch/couchdb/reqmgr_config_cache/{{configid}}/configFile'
+                       rel="tooltip"
+                       title="View production configuration file {{configid}}"
+                       target="_self">
+                       <i class="icon-th"></i>
+                    </a>
                   </li>
                 </ul>
               </div>

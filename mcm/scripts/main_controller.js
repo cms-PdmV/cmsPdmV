@@ -926,40 +926,49 @@ testApp.directive("customHistory", function () {
 
 testApp.directive("sequenceDisplay", function ($http) {
   return {
-    require: 'ngModel',
+    restrict: 'EA',
     template:
       '<div>' +
-      '  <div ng-hide="show_sequence">' +
-      '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();show_sequence=true;">' +
+      '  <div ng-hide="showSequences">' +
+      '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();">' +
       '     <i class="icon-eye-open"></i>' +
       '    </a>' +
       '  </div>' +
-      '  <div ng-show="show_sequence">' +
-      '    <a rel="tooltip" title="Hide" ng-click="show_sequence=false;">' +
+      '  <div ng-show="showSequences">' +
+      '    <a rel="tooltip" title="Hide" ng-click="showSequences=false;">' +
       '     <i class="icon-remove"></i>' +
       '    </a>' +
-      '    <ul>' +
+      '    <img ng-show="!driver" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>' +
+      '    <ul ng-if="database == \'campaigns\'">' +
       '      <li ng-repeat="sequence in driver">' +
       '        <ul ng-repeat="(key,value) in sequence">' +
       '          <li><b>{{key}}</b>: <div style="width:600px;overflow:auto"><pre>{{value}}</pre></div></li>' +
       '        </ul>' +
       '      </li>' +
       '    </ul>' +
+      '    <ul ng-if="database == \'requests\'">' +
+      '      <li ng-repeat="sequence in driver">' +
+      '        <div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div>' +
+      '      </li>' +
+      '    </ul>' +
       '  </div>' +
       '</div>',
-    link: function (scope, element, attrs, ctrl) {
-      ctrl.$render = function () {
-        scope.show_sequence = false;
-        scope.sequencePrepId = ctrl.$viewValue;
-      };
-      scope.getCmsDriver = function () {
-        if (scope.driver === undefined) {
-          var promise = $http.get("restapi/" + scope.dbName + "/get_cmsDrivers/" + scope.sequencePrepId);
+    scope: {
+      prepid: '=',
+      database: '=',
+    },
+    link: function ($scope) {
+      $scope.getCmsDriver = function () {
+        if ($scope.driver === undefined) {
+          const promise = $http.get("restapi/" + $scope.database + "/get_cmsDrivers/" + $scope.prepid);
           promise.then(function (data) {
-            scope.driver = data.data.results;
+            $scope.showSequences = true;
+            $scope.driver = data.data.results;
           }, function (data) {
             alert("Error: ", data.status);
           });
+        } else {
+          $scope.showSequences = true;
         }
       };
     }
