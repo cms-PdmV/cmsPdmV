@@ -32,6 +32,7 @@ class user_pack:
                     user = self.__db.get(username)
                     self.__user_cache.set(username, user, timeout=self.CACHE_TIMEOUT)
 
+                self.user_dict['role'] = user['role']
                 # we take email from DB if user is registered, else we use ADFS
                 if user and "email" in user:
                     self.user_dict['email'] = user['email']

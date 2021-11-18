@@ -1,42 +1,81 @@
 import flask
 import time
 
-from json import dumps, loads
-
+import json
 from rest_api.RestAPIMethod import RESTResource
 from rest_api.RequestActions import RequestLister
-from couchdb_layer.mcm_database import database
-from json_layer.mccm import mccm
-from json_layer.user import user
-from json_layer.chained_campaign import chained_campaign
-from json_layer.chained_request import chained_request
-from json_layer.request import request
+from couchdb_layer.mcm_database import database as Database
+from json_layer.mccm import mccm as MccM
+from json_layer.user import user as User
+from json_layer.chained_campaign import chained_campaign as ChainedCampaign
+from json_layer.chained_request import chained_request as ChainedRequest
+from json_layer.request import request as Request
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
 import tools.settings as settings
 from tools.user_management import access_rights
+from tools.user_management import user_pack as UserPack
 from tools.priority import priority
 
 
-class GetMccm(RESTResource):
+class CreateMccm(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
+        settings_db = Database('settings')
+        self.possible_pwgs = settings_db.get("pwg")["value"]
         self.before_request()
         self.count_call()
 
-    def get(self, mccm_id):
+    def put(self):
         """
-        Retreive the dictionnary for a given mccm
+        Create the mccm with the provided json content
         """
-        return self.get_doc(mccm_id)
+        mccm = MccM(json.loads(flask.request.data.strip()))
+        pwg = mccm.get_attribute('pwg').upper()
 
-    def get_doc(self, mccm_id):
-        db = database('mccms')
-        if not db.document_exists(mccm_id):
-            return {"results": {}}
-        mccm_doc = db.get(prepid=mccm_id)
+        if pwg not in self.possible_pwgs:
+            self.logger.error('Bad PWG: %s', pwg)
+            return {'results': False,
+                    'message': 'Bad PWG "%s"' % (pwg)}
 
-        return {"results": mccm_doc}
+        duplicates = mccm.get_duplicate_requests()
+        if duplicates:
+            return {'results': False,
+                    'message': 'Duplicated requests: %s' % (', '.join(duplicates))}
+
+        mccm_db = Database('mccms')
+        # need to complete the prepid
+        with locker.lock('create-ticket-%s' % (pwg)):
+            meeting_date = MccM.get_meeting_date()
+            meeting_date_full = meeting_date.strftime('%Y-%m-%d')
+            meeting_date_short = meeting_date.strftime('%Y%b%d')
+            prepid = '%s-%s' % (pwg, meeting_date_short)
+            query = mccm_db.construct_lucene_query({'prepid': '%s-*' % (prepid)})
+            newest = mccm_db.full_text_search('search', query, limit=1, sort_asc=False)
+            if newest:
+                number = int(newest[0]['prepid'].split('-')[-1]) + 1
+            else:
+                number = 1
+
+            prepid = '%s-%05d' % (prepid, number)
+            if mccm_db.document_exists(prepid):
+                return {"results": False,
+                        "message": "MccM document %s already exists" % (prepid)}
+
+            mccm.set_attribute('prepid', prepid)
+            mccm.set_attribute('_id', prepid)
+            mccm.set_attribute('pwg', pwg) # Uppercase
+            mccm.set_attribute('meeting', meeting_date_full)
+            mccm.update_history({'action': 'created'})
+            if mccm_db.save(mccm.json()):
+                return {'results': True,
+                        'prepid': prepid}
+
+        return {'results': False,
+                'message': 'MccM ticket could not be created'}
 
 
 class UpdateMccm(RESTResource):
@@ -49,143 +88,130 @@ class UpdateMccm(RESTResource):
 
     def put(self):
         """
-        Updating an existing mccm with an updated dictionary
+        Updating a MccM with an updated dictionary
         """
-        try:
-            return self.update(flask.request.data.strip())
-        except Exception as ex:
-            self.logger.error('Failed to update an mccm from API. Reason: %s' % (str(ex)))
-            return {'results': False, 'message': 'Failed to update an mccm from API. Reason: %s' % (
-                    str(ex))}
-
-    def is_there_difference(self, previous_requests, new_requests):
-        frequency = {}
-        for req in previous_requests:
-            if req in frequency:
-                frequency[req] += 1
-            else:
-                frequency[req] = 1
-        for req in new_requests:
-            if req not in frequency or frequency[req] == 0:
-                return True
-            else:
-                frequency[req] -= 1
-        for value in frequency.itervalues():
-            if value != 0:
-                return True
-        return False
-
-    def update(self, body):
-        data = loads(body)
+        data = json.loads(flask.request.data)
         if '_rev' not in data:
-            self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
-            return {"results": False, 'message': 'could not locate revision number in the object'}
-        db = database('mccms')
-        if not db.document_exists(data['_id']):
-            return {"results": False, 'message': 'mccm %s does not exist' % (data['_id'])}
-        else:
-            if db.get(data['_id'])['_rev'] != data['_rev']:
-                return {"results": False, 'message': 'revision clash'}
+            return {'results': False,
+                    'message': 'No revision provided'}
 
-        new_version = mccm(json_input=data)
+        mccm_db = Database('mccms')
+        mccm = MccM(json_input=data)
+        prepid = mccm.get_attribute('prepid')
+        if not prepid:
+            self.logger.error('Invalid prepid "%s"', prepid)
+            return {'results': False,
+                    'message': 'Invalid prepid "%s"' % (prepid)}
 
-        if not new_version.get_attribute('prepid') and not new_version.get_attribute('_id'):
-            self.logger.error('Prepid returned was None')
-            raise ValueError('Prepid returned was None')
+        mccm_json = mccm_db.get(prepid)
+        if not mccm_json:
+            self.logger.error('Cannot update, %s does not exist', prepid)
+            return {'results': False,
+                    'message': 'Cannot update, "%s" does not exist' % (prepid)}
 
-        # operate a check on whether it can be changed
-        previous_version = mccm(db.get(new_version.get_attribute('prepid')))
-        editable = previous_version.get_editable()
-        for (key, right) in editable.items():
-            # does not need to inspect the ones that can be edited
-            if right:
-                continue
-            if previous_version.get_attribute(key) != new_version.get_attribute(key):
-                self.logger.error('Illegal change of parameter, %s: %s vs %s : %s' % (
-                        key, previous_version.get_attribute(key),
-                        new_version.get_attribute(key), right))
+        duplicates = mccm.get_duplicate_requests()
+        if duplicates:
+            return {'results': False,
+                    'message': 'Duplicated requests: %s' % (', '.join(duplicates))}
 
-                return {"results": False, 'message': 'Illegal change of parameter %s' % key}
+        old_mccm = MccM(json_input=mccm_json)
+        # Find what changed
+        for (key, editable) in old_mccm.get_editable().items():
+            old_value = old_mccm.get_attribute(key)
+            new_value = mccm.get_attribute(key)
+            if not editable and old_value != new_value:
+                message = 'Not allowed to change "%s": "%s" -> "%s' % (key, old_value, new_value)
+                self.logger.error(message)
+                return {'results': False,
+                        'message': message}
 
-        self.logger.info('Updating mccm %s...' % (new_version.get_attribute('prepid')))
+        if set(old_mccm.get_request_list()) != set(mccm.get_request_list()):
+            self.logger.info('Request list changed, recalculating total events')
+            mccm.update_total_events()
 
-        if self.is_there_difference(previous_version.get_request_list(previous_version.get_attribute("requests")),
-                new_version.get_request_list(new_version.get_attribute("requests"))):
-
-            self.logger.info("Found difference in requests, calculating total_events")
-            new_version.update_total_events()
-
-        # update history
-        difference = self.get_obj_diff(previous_version.json(),
-                                       new_version.json(),
+        difference = self.get_obj_diff(old_mccm.json(),
+                                       mccm.json(),
                                        ('history', '_rev'))
         difference = ', '.join(difference)
-        new_version.update_history({'action': 'update', 'step': difference})
-        return {"results": db.update(new_version.json())}
+        mccm.update_history({'action': 'update', 'step': difference})
+
+        # Save to DB
+        if not mccm_db.update(mccm.json()):
+            self.logger.error('Could not save MccM %s to database', prepid)
+            return {'results': False,
+                    'message': 'Could not save MccM %s to database' % (prepid)}
+
+        return {'results': True}
 
 
-class CreateMccm(RESTResource):
+class DeleteMccm(RESTResource):
 
     access_limit = access_rights.generator_contact
 
     def __init__(self):
-        sdb = database('settings')
-        self.possible_pwgs = sdb.get("pwg")["value"]
         self.before_request()
         self.count_call()
 
-    def put(self):
+    def delete(self, mccm_id):
         """
-        Create the mccm with the provided json content
+        Delete a MccM ticket
         """
-        try:
-            mccm_d = mccm(loads(flask.request.data.strip()))
-        except Exception as e:
-            self.logger.error(mccm_d.json())
-            self.logger.error("Something went wrong with loading the mccm data:\n {0}".format(e))
-            return {
-                "results": False,
-                "message": "Something went wrong with loading the mccm data:\n {0}".format(e)}
+        mccm_db = Database('mccms')
+        mccm_json = mccm_db.get(mccm_id)
+        if not mccm_json:
+            self.logger.error('Cannot delete, %s does not exist', mccm_id)
+            return {'results': False,
+                    'message': 'Cannot delete, %s does not exist' % (mccm_id)}
 
-        if not mccm_d.get_attribute('prepid'):
-            self.logger.error('Non-existent prepid')
-            return {"results": False, "message": "The mccm ticket has no id!"}
-
-        if mccm_d.get_attribute("pwg") not in self.possible_pwgs:
-            self.logger.error('Trying to create Mccm with non-existant PWG: %s' % (mccm_d.get_attribute("pwg")))
-            return {
-                "results": False,
-                "message": "The mccm ticket has non-existant PWG!"}
-
-        db = database('mccms')
-        # need to complete the prepid
-        if mccm_d.get_attribute('prepid') == mccm_d.get_attribute('pwg'):
-            mccm_d.set_attribute('prepid', self.fill_id(mccm_d.get_attribute('pwg'), db))
-        elif db.document_exists(mccm_d.get_attribute('prepid')):
+        mccm = MccM(json_input=mccm_json)
+        if mccm.get_attribute('status') == 'done':
             return {"results": False,
-                    "message": "Mccm document {0} already exists".format(
-                            mccm_d.get_attribute('prepid'))}
+                    "message": "Cannot delete a ticket that is done"}
 
-        mccm_d.set_attribute('_id', mccm_d.get_attribute('prepid'))
-        mccm_d.set_attribute('meeting', mccm.get_meeting_date().strftime("%Y-%m-%d"))
-        mccm_d.update_history({'action': 'created'})
-        self.logger.info('Saving mccm {0}'.format(mccm_d.get_attribute('prepid')))
+        # User info
+        user = UserPack(db=True)
+        user_role = user.user_dict.get('role')
+        self.logger.info('User %s (%s) is trying to delete %s',
+                         user.get_username(),
+                         user_role,
+                         mccm_id)
+        if user_role not in {'production_manager', 'administrator'}:
+            username = user.get_username()
+            history = mccm.get_attribute('history')
+            if history:
+                for history_entry in history:
+                    if history_entry['action'] == 'created':
+                        owner = history_entry['updater']['author_name']
 
-        return {
-            "results": db.save(mccm_d.json()),
-            "prepid": mccm_d.get_attribute('prepid')}
+            if not owner:
+                return {'results': False,
+                        'message': 'Could not get owner of the ticket'}
 
-    def fill_id(self, pwg, db):
-        mccm_id = pwg
-        with locker.lock(mccm_id):  # get date and number
-            t = mccm.get_meeting_date()
-            mccm_id += '-' + t.strftime("%Y%b%d") + '-'  # date
-            final_mccm_id = mccm_id + '00001'
-            i = 2
-            while db.document_exists(final_mccm_id):
-                final_mccm_id = mccm_id + str(i).zfill(5)
-                i += 1
-            return final_mccm_id
+            if owner != username:
+                return {'results': False,
+                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner)}
+
+        # Delete from DB
+        if not mccm_db.delete(mccm_id):
+            self.logger.error('Could not delete %s from database', mccm_id)
+            return {'results': False,
+                    'message': 'Could not delete %s from database' % (mccm_id)}
+
+        return {'results': True}
+
+
+class GetMccm(RESTResource):
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self, mccm_id):
+        """
+        Retrieve the MccM for given id
+        """
+        mccm_db = Database('mccms')
+        return {'results': mccm_db.get(prepid=mccm_id)}
 
 
 class CancelMccm(RESTResource):
@@ -198,47 +224,39 @@ class CancelMccm(RESTResource):
 
     def get(self, mccm_id):
         """
-        Cancel the MccM ticket provided in argument. Does not delete it but put the status as cancelled.
+        Cancel the MccM ticket provided in argument
+        Does not delete it but put the status as cancelled.
         """
-        db = database('mccms')
-        udb = database('users')
+        mccm_db = Database('mccms')
+        user_db = Database('users')
 
-        mcm_mccm = mccm(db.get(mccm_id))
-        curr_user = user(udb.get(mcm_mccm.current_user))
+        mccm = MccM(json_input=mccm_db.get(mccm_id))
+        status = mccm.get_attribute('status')
+        if status == 'done':
+            return {"results": False,
+                    "message": "Cannot cancel done tickets"}
 
-        self.logger.info("Canceling an mccm: %s" % (mccm_id))
+        mccm.get_current_user_role_level()
+        user = User(user_db.get(mccm.current_user))
+        user_pwgs = user.get_pwgs()
+        ticket_pwg = mccm.get_attribute("pwg")
+        if ticket_pwg not in user_pwgs:
+            self.logger.error('User\'s PWGs: %s, ticket: %s', user_pwgs, ticket_pwg)
+            return {"results": False,
+                    "message": "You cannot cancel ticket with different PWG than yours"}
 
-        if mcm_mccm.get_attribute('status') == 'done':
-            self.logger.info("You cannot cancel 'done' mccm ticket")
-            return {"results": False, "message": "Cannot cancel done tickets"}
+        if status == 'new':
+            mccm.set_attribute('status', 'cancelled')
+            mccm.update_history({'action': 'cancelled'})
+        elif status == 'cancelled':
+            mccm.set_attribute('status', 'new')
+            mccm.update_history({'action': 'uncancelled'})
 
-        if not mcm_mccm.get_attribute("pwg") in curr_user.get_pwgs():
-            self.logger.info("User's PWGs: %s doesnt include ticket's PWG: %s" % (
-                    curr_user.get_pwgs(), mcm_mccm.get_attribute("pwg")))
+        if not mccm_db.update(mccm.json()):
+            return {"results": False,
+                    "message": "Could not save to the database"}
 
-            return {"results": False, "message": "You cannot cancel ticket with different PWG than yours"}
-
-        mcm_mccm.set_attribute('status', 'cancelled')
-        mcm_mccm.update_history({'action': 'cancelled'})
-        saved = db.update(mcm_mccm.json())
-        if saved:
-            return {"results": True}
-        else:
-            return {"results": False, "message": "Could not save the ticket to be cancelled."}
-
-
-class DeleteMccm(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def delete(self, mccm_id):
-        db = database('mccms')
-        mcm_mccm = db.get(mccm_id)
-        if mcm_mccm['status'] == 'done':
-            return {"results": False, "message": "Cannot delete a ticket that is done"}
-
-        return {"results": db.delete(mccm_id)}
+        return {"results": True}
 
 
 class NotifyMccm(RESTResource):
@@ -253,24 +271,31 @@ class NotifyMccm(RESTResource):
         """
         Sends the prodived posted text to the users who acted on MccM ticket
         """
-        data = loads(flask.request.data.strip())
-        # read a message from data
+        data = json.loads(flask.request.data)
+        # Message
         message = data['message'].strip()
-        prepid = data['prepid']
-        subject = data.get('subject', 'Communication about %s' % (prepid)).strip()
-        db = database('mccms')
-        mcm_mccm = db.get(prepid)
-        if not mcm_mccm:
-            return {"results": False, "message": "Could not find %s" % (prepid)}
+        if not message:
+            return {'results': False,
+                    'message': 'No message'}
 
-        mccm(mcm_mccm).notify(subject, message, accumulate=False)
+        # Prepid
+        prepid = data['prepid']
+        mccm_db = Database('mccms')
+        mccm_json = mccm_db.get(prepid)
+        if not mccm_json:
+            return {"results": False,
+                    "message": "Could not find %s" % (prepid)}
+
+        # Subject
+        subject = data.get('subject', 'Communication about %s' % (prepid)).strip()
+        mccm = MccM(json_input=mccm_json)
+        mccm.notify(subject, message, accumulate=False)
         return {"results": True}
 
 
 class GetEditableMccmFields(RESTResource):
 
     def __init__(self):
-        self.db_name = 'mccms'
         self.before_request()
         self.count_call()
 
@@ -278,13 +303,9 @@ class GetEditableMccmFields(RESTResource):
         """
         Retrieve the fields that are currently editable for a given mccm
         """
-        return self.get_editable(mccm_id)
-
-    def get_editable(self, prepid):
-        db = database(self.db_name)
-        mccm_d = mccm(db.get(prepid))
-        editable = mccm_d.get_editable()
-        return {"results": editable}
+        mccm_db = Database('mccms')
+        mccm = MccM(json_input=mccm_db.get(mccm_id))
+        return {"results": mccm.get_editable()}
 
 
 class GenerateChains(RESTResource):
@@ -295,300 +316,246 @@ class GenerateChains(RESTResource):
         self.before_request()
         self.count_call()
 
-    def get(self, mccm_id, reserve_input='', limit_campaign_id=''):
+    def get(self, mccm_id):
         """
         Operate the chaining for a given MccM document id
         """
-        reserve = False
-        if reserve_input == 'reserve':
-            reserve = True
-            if limit_campaign_id != '':
-                reserve = limit_campaign_id
+        args = flask.request.args
+        # Reserve chains?
+        reserve = args.get('reserve', 'false').lower() == 'true'
+        # Limit reservation to campaign?
+        limit_campaign = []
+        if reserve:
+            limit_campaign = args.get('limit', '').split(',')
 
-        # Skip existing ones
+        # Skip existing ones?
         skip_existing = flask.request.args.get('skip_existing', 'False').lower() == 'true'
-        # Generate all
-        generate_all = flask.request.args.get('generate_all', 'False').lower() == 'true'
+        # Allow duplicated chained requests?
+        allow_duplicates = flask.request.args.get('allow_duplicates', 'False').lower() == 'true'
 
         lock = locker.lock(mccm_id)
         if lock.acquire(blocking=False):
             try:
-                res = self.generate(mccm_id, reserve, skip_existing, generate_all)
+                res = self.generate(mccm_id, reserve, limit_campaign, skip_existing, allow_duplicates)
             finally:
                 lock.release()
             return res
         else:
-            return {
-                "results": False,
-                "message": "%s is already being operated on" % mccm_id}
+            return {"results": False,
+                    "message": "%s is already being operated on" % (mccm_id)}
 
-    def generate(self, mid, reserve=False, skip_existing=False, generate_all=False):
-        mdb = database('mccms')
-        rdb = database('requests')
+    def generate(self, mccm_id, reserve, limit_campaign, skip_existing, generate_all):
+        mccm_db = Database('mccms')
+        mccm_json = mccm_db.get(mccm_id)
+        if not mccm_json:
+            return {"results": False,
+                    'message': '%s does not exist' % (mccm_id)}
 
-        mcm_m = mccm(mdb.get(mid))
-
-        if mcm_m.get_attribute('status') != 'new' and not skip_existing:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "status is %s, expecting new" % (
-                            mcm_m.get_attribute('status'))}
-
-        if mcm_m.get_attribute('block') == 0:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "No block selected"}
-
-        if len(mcm_m.get_attribute('chains')) == 0:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "No chains selected"}
-
-        if len(mcm_m.get_attribute('requests')) == 0:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "No requests selected"}
-
-        request_prepids = []
-        for r in mcm_m.get_attribute('requests'):
-            if type(r) == list:
-                if len(r) > 2:
-                    return {
-                        "prepid": mid,
-                        "results": False,
-                        "message": "range of id too large"}
-
-                (pwg1, campaign1, serial1) = r[0].split('-')
-                (pwg2, campaign2, serial2) = r[1].split('-')
-                serial1 = int(serial1)
-                serial2 = int(serial2)
-                if pwg1 != pwg2 or campaign1 != campaign2:
-                    return {
-                        "prepid": mid,
-                        "results": False,
-                        "message": "inconsistent range of ids %s -> %s" % (r[0], r[1])}
-
-                request_prepids.extend(map(lambda s: "%s-%s-%05d" % (pwg1, campaign1, s),
-                        range(serial1, serial2 + 1)))
-
-            else:
-                request_prepids.append(r)
-
-        if len(request_prepids) != len(set(request_prepids)):
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "There are duplicate actions in the ticket"}
-
-        ccdb = database('chained_campaigns')
-        chained_campaigns = []
-        for cc in mcm_m.get_attribute('chains'):
-            __query = ccdb.construct_lucene_query({
-                    'prepid': cc,
-                    'alias': cc
-                }, boolean_operator="OR"
-            )
-            query_result = ccdb.full_text_search('search', __query, page=-1)
-            if len(query_result) == 0:
-                return {
-                    'prepid' : mid,
-                    'results' : False,
-                    'message' : 'Chained campaign "%s" does not exist' % (cc)}
-
-            chained_campaigns.extend(map(lambda cc: chained_campaign(cc), query_result))
-        # collect the name of the campaigns it can belong to
-        ccs = list(set(map(lambda cc: cc.get_attribute('campaigns')[0][0], chained_campaigns)))
-        if len(ccs) != 1:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "inconsistent list of chains %s, leading to different root campaigns %s" % (mcm_m.get_attribute('chains'), ccs)}
-
-        allowed_campaign = ccs[0]
-        crdb = database('chained_requests')
-        chained_campaigns_for_requests = {}
-        for request_prepid in request_prepids:
-            mcm_r = rdb.get(request_prepid)
-            if not mcm_r:
-                return {
-                    "prepid" : mid,
-                    "results" : False,
-                    "message" : "Request %s could not be found therefore chained request could not be created." % (request_prepid)}
-
-            if mcm_r['member_of_campaign'] != allowed_campaign:
-                return {
-                    "prepid" : mid,
-                    "results" : False,
-                    "message" : "A request (%s) is not from the allowed root campaign %s" % (request_prepid, allowed_campaign)}
-
-            if mcm_r['status'] == 'new' and mcm_r['approval'] == 'validation':
-                return {
-                    "prepid": mid,
+        mccm = MccM(json_input=mccm_json)
+        status = mccm.get_attribute('status')
+        if status != 'new' and not skip_existing:
+            return {"prepid": mccm_id,
                     "results": False,
-                    "message": "A request (%s) is being validated." % (request_prepid)}
+                    "message": 'Status is "%s", expecting "new"' % (status)}
 
-            if mcm_r['flown_with']:
-                return {
-                    "prepid": mid,
-                     "results": False,
-                    "message": "A request (%s) is in the middle of a chain already." % (request_prepid)}
+        block = mccm.get_attribute('block')
+        if not block:
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": "No block selected"}
 
-            chained_campaigns_for_requests[mcm_r['prepid']] = []
-            for cc in chained_campaigns:
-                duplicate_query = ccdb.construct_lucene_query({
-                        'member_of_campaign': cc.get_attribute('prepid'),
-                        'contains': request_prepid,
-                        'pwg': mcm_r['pwg']
-                    },
-                    boolean_operator='AND')
-                duplicate_query_result = crdb.full_text_search('search', duplicate_query, page=-1)
-                if len(duplicate_query_result) > 0 and not generate_all:
-                    if not skip_existing:
-                        return {
-                            'prepid' : mid,
-                            'results' : False,
-                            'message' : 'Chain(s) with request "%s" and chained campaign "%s" already exist. '
-                                        'Chained request(s): %s' % (request_prepid,
-                                                                    cc.get_attribute('prepid'),
-                                                                    ',\n'.join([x['prepid'] for x in duplicate_query_result]))}
-                else:
-                    chained_campaigns_for_requests[mcm_r['prepid']].append(cc.get_attribute('prepid'))
+        chained_campaign_prepids = mccm.get_attribute('chains')
+        if not chained_campaign_prepids:
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": "No chains selected"}
 
-        if not mcm_m.get_attribute('repetitions'):
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "The number of repetitions (%s) is invalid" % (mcm_m.get_attribute('repetitions'))}
+        if not mccm.get_attribute('requests'):
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": "No requests selected"}
 
-        self.logger.info('Will generate chains for these requests and campaigns:\n%s', dumps(chained_campaigns_for_requests, indent=4))
-        res = []
-        special = mcm_m.get_attribute('special')
-        if isinstance(reserve, bool):
-            reserve_campaigns = [reserve] * len(request_prepids)
+        repetitions = mccm.get_attribute('repetitions')
+        if not repetitions:
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": 'The number of repetitions "%s" is invalid' % (repetitions)}
+
+        # Prepare limits dictionary
+        if len(limit_campaign) == 1:
+            # If there is one limit, set it to all
+            limit_campaign = {c: limit_campaign[0] for c in chained_campaign_prepids}
+        elif len(limit_campaign) == len(chained_campaign_prepids):
+            # If there is same number of limits as chained campaigns, set 1 to 1
+            limit_campaign = {cc: c for cc, c in zip(chained_campaign_prepids, limit_campaign)}
+        elif len(limit_campaign):
+            # If there is more than one, but not same number as chains
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": 'Number of limit campaigns must be the same as number of chains'}
         else:
-            reserve_campaigns = reserve.split(',')
+            # No limit at all
+            limit_campaign = {c: None for c in chained_campaign_prepids}
 
-        generated_chains = mcm_m.get_attribute('generated_chains')
-        if generated_chains is None:
-            generated_chains = {}
+        # Make a set just to be sure they are unique
+        request_prepids = sorted(list(set(mccm.get_request_list())))
+        def not_found_prepids(id_list, items):
+            return list(set(id_list) - set(x['prepid'] for x in items))
 
-        for request_prepid in request_prepids:
-            self.logger.info("Generating all chained request for request %s" % request_prepid)
-            for times in range(mcm_m.get_attribute('repetitions')):
-                for index, mcm_chained_campaign in enumerate(chained_campaigns):
-                    if mcm_chained_campaign.get_attribute('prepid') in chained_campaigns_for_requests.get(request_prepid, []):
-                        generated_dict = self.generate_chained_requests(mcm_m, request_prepid, mcm_chained_campaign, reserve=reserve_campaigns[index], special=special)
-                        res.append(generated_dict)
-                        # for now we put a small delay to not crash index with a lot of action
-                        time.sleep(0.25)
-                        if not generated_dict['results']:
-                            return {"prepid": mid,
-                                    "results": False,
-                                    "message": generated_dict['message'],
-                                    'chained_request_prepid': generated_dict['prepid'] if 'prepid' in generated_dict else ''}
+        # Chained campaigns of ticket
+        chained_campaign_db = Database('chained_campaigns')
+        chained_campaigns = chained_campaign_db.db.bulk_get(chained_campaign_prepids)
+        not_found_chained_campaigns = not_found_prepids(chained_campaign_prepids, chained_campaigns)
+        if not_found_chained_campaigns:
+            not_found_ids = ', '.join(list(not_found_chained_campaigns))
+            return {'prepid': mccm_id,
+                    'results': False,
+                    'message': 'Could not find %s chained campaigns' % (not_found_ids)}
 
-                        generated_chains[generated_dict['prepid']] = generated_dict['generated_requests']
-                        mcm_m.set_attribute("generated_chains", generated_chains)
-                        mdb.update(mcm_m.json())
-                        mcm_m.reload(save_current=False)
-                        time.sleep(0.125)
-                    else:
-                        self.logger.info('Skipping %s and %s' % (request_prepid, mcm_chained_campaign.get_attribute('prepid')))
+        chained_campaigns = [ChainedCampaign(json_input=c) for c in chained_campaigns]
+        # Requests of ticket
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(request_prepids)
+        not_found_requests = not_found_prepids(request_prepids, requests)
+        if not_found_requests:
+            not_found_ids = ', '.join(list(not_found_requests))
+            return {'prepid': mccm_id,
+                    'results': False,
+                    'message': 'Could not find %s requests' % (not_found_ids)}
 
-        if not res:
-            return {
-                "prepid": mid,
-                "results": False,
-                "message": "Everything went fine, but nothing was generated"}
+        requests = [Request(json_input=r) for r in requests]
+        # Root campaigns of chained campaigns
+        root_campaigns = {}
+        for chained_campaign in chained_campaigns:
+            root_campaign = chained_campaign.get_attribute('campaigns')[0][0]
+            root_campaigns.setdefault(root_campaign, []).append(chained_campaign)
 
-        mcm_m.set_status()
-        mdb.update(mcm_m.json())
-        return {
-                "prepid": mid,
+        # Check requests
+        chained_campaigns_for_requests = {}
+        chained_request_db = Database('chained_requests')
+        for request in requests:
+            prepid = request.get_attribute('prepid')
+            campaign = request.get_attribute('member_of_campaign')
+            pwg = request.get_attribute('pwg')
+            if campaign not in root_campaigns:
+                return {"prepid" : mccm_id,
+                        "results" : False,
+                        "message" : '"%s" campaign is not in given chains' % (prepid)}
+
+            if request.get_attribute('flown_with'):
+                return {"prepid" : mccm_id,
+                        "results" : False,
+                        "message" : '"%s" is in the middle of the chain' % (prepid)}
+
+            chained_campaigns_for_requests[prepid] = []
+            for chained_campaign in root_campaigns[campaign]:
+                chained_campaign_prepid = chained_campaign.get_attribute('prepid')
+                query_dict = {'member_of_campaign': chained_campaign_prepid,
+                              'contains': prepid,
+                              'pwg': pwg}
+                query = chained_request_db.construct_lucene_query(query_dict)
+                duplicates = chained_request_db.full_text_search('search', query, limit=1)
+                if duplicates and not generate_all:
+                    if not skip_existing:
+                        return {'prepid': mccm_id,
+                                'results': False,
+                                'message': 'Chain(s) with request "%s" and chained campaign "%s" '
+                                           'already exist. ' % (prepid, chained_campaign_prepid)}
+                else:
+                    chained_campaigns_for_requests[prepid].append(chained_campaign)
+
+        results = []
+        generated_chains = mccm.get_attribute('generated_chains')
+        for request in requests:
+            request_prepid = request.get_attribute('prepid')
+            self.logger.info("Generating chained requests for %s", request_prepid)
+            chained_campaigns = chained_campaigns_for_requests[request_prepid]
+            for chained_campaign in chained_campaigns:
+                chained_campaign_prepid = chained_campaign.get_attribute('prepid')
+                limit = limit_campaign[chained_campaign_prepid] or None
+                for _ in range(repetitions):
+                    generated= self.generate_chained_requests(mccm,
+                                                              request,
+                                                              chained_campaign,
+                                                              reserve,
+                                                              limit)
+                    results.append(generated)
+                    # A small delay to not crash DB
+                    time.sleep(0.05)
+                    generated_prepid = generated.get('prepid', '')
+                    if not generated['results']:
+                        return {"prepid": mccm_id,
+                                "results": False,
+                                "message": generated['message'],
+                                'chained_request_prepid': generated_prepid}
+
+                    generated_chains[generated_prepid] = generated['generated_requests']
+                    mccm.set_attribute("generated_chains", generated_chains)
+                    mccm.reload(save_current=True)
+                    # A small delay to not crash DB
+                    time.sleep(0.05)
+
+        if not results:
+            return {"prepid": mccm_id,
+                    "results": False,
+                    "message": "Everything went fine, but nothing was generated"}
+
+        mccm.set_status()
+        mccm_db.update(mccm.json())
+        return {"prepid": mccm_id,
                 "results": True,
-                "message": res}
+                "message": results}
 
-    def generate_chained_requests(self, mccm_ticket, request_prepid, mcm_chained_campaign, reserve=False, with_notify=True, special=False):
-        try:
-            mcm_chained_campaign.reload(save_current=False)
-            generated_chained_request = chained_request(mcm_chained_campaign.generate_request(request_prepid))
-        except Exception as e:
-            message = "Unable to generate chained request for ticket %s request %s, message: %s" % (mccm_ticket.get_attribute('prepid'), request_prepid, str(e))
-            self.logger.error(message)
-            return {
-                "results": False,
-                "message": message}
-        requests_db = database('requests')
-        self.overwrite_action_parameters_from_ticket(generated_chained_request, mccm_ticket)
-        mcm_request = request(json_input=requests_db.get(request_prepid))
-        generated_chained_request.set_attribute('last_status', mcm_request.get_attribute('status'))
-        if generated_chained_request.get_attribute('last_status') in ['submitted', 'done']:
-            generated_chained_request.set_attribute('status', 'processing')
-        if special:
-            generated_chained_request.set_attribute('approval', 'none')
-        new_chain_prepid = generated_chained_request.get_attribute('prepid')
-        if not generated_chained_request.reload():
-            return {
-                'results': False,
-                'message': 'Unable to save chained request %s' % new_chain_prepid}
-        # update the history of chained campaign
-        mcm_chained_campaign.save()
+    def generate_chained_requests(self, mccm, request, chained_campaign, reserve, limit):
+        chained_request = chained_campaign.generate_request(request)
+        chained_request_prepid = chained_request.get_attribute('prepid')
+        # Updates from the ticket
+        block = mccm.get_attribute('block')
+        action_parameters = chained_request.get_attribute('action_parameters')
+        action_parameters.update({'block_number': block})
+
+        if not chained_request.reload():
+            return {'results': False,
+                    'message': 'Unable to save chained request %s' % (chained_request_prepid)}
+
         # let the root request know that it is part of a chained request
-        chains = mcm_request.get_attribute('member_of_chain')
-        chains.append(new_chain_prepid)
-        chains.sort()
-        mcm_request.set_attribute('member_of_chain', list(set(chains)))
-        mcm_request.update_history({'action': 'join chain', 'step': new_chain_prepid})
-        mcm_request.save()
-        mcm_request_status = mcm_request.get_attribute('status')
+        root_chains = request.get_attribute('member_of_chain')
+        root_chains.append(chained_request_prepid)
+        request.set_attribute('member_of_chain', sorted(list(set(root_chains))))
+        request.update_history({'action': 'join chain', 'step': chained_request_prepid})
+        request.save()
+        request_status = request.get_attribute('status')
         # do the reservation of the whole chain ?
         generated_requests = []
         if reserve:
-            results_dict = generated_chained_request.reserve(limit=reserve, save_requests=False)
+            results_dict = chained_request.reserve(limit=limit, save_requests=False)
             if results_dict['results'] and 'generated_requests' in results_dict:
                 generated_requests = results_dict['generated_requests']
                 results_dict.pop('generated_requests')
             else:
-                return {
-                    "results": False,
-                    "prepid": new_chain_prepid,
-                    "message": results_dict['message']}
+                return {"results": False,
+                        "prepid": chained_request_prepid,
+                        "message": results_dict['message']}
 
-        block = mccm_ticket.get_attribute('block')
-        self.logger.info('Generated requests for %s are %s' % (generated_chained_request.get_attribute('prepid'), generated_requests))
-        self.logger.info('Status of %s root request %s is %s' % (generated_chained_request.get_attribute('prepid'), request_prepid, mcm_request_status))
-        if mcm_request_status == 'done' or mcm_request_status == 'approved':
+        self.logger.info('Generated requests for %s are %s',
+                         chained_request_prepid,
+                         generated_requests)
+        if request_status in ('approved', 'done'):
             # change priority of the whole chain
-            self.logger.info('Setting block %s for %s' % (block, generated_chained_request.get_attribute('prepid')))
-            generated_chained_request.set_priority(block)
-        elif mcm_request_status == 'submitted':
+            self.logger.info('Setting block %s for %s' % (block, chained_request_prepid))
+            chained_request.set_priority(block)
+        elif request_status == 'submitted':
             # change priority only for the newly created requests
             new_priority = priority().priority(block)
-            for generated_request_prepid in generated_requests:
-                generated_request = request(json_input=requests_db.get(generated_request_prepid))
-                self.logger.info('Setting priority %s for %s' % (new_priority, generated_request_prepid))
+            request_db = Database('requests')
+            for request_prepid in generated_requests:
+                generated_request = Request(json_input=request_db.get(request_prepid))
+                self.logger.info('Setting priority %s for %s' % (new_priority, request_prepid))
                 generated_request.change_priority(new_priority)
 
-        return {
-                "results":True,
-                "prepid": new_chain_prepid,
+        return {"results":True,
+                "prepid": chained_request_prepid,
                 'generated_requests': generated_requests}
-
-    def overwrite_action_parameters_from_ticket(self, generated_chained_request, mccm_ticket):
-        block = mccm_ticket.get_attribute('block')
-        staged = mccm_ticket.get_attribute('staged')
-        threshold = mccm_ticket.get_attribute('threshold')
-        # generated_chained_request.set_priority(block)
-        action_parameters = generated_chained_request.get_attribute('action_parameters')
-        action_parameters.update(
-            {
-                'block_number': block,  # block is mandatory
-                'staged': staged if staged != 0 else action_parameters['staged'],
-                'threshold': threshold if threshold != 0 else action_parameters['threshold']})
 
 
 class MccMReminderGenContacts(RESTResource):
@@ -601,63 +568,79 @@ class MccMReminderGenContacts(RESTResource):
 
     def get(self):
         """
-        Send a reminder to all generator contacts that have tickets with status equal to new
+        Send a reminder to the generator conveners about "new" MccM tickets that
+        don't have all requests "defined"
         """
-        def streaming_function():
-            mccms_db = database('mccms')
-            users_db = database('users')
-            generator_contacts_query = users_db.construct_lucene_query({'role': 'generator_contact'})
-            generator_contacts = users_db.full_text_search("search", generator_contacts_query, page=-1)
-            generator_contacts_by_pwg = {}
-            generator_contacts_emails = set()
-            for contact in generator_contacts:
-                for pwg in contact.get('pwg', []):
-                    if pwg not in generator_contacts_by_pwg:
-                        generator_contacts_by_pwg[pwg] = []
+        mccm_db = Database('mccms')
+        query = mccm_db.construct_lucene_query({'status': 'new'})
+        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        if not mccm_jsons:
+            return {"results": True,
+                    "message": "No new tickets, what a splendid day!"}
 
-                    generator_contacts_by_pwg[pwg].append(contact.get('email'))
-                    generator_contacts_emails.add(contact.get('email'))
+        l_type = locator()
+        com = communicator()
+        self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
+        # Quickly filter-out no request, no chain and 0 block ones
+        mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
+        mccm_jsons = sorted(mccm_jsons, key=lambda x: x['prepid'])
+        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        # Get all defined but not approved requests
+        not_defined_requests = {}
+        for mccm in mccms:
+            prepid = mccm.get_attribute('prepid')
+            not_defined_requests[prepid] = mccm.get_not_defined()
 
-            __query = mccms_db.construct_lucene_query({'status': 'new'})
-            mccms_tickets = mccms_db.full_text_search('search', __query, page=-1)
-            authors_tickets_dict = dict()
-            yield '<pre>'
-            for ticket in mccms_tickets:
-                yield 'Processing ticket %s\n' % (ticket['prepid'])
-                mccm_ticket = mccm(json_input=ticket)
-                pwg = mccm_ticket.get_attribute('pwg')
-                authors = mccm_ticket.get_actors(what='author_email')
-                yield '%s worked on %s\n' % (authors, ticket['prepid'])
-                authors = filter(lambda e: e in generator_contacts_emails, list(set(authors + generator_contacts_by_pwg.get(pwg, []))))
-                yield '%s will be notified about %s\n' % (authors, ticket['prepid'])
-                for author_email in authors:
-                    if author_email in generator_contacts_emails:
-                        if author_email not in authors_tickets_dict:
-                            authors_tickets_dict[author_email] = set()
+        # Only tickets that have all requests at least defined, but not all
+        # approved
+        mccms = [mccm for mccm in mccms if len(not_defined_requests[mccm.get_attribute('prepid')])]
 
-                        authors_tickets_dict[author_email].add(ticket['prepid'])
+        by_pwg = {}
+        for mccm in mccms:
+            pwg = mccm.get_attribute('pwg')
+            by_pwg.setdefault(pwg, []).append(mccm)
 
-            subject_template = 'Gentle reminder on %s ticket%s to be operated by you'
-            message_template = ('Dear GEN Contact,\nPlease find below the details of %s MccM ticket%s in status "new". ' + 
-                                'Please present them in next MccM googledoc or cancel tickets if these are not needed anymore.\n\n')
-            base_url = locator().baseurl()
-            mail_communicator = communicator()
-            service_account = settings.get_value('service_account')
-            for author_email, ticket_prepids in authors_tickets_dict.iteritems():
-                num_tickets = len(ticket_prepids)
-                subject = subject_template % (num_tickets, '' if num_tickets == 1 else 's')
-                message = message_template % (num_tickets, '' if num_tickets == 1 else 's')
-                for ticket_prepid in ticket_prepids:
-                    message += 'Ticket: %s\n%smccms?prepid=%s\n\n' % (ticket_prepid, base_url, ticket_prepid)
-                    yield '.'
+        subject_template = 'Gentle reminder about %s %s tickets'
+        message_template = 'Dear GEN Contacts of %s,\n\n'
+        message_template += 'Below you can find a list of MccM tickets where not all requests are '
+        message_template += 'in "defined" status.\n'
+        message_template += 'Please check them and once all are defined, present them in MccM or '
+        message_template += 'cancel/delete tickets if they are no longer needed.\n\n'
+        base_url = l_type.baseurl()
+        contacts = self.get_contacts_by_pwg()
+        for pwg, pwg_mccms in by_pwg.items():
+            subject = subject_template % (len(pwg_mccms), pwg)
+            message = message_template % (pwg)
+            for mccm in pwg_mccms:
+                prepid = mccm.get_attribute('prepid')
+                not_defined = len(not_defined_requests[prepid])
+                total = len(mccm.get_request_list())
+                message += 'Ticket: %s (%s/%s request(s) are not defined)\n' % (prepid,
+                                                                                    not_defined,
+                                                                                    total)
+                message += '%smccms?prepid=%s\n\n' % (base_url, prepid)
 
-                yield '\n'
-                message += 'You received this email because you are listed as generator contact of physics group(s) of these tickets.\n'
-                self.logger.info('Email:%s\nSubject: %s\nMessage:%s' % (author_email, subject, message))
-                mail_communicator.sendMail([author_email, service_account], subject, message)
-                yield 'Email sent to %s\n' % (author_email)
+            message += 'You received this email because you are listed as GEN contact of %s.\n' % (pwg)
+            recipients = contacts[pwg]
+            com.sendMail(recipients, subject, message)
 
-        return flask.Response(flask.stream_with_context(streaming_function()))
+        return {"results": True,
+                "message": [mccm.get_attribute('prepid') for mccm in mccms]}
+
+
+    def get_contacts_by_pwg(self):
+        """
+        Get list of generator contact emails by PWG
+        """
+
+        user_db = Database('users')
+        generator_contacts = user_db.query(query="role==generator_contact", page_num=-1)
+        by_pwg = {}
+        for contact in generator_contacts:
+            for pwg in contact.get('pwg', []):
+                by_pwg.setdefault(pwg, []).append(contact['email'])
+
+        return by_pwg
 
 
 class MccMReminderProdManagers(RESTResource):
@@ -668,45 +651,136 @@ class MccMReminderProdManagers(RESTResource):
         self.before_request()
         self.count_call()
 
-    def get(self, block_threshold=0):
+    def get(self):
         """
-        Send a reminder to the production managers for existing opened mccm documents
+        Send a reminder to the production managers about "new" MccM tickets that
+        have all requests "approved"
         """
-        mdb = database('mccms')
-        udb = database('users')
-
-        __query = mdb.construct_lucene_query({'status': 'new'})
-        mccms = mdb.full_text_search('search', __query, page=-1)
-
-        mccms = filter(lambda m: m['block'] <= block_threshold, mccms)
-        mccms = sorted(mccms, key=lambda m: m['block'])
-        if len(mccms) == 0:
-            return {"results": True, "message": "nothing to remind of at level %s, %s" % (block_threshold, mccms)}
+        mccm_db = Database('mccms')
+        query = mccm_db.construct_lucene_query({'status': 'new'})
+        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        if not mccm_jsons:
+            return {"results": True,
+                    "message": "No new tickets, what a splendid day!"}
 
         l_type = locator()
         com = communicator()
-        subject = 'Gentle reminder on %s tickets to be operated by you' % (len( mccms))
-        message = '''\
-Dear Production Managers,
- please find below the details of %s opened MccM tickets that need to be operated.
+        self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
+        # Quickly filter-out no request, no chain and 0 block ones
+        mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
+        def sort_attr(mccm):
+            return (mccm['meeting'], 100000 - int(mccm['prepid'].split('-')[-1]))
 
-''' % (len(mccms))
-        mccm_prepids = []
-        for _mccm in mccms:
-            prepid = _mccm['prepid']
-            message += 'Ticket : %s (block %s)\n' % (prepid, _mccm['block'])
-            message += ' %smccms?prepid=%s \n\n' % (l_type.baseurl(), prepid)
-            mccm_prepids.append(prepid)
-        message += '\n'
+        def comma_separate_thousands(number):
+            return '{:,}'.format(int(number))
 
-        to_who = [settings.get_value('service_account')]
-        to_who.extend(map(lambda u: u['email'], udb.query(query="role==production_manager", page_num=-1)))
-        com.sendMail(
-            to_who,
-            subject,
-            message)
+        mccm_jsons = sorted(mccm_jsons, key=sort_attr, reverse=True)
+        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        mccms = [mccm for mccm in mccms if mccm.all_requests_approved()]
+        self.logger.info('Have %s MccM tickets after filters', len(mccms))
+        # Email
+        subject = 'Gentle reminder about %s approved tickets' % (len(mccms))
+        message = 'Dear Production Managers,\n\n'
+        message += 'Below you can find a list of MccM tickets in status "new" '
+        message += 'that have all requests "approved".\n'
+        message += 'You can now operate on them or delete/cancel unneeded ones.\n'
+        by_pwg = {}
+        for mccm in mccms:
+            pwg = mccm.get_attribute('pwg')
+            by_pwg.setdefault(pwg, []).append(mccm)
 
-        return {"results": True, "message": map(lambda m: m['prepid'], mccms)}
+        base_url = l_type.baseurl()
+        for pwg in sorted(list(by_pwg.keys())):
+            pwg_mccms = by_pwg[pwg]
+            message += '\n%s (%s tickets)\n' % (pwg, len(pwg_mccms))
+            for mccm in pwg_mccms:
+                prepid = mccm.get_attribute('prepid')
+                block = mccm.get_attribute('block')
+                events = comma_separate_thousands(mccm.get_attribute('total_events'))
+                message += '  Ticket: %s (block %s and %s events)\n' % (prepid, block, events)
+                message += '  %smccms?prepid=%s\n\n' % (base_url, prepid)
+
+        user_db = Database('users')
+        production_managers = user_db.query(query="role==production_manager", page_num=-1)
+        recipients = [manager['email'] for manager in production_managers]
+        com.sendMail(recipients, subject, message)
+        return {"results": True,
+                "message": [mccm.get_attribute('prepid') for mccm in mccms]}
+
+
+class MccMReminderGenConveners(RESTResource):
+
+    access_limit = access_rights.administrator
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def get(self):
+        """
+        Send a reminder to the generator conveners about "new" MccM tickets that
+        don't have all requests "approved"
+        """
+        mccm_db = Database('mccms')
+        query = mccm_db.construct_lucene_query({'status': 'new'})
+        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        if not mccm_jsons:
+            return {"results": True,
+                    "message": "No new tickets, what a splendid day!"}
+
+        l_type = locator()
+        com = communicator()
+        self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
+        # Quickly filter-out no request, no chain and 0 block ones
+        mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
+        mccm_jsons = sorted(mccm_jsons, key=lambda x: x['prepid'])
+        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        # Get all defined but not approved requests
+        defined_requests = {}
+        for mccm in mccms:
+            prepid = mccm.get_attribute('prepid')
+            defined_requests[prepid] = mccm.get_defined_but_not_approved_requests()
+        # Only tickets that have all requests at least defined, but not all
+        # approved
+        mccms = [mccm for mccm in mccms if len(defined_requests[mccm.get_attribute('prepid')])]
+        self.logger.info('Have %s MccM tickets after filters', len(mccms))
+        # Email
+        subject = 'Gentle reminder about %s tickets that need approval' % (len(mccms))
+        message = 'Dear GEN Conveners,\n\n'
+        message += 'Below you can find a list of MccM tickets in status "new" '
+        message += 'that have all requests "defined", but not all "approved".\n'
+        message += 'You need to check the remaining requests and approve them '
+        message += 'if they are correct and were presented in a meeting.\n'
+        by_meeting_pwg = {}
+        for mccm in mccms:
+            pwg = mccm.get_attribute('pwg')
+            meeting = mccm.get_attribute('meeting')
+            by_meeting_pwg.setdefault(meeting, {}).setdefault(pwg, []).append(mccm)
+
+        base_url = l_type.baseurl()
+        for meeting in sorted(list(by_meeting_pwg.keys()), reverse=True):
+            by_meeting = by_meeting_pwg[meeting]
+            ticket_count = sum(len(mccms) for _, mccms in by_meeting.items())
+            message += '\nMeeting %s (%s tickets)\n' % (meeting, ticket_count)
+            for pwg in sorted(list(by_meeting.keys())):
+                pwg_mccms = by_meeting[pwg]
+                message += '  %s (%s tickets)\n' % (pwg, len(pwg_mccms))
+                for mccm in pwg_mccms:
+                    prepid = mccm.get_attribute('prepid')
+                    defined = len(defined_requests[prepid])
+                    total = len(mccm.get_request_list())
+                    message += '    Ticket: %s (%s/%s request(s) are not approved)\n' % (prepid,
+                                                                                         defined,
+                                                                                         total)
+                    message += '    %smccms?prepid=%s\n\n' % (base_url, prepid)
+
+
+        user_db = Database('users')
+        generator_conveners = user_db.query(query="role==generator_convener", page_num=-1)
+        recipients = [manager['email'] for manager in generator_conveners]
+        com.sendMail(recipients, subject, message)
+        return {"results": True,
+                "message": [mccm.get_attribute('prepid') for mccm in mccms]}
 
 
 class CalculateTotalEvts(RESTResource):
@@ -721,19 +795,20 @@ class CalculateTotalEvts(RESTResource):
         """
         Force to recalculate total_events for ticket
         """
-        db = database('mccms')
+        mccm_db = Database('mccms')
+        mccm_json = mccm_db.get(mccm_id)
+        if not mccm_json:
+            return {"results": False,
+                    'message': '%s does not exist' % (mccm_id)}
 
-        if not db.document_exists(mccm_id):
-            return {"results": {}}
+        mccm = MccM(json_input=mccm_json)
+        mccm.update_total_events()
+        if not mccm_db.update(mccm.json()):
+            return {"results": False,
+                    "message": "Could not save to the database"}
 
-        mccm_doc = mccm(db.get(prepid=mccm_id))
-        mccm_doc.update_total_events()
+        return {'results': True}
 
-        saved = db.update(mccm_doc.json())
-        if saved:
-            return {"results": True}
-        else:
-            return {"results": False, "message": "Could not save the ticket to be cancelled."}
 
 class CheckIfAllApproved(RESTResource):
 
@@ -747,32 +822,25 @@ class CheckIfAllApproved(RESTResource):
         """
         Return whether all requests in MccM are approve-approved
         """
-        mccm_db = database('mccms')
+        mccm_db = Database('mccms')
+        mccm_json = mccm_db.get(mccm_id)
+        if not mccm_json:
+            return {"results": False,
+                    'message': '%s does not exist' % (mccm_id)}
 
-        if not mccm_db.document_exists(mccm_id):
-            return {"results": False}
-
-        mccm_doc = mccm_db.get(prepid=mccm_id)
-        req_db = database('requests')
-        query = ''
-        for root_request in mccm_doc.get('requests', []):
-            if isinstance(root_request, str) or isinstance(root_request, unicode):
-                query += '%s\n' % (root_request)
-            elif isinstance(root_request, list):
-                # List always contains two elements - start and end of a range
-                query += '%s -> %s\n' % (root_request[0], root_request[1])
-
-        req_lister = RequestLister()
-        req_lister.logger = self.logger
-        requests = req_lister.get_list_of_ids(req_db, {'contents' : query})
-        allowed_approvals = set(['approve', 'submit'])
-        for request_prepid in requests:
-            req = req_db.get(request_prepid)
-            if not req:
-                return {'results': False, 'message': 'Request %s does not exist' % (request_prepid)}
-
-            approval = req.get('approval')
-            if approval not in allowed_approvals:
+        mccm = MccM(json_input=mccm_json)
+        requests_prepids = mccm.get_request_list()
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(requests_prepids)
+        requests_prepids = set(requests_prepids)
+        allowed_approvals = {'approve', 'submit'}
+        for request in requests:
+            requests_prepids.remove(request['prepid'])
+            if request.get('approval') not in allowed_approvals:
                 return {'results': False}
+
+        if requests_prepids:
+            return {'results': False,
+                    'message': 'Request(s) %s do not exist' % (', '.join(list(requests_prepids)))}
 
         return {'results': True}

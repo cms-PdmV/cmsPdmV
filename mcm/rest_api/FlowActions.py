@@ -204,9 +204,9 @@ class UpdateFlow(FlowRESTResource):
                     'message': 'Cannot update, "%s" does not exist' % (prepid)}
 
         # find out what is the change
-        old_flow = Flow(json_input=flow_db.get(prepid))
+        previous_version = Flow(json_input=flow_db.get(prepid))
 
-        old_ps = old_flow.get_attribute('request_parameters').get('process_string', None)
+        old_ps = previous_version.get_attribute('request_parameters').get('process_string', None)
         new_ps = flow.get_attribute('request_parameters').get('process_string', None)
         if old_ps != new_ps:
             request_db = Database('requests')
@@ -234,7 +234,6 @@ class UpdateFlow(FlowRESTResource):
         if parameter_check is not True:
             return parameter_check
 
-        previous_version = Flow(json_input=flow_db.get(prepid))
         previous_allowed_campaigns = previous_version.get_attribute('allowed_campaigns')
         removed_campaigns = set(previous_allowed_campaigns) - set(allowed_campaigns)
         if removed_campaigns:

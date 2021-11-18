@@ -1476,18 +1476,18 @@ class RequestsReminder(RESTResource):
                     subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
                     com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
-            if not what or 'gen_conveners' in what or 'generator_convener' in what:
-                # send the reminder to generator conveners
-                ids_for_gen_conveners = get_all_in_status('defined')
-                for c in ids_for_gen_conveners:
-                    res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
-                if len(ids_for_gen_conveners):
-                    __query3 = udb.construct_lucene_query({'role': 'generator_convener'})
-                    gen_conveners = udb.full_text_search('search', __query3, page=-1)
-                    message = 'A few requests need your approvals \n\n'
-                    message += prepare_text_for(ids_for_gen_conveners, 'defined')
-                    subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
-                    com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
+            # if not what or 'gen_conveners' in what or 'generator_convener' in what:
+            #     # send the reminder to generator conveners
+            #     ids_for_gen_conveners = get_all_in_status('defined')
+            #     for c in ids_for_gen_conveners:
+            #         res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
+            #     if len(ids_for_gen_conveners):
+            #         __query3 = udb.construct_lucene_query({'role': 'generator_convener'})
+            #         gen_conveners = udb.full_text_search('search', __query3, page=-1)
+            #         message = 'A few requests need your approvals \n\n'
+            #         message += prepare_text_for(ids_for_gen_conveners, 'defined')
+            #         subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
+            #         com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
                 all_ids = set()

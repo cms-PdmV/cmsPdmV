@@ -31,27 +31,22 @@ class chained_campaign(json_base):
         self.update(json_input)
         self.validate()
 
-    def generate_request(self, root_request_id):
+    def generate_request(self, root_request):
         """
         Create a new chained request using this chained campaign and given
-        root request prepid
+        root request
         """
         prepid = self.get_attribute('prepid')
+        root_request_id = root_request.get_attribute('prepid')
         self.logger.info('Building a new chained request using %s and %s as root',
                          prepid,
                          root_request_id)
 
-        request_db = Database('requests')
-        root_request = request_db.get(root_request_id)
-        # check to see if root request id exists
-        if not root_request:
-            return {}
-
         # parse request id
-        pwg = root_request['pwg']
+        pwg = root_request.get_attribute('pwg')
         # generate new chain id
         chained_request_id = ChainedRequestPrepId().next_id(pwg, prepid)
-        if chained_request_id:
+        if not chained_request_id:
             raise ValueError('Prepid returned was None')
 
         chained_request_db = Database('chained_requests')
@@ -66,13 +61,18 @@ class chained_campaign(json_base):
         chained_request.get_attribute('action_parameters')['flag'] = True
 
         # set the default values that will be carried over to the next step in the chain
-        chained_request.set_attribute("dataset_name", root_request["dataset_name"])
+        chained_request.set_attribute("dataset_name", root_request.get_attribute("dataset_name"))
         chained_request.set_attribute("pwg", pwg)
+
+        # Last status of chain
+        request_status = root_request.get_attribute('status')
+        chained_request.set_attribute('last_status', request_status)
+        if request_status in {'submitted', 'done'}:
+            chained_request.set_attribute('status', 'processing')
 
         # add root request to chain
         chained_request.set_attribute('chain', [root_request_id])
 
         # update history
         chained_request.update_history({'action': 'created'})
-        self.update_history({'action': 'add request', 'step': chained_request_id})
-        return chained_request.json()
+        return chained_request

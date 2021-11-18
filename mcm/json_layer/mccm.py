@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
 from json_base import json_base
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
 
 
 class mccm(json_base):
@@ -9,133 +7,164 @@ class mccm(json_base):
     _json_base__schema = {
         '_id': '',
         'prepid': '',
-        'approval': 'none',
         'block': 0,
         'staged': 0,
         'threshold': 0.,
         'meeting': '',
-        'deadline': '',
         'history': [],
-        'message_id': '',
         'notes': '',
         'pwg': '',
         'requests': [],
         'chains': [],
         'tags': [],
         'repetitions': 1,
-        'size': 0,
         'status': 'new',
-        'special': False,
         'generated_chains': {},
         'total_events': 0  # Sum of request events in ticket not considering repetitions nor chains
     }
 
-    _json_base__approvalsteps = ['none', 'approved']
     _json_base__status = ['new', 'done']
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-        # update self according to json_input
-        if 'repetitions' in json_input:
-            if int(json_input['repetitions']) > 10:
-                self.logger.error("Issue in creating mccm... To many repetitions:%s" % (json_input['repetitions']))
-                raise Exception('More than 10 repetitions')
+
+        repetitions = int(json_input.get('repetitions', 1))
+        if repetitions > 10:
+            self.logger.error('Too many repetitions: %s', repetitions)
+            raise Exception('Too many repetitions: %s' % (repetitions))
 
         self.update(json_input)
         self.validate()
-        self.get_current_user_role_level()
-        self.setup()
+        # Make sure this does not throw any errors
+        self.get_request_list()
 
     @staticmethod
     def get_meeting_date():
+        """
+        Get next meeting date
+        """
         import datetime
         import tools.settings as settings
-        t = datetime.date.today()
+        today = datetime.date.today()
         meeting_day = int(settings.get_value('mccm_meeting_day'))
-        w = 0 if meeting_day >= t.weekday() else 1
-        t = t + datetime.timedelta(days=meeting_day - t.weekday(), weeks=w)
-        return t
+        weeks = 0 if meeting_day >= today.weekday() else 1
+        today = today + datetime.timedelta(days=meeting_day - today.weekday(), weeks=weeks)
+        return today
 
     def get_editable(self):
-        editable = dict()
+        editable = {}
+        schema = self._json_base__schema
         if self.get_attribute('status') == 'new':
-            for key in self._json_base__schema:
-                editable[key] = True
-            not_editable = ["status", "prepid", "meeting", "pwg", "approval", "message_id", "generated_chains"]
-            for key in not_editable:
-                editable[key] = False
+            not_editable = {"status", "prepid", "meeting", "pwg",
+                            "approval", "message_id", "generated_chains"}
+            for key in schema:
+                editable[key] = bool(key not in not_editable)
+
         else:
-            for key in self._json_base__schema:
+            for key in schema:
                 editable[key] = False
+
         return editable
 
     @staticmethod
     def get_mccm_by_generated_chain(chain_id):
-        mccms_db = database('mccms')
-        __query = mccms_db.construct_lucene_query({'generated_chains': chain_id})
-        result = mccms_db.full_text_search('search', __query, page=-1)
-        try:
+        mccms_db = Database('mccms')
+        query = mccms_db.construct_lucene_query({'generated_chains': chain_id})
+        result = mccms_db.full_text_search('search', query)
+        if result and result[0]:
             return mccm(json_input=result[0])
-        except Exception as ex:
-            mccms_db.logger.error('Initalization of mccm object failed: %s' % (str(ex)))
-            return None
-        mccms_db.logger.error('No mccm with generated chain: %s' % (chain_id))
+
         return None
 
     def update_mccm_generated_chains(self, chains_requests_dict):
         generated_chains = self.get_attribute('generated_chains')
         for chain, requests in chains_requests_dict.iteritems():
-            if chain in generated_chains:
-                for request in chains_requests_dict[chain]:
-                    generated_chains[chain].append(request)
-            else:
-                generated_chains[chain] = chains_requests_dict[chain]
-        mccms_db = database('mccms')
+            generated_chains.setdefault(chain, []).extend(requests)
+
+        mccms_db = Database('mccms')
         mccms_db.save(self.json())
 
-    def get_request_list(self, request_list):
+    def get_request_list(self):
         """
-        convert list of requests and range of requests into list
+        Convert list of prepids and ranges to list of prepids
         """
-        new_request_list = []
-        for req in request_list:
-            if isinstance(req, list):
-                if len(req) == 1:
-                    new_request_list.append(req[0])
-                elif len(req) == 2:
-                    start = int(req[0].split('-')[2])
-                    split = req[1].split('-')
-                    end = int(split[2])
-                    placeholder = split[0] + '-' + split[1] + '-'
-                    while(start <= end):
-                        current = str(start)
-                        current = '0' * (5 - len(current)) + current
-                        new_request_list.append(placeholder + current)
-                        start += 1
-            else:
-                new_request_list.append(req)
-        return new_request_list
+        request_list = self.get_attribute("requests")
+        requests = []
+        for entry in request_list:
+            if isinstance(entry, list) and len(entry) == 2:
+                start = entry[0].split('-')
+                end = entry[1].split('-')
+                numbers = range(int(start[-1]), int(end[-1]) + 1)
+                start = '-'.join(start[:-1])
+                end = '-'.join(end[:-1])
+                if start != end:
+                    raise Exception('Invalid range "%s-..." != "%s-..."', start, end)
+
+                requests.extend('%s-%05d' % (start, n) for n in numbers)
+            elif isinstance(entry, (basestring, str)):
+                requests.append(entry)
+
+        return requests
+
+    def get_duplicate_requests(self):
+        """
+        Return requests that appear more than once in the list
+        """
+        frequency = {}
+        for request in self.get_request_list():
+            frequency[request] = frequency.setdefault(request, 0) + 1
+
+        return [k for k, v in frequency.items() if v > 1]
 
     def update_total_events(self):
         """
-        calculate total_evts for  request list
+        Calculate total events of requests
         """
-
-        requests_db = database('requests')
-        index = 0
-        fetched_requests = []
-        new_requests = self.get_request_list(self.get_attribute("requests"))
-
-        while len(new_requests) > index:
-            query = requests_db.construct_lucene_query({'prepid': new_requests[index:index + 20]}, boolean_operator='OR')
-            fetched_requests += requests_db.full_text_search("search", query, page=-1)
-            index += 20
-
-        fetched_requests_dict = {}
-        for req in fetched_requests:
-            fetched_requests_dict[req['prepid']] = req['total_events'] if 'total_events' in req else 0
-        events = 0
-        for req in new_requests:
-            events += fetched_requests_dict[req] if req in fetched_requests_dict else 0
-
+        requests_db = Database('requests')
+        prepids = self.get_request_list()
+        requests = requests_db.db.bulk_get(prepids)
+        events = sum(max(0, r.get('total_events', 0)) for r in requests)
         self.set_attribute('total_events', events)
+
+    def all_requests_approved(self):
+        """
+        Return whether all requests are approved
+        """
+        request_prepids = self.get_request_list()
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(request_prepids)
+        allowed_approvals = {'approve', 'submit'}
+        for request in requests:
+            if request.get('approval') not in allowed_approvals:
+                return False
+
+        return True
+
+    def get_defined_but_not_approved_requests(self):
+        """
+        Check if all requests are defined or approved
+        If they are, return which are not yet approved
+        If there are requests that are not defined, return empty list
+        """
+        request_prepids = self.get_request_list()
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(request_prepids)
+        defined = {'define', 'approve', 'submit'}
+        if [r for r in requests if r.get('approval') not in defined]:
+            # There are requests that are not defined/approved/submitted
+            return []
+
+        approved = {'approve', 'submit'}
+        return [r['prepid'] for r in requests if r.get('approval') not in approved]
+
+    def get_not_defined(self):
+        """
+        Get list of not defined requests
+        """
+        request_prepids = self.get_request_list()
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(request_prepids)
+        defined = {'define', 'approve', 'submit'}
+        defined_prepids = [r['prepid'] for r in requests if r.get('approval') in defined]
+        not_defined_prepids = sorted(list(set(request_prepids) - set(defined_prepids)))
+        return not_defined_prepids

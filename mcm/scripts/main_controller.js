@@ -959,16 +959,14 @@ testApp.directive("sequenceDisplay", function ($http) {
     },
     link: function ($scope) {
       $scope.getCmsDriver = function () {
+        $scope.showSequences = true;
         if ($scope.driver === undefined) {
           const promise = $http.get("restapi/" + $scope.database + "/get_cmsDrivers/" + $scope.prepid);
           promise.then(function (data) {
-            $scope.showSequences = true;
             $scope.driver = data.data.results;
           }, function (data) {
             alert("Error: ", data.status);
           });
-        } else {
-          $scope.showSequences = true;
         }
       };
     }

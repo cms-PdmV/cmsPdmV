@@ -105,9 +105,8 @@ class Database():
                                             method='POST',
                                             data={'docs': [{'id': x} for x in ids]})
         data = self.opener.open(db_request)
-        results = loads(data.read())
-        results = [r['docs'][0] for r in results['results']]
-        results = [r['ok'] for r in results if r.get('ok')]
+        results = loads(data.read())['results']
+        results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
         return results
 
     def prepid_is_used(self, doc_id):

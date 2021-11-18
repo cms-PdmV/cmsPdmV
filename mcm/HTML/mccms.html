@@ -1,142 +1,127 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-  <head>
-        <base href="/mcm/">
-        <title>Mccms page McM</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
-        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-        <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
-        <!--[IF IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-          </script>
-        <![endif]-->
-        <![if !IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-          </script>
-        <![endif]>
-        <script src="scripts/main_controller.js"></script>
-        <script src="scripts/mccms_controller.js"></script>
-  </head>
-  <body ng-controller="mainCtrl">
-    <span ng-controller="resultsCtrl">
-    <div ng-include="'HTML/navbar_template.html'"></div>
+<head>
+  <title>McM - MccM Tickets</title>
+  <base href="/mcm/">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
+  <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/mccms_controller.js"></script>
+</head>
+
+<body ng-controller="mainCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
     </div>
-    <table class="table table-bordered table-stripped">
+    <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in defaults" ng-if="column.select" ng-switch on="column.text">
-	          <div ng-switch-when="Actions">
-              {{column.text}}
-              <!-- SORTING lines -->
-              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-resize-vertical"></i>
-              </a>
-              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
-              </span>
-              <!-- END OF: SORTING lines -->
-	          </div>
-	          <div ng-switch-default>
-                    {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#mccms_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-              <!-- SORTING lines -->
-              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-resize-vertical"></i>
-              </a>
-              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
-              </span>
-              <!-- END OF: SORTING lines -->
-	          </div>
+          <th ng-repeat="column in columns"
+              ng-if="column.select"
+              style="white-space: nowrap; text-align: center;">
+            {{column.text}}
           </th>
         </tr>
       </thead>
       <tbody>
-      	<tr ng-repeat="mccm_info in result | orderBy:sort.column: sort.descending">
-      	  <td ng-repeat="data in defaults" ng-if="data.select" style="white-space: nowrap;">
-      	    <div ng-switch on="data.text">
-              <div ng-switch-when="Actions">
-                <a rel="tooltip" title="Delete ticket" ng-click="open_isSureModal('delete', mccm_info.prepid)" ng-href="#" ng-hide="role(3);"><i class="icon-minus-sign"></i></a>
-                <a rel="tooltip" title="Edit details" ng-href="edit?db_name=mccms&prepid={{mccm_info['prepid']}}" ng-hide="role(1);" target="_self"><i class="icon-wrench"></i></a>
-                <a rel="tooltip" title="Cancel ticket {{mccm_info.prepid}}" ng-click="open_isSureModal('cancel', mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-thumbs-down"></i></a>
-                <a rel="tooltip" title="Generate chains for {{mccm_info.prepid}}" ng-click="generate(mccm_info.prepid,'')" ng-href="#" ng-hide="role(3);"><i class="icon-play"></i></a>
-                <a rel="tooltip" title="Generate chains and reserve for {{mccm_info.prepid}}" ng-click="dropdownModal(mccm_info.prepid,mccm_info.chains)" ng-href="#" ng-hide="role(3)"><i class="icon-indent-right"></i></a>
-                <a rel="tooltip" title="Recalculate total_events for {{mccm_info.prepid}}" ng-click="recalculate_evts(mccm_info.prepid)" ng-href="#" ng-hide="role(1);"><i class="icon-filter"></i></a>
-                <a rel="tooltip" title="View all requests for {{mccm_info.prepid}}" ng-href="requests?range={{generateAllRequests(mccm_info.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
-                <a ng-hide="allRequestsApproved[mccm_info.prepid] !== undefined" ng-click="checkIfAllApproved(mccm_info.prepid)" rel="tooltip" title="Check approval of requests" ng-href="#"><i class="icon-eye-open"></i></a>
+        <tr ng-repeat="data in result">
+          <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
+            <div ng-switch on="column.db_name">
+              <div ng-switch-when="prepid">
+                <a ng-href='mccms?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/mccms/{{data[column.db_name]}}"
+                   rel="tooltip"
+                   title="Admin view of {{data[column.db_name]}}"
+                   ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/mccms/{{data[column.db_name]}}"
+                   rel="tooltip"
+                   title="Admin view of {{data[column.db_name]}}"
+                   ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
               </div>
-              <div ng-switch-when="Prepid">
-                <a ng-href='mccms?prepid={{mccm_info[data.db_name]}}' rel="tooltip" title="View only {{mccm_info[data.db_name]}}" target="_self">{{mccm_info[data.db_name]}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
+              <div ng-switch-when="">
+                <a ng-href='edit?db_name=mccms&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_self">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete ticket" ng-hide="role(1);" ng-href="#">
+                  <i class="icon-minus-sign"></i>
+                </a>
+                <a rel="tooltip" title="Cancel ticket" ng-click="actionPrompt('cancel', data.prepid)" ng-href="#" ng-hide="role(1);">
+                  <i class="icon-thumbs-down"></i>
+                </a>
+                <a rel="tooltip" title="Generate chains for {{data.prepid}}" ng-click="actionPrompt('generate', data.prepid)" ng-href="#" ng-hide="role(3);">
+                  <i class="icon-play"></i>
+                </a>
+                <a rel="tooltip" title="Generate chains and reserve for {{data.prepid}}" ng-click="openGenerateReserveModal(data)" ng-href="#" ng-hide="role(3)">
+                  <i class="icon-indent-right"></i>
+                </a>
+                <a rel="tooltip" title="Recalculate total_events for {{data.prepid}}" ng-click="objectAction('update_total_events', data.prepid)" ng-href="#" ng-hide="role(1);">
+                  <i class="icon-filter"></i>
+                </a>
+                <a rel="tooltip" title="View all requests for {{data.prepid}}" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self">
+                  <i class="icon-folder-open"></i>
+                </a>
+                <a ng-hide="allRequestsApproved[data.prepid] !== undefined" ng-click="checkIfAllApproved(data.prepid)" rel="tooltip" title="Check approval of requests" ng-href="#">
+                  <i class="icon-eye-open"></i>
+                </a>
               </div>
-              <div ng-switch-when="Size">
-                {{numberWithCommas(mccm_info[data.db_name])}}
+              <div ng-switch-when="pwg">
+                <a ng-href='mccms?pwg={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
               </div>
-              <div ng-switch-when="Staged">
-                {{numberWithCommas(mccm_info[data.db_name])}}
+              <div ng-switch-when="meeting">
+                <a ng-href='mccms?meeting={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
               </div>
-              <div ng-switch-when="Pwg">
-                <a ng-href='mccms?pwg={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+              <div ng-switch-when="status">
+                <a ng-href='mccms?status={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
               </div>
-              <div ng-switch-when="Meeting">
-                <a ng-href='mccms?meeting={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
+              <div ng-switch-when="notes">
+                <div style="width:400px">
+                  <pre class="notes">{{data[column.db_name]}}</pre>
+                </div>
               </div>
-              <div ng-switch-when="Status">
-                <a ng-href='mccms?status={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Approval">
-                <a ng-href='mccms?approval={{mccm_info[data.db_name]}}' rel="tooltip" title="View mccms for {{mccm_info[data.db_name]}}"  target="_self"> {{mccm_info[data.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Notes" style="width:500px;overflow:auto">
-                <pre>{{mccm_info[data.db_name]}}</pre>
-              </div>
-              <div ng-switch-when="Special" align="center">
-                <i class="icon-ok" ng-show="mccm_info[data.db_name]"></i>
-                <i class="icon-remove" ng-show="!mccm_info[data.db_name]"></i>
-              </div>
-              <div ng-switch-when="Name">
-                {{mccm_info[data.db_name]}}
-                <a ng-href="admin/_utils/document.html?mccms/{{mccm_info[data.db_name]}}" rel="tooltip" title="Admin view of {{mccm_info[data.db_name]}}" target="_self" ng-hide="role(4);"><i class="icon-star"></i></a>
-              </div>
-              <div ng-switch-when="Requests">
-                <i ng-hide="allRequestsApproved[mccm_info.prepid] === undefined || allRequestsApproved[mccm_info.prepid] === true" style="color:red">Not all requests are approved</i>
-                <i ng-hide="allRequestsApproved[mccm_info.prepid] === undefined || allRequestsApproved[mccm_info.prepid] === false" style="color:green">All requests are approved</i>
+              <div ng-switch-when="requests">
+                <i ng-hide="allRequestsApproved[data.prepid] === undefined || allRequestsApproved[data.prepid] === true"
+                  style="color:red">Not all requests are approved</i>
+                <i ng-hide="allRequestsApproved[data.prepid] === undefined || allRequestsApproved[data.prepid] === false"
+                  style="color:green">All requests are approved</i>
                 <ul>
-                  <div ng-repeat="elem in mccm_info[data.db_name]">
+                  <div ng-repeat="elem in data[column.db_name]">
                     <li ng-hide="isArray(elem);">
-                      <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}" target="_self">{{elem}}</a>
-                      <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
+                      <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}"
+                        target="_self">{{elem}}</a>
+                      <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}"
+                        target="_self"><i class="icon-indent-left"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
-                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
+                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests"
+                        target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
                     </li>
                   </div>
                 </ul>
               </div>
-              <div ng-switch-when="Tags">
-                  <tokenfield ng-disabled="true" on-click="findToken" tokens="mccm_info[data.db_name]"/>
+              <div ng-switch-when="tags">
+                <tokenfield ng-disabled="true" on-click="findToken" tokens="data[column.db_name]" />
               </div>
-              <div ng-switch-when="History">
-                <div custom-history ng-model="mccm_info[data.db_name]"></div>
+              <div ng-switch-when="history">
+                <div custom-history ng-model="data[column.db_name]"></div>
               </div>
-              <div ng-switch-when="Chains">
-                <ul ng-repeat="el in mccm_info[data.db_name]">
+              <div ng-switch-when="chains">
+                <ul ng-repeat="el in data[column.db_name]">
                   <li ng-switch="el.indexOf('chain_') == -1">
                     <a ng-switch-when="true" ng-href="chained_campaigns?alias={{el}}" target="_self">{{el}}</a>
                     <a ng-switch-when="false" ng-href="chained_campaigns?prepid={{el}}" target="_self">{{el}}</a>
                   </li>
                 </ul>
               </div>
-              <div ng-switch-when="Generated chains">
-                <ul ng-repeat="(chain, requests) in mccm_info[data.db_name]">
+              <div ng-switch-when="generated_chains">
+                <ul ng-repeat="(chain, requests) in data[column.db_name]">
                   <li>
                     <a href="chained_requests?prepid={{chain}}" target="_self">{{chain}}</a>
                   </li>
@@ -149,59 +134,66 @@
                     </li>
                   </ul>
                 </ul>
-                <input type="button" class="btn" ng-click="approve_all_requests(mccm_info.prepid)" ng-show="get_requests_size(mccm_info.generated_chains)" value="Approve all requests" align="left"/>
-                <input type="button" class="btn" ng-click="redirect_chained_request(mccm_info.prepid)" ng-show="is_generated_chains_empty(mccm_info.generated_chains)" value="Show chains" align="left"/>
+                <input type="button" class="btn" ng-click="approve_all_requests(data.prepid)"
+                  ng-show="get_requests_size(data.generated_chains)" value="Approve all requests" align="left" />
+                <input type="button" class="btn" ng-click="redirect_chained_request(data.prepid)"
+                  ng-show="is_generated_chains_empty(data.generated_chains)" value="Show chains" align="left" />
               </div>
-      	      <div ng-switch-default>
-    		        {{mccm_info[data.db_name]}}
-      	      </div>
-      	    </div>
-      	  </td>
-      	</tr>
+              <div ng-switch-default>
+                {{data[column.db_name]}}
+              </div>
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
     <div class="row-fluid custom-footer">
-        <div class="span4">
-          <div>
-            <input type="button" class="btn" ng-click="openCreateModal()" value="Create new MccM ticket" ng-hide="role(1);" align="left"/>
-            <script type="text/ng-template" id="createMccmModal.html"> <!--hidden modal template-->
-              <div class="modal-header">
-                <h4>Create MccM ticket</h4>
-              </div>
-              <div class="modal-body">
-                Choose pwg for the ticket: <select ng-options="value for value in mccms.pwgs" ng-model="mccms.selectedPwg" style="width: 90px; margin-bottom: 0px;">
-                  </select>
-              </div>
-              <div class="modal-footer">
-                <button class="btn btn-success" ng-click="save()">Create</button>
-                <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-              </div>
-            </script>
-          </div>
+      <div class="span4">
+        <input type="button" class="btn" ng-click="openTicketCreator()" value="Create new MccM ticket" ng-hide="role(1);" align="left" />
+        <script type="text/ng-template" id="createTicketModal.html"> <!--hidden modal template-->
+        <div class="modal-header">
+          <h4>Create an MccM Ticket</h4>
         </div>
-        <!-- MODAL-->
-        <script type="text/ng-template" id="dropdownModal.html">
-          <div class="modal-header">
-            <h4>Limited reservation for {{toggle_prepid}}?</h4>
-          </div>
-          <div class="modal-body">
-            <span ng-repeat="(prepid, singleChainDropdown) in campaignListDropdown">
-              {{ prepid }}<br>
-              <select ng-model="campaignListDropdownSelector[prepid]">
-                <option ng-repeat="elem in singleChainDropdown track by $index">{{elem}}</option>
-              </select>
-              <br>
-            </span>
-            <span title="Silently skip already existing chained requests"><input type="checkbox" ng-model="skipExistingChains"> Generate only non-existing chained requests</span><br>
-            <span title="Generate all chained requests for all requests and chained campaings. This may lead to duplication of chained requests if some of them were created before"><input type="checkbox" ng-model="generateAllChains"> Generate all chained requests</span>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-warning" ng-click="confirm(campaignListDropdownSelector, skipExistingChains, generateAllChains)">Confirm</button>
-            <button class="btn btn-success" ng-click="cancel()">Cancel</button>
-          </div>
+        <div class="modal-body">
+          Choose a PWG:
+          <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;"></select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success" ng-click="save()">Create</button>
+          <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+        </div>
         </script>
-        <!-- END of MODAL-->
+      </div>
+      <!-- MODAL-->
+      <script type="text/ng-template" id="reserveGenerateReserveModal.html"> <!--hidden modal template-->
+        <div class="modal-header">
+          <h4>Chain generation and reservation</h4>
+        </div>
+        <div class="modal-body">
+          <div ng-repeat="chain in chains">
+            <small style="word-break: break-all">{{chain.prepid}}</small>
+            <br>
+            Reserve up to:
+            <select ng-model="chain.campaign" style="width: 60%">
+              <option ng-repeat="campaign in chain.campaigns" value="{{campaign[0]}}">{{campaign[1]}}</option>
+            </select>
+          </div>
+          <span title="Silently skip already existing chained requests">
+            <input type="checkbox" ng-model="vars.skipExisting"> Ignore existing chained requests
+          </span>
+          <br>
+          <span title="Generate chained requests for all requests and chained campaings even if this leads to duplicated chained requests">
+            <input type="checkbox" ng-model="vars.allowDuplicates"> Allow duplicates
+          </span>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-warning" ng-click="confirm()">Confirm</button>
+          <button class="btn btn-success" ng-click="cancel()">Cancel</button>
+        </div>
+      </script>
+      <!-- END of MODAL-->
     </div>
   </span>
-  </body>
+</body>
+
 </html>
