@@ -398,20 +398,6 @@
                 <span ng-show="data[column.db_name] != 0">{{data[column.db_name]}}</span>
                 <span ng-show="data[column.db_name] == 0">Use campaign's value</span>
               </div>
-              <div ng-switch-when="transient_output_modules" align="left">
-                <ul ng-repeat="elem in data[column.db_name] track by $index">
-                  <li>
-                    For sequence {{ $index +1 }}:
-                    <ul>
-                      <li ng-repeat="module_name in elem">{{ module_name }}</li>
-                    </ul>
-                  </li>
-                </ul>
-              </div>
-              <div ng-switch-when="cadi_line" align="center">
-                <a ng-show="data[column.db_name]" rel="tooltip" title="Cadi line"
-                  ng-href="http://cms.cern.ch/iCMS/analysisadmin/cadilines?line={{data[column.db_name]}}">{{data[column.db_name]}}</a>
-              </div>
               <div ng-switch-when="interested_pwg">
                 <ul>
                   <li ng-repeat="elem in data[column.db_name]">

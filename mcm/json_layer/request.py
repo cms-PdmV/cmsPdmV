@@ -40,14 +40,6 @@ class AFSPermissionError(Exception):
 
 
 class request(json_base):
-    class DuplicateApprovalStep(Exception):
-        def __init__(self, approval=None):
-            self.__approval = repr(approval)
-            request.logger.error('Duplicate Approval Step: Request has already been %s approved' % (self.__approval))
-
-        def __str__(self):
-            return 'Duplicate Approval Step: Request has already been \'' + self.__approval + '\' approved'
-
     _json_base__schema = {
         '_id': '',
         'prepid': '',
@@ -62,8 +54,6 @@ class request(json_base):
         'pileup_dataset_name': '',
         'process_string': '',
         'extension': 0,
-        'block_black_list': [],
-        'block_white_list': [],
         'fragment_tag': '',
         'mcdb_id': -1,
         'notes': '',
@@ -72,9 +62,9 @@ class request(json_base):
         'member_of_chain': [],
         'member_of_campaign': '',
         'flown_with': '',
-        'time_event': [float(-1)],
-        'size_event': [-1],
-        'memory': 2000,  # the default until now
+        'time_event': [-1.0],
+        'size_event': [-1.0],
+        'memory': 2000,
         'name_of_fragment': '',
         'fragment': '',
         'config_id': [],
@@ -85,15 +75,11 @@ class request(json_base):
         'generators': [],
         'sequences': [],
         'generator_parameters': [],
-        'reqmgr_name': [],  # list of tuples (req_name, valid)
+        'reqmgr_name': [],
         'approval': '',
-        'analysis_id': [],
         'energy': 0.0,
         'tags': [],
-        'transient_output_modules': [[]],
-        'cadi_line': '',
         'interested_pwg': [],
-        'ppd_tags': [],
         'events_per_lumi': 0,
         'pilot': False,
     }
@@ -107,6 +93,7 @@ class request(json_base):
         cdb = database('campaigns')
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
             if cdb.document_exists(json_input['member_of_campaign']):
+                self.logger.info('**** GETTING CAMPAIGN %s FOR REQUEST %s', json_input.get('member_of_campaign'), json_input.get('prepid'))
                 __camp = cdb.get(json_input['member_of_campaign'])
                 self._json_base__schema['memory'] = __camp['memory']
 
@@ -152,13 +139,6 @@ class request(json_base):
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
         prepid = self.get_attribute('prepid')
-        if 'pLHE' in self.get_attribute('prepid'):
-            title = 'Status changed for request %s to %s' % (prepid, new_status)
-            self.notify(
-                title,
-                self.textified(),
-                accumulate=True)
-
         from json_layer.chained_request import chained_request
         crdb = database('chained_requests')
         for inchain in self.get_attribute('member_of_chain'):
@@ -1037,7 +1017,6 @@ class request(json_base):
             # putting things together from the campaign+flow
             freshSeq = []
             freshKeep = []
-            freshTransientOutputModules = []
             if flownWith:
                 request.put_together(camp, flownWith, self)
             else:
@@ -1045,14 +1024,12 @@ class request(json_base):
                     fresh = sequence(camp.get_attribute('sequences')[i]["default"])
                     freshSeq.append(fresh.json())
                     freshKeep.append(False)  # dimension keep output to the sequences
-                    freshTransientOutputModules.append([])
 
                 if not camp.get_attribute("no_output"):
                     freshKeep[-1] = True  # last output must be kept
 
                 self.set_attribute('sequences', freshSeq)
                 self.set_attribute('keep_output', freshKeep)
-                self.set_attribute('transient_output_modules', freshTransientOutputModules)
             if can_save:
                 self.update_history({'action': 'reset', 'step': 'option'})
                 self.reload()
@@ -1068,11 +1045,9 @@ class request(json_base):
             self.set_attribute('output_dataset', [])
             freshSeq = []
             freshKeep = []
-            freshTransientOutputModules = []
             for i in range(len(self.get_attribute('sequences'))):
                 freshSeq.append(sequence().json())
                 freshKeep.append(False)
-                freshTransientOutputModules.append([])
 
             if not camp.get_attribute("no_output"):
                 freshKeep[-1] = True  # last output must be kept
@@ -1080,7 +1055,6 @@ class request(json_base):
             freshKeep[-1] = True
             self.set_attribute('sequences', freshSeq)
             self.set_attribute('keep_output', freshKeep)
-            self.set_attribute('transient_output_modules', freshTransientOutputModules)
             # then update itself in DB
             if can_save:
                 self.reload()
@@ -1126,31 +1100,6 @@ class request(json_base):
             r_tiers.extend(self.get_tier(i))
         # the last tier is the main output : reverse it
         return list(reversed(r_tiers))
-
-    def get_transient_tiers(self):
-        transient_output_modules = self.get_attribute('transient_output_modules')
-        transient_tiers = []
-        for (i, s) in enumerate(self.get_attribute('sequences')):
-            if i >= len(transient_output_modules):
-                continue
-
-            modules = transient_output_modules[i]
-            if len(modules) == 0:
-                # If there are no transient output modules,
-                # there is no point in looking at datatiers
-                continue
-
-            eventcontent = s.get('eventcontent', [])
-            datatier = s.get('datatier', [])
-            for (ec_index, eventcontent_entry) in enumerate(eventcontent):
-                if '%soutput' % (eventcontent_entry) in modules:
-                    if ec_index < len(datatier):
-                        transient_tiers.append(datatier[ec_index])
-
-        if len(transient_tiers) > 0:
-            self.logger.info('Transient tiers for %s are: %s' % (self.get_attribute('prepid'), transient_tiers))
-
-        return transient_tiers
 
     def get_processing_string(self, i):
         ingredients = []
@@ -2232,11 +2181,6 @@ class request(json_base):
                         return not_good
 
                     self.logger.info('Expected tiers of %s are %s' % (self.get_attribute('prepid'), tiers_expected))
-                    transient_tiers = self.get_transient_tiers()
-                    if len(transient_tiers) > 0:
-                        tiers_expected = [x for x in tiers_expected if x not in transient_tiers]
-                        self.logger.info('Expected tiers of %s after removing transien tiers: %s' % (self.get_attribute('prepid'), tiers_expected))
-
                     # make sure no expected tier was left behind
                     if not force:
                         if not all(map(lambda t: any(map(lambda dn: t == dn.split('/')[-1],
@@ -2308,7 +2252,6 @@ class request(json_base):
                               'prepid',
                               'dataset_name',
                               'mcdb_id',
-                              'analysis_id',
                               'notes',
                               'total_events',
                               'validation',
@@ -2510,16 +2453,13 @@ class request(json_base):
         new_req.set_attribute('sequences', sequences)
         # setup the keep output parameter
         keep = []
-        freshTransientOutputModules = []
         for s in sequences:
             keep.append(False)
-            freshTransientOutputModules.append([])
 
         if not nc.get_attribute('no_output'):
             keep[-1] = True
 
         new_req.set_attribute('keep_output', keep)
-        new_req.set_attribute('transient_output_modules', freshTransientOutputModules)
         # override request's parameters
         for key in fl.get_attribute('request_parameters'):
             if key == 'sequences':
@@ -2532,7 +2472,7 @@ class request(json_base):
 
     @staticmethod
     def transfer(current_request, next_request):
-        to_be_transferred = ['dataset_name', 'generators', 'process_string', 'analysis_id', 'mcdb_id', 'notes', 'extension']
+        to_be_transferred = ['dataset_name', 'generators', 'process_string', 'mcdb_id', 'notes', 'extension']
         for key in to_be_transferred:
             next_request.set_attribute(key, current_request.get_attribute(key))
 
@@ -3016,10 +2956,6 @@ class request(json_base):
             task_dict['output_'] = "%soutput" % (sequences[sequence_index]['eventcontent'][0])
             task_dict['priority_'] = self.get_attribute('priority')
             task_dict['request_type_'] = self.get_wmagent_type()
-            transient_output_modules = self.get_attribute('transient_output_modules')
-            if len(transient_output_modules) > sequence_index:
-                if transient_output_modules[sequence_index]:
-                    task_dict['TransientOutputModules'] = transient_output_modules[sequence_index]
 
             tasks.append(task_dict)
         return tasks

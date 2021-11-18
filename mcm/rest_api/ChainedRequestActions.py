@@ -277,10 +277,6 @@ class FlowToNextStep(RESTResource):
         inwhite = []
         if 'input_dataset' in data:
             inputds = data['input_dataset']
-        if 'block_black_list' in data:
-            inblack = data['block_black_list']
-        if 'block_white_list' in data:
-            inwhite = data['block_white_list']
         if 'force' in data:
             check_stats = data['force'] != 'force'
         if 'reserve' in data and data["reserve"]:

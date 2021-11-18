@@ -781,9 +781,6 @@ testApp.directive("listPredefined", function($http){
           return {};
         }
         var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
-        if (scope.fieldName === 'ppd_tags') {
-          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
-        }
         var promise = $http.get(searchURL);
         return promise.then(function(data){
           var filteredResults = data['data']['results'].filter(function(el) {
@@ -877,9 +874,6 @@ testApp.directive("singlePredefined", function($http){
           return {};
         }
         var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
-        if (scope.fieldName === 'ppd_tags') {
-          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
-        }
         var promise = $http.get(searchURL);
         return promise.then(function(data){
           var filteredResults = data['data']['results'].filter(function(el) {

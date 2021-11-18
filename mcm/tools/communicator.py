@@ -60,7 +60,7 @@ class communicator:
                  accumulate=False):
 
         if not isinstance(destination, list):
-            print "Cannot send email. destination should be a list of strings"
+            communicator.logger.error("Cannot send email. destination should be a list of strings")
             return
 
         destination.sort()
@@ -79,6 +79,7 @@ class communicator:
 
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
+        destination.append('pdmvserv@cern.ch')
         msg['Cc'] = 'pdmvserv@cern.ch'
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID
@@ -115,8 +116,10 @@ class communicator:
             msg.attach(MIMEText(text))
             smtpObj = smtplib.SMTP()
             smtpObj.connect()
+            communicator.logger.info('Sending %s to %s...' % (msg['Subject'], msg['To']))
             smtpObj.sendmail(sender, destination, msg.as_string())
             smtpObj.quit()
             return new_msg_ID
         except Exception as e:
-            print "Error: unable to send email", e.__class__
+            communicator.logger.error("Error: unable to send email %s", e)
+

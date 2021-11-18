@@ -106,13 +106,6 @@ class RequestRESTResource(RESTResource):
 
 
         member_of_campaign = mcm_req.get_attribute('member_of_campaign')
-        all_ppd_tags = settings.get_value('ppd_tags')
-        allowed_ppd_tags = set(all_ppd_tags.get('all',[])).union(set(all_ppd_tags.get(member_of_campaign,[])))
-        for ppd_tag in mcm_req.get_attribute('ppd_tags'):
-            if ppd_tag not in allowed_ppd_tags:
-                self.logger.error('Illegal PPD Tag %s was found while importing %s' % (ppd_tag, mcm_req.get_attribute('prepid')))
-                return {"results": False, "message": "PPD Tag %s is not allowed" % (ppd_tag)}
-
         # put a generator info by default in case of possible root request
         if camp.get_attribute('root') <= 0:
             mcm_req.update_generator_parameters()
@@ -198,7 +191,6 @@ class CloneRequest(RequestRESTResource):
                        'completed_events',
                        'version',
                        'priority',
-                       'analysis_id',
                        'extension',
                        'output_dataset',
                        'tags',
@@ -207,7 +199,7 @@ class CloneRequest(RequestRESTResource):
                        'keep_output']
             if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
                 # this is a cloning accross campaign: a few other things need to be cleanedup
-                to_wipe.extend(['energy', 'ppd_tags'])
+                to_wipe.extend(['energy'])
 
             old_validation_multiplier = new_json['validation'].get('time_multiplier', 1)
             new_json.update(data)
@@ -321,13 +313,6 @@ class UpdateRequest(RequestRESTResource):
                 # raise ValueError('Illegal change of parameter')
 
         member_of_campaign = mcm_req.get_attribute('member_of_campaign')
-        all_ppd_tags = settings.get_value('ppd_tags')
-        allowed_ppd_tags = set(all_ppd_tags.get('all',[])).union(set(all_ppd_tags.get(member_of_campaign,[])))
-        for ppd_tag in mcm_req.get_attribute('ppd_tags'):
-            if ppd_tag not in allowed_ppd_tags:
-                self.logger.error('Illegal PPD Tag %s was found while updating %s' % (ppd_tag, mcm_req.get_attribute('prepid')))
-                return {"results": False, "message": "PPD Tag %s is not allowed" % (ppd_tag)}
-
         new_validation_multiplier = mcm_req.get_attribute('validation').get('time_multiplier', 1)
         old_validation_multiplier = previous_version.get_attribute('validation').get('time_multiplier', 1)
         if (new_validation_multiplier != old_validation_multiplier
@@ -1930,10 +1915,6 @@ class TaskChainRequestDict(RESTResource):
 
         if request_type in ['MonteCarloFromGEN', 'ReDigi']:
             wma['InputDataset'] = task_dicts[0]['InputDataset']
-            if mcm_request.get_attribute('block_white_list'):
-                wma['BlockWhitelist'] = '"' + ','.join(mcm_request.get_attribute('block_white_list')) + '"'
-            if mcm_request.get_attribute('block_black_list'):
-                wma['BlockWhitelist'] = '"' + ','.join(mcm_request.get_attribute('block_black_list')) + '"'
 
         task_counter = 1
         for task in task_dicts:
@@ -1954,27 +1935,6 @@ class TaskChainRequestDict(RESTResource):
         wma['PrepID'] = task_name
         wma['RequestString'] = wma['PrepID']
         return dumps(wma, indent=4)
-
-
-class PPDTags(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_id):
-        requests_db = database('requests')
-        mcm_request = request(requests_db.get(request_id))
-        if not mcm_request:
-            return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}
-
-        campaign = mcm_request.get_attribute('member_of_campaign')
-        ppd_tags = settings.get_value('ppd_tags')
-        tags = set(ppd_tags.get('all',[])).union(set(ppd_tags.get(campaign,[])))
-        return {'results': sorted(list(tags)),
-                'message': '%s tags found' % (len(tags))}
 
 
 class GENLogOutput(RESTResource):
