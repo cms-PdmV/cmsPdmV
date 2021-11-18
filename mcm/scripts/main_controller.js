@@ -292,7 +292,7 @@ angular.module('testApp').controller('mainCtrl',
           } else {
             $scope.openErrorModal(prepid, data['message']);
           }
-        }).error(function (status) {
+        }).error(function (data, status) {
           $scope.openErrorModal(prepid, data['message']);
           $scope.setSuccess(false, status);
         });

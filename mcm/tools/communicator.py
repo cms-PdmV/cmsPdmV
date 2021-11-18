@@ -30,6 +30,7 @@ class communicator:
                 msg = MIMEMultipart()
                 msg['From'] = sender
                 msg['To'] = addressee
+                msg['Cc'] = 'pdmvserv@cern.ch'
                 msg['Date'] = formatdate(localtime=True)
                 new_msg_ID = make_msgid()
                 msg['Message-ID'] = new_msg_ID
@@ -65,7 +66,7 @@ class communicator:
         destination.sort()
         msg = MIMEMultipart()
         # it could happen that message are send after forking, threading and there's no current user anymore
-        msg['From'] = sender if sender else 'pdmvserv@cern.ch'
+        msg['From'] = sender if sender else 'PdmV Service Account <pdmvserv@cern.ch>'
 
         # add a mark on the subjcet automatically
         if locator().isDev():
@@ -78,6 +79,7 @@ class communicator:
 
         msg['To'] = COMMASPACE.join(destination)
         msg['Date'] = formatdate(localtime=True)
+        msg['Cc'] = 'pdmvserv@cern.ch'
         new_msg_ID = make_msgid()
         msg['Message-ID'] = new_msg_ID
 

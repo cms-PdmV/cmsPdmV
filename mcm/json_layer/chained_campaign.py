@@ -13,14 +13,10 @@ class chained_campaign(json_base):
         'campaigns': [],  # list of lists [camp_id, flow]
         'notes': '',
         'action_parameters': {
-            'block_number': 0,
-            'staged': 0,
             'threshold': 0,
             'flag': True
         },
         'history': [],
-        'valid': True,
-        'chain_type': 'TaskChain',
         'do_not_check_cmssw_versions': False
     }
 
@@ -56,7 +52,6 @@ class chained_campaign(json_base):
         chained_request.set_attribute('pwg', pwg)
         chained_request.set_attribute('member_of_campaign', self.get_attribute('prepid'))
         chained_request.set_attribute('action_parameters', self.get_attribute('action_parameters'))
-        chained_request.set_attribute('chain_type', self.get_attribute('chain_type'))
         # By default flag should be true
         chained_request.get_attribute('action_parameters')['flag'] = True
 

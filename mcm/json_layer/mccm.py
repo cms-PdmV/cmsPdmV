@@ -8,7 +8,6 @@ class mccm(json_base):
         '_id': '',
         'prepid': '',
         'block': 0,
-        'staged': 0,
         'threshold': 0.,
         'meeting': '',
         'history': [],
@@ -90,6 +89,7 @@ class mccm(json_base):
         """
         request_list = self.get_attribute("requests")
         requests = []
+        prepid = self.get_attribute('prepid')
         for entry in request_list:
             if isinstance(entry, list) and len(entry) == 2:
                 start = entry[0].split('-')
@@ -98,7 +98,9 @@ class mccm(json_base):
                 start = '-'.join(start[:-1])
                 end = '-'.join(end[:-1])
                 if start != end:
-                    raise Exception('Invalid range "%s-..." != "%s-..."', start, end)
+                    raise Exception('Invalid range "%s-..." != "%s-..." for %s' % (start,
+                                                                                   end,
+                                                                                   prepid))
 
                 requests.extend('%s-%05d' % (start, n) for n in numbers)
             elif isinstance(entry, (basestring, str)):

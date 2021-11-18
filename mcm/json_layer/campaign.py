@@ -22,7 +22,6 @@ class campaign(json_base):
         # TO-DO: migrate existing campaigns to have the default value
         'root': 1,  # -1: possible root, 0: root, 1: non-root
         'sequences': [],  # list of jsons of jsons
-        'approval': '',
         'history': [],
         'memory': 2000,
         'no_output': False}
