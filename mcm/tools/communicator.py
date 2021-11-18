@@ -60,7 +60,7 @@ class communicator:
                  accumulate=False):
 
         if not isinstance(destination, list):
-            print "Cannot send email. destination should be a list of strings"
+            communicator.logger.error("Cannot send email. destination should be a list of strings")
             return
 
         destination.sort()

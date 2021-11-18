@@ -69,7 +69,6 @@ class chained_request(json_base):
         'chain': [],
         'approval': str(''),
         'step': 0,
-        'analysis_id': [],
         'pwg': '',
         'prepid': '',
         'dataset_name': '',
@@ -138,12 +137,7 @@ class chained_request(json_base):
 
         return __list_of_campaigns
 
-    def flow_trial(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, super_flow=False):
-        if not block_black_list:
-            block_black_list = []
-        if not block_white_list:
-            block_white_list = []
-
+    def flow_trial(self, input_dataset='', check_stats=True, reserve=False, super_flow=False):
         reqDB = database("requests")
 
         __curr_step = self.get_attribute("step")
@@ -177,7 +171,7 @@ class chained_request(json_base):
 
                 __submit_step = 1
 
-                ret_flow = self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats=check_stats)['result']
+                ret_flow = self.flow_to_next_step(input_dataset, check_stats=check_stats)['result']
 
                 if ret_flow:
                     # force updating the chain_request document in DB and here
@@ -331,12 +325,8 @@ class chained_request(json_base):
         if mccm_ticket is not None:
             mccm_ticket.update_mccm_generated_chains({chain_id: generated_requests})
 
-    def flow(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True):
-        if not block_black_list:
-            block_black_list = []
-        if not block_white_list:
-            block_white_list = []
-        return self.flow_to_next_step(input_dataset, block_black_list, block_white_list, check_stats)['result']
+    def flow(self, input_dataset='', check_stats=True):
+        return self.flow_to_next_step(input_dataset, check_stats)['result']
 
     def get_setup(self, for_validation, automatic_validation, scratch=False):
         if scratch:
@@ -355,11 +345,7 @@ class chained_request(json_base):
 
         return setup_file
 
-    def flow_to_next_step(self, input_dataset='', block_black_list=None, block_white_list=None, check_stats=True, reserve=False, stop_at_campaign=None):
-        if not block_white_list:
-            block_white_list = []
-        if not block_black_list:
-            block_black_list = []
+    def flow_to_next_step(self, input_dataset='', check_stats=True, reserve=False, stop_at_campaign=None):
         self.logger.info('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
             self.add_to_nonflowing_list('Chained request has no root')
@@ -789,12 +775,6 @@ class chained_request(json_base):
             if other_chained_request['chain'].index(next_id) > other_chained_request['step']:
                 other_chained_request['step'] = other_chained_request['chain'].index(next_id)
                 crdb.save(other_chained_request)
-
-        # set blocks restriction if any
-        if block_black_list:
-            next_request.set_attribute('block_black_list', block_black_list)
-        if block_white_list:
-            next_request.set_attribute('block_white_list', block_white_list)
 
         # register the flow to the request
         next_request.set_attribute('flown_with', flow_name)
