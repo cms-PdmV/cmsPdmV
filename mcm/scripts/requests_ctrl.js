@@ -175,7 +175,7 @@ angular.module('testApp').controller('resultsCtrl',
               $scope.allPWGs = data.data.results;
               $scope.vars.pwg = $scope.allPWGs[0];
             });
-            $http.get("search?db_name=campaigns&page=-1").then(function (data) {
+            $http.get("search?db_name=campaigns&status=started&page=-1").then(function (data) {
               $scope.allCampaigns = data.data.results.map(x => x.prepid);
               $scope.vars.campaign = $scope.allCampaigns[0];
             });

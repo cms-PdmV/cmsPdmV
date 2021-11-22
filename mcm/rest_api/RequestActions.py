@@ -1,19 +1,21 @@
 #!/usr/bin/env python
+from copy import deepcopy
 import flask
 import traceback
 import time
-import urllib2
-from json import dumps, loads
+
+from flask import app
+from flask.globals import request
+import json
 from collections import defaultdict
 import re
 
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
-from json_layer.request import request
-from json_layer.chained_request import chained_request
-from json_layer.sequence import sequence
-from json_layer.campaign import campaign
+from json_layer.request import request as Request
+from json_layer.chained_request import chained_request as ChainedRequest
+from json_layer.sequence import sequence as Sequence
+from json_layer.campaign import campaign as Campaign
 from json_layer.user import user
 from tools.locator import locator
 from tools.communicator import communicator
@@ -23,6 +25,7 @@ from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
 from flask_restful import reqparse
+from tools.user_management import user_pack as UserPack
 
 
 class RequestRESTResource(RESTResource):
@@ -33,177 +36,121 @@ class RequestRESTResource(RESTResource):
         self.db_name = 'requests'
         self.with_trace = True
 
-    def set_campaign(self, mcm_req):
-        cdb = database('campaigns')
-        # check that the campaign it belongs to exists
-        camp = mcm_req.get_attribute('member_of_campaign')
-        if not cdb.document_exists(camp):
-            return None
-            # get campaign
-        camp = campaign(cdb.get(camp))
-        mcm_req.set_attribute('energy', camp.get_attribute('energy'))
-        if not mcm_req.get_attribute('cmssw_release'):
-            mcm_req.set_options(can_save=False)
+    def import_request(self, request_json, cloned_from=None):
+        request_db = Database('requests')
+        campaign_db = Database('campaigns')
+        campaign_name = request_json['member_of_campaign']
+        campaign_json = campaign_db.get(campaign_name)
+        if not campaign_json:
+            return {"results": False,
+                    "message": 'Campaign %s could not be found' % (campaign_name)}
 
-        return camp
+        if campaign_json.get('status') != 'started':
+            return {"results": False,
+                    "message": "Cannot create a request in a campaign that is not started"
+                               "%s is %s" % (campaign_name, campaign_json.get('status'))}
 
-    def import_request(self, data, db, label='created', step=None):
+        if 'prepid' in request_json or '_id' in request_json:
+            return {"results": False,
+                    "message": '"prepid" and "_id" should not exist in new request data'}
 
-        if '_rev' in data:
-            return {"results": False, 'message': 'could not save object with a revision number in the object'}
+        pwg = request_json['pwg']
+        self.logger.info('Building new request for %s in %s', pwg, campaign_name)
+        request = Request(json_input=request_json)
+        request.reset_options()
+        request.set_attribute('history', [])
+        if cloned_from:
+            request.update_history({'action': 'clone', 'step': cloned_from})
+        else:
+            request.update_history({'action': 'created'})
 
-        try:
-            # mcm_req = request(json_input=loads(data))
-            mcm_req = request(json_input=data)
-        except request.IllegalAttributeName as ex:
-            return {"results": False, "message": str(ex)}
-        camp = self.set_campaign(mcm_req)
-        if not camp:
-            return {"results": False, "message": 'Error: Campaign ' + mcm_req.get_attribute(
-                'member_of_campaign') + ' does not exist.'}
+        # Add PWG as interested one
+        if pwg not in request.get_attribute('interested_pwg'):
+            request.set_attribute('interested_pwg', request.get_attribute('interested_pwg') + [pwg])
 
-        if camp.get_attribute('status') != 'started':
-            return {"results": False, "message": "Cannot create a request in a campaign that is not started"}
-
-        self.logger.info('Building new request...')
-
-        prepid = RequestPrepId().next_prepid(mcm_req.get_attribute('pwg'),
-                                             mcm_req.get_attribute('member_of_campaign'))
-        self.logger.info('New prepid: %s', prepid)
-        if not prepid:
-            return {'results': False,
-                    'message': 'Could not create new prepid. Prepid required PWG and campaign name'}
-
-        mcm_req = request(db.get(prepid))
-        for key in data:
-            if key not in ['prepid', '_id', 'history']:
-                mcm_req.set_attribute(key, data[key])
-
-        number_of_sequences = len(camp.get_attribute('sequences'))
-        if 'time_event' not in data:
-            self.logger.info('No time_event in data, creating %s default values' % (number_of_sequences))
-            mcm_req.set_attribute('time_event', [-1] * number_of_sequences)
-
-        if 'size_event' not in data:
-            self.logger.info('No size_event in data, creating %s default values' % (number_of_sequences))
-            mcm_req.set_attribute('size_event', [-1] * number_of_sequences)
-
-
-        member_of_campaign = mcm_req.get_attribute('member_of_campaign')
         # put a generator info by default in case of possible root request
-        if camp.get_attribute('root') <= 0:
-            mcm_req.update_generator_parameters()
+        # TODO: Review this
+        if campaign_json.get('root') <= 0:
+            request.update_generator_parameters()
 
-        # cast the campaign parameters into the request: knowing that those can be edited at will later
-        if not mcm_req.get_attribute('sequences'):
-            mcm_req.set_options(can_save=False)
-
-        # c = cdb.get(camp)
-        # tobeDraggedInto = ['cmssw_release','pileup_dataset_name']
-        # for item in tobeDraggedInto:
-        #    mcm_req.set_attribute(item,c.get_attribute(item))
-        # nSeq=len(c.get_attribute('sequences'))
-        # mcm_req.
-
-        # update history
-        if self.with_trace:
-            if step:
-                mcm_req.update_history({'action': label, 'step': step})
+        request.validate()
+        prepid = '%s-%s' % (pwg, campaign_name)
+        with locker.lock('create-request-%s' % (prepid)):
+            self.logger.info('Will try to find new prepid for request %s-*', prepid)
+            query = request_db.construct_lucene_query({'prepid': '%s-*' % (prepid)})
+            newest = request_db.full_text_search('search', query, limit=1, sort_asc=False)
+            if newest:
+                number = int(newest[0]['prepid'].split('-')[-1]) + 1
             else:
-                mcm_req.update_history({'action': label})
+                number = 1
 
-        # save to database or update if existed
-        interested_pwg = mcm_req.get_attribute('interested_pwg')
-        pwg = mcm_req.get_attribute('pwg')
-        if pwg not in interested_pwg:
-            interested_pwg.append(pwg)
-            mcm_req.set_attribute('interested_pwg', interested_pwg)
+            prepid = '%s-%05d' % (prepid, number)
+            self.logger.info('New prepid - %s', prepid)
+            if request_db.document_exists(prepid):
+                return {"results": False,
+                        "message": "Request %s already exists" % (prepid)}
 
-        if not db.save(mcm_req.json()):
-            self.logger.error('Could not save results to database')
-            return {"results": False}
+            request.set_attribute('prepid', prepid)
+            request.set_attribute('_id', prepid)
+            if not request_db.save(request.json()):
+                return {'results': False,
+                        'message': 'Request could not be created'}
 
-        return {"results": True, "prepid": mcm_req.get_attribute('_id')}
+        return {'results': True,
+                'prepid': prepid}
 
 
 class CloneRequest(RequestRESTResource):
 
-    #access_limit = access_rights.generator_contact ## maybe that is wrong
+    access_limit = access_rights.generator_contact
 
     def __init__(self):
-        RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
-
-    def get(self, request_id):
-        """
-        Make a clone with no special requirement
-        """
-        return self.clone_request(request_id)
 
     def put(self):
         """
         Make a clone with specific requirements
         """
-        data = loads(flask.request.data.strip())
-        pid = data['prepid']
-        return self.clone_request(pid, data)
+        data = json.loads(flask.request.data)
+        prepid = data.get('prepid', '').strip()
+        if not prepid:
+            return {'results': False,
+                    'message': 'Missing prepid'}
 
-    def clone_request(self, pid, data={}):
-        db = database(self.db_name)
-        cdb = database("campaigns")
+        pwg = data.get('pwg', '').strip().upper()
+        if not prepid:
+            return {'results': False,
+                    'message': 'Missing PWG'}
 
-        if db.document_exists(pid):
-            new_json = db.get(pid)
-            if new_json['flown_with']:
-                return {"results": False, "message": "cannot clone a request that has been flown"}
+        new_campaign = data.get('member_of_campaign', '').strip()
+        if not prepid:
+            return {'results': False,
+                    'message': 'Missing campaign'}
 
-            to_wipe = ['_id',
-                       '_rev',
-                       'prepid',
-                       'approval',
-                       'status',
-                       'history',
-                       'config_id',
-                       'reqmgr_name',
-                       'member_of_chain',
-                       'validation',
-                       'completed_events',
-                       'version',
-                       'priority',
-                       'extension',
-                       'output_dataset',
-                       'tags',
-                       'cmssw_release',
-                       'sequences',
-                       'keep_output']
-            if 'member_of_campaign' in data and data['member_of_campaign'] != new_json['member_of_campaign']:
-                # this is a cloning accross campaign: a few other things need to be cleanedup
-                to_wipe.extend(['energy'])
+        request_db = Database('requests')
+        request_json = request_db.get(prepid)
+        if not request_json:
+            return {'results': False,
+                    'message': 'Cannot clone from "%s" because it does not exist' % (prepid)}
 
-            old_validation_multiplier = new_json['validation'].get('time_multiplier', 1)
-            new_json.update(data)
-            # set the memory of new request to that of future member_of_campaign
-            new_json['memory'] = cdb.get(new_json['member_of_campaign'])['memory']
-            new_json['generator_parameters'] = new_json['generator_parameters'][-1:]
-            new_json['generator_parameters'][0]['version'] = 0
-            # remove some of the parameters to get then fresh from a new request.
-            for w in to_wipe:
-                # Delete if exists
-                new_json.pop(w, None)
+        if request_json.get('flown_with'):
+            return {"results": False,
+                    "message": "Cannot clone a request that has been flown, can clone only root"}
 
-            if 'interested_pwg' not in new_json:
-                new_json['interested_pwg'] = []
+        old_campaign = request_json['member_of_campaign']
+        # Attributes to move over to new request
+        to_move = ['input_dataset', 'dataset_name', 'pileup_dataset_name', 'process_string',
+                   'fragment_tag', 'mcdb_id', 'notes', 'total_events', 'name_of_fragment',
+                   'fragment', 'type', 'interested_pwg', 'events_per_lumi', 'generators']
 
-            if new_json['pwg'] not in new_json['interested_pwg']:
-                new_json['interested_pwg'].append(new_json['pwg'])
+        if old_campaign == new_campaign:
+            to_move.extend(['time_event', 'size_event', 'generator_parameters'])
 
-            if old_validation_multiplier != 1:
-                new_json['validation'] = {'time_multiplier': old_validation_multiplier}
-
-            return self.import_request(new_json, db, label='clone', step=pid)
-        else:
-            return {"results": False, "message": "cannot clone an inexisting id %s" % pid}
+        new_request = {attribute: request_json[attribute] for attribute in to_move}
+        new_request['member_of_campaign'] = new_campaign
+        new_request['pwg'] = pwg
+        return self.import_request(new_request, cloned_from=prepid)
 
 
 class ImportRequest(RequestRESTResource):
@@ -211,7 +158,6 @@ class ImportRequest(RequestRESTResource):
     #access_limit = access_rights.generator_contact ## maybe that is wrong
 
     def __init__(self):
-        RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
 
@@ -219,8 +165,8 @@ class ImportRequest(RequestRESTResource):
         """
         Saving a new request from a given dictionnary
         """
-        db = database(self.db_name)
-        return self.import_request(loads(flask.request.data.strip()), db)
+        data = json.loads(flask.request.data)
+        return self.import_request(data)
 
 
 class UpdateRequest(RequestRESTResource):
@@ -228,7 +174,6 @@ class UpdateRequest(RequestRESTResource):
     access_limit = access_rights.user
 
     def __init__(self):
-        RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
 
@@ -236,119 +181,188 @@ class UpdateRequest(RequestRESTResource):
         """
         Updating an existing request with an updated dictionary
         """
-        return self.update()
+        data = json.loads(flask.request.data)
+        rev = data.get('_rev')
+        if not rev:
+            return {'results': False,
+                    'message': 'Missing revision ("_rev") in submitted data'}
 
-    def update(self):
-        try:
-            res = self.update_request(flask.request.data.strip())
-            return res
-        except Exception as e:
-            # trace = traceback.format_exc()
-            trace = str(e)
-            self.logger.error('Failed to update a request from API \n%s' % (trace))
-            return {'results': False, 'message': 'Failed to update a request from API %s' % trace}
+        prepid = data.get('prepid', data.get('_id'))
+        if not prepid:
+            return {'results': False,
+                    'message': 'Missing prepid ("prepid") in submitted data'}
 
-    def update_request(self, data):
-        data = loads(data)
-        db = database(self.db_name)
-        if '_rev' not in data:
-            self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
-            return {"results": False, 'message': 'could not locate revision number in the object'}
+        data['prepid'] = prepid
+        data['_id'] = prepid
+        request_db = Database('requests')
+        with locker.lock('create-request-%s' % (prepid)):
+            request_json = request_db.get(prepid)
+            if not request_json:
+                return {"results": False,
+                        'message': 'Request "%s" does not exist' % (prepid)}
 
-        if not db.document_exists(data['_id']):
-            return {"results": False, 'message': 'request %s does not exist' % (data['_id'])}
-        else:
-            if db.get(data['_id'])['_rev'] != data['_rev']:
-                return {"results": False, 'message': 'revision clash'}
+            if rev != request_json['_rev']:
+                    return {'results': False,
+                            'message': 'Provided revision does not match revision in database'}
 
-        try:
-            mcm_req = request(json_input=data)
-        except request.IllegalAttributeName:
-            return {"results": False, 'message': 'Mal-formatted request json in input'}
+            old_request = Request(request_json)
+            # Create new request data
+            request_json = deepcopy(request_json)
+            for to_pop in ('prepid', '_id', 'history'):
+                data.pop(to_pop, None)
 
-        if not mcm_req.get_attribute('prepid') and not mcm_req.get_attribute('_id'):
-            self.logger.error('prepid returned was None')
-            raise ValueError('Prepid returned was None')
+            request_json.update(data)
+            new_request = Request(request_json)
+            # Check edited values
+            editing_info = old_request.get_editable()
+            for (key, editable) in editing_info.items():
+                if editable or key == 'sequences':
+                    # Do not check attributes that can be edited
+                    continue
 
-        # operate a check on whether it can be changed
-        previous_version = request(db.get(mcm_req.get_attribute('prepid')))
-        editable = previous_version.get_editable()
-        for (key, right) in editable.items():
-            # does not need to inspect the ones that can be edited
-            if right:
-                if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
-                    self.logger.info('##UPDATING [%s] field## %s: %s vs %s' % (
-                        mcm_req.get_attribute('prepid'), key,
-                        previous_version.get_attribute(key),
-                        mcm_req.get_attribute(key)))
-                continue
+                old_value = old_request.get_attribute(key)
+                new_value = new_request.get_attribute(key)
+                if old_value != new_value:
+                    self.logger.error('Editing "%s" of %s is not allowed: %s -> %s',
+                                      key, prepid, old_value, new_value)
+                    return {"results": False,
+                            'message': 'Editing "%s" of %s is not allowed' % (key, prepid)}
 
-            if key == 'sequences':
-                # need a special treatment because it is a list of dicts
-                continue
-            if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
-                self.logger.error('Illegal change of parameter, %s: %s vs %s: %s' % (
-                    key, previous_version.get_attribute(key), mcm_req.get_attribute(key), right))
-                return {"results": False, 'message': 'Illegal change of parameter %s' % key}
-                # raise ValueError('Illegal change of parameter')
+            # Special check for validation multiplier
+            new_multiplier = old_request.get_attribute('validation').get('time_multiplier', 1)
+            old_multiplier = new_request.get_attribute('validation').get('time_multiplier', 1)
+            if new_multiplier != old_multiplier and new_multiplier > 2:
+                if new_request.current_user_level < access_rights.generator_convener:
+                    return {"results": False,
+                            'message': 'You need to be at least GEN convener to set validation to >16h'}
 
-        member_of_campaign = mcm_req.get_attribute('member_of_campaign')
-        new_validation_multiplier = mcm_req.get_attribute('validation').get('time_multiplier', 1)
-        old_validation_multiplier = previous_version.get_attribute('validation').get('time_multiplier', 1)
-        if (new_validation_multiplier != old_validation_multiplier
-            and new_validation_multiplier > 2
-            and mcm_req.current_user_level < access_rights.generator_convener):
-            return {"results": False, 'message': 'You need to be at least generator convener to set validation to >16h %s' % (mcm_req.current_user_level)}
+            new_request.validate()
+            self.logger.info('Updating request %s' % (prepid))
+            difference = self.get_obj_diff(old_request.json(),
+                                            new_request.json(),
+                                            ('history', '_rev'))
+            if not difference:
+                return {'results': True}
 
-        all_interested_pwg = set(settings.get_value('pwg'))
-        req_interested_pwg = mcm_req.get_attribute('interested_pwg')
-        for interested_pwg in req_interested_pwg:
-            if interested_pwg not in all_interested_pwg:
-                return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
+            new_request.update_history({'action': 'update', 'step': ', '.join(difference)})
+            if not request_db.update(new_request.json()):
+                self.logger.error('Could not save %s to database', prepid)
+                return {'results': False,
+                        'message': 'Could not save %s to database' % (prepid)}
 
-        dataset_name = mcm_req.get_attribute('dataset_name')
-        dataset_name_regex = re.compile('.*[^0-9a-zA-Z_-].*')
-        if dataset_name_regex.match(dataset_name):
-            return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
-
-        requests_events_per_lumi = mcm_req.get_attribute('events_per_lumi')
-        if requests_events_per_lumi != 0 and (requests_events_per_lumi < 100 or requests_events_per_lumi > 1000):
-            return {"results": False, 'message': 'Events per lumi must be 100<=X<=1000 or 0 to use campaign\'s value'}
-
-        self.logger.info('Updating request %s...' % (mcm_req.get_attribute('prepid')))
-
-        # update history
-        if self.with_trace:
-            difference = self.get_obj_diff(previous_version.json(),
-                                           mcm_req.json(),
-                                           ('history', '_rev'))
-            difference = ', '.join(difference)
-            if difference:
-                mcm_req.update_history({'action': 'update', 'step': difference})
-            else:
-                mcm_req.update_history({'action': 'update'})
-
-        return {"results": db.update(mcm_req.json())}
+        return {"results": True}
 
 
-class ManageRequest(UpdateRequest):
-    """
-    Same as UpdateRequest, leaving no trace in history, for admin only
-    """
-
-    access_limit = access_rights.administrator
+class GetRequest(RESTResource):
 
     def __init__(self):
-        UpdateRequest.__init__(self)
-        self.with_trace = False
         self.before_request()
         self.count_call()
 
-    def put(self):
+    def get(self, request_id):
         """
-        Updating an existing request with an updated dictionnary, leaving no trace in history, for admin only
+        Retreive the dictionnary for a given request
         """
-        return self.update()
+        request_db = Database('requests')
+        request_id = request_id.strip()
+        request_json = request_db.get(request_id)
+        return {"results": request_json}
+
+
+class DeleteRequest(RESTResource):
+
+    access_limit = access_rights.generator_contact
+
+    def __init__(self):
+        self.before_request()
+        self.count_call()
+
+    def delete(self, request_id):
+        """
+        Simply delete a request
+        """
+        request_db = Database('requests')
+        request_json = request_db.get(request_id)
+        approval = request_json['approval']
+        status = request_json['status']
+        if approval != 'none' or status != 'new':
+            return {'results': False,
+                    'prepid': request_id,
+                    'message': 'Cannot delete "%s-%s" request, must be "none-new"' % (approval,
+                                                                                      status)}
+
+        chained_request_ids = request_json['member_of_chain']
+        if chained_request_ids:
+            # If request is a member of chain, only prod managers can delete it
+            user = UserPack(db=True)
+            user_role = user.user_dict.get('role')
+            self.logger.info('User %s (%s) is trying to delete %s',
+                            user.get_username(),
+                            user_role,
+                            request_id)
+            if user_role not in {'production_manager', 'administrator'}:
+                return {"results": False,
+                        "prepid": request_id,
+                        "message": 'Only production managers and administrators can delete '
+                                   'requests that are member of chained requests'}
+
+        chained_request_db = Database('chained_requests')
+        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
+        chained_requests_with_request = []
+        chained_requests_to_delete = []
+        for chained_request in chained_requests:
+            if not chained_request:
+                # Don't care about this in deletion
+                continue
+
+            chain = chained_request['chain']
+            if request_id not in chain:
+                # Don't care about this in deletion
+                continue
+
+            chained_request_id = chained_request['prepid']
+            if chained_request.get('action_parameters', {}).get('flag', False):
+                return {'results': False,
+                        'prepid': request_id,
+                        'message': 'Request is a member of a valid chained request %s' % (chained_request_id)}
+
+            if request_id != chain[-1]:
+                return {'results': False,
+                        'prepid': request_id,
+                        'message': 'Request must be a last request in all its chained requests'}
+
+            if chained_request['step'] >= chain.index(request_id):
+                # Request is the current step in the chain
+                return {'results': False,
+                        'prepid': request_id,
+                        'message': "Request is the current step of chained request %s" % (chained_request_id)}
+
+            if request_id == chain[0]:
+                # Request is root - delete it together with the chained request
+                chained_requests_to_delete.append(chained_request_id)
+            else:
+                # Request is not root - just pop it off the chained request
+                chained_requests_with_request.append(chained_request)
+
+        for chained_request_json in chained_requests_with_request:
+            # Chained requests that should have request at the end of the chain
+            chained_request = ChainedRequest(chained_request_json)
+            chain = chained_request.get_attribute('chain')
+            chain.remove(request_id)
+            chained_request.set_attribute('chain', chain)
+            chained_request.update_history({'action': 'remove request', 'step': request_id})
+            chained_request.reload()
+
+        for chained_request_id in chained_requests_to_delete:
+            chained_request_db.delete(chained_request_id)
+
+        # Delete from DB
+        if not request_db.delete(request_id):
+            self.logger.error('Could not delete %s from database', request_id)
+            return {'results': False,
+                    'message': 'Could not delete %s from database' % (request_id)}
+
+        return {'results': True}
 
 
 class GetCmsDriverForRequest(RESTResource):
@@ -379,7 +393,6 @@ class OptionResetForRequest(RESTResource):
     access_limit = access_rights.generator_contact
 
     def __init__(self):
-        self.db_name = 'requests'
         self.before_request()
         self.count_call()
 
@@ -387,25 +400,30 @@ class OptionResetForRequest(RESTResource):
         """
         Reset the options for request
         """
-        rdb = database(self.db_name)
-        req_ids = request_ids.split(',')
-        response = []
-        for req_id in req_ids:
-            req = request(rdb.get(req_id))
-            if req.get_attribute('approval') != 'none' or req.get_attribute('status') != 'new':
-                response.append({"results": False,
-                                 "prepid": req_id,
-                                 "message": "Cannot option reset %s because it\'s status is not none-new" % (req_id)})
+        request_db = Database('requests')
+        request_ids = [r.strip() for r in request_ids.split(',') if r.strip()]
+        results = []
+        requests = request_db.db.bulk_get(request_ids)
+        for req_json in requests:
+            if not req_json:
                 continue
 
-            req.set_options()
-            response.append({"results": True,
-                             "prepid": req_id})
+            prepid = req_json['prepid']
+            if req_json['approval'] != 'none' or req_json['status'] != 'new':
+                results.append({"results": False,
+                                "prepid": prepid,
+                                "message": "Cannot option reset %s because it is not none-new" % (prepid)})
+                continue
 
-        if len(response) == 1:
-            return response[0]
-        else:
-            return response
+            req = request(req_json)
+            req.reset_options()
+            results.append({"results": True,
+                            "prepid": prepid})
+
+        if len(results) == 1:
+            return results[0]
+
+        return results
 
 
 class GetFragmentForRequest(RESTResource):
@@ -469,80 +487,6 @@ class GetSetupForRequest(RESTResource):
             return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
 
 
-class DeleteRequest(RESTResource):
-
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.db_name = 'requests'
-        self.before_request()
-        self.count_call()
-
-    def delete(self, request_id):
-        """
-        Simply delete a request
-        """
-        return self.delete_request(request_id)
-
-    def delete_request(self, pid):
-        db = database(self.db_name)
-        crdb = database('chained_requests')
-        mcm_r = request(db.get(pid))
-
-        if len(mcm_r.get_attribute("member_of_chain")) != 0 and mcm_r.current_user_level < 3:
-            # if request has a member_of_campaign we user role to be equal or more than
-            # prod_manager, so we have to do check manually and return False
-            return {
-                "prepid": pid, "results": False,
-                "message": "Only prod_managers and up can delete already chained requests"}
-
-        if mcm_r.get_attribute('status') != 'new':
-            return {
-                "prepid": pid,
-                "results": False,
-                "message": "Not possible to delete a request (%s) in status %s" % (pid, mcm_r.get_attribute('status'))}
-        if mcm_r.has_at_least_an_action():
-            return {
-                "prepid": pid,
-                "results": False,
-                "message": "Not possible to delete a request (%s) that is part of a valid chain" % (pid)}
-        in_chains = mcm_r.get_attribute('member_of_chain')
-        for in_chain in in_chains:
-            mcm_cr = chained_request(crdb.get(in_chain))
-            if mcm_cr.get_attribute('chain')[-1] != pid:
-                # the pid is not the last of the chain
-                return {
-                    "prepid": pid,
-                    "results": False,
-                    "message": "Not possible to delete a request (%s) that is not at the end of an invalid chain (%s)" % (
-                        pid, in_chain)}
-
-            if mcm_cr.get_attribute('step') == mcm_cr.get_attribute('chain').index(pid):
-                # we are currently processing that request
-                return {
-                    "prepid": pid,
-                    "results": False,
-                    "message": "Not possible to delete a request (%s) that is being the current step (%s) of an invalid chain (%s)" % (
-                        pid, mcm_cr.get_attribute('step'), in_chain)}
-
-            # found a chain that deserves the request to be pop-ep out from the end
-            new_chain = mcm_cr.get_attribute('chain')
-            new_chain.remove(pid)
-            mcm_cr.set_attribute('chain', new_chain)
-            mcm_cr.update_history({'action': 'remove request', 'step': pid})
-            mcm_cr.reload()
-
-        # delete chained requests !
-        # self.delete_chained_requests(self,pid):
-        return {"prepid": pid, "results": db.delete(pid)}
-
-    def delete_chained_requests(self, pid):
-        crdb = database('chained_requests')
-        mcm_crs = crdb.search({'contains': pid}, page=-1)
-        for doc in mcm_crs:
-            crdb.delete(doc['prepid'])
-
-
 class GetRequestByDataset(RESTResource):
     def __init__(self):
         self.before_request()
@@ -600,31 +544,6 @@ class GetRequestOutput(RESTResource):
                     res[prepid].append(mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'])
 
         return res
-
-
-class GetRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_id):
-        """
-        Retreive the dictionnary for a given request
-        """
-        return self.get_request(request_id)
-
-    def get_request(self, data):
-        db = database(self.db_name)
-        if not db.document_exists(data):
-            return {"results": {}}
-        mcm_r = db.get(prepid=data)
-        # cast the sequence for schema evolution !!! here or not ?
-        for (i_s, s) in enumerate(mcm_r['sequences']):
-            mcm_r['sequences'][i_s] = sequence(s).json()
-
-        mcm_r['generator_parameters'] = [g for g in mcm_r['generator_parameters'] if g]
-        return {"results": mcm_r}
 
 
 class ApproveRequest(RESTResource):

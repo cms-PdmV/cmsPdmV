@@ -92,6 +92,9 @@ class UpdateChainedCampaign(RESTResource):
         difference = self.get_obj_diff(previous_version.json(),
                                        chained_campaign.json(),
                                        ('history', '_rev'))
+        if not difference:
+            return {'results': True}
+
         difference = ', '.join(difference)
         chained_campaign.update_history({'action': 'update', 'step': difference})
 

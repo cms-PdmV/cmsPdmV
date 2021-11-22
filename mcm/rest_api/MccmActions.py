@@ -145,6 +145,9 @@ class UpdateMccm(RESTResource):
         difference = self.get_obj_diff(old_mccm.json(),
                                        mccm.json(),
                                        ('history', '_rev'))
+        if not difference:
+            return {'results': True}
+
         difference = ', '.join(difference)
         mccm.update_history({'action': 'update', 'step': difference})
 
@@ -415,13 +418,11 @@ class GenerateChains(RESTResource):
 
         # Make a set just to be sure they are unique
         request_prepids = sorted(list(set(mccm.get_request_list())))
-        def not_found_prepids(id_list, items):
-            return list(set(id_list) - set(x['prepid'] for x in items))
 
         # Chained campaigns of ticket
         chained_campaign_db = Database('chained_campaigns')
         chained_campaigns = chained_campaign_db.bulk_get(chained_campaign_prepids)
-        not_found_chained_campaigns = not_found_prepids(chained_campaign_prepids, chained_campaigns)
+        not_found_chained_campaigns = [c for c in chained_campaigns if not c]
         if not_found_chained_campaigns:
             not_found_ids = ', '.join(list(not_found_chained_campaigns))
             return {'prepid': mccm_id,
@@ -432,7 +433,7 @@ class GenerateChains(RESTResource):
         # Requests of ticket
         request_db = Database('requests')
         requests = request_db.bulk_get(request_prepids)
-        not_found_requests = not_found_prepids(request_prepids, requests)
+        not_found_requests = [r for r in requests if not r]
         if not_found_requests:
             not_found_ids = ', '.join(list(not_found_requests))
             return {'prepid': mccm_id,
@@ -851,6 +852,9 @@ class CheckIfAllApproved(RESTResource):
         requests_prepids = set(requests_prepids)
         allowed_approvals = {'approve', 'submit'}
         for request in requests:
+            if not request:
+                continue
+
             requests_prepids.remove(request['prepid'])
             if request.get('approval') not in allowed_approvals:
                 return {'results': False}
