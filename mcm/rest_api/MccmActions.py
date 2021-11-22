@@ -609,6 +609,11 @@ class MccMReminderGenContacts(RESTResource):
         base_url = l_type.baseurl()
         contacts = self.get_contacts_by_pwg()
         for pwg, pwg_mccms in by_pwg.items():
+            recipients = contacts.get(pwg)
+            if not recipients:
+                self.logger.info('No recipients for %s, will not remind about tickets', pwg)
+                continue
+
             subject = subject_template % (len(pwg_mccms), pwg)
             message = message_template % (pwg)
             for mccm in pwg_mccms:
@@ -621,7 +626,6 @@ class MccMReminderGenContacts(RESTResource):
                 message += '%smccms?prepid=%s\n\n' % (base_url, prepid)
 
             message += 'You received this email because you are listed as GEN contact of %s.\n' % (pwg)
-            recipients = contacts[pwg]
             com.sendMail(recipients, subject, message)
 
         return {"results": True,
