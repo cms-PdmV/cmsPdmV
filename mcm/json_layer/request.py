@@ -15,13 +15,13 @@ from math import sqrt
 from json import loads, dumps
 from operator import itemgetter
 
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
 from json_layer.json_base import json_base
-from json_layer.campaign import campaign
-from json_layer.flow import flow
-from json_layer.batch import batch
+from json_layer.campaign import campaign as Campaign
+from json_layer.flow import flow as Flow
+from json_layer.batch import batch as Batch
 from json_layer.generator_parameters import generator_parameters
-from json_layer.sequence import sequence
+from json_layer.sequence import sequence as Sequence
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
@@ -90,7 +90,7 @@ class request(json_base):
         if not json_input:
             json_input = {}
         self.is_root = False
-        cdb = database('campaigns')
+        cdb = Database('campaigns')
         if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
             if cdb.document_exists(json_input['member_of_campaign']):
                 self.logger.info('**** GETTING CAMPAIGN %s FOR REQUEST %s', json_input.get('member_of_campaign'), json_input.get('prepid'))
@@ -117,6 +117,32 @@ class request(json_base):
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
+
+    def validate(self):
+        """
+        Check if all attributes of the object are valid
+        Return a boolean whether it is valid and an optional error message
+        """
+        self.logger.warning('TODO: Implement validate() of request!')
+        """
+
+        all_interested_pwg = set(settings.get_value('pwg'))
+        req_interested_pwg = mcm_req.get_attribute('interested_pwg')
+        for interested_pwg in req_interested_pwg:
+            if interested_pwg not in all_interested_pwg:
+                return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
+
+        dataset_name = mcm_req.get_attribute('dataset_name')
+        dataset_name_regex = re.compile('.*[^0-9a-zA-Z_-].*')
+        if dataset_name_regex.match(dataset_name):
+            return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
+
+        requests_events_per_lumi = mcm_req.get_attribute('events_per_lumi')
+        if requests_events_per_lumi != 0 and (requests_events_per_lumi < 100 or requests_events_per_lumi > 1000):
+            return {"results": False, 'message': 'Events per lumi must be 100<=X<=1000 or 0 to use campaign\'s value'}
+
+        """
+        return True, None
 
     def approve(self, step=-1, to_approval=None):
         json_base.approve(self, step, to_approval)
@@ -1003,61 +1029,78 @@ class request(json_base):
             except request.IllegalAttributeName:
                 continue
 
-    def set_options(self, can_save=True):
-        if self.get_attribute('status') == 'new':
-            cdb = database('campaigns')
+    def reset_options(self):
+        prepid = self.get_attribute('prepid')
+        campaign_db = Database('campaigns')
+        campaign_name = self.get_attribute('member_of_campaign')
+        campaign = campaign_db.get(campaign_name)
+        if not campaign:
+            raise Exception('"%s" could not find "%s" to reset options' % (prepid, campaign_name))
 
-            flownWith = None
-            if self.get_attribute('flown_with'):
-                fdb = database('flows')
-                flownWith = flow(fdb.get(self.get_attribute('flown_with')))
+        if not self.get_attribute('status') == 'new':
+            raise Exception('Cannot reset options for a non "new" request "%s"' % (prepid))
 
-            camp = campaign(cdb.get(self.get_attribute('member_of_campaign')))
-            self.transfer_from(camp)
-            # putting things together from the campaign+flow
-            freshSeq = []
-            freshKeep = []
-            if flownWith:
-                request.put_together(camp, flownWith, self)
-            else:
-                for i in range(len(camp.get_attribute('sequences'))):
-                    fresh = sequence(camp.get_attribute('sequences')[i]["default"])
-                    freshSeq.append(fresh.json())
-                    freshKeep.append(False)  # dimension keep output to the sequences
+        self.logger.info('Resetting options for "%s" from "%s"', prepid, campaign_name)
+        # Copy values from campaign
+        to_copy = ('energy', 'cmssw_release', 'pileup_dataset_name',
+                   'type', 'input_dataset', 'memory')
+        for attribute in to_copy:
+            self.set_attribute(attribute, campaign[attribute])
 
-                if not camp.get_attribute("no_output"):
-                    freshKeep[-1] = True  # last output must be kept
+        request_parameters = {}
+        flow_name = self.get_attribute('flown_with')
+        if flow_name:
+            flow_db = Database('flows')
+            flow = flow_db.get(flow_name)
+            if not flow:
+                raise Exception('"%s" could not find "%s" to reset options' % (prepid, flow_name))
 
-                self.set_attribute('sequences', freshSeq)
-                self.set_attribute('keep_output', freshKeep)
-            if can_save:
-                self.update_history({'action': 'reset', 'step': 'option'})
-                self.reload()
+            request_parameters = flow.get('request_parameters', {})
 
-    def reset_options(self, can_save=True):
-        self.logger.error("executing code that we shouldnt")
-        cdb = database('campaigns')
-        camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
-        # a way of resetting the sequence and necessary parameters
-        if self.get_attribute('status') == 'new':
-            self.set_attribute('cmssw_release', '')
-            self.set_attribute('pileup_dataset_name', '')
-            self.set_attribute('output_dataset', [])
-            freshSeq = []
-            freshKeep = []
-            for i in range(len(self.get_attribute('sequences'))):
-                freshSeq.append(sequence().json())
-                freshKeep.append(False)
+        sequences = []
+        campaign_sequences = campaign['sequences']
+        flow_sequences = request_parameters.get('sequences', [])
+        # Add empty sequences to flow
+        flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{'default': {}}]
+        assert(len(campaign_sequences) == len(flow_sequences))
+        # Get sequence names from flow, usually "default"
+        sequence_names = [seq.keys()[0] for seq in flow_sequences]
+        # Pick sequences from the flow
+        flow_sequences = [seq[name] for seq, name in zip(flow_sequences, sequence_names)]
+        # Pick sequences from the campaign based on names in flow
+        campaign_sequences = [seq[name] for seq, name in zip(campaign_sequences, sequence_names)]
+        for flow_seq, campaign_seq in zip(flow_sequences, campaign_sequences):
+            # Allow all attributes?
+            campaign_seq.update(flow_seq)
+            sequences.append(campaign_seq)
 
-            if not camp.get_attribute("no_output"):
-                freshKeep[-1] = True  # last output must be kept
+        self.set_attribute('sequences', sequences)
+        # Keep output
+        if self.get_attribute('sequences'):
+            keep_output = len(self.get_attribute('sequences')) * [False]
+            keep_output[-1] = not campaign.get('no_output')
+        else:
+            keep_output = []
 
-            freshKeep[-1] = True
-            self.set_attribute('sequences', freshSeq)
-            self.set_attribute('keep_output', freshKeep)
-            # then update itself in DB
-            if can_save:
-                self.reload()
+        # Number of time per event values
+        time_per_event = self.get_attribute('time_event')
+        if len(time_per_event) > len(sequences):
+            self.set_attribute('time_event', time_per_event[:len(sequences)])
+        elif len(time_per_event) < len(sequences):
+            time_per_event += [-1.0] * len(sequences) - len(time_per_event)
+            self.set_attribute('time_event', time_per_event)
+
+        # Number of size per event values
+        size_per_event = self.get_attribute('size_event')
+        if len(size_per_event) > len(sequences):
+            self.set_attribute('size_event', size_per_event[:len(sequences)])
+        elif len(size_per_event) < len(sequences):
+            size_per_event += [-1.0] * len(sequences) - len(size_per_event)
+            self.set_attribute('size_event', size_per_event)
+
+        self.set_attribute('keep_output', keep_output)
+        # Add hisotry entry
+        self.update_history({'action': 'reset', 'step': 'option'})
 
     def build_cmsDrivers(self):
         commands = []
@@ -1087,7 +1130,7 @@ class request(json_base):
         tiers = s['datatier']
         if isinstance(tiers, str):
             tiers = tiers.split(',')
-        
+
         # the first tier is the main output : reverse it
         return list(reversed(tiers))
 

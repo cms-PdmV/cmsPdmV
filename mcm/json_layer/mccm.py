@@ -125,7 +125,7 @@ class mccm(json_base):
         requests_db = Database('requests')
         prepids = self.get_request_list()
         requests = requests_db.db.bulk_get(prepids)
-        events = sum(max(0, r.get('total_events', 0)) for r in requests)
+        events = sum(max(0, r.get('total_events', 0)) for r in requests if r)
         self.set_attribute('total_events', events)
 
     def all_requests_approved(self):
@@ -137,7 +137,7 @@ class mccm(json_base):
         requests = request_db.db.bulk_get(request_prepids)
         allowed_approvals = {'approve', 'submit'}
         for request in requests:
-            if request.get('approval') not in allowed_approvals:
+            if not request or request.get('approval') not in allowed_approvals:
                 return False
 
         return True
@@ -152,7 +152,7 @@ class mccm(json_base):
         request_db = Database('requests')
         requests = request_db.db.bulk_get(request_prepids)
         defined = {'define', 'approve', 'submit'}
-        if [r for r in requests if r.get('approval') not in defined]:
+        if [r for r in requests if not r or r.get('approval') not in defined]:
             # There are requests that are not defined/approved/submitted
             return []
 
@@ -167,6 +167,6 @@ class mccm(json_base):
         request_db = Database('requests')
         requests = request_db.db.bulk_get(request_prepids)
         defined = {'define', 'approve', 'submit'}
-        defined_prepids = [r['prepid'] for r in requests if r.get('approval') in defined]
+        defined_prepids = [r['prepid'] for r in requests if r and r.get('approval') in defined]
         not_defined_prepids = sorted(list(set(request_prepids) - set(defined_prepids)))
         return not_defined_prepids

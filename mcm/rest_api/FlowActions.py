@@ -276,6 +276,9 @@ class UpdateFlow(FlowRESTResource):
         difference = self.get_obj_diff(previous_version.json(),
                                        flow.json(),
                                        ('history', '_rev'))
+        if not difference:
+            return {'results': True}
+
         difference = ', '.join(difference)
         flow.update_history({'action': 'update', 'step': difference})
 

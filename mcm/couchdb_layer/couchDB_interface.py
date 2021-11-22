@@ -107,6 +107,10 @@ class Database():
         data = self.opener.open(db_request)
         results = loads(data.read())['results']
         results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
+        # Make a dictionary of _id -> object
+        results = {r['_id']: r for r in results}
+        # Make a list of same order of ids and put None if object was not found
+        results = [results.get(obj_id) for obj_id in ids]
         return results
 
     def prepid_is_used(self, doc_id):

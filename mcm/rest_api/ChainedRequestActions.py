@@ -118,6 +118,9 @@ class UpdateChainedRequest(RESTResource):
         difference = self.get_obj_diff(previous_version.json(),
                                        chained_req.json(),
                                        ('history', '_rev'))
+        if not difference:
+            return {'results': True}
+
         difference = ', '.join(difference)
         chained_req.update_history({'action': 'update', 'step': difference})
         return {"results": db.update(chained_req.json())}
