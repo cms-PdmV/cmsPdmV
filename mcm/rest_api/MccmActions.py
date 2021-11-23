@@ -178,10 +178,13 @@ class DeleteMccm(RESTResource):
         if user_role not in {'production_manager', 'administrator'}:
             username = user.get_username()
             history = mccm.get_attribute('history')
+            owner = None
+            owner_name = None
             if history:
                 for history_entry in history:
                     if history_entry['action'] == 'created':
-                        owner = history_entry['updater']['author_name']
+                        owner = history_entry['updater']['author_username']
+                        owner_name = history_entry['updater']['author_name']
 
             if not owner:
                 return {'results': False,
@@ -189,7 +192,7 @@ class DeleteMccm(RESTResource):
 
             if owner != username:
                 return {'results': False,
-                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner)}
+                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner_name)}
 
         # Delete from DB
         if not mccm_db.delete(mccm_id):
