@@ -526,7 +526,7 @@ class GenerateChains(RESTResource):
         root_chains.append(chained_request_prepid)
         request.set_attribute('member_of_chain', sorted(list(set(root_chains))))
         request.update_history({'action': 'join chain', 'step': chained_request_prepid})
-        request.save()
+        request.reload()
         request_status = request.get_attribute('status')
         # do the reservation of the whole chain ?
         generated_requests = []
