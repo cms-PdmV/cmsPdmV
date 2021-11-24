@@ -677,16 +677,18 @@ class chained_request(json_base):
                     for i in range(next_step, min(len(common_steps), len(candidate_chain))):
                         candidate_request = rdb.get(candidate_chain[i])
                         candidate_request_keep_output = True in candidate_request['keep_output']
-                        self.logger.info('Checking step %s, %s->%s request %s keeps output: %s',
+                        candidate_request_status = candidate_request.get('approval')
+                        self.logger.info('Checking step %s, %s->%s request %s (%s) keeps output: %s',
                                          i,
                                          common_steps[i][1],
                                          common_steps[i][0],
                                          candidate_chain[i],
+                                         candidate_request_status,
                                          candidate_request_keep_output)
                         if candidate_request_keep_output:
                             further_steps_keep_output = True
 
-                    if not further_steps_keep_output:
+                    if candidate_request_status != 'submit' or candidate_request_keep_output:
                         self.logger.info('None of following common requests keep output, bad candidate')
                         continue
 
