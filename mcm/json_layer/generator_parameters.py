@@ -35,7 +35,3 @@ class generator_parameters(json_base):
             if 'efficiency' in k and not 'error' in k and v==0:
                 return True
         return False
-
-if __name__=='__main__':
-    g = generator_parameters(' ')
-    g.print_self()

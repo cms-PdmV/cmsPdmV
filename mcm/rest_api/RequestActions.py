@@ -73,7 +73,6 @@ class RequestRESTResource(RESTResource):
         if campaign_json.get('root') <= 0:
             request.update_generator_parameters()
 
-        request.validate()
         prepid = '%s-%s' % (pwg, campaign_name)
         with locker.lock('create-request-%s' % (prepid)):
             self.logger.info('Will try to find new prepid for request %s-*', prepid)
@@ -236,11 +235,10 @@ class UpdateRequest(RequestRESTResource):
                     return {"results": False,
                             'message': 'You need to be at least GEN convener to set validation to >16h'}
 
-            new_request.validate()
             self.logger.info('Updating request %s' % (prepid))
             difference = self.get_obj_diff(old_request.json(),
-                                            new_request.json(),
-                                            ('history', '_rev'))
+                                           new_request.json(),
+                                           ('history', '_rev'))
             if not difference:
                 return {'results': True}
 
@@ -365,29 +363,6 @@ class DeleteRequest(RESTResource):
         return {'results': True}
 
 
-class GetCmsDriverForRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        self.json = {}
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_id):
-        """
-        Retrieve the cmsDriver commands for a given request
-        """
-        db = database(self.db_name)
-        return self.get_cmsDriver(db.get(prepid=request_id))
-
-    def get_cmsDriver(self, data):
-        try:
-            mcm_req = request(json_input=data)
-        except request.IllegalAttributeName:
-            return {"results": ''}
-
-        return {"results": mcm_req.build_cmsDrivers()}
-
-
 class OptionResetForRequest(RESTResource):
 
     access_limit = access_rights.generator_contact
@@ -424,6 +399,29 @@ class OptionResetForRequest(RESTResource):
             return results[0]
 
         return results
+
+
+class GetCmsDriverForRequest(RESTResource):
+    def __init__(self):
+        self.db_name = 'requests'
+        self.json = {}
+        self.before_request()
+        self.count_call()
+
+    def get(self, request_id):
+        """
+        Retrieve the cmsDriver commands for a given request
+        """
+        db = database(self.db_name)
+        return self.get_cmsDriver(db.get(prepid=request_id))
+
+    def get_cmsDriver(self, data):
+        try:
+            mcm_req = request(json_input=data)
+        except request.IllegalAttributeName:
+            return {"results": ''}
+
+        return {"results": mcm_req.build_cmsDrivers()}
 
 
 class GetFragmentForRequest(RESTResource):
@@ -552,83 +550,74 @@ class GetRequestOutput(RESTResource):
 
 
 class ApproveRequest(RESTResource):
+
     def __init__(self):
         self.before_request()
         self.count_call()
 
-    def get(self, request_id=None, step=-1):
-        """
-        Approve to the next step, or specified index the given request or coma separated list of requests
-        """
-        if request_id is None:
-            return {'results': False, 'message': 'No prepid was given'}
-
-        return self.multiple_approve(request_id, step)
-
-    def post(self, request_id=None, step=-1):
+    def post(self):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
         """
-        return self.multiple_approve(flask.request.data)
+        data = json.loads(flask.request.data)
+        prepids = data.get('prepid')
+        if isinstance(prepids, (basestring, str)):
+            prepids = prepids.split(',')
+        elif not isinstance(prepids, list):
+            return {'results': False,
+                    'message': 'Expected a string or list of prepids'}
 
-    def multiple_approve(self, rid, val=-1, hard=True):
-        if ',' in rid:
-            rlist = rid.rsplit(',')
-            res = []
-            for r in rlist:
-                res.append(self.approve(r, val, hard))
-            return res
-        else:
-            return self.approve(rid, val, hard)
+        return self.approve_many(prepids)
 
-    def approve(self, rid, val=-1, hard=True):
-        _res = ""
-        db = database('requests')
-        if not db.document_exists(rid):
-            return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
-        req = request(json_input=db.get(rid))
+    def approve_many(self, prepids):
+        self.allowed_to_approve_users = set(settings.get_value('allowed_to_approve'))
+        self.allowed_to_approve_roles = {'administrator', 'generator_convener'}
+        self.request_db = Database('requests')
+        requests = self.request_db.db.bulk_get(prepids)
+        results = []
+        for prepid, request in zip(prepids, requests):
+            if not request:
+                results.append({"results": False,
+                                "prepid": prepid,
+                                'message': 'Request "%s" does not exist' % (prepid)})
+                continue
 
-        self.logger.info('Approving request %s for step "%s"' % (rid, val))
-        if req.get_attribute('approval') == 'define' and req.get_attribute('status') == 'defined' and val == -1:
+            assert(prepid == request['prepid'])
+            with locker.lock(prepid):
+                results.append(self.approve(request))
+
+        if len(results) == 1:
+            return results[0]
+
+        return results
+
+    def approve(self, request_json):
+        request = Request(request_json)
+        prepid = request.get_attribute('prepid')
+        self.logger.info('Approving request %s' % (prepid))
+        if request.get_attribute('approval') == 'define' and request.get_attribute('status') == 'defined':
             username = self.user_dict.get('username', '')
             role = self.user_dict.get('role', 'user')
-            allowed_to_approve = settings.get_value('allowed_to_approve')
-            if role not in set(['administrator', 'generator_convener']) and username not in allowed_to_approve:
-                self.logger.warning('%s (%s) was stopped from approving %s' % (username, role, rid))
-                return {'prepid': rid, 'results': False, 'message': 'You are not allowed to approve requests'}
-            else:
-                self.logger.warning('%s (%s) was allowed to approve %s' % (username, role, rid))
+            if role not in self.allowed_to_approve_roles and username not in self.allowed_to_approve_users:
+                self.logger.info('%s (%s) stopped from approving %s' % (username, role, prepid))
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': 'You are not allowed to approve requests'}
 
+            self.logger.info('%s (%s) allowed to approve %s' % (username, role, prepid))
 
-        # req.approve(val)
-        try:
-            if val == 0:
-                req.reset(hard)
-                saved = db.update(req.json())
-            else:
-                with locker.lock('{0}-wait-for-approval'.format(rid)):
-                    _res = req.approve(val)
-                    saved = db.update(req.json())
+        approved, message = request.approve()
+        if not approved:
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': message}
 
-        except request.WrongApprovalSequence as ex:
-            return {'prepid': rid, 'results': False, 'message': str(ex)}
-        except request.WrongStatusSequence as ex:
-            return {"prepid": rid, "results": False, 'message': str(ex)}
-        except request.IllegalApprovalStep as ex:
-            return {"prepid": rid, "results": False, 'message': str(ex)}
-        except request.BadParameterValue as ex:
-            return {"prepid": rid, "results": False, 'message': str(ex)}
-        except Exception:
-            trace = traceback.format_exc()
-            self.logger.error("Exception caught in approval\n%s" % (trace))
-            return {'prepid': rid, 'results': False, 'message': trace}
-        if saved:
-            if _res:
-                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': False, 'message': _res["message"]}
-            else:
-                return {'prepid': rid, 'approval': req.get_attribute('approval'), 'results': True}
-        else:
-            return {'prepid': rid, 'results': False, 'message': 'Could not save the request after approval'}
+        if not self.request_db.update(request.json()):
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': 'Error saving "%s" to database' % (prepid)}
+
+        return {'results': True, 'prepid': prepid}
 
 
 class ResetRequestApproval(ApproveRequest):
@@ -1605,90 +1594,6 @@ class GetUniqueValues(RESTResource):
             kwargs['limit'] = int(kwargs['limit'])
         kwargs['group'] = True
         return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
-
-
-class PutToForceComplete(RESTResource):
-
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def put(self):
-        """
-        Put a request to a force complete list
-        """
-        data = loads(flask.request.data.strip())
-        pid = data['prepid']
-
-        reqDB = database('requests')
-        lists_db = database('lists')
-        udb = database('users')
-        self.logger.info('Will try to add to forcecomplete a request: %s' % (pid))
-        req = request(reqDB.get(pid))
-        curr_user = user(udb.get(req.current_user))
-        forcecomplete_list = lists_db.get('list_of_forcecomplete')
-
-        # do some checks
-        if req.get_attribute('status') != 'submitted':
-            self.logger.info('%s is not submitted for forcecompletion' % (pid))
-            message = 'Cannot add a request which is not submitted'
-            return {"prepid": pid, "results": False, 'message': message}
-
-        # we want users to close only theirs PWGs
-        if not req.get_attribute("pwg") in curr_user.get_pwgs():
-            self.logger.info("User's PWG:%s is doesnt have requests PWG:%s" % (
-                curr_user.get_pwgs(), req.get_attribute("pwg")))
-
-            message = "User's PWG:%s is doesnt have requests PWG:%s" % (
-                ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
-
-            return {"prepid": pid, "results": False, 'message': message}
-        # check if request if at least 50% complete
-        if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5 and curr_user.get_attribute('role') != 'administrator':
-            self.logger.info('%s is below 50percent completion' % (pid))
-            message = 'Request is below 50 percent completion'
-            return {"prepid": pid, "results": False, 'message': message}
-
-        if pid in forcecomplete_list['value']:
-            self.logger.info('%s already in forcecompletion' % (pid))
-            message = 'Request already in forcecomplete list'
-            return {"prepid": pid, "results": False, 'message': message}
-
-        forcecomplete_list['value'].append(pid)
-        ret = lists_db.update(forcecomplete_list)
-
-        # lets see if we succeeded in saving it to settings DB
-        if ret:
-            req.update_history({'action': 'forcecomplete'})
-            reqDB.save(req.json())
-        else:
-            self.logger.error('%s failed to save forcecomplete in settings DB' % (pid))
-            message = 'Failed to save forcecomplete to DB'
-            return {"prepid": pid, "results": False, 'message': message}
-
-        return {"prepid": pid, "results": True,
-                'message': 'Successfully added request to force complete list'}
-
-
-class ForceCompleteMethods(RESTResource):
-
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.access_user = settings.get_value('allowed_to_acknowledge')
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
-    def get(self):
-        """
-        Get a list of workflows for force complete
-        """
-        lists_db = database('lists')
-        forcecomplete_list = lists_db.get('list_of_forcecomplete')
-        return dumps(forcecomplete_list['value'], indent=4)
 
 
 class RequestsPriorityChange(RESTResource):

@@ -105,8 +105,3 @@ class sequence(json_base):
                 command += addone
                 command += ' '
         return command
-
-
-if __name__ == '__main__':
-    s = sequence()
-    s.print_self()
