@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-
 import logging
 import traceback
+import re
 
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
@@ -13,156 +12,57 @@ from tools.user_management import access_rights
 
 class json_base:
     __json = {}
-    __approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
-    __status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
+    __approvalsteps = []
+    __status = []
     __schema = {}
+    __database = None
     logger = logging.getLogger("mcm_error")
 
-    class WrongApprovalSequence(Exception):
-        def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to approve %s in status %s. %s' % (approval, status, message)
-            json_base.logger.error(self.text)
+    def __init__(self, json_input=None):
+        if not json_input:
+            # If no data is provided, use default values from schema
+            json_input = self.schema()
 
-        def __str__(self):
-            return self.text
-
-    class WrongStatusSequence(Exception):
-        def __init__(self, status, approval, message=''):
-            self.text = 'It is illegale to change status %s in approval %s. %s' % (status, approval, message)
-            json_base.logger.error(self.text)
-
-        def __str__(self):
-            return self.text
-
-    class IllegalAttributeName(Exception):
-        def __init__(self, attribute=None):
-            self.__attribute = repr(attribute)
-            json_base.logger.error('Invalid Json Format: Attribute %s is illegal' % (self.__attribute))
-
-        def __str__(self):
-            return 'Invalid Json Format: Attribute \'' + self.__attribute + '\' is illegal'
-
-    class IllegalApprovalStep(Exception):
-        def __init__(self, step=None):
-            self.__step = repr(step)
-            json_base.logger.error('Illegal approval step: %s' % (self.__step))
-
-        def __str__(self):
-            return 'Illegal Approval Step: ' + self.__step
-
-    class IllegalStatusStep(Exception):
-        def __init__(self, step=None):
-            self.__step = repr(step)
-            json_base.logger.error('Illegal Status: %s' % (self.__step))
-
-        def __str__(self):
-            return 'Illegal Status: ' + self.__step
-
-    class WrongTimeEvent(Exception):
-        def __init__(self, message=''):
-            self.message = message
-            json_base.logger.error(str(self))
-
-        def __str__(self):
-            return self.message
-
-    class BadParameterValue(Exception):
-        def __init__(self, message=''):
-            self.message = message
-            json_base.logger.error(str(self))
-
-        def __str__(self):
-            return self.message
-
-    def __init__(self, json=None):
-        json = json if json else {}
-        if json:
-            self.__json = json
-
-    def setup(self):
-        self.com = communicator()
+        self.__json = deepcopy(json_input)
 
     def validate(self):
         if not self.__json:
             return
-            # looks for keys that are missing, from the schema requirement
+
         for key in self.__schema:
             if key not in self.__json:
-                raise self.IllegalAttributeName(key)
+                raise Exception('Missing attribute "%s"' % (key))
 
-                # JR: how to test exactness of information
-                # look for keys that are in extras to the schema requirement
-                # for key in self.__json:
-                # if key not in self.__schema:
-                # json_base.logger.error('Parameter %s is not mandatory anymore: removing ?'%(key))
+    @classmethod
+    def get_database(cls):
+        return cls.__database
 
     def reload(self, save_current=True):
         """
-        Save (if specified) and reloads the object with info from database (new revision)
+        Save and reload the object from database
         """
-        if save_current:
-            if not self.save():
-                return False
-        db = self.get_database()
-        if db is None:
-            return False
-        with locker.lock(self.get_attribute('_id')):
-            self.__init__(db.get(self.get_attribute('_id')))
-            return True
+        object_id = self.get_attribute('_id')
+        database = self.get_database()
+        with locker.lock(object_id):
+            if save_current:
+                if not self.save():
+                    return False
 
-    def get_database(self):
-        try:
-            if self.__class__.__name__ == "batch":
-                return database(self.__class__.__name__ + "es")
-            else:
-                return database(self.__class__.__name__ + "s")
-        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
-            self.logger.error("Problem with database creation:\n{0}".format(ex))
-            return None
+            self.__init__(database.get(object_id))
+
+        return True
 
     def save(self):
         """
-        Updates or creates document in database with name db_name
+        Updates or creates document in the database
         """
-        db = self.get_database()
-        if db is None:
-            return False
-        with locker.lock(self.get_attribute('_id')):
-            if not db.document_exists(self.get_attribute('_id')):
-                saved = db.save(self.json())
-            else:
-                saved = db.update(self.json())
-            if not saved:
-                return False
-        return True
+        object_id = self.get_attribute('_id')
+        database = self.get_database()
+        with locker.lock(object_id):
+            if database.document_exists(object_id):
+                return database.update(self.json())
 
-    def overwrite(self, json_input):
-        """
-        Update the document with the input, regardless of revision clash.
-        This has to be used to much care
-        """
-        db = self.get_database()
-        if db is None:
-            return False
-        with locker.lock(self.get_attribute('_id')):
-            if not db.document_exists(self.get_attribute('_id')):
-                return False
-            # reload the doc with db
-            t = db.get(self.get_attribute('_id'))
-            self.__init__(t)
-            if "_rev" in json_input:
-                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: %s" % (t["_rev"], json_input["_rev"]))
-
-            else:
-                self.logger.debug("trying to overwrite.DB _rev:%s Doc _rev: none" % (t["_rev"]))
-
-            # add what was provided on top
-            self._json_base__json.update(json_input)
-            # save back
-            saved = db.update(self.json())
-            if not saved:
-                return False
-            return True
+            return database.save(self.json())
 
     def update(self, json_input):
         self._json_base__json = {}
@@ -329,14 +229,6 @@ class json_base:
     def class_schema(cls):
         return cls.__schema
 
-    def print_self(self):
-        try:
-            import json
-        except ImportError:
-            self.logger.error('Error: Could not import "json" module')
-            print self.__json
-        print json.dumps(self.__json, indent=4)
-
     def keys(self):
         return self.__schema.keys()
 
@@ -461,6 +353,9 @@ class json_base:
         except Exception:
             self.logger.error("Error looking for input dataset: %s" % (traceback.format_exc()))
             return ""
+
+    def fullmatch(self, pattern, string):
+        return re.match("(?:" + pattern + r")\Z", string)
 
 
 class submission_details(json_base):

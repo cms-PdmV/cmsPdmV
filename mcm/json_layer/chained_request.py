@@ -896,27 +896,15 @@ class chained_request(json_base):
 
         return True
 
-    def set_last_status(self, status=None):
-        if not status:
-            rdb = database('requests')
-            step_r = rdb.get(self.get_attribute('chain')[self.get_attribute('step')])
-            new_last_status = step_r['status']
-        else:
-            new_last_status = status
-        if new_last_status != self.get_attribute('last_status'):
-            self.update_history({'action': 'set last status', 'step': new_last_status})
-            self.set_attribute('last_status', new_last_status)
-            return True
-        else:
+    def set_last_status(self, status):
+        if status == self.get_attribute('last_status'):
             return False
 
-    def set_processing_status(self, pid=None, status=None):
-        if not pid or not status:
-            rdb = database('requests')
-            step_r = rdb.get(self.get_attribute('chain')[self.get_attribute('step')])
-            pid = step_r['prepid']
-            status = step_r['status']
+        self.update_history({'action': 'set last status', 'step': status})
+        self.set_attribute('last_status', status)
+        return True
 
+    def set_processing_status(self, pid=None, status=None):
         if pid == self.get_attribute('chain')[self.get_attribute('step')]:
             cdb = database("chained_campaigns")
             chained_camp = cdb.get(self.get_attribute("member_of_campaign"))

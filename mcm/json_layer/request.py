@@ -25,7 +25,7 @@ from json_layer.sequence import sequence as Sequence
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
-import tools.settings as settings
+import tools.settings as Settings
 from tools.locker import locker
 from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
@@ -69,14 +69,14 @@ class request(json_base):
         'fragment': '',
         'config_id': [],
         'version': 0,
-        'status': '',
+        'status': 'new',
         'type': '',
         'keep_output': [],  # list of booleans
         'generators': [],
         'sequences': [],
         'generator_parameters': [],
         'reqmgr_name': [],
-        'approval': '',
+        'approval': 'none',
         'energy': 0.0,
         'tags': [],
         'interested_pwg': [],
@@ -84,34 +84,18 @@ class request(json_base):
         'pilot': False,
     }
 
+    _cmssw_pattern = 'CMSSW_[0-9]{1,3}_[0-9]{1,3}_[0-9]{1,3}.{0,20}'
+    _dataset_name_pattern = '^[A-Za-z][A-Za-z0-9\-_]{5,99}$'
+    _processing_string_pattern = '[a-zA-Z0-9_]{3,100}'
+
     def __init__(self, json_input=None):
 
         # detect approval steps
         if not json_input:
             json_input = {}
-        self.is_root = False
-        cdb = Database('campaigns')
-        if 'member_of_campaign' in json_input and json_input['member_of_campaign']:
-            if cdb.document_exists(json_input['member_of_campaign']):
-                self.logger.info('**** GETTING CAMPAIGN %s FOR REQUEST %s', json_input.get('member_of_campaign'), json_input.get('prepid'))
-                __camp = cdb.get(json_input['member_of_campaign'])
-                self._json_base__schema['memory'] = __camp['memory']
 
-                if __camp['root'] > 0:  # when is not root
-                    self._json_base__approvalsteps = ['none', 'approve', 'submit']
-                    self._json_base__status = ['new', 'approved', 'submitted', 'done']
-                else:
-                    self.is_root = True
-
-            else:
-                raise Exception('Campaign %s does not exist in the database' % (json_input['member_of_campaign']))
-
-        else:
-            raise Exception('Request is not a member of any campaign')
-
-        self._json_base__schema['status'] = self.get_status_steps()[0]
-        self._json_base__schema['approval'] = self.get_approval_steps()[0]
-
+        self._json_base__approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
+        self._json_base__status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
         # update self according to json_input
         self.setup()
         self.update(json_input)
@@ -121,46 +105,144 @@ class request(json_base):
     def validate(self):
         """
         Check if all attributes of the object are valid
-        Return a boolean whether it is valid and an optional error message
         """
-        self.logger.warning('TODO: Implement validate() of request!')
+        prepid = self.get_attribute('prepid')
+        self.logger.info('Validating request %s', prepid)
+        # Check if PWG is valid
+        pwg = self.get_attribute('pwg')
+        all_pwgs = Settings.get_value('pwg')
+        if pwg not in all_pwgs:
+            raise Exception('Invalid PWG - "%s"' % (pwg))
+
+        # Check if interested PWGs are valid
+        interested_pwgs = self.get_attribute('interested_pwg')
+        if set(interested_pwgs) - set(all_pwgs):
+            invalid_pwgs = sorted(list(set(interested_pwgs) - set(all_pwgs)))
+            raise Exception('Invalid interested PWG: %s' % (', '.join(invalid_pwgs)))
+
+        # Dataset name
+        dataset_name = self.get_attribute('dataset_name')
+        if dataset_name and not self.fullmatch(self._dataset_name_pattern, dataset_name):
+            raise Exception('Dataset name "%s" does not match required format' % (dataset_name))
+
+        # Events per lumi
+        events_per_lumi = self.get_attribute('events_per_lumi')
+        if events_per_lumi != 0 and not (100 <= events_per_lumi <= 1000):
+            raise Exception('Events per lumi must be 100<=X<=1000 or 0 to use campaign value')
+
+        # CMSSW release
+        cmssw_release = self.get_attribute('cmssw_release')
+        if not self.fullmatch(self._cmssw_pattern, cmssw_release):
+            raise Exception('Invalid CMSSW release name "%s"' % (cmssw_release))
+
+        # Processing string check
+        processing_string = self.get_attribute('process_string')
+        if processing_string and not self.fullmatch(self._processing_string_pattern, processing_string):
+            raise Exception('Invalid processing string "%s"' % (processing_string))
+
+        sequences = self.get_attribute('sequences')
+        # Max number of cores:
+        cores = max(s.get('nThreads', 1) for s in sequences)
+        if not cores:
+            raise Exception('Invalid number of nThreads in sequences')
+
+        # Memory
+        memory = self.get_attribute('memory')
+        memory_per_core = memory / cores
+        if not (1000 < memory_per_core < 4000):
+            raise Exception('Invalid memory, allowed 1-4GB/core, found %.2fMB' % (memory_per_core))
+
+        # Number of time per event values:
+        if len(self.get_attribute('time_event')) != len(sequences):
+            raise Exception('Number of time per event values is different from number of sequences')
+
+        # Number of size per event values:
+        if len(self.get_attribute('size_event')) != len(sequences):
+            raise Exception('Number of size per event values is different from number of sequences')
+
+        # Number of keep output values:
+        if len(self.get_attribute('keep_output')) != len(sequences):
+            raise Exception('Number of keep output values is different from number of sequences')
+
+    def approve(self):
         """
-
-        all_interested_pwg = set(settings.get_value('pwg'))
-        req_interested_pwg = mcm_req.get_attribute('interested_pwg')
-        for interested_pwg in req_interested_pwg:
-            if interested_pwg not in all_interested_pwg:
-                return {"results": False, 'message': '%s is not a valid PWG' % (interested_pwg)}
-
-        dataset_name = mcm_req.get_attribute('dataset_name')
-        dataset_name_regex = re.compile('.*[^0-9a-zA-Z_-].*')
-        if dataset_name_regex.match(dataset_name):
-            return {"results": False, 'message': 'Dataset name %s does not match required format' % (dataset_name)}
-
-        requests_events_per_lumi = mcm_req.get_attribute('events_per_lumi')
-        if requests_events_per_lumi != 0 and (requests_events_per_lumi < 100 or requests_events_per_lumi > 1000):
-            return {"results": False, 'message': 'Events per lumi must be 100<=X<=1000 or 0 to use campaign\'s value'}
-
+        Approve request - move it to next status
+        Statuses:
+        - none-new              -> new
+        - validation-new        -> validating
+        - validation-validation -> validated
+        - defined-defined       -> defined
+        - approve-approved      -> approved
+        - submit-approved       -> submitting
+        - submit-submitted      -> submitted
+        - submit-done           -> done
         """
-        return True, None
+        prepid = self.get_attribute('prepid')
+        current_status = '%s-%s' % (self.get_attribute('approval'), self.get_attribute('status'))
+        self.logger.info('Approving request "%s", current status "%s"', prepid, current_status)
+        if current_status == 'none-new':
+            # Need to check if this is root campaign or not, it root or possible
+            # then move to validation, otherwise straight to approved
+            campaign_db = Database('campaigns')
+            campaign = campaign_db.get(self.get_attribute('member_of_campaign'))
+            if campaign['root'] > 0:
+                # Not root
+                self.move_to_approved()
+            else:
+                # Root or possible root
+                # Skip to validated if request is in validation bypass list
+                self.move_to_validating()
 
-    def approve(self, step=-1, to_approval=None):
-        json_base.approve(self, step, to_approval)
-        step = self.get_attribute('approval')
-        result = True
-        # is it allowed to move on
-        if step == "validation":
-            result = self.ok_to_move_to_approval_validation()
-        elif step == "define":
-            result = self.ok_to_move_to_approval_define()
-        elif step == "approve":
-            result = self.ok_to_move_to_approval_approve()
-        elif step == "submit":
-            result = self.ok_to_move_to_approval_submit()
+        elif current_status == 'validation-new':
+            # Move to validated, is allowed only for pdmvserv
+            raise Exception('Request is being validated, approval is not allowed')
+        elif current_status == 'validation-validation':
+            # Move to defined
+            self.move_to_defined()
+        elif current_status == 'define-defined':
+            # Last action of generator contacts
+            self.move_to_approved()
+        elif current_status == 'approve-approved':
+            # Allowed only for generator contacts and explicitly listed people
+            self.move_to_submitting()
+        elif current_status == 'submit-approved':
+            # Invalid action
+            raise Exception('Request is being submitted, approval is not allowed')
+        elif current_status == 'submit-submitted':
+            # Check if request is done
+            self.move_to_done()
+        elif current_status == 'submit-done':
+            # Cannot go further than done
+            raise Exception('Request is already done, cannot move status further')
+        else:
+            self.logger.error('Unsupported request %s status "%s"', prepid, current_status)
+            raise Exception('Unsupported request %s status "%s"' % (prepid, current_status))
 
-        return result
 
-    def set_status(self, step=-1, with_notification=False, to_status=None):
+    def set_approval_status(self, approval, status):
+        self.set_attribute('approval', approval)
+        self.set_attribute('status', status)
+        # When status is changed, udpdate it in all chained requests
+        chained_request_ids = self.get_attribute('member_of_chain')
+        if not chained_request_ids:
+            return
+
+        prepid = self.get_attribute('prepid')
+        from json_layer.chained_request import chained_request as ChainedRequest
+        chained_request_db = Database('chained_requests')
+        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
+        for chained_request in chained_requests:
+            if chained_request['step'] != chained_request['chain'].index(prepid):
+                continue
+
+            if chained_request['last_status'] == status:
+                continue
+
+            chained_request = ChainedRequest(chained_request)
+            if chained_request.set_last_status(status):
+                chained_request.save()
+
+    def set_status(self, step=-1):
         # call the base
         json_base.set_status(self, step)
         new_status = self.get_attribute('status')
@@ -177,17 +259,6 @@ class request(json_base):
                     crdb.save(chain.json())
         if self._json_base__status[step] in ['new', 'done']:
             self.remove_from_forcecomplete()
-
-    def remove_from_forcecomplete(self):
-        lists_db = database('lists')
-        forcecomplete_list = lists_db.get('list_of_forcecomplete')
-        prepid = self.get_attribute('prepid')
-        if prepid not in forcecomplete_list['value']:
-            return
-        self.logger.info("Deleting a request %s from forcecomplete" % (prepid))
-        forcecomplete_list['value'].remove(prepid)
-        if not lists_db.update(forcecomplete_list):
-            self.logger.error('Failed to save forcecomplete to DB while removing %s from list' % prepid)
 
     def get_editable(self):
         editable = {}
@@ -286,148 +357,65 @@ class request(json_base):
             rounding_unit = 10**int(max(log10(total_events_should_be) - 2, 0))
             self.set_attribute('total_events', int(1 + total_events_should_be / float(rounding_unit)) * int(rounding_unit))
 
-    def ok_to_move_to_approval_validation(self, for_chain=False):
-        settingsDB = database('settings')
-        if settingsDB.get('validation_stop')['value']:
-            self.test_failure(message=None, what='', rewind=True, with_notification=False)
-            return {'message': ('validation jobs are halted to allow forthcoming mcm restart - try again later')}
+    def move_to_validating(self, for_chain=False):
+        validation_halt = Settings.get_value('validation_stop')
+        if validation_halt:
+            raise Exception('Validation jobs are temporary stopped for upcoming McM restart')
 
-        message = ""
-        if self.current_user_level == 0:
-            # not allowed to do so
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'bad user admin level %s' % (self.current_user_level))
-
-        if self.get_attribute('memory') < 1000:
-            raise self.BadParameterValue('Memory (%sMB) is lower than threshold (1000MB)' % (self.get_attribute('memory')))
+        if self.current_user_level < access_rights.generator_contact:
+            raise Exception('You need to be at least gen contact to put request to validation')
 
         if not self.correct_types():
-            raise TypeError("Wrong type of attribute, cannot move to approval validation of request {0}".format(self.get_attribute('prepid')))
+            raise TypeError('Wrong type of attribute(s)')
 
-        if self.get_attribute('status') != 'new':
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation')
+        if not self.get_scram_arch():
+            raise Exception('SCRAM architecture is invalid, please double check the release')
 
-        if not self.get_attribute('cmssw_release') or self.get_attribute('cmssw_release') == 'None':
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'validation', 'The release version is undefined')
+        if not self.get_attribute('dataset_name'):
+            raise Exception('Missing dataset name')
 
-        if self.get_scram_arch() is None:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
+        # TODO: are generator parameters needed at all?
+        gen_parameters = self.get_attribute('generator_parameters')
+        if not gen_parameters or generator_parameters(gen_parameters[-1]).isInValid():
+            raise Exception('The generator parameters are invalid: either none or negative or null '
+                            'values, or efficiency larger than 1')
 
-        bad_characters = [' ', '?', '/', '.', '+']
-        if not self.get_attribute('dataset_name') or any(map(lambda char: char in self.get_attribute('dataset_name'), bad_characters)):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The dataset name is invalid: either null string or containing %s' % (','.join(bad_characters)))
+        gen_parameters[-1] = generator_parameters(gen_parameters[-1]).json()
+        self.set_attribute('generator_parameters', gen_parameters)
 
-        if len(self.get_attribute('dataset_name')) > 99:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'Dataset name is too long: %s. Max 99 characters' % (len(self.get_attribute('dataset_name'))))
+        if not self.get_attribute('generators'):
+            raise Exception('There should be at least one generator specified in the request')
 
-        other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The process string (%s) contains a bad character %s' % (self.get_attribute('process_string'), ','.join( other_bad_characters )))
+        sequences = self.get_attribute('sequences')
+        if not sequences:
+            raise Exception('No sequences could be found in the request')
 
-        gen_p = self.get_attribute('generator_parameters')
-        if not len(gen_p) or generator_parameters(gen_p[-1]).isInValid():
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The generator parameters is invalid: either none or negative or null values, or efficiency larger than 1')
+        if [t for t in self.get_attribute('time_event') if not t or t <= 0]:
+            raise Exception('Invalid time per event - all values must be positive')
 
-        gen_p[-1] = generator_parameters(gen_p[-1]).json()
-        self.set_attribute('generator_parameters', gen_p)
+        if [s for s in self.get_attribute('size_event') if not s or s <= 0]:
+            raise Exception('Invalid size per event - all values must be positive')
 
-        if not len(self.get_attribute('generators')):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'There should be at least one generator mentioned in the request')
+        mcdb_id = self.get_attribute('mcdb_id')
+        if self.get_wmagent_type() == 'LHEStepZero' and mcdb_id <= 0:
+            raise Exception('LHE requests should have a positive MCDB ID')
 
-        if self.any_negative_events("time_event") or self.any_negative_events("size_event"):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The time per event or size per event are invalid: negative or null')
+        if not for_chain:
+            total_events = self.get_attribute('total_events')
+            if total_events <= 0:
+                raise Exception('Total events must be a positive number')
 
-        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'Number of time_event entries: %s are different from number of sequences: %s' % (
-                    len(self.get_attribute("time_event")),
-                    len(self.get_attribute("sequences"))))
-
-        if len(self.get_attribute('size_event')) != len(self.get_attribute("sequences")):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'Number of size_event entries: %s are different from number of sequences: %s' % (
-                    len(self.get_attribute("size_event")),
-                    len(self.get_attribute("sequences"))))
-
-        if not self.get_attribute('fragment') and (not (self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'))):
-            if self.get_attribute('mcdb_id') > 0 and not self.get_attribute('input_dataset'):
-                # this case is OK
-                pass
-            else:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'validation',
-                    'The configuration fragment is not available. Neither fragment or name_of_fragment are available')
-
-        if self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
-            if re.match('^[\w/.-]+$', self.get_attribute('name_of_fragment')) is None:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'validation',
-                    'The configuration fragment {0} name contains illegal characters'.format(self.get_attribute('name_of_fragment')))
-
-            for line in self.parse_fragment():
-                if 'This is not the web page you are looking for' in line:
-                    raise self.WrongApprovalSequence(
-                        self.get_attribute('status'),
-                        'validation',
-                        'The configuration fragment does not exist in git')
-
-                if 'Exception Has Occurred' in line:
-                    raise self.WrongApprovalSequence(
-                        self.get_attribute('status'),
-                        'validation',
-                        'The configuration fragment does not exist in cvs')
-
-        if self.get_attribute('total_events') < 0 and not for_chain:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'The number of requested event is invalid: Negative')
-
-        if self.get_wmagent_type() == 'LHEStepZero':
-            if self.get_attribute('mcdb_id') < 0:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'validation',
-                    'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
-
-        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 4000:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'Single core request should use <= 4GB memory')
+            fragment = self.get_attribute('fragment')
+            fragment_name = self.get_attribute('name_of_fragment')
+            input_dataset = self.get_attribute('input_dataset')
+            if not fragment and not fragment_name and mcdb_id <= 0 and not input_dataset:
+                # No fragment, no fragment name, no mcdb id and no input dataset
+                raise Exception('No input: no fragment, no MCDB ID and no input dataset')
 
         # Do not allow to validate if there are collisions
         self.check_for_collisions()
 
+<<<<<<< HEAD
         cdb = database('campaigns')
         mcm_c = cdb.get(self.get_attribute('member_of_campaign'))
         rdb = database('requests')
@@ -569,24 +557,81 @@ class request(json_base):
         else:
             if self.get_attribute('process_string') or __flow_ps:  # if both are not empty string
                 message = {"message": "Request was put to validation. Process string was provided while the sequences is the same as one of the campaign."}
+=======
+        campaign_db = Database('campaigns')
+        campaign = campaign_db.get(self.get_attribute('member_of_campaign'))
+        # Check for changed number of sequences in campaign
+        if len(sequences) != len(campaign['sequences']):
+            raise Exception('Request has a different number of sequences '
+                            'than the campaigns it belongs to')
+>>>>>>> Refactor request changing status to validating
 
-        if for_chain:
+        # Check previous requests if request if member of chained requests
+        prepid = self.get_attribute('prepid')
+        chained_request_ids = self.get_attribute('member_of_chain')
+        if chained_request_ids:
+            # Request is member of chained requests
+            chained_request_db = Database('chained_requests')
+            for chained_request_id in chained_request_ids:
+                chained_request = chained_request_db.get(chained_request_id)
+                index = chained_request['chain'].index(prepid)
+                if index > 0:
+                    self.check_with_previous(chained_request['chain'][index  - 1])
+
+                if not for_chain and index != chained_request['step']:
+                    raise Exception('Request if not current step of %s' % (chained_request_id))
+
+        # Check if sequences in request are different from the sequences in
+        # campaign. If they are different, then either flow or request should
+        # have a processing string set
+        processing_string = self.get_attribute('process_string')
+        if not processing_string:
+            flow_processing_string = None
+            flow_name = self.get_attribute('flown_with')
+            request_parameters = {}
+            if flow_name:
+                flow_db = Database('flows')
+                flow = flow_db.get(flow_name)
+                request_parameters = flow.get('request_parameters', {})
+                flow_processing_string = request_parameters.get('process_string')
+
+            if not flow_processing_string:
+                def similar_sequences(seq1, seq2):
+                    """
+                    Return whether two sequences are similar enough to not need a
+                    explicit processing string
+                    """
+                    ignore = {'conditions', 'datatier', 'eventcontent', 'nThreads'}
+                    # Get keys of both sequences and remove the ignored ones
+                    keys = list(set(list(seq1.keys()) + list(seq2.keys())) - ignore)
+                    # Cound number of different values for the keys above
+                    diff = [1 for k in keys if seq1.get(k) and seq2.get(k) and seq1[k] != seq2[k]]
+                    return bool(diff)
+
+                # Neither request, nor flow have processing string, compare
+                # sequences of request and campaign
+                campaign_sequences = campaign['sequences']
+                # Get sequence names from flow
+                flow_sequences = list(request_parameters.get('sequences', {}).keys())
+                # Add 'default' name if any are missing
+                flow_sequences += ['default'] * len(campaign_sequences) - len(flow_sequences)
+                # Get sequences from campaign based on flow sequence names
+                campaign_sequences = [s[f] for f, s in zip(flow_sequences, campaign_sequences)]
+                for request_sequence, campaign_sequence in zip(sequences, campaign_sequences):
+                    if not similar_sequences(request_sequence, campaign_sequence):
+                        raise Exception('Sequences of request differ from campaign sequences, but '
+                                        'neither flow, nor request itself have a processing string '
+                                        'to show that')
+
+        bypass_list = Settings.get_value('validation_bypass')
+        if prepid in bypass_list:
+            self.logger.info('Request %s is in validation bypass list and is being moved to approved status',
+                             prepid)
+            self.move_to_approved()
             return
 
-        # select to synchronize status and approval toggling, or run the validation/run test
-        validation_disable = settings.get_value('validation_disable')
-        do_runtest = not validation_disable
-
-        by_pass = settingsDB.get('validation_bypass')['value']
-        if self.get_attribute('prepid') in by_pass:
-            do_runtest = False
-
-        # if do_runtest, it will be run by a jenkins job, look for ValidationControl.py in this repo
-        if not do_runtest:
-            self.set_status()
-
-        if message:
-            return message
+        self.set_approval_status('validation', 'new')
+        self.reload()
 
     def ok_to_move_to_approval_define(self):
         if self.current_user_level == 0:
@@ -705,6 +750,7 @@ class request(json_base):
             self.set_status()
 
     def check_for_collisions(self):
+<<<<<<< HEAD
         request_db = database('requests')
         same_dataset_requests = request_db.search({'dataset_name': self.get_attribute('dataset_name'),
                                                    'member_of_campaign': self.get_attribute('member_of_campaign')},
@@ -730,20 +776,48 @@ class request(json_base):
 
             if other_request_json['approval'] == 'none' and other_request_json['status'] == 'new':
                 # Not paying attention to new requests
+=======
+        request_db = Database('requests')
+        dataset_name = self.get_attribute('dataset_name')
+        campaign = self.get_attribute('member_of_campaign')
+        query = request_db.construct_lucene_query({'dataset_name': dataset_name,
+                                                   'member_of_campaign': campaign})
+        similar_requests = request_db.full_text_search('search', query, page=-1)
+        if len(similar_requests) == 0:
+            raise Exception('It seems that database is down, could not check for duplicates')
+
+        # Remove self
+        prepid = self.get_attribute('prepid')
+        similar_requests = [r for r in similar_requests if r['prepid'] != prepid]
+        # Remove none-new requests
+        similar_requests = [r for r in similar_requests if r['approval'] != 'none']
+        # Maybe there are no more similar requests?
+        if not similar_requests:
+            return
+
+        my_ps_and_tiers = set(self.get_kept_processing_strings_and_tiers())
+        self.logger.info('Found %s requests with same dataset and campaign as %s: %s',
+                         len(similar_requests),
+                         prepid,
+                         ', '.join(r['prepid'] for r in similar_requests))
+
+        for similar_request_json in similar_requests:
+            similar_request = request(similar_request_json)
+            ps_and_tiers = set(similar_request.get_kept_processing_strings_and_tiers())
+            # Check for collision
+            collisions = my_ps_and_tiers & ps_and_tiers
+            if not collisions:
+>>>>>>> Refactor request changing status to validating
                 continue
 
-            other_request = request(other_request_json)
-            other_request_campaign_process_string_tier = other_request.get_camp_plus_ps_and_tiers()
-            # check for collision
-            collisions = [x for x in other_request_campaign_process_string_tier if x in my_campaign_process_string_tier]
-            if len(collisions) != 0:
-                collision = collisions[0]
-                text = 'Output dataset name collision with %s. Campaign "%s", process string "%s", tier "%s"' % (other_request_json['prepid'],
-                                                                                                                 collision[0],
-                                                                                                                 collision[1],
-                                                                                                                 collision[2])
-                self.logger.info(text)
-                raise self.BadParameterValue(text)
+            similar_request_id = similar_request_json['prepid']
+            collision = collisions.pop()
+            message = ('Output dataset name collision with %s. '
+                       'Process string "%s", datatier "%s"' % (similar_request_id,
+                                                               collision[0],
+                                                               collision[1]))
+            self.logger.error(message)
+            raise Exception(message)
 
     def ok_to_move_to_approval_submit(self):
         if self.current_user_level < 3:
@@ -1140,52 +1214,63 @@ class request(json_base):
         return list(reversed(r_tiers))
 
     def get_processing_string(self, i):
+        """
+        Get processing string for a certain sequence
+        Processing string depends on conditions, so each sequence may have
+        different processing string
+        """
         ingredients = []
         if self.get_attribute('flown_with'):
-            ccDB = database('chained_campaigns')
-            fdb = database('flows')
+            chained_campaign_db = Database('chained_campaigns')
             # could 2nd chain_req be with different process_string??
             # we dont want to use chained_camp object -> circular dependency :/
             # so we work on json object
-            __cc_id = self.get_attribute("member_of_chain")[0].split("-")[1]
-            __cc = ccDB.get(__cc_id)
-            if not __cc or 'campaigns' not in __cc:
-                raise Exception('Chained campaign %s is missing from database, needed for %s!' % (__cc_id, self.get_attribute('prepid')))
+            chained_campaign_id = self.get_attribute("member_of_chain")[0].split("-")[1]
+            chained_campaign = chained_campaign_db.get(chained_campaign_id)
+            if not chained_campaign:
+                prepid = self.get_attribute('prepid')
+                raise Exception('Chained campaign %s of %s could not be found' % (chained_campaign_id, prepid))
 
-            for camp, mcm_flow in __cc["campaigns"]:
-                if mcm_flow != None:
-                    f = fdb.get(mcm_flow)
-                    if 'process_string' in f['request_parameters']:
-                        ingredients.append(f['request_parameters']['process_string'])
-                # don't include process_strings from flows which goes after request
-                if self.get_attribute('member_of_campaign') == camp:
+            member_of_campaign = self.get_attribute('member_of_campaign')
+            flow_db = Database('flows')
+            for campaign_name, flow_name in chained_campaign["campaigns"]:
+                if flow_name:
+                    flow = flow_db.get(flow_name)
+                    ingredients.append(flow.get('request_parameters', {}).get('process_string', ''))
+
+                # Don't include processing strings from subsequent flows
+                if member_of_campaign == campaign_name:
                     break
 
+        # Processing string of this request
         ingredients.append(self.get_attribute('process_string'))
+        # Conditions of "i" sequence
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
-        if self.get_attribute('extension'):
-            ingredients.append("ext%s" % self.get_attribute('extension'))
-        return "_".join(filter(lambda s: s, ingredients))
+        # Add extension if it's > 0
+        extension = self.get_attribute('extension')
+        if extension > 0:
+            ingredients.append("ext%s" % extension)
 
-    def get_processing_strings(self):
-        keeps = self.get_attribute('keep_output')
-        ps = []
-        for i in range(len(self.get_attribute('sequences'))):
-            if i < len(keeps) and not keeps[i]:
-                continue
-            ps.append(self.get_processing_string(i))
-        return ps
+        # Join all truthy values with underscore
+        ingredients = [ingredient.strip() for ingredient in ingredients if ingredient.strip()]
+        return '_'.join(ingredients)
 
-    def get_camp_plus_ps_and_tiers(self):
-        keeps = self.get_attribute('keep_output')
-        # we should compare whole Campaign-Processstring_tag
-        campaign = self.get_attribute("member_of_campaign")
-        p_and_t = []
-        for i in range(len(self.get_attribute('sequences'))):
-            if i < len(keeps) and not keeps[i]:
-                continue
-            p_and_t.extend([(campaign, self.get_processing_string(i), tier) for tier in self.get_tier(i)])
-        return p_and_t
+    def get_kept_processing_strings_and_tiers(self):
+        """
+        Return tuples of processing strings and datatiers of sequences that are
+        kept (keep_output[x] = True)
+        """
+        keep_output = self.get_attribute('keep_output')
+        sequences = self.get_attribute('sequences')
+        assert(len(keep_output) == len(sequences))
+        tiers = []
+        for i, (keep, sequence) in enumerate(zip(keep_output, sequences)):
+            if keep:
+                processing_string = self.get_processing_string(i)
+                datatiers = [t for t in sequence.get('datatier', '').split(',') if t]
+                tiers.extend([(processing_string, datatier for datatier in datatiers)])
+
+        return tiers
 
     def get_scram_arch(self):
         # economise to call many times.
