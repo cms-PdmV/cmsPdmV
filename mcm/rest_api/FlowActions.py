@@ -286,7 +286,7 @@ class UpdateFlow(FlowRESTResource):
                     'message': 'Could not save flow %s to database' % (prepid)}
 
         # Update relevant campaigns' "Next" parameter
-        self.update_derived_objects(previous_flow, flow)
+        self.update_derived_objects(previous_version, flow)
 
         return {'results': True}
 
