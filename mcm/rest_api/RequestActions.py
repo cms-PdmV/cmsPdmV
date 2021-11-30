@@ -551,6 +551,8 @@ class GetRequestOutput(RESTResource):
 
 class ApproveRequest(RESTResource):
 
+    access_limit = access_rights.generator_contact
+
     def __init__(self):
         self.before_request()
         self.count_call()

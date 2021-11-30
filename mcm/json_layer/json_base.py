@@ -4,9 +4,9 @@ import re
 
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
-import tools.settings as settings
+import tools.settings as Settings
 from tools.locker import locker
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import Database
 from copy import deepcopy
 from tools.user_management import access_rights
 
@@ -312,6 +312,38 @@ class json_base:
             if not isinstance(self.__json[key], type(self.__schema[key])):
                 return False
         return True
+
+    def get_input_dataset(self, datasets, sequences):
+        """
+        Try to figure out a dataset of "datasets" that could be used as input
+        for the first sequence based on sequence's "step"
+        """
+        if not datasets or not sequences:
+            self.logger.warning('Return "" dataset name, becase datasets or sequences are missing')
+            return ""
+
+        steps = sequences[0]['step']
+        if isinstance(steps, (str, basestring)):
+            # TODO: Is this possible?
+            steps = steps.split(',')
+
+        # Take the first step and remove :... if needed
+        step = steps[0].split(':')[0]
+        step_input_dict = Settings.get_value('datatier_input')
+        if step not in step_input_dict:
+            self.logger.warning('Could not find input info for "%s" step, returning %s',
+                                step,
+                                datasets[0])
+            return datasets[0]
+
+        datatiers = step_input_dict[step]
+        for datatier in datatiers:
+            for dataset in datasets:
+                if dataset.split('/')[-1] == datatier:
+                    self.logger.info('Picked "%s" as input for "%s"', dataset, step)
+                    return dataset
+
+        return datasets[0]
 
     def get_ds_input(self, __output_dataset, __seq):
         try:

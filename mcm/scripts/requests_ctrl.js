@@ -58,8 +58,24 @@ angular.module('testApp').controller('resultsCtrl',
             $scope.getData();
           }
         }).error(function (data, status) {
+          delete $scope.actionMessage[prepid];
           $scope.openErrorModal(undefined, data['message'])
         });
+      };
+
+      $scope.forcecompletePrompt = function(prepid) {
+        $scope.openIsSureModal($scope.dbName, prepid, 'forcecomplete', function (database, prepid, action) {
+          $scope.actionMessage[prepid] = 'loading';
+          $http({ method: 'PUT', url: 'restapi/requests/add_forcecomplete', data: {'prepid': prepid} }).success(function (data, status) {
+            $scope.actionMessage[prepid] = data.results ? 'OK' : data.message;
+            if (data.results) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            delete $scope.actionMessage[prepid];
+            $scope.openErrorModal(undefined, data['message'])
+          });
+        })
       };
 
       $scope.$watch(function () {

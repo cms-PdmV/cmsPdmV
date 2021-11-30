@@ -136,7 +136,7 @@
                 <a ng-click="objectAction('update_stats', data.prepid)" rel="tooltip" ng-hide="role(4);" title="Update status of {{data.prepid}} in Stats" ng-href="#">
                   <i class="icon-refresh"></i>
                 </a>
-                <a ng-click="actionPrompt('forcecomplete', data.prepid)" rel="tooltip" ng-if="data.status == 'submitted'" ng-hide="role(1);" title="Add request to be force completed" ng-href="#">
+                <a ng-click="forcecompletePrompt(data.prepid)" rel="tooltip" ng-if="data.status == 'submitted'" ng-hide="role(1);" title="Add request to be force completed" ng-href="#">
                   <i class="icon-gift"></i>
                 </a>
                 <a ng-href="restapi/requests/gen_log/{{data.prepid}}" rel="tooltip" title="See GEN request checking script logs for {{data.prepid}}" target="_self">

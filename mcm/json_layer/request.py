@@ -16,6 +16,7 @@ from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
+from json_layer.chained_request import chained_request
 from json_layer.json_base import json_base
 from json_layer.campaign import campaign as Campaign
 from json_layer.flow import flow as Flow
@@ -29,6 +30,7 @@ import tools.settings as Settings
 from tools.locker import locker
 from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
+from tools.user_management import user_pack as UserPack
 
 
 class AFSPermissionError(Exception):
@@ -218,152 +220,130 @@ class request(json_base):
             self.logger.error('Unsupported request %s status "%s"', prepid, current_status)
             raise Exception('Unsupported request %s status "%s"' % (prepid, current_status))
 
+    def get_chained_requests(self):
+        """
+        Return chained request dicts that this request is member of
+        """
+        chained_request_ids = self.get_attribute('member_of_chain')
+        if not chained_request_ids:
+            return []
+
+        chained_request_db = Database('chained_requests')
+        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
+        return chained_requests
+
+    def get_previous_request(self):
+        """
+        Return request that is input for the current request or None if it does
+        not exist
+        """
+        chained_request_ids = self.get_attribute('member_of_chain')
+        if not chained_request_ids:
+            return None
+
+        prepid = self.get_attribute('prepid')
+        chained_request_db = Database('chained_requests')
+        # Take first chained request as all of them should be identical
+        chained_request = chained_request_db.get(chained_request_ids[0])
+        index = chained_request['chain'].index(prepid)
+        if index <= 0:
+            return None
+
+        previous_prepid = chained_request['chain'][index - 1]
+        request_db = Database('requests')
+        req = request_db.get(previous_prepid)
+        self.logger.info('Previous request for %s is %s', prepid, previous_prepid)
+        return req
 
     def set_approval_status(self, approval, status):
+        """
+        Set both approval and status of the request
+        Update chained requests' "last_status" if needed
+        """
         self.set_attribute('approval', approval)
         self.set_attribute('status', status)
         # When status is changed, udpdate it in all chained requests
-        chained_request_ids = self.get_attribute('member_of_chain')
-        if not chained_request_ids:
+        chained_requests = self.get_chained_requests()
+
+        # No need to update to same satus
+        chained_requests = [c for c in chained_requests if c['last_status'] != status]
+
+        # Don't care where request is not current step
+        prepid = self.get_attribute('prepid')
+        chained_requests = [c for c in chained_requests if c['step'] == c['chain'].index(prepid)]
+
+        if not chained_requests:
             return
 
-        prepid = self.get_attribute('prepid')
         from json_layer.chained_request import chained_request as ChainedRequest
-        chained_request_db = Database('chained_requests')
-        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
-        for chained_request in chained_requests:
-            if chained_request['step'] != chained_request['chain'].index(prepid):
-                continue
-
-            if chained_request['last_status'] == status:
-                continue
-
-            chained_request = ChainedRequest(chained_request)
+        for chained_request_json in chained_requests:
+            chained_request = ChainedRequest(chained_request_json)
             if chained_request.set_last_status(status):
                 chained_request.save()
 
-    def set_status(self, step=-1):
-        # call the base
-        json_base.set_status(self, step)
-        new_status = self.get_attribute('status')
-        prepid = self.get_attribute('prepid')
-        from json_layer.chained_request import chained_request
-        crdb = database('chained_requests')
-        for inchain in self.get_attribute('member_of_chain'):
-            if crdb.document_exists(inchain):
-                chain = chained_request(crdb.get(inchain))
-                a_change = False
-                a_change += chain.set_last_status(new_status)
-                a_change += chain.set_processing_status(self.get_attribute('prepid'), new_status)
-                if a_change:
-                    crdb.save(chain.json())
-        if self._json_base__status[step] in ['new', 'done']:
-            self.remove_from_forcecomplete()
+    def get_approval_status(self):
+        """
+        Return approval and status of a request
+        """
+        approval = self.get_attribute('approval')
+        status = self.get_attribute('status')
+        return '%s-%s' % (approval, status)
 
     def get_editable(self):
+        """
+        Return editing info for the request
+        """
         editable = {}
-        # prevent anything to happen during validation procedure.
-        if self.get_attribute('status') == 'new' and self.get_attribute('approval') == 'validation':
-            for key in self._json_base__schema:
-                editable[key] = False
+        approval_status = self.get_approval_status()
+        # Nothing is editable by default
+        for key in self._json_base__schema:
+            editable[key] = False
+
+        # Prevent anything to happen during validation
+        if approval_status == 'validation-new':
             return editable
 
-        if self.get_attribute('status') != 'new':  # after being new, very limited can be done on it
-            for key in self._json_base__schema:
-                # we want to be able to edit total_events untill approved status
-                if self._json_base__status.index(self.get_attribute("status")) <= 2 and key == "total_events":
-                    editable[key] = True
-                else:
-                    editable[key] = False
+        user = UserPack(db=True)
+        user_role = user.user_dict.get('role')
+        is_admin = user_role == 'administrator'
+        is_prod_manager = is_admin or user_role == 'production_manager'
+        is_gen_convener = is_prod_manager or user_role == 'generator_convener'
+        is_gen_contact = is_gen_convener or user_role == 'generator_contact'
+        is_user = is_gen_contact or user_role == 'user'
+        # Some are always editable
+        editable['notes'] = is_user
+        editable['tags'] = is_user
+        editable['interested_pwg'] = is_user
+        # Depending on status
+        if approval_status == 'none-new':
+            editable['dataset_name'] = is_gen_contact
+            editable['total_events'] = is_gen_contact
+            editable["keep_output"] = is_gen_contact
+            editable["pilot"] = is_gen_contact
+            editable['extension'] = is_gen_contact
+            editable['input_dataset'] = is_gen_contact
+            editable['time_event'] = is_gen_contact
+            editable['size_event'] = is_gen_contact
+            editable['generators'] = is_gen_contact
+            editable['generator_parameters'] = is_gen_contact
+            editable['fragment'] = is_gen_contact
+        elif approval_status == 'approve-approved':
+            editable['dataset_name'] = is_gen_convener
 
-            if self.current_user_level != 0:  # not a simple user
-                always_editable = settings.get_value('editable_request')
-                for key in always_editable:
-                    editable[key] = True
-
-            if self.current_user_level == 3 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
-                # Allow production managers to edit input dataset for
-                # "validation-validation", "define-" and "approve-" requests
-                editable['input_dataset'] = True
-                editable['extension'] = True
-
-            if self.current_user_level == 2 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
-                # Allow generator conveners to edit dataset name for
-                # "validation-validation", "define-" and "approve-" requests
-                editable['dataset_name'] = True
-
-            if self.current_user_level > 3:  # only for admins
-                for key in self._json_base__schema:
-                    editable[key] = True
-        else:
-            for key in self._json_base__schema:
-                editable[key] = True
-            if self.current_user_level <= 3:  # only for not admins
-                not_editable = settings.get_value('not_editable_request')
-                for key in not_editable:
-                    editable[key] = False
-
-        # Tags are editable by everone
-        editable['tags'] = True
-        if self.current_user_level < 3:
-            editable['memory'] = False
-            editable['sequences'] = False
-            editable['pileup_dataset_name'] = False
+        if approval_status not in {'submit-approved', 'submit-submitted', 'submit-done'}:
+            editable['memory'] = is_prod_manager
+            editable['sequences'] = is_prod_manager
+            editable['pileup_dataset_name'] = is_prod_manager
 
         return editable
 
-    def get_events_for_dataset(self, workflows, dataset):
-        self.logger.debug("Running num_events search for dataset")
-        for elem in workflows:
-            if dataset in elem["content"].get("pdmv_dataset_statuses", []):
-                return elem["content"]["pdmv_dataset_statuses"][dataset]["pdmv_evts_in_DAS"]
-        # TO-DO do we need to put a default return? As all the time there must be a DS
-
-    def check_with_previous(self, previous_id, rdb, what, and_set=False):
-        previous_one = rdb.get(previous_id)
-        input_ds = ""
-
-        if len(previous_one['reqmgr_name']) > 0:
-            input_ds = self.get_ds_input(previous_one['output_dataset'],
-                    self.get_attribute('sequences'))
-
-        if input_ds == "":
-            # in case our datatier selection failed we back up to default method
-            previous_events = previous_one['total_events']
-            if previous_one['completed_events'] > 0:
-                previous_events = previous_one['completed_events']
-        else:
-            previous_events = self.get_events_for_dataset(previous_one['reqmgr_name'], input_ds)
-
-        self.logger.debug("Possible input for validation:%s events: %s" % (input_ds, previous_events))
-        total_events_should_be = previous_events * self.get_efficiency()
-        margin = int(total_events_should_be * 1.5)
-        if self.get_attribute('total_events') > margin:  # safety factor of 50%
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                what,
-                'The requested number of events (%d > %d) is much larger than what can be obtained (%d = %d*%5.2f) from previous request' % (
-                    self.get_attribute('total_events'),
-                    margin,
-                    total_events_should_be,
-                    previous_events,
-                    self.get_efficiency()))
-        if and_set:
-            if self.get_attribute('total_events') > 0:
-                # do not overwrite the number for no reason
-                return
-            from math import log10
-            # round to a next 1% unit = 10^(-2) == -2 below
-            rounding_unit = 10**int(max(log10(total_events_should_be) - 2, 0))
-            self.set_attribute('total_events', int(1 + total_events_should_be / float(rounding_unit)) * int(rounding_unit))
-
     def move_to_validating(self, for_chain=False):
+        """
+        Move request to validation-new ("validating") status
+        """
         validation_halt = Settings.get_value('validation_stop')
         if validation_halt:
             raise Exception('Validation jobs are temporary stopped for upcoming McM restart')
-
-        if self.current_user_level < access_rights.generator_contact:
-            raise Exception('You need to be at least gen contact to put request to validation')
 
         if not self.correct_types():
             raise TypeError('Wrong type of attribute(s)')
@@ -422,20 +402,14 @@ class request(json_base):
             raise Exception('Request has a different number of sequences '
                             'than the campaigns it belongs to')
 
-        # Check previous requests if request if member of chained requests
         prepid = self.get_attribute('prepid')
-        chained_request_ids = self.get_attribute('member_of_chain')
-        if chained_request_ids:
-            # Request is member of chained requests
-            chained_request_db = Database('chained_requests')
-            for chained_request_id in chained_request_ids:
-                chained_request = chained_request_db.get(chained_request_id)
-                index = chained_request['chain'].index(prepid)
-                if index > 0:
-                    self.check_with_previous(chained_request['chain'][index  - 1])
+        chained_requests = self.get_chained_requests()
+        for chained_request in chained_requests:
+            if chained_request['chain'].index(prepid) != chained_request['step']:
+                raise Exception('Request if not current step of %s' % (chained_request['prepid']))
 
-                if not for_chain and index != chained_request['step']:
-                    raise Exception('Request if not current step of %s' % (chained_request_id))
+        # Check previous request
+        self.check_with_previous(True)
 
         # Check if sequences in request are different from the sequences in
         # campaign. If they are different, then either flow or request should
@@ -489,125 +463,60 @@ class request(json_base):
         self.set_approval_status('validation', 'new')
         self.reload()
 
-    def ok_to_move_to_approval_define(self):
-        if self.current_user_level == 0:
-            # not allowed to do so
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'define', 'bad user admin level %s' % (self.current_user_level))
-            # we could restrict certain step to certain role level
-        # if self.current_user_role != 'generator_contact':
-        #    raise self.WrongApprovalSequence(self.get_attribute('status'),'validation','bad user role %s'%(self.current_user_role))
+    def move_to_defined(self):
+        """
+        Move request to define-defined ("defined") status
+        """
+        self.logger.warning('Not checking if user moving request to defined is from correct PWG')
+        self.set_approval_status('define', 'defined')
+        self.reload()
 
-        if self.get_attribute('status') != 'validation':
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'define')
+    def move_to_approved(self):
+        """
+        Move reqeust to approve-approved ("approved") status
+        """
+        prepid = self.get_attribute('prepid')
+        approval = self.get_attribute('approval')
+        status = self.get_attribute('status')
+        if approval == 'defined' and status == 'defined':
+            # Only GEN conveners, administrators and special people are allowed
+            # to approve defined requests
+            user = UserPack(db=True)
+            username = user.get_username()
+            user_role = user.user_dict.get('role')
+            self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
+            if user_role not in {'generator_convener', 'administrator'}:
+                if username not in Settings.get_value('allowed_to_approve'):
+                    raise Exception('You are not allowed to approve "defined" requests')
 
-        # a state machine should come along and create the configuration. check the filter efficiency, and set information back
-        # then toggle the status
-        self.set_status()
+        if not self.get_attribute('dataset_name'):
+            raise Exception('Dataset name cannot be empty')
 
-    def ok_to_move_to_approval_approve(self, for_chain=False):
-        max_user_level = 1
-        PRIMARY_DS_regex = '^[a-zA-Z][a-zA-Z0-9\-_]*$'
-        if for_chain:
-            max_user_level = 0
+        # Validate attributes
+        self.validate()
 
-        if self.current_user_level <= max_user_level:
-            # not allowed to do so
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'bad user admin level %s' % (self.current_user_level))
+        # Check for invalidations
+        self.check_for_invalidations()
 
-        if self.is_root:
-            if self.get_attribute('status') != 'defined':
-                raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve')
-        else:
-            if self.get_attribute('status') != 'new':
-                raise self.WrongApprovalSequence(self.get_attribute('status'), 'approve')
-
-        if re.match(PRIMARY_DS_regex, self.get_attribute('dataset_name')) is None:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'approve',
-                    'Dataset name name contains illegal characters')
-
-        if len(self.get_attribute('dataset_name')) > 99:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'Dataset name is too long: %s. Max 99 characters' % (len(self.get_attribute('dataset_name'))))
-
-        if len(self.get_attribute('time_event')) != len(self.get_attribute("sequences")):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'Number of time_event entries: %s are different from number of sequences: %s' % (
-                    len(self.get_attribute("time_event")),
-                    len(self.get_attribute("sequences"))))
-
-        if len(self.get_attribute('size_event')) != len(self.get_attribute("sequences")):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'Number of size_event entries: %s are different from number of sequences: %s' % (
-                    len(self.get_attribute("size_event")),
-                    len(self.get_attribute("sequences"))))
-
-        # Check if there are new/announced invalidations for request before approving it.
-        # So we would not submit same request to computing until previous is fully reset/invalidated
-        idb = database("invalidations")
-        __invalidations_query = idb.construct_lucene_query({"prepid": self.get_attribute("prepid")})
-        self.logger.debug("len invalidations list %s" % (len(__invalidations_query)))
-        res = idb.full_text_search("search", __invalidations_query, page=-1)
-        for el in res:
-            if el["status"] in ["new", "announced"]:
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'approve',
-                    'There are unacknowledged invalidations for request: %s' % (self.get_attribute("prepid")))
-
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        for cr in self.get_attribute('member_of_chain'):
-            mcm_cr = crdb.get(cr)
-            request_is_at = mcm_cr['chain'].index(self.get_attribute('prepid'))
-
-            if request_is_at != 0:
-                self.check_with_previous(
-                    mcm_cr['chain'][request_is_at - 1],
-                    rdb,
-                    'approve',
-                    and_set=for_chain)
-
-            if for_chain:
-                continue
-
-            if request_is_at != mcm_cr['step']:
-                all_good = True
-                chain = mcm_cr['chain'][mcm_cr['step']:]
-                for r in chain:
-                    if r == self.get_attribute('prepid'):
-                        # don't self check
-                        continue
-
-                    mcm_r = request(rdb.get(r))
-                    if mcm_r.is_root:
-                        # we check if request needs validation,
-                        # so we wont approve a request which is not yet validated
-                        all_good &= (mcm_r.get_attribute('status') in ['defined', 'validation', 'approved'])
-
-                if not all_good:
-                    raise self.WrongApprovalSequence(
-                        self.get_attribute('status'),
-                        'approve',
-                        'The request is not the current step of chain %s and the remaining of the chain is not in the correct status' % (mcm_cr['prepid']))
-
+        # Check for collisions
         self.check_for_collisions()
+
+        # Set new status
+        self.set_approval_status('approve', 'approved')
+
+        chained_requests = self.get_chained_requests()
+        # Check status of requests leading to this one
+        self.check_status_of_previous(chained_requests)
+        self.check_with_previous(True)
         self.get_input_dataset_status()
-        # start uploading the configs ?
-        if not for_chain:
-            self.set_status()
+        self.reload()
 
     def check_for_collisions(self):
+        """
+        Check if there are any other requests that have same dataset name, same
+        campaign, same processing string and datatier
+        Ignore none-new requests
+        """
         request_db = Database('requests')
         dataset_name = self.get_attribute('dataset_name')
         campaign = self.get_attribute('member_of_campaign')
@@ -649,156 +558,224 @@ class request(json_base):
             self.logger.error(message)
             raise Exception(message)
 
-    def ok_to_move_to_approval_submit(self):
-        if self.current_user_level < 3:
-            # not allowed to do so
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'bad user admin level %s' % (self.current_user_level))
-
-        if self.get_attribute('status') != 'approved':
-            raise self.WrongApprovalSequence(self.get_attribute('status'), 'submit')
-
-        if not len(self.get_attribute('member_of_chain')):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'This request is not part of any chain yet')
-
-        at_least_an_action = self.has_at_least_an_action()
-        if not at_least_an_action:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'This request does not spawn from any valid action')
-
-        if self.any_negative_events("time_event") or self.any_negative_events("size_event"):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'The time (%s) or size per event (%s) is inappropriate' % (
-                    self.get_attribute('time_event'),
-                    self.get_attribute('size_event')))
-
-
-        if self.get_scram_arch() == None:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
-
-        other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'submit',
-                'The process string (%s) contains a bad character %s' % (
-                    self.get_attribute('process_string'),
-                    ','.join( other_bad_characters )))
-
-        # do a dataset collision check : remind that it requires the flows to have process_string properly set
-        rdb = database('requests')
-        self.check_for_collisions()
-        self.get_input_dataset_status()
+    def check_for_invalidations(self):
+        """
+        Check if there are new/announced invalidations for the request.
+        """
+        invalidation_db = Database('invalidations')
         prepid = self.get_attribute('prepid')
-        # Check if there are any unacknowledged invalidations
-        invalidations_db = database('invalidations')
-        invalidations_query = invalidations_db.construct_lucene_query({'prepid': prepid})
-        invalidations = invalidations_db.full_text_search('search', invalidations_query, page=-1)
-        invalidations = [i for i  in invalidations if i['status'] in ('new', 'announced')]
+        query = invalidation_db.construct_lucene_query({'prepid': prepid})
+        invalidations = invalidation_db.full_text_search("search", query, page=-1)
+        invalidations = [i for i in invalidations if i["status"] in {"new", "announced"}]
         if invalidations:
-            self.logger.info('Unacknowledged invalidations for %s: %s' % (prepid, ', '.join([x['prepid'] for x in invalidations])))
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'approve',
-                'There are %s unacknowledged invalidations for %s' % (len(invalidations), prepid))
+            raise Exception('There are %s unacknowledged invalidations for %s' % (len(invalidations),
+                                                                                  prepid))
+
+    def check_with_previous(self, update_total_events=False):
+        """
+        Check if previous request in the chain has enough events
+        Update total events of this request if needed
+        """
+        previous_request = self.get_previous_request()
+        if not previous_request:
+            return
+
+        previous_prepid = previous_request['prepid']
+        # By default, it's total_events
+        previous_events = previous_request['total_events']
+        # Get input dataset
+        sequences = self.get_attribute('sequences')
+        input_dataset = self.get_input_dataset(previous_request['output_dataset'], sequences)
+        if input_dataset and previous_request['reqmgr_name']:
+            for workflow in previous_request['reqmgr_name']:
+                dataset_statuses = workflow["content"].get("pdmv_dataset_statuses", {})
+                if input_dataset in dataset_statuses:
+                    previous_events = dataset_statuses[input_dataset]["pdmv_evts_in_DAS"]
+                    break
+
+        if previous_events <= 0 and previous_request['completed_events'] > 0:
+            previous_events = previous_request['completed_events']
         else:
-            self.logger.info('No unacknowledged invalidations for %s' % (prepid))
+            raise Exception('Cannot get events for previous request %s' % (previous_prepid))
 
-        moveon_with_single_submit = True  # for the case of chain request submission
-        is_the_current_one = False
-        # check on position in chains
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        for c in self.get_attribute('member_of_chain'):
-            mcm_cr = crdb.get(c)
-            chain = mcm_cr['chain'][mcm_cr['step']:]
+        prepid = self.get_attribute('prepid')
+        self.logger.debug('Found %s events in %s (%s) as input for %s',
+                          previous_events,
+                          previous_prepid,
+                          input_dataset,
+                          prepid)
 
-            # check everything that comes after for something !=new to block automatic submission.
-            for r in chain:
-                if r == prepid:
-                    continue  # no self checking
+        total_events = self.get_attribute('total_events')
+        efficiency = self.get_efficiency()
+        # How many events could be produced from input with certain filter
+        events_after_filter = int(previous_events * efficiency)
+        percentage = events_after_filter / total_events
+        # If less than 75% events could be produced, throw an error
+        if percentage < 0.75:
+            raise Exception('%s requires %s events, but only ~%s (%.2f%%) can be produced using %s '
+                            'as input with %s events' % (prepid,
+                                                         total_events,
+                                                         events_after_filter,
+                                                         percentage * 100,
+                                                         previous_prepid,
+                                                         previous_events))
 
-                mcm_r = request(rdb.get(r))
-                # we can move on to submit if everything coming next in the chain is new
-                moveon_with_single_submit &= (mcm_r.get_attribute('status') in ['new'])
+        if update_total_events and total_events > events_after_filter:
+            self.set_attribute('total_events', events_after_filter)
 
-        fdb = database('flows')
-        ccdb = database('chained_campaigns')
-        # Check if any of the requests in any chained requests are new to block automatic submission.
-        for c in self.get_attribute('member_of_chain'):
-            mcm_cr = crdb.get(c)
-            chain = mcm_cr['chain'][mcm_cr['step']:]
-            chained_campaign = ccdb.get(mcm_cr['member_of_campaign'])
+    def check_status_of_previous(self, chained_requests):
+        """
+        Go through all chains that request is in and check if requests that are
+        leading to this request are in greater or equal status
+        """
+        if not chained_requests:
+            return
 
-            # Flag means whether chained campaign is active. If it's not active, ignore it
-            if not chained_campaign.get('action_parameters', {}).get('flag', True):
-                self.logger.info('Chained campaign %s flag is off, skipping check' % (chained_campaign.get('prepid', '???')))
+        prepids = set()
+        prepid = self.get_attribute('prepid')
+        for chained_request in chained_requests:
+            chain = chained_request['chain']
+            if prepid not in chain:
+                raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
+
+            prepids.update(chain[:chain.index(prepid)])
+
+        if not prepids:
+            return
+
+        request_db = Database('requests')
+        requests = request_db.db.bulk_get(list(prepids))
+        approval_status = self.get_approval_status()
+        order = ['none-new',
+                 'validation-new',
+                 'validation-validation',
+                 'define-defined',
+                 'approve-approved',
+                 'submit-approved',
+                 'submit-submitted',
+                 'submit-done']
+        for request in requests:
+            request_approval_status = '%s-%s' % (request['approval'], request['status'])
+            if order.index(request_approval_status) < order.index(approval_status):
+                raise Exception('%s status is %s which is lower than %s' % (request['prepid'],
+                                                                            request_approval_status,
+                                                                            approval_status))
+
+    def to_be_submitted_together(self, chained_requests):
+        """
+        Return dictionary of chained requests and their requests that should be
+        submitted togetger with this request
+        """
+        chained_requests = [c for c in chained_requests if c['enabled']]
+        prepid = self.get_attribute('prepid')
+        chained_campaign_db = Database('chained_campaigns')
+        request_db = Database('requests')
+        requests_cache = {}
+        flow_db = Database('flows')
+        flows_cache = {}
+        def get_requests(prepids):
+            to_get = [p for p in prepids if p not in requests_cache]
+            if to_get:
+                requests = request_db.db.bulk_get(to_get)
+                for request in requests:
+                    requests_cache[request['prepid']] = request
+
+            return [requests_cache[p] for p in prepids]
+
+        def get_flow(prepid):
+            if prepid not in flows_cache:
+                flows_cache[prepid] = flow_db.get(prepid)
+
+            return flows_cache[prepid]
+
+        together = []
+        for chained_request in chained_requests:
+            chained_campaign = chained_campaign_db.get(chained_request['member_of_campaign'])
+            if not chained_campaign['enabled']:
+                chained_campaign_id = chained_campaign['prepid']
+                self.logger.debug('Chained campaign %s is disabled, ignoring', chained_campaign_id)
+
+            chain = chained_request['chain']
+            chain = chain[chain.index(prepid) + 1:]
+            if not chain:
                 continue
 
-            if not mcm_cr.get('action_parameters', {}).get('flag', True):
-                self.logger.info('Chained request %s flag is off, skipping check' % (mcm_cr.get('prepid', '???')))
-                continue
+            together[chained_request['prepid']] = []
+            requests = get_requests(chain)
+            for request in requests:
+                flow = get_flow(request['flown_with'])
+                if flow['approval'] == 'tasksubmit':
+                    together[chained_request['prepid']].append(request)
+                else:
+                    break
 
-            for r in chain:
-                if r == self.get_attribute('prepid'):
-                    # No self checking
-                    continue
+        return together
 
-                mcm_r = request(rdb.get(r))
-                mcm_r_flow = flow(fdb.get(mcm_r.get_attribute('flown_with')))
-                if mcm_r_flow.get_attribute('approval') in ['submit', 'tasksubmit'] and mcm_r.get_attribute('status') in ['new']:
-                    # Automatically approve because flow is submit or tasksubmit
-                    mcm_r.approve()
-                    mcm_r.reload(save_current=True)
+    def move_to_submitting(self):
+        """
+        Move reqeust to approve-approved ("approved") status
+        """
+        prepid = self.get_attribute('prepid')
+        user = UserPack(db=True)
+        username = user.get_username()
+        user_role = user.user_dict.get('role')
+        self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
+        if user_role not in {'production_manager', 'administrator'}:
+            raise Exception('You are not allowed to submit requests')
 
-        for c in self.get_attribute('member_of_chain'):
-            mcm_cr = crdb.get(c)
-            is_the_current_one = (mcm_cr['chain'].index(self.get_attribute('prepid')) == mcm_cr['step'])
-            if not is_the_current_one and moveon_with_single_submit:
-                # check that something else in the chain it belongs to is indicating that
-                raise self.WrongApprovalSequence(
-                    self.get_attribute('status'),
-                    'submit',
-                    'The request (%s)is not the current step (%s) of its chain (%s)' % (
-                        self.get_attribute('prepid'),
-                        mcm_cr['step'], c))
+        if not self.get_attribute('dataset_name'):
+            raise Exception('Dataset name cannot be empty')
 
-        if is_the_current_one:
-            self.logger.info('Doing TaskChain submission for %s', prepid)
-            from tools.handlers import ChainRequestInjector, submit_pool
+        if not self.get_scram_arch():
+            raise Exception('SCRAM architecture is invalid, please double check the release')
 
-            _q_lock = locker.thread_lock(prepid)
-            if not locker.thread_acquire(prepid, blocking=False):
-                return {'prepid': self.get_attribute('prepid'),
-                        'results': False,
-                        'message': 'Request %s is being handled already' % (prepid)}
+        if not self.get_attribute('member_of_chain'):
+            raise Exception('Request is not a member of any chains')
 
-            threaded_submission = ChainRequestInjector(prepid=prepid,
-                                                       check_approval=False,
-                                                       lock=locker.lock(prepid),
-                                                       queue_lock=_q_lock)
+        # Validate attributes
+        self.validate()
 
-            submit_pool.add_task(threaded_submission.internal_run)
+        # Check for invalidations
+        self.check_for_invalidations()
+
+        # Check for collisions
+        self.check_for_collisions()
+
+        # Set new status
+        self.set_approval_status('submit', 'approved')
+
+        chained_requests = self.get_chained_requests()
+        # Check status of requests leading to this one
+        self.check_status_of_previous(chained_requests)
+
+        # TODO: Allow users to aprove only current steps of chain, only
+        # submission or flowing code can approve otherwise
+        chained_requests = [c for c in chained_requests if c['enabled']]
+        previous_request = self.get_previous_request()
+        if previous_request['status'] == 'done':
+            self.get_input_dataset_status()
+            for chained_request in chained_requests:
+                if chained_request['chain'].index(prepid) != chained_request['step']:
+                    raise Exception('%s is not current step of %s' % (prepid,
+                                                                      chained_request['prepid']))
         else:
-            self.logger.error('Not submitting %s. moveon_with_single_submit:%s is_the_current_one:%s',
-                              prepid,
-                              moveon_with_single_submit,
-                              is_the_current_one)
-            return {'prepid': prepid,
-                    'results': False,
-                    'message': 'The request was not submitted, it is not the current step of chain'}
+            self.set_attribute('input_dataset', '')
+
+        # Collect chains and requests that should be submitted together
+        submitted_together = self.to_be_submitted_together(chained_requests)
+
+        # TODO: submit
+        # from tools.handlers import ChainRequestInjector, submit_pool
+        # _q_lock = locker.thread_lock(prepid)
+        # if not locker.thread_acquire(prepid, blocking=False):
+        #     return {'prepid': self.get_attribute('prepid'),
+        #             'results': False,
+        #             'message': 'Request %s is being handled already' % (prepid)}
+        # threaded_submission = ChainRequestInjector(prepid=prepid,
+        #                                            check_approval=False,
+        #                                            lock=locker.lock(prepid),
+        #                                            queue_lock=_q_lock)
+        # submit_pool.add_task(threaded_submission.internal_run)
 
     def has_at_least_an_action(self):
         crdb = database('chained_requests')
