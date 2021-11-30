@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, MultiSearch, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, PutToForceComplete, ForceCompleteMethods, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -255,8 +255,6 @@ api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:
 api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
 api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
 api.add_resource(GetUniqueValues, '/restapi/requests/unique_values/<string:field_name>')
-api.add_resource(PutToForceComplete, '/restapi/requests/add_forcecomplete')
-api.add_resource(ForceCompleteMethods, '/restapi/requests/forcecomplete')
 api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
 api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
