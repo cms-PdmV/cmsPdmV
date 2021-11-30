@@ -181,10 +181,13 @@ class DeleteMccm(RESTResource):
         if user_role not in {'production_manager', 'administrator'}:
             username = user.get_username()
             history = mccm.get_attribute('history')
+            owner = None
+            owner_name = None
             if history:
                 for history_entry in history:
                     if history_entry['action'] == 'created':
-                        owner = history_entry['updater']['author_name']
+                        owner = history_entry['updater']['author_username']
+                        owner_name = history_entry['updater']['author_name']
 
             if not owner:
                 return {'results': False,
@@ -192,7 +195,7 @@ class DeleteMccm(RESTResource):
 
             if owner != username:
                 return {'results': False,
-                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner)}
+                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner_name)}
 
         # Delete from DB
         if not mccm_db.delete(mccm_id):
@@ -524,7 +527,7 @@ class GenerateChains(RESTResource):
         root_chains.append(chained_request_prepid)
         request.set_attribute('member_of_chain', sorted(list(set(root_chains))))
         request.update_history({'action': 'join chain', 'step': chained_request_prepid})
-        request.save()
+        request.reload()
         request_status = request.get_attribute('status')
         # do the reservation of the whole chain ?
         generated_requests = []
@@ -610,6 +613,11 @@ class MccMReminderGenContacts(RESTResource):
         base_url = l_type.baseurl()
         contacts = self.get_contacts_by_pwg()
         for pwg, pwg_mccms in by_pwg.items():
+            recipients = contacts.get(pwg)
+            if not recipients:
+                self.logger.info('No recipients for %s, will not remind about tickets', pwg)
+                continue
+
             subject = subject_template % (len(pwg_mccms), pwg)
             message = message_template % (pwg)
             for mccm in pwg_mccms:
@@ -622,7 +630,6 @@ class MccMReminderGenContacts(RESTResource):
                 message += '%smccms?prepid=%s\n\n' % (base_url, prepid)
 
             message += 'You received this email because you are listed as GEN contact of %s.\n' % (pwg)
-            recipients = contacts[pwg]
             com.sendMail(recipients, subject, message)
 
         return {"results": True,

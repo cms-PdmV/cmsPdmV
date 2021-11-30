@@ -122,4 +122,3 @@ class communicator:
             return new_msg_ID
         except Exception as e:
             communicator.logger.error("Error: unable to send email %s", e)
-

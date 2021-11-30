@@ -2713,6 +2713,10 @@ class request(json_base):
             if not isinstance(sequences, list):
                 sequences = [sequences]
 
+            for s in sequences:
+                if 'estimated_events_per_lumi' not in s:
+                    s['estimated_events_per_lumi'] = (28800 * s['filter_efficiency'] / s['time_per_event']) if s.get('time_per_event') else 0
+                
             validation_info.append({'threads': int(threads),
                                     'cpu_efficiency': self.sequences_cpu_efficiency(sequences),
                                     'filter_efficiency': self.sequences_filter_efficiency(sequences),
