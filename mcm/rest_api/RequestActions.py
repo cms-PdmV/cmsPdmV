@@ -77,7 +77,7 @@ class RequestRESTResource(RESTResource):
         with locker.lock('create-request-%s' % (prepid)):
             self.logger.info('Will try to find new prepid for request %s-*', prepid)
             query = request_db.make_query({'prepid': '%s-*' % (prepid)})
-            newest = request_db.full_text_search('search', query, limit=1, sort_asc=False)
+            newest = request_db.search('search', query, limit=1, sort_asc=False)
             if newest:
                 number = int(newest[0]['prepid'].split('-')[-1]) + 1
             else:
@@ -545,6 +545,8 @@ class GetRequestOutput(RESTResource):
 
 
 class ApproveRequest(RESTResource):
+
+    access_limit = access_rights.generator_contact
 
     def __init__(self):
         self.before_request()

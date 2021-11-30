@@ -60,14 +60,11 @@ class chained_request(json_base):
         def __str__(self):
             return 'Error: ' + self.name + ' is stopped.'
 
-    _json_base__approvalsteps = ['none', 'flow', 'submit']
-
     _json_base__status = ['new', 'processing', 'done', 'force_done']
 
     _json_base__schema = {
         '_id': '',
         'chain': [],
-        'approval': str(''),
         'step': 0,
         'pwg': '',
         'prepid': '',
@@ -76,8 +73,7 @@ class chained_request(json_base):
         'member_of_campaign': '',
         'last_status': 'new',
         'status': '',
-        'chain_type': 'TaskChain',
-        'validate': 0,  # indicates whether the chain should be submitted to validation
+        'validate': 0,  # Whether the chain should be submitted to validation
         'action_parameters': {
             'block_number': 0,
             'staged': 0,
@@ -91,11 +87,9 @@ class chained_request(json_base):
         json_input = json_input if json_input else {}
 
         # create all chained request in flow
-        self._json_base__schema['approval'] = self.get_approval_steps()[1]
         self._json_base__schema['status'] = self.get_status_steps()[0]
 
         # update self according to json_input
-        self.setup()
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
@@ -159,7 +153,6 @@ class chained_request(json_base):
                     db.update(self.json())
                     # toggle the last request forward
                     __ret = self.toggle_last_request()
-                    self.remove_from_nonflowing_list()
                     return {"prepid": chainid, "results": True}
             else:
                 # we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
@@ -246,11 +239,6 @@ class chained_request(json_base):
                         "results": False,
                         "message": "Reservation failed",
                         "prepid": chainid}
-
-                return {
-                    "prepid": chainid,
-                    "results": False,
-                    "message": "We are failing superflow for now...."}
 
         except Exception as ex:
             self.logger.info("Error in chained_request flow: %s" % (str(ex)))
@@ -348,7 +336,6 @@ class chained_request(json_base):
     def flow_to_next_step(self, input_dataset='', check_stats=True, reserve=False, stop_at_campaign=None):
         self.logger.info('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
-            self.add_to_nonflowing_list('Chained request has no root')
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'chained_request %s has got no root' % (self.get_attribute('_id')))
@@ -381,7 +368,6 @@ class chained_request(json_base):
         current_campaign = campaign(cdb.get(current_request.get_attribute('member_of_campaign')))
 
         if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
-            self.add_to_nonflowing_list('Chained request is a member of campaign %s that does not exist' % (self.get_attribute('member_of_campaign')))
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'the chain request %s is member of %s that does not exist' % (
@@ -428,17 +414,14 @@ class chained_request(json_base):
         # what is the campaign to go to next and with which flow
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
         if not fdb.document_exists(flow_name):
-            self.add_to_nonflowing_list('The flow %s does not exist' % (flow_name))
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The flow %s does not exist' % flow_name)
         mcm_f = flow(fdb.get(flow_name))
         if 'sequences' not in mcm_f.get_attribute('request_parameters'):
-            self.add_to_nonflowing_list('The flow %s does not contain sequences information' % (flow_name))
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'The flow %s does not contain sequences information.' % (flow_name))
         other_bad_characters = [' ', '-']
         if "process_string" in mcm_f.get_attribute('request_parameters') and mcm_f.get_attribute("request_parameters")["process_string"] and any(map(lambda char: char in mcm_f.get_attribute("request_parameters")["process_string"], other_bad_characters)):
-            self.add_to_nonflowing_list('The flow process string (%s) contains a bad character %s' % (mcm_f.get_attribute("request_parameters")["process_string"], ','.join(other_bad_characters)))
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'The flow process string (%s) contains a bad character %s' % (
@@ -446,30 +429,24 @@ class chained_request(json_base):
                     ','.join(other_bad_characters)))
 
         if not cdb.document_exists(next_campaign_id):
-            self.add_to_nonflowing_list('The next campaign %s does not exist' % (next_campaign_id))
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The next campaign %s does not exist' % next_campaign_id)
 
         next_campaign = campaign(cdb.get(next_campaign_id))
         if len(next_campaign.get_attribute('sequences')) != len(mcm_f.get_attribute('request_parameters')['sequences']):
-            self.add_to_nonflowing_list('Sequences changes in flow %s are not consistent with the next campaign %s' % (flow_name, next_campaign_id))
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),
                 'the sequences changes in flow %s are not consistent with the next campaign %s' % (flow_name, next_campaign_id))
 
         if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
-            self.add_to_nonflowing_list('Request %s has inconsistent energy.' % (next_campaign.get_attribute('prepid')))
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
 
         if not mcm_cc.get('do_not_check_cmssw_versions', False) and not next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
-            self.add_to_nonflowing_list('Request %s has lower release version.' % (next_campaign.get_attribute('prepid')))
             raise self.ChainedRequestCannotFlowException(self.get_attribute("_id"), 'cannot flow any further. Request {0} has lower release version.'.format(next_campaign.get_attribute("prepid")))
 
         if next_campaign.get_attribute('type') == 'MCReproc' and ('time_event' not in mcm_f.get_attribute('request_parameters')):
-            self.add_to_nonflowing_list('Flow is getting into a MCReproc campaign but not time per event is specified')
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'the flow is getting into a MCReproc campaign but not time per event is specified')
 
         if next_campaign.get_attribute('type') == 'MCReproc' and ('size_event' not in mcm_f.get_attribute('request_parameters')):
-            self.add_to_nonflowing_list('Flow is getting into a MCReproc campaign but not size per event is specified')
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'the flow is getting into a MCReproc campaign but not size per event is specified')
 
         # check that it is allowed to flow
@@ -493,7 +470,6 @@ class chained_request(json_base):
             existing_next_req = rdb.get(self.get_attribute('chain')[self.get_attribute('step') + 1])
             if existing_next_req.get('status') == 'done':
                 self.set_attribute('step', self.get_attribute('step') + 1)
-                self.remove_from_nonflowing_list()
                 self.logger.info('Next request - %s is done, moving step to +1' % (existing_next_req.get('prepid')))
                 return {
                     'result': True,
@@ -521,7 +497,6 @@ class chained_request(json_base):
                     current_request.get_attribute('completed_events'),
                     current_request.get_attribute('prepid')))
 
-                self.add_to_nonflowing_list('The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
             else:
                 allowed_request_statuses = ['done']
@@ -569,9 +544,6 @@ class chained_request(json_base):
                                                message,
                                                accumulate=True)
 
-                    self.add_to_nonflowing_list('The number of events completed %s (%.2f%%) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'),
-                                                                                                                                       __percentage,
-                                                                                                                                       completed_events_to_pass))
                     raise self.ChainedRequestCannotFlowException(
                         self.get_attribute('_id'),
                         'The number of events completed %s (%.2f%%) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), __percentage, completed_events_to_pass))
@@ -586,8 +558,6 @@ class chained_request(json_base):
             # not at the end
             next_id = self.get_attribute('chain')[next_step]
             if not rdb.document_exists(next_id):
-                self.add_to_nonflowing_list('The next request (%s) according to the step (%s) does not exist' % (next_id,
-                                                                                                                 next_step))
                 raise self.ChainedRequestCannotFlowException(
                     self.get_attribute('_id'),
                     'The next request (%s) according to the step (%s) does not exist' % (next_id, next_step))
@@ -853,9 +823,6 @@ class chained_request(json_base):
             forceflow_list["value"].remove(self.get_attribute("prepid"))
             ldb.update(forceflow_list)
 
-        # It's flown, remove it from list_of_nonflowing_chains
-        self.remove_from_nonflowing_list()
-
         return {
             'result': True,
             'generated_request': next_request.get_attribute('prepid')
@@ -938,17 +905,6 @@ class chained_request(json_base):
                 okay = False
         return okay
 
-    def timer(method):
-        def timed(*args, **kw):
-            t0 = time.time()
-            result = method(*args, **kw)
-            t1 = time.time()
-            # if t1-t0 > 100:
-            json_base.logger.info("%s ####method took: %s" % (method.__name__, t1 - t0))
-            return result
-        return timed
-
-    @timer
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}
 
@@ -988,41 +944,3 @@ class chained_request(json_base):
             subject = 'Chained validation run test'
             message = 'Problem saving changes in chain %s, set validate = False ASAP!' % self.get_attribute('prepid')
             self.notify(subject, message)
-
-    def add_to_nonflowing_list(self, reason):
-        chain_prepid = self.get_attribute('prepid')
-        with locker.lock('%s-nonflowing-list' % (chain_prepid)):
-            ldb = database('lists')
-            list_of_nonflowing_chains = ldb.get('list_of_nonflowing_chains')
-            for stalled_entry in list_of_nonflowing_chains['value']:
-                if stalled_entry['chain'] == chain_prepid:
-                    break
-            else:
-                # Else will be executed only if no break happened before
-                # Check if it's not the last request in the chain
-                requests_in_chain = self.get_attribute('chain')
-                current_step_prepid = requests_in_chain[self.get_attribute('step')]
-                rdb = database('requests')
-                set_status_date = int(time.time())
-                current_request = rdb.get(current_step_prepid)
-                for history_entry in reversed(current_request.get('history', [])):
-                    if history_entry.get('action') == 'set status':
-                        set_status_date = history_entry['updater']['submission_date']
-                        set_status_date = int(time.mktime(time.strptime(set_status_date, '%Y-%m-%d-%H-%M')))
-                        break
-
-                list_of_nonflowing_chains['value'].append({'reason': reason,
-                                                           'chain': chain_prepid,
-                                                           'nonflowing_since': set_status_date})
-                ldb.update(list_of_nonflowing_chains)
-
-    def remove_from_nonflowing_list(self):
-        # Remove from nonflowing list
-        chain_prepid = self.get_attribute('prepid')
-        with locker.lock('%s-nonflowing-list' % (chain_prepid)):
-            ldb = database('lists')
-            list_of_nonflowing_chains = ldb.get('list_of_nonflowing_chains')
-            new_list_of_nonflowing_chains = [x for x in list_of_nonflowing_chains['value'] if x['chain'] != chain_prepid]
-            if len(new_list_of_nonflowing_chains) != len(list_of_nonflowing_chains['value']):
-                list_of_nonflowing_chains['value'] = new_list_of_nonflowing_chains
-                ldb.update(list_of_nonflowing_chains)
