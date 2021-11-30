@@ -412,7 +412,7 @@ class GetCmsDriverForRequest(RESTResource):
         """
         Retrieve the cmsDriver commands for a given request
         """
-        db = database(self.db_name)
+        db = Database('requests')
         return self.get_cmsDriver(db.get(prepid=request_id))
 
     def get_cmsDriver(self, data):
@@ -476,7 +476,7 @@ class GetSetupForRequest(RESTResource):
         """
         for_validation = self.opt in ('test', 'valid')
         automatic_validation = self.opt == 'valid'
-        request_db = database(self.db_name)
+        request_db = Database('requests')
         if request_db.document_exists(prepid):
             req = request(request_db.get(prepid))
             output_text = req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation, threads=1)
@@ -521,7 +521,7 @@ class GetRequestOutput(RESTResource):
         """
         # how to structure better the output ? using a dict ?
         res = {prepid: []}
-        rdb = database('requests')
+        rdb = Database('requests')
 
         if is_chain == 'chain':
             collect = []
@@ -661,7 +661,7 @@ class GetStatus(RESTResource):
             self.logger.info("someone is looking for empty request status")
             return {"results": "You shouldnt be looking for empty prepid"}
 
-        db = database('requests')
+        db = Database('requests')
         if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
 
@@ -713,7 +713,7 @@ class InspectStatus(RESTResource):
     def multiple_inspect(self, rid, force_req):
         rlist = rid.rsplit(',')
         res = []
-        db = database('requests')
+        db = Database('requests')
         crdb = database('chained_requests')
         for r in rlist:
             if not db.document_exists(r):
@@ -761,7 +761,7 @@ class UpdateStats(RESTResource):
         # set forcing argument
         force = True if forced == "force" else False
 
-        rdb = database('requests')
+        rdb = Database('requests')
         if not rdb.document_exists(request_id):
             return {"prepid": request_id, "results": False,
                     "message": '%s does not exist' % request_id}
@@ -844,7 +844,7 @@ class SetStatus(RESTResource):
             return self.status(rid, val)
 
     def status(self, rid, step=-1):
-        db = database('requests')
+        db = Database('requests')
         if not db.document_exists(rid):
             return {"prepid": rid, "results": 'Error: The given request id does not exist.'}
 
@@ -863,7 +863,6 @@ class SetStatus(RESTResource):
 
 class GetEditable(RESTResource):
     def __init__(self):
-        self.db_name = 'requests'
         self.before_request()
         self.count_call()
 
@@ -871,32 +870,25 @@ class GetEditable(RESTResource):
         """
         Retreive the fields that are currently editable for a given request id
         """
-        return self.get_editable(request_id)
-
-    def get_editable(self, prepid):
-        db = database(self.db_name)
-        request_in_db = request(db.get(prepid=prepid))
-        editable = request_in_db.get_editable()
-        return {"results": editable}
+        request_db = Database('requests')
+        request_json = request_db.get(request_id)
+        request = Request(request_json)
+        editable = request.get_editable()
+        return {'results': editable}
 
 
 class GetDefaultGenParams(RESTResource):
     def __init__(self):
-        self.db_name = 'requests'
         self.before_request()
         self.count_call()
 
     def get(self, request_id):
         """
-        Simply get the schema for the generator parameters object in request.
+        Get schema for the generator parameters object in request
         """
-        return self.get_default_params(request_id)
-
-    def get_default_params(self, prepid):
-        db = database(self.db_name)
-        request_in_db = request(db.get(prepid=prepid))
-        request_in_db.update_generator_parameters()
-        return {"results": request_in_db.get_attribute('generator_parameters')[-1]}
+        from json_layer.generator_parameters import generator_parameters
+        params = generator_parameters()
+        return {"results": params.json()}
 
 
 class NotifyUser(RESTResource):
@@ -917,7 +909,7 @@ class NotifyUser(RESTResource):
         l_type = locator()
         pids = data['prepids']
         results = []
-        rdb = database('requests')
+        rdb = Database('requests')
 
         for pid in pids:
             if not rdb.document_exists(pid):
@@ -967,7 +959,7 @@ class RegisterUser(RESTResource):
             return self.register_user(rid)
 
     def register_user(self, pid):
-        rdb = database('requests')
+        rdb = Database('requests')
         udb = database('users')
         request_in_db = request(rdb.get(pid))
         current_user = request_in_db.current_user
@@ -1000,7 +992,7 @@ class GetActors(RESTResource):
         return self.show_user(request_id, what)
 
     def show_user(self, pid, what=None):
-        rdb = database('requests')
+        rdb = Database('requests')
         request_in_db = request(rdb.get(pid))
         if what:
             return request_in_db.get_actors(what=what)
@@ -1150,7 +1142,7 @@ class RequestsFromFile(RequestLister, RESTResource):
         """
         Parse the posted text document for request id and request ranges for display of requests
         """
-        rdb = database('requests')
+        rdb = Database('requests')
         all_ids = self.get_list_of_ids(rdb)
         return self.get_objects(all_ids, rdb)
 
@@ -1167,7 +1159,7 @@ class StalledReminder(RESTResource):
         """
         Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
         """
-        rdb = database('requests')
+        rdb = Database('requests')
         bdb = database('batches')
         statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
         __query = rdb.make_query()
@@ -1265,7 +1257,7 @@ class RequestsReminder(RESTResource):
             who = who.split(',')
 
         udb = database('users')
-        rdb = database('requests')
+        rdb = Database('requests')
         crdb = database('chained_requests')
         # a dictionary contact : { campaign : [ids] }
         ids_for_users = {}
@@ -1453,7 +1445,7 @@ class UpdateMany(RequestRESTResource):
         list_of_prepids = data["prepids"]
         updated_values = data["updated_data"]
         return_info = []
-        db = database(self.db_name)
+        db = Database('requests')
         for elem in list_of_prepids:
             document = db.get(elem)
             for value in updated_values:
@@ -1516,7 +1508,7 @@ class GetUploadCommand(RESTResource):
         """
         Get command used to upload configurations for given request.
         """
-        db = database("requests")
+        db = Database('requests')
         if not db.document_exists(request_id):
             self.logger.error('GetUploadCommand: request with id {0} does not exist'.format(request_id))
             return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
@@ -1538,7 +1530,7 @@ class GetInjectCommand(RESTResource):
         """
         Get command used to inject given request.
         """
-        db = database("requests")
+        db = Database('requests')
         if not db.document_exists(request_id):
             self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(request_id))
             return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
@@ -1569,7 +1561,7 @@ class RequestsPriorityChange(RESTResource):
     def __init__(self):
         self.before_request()
         self.count_call()
-        self.requests_db = database("requests")
+        self.requests_db = Database('requests')
 
     def post(self):
         fails = []
@@ -1602,7 +1594,7 @@ class Reserve_and_ApproveChain(RESTResource):
         self.before_request()
         self.count_call()
         self.cdb = database("chained_requests")
-        self.rdb = database("requests")
+        self.rdb = Database('requests')
 
     def get(self, chain_id):
         """
@@ -1657,7 +1649,7 @@ class TaskChainRequestDict(RESTResource):
         self.representations = {'text/plain': self.output_text}
 
     def get(self, request_id):
-        requests_db = database('requests')
+        requests_db = Database('requests')
         mcm_request = request(requests_db.get(request_id))
         task_name = 'task_' + request_id
         request_type = mcm_request.get_wmagent_type()
@@ -1715,7 +1707,7 @@ class GENLogOutput(RESTResource):
         self.count_call()
 
     def get(self, request_id):
-        requests_db = database('requests')
+        requests_db = Database('requests')
         mcm_request = request(requests_db.get(request_id))
         if not mcm_request:
             return {'results': False, 'message': 'Can\'t find request %s' % (request_id)}

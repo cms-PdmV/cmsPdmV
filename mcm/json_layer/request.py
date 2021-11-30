@@ -16,7 +16,6 @@ from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
-from json_layer.chained_request import chained_request
 from json_layer.json_base import json_base
 from json_layer.campaign import campaign as Campaign
 from json_layer.flow import flow as Flow
@@ -31,6 +30,7 @@ from tools.locker import locker
 from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
 from tools.user_management import user_pack as UserPack
+from tools.utils import get_scram_arch as fetch_scram_arch
 
 
 class AFSPermissionError(Exception):
@@ -51,7 +51,7 @@ class request(json_base):
         'input_dataset': '',
         'output_dataset': [],
         'pwg': '',
-        'validation': {"valid":False,"content":"all"},
+        'validation': {"valid":False, "content":"all"},
         'dataset_name': '',
         'pileup_dataset_name': '',
         'process_string': '',
@@ -99,7 +99,6 @@ class request(json_base):
         self._json_base__approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
         self._json_base__status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
         # update self according to json_input
-        self.setup()
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
@@ -129,7 +128,7 @@ class request(json_base):
 
         # Events per lumi
         events_per_lumi = self.get_attribute('events_per_lumi')
-        if events_per_lumi != 0 and not (100 <= events_per_lumi <= 1000):
+        if events_per_lumi != 0 and not 100 <= events_per_lumi <= 1000:
             raise Exception('Events per lumi must be 100<=X<=1000 or 0 to use campaign value')
 
         # CMSSW release
@@ -939,7 +938,7 @@ class request(json_base):
         flow_sequences = request_parameters.get('sequences', [])
         # Add empty sequences to flow
         flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{'default': {}}]
-        assert(len(campaign_sequences) == len(flow_sequences))
+        assert len(campaign_sequences) == len(flow_sequences)
         # Get sequence names from flow, usually "default"
         sequence_names = [seq.keys()[0] for seq in flow_sequences]
         # Pick sequences from the flow
@@ -1070,51 +1069,24 @@ class request(json_base):
         """
         keep_output = self.get_attribute('keep_output')
         sequences = self.get_attribute('sequences')
-        assert(len(keep_output) == len(sequences))
+        assert len(keep_output) == len(sequences)
         tiers = []
         for i, (keep, sequence) in enumerate(zip(keep_output, sequences)):
             if keep:
                 processing_string = self.get_processing_string(i)
                 datatiers = [t for t in sequence.get('datatier', '').split(',') if t]
-                tiers.extend([(processing_string, datatier for datatier in datatiers)])
+                tiers.extend([(processing_string, datatier) for datatier in datatiers])
 
         return tiers
 
     def get_scram_arch(self):
-        # economise to call many times.
+        """
+        Get scram arch of the request's release
+        """
         if hasattr(self, 'scram_arch'):
             return self.scram_arch
 
-        scram_arch_exceptions = settings.get_value('scram_arch_exceptions')
-        prepid = self.get_attribute('prepid')
-        campaign = self.get_attribute('member_of_campaign')
-        release_to_find = self.get_attribute('cmssw_release')
-        if prepid in scram_arch_exceptions:
-            self.scram_arch = scram_arch_exceptions.get(prepid)
-            self.logger.info('Found %s in scram arch exceptions (%s)' % (prepid, self.scram_arch))
-            return self.scram_arch
-        elif campaign in scram_arch_exceptions:
-            self.scram_arch = scram_arch_exceptions.get(campaign)
-            self.logger.info('Found %s in scram arch exceptions (%s)' % (campaign, self.scram_arch))
-            return self.scram_arch
-        elif release_to_find in scram_arch_exceptions:
-            self.scram_arch = scram_arch_exceptions.get(release_to_find)
-            self.logger.info('Found %s in scram arch exceptions (%s)' % (release_to_find, self.scram_arch))
-            return self.scram_arch
-
-        self.scram_arch = None
-        import xml.dom.minidom
-
-        release_announcement = settings.get_value('release_announcement')
-        xml_data = xml.dom.minidom.parseString(os.popen('curl -s --insecure %s ' % (release_announcement)).read())
-
-        for arch in xml_data.documentElement.getElementsByTagName("architecture"):
-            scram_arch = arch.getAttribute('name')
-            for project in arch.getElementsByTagName("project"):
-                release = str(project.getAttribute('label'))
-                if release == release_to_find:
-                    self.scram_arch = scram_arch
-
+        self.scram_arch = fetch_scram_arch(self.get_attribute('cmssw_release'))
         return self.scram_arch
 
     def make_release(self):
