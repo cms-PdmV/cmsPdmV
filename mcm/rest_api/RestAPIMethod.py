@@ -1,74 +1,95 @@
-#!/usr/bin/env python
 import logging
 import re
+import json
+import time
 
-from tools.user_management import access_rights, roles
-from tools.user_management import authenticator, user_pack
 from tools.locker import locker
 from flask_restful import Resource
 from flask import request, abort, make_response, current_app, render_template
-import json
+from json_layer.user import User, Role
 
 
 class RESTResource(Resource):
     logger = logging.getLogger("mcm_error")
-    access_limit = None
-    access_user = []
-    call_counters = {}
-    limit_per_method = {
-        'GET': access_rights.user,
-        'PUT': access_rights.generator_contact,
-        'POST': access_rights.generator_contact,
-        'DELETE': access_rights.administrator}
 
-    def __init__(self, content=''):
-        self.content = content
+    def __getattribute__(self, name):
+        """
+        Catch GET, PUT, POST and DELETE methods and wrap them
+        """
+        if name in {'get', 'put', 'post', 'delete'}:
+            attr = object.__getattribute__(self, name)
+            if hasattr(attr, '__call__'):
+                def wrapped_function(*args, **kwargs):
+                    start_time = time.time()
+                    try:
+                        result = attr(*args, **kwargs)
+                        status_code = result.status_code
+                    except Exception as ex:
+                        status_code = self.exception_to_http_code(ex)
+                        raise ex
+                    finally:
+                        end_time = time.time()
+                        self.logger.info('[%s] %s %.4fs %s',
+                                         name.upper(),
+                                         request.path,
+                                         end_time - start_time,
+                                         status_code)
+                    return result
 
-    def before_request(self):
-        access_limit = self.__class__.access_limit
-        if access_limit is not None:
-            self.logger.info('Setting access limit to access_rights.%s (%s)' % (roles[access_limit], access_limit))
-        elif request.method in self.limit_per_method:
-            access_limit = self.limit_per_method[request.method]
-        user_p = user_pack()
-        try:
-            self.user_dict = {'username': user_p.get_username(),
-                              'role': authenticator.get_user_role(user_p.get_username())}
-        except:
-            self.user_dict = {'username': 'anonymous',
-                              'role': 'user'}
-        if not user_p.get_username():
-            # meaning we are going public, only allow GET.
-            if 'public' not in request.path:
-                self.logger.error('From within %s, adfs-login not found: \n %s \n %s' % (self.__class__.__name__, str(request.headers), str(request.path)))
+                return wrapped_function
+
+        return super().__getattribute__(name)
+
+    @classmethod
+    def ensure_role(cls, role):
+        """
+        Ensure that user has appropriate roles for this API call
+        """
+        def ensure_role_wrapper(func):
+            """
+            Wrapper
+            """
+            def ensure_role_wrapper_wrapper(*args, **kwargs):
+                """
+                Wrapper inside wrapper
+                """
+                if '/public/' in request.path:
+                    # Public API, no need to ensure role
+                    return func(*args, **kwargs)
+
+                user = User()
+                user_role = user.get_role()
+                if user_role >= role:
+                    return func(*args, **kwargs)
+
+                username = user.get_username()
+                api_role = role.name
+                message = 'API not allowed. User "%s" has role "%s", required "%s"' % (username,
+                                                                                       user_role,
+                                                                                       api_role)
+                return cls.build_response({'results': None, 'message': message}, code=403)
+
+            ensure_role_wrapper_wrapper.__name__ = func.__name__
+            ensure_role_wrapper_wrapper.__doc__ = func.__doc__
+            ensure_role_wrapper_wrapper.__role__ = role
+            return ensure_role_wrapper_wrapper
+
+        return ensure_role_wrapper
+
+    @staticmethod
+    def build_response(data, code=200, headers=None, content_type='application/json'):
+        """
+        Makes a Flask response with a plain text encoded body
+        """
+        if content_type == 'application/json':
+            resp = make_response(json.dumps(data, indent=1, sort_keys=True), code)
         else:
-            if not authenticator.can_access(user_p.get_username(), access_limit):
-                if user_p.get_username() in self.access_user:
-                    self.logger.error('User %s allowed to get through' % user_p.get_username())
-                else:
-                    abort(403)
+            resp = make_response(data, code)
 
-    def output_text(self, data, code, headers=None):
-        """Makes a Flask response with a plain text encoded body"""
-        if isinstance(data, (dict, list)):
-            data = json.dumps(data, indent=1)
-
-        resp = make_response(data, code)
-        if headers:
-            for key, value in headers.iteritems():
-                resp.headers[key] = value
-
+        resp.headers.extend(headers or {})
+        resp.headers['Content-Type'] = content_type
+        resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
-
-    def count_call(self):
-        # counter for calls
-        method = request.method
-        with locker.lock("rest-call-counter"):
-           key = self.__class__.__name__ + method
-           try:
-               RESTResource.call_counters[key] += 1
-           except KeyError:
-               RESTResource.call_counters[key] = 1
 
     def get_obj_diff(self, old, new, ignore_keys, diff=None, key_path=''):
         if diff is None:
