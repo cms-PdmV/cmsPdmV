@@ -2,11 +2,11 @@ import time
 import json
 
 from json_base import json_base
-from json_layer.request import request
-from json_layer.campaign import campaign
-from json_layer.mccm import mccm
-from flow import flow
-from couchdb_layer.mcm_database import database
+from json_layer.request import request as Request
+from json_layer.campaign import campaign as Campaign
+from json_layer.mccm import mccm as MccM
+from flow import flow as Flow
+from couchdb_layer.mcm_database import database as Database
 from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
@@ -14,72 +14,24 @@ import tools.settings as settings
 
 
 class chained_request(json_base):
-    class CampaignAlreadyInChainException(Exception):
-        def __init__(self, campaign):
-            self.c = campaign
-            chained_request.logger.error('Campaign %s is already member of the chain.' % self.c)
-
-        def __str__(self):
-            return 'Error: Campaign', self.c, 'already represented in the chain.'
-
-    class ChainedRequestCannotFlowException(Exception):
-        def __init__(self, crname, message='cannot flow any further'):
-            self.name = str(crname)
-            self.message = message
-            chained_request.logger.error('Chained request %s %s.' % (self.name, self.message))
-
-        def __str__(self):
-            return 'Chained request %s %s.' % (self.name, self.message)
-
-    class NotApprovedException(Exception):
-        def __init__(self, oname, alevel, allowed):
-            self.name = str(oname)
-            self.level = str(alevel)
-            self.allowed = ' or '.join(map(lambda s: '"%s"' % s, allowed))
-            chained_request.logger.error(
-                '%s has not been approved for any of %s levels : "%s"' % (self.name, self.allowed, self.level))
-
-        def __str__(self):
-            return 'Error: ' + self.name + ' is "' + self.level + '" approved. requires ' + self.allowed
-
-    class NotInProperStateException(Exception):
-        def __init__(self, oname, alevel, allowed):
-            self.name = str(oname)
-            self.level = str(alevel)
-            self.allowed = ' or '.join(map(lambda s: '"%s"' % s, allowed))
-            chained_request.logger.error('%s has not reached status %s : "%s"' % (self.name, self.allowed, self.level))
-
-        def __str__(self):
-            return 'Error: ' + self.name + ' is in"' + self.level + '" status. requires ' + self.allowed
-
-    class CampaignStoppedException(NotApprovedException):
-        def __init__(self, oname):
-            self.name = str(oname)
-            chained_request.logger.error('Campaign %s is stopped' % self.name)
-
-        def __str__(self):
-            return 'Error: ' + self.name + ' is stopped.'
 
     _json_base__status = ['new', 'processing', 'done', 'force_done']
 
     _json_base__schema = {
         '_id': '',
-        'chain': [],
-        'step': 0,
-        'pwg': '',
         'prepid': '',
+        'chain': [],
         'dataset_name': '',
+        'enabled': True,
         'history': [],
-        'member_of_campaign': '',
         'last_status': 'new',
+        'member_of_campaign': '',
+        'priority': 0,
+        'pwg': '',
+        'step': 0,
         'status': '',
+        'threshold': 0,
         'validate': 0,  # Whether the chain should be submitted to validation
-        'action_parameters': {
-            'block_number': 0,
-            'staged': 0,
-            'threshold': 0,
-            'flag': True
-        }
     }
 
     def __init__(self, json_input=None):
@@ -98,38 +50,6 @@ class chained_request(json_base):
         rdb = database('requests')
         last_r = request(rdb.get(self.get_attribute('chain')[-1]))
         return last_r.get_actors(N, what, Nchild)
-
-    def get_list_of_superflows(self):
-        """
-        get a list of 2 or more consequitive campaigns
-        where flow approval==tasksubmit
-        """
-
-        cDB = database("chained_campaigns")
-        flowDB = database("flows")
-
-        __curr_step = self.get_attribute("step")
-        __cc = cDB.get(self.get_attribute("member_of_campaign"))
-        __list_of_campaigns = []
-        FLOW_APPRVAL_FOR_TASKCHAIN = "tasksubmit"
-        # we work only starting from current step
-        # +1 so we dont want to take current campaign
-        for chain in __cc["campaigns"][__curr_step + 1:]:
-            __ongoing_flow = flowDB.get(chain[1])
-            if __ongoing_flow:
-                # check in case flow doesnt exists
-                if __ongoing_flow["approval"] == FLOW_APPRVAL_FOR_TASKCHAIN:
-                    # do we need a list? we could save only last campaign's prepid
-                    __list_of_campaigns.append(chain[0])
-                elif len(__list_of_campaigns) >= 2:
-                    # we case previously we had 2 or more consequitive superflows
-                    # and 3rd was normal flow we return only the previous superflows
-                    return __list_of_campaigns
-                else:
-                    # in case superflow->flow we return nothing as its a normal flow
-                    return []
-
-        return __list_of_campaigns
 
     def flow_trial(self, input_dataset='', check_stats=True, reserve=False, super_flow=False):
         reqDB = database("requests")
@@ -500,9 +420,8 @@ class chained_request(json_base):
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
             else:
                 allowed_request_statuses = ['done']
-                # determine if this is a root -> non-root transition to potentially apply staged number
                 at_a_transition = (current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
-                if (action_parameters['staged'] != 0 or action_parameters['threshold'] != 0) and at_a_transition:
+                if action_parameters['threshold'] != 0 and at_a_transition:
                     allowed_request_statuses.append('submitted')
                 # check status
                 if not current_request.get_attribute('status') in allowed_request_statuses:
@@ -513,10 +432,7 @@ class chained_request(json_base):
                 # special check at transition that the statistics is good enough
                 if at_a_transition:
                     self.logger.info("ChainedRequest is at transition. id: %s" % (self.get_attribute('prepid')))
-                    # at a root -> non-root transition only does the staged/threshold functions !
-                    if action_parameters['staged'] != 0:
-                        next_total_events = int(action_parameters['staged'])
-                        completed_events_to_pass = next_total_events
+                    # at a root -> non-root transition only does the threshold functions !
                     if action_parameters['threshold'] != 0:
                         next_total_events = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
                         completed_events_to_pass = next_total_events
@@ -669,8 +585,6 @@ class chained_request(json_base):
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
 
             # if case we have action parameters they overwrite the total_events
-            if action_parameters['staged'] != 0:
-                next_total_evts = int(action_parameters['staged'])
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
@@ -709,8 +623,6 @@ class chained_request(json_base):
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
 
             # if case we have action parameters they overwrite the total_events
-            if action_parameters['staged'] != 0:
-                next_total_evts = int(action_parameters['staged'])
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
