@@ -685,7 +685,7 @@ class chained_request(json_base):
                                          candidate_chain[i],
                                          candidate_request_status,
                                          candidate_request_keep_output)
-                        if candidate_request_keep_output:
+                        if candidate_request_status != 'submit' or candidate_request_keep_output:
                             further_steps_keep_output = True
 
                     if candidate_request_status != 'submit' or candidate_request_keep_output:
