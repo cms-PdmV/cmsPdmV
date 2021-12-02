@@ -221,20 +221,6 @@ angular.module('testApp').controller('mainCtrl',
       $scope.getData = function () {
         if ($scope.file_was_uploaded) {
           $scope.upload($scope.uploaded_file);
-        }
-        else if ($location.search()['range'] != undefined) {
-          var tmp = $location.search()['range'].split(";");
-          var imaginary_file = [];
-          _.each(tmp, function (elem) {
-            var ranges = elem.split(",");
-            if (ranges.length > 1) {
-              imaginary_file.push(ranges[0] + " -> " + ranges[1]);
-            } else {
-              imaginary_file.push(ranges[0]);
-            }
-          });
-          $scope.upload({ contents: imaginary_file.join("\n") });
-          $scope.file_was_uploaded = false;
         } else {
           let query = "";
           _.each($location.search(), function (value, key) {
@@ -244,7 +230,7 @@ angular.module('testApp').controller('mainCtrl',
           });
           $scope.got_results = false; //to display/hide the 'found n results' while reloading
           $scope.resultsFromFile = false;
-          $http.get("search?" + "db_name=" + $scope.dbName + query + "&get_raw").then(function (data) {
+          $http.get("search?" + "db_name=" + $scope.dbName + query).then(function (data) {
             $scope.got_results = true;
             $scope.result = _.pluck(data.data.rows, 'doc');
             if ($scope.result === undefined) {

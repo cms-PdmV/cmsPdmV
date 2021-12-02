@@ -58,19 +58,25 @@ angular.module('testApp').controller('resultsCtrl',
             $scope.getData();
           }
         }).error(function (data, status) {
+          delete $scope.actionMessage[prepid];
           $scope.openErrorModal(undefined, data['message'])
         });
       };
 
-      $scope.$watch(function () {
-        var loc_dict = $location.search();
-        return "page" + loc_dict["page"] + "limit" + loc_dict["limit"];
-      },
-        function () {
-          $scope.getData();
-          $scope.selected_prepids = [];
-        });
-
+      $scope.forcecompletePrompt = function(prepid) {
+        $scope.openIsSureModal($scope.dbName, prepid, 'forcecomplete', function (database, prepid, action) {
+          $scope.actionMessage[prepid] = 'loading';
+          $http({ method: 'PUT', url: 'restapi/requests/add_forcecomplete', data: {'prepid': prepid} }).success(function (data, status) {
+            $scope.actionMessage[prepid] = data.results ? 'OK' : data.message;
+            if (data.results) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            delete $scope.actionMessage[prepid];
+            $scope.openErrorModal(undefined, data['message'])
+          });
+        })
+      };
 
       $scope.selected_prepids = [];
       $scope.add_to_selected_list = function (prepid) {

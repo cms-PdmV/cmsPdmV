@@ -3,13 +3,13 @@ import flask
 from collections import defaultdict
 
 from RestAPIMethod import RESTResource
-from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights, authenticator, user_pack
 import tools.settings as settings
 from json import dumps, loads
 
 from tools.communicator import communicator
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import database as Database
+from tools.utils import clean_split
 
 
 class Communicate(RESTResource):
@@ -35,166 +35,109 @@ class Search(RESTResource):
     """
 
     access_limit = access_rights.user
+    modules = {'batches': 'batch',
+               'campaigns': 'campaign',
+               'chained_campaigns': 'chained_campaign',
+               'chained_requests': 'chained_request',
+               'flows': 'flow',
+               'invalidations': 'invalidation',
+               'mccms': 'mccm',
+               'requests': 'request',
+               'settings': 'setting',
+               'user': 'user'}
+    casting = None
+
+    @classmethod
+    def prepare_casting(cls):
+        cls.logger.info('Preparing attribute casting in search')
+        import json_layer
+        cls.casting = {}
+        for database_name, module_name in cls.modules.items():
+            module = getattr(json_layer, module_name)
+            class_obj = getattr(module, module_name)
+            schema = class_obj.class_schema()
+            if not schema:
+                continue
+
+            cls.casting[database_name] = {}
+            for schema_key, schema_value in schema.items():
+                schema_type = type(schema_value)
+                if schema_type in [int, float]:
+                    cls.casting[database_name][schema_key] = '<%s>' % (schema_type.__name__)
 
     def __init__(self):
         self.before_request()
-        self.casting = defaultdict(lambda: defaultdict(lambda: ""))
-        self.type_dict = defaultdict(lambda: defaultdict(lambda: basestring))
-        import json_layer
-        for module in json_layer.__all__:
-            mod_obj = getattr(json_layer, module)
-            class_obj = getattr(mod_obj, module)
-            key_name = module if module.endswith("s") else module + "s"  # key name that can be resolved to database name
-            if module is 'batch':
-                key_name = 'batches'  # bleh, special case
-            schema = class_obj.class_schema()
-            if schema:
-                for schema_key in schema:
-                    self.type_dict[key_name][schema_key] = type(schema[schema_key])
-                    if type(schema[schema_key]) in [int, float]:
-                        self.casting[key_name][schema_key] = "<" + type(schema[schema_key]).__name__ + ">"
+        if not self.casting:
+            self.prepare_casting()
 
     def get(self):
         args = flask.request.args.to_dict()
-        db_name = 'requests'
-        page = 0
-        limit = 20
-        get_raw = False
-        include_fields = ''
-        if 'db_name' in args:
-            db_name = args['db_name']
-            args.pop('db_name')
-        if 'page' in args:
-            page = int(args['page'])
-            args.pop('page')
-        if 'limit' in args:
-            limit = int(args['limit'])
-            args.pop('limit')
-        if 'get_raw' in args:
-            get_raw = True
-            args.pop('get_raw')
-        if 'include_fields' in args:
-            include_fields = args['include_fields']
-            args.pop('include_fields')
-        if 'keep_output' in args:
-            args['keep_output'] = args['keep_output'].replace(',', '_')
+        self.logger.debug('Search: %s', ','.join('%s=%s' % (k, v) for k, v in args.items()))
+        db_name = args.pop('db_name', 'requests')
+        page = int(args.pop('page', 0))
+        limit = int(args.pop('limit', 20))
+        # Drop get_raw attribute
+        args.pop('get_raw', None)
+        include_fields = args.pop('include_fields', '')
+
+        if db_name not in self.modules:
+            return {'results': False, 'message': 'Invalid database name %s' % (db_name)}
 
         if page == -1 and not args and db_name == 'requests':
             return {"results": False, "message": "Why you stupid? Don't be stupid..."}
 
-        args = {k: v.split(',')[0] for k, v in args.items()}
-        res = self.search(args, db_name=db_name, page=page, limit=limit, get_raw=get_raw, include_fields=include_fields)
-        if get_raw:
-            self.representations = {'text/plain': self.output_text}
-            return res
+        database = Database(db_name)
+        args = {k: clean_split(v) if k != 'range' else v for k, v in args.items()}
+        # range - requests, chained_requests, tickets
+        get_range  = args.pop('range', None)
+        if get_range and db_name in ('requests', 'chained_requests', 'tickets'):
+            # Get range of objects
+            # Syntax: a,b;c,d;e;f
+            args['prepid_'] = []
+            for part in clean_split(get_range, ';'):
+                if ',' in part:
+                    parts = part.split(',')
+                    start = parts[0].split('-')
+                    end = parts[1].split('-')
+                    numbers = range(int(start[-1]), int(end[-1]) + 1)
+                    start = '-'.join(start[:-1])
+                    args['prepid_'].extend('%s-%05d' % (start, n) for n in numbers)
+                else:
+                    args['prepid_'].append(part)
+
+        # from_ticket - chained_requests
+        from_ticket = args.pop('from_ticket', None)
+        if from_ticket and db_name in ('chained_requests', ):
+            # Get chained requests generated from the ticket
+            mccm_db = Database('mccms')
+            if len(from_ticket) == 1 and '*' not in from_ticket[0]:
+                mccms = [mccm_db.get(from_ticket[0])]
+            else:
+                query = mccm_db.make_query({'prepid': from_ticket})
+                mccms = mccm_db.full_text_search('search', query, page=-1)
+
+            args['prepid__'] = []
+            for mccm in mccms:
+                args['prepid__'].extend(mccm.get('generated_chains', []).keys())
+
+        args.update(args)
+        if not args:
+            # If there are no args, use simpler fetch
+            res = database.get_all(page, limit, True)
         else:
-            return {"results": res}
+            # Add types to arguments
+            args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
+            # Construct the complex query
+            query = database.make_query(args)
+            self.logger.debug('Lucene query: %s', query)
+            res = database.full_text_search("search",
+                                            query=query,
+                                            page=page,
+                                            limit=limit,
+                                            get_raw=True,
+                                            include_fields=include_fields)
 
-    def search(self, args, db_name, page=-1, limit=0, get_raw=False, include_fields=''):
-        odb = database(db_name)
-        if args:
-            args = self.prepare_typed_args(args, db_name)
-            lucene_query = odb.construct_lucene_query(args)
-            self.logger.info("lucene url: %s" % (lucene_query))
-            res = odb.full_text_search("search", lucene_query, page=page,
-                limit=limit, get_raw=get_raw, include_fields=str(include_fields))
-
-        else:
-            res = odb.get_all(page, limit, get_raw=get_raw)
-        return res
-
-    def prepare_typed_args(self, args, db_name):
-        for arg in args:
-            args[arg + self.casting[db_name][arg]] = args.pop(arg)
-        return args
-
-
-class MultiSearch(Search):
-    """
-    Search getting all parameters from body of request and performing multiple searches
-    takes in json containing list of consecutive searches. Page, limit and get_raw is
-    taken into account only for last search:
-    {
-    page: PAGE,
-    limit: LIMIT,
-    searches: [
-        {
-            db_name: DBNAME1,
-            use_previous_as: INPUT_PLACE_NAME1,
-            return_field: OUTPUT_FIELD_NAME1,
-            search: {search_dictionary1}
-        },
-        {
-            db_name: DBNAME2,
-            use_previous_as: INPUT_PLACE_NAME2 (so it's OUTPUT_FIELD_NAME1),
-            return_field: OUTPUT_FIELD_NAME2,
-            search: {search_dictionary2}
-        }]
-    }
-
-    use_previous_as means how to use result of previous search query (on which field)
-    return_field means value of which field should be used
-
-    """
-
-    @staticmethod
-    def __add_previous_to_search(search, previous, iteration):
-        if iteration:
-            search['search'][search['use_previous_as']] = "(" + "+OR+".join(previous) + ")"
-            return
-        if 'use_previous_as' in search and search['use_previous_as']:
-            if search['use_previous_as'] in search['search']:
-                previous.append(search['search'][search['use_previous_as']])
-            search['search'][search['use_previous_as']] = "(" + "+OR+".join(previous) + ")"
-
-    def post(self):
-        search_dicts = loads(flask.request.data)
-        limit = 20
-        page = 0
-        if 'limit' in search_dicts:
-            limit = int(search_dicts['limit'])
-        if 'page' in search_dicts:
-            page = int(search_dicts['page'])
-        if page == -1:
-            limit = 1000000000
-            skip = 0
-        else:
-            skip = limit * page
-        previous = []
-        for search in search_dicts['searches'][:-1]:
-            prev_len = len(previous)
-            prev_len = prev_len if prev_len else 1
-            new_previous = []
-            flatten = self.type_dict[search['db_name']][search['return_field']] == list
-            for i in range(0, prev_len, 100):
-                self.__add_previous_to_search(search, previous[i:i + 100], i)
-                res = [x[search['return_field']] for x in self.search(search['search'], search['db_name'])]
-                new_previous.extend([i for x in res for i in x] if flatten else res)
-
-            previous = list(set(new_previous))
-
-        search = search_dicts['searches'][-1]
-        prev_len = len(previous)
-        res = []
-        current_len = 0
-        subskip = 0
-        start_adding = False
-        # pagination by hand (so the whole thing won't break because of super-long queries)
-        # MIGHT CAUSE DUPLICATIONS OF DOCUMENTS IN RESULTS!
-        for i in range(0, prev_len, 100):
-            self.__add_previous_to_search(search, previous[i:i + 100], i)
-            partial_result = self.search(search['search'], search['db_name'])
-            current_len += len(partial_result)
-            if start_adding:
-                subskip += len(partial_result)
-                res.extend(partial_result)
-            if current_len >= skip and not start_adding:
-                subskip = current_len - skip
-                start_adding = True
-                res.extend(partial_result)
-            if current_len >= skip + limit:
-                break
-        return {"results": res[-subskip:len(res) - subskip + limit] if page != -1 else res}
+        return self.output_text(res, 200, {'Content-Type': 'application/json'})
 
 
 class CacheInfo(RESTResource):
@@ -209,7 +152,7 @@ class CacheInfo(RESTResource):
         """
         Get information about cache sizes in McM
         """
-        db = database('requests')
+        db = Database('requests')
         db_cache_length, db_cache_size = db.cache_size()
         settings_cache_length, settings_cache_size = settings.cache_size()
         user_cache_length, user_cache_size = user_pack.cache_size()
@@ -223,6 +166,7 @@ class CacheInfo(RESTResource):
                             'user_role_cache_length': user_role_cache_length,
                             'user_role_cache_size': user_role_cache_size}}
 
+
 class CacheClear(RESTResource):
 
     access_limit = access_rights.user
@@ -235,7 +179,7 @@ class CacheClear(RESTResource):
         """
         Clear McM cache
         """
-        db = database('requests')
+        db = Database('requests')
         db.clear_cache()
         settings.clear_cache()
         authenticator.clear_cache()
