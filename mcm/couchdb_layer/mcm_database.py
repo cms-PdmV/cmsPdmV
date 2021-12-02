@@ -241,19 +241,24 @@ class database:
             self.logger.error('Could not commit changes to database. Reason: %s' % (ex))
             return False
 
-    def get_all(self, page_num=-1, limit=20, get_raw=False):
+    def get_all(self, page_num=-1, limit=20, with_total_rows=False):
         try:
             limit, skip = self.__pagify(page_num, limit=limit)
             url = "_design/%s/_view/%s" % (self.db_name, "all")
             if limit >= 0 and skip >= 0:
                 result = self.db.loadView(url, options={'limit': limit,
-                        'skip': skip, 'include_docs': True}, get_raw=get_raw)
+                        'skip': skip, 'include_docs': True})
 
             else:
-                result = self.db.loadView(url, options={'include_docs': True},
-                        get_raw=get_raw)
+                result = self.db.loadView(url, options={'include_docs': True})
 
-            return result if get_raw else map(lambda r: r['doc'], result['rows'])
+            res_total_rows = result["total_rows"]
+            results = [r['doc'] for r in result['rows']]
+            if with_total_rows:
+                return {'total_rows': res_total_rows,
+                        'rows': results}
+            else:
+                return results
         except Exception as ex:
             self.logger.error('Could not access view. Reason: %s' % (ex))
             return []
@@ -605,11 +610,12 @@ class database:
             constructed_query += close_parenthesis
         return constructed_query
 
-    def full_text_search(self, index_name, query, page=0, limit=20, get_raw=False, include_fields='', sort='', sort_asc=True):
+    def full_text_search(self, index_name, query, page=0, limit=20, with_total_rows=False, include_fields='', sort='', sort_asc=True):
         """
         queries loadView method with lucene interface for full text search
         """
         __retries = 3
+        self.logger.debug('index_name=%s, query=%s, include_fields=%s, sort=%s, sort_asc=%s', index_name, query, include_fields, sort, sort_asc)
         limit, skip = self.__pagify(int(page), limit=int(limit))
         url = "_design/lucene/%s?q=%s" % (index_name, query.replace(' ', '%20'))
         data = {'rows': []}
@@ -622,14 +628,15 @@ class database:
                     'sort': '_id<string>'
                 }
                 if include_fields != '':
-                    options['include_fields'] = include_fields
+                    options['include_fields'] = str(include_fields)
                 if sort != '':
                     self.logger.warning('Setting sort to %s', sort)
                     options['sort'] = sort
                 if not sort_asc:
                     options['sort'] = '\\%s' % (options['sort'])
 
-                data = self.db.FtiSearch(url, options=options, get_raw=get_raw)  # we sort ascending by doc._id field
+                self.logger.debug(options)
+                data = self.db.FtiSearch(url, options=options)
                 break
             except Exception as ex:
                 self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (url,
@@ -639,10 +646,17 @@ class database:
             # if we are retrying we should wait little bit
             time.sleep(0.5)
 
+        res_total_rows = data["total_rows"]
         if include_fields != '':
-            return [elem["fields"] for elem in data['rows']]
+            data = [elem["fields"] for elem in data['rows']]
+        else:
+            data = [elem["doc"] for elem in data['rows']]
 
-        return data if get_raw else [elem["doc"] for elem in data['rows']]
+        if with_total_rows:
+            return {'total_rows': res_total_rows,
+                    'rows': data}
+        else:
+            return data
 
     def raw_view_query(self, view_doc, view_name, options={}, cache=True):
         sequence_id = "%s/%s" % (view_doc, view_name)

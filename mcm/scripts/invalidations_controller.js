@@ -46,7 +46,7 @@ angular.module('testApp').controller('resultsCtrl',
       var promise = $http.get("search?db_name="+$scope.dbName+query+"&get_raw");
       $scope.got_results = false; //to display/hide the 'found n results' while reloading
       promise.then(function(data){
-        $scope.result = _.pluck(data.data.rows, 'doc');
+        $scope.result = data.data.results;
         $scope.result_status = data.status;
         $scope.got_results = true;
         $scope.total_results = data.data.total_rows;

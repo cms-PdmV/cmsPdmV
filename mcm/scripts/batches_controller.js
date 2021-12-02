@@ -59,10 +59,10 @@ angular.module('testApp').controller('resultsCtrl',
       promise.then(function(data){
         $scope.result_status = data.status;
         $scope.got_results = true;
-        if (data.data.rows === undefined){
+        if (data.data.results === undefined){
             $scope.result = data.data;
         }else{
-            $scope.result = _.pluck(data.data.rows, 'doc');
+            $scope.result = data.data.results;
         }
         $scope.total_results = data.data.total_rows;
         if ($scope.result.length != 0){

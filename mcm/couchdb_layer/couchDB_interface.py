@@ -164,17 +164,17 @@ class Database():
         return False
 
 
-    def loadView(self, viewname, options=None, get_raw=False):
+    def loadView(self, viewname, options=None):
         """
-        query couchDB view with optional query parameters
+        Query CouchDB view
         """
         if options is None:
             db_request = self.construct_request("%s/%s" % (self.__dbname, viewname))
         else:
-            #db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, urllib.urlencode(options).replace('%27','%22')))
             db_request = self.construct_request("%s/%s?%s" %(self.__dbname, viewname, self.to_json_query(options)))
-        data = self.opener.open(db_request)
-        return data.read() if get_raw else loads(data.read())
+
+        data = self.opener.open(db_request).read()
+        return loads(data)
 
     def commitOne(self, doc):
         """
@@ -231,15 +231,16 @@ class Database():
         except Exception as ex:
             return False
 
-    def FtiSearch(self, viewname, options=None, get_raw=False):
+    def FtiSearch(self, viewname, options=None):
         """
-        query couchDB view with optional query parameters
+        Query CouchDB-lucene
         """
-        if "key" in options:
-            options["key"] = '"'+str(options["key"])+'"'
+        if 'key' in options:
+            options['key'] = '"%s"' % (options['key'])
+
         db_request = self.construct_lucene_request('local/%s/%s&%s' % (self.__dbname, viewname, self.to_json_query(options)))
-        data = self.opener.open(db_request)
-        return data.read() if get_raw else loads(data.read())
+        data = self.opener.open(db_request).read()
+        return loads(data)
 
     def UpdateSequence(self, options=None):
         """

@@ -123,7 +123,7 @@ class Search(RESTResource):
         args.update(args)
         if not args:
             # If there are no args, use simpler fetch
-            res = database.get_all(page, limit, True)
+            res = database.get_all(page, limit, with_total_rows=True)
         else:
             # Add types to arguments
             args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
@@ -134,9 +134,10 @@ class Search(RESTResource):
                                             query=query,
                                             page=page,
                                             limit=limit,
-                                            get_raw=True,
+                                            with_total_rows=True,
                                             include_fields=include_fields)
 
+        res['results'] = res.pop('rows', [])
         return self.output_text(res, 200, {'Content-Type': 'application/json'})
 
 

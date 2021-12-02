@@ -50,11 +50,8 @@ class RESTResource(Resource):
 
     def output_text(self, data, code, headers=None):
         """Makes a Flask response with a plain text encoded body"""
-        if isinstance(data, dict):
-            data = json.dumps(data)
-
-        if isinstance(data, list):
-            data = str(data)
+        if isinstance(data, (dict, list)):
+            data = json.dumps(data, indent=1)
 
         resp = make_response(data, code)
         if headers:

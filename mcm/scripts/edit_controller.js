@@ -648,7 +648,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
         });
       };
       scope.getChains = function (viewValue, search_by){
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=0&limit=10&include_fields=prepid,alias&" + search_by + "=" + viewValue + "*");
+        var promise = $http.get("search/?db_name=chained_campaigns&page=0&limit=10&include_fields=prepid&" + search_by + "=" + viewValue + "*");
         return promise.then(function(data){
           return scope.parseChainData(data);
         }, function(data){

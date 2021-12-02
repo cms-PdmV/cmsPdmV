@@ -222,6 +222,9 @@ angular.module('testApp').controller('mainCtrl',
         if ($scope.file_was_uploaded) {
           $scope.upload($scope.uploaded_file);
         } else {
+          if (!$scope.dbName) {
+            return;
+          }
           let query = "";
           _.each($location.search(), function (value, key) {
             if ((key != 'shown') && (key != 'fields')) {
@@ -232,7 +235,7 @@ angular.module('testApp').controller('mainCtrl',
           $scope.resultsFromFile = false;
           $http.get("search?" + "db_name=" + $scope.dbName + query).then(function (data) {
             $scope.got_results = true;
-            $scope.result = _.pluck(data.data.rows, 'doc');
+            $scope.result = data.data.results;
             if ($scope.result === undefined) {
               alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
               return; //stop doing anything if results are undefined
