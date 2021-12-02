@@ -507,6 +507,36 @@ class database:
         term = term.replace('\\', r'\\')   # escape \ first
         return "".join([nextStr for nextStr in self.escapedSeq(term)])
 
+    def make_query(self, args):
+        """
+        Make query for given args dictionary
+        args dictionary may look like this:
+        {
+            arg1: [val1, val2, val3] # arg1 is val1 OR val2 OR val3
+            # AND
+            arg2: val4 # arg2 is val4
+            # AND
+            arg3: [!val5] # arg3 is not val5
+        }
+        """
+        query = []
+        for attribute, value in args.items():
+            attribute = attribute.rstrip('_')
+            if not isinstance(value, list):
+                value = [value]
+
+            positive = [v for v in value if v[0] != '!']
+            if positive:
+                query.append('(%s:(%s))' % (attribute, ' '.join(v for v in positive)))
+                # If there is something positive, don't need to query for negative
+                continue
+
+            negative = [v.lstrip('!') for v in value if v[0] == '!']
+            if negative:
+                query.append('(%s:(* %s))' % (attribute, ' '.join('-%s' % (v) for v in negative)))
+
+        return 'AND'.join(query)
+
     def construct_lucene_query(self, query, boolean_operator="AND"):
         """
         constructs key:value dictionary to couchDB lucene query
@@ -581,7 +611,7 @@ class database:
         """
         __retries = 3
         limit, skip = self.__pagify(int(page), limit=int(limit))
-        url = "_design/lucene/%s?q=%s" % (index_name, query)
+        url = "_design/lucene/%s?q=%s" % (index_name, query.replace(' ', '%20'))
         data = {'rows': []}
         for i in xrange(1, __retries + 1):
             try:

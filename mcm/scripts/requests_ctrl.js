@@ -78,16 +78,6 @@ angular.module('testApp').controller('resultsCtrl',
         })
       };
 
-      $scope.$watch(function () {
-        var loc_dict = $location.search();
-        return "page" + loc_dict["page"] + "limit" + loc_dict["limit"];
-      },
-        function () {
-          $scope.getData();
-          $scope.selected_prepids = [];
-        });
-
-
       $scope.selected_prepids = [];
       $scope.add_to_selected_list = function (prepid) {
         if (_.contains($scope.selected_prepids, prepid)) {
