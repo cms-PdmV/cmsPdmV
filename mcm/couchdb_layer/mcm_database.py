@@ -532,13 +532,13 @@ class database:
 
             positive = [v for v in value if v[0] != '!']
             if positive:
-                query.append('(%s:(%s))' % (attribute, ' '.join(v for v in positive)))
+                query.append('(%s:(%s))' % (attribute, ' '.join(self.escapeLuceneArg(v) for v in positive)))
                 # If there is something positive, don't need to query for negative
                 continue
 
             negative = [v.lstrip('!') for v in value if v[0] == '!']
             if negative:
-                query.append('(%s:(* %s))' % (attribute, ' '.join('-%s' % (v) for v in negative)))
+                query.append('(%s:(* %s))' % (attribute, ' '.join('-%s' % (self.escapeLuceneArg(v)) for v in negative)))
 
         return 'AND'.join(query)
 
@@ -617,18 +617,20 @@ class database:
         __retries = 3
         self.logger.debug('index_name=%s, query=%s, include_fields=%s, sort=%s, sort_asc=%s', index_name, query, include_fields, sort, sort_asc)
         limit, skip = self.__pagify(int(page), limit=int(limit))
-        url = "_design/lucene/%s?q=%s" % (index_name, query.replace(' ', '%20'))
+        # This needs to have include_docs
+        url = "_design/lucene/%s?include_docs=True" % (index_name)
         data = {'rows': []}
         for i in xrange(1, __retries + 1):
             try:
                 options = {
                     'limit': limit,
-                    'include_docs': True,
                     'skip': skip,
-                    'sort': '_id<string>'
+                    'sort': '_id<string>',
+                    'q': query.replace(' ', '%20'),
                 }
                 if include_fields != '':
                     options['include_fields'] = str(include_fields)
+
                 if sort != '':
                     self.logger.warning('Setting sort to %s', sort)
                     options['sort'] = sort

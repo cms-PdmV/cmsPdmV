@@ -62,7 +62,7 @@ class Database():
         """
         stringfied = dict()
         for p in params:
-            if isinstance(params[p], str):
+            if isinstance(params[p], (basestring, str)):
                 stringfied[p] = params[p]
             else:
                 stringfied[p] = dumps(params[p])
@@ -238,7 +238,12 @@ class Database():
         if 'key' in options:
             options['key'] = '"%s"' % (options['key'])
 
-        db_request = self.construct_lucene_request('local/%s/%s&%s' % (self.__dbname, viewname, self.to_json_query(options)))
+        # For some reason if options end in parentheses or something
+        # non-alphanumeric, like parentheses, couchdb-lucene crashes
+        db_request = self.construct_lucene_request('local/%s/%s' % (self.__dbname, viewname),
+                                                   method='POST',
+                                                   headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                                                   data=self.to_json_query(options) + '&')
         data = self.opener.open(db_request).read()
         return loads(data)
 
