@@ -53,8 +53,9 @@ class CreateMccm(RESTResource):
             meeting_date_full = meeting_date.strftime('%Y-%m-%d')
             meeting_date_short = meeting_date.strftime('%Y%b%d')
             prepid = '%s-%s' % (pwg, meeting_date_short)
-            query = mccm_db.construct_lucene_query({'prepid': '%s-*' % (prepid)})
-            newest = mccm_db.full_text_search('search', query, limit=1, sort_asc=False)
+            query = mccm_db.make_query({'prepid': '%s-*' % (prepid)})
+            newest = mccm_db.full_text_search('search', query, limit=3, sort_asc=False)
+            self.logger.info([n['prepid'] for n in newest])
             if newest:
                 number = int(newest[0]['prepid'].split('-')[-1]) + 1
             else:
@@ -96,7 +97,12 @@ class UpdateMccm(RESTResource):
                     'message': 'No revision provided'}
 
         mccm_db = Database('mccms')
-        mccm = MccM(json_input=data)
+        try:
+            mccm = MccM(json_input=data)
+        except Exception as ex:
+            return {'results': False,
+                    'message': str(ex)}
+
         prepid = mccm.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -456,7 +462,7 @@ class GenerateChains(RESTResource):
                 query_dict = {'member_of_campaign': chained_campaign_prepid,
                               'contains': prepid,
                               'pwg': pwg}
-                query = chained_request_db.construct_lucene_query(query_dict)
+                query = chained_request_db.make_query(query_dict)
                 duplicates = chained_request_db.full_text_search('search', query, limit=1)
                 if duplicates and not generate_all:
                     if not skip_existing:
@@ -575,7 +581,7 @@ class MccMReminderGenContacts(RESTResource):
         don't have all requests "defined"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.construct_lucene_query({'status': 'new'})
+        query = mccm_db.make_query({'status': 'new'})
         mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
         if not mccm_jsons:
             return {"results": True,
@@ -664,7 +670,7 @@ class MccMReminderProdManagers(RESTResource):
         have all requests "approved"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.construct_lucene_query({'status': 'new'})
+        query = mccm_db.make_query({'status': 'new'})
         mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
         if not mccm_jsons:
             return {"results": True,
@@ -729,7 +735,7 @@ class MccMReminderGenConveners(RESTResource):
         don't have all requests "approved"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.construct_lucene_query({'status': 'new'})
+        query = mccm_db.make_query({'status': 'new'})
         mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
         if not mccm_jsons:
             return {"results": True,

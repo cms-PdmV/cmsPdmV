@@ -485,7 +485,7 @@ class RequestApprover(Handler):
     def send_email_failure(self, output, error):
         com = communicator()
         users_db = database('users')
-        query = users_db.construct_lucene_query({'role': 'production_manager'})
+        query = users_db.make_query({'role': 'production_manager'})
         production_managers = users_db.full_text_search('search', query, page=-1)
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)

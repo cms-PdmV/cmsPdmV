@@ -33,9 +33,9 @@ def multiple_inspect():
             chained_requests_db.clear_cache()
             page = 0
             chained_requests = [{}]
-            query = chained_requests_db.construct_lucene_complex_query([('member_of_campaign', {'value': [chained_campaign_prepid]}),
-                                                                        ('last_status', {'value': 'done'}),
-                                                                        ('status', {'value': 'processing'})])
+            query = chained_requests_db.make_query({'member_of_campaign': chained_campaign_prepid,
+                                                    'last_status': 'done',
+                                                    'status': 'processing'})
 
             while chained_requests:
                 print('Chained campaign %s page %s' % (chained_campaign_prepid, page))

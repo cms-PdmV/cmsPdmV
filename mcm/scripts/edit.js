@@ -675,20 +675,11 @@ testApp.directive("listEdit", function($http){
         if (scope.fieldName == undefined || fieldValue == '') {
           return {};
         }
-
-        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
-        searchURL += "?limit=10&group=true";
-        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
-
-        var promise = $http.get(searchURL);
-        return promise.then(function(data){
-          var filteredResults = data['data']['results'].filter(function(el) {
-            return scope.analysis_data.indexOf(el) < 0;
-          });
-          return filteredResults;
-
-        }, function(data){
-          alert("Error getting suggestions for " + scope.fieldName + " field (value=" + fieldValue + "): " + data.status);
+        const searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        return $http.get(searchURL).then(function (data) {
+          return data.data.results;
+        }, function (data) {
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -726,10 +717,6 @@ testApp.directive("listPredefined", function($http){
     '',
     link: function(scope, element, attr, ctrl)
     {
-      ctrl.$init = function() {
-        console.log('INIT!')
-      };
-
       ctrl.$render = function(){
         scope.analysis_data = ctrl.$viewValue;
         scope.new_analysis_id = "";
@@ -780,18 +767,14 @@ testApp.directive("listPredefined", function($http){
         if (scope.fieldName == undefined) {
           return {};
         }
-        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
+        let searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
         if (scope.fieldName === 'ppd_tags') {
           searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
         }
-        var promise = $http.get(searchURL);
-        return promise.then(function(data){
-          var filteredResults = data['data']['results'].filter(function(el) {
-            return scope.analysis_data.indexOf(el) < 0;
-          });
-          scope.suggestions = filteredResults;
-        }, function(data){
-          alert("Error getting suggestions for " + scope.fieldName + " " + data.status + " ");
+        return $http.get(searchURL).then(function (data) {
+          return data.data.results;
+        }, function (data) {
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -821,10 +804,6 @@ testApp.directive("singlePredefined", function($http){
     '',
     link: function(scope, element, attr, ctrl)
     {
-      ctrl.$init = function() {
-        console.log('INIT!')
-      };
-
       ctrl.$render = function(){
         scope.analysis_data = ctrl.$viewValue;
         scope.new_analysis_id = "";
@@ -876,18 +855,11 @@ testApp.directive("singlePredefined", function($http){
         if (scope.fieldName == undefined) {
           return {};
         }
-        var searchURL = "restapi/requests/unique_values/" + scope.fieldName;
-        if (scope.fieldName === 'ppd_tags') {
-          searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
-        }
-        var promise = $http.get(searchURL);
-        return promise.then(function(data){
-          var filteredResults = data['data']['results'].filter(function(el) {
-            return scope.analysis_data.indexOf(el) < 0;
-          });
-          scope.suggestions = filteredResults;
-        }, function(data){
-          alert("Error getting suggestions for " + scope.fieldName + " " + data.status + " ");
+        const searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        return $http.get(searchURL).then(function (data) {
+          return data.data.results;
+        }, function (data) {
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -943,6 +915,20 @@ testApp.directive("timeEventEdit", function(){
       };
     }
   }
+});
+
+testApp.directive('convertToNumber', function() {
+  return {
+    require: 'ngModel',
+    link: function(scope, element, attrs, ngModel) {
+      ngModel.$parsers.push(function(val) {
+        return parseInt(val, 10);
+      });
+      ngModel.$formatters.push(function(val) {
+        return '' + val;
+      });
+    }
+  };
 });
 
 testApp.directive("sizeEventEdit", function(){

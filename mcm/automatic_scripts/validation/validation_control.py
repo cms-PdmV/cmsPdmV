@@ -99,12 +99,12 @@ class ValidationControl():
         Take list of requests that already had validation submitted to condor - list D
         Add lists A and B together and remove already submitted items - list D
         """
-        request_query = self.request_db.construct_lucene_query({'status': 'new',
-                                                                'approval': 'validation'})
+        request_query = self.request_db.make_query({'status': 'new',
+                                                    'approval': 'validation'})
         requests = self.request_db.full_text_search('search', request_query, page=-1)
         requests = set(x['prepid'] for x in requests)
 
-        chained_request_query = self.chained_request_db.construct_lucene_query({'validate<int>': '1'})
+        chained_request_query = self.chained_request_db.make_query({'validate<int>': '1'})
         chained_requests = self.chained_request_db.full_text_search('search', chained_request_query, page=-1)
 
         for chained_request in chained_requests:

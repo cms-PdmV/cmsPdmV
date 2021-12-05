@@ -381,141 +381,90 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
     template:
     '<div>'+
     '  <ul>'+
-    '    <li ng-repeat="elem in requests_data">'+
-    '      <span ng-switch on="underscore.isArray(elem)">'+
-    '        <span ng-switch-when="true">'+
-    '        {{elem[0]}} <i class="icon-arrow-right"></i> {{elem[1]}}'+
-    '          <a ng-href="#" ng-click="removeOldRequest($index)" rel="tooltip" title="Remove last from list"><i class="icon-minus"></i></a>'+
-    '        </span>'+
-    '        <span ng-switch-when="false">'+
-    '          {{elem}}'+
-    '          <a ng-href="#" ng-click="removeOldRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Remove itself" ><i class="icon-minus"></i></a>'+
-    '          <a ng-href="#" ng-click="addNewRequest($index)" ng-hide="show_new[$index] || not_editable_list.indexOf(\'Requests\')!=-1" rel="tooltip" title="Add new"><i class="icon-plus"></i></a>'+
-    '          <a ng-href="#" ng-click="toggleNewRequest($index)" ng-show="show_new[$index]" rel="tooltip" title="Close input"><i class="icon-minus-sign"></i></a>'+
-    '          <input type="text" ng-model="tmpRequest[$index]" ng-show="show_new[$index]" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
-    '          <a ng-href="#" ng-click="saveNewRequest($index)" ng-show="show_new[$index]"><i class="icon-plus-sign" rel="tooltip" title="Add id to list"></i></a>'+
-    '          <font color="red" ng-show="bad_sub_request">Wrong request</font>'+
-    '        </span>'+
+    '    <li ng-repeat="elem in requests">'+
+    '      <span ng-if="underscore.isArray(elem)">'+
+    '        {{elem[0]}} <a ng-href="#" ng-click="removeFirstRequest($index)" ng-show="isEditable" title="Remove {{elem[0]}}"><i class="icon-minus"></i></a>' +
+    '        <i class="icon-arrow-right"></i>'+
+    '        {{elem[1]}} <a ng-href="#" ng-click="removeSecondRequest($index)" ng-show="isEditable" title="Remove {{elem[1]}}"><i class="icon-minus"></i></a>'+
+    '      </span>'+
+    '      <span ng-if="!underscore.isArray(elem)">'+
+    '        {{elem}}'+
+    '        <a ng-href="#" ng-click="removeRequest($index)" ng-show="isEditable" title="Remove {{elem}}"><i class="icon-minus"></i></a>'+
+    '        <a ng-href="#" ng-click="showSearch($index)" ng-show="isEditable && !showSearchField[$index]" title="Make range"><i class="icon-plus"></i></a>'+
+    '        <input type="text"'+
+    '               style="margin: 0"'+
+    '               ng-model="newRequestPrepid[$index]"'+
+    '               ng-show="showSearchField[$index]"'+
+    '               typeahead="suggestion for suggestion in preloadPossibleRequests($index, $viewValue)"'+
+    '               typeahead-on-select=addRequest($index)>'+
+    '        <a ng-href="#" ng-click="cancelSearch($index)" ng-show="isEditable && showSearchField[$index]" title="Cancel search"><i class="icon-minus"></i></a>'+
     '      </span>'+
     '    </li>'+
     '  </ul>'+
-    '  <a ng-href="#" ng-click ="toggleNewRequest(\'new\')" ng-hide="show_new[\'new\'] || not_editable_list.indexOf(\'Requests\')!=-1"><i class="icon-plus"></i></a>'+
-    '  <a ng-href="#" ng-click="toggleNewRequest(\'new\')" ng-show="show_new[\'new\']"><i class="icon-minus-sign"></i></a>'+
-    '  <input type="text" ng-model="tmpRequest[\'new\']" ng-show="show_new[\'new\']" typeahead="id for id in preloadPossibleRequests($viewValue)">'+
-    '  <a ng-href="#" ng-click="pushNewRequest()" ng-show="show_new[\'new\']"><i class="icon-plus-sign"></i></a>'+
-    '  <font color="red" ng-show="bad_request">Wrong request</font>'+
+    '  <a ng-href="#" ng-click="showSearch(-1)" title="Add new request or range" ng-show="isEditable && !showSearchField[-1]"><i class="icon-plus"></i></a>'+
+    '  <a ng-href="#" ng-click="cancelSearch(-1)" ng-show="isEditable && showSearchField[-1]" title="Cancel search"><i class="icon-minus"></i></a>'+
+    '  <input type="text"'+
+    '         style="margin: 0"'+
+    '         ng-model="newRequestPrepid[-1]"'+
+    '         ng-show="showSearchField[-1]"'+
+    '         typeahead="suggestion for suggestion in preloadPossibleRequests(-1, $viewValue)"'+
+    '         typeahead-on-select=addRequest(-1)>'+
     '</div>'+
     '',
     link: function (scope, element, attr, ctrl) {
       ctrl.$render = function(){
-        scope.requests_data = ctrl.$viewValue;
-        scope.show_new = {};
-        scope.tmpRequest = {};
-        scope.possible_requests = [];
-        if (typeof($rootScope.root_campaign) == "undefined"){
-          $rootScope.root_campaign = "";
-        }
-        $rootScope.request_list_length = scope.requests_data.length;
-        scope.bad_request = false;
-        scope.bad_sub_request = false;
-        if (scope.requests_data.length != 0 && $rootScope.root_campaign == "")
-        {
-          switch(_.isArray(scope.requests_data[0])){
-            case true:
-              $rootScope.root_campaign = scope.requests_data[0][0].split("-")[1];
-              break;
-            default:
-              $rootScope.root_campaign = scope.requests_data[0].split("-")[1];
-              break;
-          };
-          $rootScope.$broadcast('refreshChains', $rootScope.root_campaign);
-        };
+        scope.requests = ctrl.$viewValue;
+        scope.showSearchField = {};
+        scope.newRequestPrepid = {};
+        scope.isEditable = scope.not_editable_list.indexOf('Requests') == -1;
+        scope.refreshCampaignsForChains();
       };
-      scope.toggleNewRequest = function (elem)
-      {
-        if(scope.show_new[elem] == true)
-        {
-          scope.show_new[elem] = false;
-        }else
-        {
-          scope.show_new[elem] = true;
-        }
-      };
-      scope.addNewRequest = function (elem)
-      {
-        scope.toggleNewRequest(elem);
-      };
-      scope.saveNewRequest = function (index)
-      {
-        if (scope.possible_requests.indexOf(scope.tmpRequest[index]) == -1 || scope.lookForDuplicates(scope.tmpRequest[index]))
-        {
-          scope.bad_sub_request = true;
-        }else{
-          scope.bad_sub_request = false;
-          var __request = scope.requests_data[index];
-          scope.requests_data[index] = [];
-          scope.requests_data[index].push(__request);
-          scope.requests_data[index].push(scope.tmpRequest[index]);
-          scope.show_new[__request] = false;
-        }
-      };
-      scope.lookForDuplicates = function (id){
-        for (var index=0; index < scope.requests_data.length; index++){
-          if(_.isArray(scope.requests_data[index])){
-            if(scope.requests_data[index][0] == id || scope.requests_data[index][1] == id){
-              return true;
-            }
-          }else{
-            if(scope.requests_data[index] == id){
-              return true;
-            }
-          }
-        }
-        return false;
+      scope.showSearch = function(index) {
+        scope.showSearchField[index] = true;
       }
-      scope.pushNewRequest = function()
-      {
-        if (scope.possible_requests.indexOf(scope.tmpRequest["new"]) == -1 || scope.lookForDuplicates(scope.tmpRequest["new"]))
-        {
-          scope.bad_request = true;
-        }else{
-          scope.bad_request = false;
-          scope.requests_data.push(scope.tmpRequest["new"]);
-          $rootScope.request_list_length = scope.requests_data.length;
-          if(scope.requests_data.length == 1){
-            $rootScope.root_campaign = scope.tmpRequest["new"].split("-")[1];
-            $rootScope.$broadcast('refreshChains', $rootScope.root_campaign);
-          }
-          scope.toggleNewRequest('new');
-          scope.tmpRequest["new"] = "";
-        }
+      scope.cancelSearch = function(index) {
+        scope.showSearchField[index] = false;
+        scope.newRequestPrepid[index] = undefined;
       };
-      scope.removeOldRequest = function (index)
-      {
-        if (_.isArray(scope.requests_data[index]))
-        {
-          scope.requests_data[index] = scope.requests_data[index][0];
-        }else
-        {
-          scope.requests_data.splice(index,1);
-        }
-        scope.show_new[index] = false;
-        $rootScope.request_list_length = scope.requests_data.length;
-        if (scope.requests_data.length == 0 && $rootScope.chain_list_length == 0)
-        {
-          $rootScope.root_campaign = "";
-          $rootScope.$broadcast('noRequestsSelected');
-        };
+      scope.refreshCampaignsForChains = function() {
+        $rootScope.campaignsForChains = scope.requests.map(x => 'chain_' + (_.isArray(x) ? x[0] : x).split('-')[1] + '_*');
       };
-      scope.preloadPossibleRequests = function (viewValue)
-      {
-        var campaign_name = $rootScope.root_campaign == "" ? '*' : $rootScope.root_campaign;
-        var promise = $http.get("restapi/requests/search_view?limit=10&requestPrepId=" + viewValue + "&memberOfCampaign=" + campaign_name);
+      scope.addRequest = function(index) {
+        const newPrepid = scope.newRequestPrepid[index].trim();
+        if (!newPrepid || !newPrepid.length) {
+          return
+        }
+        if (index == -1) {
+          scope.requests.push(newPrepid);
+        } else {
+          scope.requests[index] = [scope.requests[index], newPrepid];
+        }
+        scope.cancelSearch(index);
+        scope.refreshCampaignsForChains();
+      };
+      scope.removeRequest = function(index) {
+        scope.requests.splice(index, 1);
+        scope.refreshCampaignsForChains();
+      }
+      scope.removeFirstRequest = function(index) {
+        scope.requests[index] = scope.requests[index][1];
+      }
+      scope.removeSecondRequest = function(index) {
+        scope.requests[index] = scope.requests[index][0];
+      }
+      scope.preloadPossibleRequests = function(index, viewValue) {
+        const firstPrepid = index != -1 ? scope.requests[index] : undefined;
+        if (index != -1) {
+          let pattern = firstPrepid.split('-');
+          let sequence = viewValue.split('-');
+          viewValue = pattern[0] + '-' + pattern[1] + '-' + (sequence.length == 3 ? sequence[2] : '');
+        }
+        const campaign = $rootScope.campaignsForRequests.length ? '&campaign=' + $rootScope.campaignsForRequests.join(',') : '';
+        const promise = $http.get("restapi/requests/search_view?prepid=" + viewValue + campaign);
         return promise.then(function(data){
-          scope.possible_requests = data.data.results;
-          return scope.possible_requests;
+          return data.data.results.filter(x => x != firstPrepid);
         }, function(data){
-          alert("Error getting list of possible requests: " + data.data);
+          alert("Error getting requests: " + data.data);
         });
       };
     }
@@ -530,175 +479,80 @@ testApp.directive("customMccmChains", function($http, $rootScope){
     template:
     '<div>'+
     '  <ul>'+
-    '   <li ng-repeat="elem in chain_data">'+
-    '     <span>'+
-    '       {{elem}}'+
-    '       <a ng-href="#" ng-click="remove($index)" ng-hide="not_editable_list.indexOf(\'Chains\')!=-1">'+
-    '         <i class="icon-remove-sign"></i>'+
-    '       </a>'+
-    '     <span>'+
-    '   </li>'+
+    '    <li ng-repeat="chainedCampaign in chainedCampaigns">'+
+    '      <span>'+
+    '        {{chainedCampaign}}'+
+    '        <a ng-href="#" ng-click="removeChain($index)" ng-show="isEditable">'+
+    '          <i class="icon-remove-sign"></i>'+
+    '        </a>'+
+    '      <span>'+
+    '    </li>'+
     '  </ul>'+
-    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(\'Chains\')!=-1">'+
-    '      <a ng-href="#" ng-click="toggleAddNewChain();">'+
-    '        <i class="icon-plus" ng-hide="add_chain"></i>'+
-    '        <i class="icon-minus" ng-show="add_chain"></i>'+
-    '      </a>'+
-    '      <input type="text" ng-model="new_chain" ng-show="add_chain" typeahead="id for id in preloadPossibleChains($viewValue)">'+
-    '      <a ng-href="#">'+
-    '        <i class="icon-plus-sign" ng-click="pushNewMcMChain()" ng-show="add_chain"></i>'+
-    '      </a>'+
-    '      <font color="red" ng-show="bad_sub_chain">Wrong request</font>'+
-    '    </form>'+
+    '  <a ng-show="isEditable" ng-href="#" ng-click="showSearchField = !showSearchField">'+
+    '    <i class="icon-plus" ng-hide="showSearchField"></i>'+
+    '    <i class="icon-minus" ng-show="showSearchField"></i>'+
+    '  </a>'+
+    '  <input type="text"'+
+    '         style="margin: 0"'+
+    '         placeholder="chain_..."'+
+    '         ng-model="newChainPrepid"'+
+    '         ng-show="showSearchField"'+
+    '         typeahead="suggestion for suggestion in preloadPossibleChains($viewValue)"'+
+    '         typeahead-on-select=addChain(newChainPrepid)>'+
     '</div>'+
     '',
     link: function(scope, element, attr, ctrl)
     {
       ctrl.$render = function(){
-        scope.chain_data = ctrl.$viewValue;
-        if (typeof($rootScope.root_campaign) == "undefined"){
-          $rootScope.root_campaign = "";
-        }
-        if (scope.chain_data.length != 0 && $rootScope.root_campaign == "")
-        {
-          if(scope.chain_data[0].startsWith("chain_")){
-            $rootScope.root_campaign = scope.chain_data[0].split('_')[1];
-          }else{
-            scope.getPrepIdFromAlias(scope.chain_data[0]);
-          }
-        }
-        $rootScope.chain_list_length = scope.chain_data.length;
-        scope.new_chain = "";
-        scope.list_of_chained_campaigns = [];
-        scope.chained_campaigns_from_requests = [];
-        scope.bad_sub_chain = false;
+        scope.chainedCampaigns = ctrl.$viewValue;
+        scope.isEditable = scope.not_editable_list.indexOf('Chains') == -1;
+        scope.refreshCampaignsForRequests();
+        scope.showSearchField = false;
+        scope.newChainPrepid = "";
+        scope.suggestionCache = {};
+        scope.newestSuggestions = [];
       };
-      scope.toggleAddNewChain = function(){
-        if($rootScope.root_campaign != "" && scope.chained_campaigns_from_requests.length == 0){
-          scope.refreshChains($rootScope.root_campaign);
-        }
-        scope.add_chain = !scope.add_chain;
+      scope.refreshCampaignsForRequests = function() {
+        $rootScope.campaignsForRequests = scope.chainedCampaigns.map(x => x.split('_')[1]);
       };
-      scope.remove = function(index){
-        scope.chain_data.splice(index,1);
-        $rootScope.chain_list_length = scope.chain_data.length;
-        if (scope.chain_data.length == 0 && $rootScope.request_list_length == 0)
-        {
-          $rootScope.root_campaign = "";
-          scope.chained_campaigns_from_requests = [];
-        }
-      }
-      scope.searchChain = function(chain)
-      {
-        for (var index=0; index < scope.list_of_chained_campaigns.length; index++){
-          var element = scope.list_of_chained_campaigns[index];
-          if(element[0] == chain || element[1] == chain){
-            return element;
-          }
-        }
-        return [];
+      scope.removeChain = function(index) {
+        scope.chainedCampaigns.splice(index,1);
+        scope.refreshCampaignsForRequests();
       };
-      scope.pushNewMcMChain = function()
-      {
-        var chain = scope.searchChain(scope.new_chain); 
-        if(chain.length == 0 || scope.chain_data.indexOf(chain[0]) != -1 || scope.chain_data.indexOf(chain[1]) != -1){
-          scope.bad_sub_chain = true;
-          return;
+      scope.addChain = function(item) {
+        if (!item || !item.trim().length) {
+          return
         }
-        scope.bad_sub_chain = false;
-        scope.chain_data.push(scope.new_chain);
-        if(scope.chain_data.length == 1){
-          $rootScope.root_campaign = chain[0].split('_')[1];
-          scope.refreshChains($rootScope.root_campaign);
+        if (scope.newestSuggestions.indexOf(item) < 0) {
+          return
         }
-        scope.new_chain = "";
+        scope.chainedCampaigns.push(item);
+        scope.refreshCampaignsForRequests();
+        scope.newChainPrepid = "";
+        scope.showSearchField = false;
       };
-      scope.listFilter = function (list, value, search_by){
-        var result_list = [];
-        if(typeof(list) == "undefined"){
+      scope.preloadPossibleChains = function(viewValue) {
+        if (!viewValue.length) {
           return [];
         }
-        var search_index = search_by == 'alias' ? 1 : 0;
-        for (var index=0; index < list.length; index++){
-          if(list[index][search_index] != "" && list[index][search_index].includes(value,0)){
-            var toPush = list[index][search_index];
-            result_list.push(toPush);
-          } else if (list[index][0].includes(value,0)){
-            result_list.push(list[index][0]);
-          }
+        const campaign = $rootScope.campaignsForChains.length ? '&prepid___=' + $rootScope.campaignsForChains.join(',') : '';
+        const url = "search/?db_name=chained_campaigns&include_fields=prepid&valid=true&prepid=" + viewValue + "*" + campaign;
+        if (scope.suggestionCache[url]) {
+          const suggestions = scope.suggestionCache[url];
+          scope.newestSuggestions = suggestions.filter(x => scope.chainedCampaigns.indexOf(x) < 0);
+          return scope.newestSuggestions;
         }
-        return result_list;
-      };
-      scope.preloadPossibleChains = function(viewValue)
-      {
-        if($rootScope.request_list_length > 0 && scope.chained_campaigns_from_requests.length == 0){
-          //There are no chains for the selected requests, we don't want to do searches while the user is typing
-          return [];
-        }
-        var search_by = viewValue.includes('chain', 0) ? 'prepid' : 'alias';
-        if(scope.chained_campaigns_from_requests.length > 0){
-          scope.list_of_chained_campaigns = scope.chained_campaigns_from_requests;
-          return scope.listFilter(scope.list_of_chained_campaigns, viewValue, search_by);
-        }
-        var promise = scope.getChains(viewValue, search_by);
-        return promise.then(function(data) {
-          scope.list_of_chained_campaigns = data;
-          return scope.listFilter(data, viewValue, search_by);
-        }, function(data) {
-        });
-      };
-      scope.getChains = function (viewValue, search_by){
-        var promise = $http.get("search/?db_name=chained_campaigns&page=0&limit=10&include_fields=prepid&" + search_by + "=" + viewValue + "*");
+        const promise = $http.get(url);
         return promise.then(function(data){
-          return scope.parseChainData(data);
+          const suggestions = data.data.results.map(x => x.prepid);
+          scope.suggestionCache[url] = suggestions;
+          scope.newestSuggestions = suggestions.filter(x => scope.chainedCampaigns.indexOf(x) < 0);
+          return scope.newestSuggestions;
         }, function(data){
-          alert("Error getting list of possible chains: " + data.data);
-        }); 
-      };
-      scope.getPrepIdFromAlias = function (alias){
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid&alias=" + alias);
-        promise.then(function(data){
-            var prepid = scope.parseChainData(data);
-            if(prepid.length > 0){
-              if(_.isArray(prepid[0])){
-                $rootScope.root_campaign = prepid[0][0].split('_')[1];
-              }else{
-                $rootScope.root_campaign = prepid[0].split('_')[1];
-              }
-              scope.refreshChains($rootScope.root_campaign);
-            }
-        }, function(data){
-          alert("Error getting the prepid for alias");
-        }); 
-      };
-      scope.parseChainData = function (data){
-        var chains = [];
-        scope.chained_campaigns_from_requests = [];
-        for (var index = 0; index <  data.data.results.length; index++){
-          var doc = data.data.results[index];
-          chains.push([doc['prepid'], doc['alias']]);
-        }
-        return chains;
-      };
-      scope.refreshChains = function (root_campaign)
-      {
-        var promise = $http.get("search/?db_name=chained_campaigns&valid=true&page=-1&include_fields=prepid,alias&prepid=*" + root_campaign + "*");
-        promise.then(function(data){
-          scope.chained_campaigns_from_requests = scope.parseChainData(data);
-        }, function(data){
-          alert("Error getting list of possible chains: " + data.data);
+          alert("Error getting chained campaigns: " + data.data);
+          return [];
         });
       };
-      scope.$on('refreshChains', function(event, chain){
-        if(scope.chained_campaigns_from_requests.length == 0){
-          scope.refreshChains(chain);
-        }
-      });
-      scope.$on('noRequestsSelected', function(event){
-        if(scope.chain_data.length == 0){
-          scope.chained_campaigns_from_requests = [];
-        }
-      });
     }
   }
 });

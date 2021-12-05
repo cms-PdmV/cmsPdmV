@@ -576,7 +576,7 @@ class DeleteRequest(RESTResource):
 
     def delete_chained_requests(self, pid):
         crdb = database('chained_requests')
-        __query = crdb.construct_lucene_query({'contains': pid})
+        __query = crdb.make_query({'contains': pid})
         mcm_crs = crdb.full_text_search('search', __query, page=-1)
         for doc in mcm_crs:
             crdb.delete(doc['prepid'])
@@ -594,7 +594,7 @@ class GetRequestByDataset(RESTResource):
         """
         datasetname = '/' + dataset.replace('*', '')
         rdb = database('requests')
-        __query = rdb.construct_lucene_query({'produce': datasetname})
+        __query = rdb.make_query({'produce': datasetname})
         r = rdb.full_text_search('search', __query, page=-1)
 
         if len(r):
@@ -624,7 +624,7 @@ class GetRequestOutput(RESTResource):
         if is_chain == 'chain':
             collect = []
             crdb = database('chained_requests')
-            __query = crdb.construct_lucene_query({'contains': prepid})
+            __query = crdb.make_query({'contains': prepid})
             for cr in crdb.full_text_search('search', __query, page=-1):
                 for r in reversed(cr['chain']):
                     if r not in collect:
@@ -928,7 +928,7 @@ class UpdateEventsFromWorkflow(RESTResource):
         """
 
         rdb = database('requests')
-        __query = rdb.construct_lucene_query({"reqmgr_name": wf_id})
+        __query = rdb.make_query({"reqmgr_name": wf_id})
         # include only prepids for us
         res = rdb.full_text_search("search", __query, page=-1, include_fields='prepid')
         if len(res) == 0:
@@ -1260,7 +1260,7 @@ class RequestLister():
             if not cdb.document_exists(possible_campaign):
                 continue
                 # get all requests
-            __query3 = odb.construct_lucene_query({'member_of_campaign': possible_campaign})
+            __query3 = odb.make_query({'member_of_campaign': possible_campaign})
             all_requests = odb.full_text_search('search', __query3, page=-1)
             for _request in all_requests:
                 if _request['dataset_name'] in possible_dsn:
@@ -1303,7 +1303,7 @@ class StalledReminder(RESTResource):
         rdb = database('requests')
         bdb = database('batches')
         statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
-        __query = rdb.construct_lucene_query({'status': 'submitted'})
+        __query = rdb.make_query({'status': 'submitted'})
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
         reminded = 0
@@ -1332,9 +1332,7 @@ class StalledReminder(RESTResource):
 
                 if (remaining > time_remaining and remaining != float('Inf')) or (elapsed > time_since and remaining != 0):
                     reminded += 1
-                    __query2 = bdb.construct_lucene_complex_query([
-                        ('contains', {'value': r['prepid']}),
-                        ('status', {'value': ['announced', 'hold']})])
+                    __query2 = bdb.make_query({'contains': r['prepid'], 'status': ['announced', 'hold']})
                     bs = bdb.full_text_search('search', __query2, page=-1)
                     # take the last one ?
                     in_batch = 'NoBatch'
@@ -1369,8 +1367,8 @@ class StalledReminder(RESTResource):
         com = communicator()
 
         udb = database('users')
-        __query4 = udb.construct_lucene_query({'role': 'production_manager'})
-        __query5 = udb.construct_lucene_query({'role': 'generator_convener'})
+        __query4 = udb.make_query({'role': 'production_manager'})
+        __query5 = udb.make_query({'role': 'generator_convener'})
 
         production_managers = udb.full_text_search('search', __query4, page=-1)
         gen_conveners = udb.full_text_search('search', __query5, page=-1)
@@ -1410,7 +1408,7 @@ class RequestsReminder(RESTResource):
         # fill up the reminders
         def get_all_in_status(status, extracheck=None):
             campaigns_and_ids = {}
-            __query = rdb.construct_lucene_query({'status': status})
+            __query = rdb.make_query({'status': status})
             for mcm_r in rdb.full_text_search('search', __query, page=-1):
                 # check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
@@ -1469,7 +1467,7 @@ class RequestsReminder(RESTResource):
                     res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
 
                 if len(ids_for_production_managers):
-                    __query2 = udb.construct_lucene_query({'role': 'production_manager'})
+                    __query2 = udb.make_query({'role': 'production_manager'})
                     production_managers = udb.full_text_search('search', __query2, page=-1)
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
@@ -1494,7 +1492,7 @@ class RequestsReminder(RESTResource):
                 # remind the gen contact about requests that are:
                 #   - in status new, and have been flown
                 # __query4 = rdb.construct_lucene_query({'status' : 'new'})
-                __query5 = rdb.construct_lucene_query({'status': 'validation'})
+                __query5 = rdb.make_query({'status': 'validation'})
                 # mcm_rs = rdb.full_text_search('search', __query4, page=-1)
                 mcm_rs = []
                 mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
@@ -1541,7 +1539,7 @@ class RequestsReminder(RESTResource):
                         yield '.'
 
                 # then remove the non generator
-                __query6 = udb.construct_lucene_query({'role': 'generator_contact'})
+                __query6 = udb.make_query({'role': 'generator_contact'})
                 gen_contacts = map(lambda u: u['username'], udb.full_text_search('search', __query6, page=-1))
                 for contact in ids_for_users.keys():
                     if who and contact not in who:
@@ -1629,36 +1627,33 @@ class UpdateMany(RequestRESTResource):
 
 
 class ListRequestPrepids(RequestRESTResource):
+
     def __init__(self):
-        RequestRESTResource.__init__(self)
         self.before_request()
         self.count_call()
-        self.db_name = 'requests'
-        self.db = database('requests')
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('requestPrepId', type=str, default='*')
-        self.parser.add_argument('memberOfCampaign', type=str, default='*')
-        self.parser.add_argument('limit', type=int, default=10)
 
     def get(self):
         """
-        List all prepids by given options
+        List all prepids for ticket editing page
         """
-        return self.get_prepids()
+        args = flask.request.args.to_dict()
+        limit = int(args.get('limit', 10))
+        prepid = args.get('prepid', '').strip()
+        campaign =args.get('campaign', '').strip()
+        query = {}
+        if prepid:
+            query['prepid'] = '%s*' % (prepid)
 
-    def get_prepids(self):
-        kwargs = self.parser.parse_args()
-        prepid = '*' if kwargs['requestPrepId'] == '*' else kwargs['requestPrepId'] + '*'
-        member_of_campaign = '*' if kwargs['memberOfCampaign'] == '*' else kwargs['memberOfCampaign'] + '*'
-        request_db = database('requests')
-        __query = request_db.construct_lucene_query(
-            {
-                'prepid': prepid,
-                'member_of_campaign': member_of_campaign})
-        query_result = request_db.full_text_search("search", __query, page=0, limit=kwargs['limit'], include_fields='prepid')
-        self.logger.info('Searching requests id with options: %s' % (kwargs))
-        results = [record['prepid'] for record in query_result]
-        return {"results": results}
+        if campaign:
+            query['member_of_campaign'] = campaign.split(',')
+
+        if not query:
+            return {'results': []}
+
+        db = database('requests')
+        query = db.make_query(query)
+        results = db.full_text_search('search', query, limit=limit, include_fields='prepid')
+        return {"results": [r['prepid'] for r in results]}
 
 
 class GetUploadCommand(RESTResource):
@@ -1713,15 +1708,11 @@ class GetUniqueValues(RESTResource):
         """
         Get unique values for navigation by field_name
         """
-        return self.get_unique_values(field_name)
-
-    def get_unique_values(self, field_name):
-        kwargs = flask.request.args.to_dict()
+        args = flask.request.args.to_dict()
         db = database('requests')
-        if 'limit' in kwargs:
-            kwargs['limit'] = int(kwargs['limit'])
-        kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        return {'results': db.query_unique(field_name,
+                                           args.get('key', ''),
+                                           int(args.get('limit', 10)))}
 
 
 class PutToForceComplete(RESTResource):

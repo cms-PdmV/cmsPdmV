@@ -734,7 +734,7 @@ class ChainsFromTicket(RESTResource):
         ticket_prepid = kwargs['ticket']
         chained_requests_db = database('chained_requests')
         mccms_db = database('mccms')
-        mccm_query = mccms_db.construct_lucene_query({'prepid': ticket_prepid})
+        mccm_query = mccms_db.make_query({'prepid': ticket_prepid})
         result = mccms_db.full_text_search("search", mccm_query, page=-1)
         if len(result) == 0:
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
@@ -751,7 +751,7 @@ class ChainsFromTicket(RESTResource):
         while start < end:
             fetch_till = start + 20
             fetch_till = end if fetch_till > end else fetch_till
-            chained_request_query = chained_requests_db.construct_lucene_query({'prepid': generated_chains[start:fetch_till]}, boolean_operator="OR")
+            chained_request_query = chained_requests_db.make_query({'prepid': generated_chains[start:fetch_till]})
             chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
             start += 20
         return chained_request_list
@@ -1181,12 +1181,8 @@ class GetUniqueChainedRequestValues(RESTResource):
         """
         Get unique values for navigation by field_name
         """
-        return self.get_unique_values(field_name)
-
-    def get_unique_values(self, field_name):
-        kwargs = flask.request.args.to_dict()
-        db = database('chained_requests')
-        if 'limit' in kwargs:
-            kwargs['limit'] = int(kwargs['limit'])
-        kwargs['group'] = True
-        return db.raw_view_query_uniques(view_name=field_name, options=kwargs, cache='startkey' not in kwargs)
+        args = flask.request.args.to_dict()
+        db = database('requests')
+        return {'results': db.query_unique(field_name,
+                                           args.get('key', ''),
+                                           int(args.get('limit', 10)))}

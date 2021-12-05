@@ -621,7 +621,7 @@ class chained_request(json_base):
             # remove <pwg>-chain_ and the -serial number, replacing _ with a .
             toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
             # make sure they get ordered by prepid
-            __query = crdb.construct_lucene_query({'root_request': root_request_id})
+            __query = crdb.make_query({'root_request': root_request_id})
             # do we really need to sort them?
             related_crs = sorted(crdb.full_text_search('search', __query, page=-1), key=lambda cr: cr['prepid'])
 

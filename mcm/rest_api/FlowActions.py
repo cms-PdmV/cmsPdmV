@@ -210,8 +210,7 @@ class UpdateFlow(FlowRESTResource):
         new_ps = flow.get_attribute('request_parameters').get('process_string', None)
         if old_ps != new_ps:
             request_db = Database('requests')
-            request_query = request_db.construct_lucene_query({'status': 'submitted',
-                                                               'flown_with': prepid})
+            request_query = request_db.make_query({'status': 'submitted', 'flown_with': prepid})
             requests = request_db.full_text_search('search',
                                                    request_query,
                                                    limit=1,
@@ -242,7 +241,7 @@ class UpdateFlow(FlowRESTResource):
             # and was using the removed campaigns
             for removed_campaign in removed_campaigns:
                 contains = {'contains': [prepid, removed_campaign]}
-                chained_campaign_query = chained_campaign_db.construct_lucene_query(contains)
+                chained_campaign_query = chained_campaign_db.make_query(contains)
                 chained_campaigns = chained_campaign_db.full_text_search('search',
                                                                          chained_campaign_query,
                                                                          limit=1,
@@ -261,7 +260,7 @@ class UpdateFlow(FlowRESTResource):
             # Check if there are chained campaigns that are made with this flow
             # and was using the changed next campaign
             contains = {'contains': [prepid, previous_next_campaign]}
-            chained_campaign_query = chained_campaign_db.construct_lucene_query(contains)
+            chained_campaign_query = chained_campaign_db.make_query(contains)
             chained_campaigns = chained_campaign_db.full_text_search('search',
                                                                      chained_campaign_query,
                                                                      limit=1,

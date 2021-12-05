@@ -44,7 +44,7 @@ class Search(RESTResource):
                'mccms': 'mccm',
                'requests': 'request',
                'settings': 'setting',
-               'user': 'user'}
+               'users': 'user'}
     casting = None
 
     @classmethod
@@ -63,7 +63,8 @@ class Search(RESTResource):
             for schema_key, schema_value in schema.items():
                 schema_type = type(schema_value)
                 if schema_type in [int, float]:
-                    cls.casting[database_name][schema_key] = '<%s>' % (schema_type.__name__)
+                    cls.casting[database_name][schema_key] = '%s<%s>' % (schema_key,
+                                                                         schema_type.__name__)
 
     def __init__(self):
         self.before_request()
@@ -76,9 +77,11 @@ class Search(RESTResource):
         db_name = args.pop('db_name', 'requests')
         page = int(args.pop('page', 0))
         limit = int(args.pop('limit', 20))
+        include_fields = args.pop('include_fields', '')
         # Drop get_raw attribute
         args.pop('get_raw', None)
-        include_fields = args.pop('include_fields', '')
+        # Drio alias attribute
+        args.pop('alias', None)
 
         if db_name not in self.modules:
             return {'results': False, 'message': 'Invalid database name %s' % (db_name)}

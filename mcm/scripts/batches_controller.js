@@ -116,7 +116,6 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.getData();
         alert('Successfully resetted the batch');
       }).error(function (status) {
-        console.log(status);
         alert('Failed while updating the batch');
       });
     };

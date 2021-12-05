@@ -290,15 +290,11 @@ testApp.directive("loadFields", function ($http, $location) {
           return {};
         }
 
-        var searchURL = "restapi/chained_requests/unique_values/" + fieldName;
-        searchURL += "?limit=10&group=true";
-        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
-
-        var promise = $http.get(searchURL);
-        return promise.then(function (data) {
+        const searchURL = "restapi/chained_requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        return $http.get(searchURL).then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -372,18 +368,12 @@ testApp.directive("loadRequestsFields", function ($http, $location) {
           return {};
         }
 
-        var searchURL = "restapi/requests/unique_values/" + fieldName;
-        searchURL += "?limit=10&group=true";
-        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
-
-        var promise = $http.get(searchURL);
-        return promise.then(function (data) {
+        const searchURL = "restapi/chained_requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        return $http.get(searchURL).then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
-
-        return {};
       };
     }
   }

@@ -68,7 +68,7 @@ class mccm(json_base):
     @staticmethod
     def get_mccm_by_generated_chain(chain_id):
         mccms_db = Database('mccms')
-        query = mccms_db.construct_lucene_query({'generated_chains': chain_id})
+        query = mccms_db.make_query({'generated_chains': chain_id})
         result = mccms_db.full_text_search('search', query)
         if result and result[0]:
             return mccm(json_input=result[0])
@@ -94,13 +94,18 @@ class mccm(json_base):
             if isinstance(entry, list) and len(entry) == 2:
                 start = entry[0].split('-')
                 end = entry[1].split('-')
-                numbers = range(int(start[-1]), int(end[-1]) + 1)
+                range_start = int(start[-1])
+                range_end = int(end[-1])
+                numbers = range(range_start, range_end + 1)
                 start = '-'.join(start[:-1])
                 end = '-'.join(end[:-1])
                 if start != end:
                     raise Exception('Invalid range "%s-..." != "%s-..." for %s' % (start,
                                                                                    end,
                                                                                    prepid))
+
+                if range_start > range_end:
+                    raise Exception('Invalid range ...-%05d > ...-%05d' % (range_start, range_end))
 
                 requests.extend('%s-%05d' % (start, n) for n in numbers)
             elif isinstance(entry, (basestring, str)):

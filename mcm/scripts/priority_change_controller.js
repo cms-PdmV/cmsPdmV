@@ -120,7 +120,7 @@ angular.module('testApp').controller('resultsCtrl',
 
     $scope.preload_tags = function(viewValue)
     {
-      var promise = $http.get("restapi/requests/unique_values/tags?limit=10&startkey=" + viewValue);
+      var promise = $http.get("restapi/requests/unique_values/tags?key=" + viewValue);
       return promise.then(function(data){
         return data.data.results;
       }, function(data){

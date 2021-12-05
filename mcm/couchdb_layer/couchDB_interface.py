@@ -231,7 +231,7 @@ class Database():
         except Exception as ex:
             return False
 
-    def FtiSearch(self, viewname, options=None):
+    def lucene_search(self, viewname, options=None):
         """
         Query CouchDB-lucene
         """
@@ -240,12 +240,35 @@ class Database():
 
         # For some reason if options end in parentheses or something
         # non-alphanumeric, like parentheses, couchdb-lucene crashes
+        self.logger.debug(options)
+        options = '&' + self.to_json_query(options) + '&'
         db_request = self.construct_lucene_request('local/%s/%s' % (self.__dbname, viewname),
                                                    method='POST',
                                                    headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                                                   data=self.to_json_query(options) + '&')
+                                                   data=options)
         data = self.opener.open(db_request).read()
         return loads(data)
+
+    def unique_search(self, field, key, limit):
+        """
+        Query CouchDB view
+        """
+        startkey = '"%s"' % (key)
+        endkey = '"%s\ufff0"' % (key)
+        options = {'limit': limit,
+                   'group': True,
+                   'startkey': startkey,
+                   }
+        options = self.to_json_query(options)
+        url = '%s/_design/unique/_view/%s?%s' % (self.__dbname, field, options)
+        db_request = self.construct_request(url)
+        try:
+            data = loads(self.opener.open(db_request).read())
+            return [r.get('key') for r in data['rows']]
+
+        except Exception as ex:
+            self.logger.error(ex)
+            return []
 
     def UpdateSequence(self, options=None):
         """

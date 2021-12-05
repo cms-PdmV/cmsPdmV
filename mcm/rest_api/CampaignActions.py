@@ -306,10 +306,8 @@ class InspectCampaigns(RESTResource):
             try:
                 self.logger.info('Starting campaign inspect of %s', campaign_id)
                 yield 'Starting campaign inspect of %s\n' % (campaign_id)
-                query = request_db.construct_lucene_complex_query([
-                    ('member_of_campaign', {'value': campaign_id}),
-                    ('status', {'value': ['submitted', 'approved']})
-                ])
+                query = request_db.make_query({'member_of_campaign': campaign_id,
+                                               'status': ['submitted', 'approved']})
                 # Do another loop over the requests themselves
                 page = 0
                 requests = [{}]

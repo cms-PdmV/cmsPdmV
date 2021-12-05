@@ -431,7 +431,7 @@ class request(json_base):
         if self.get_attribute('process_string'):
             __q_params['process_string'] = self.get_attribute('process_string')
 
-        __query = rdb.construct_lucene_query(__q_params)
+        __query = rdb.make_query(__q_params)
 
         similar_ds = rdb.full_text_search("search", __query, page=-1)
 
@@ -650,7 +650,7 @@ class request(json_base):
         # Check if there are new/announced invalidations for request before approving it.
         # So we would not submit same request to computing until previous is fully reset/invalidated
         idb = database("invalidations")
-        __invalidations_query = idb.construct_lucene_query({"prepid": self.get_attribute("prepid")})
+        __invalidations_query = idb.make_query({"prepid": self.get_attribute("prepid")})
         self.logger.debug("len invalidations list %s" % (len(__invalidations_query)))
         res = idb.full_text_search("search", __invalidations_query, page=-1)
         for el in res:
@@ -704,8 +704,8 @@ class request(json_base):
 
     def check_for_collisions(self):
         request_db = database('requests')
-        dataset_query = request_db.construct_lucene_query({'dataset_name': self.get_attribute('dataset_name'),
-                                                           'member_of_campaign': self.get_attribute('member_of_campaign')})
+        dataset_query = request_db.make_query({'dataset_name': self.get_attribute('dataset_name'),
+                                               'member_of_campaign': self.get_attribute('member_of_campaign')})
         same_dataset_requests = request_db.full_text_search('search', dataset_query, page=-1)
         if len(same_dataset_requests) == 0:
             raise self.BadParameterValue('It seems that database is down, could not check for duplicates')
@@ -798,7 +798,7 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         # Check if there are any unacknowledged invalidations
         invalidations_db = database('invalidations')
-        invalidations_query = invalidations_db.construct_lucene_query({'prepid': prepid})
+        invalidations_query = invalidations_db.make_query({'prepid': prepid})
         invalidations = invalidations_db.full_text_search('search', invalidations_query, page=-1)
         invalidations = [i for i  in invalidations if i['status'] in ('new', 'announced')]
         if invalidations:
@@ -2625,7 +2625,7 @@ class request(json_base):
             fetched_batches = []
             while len(req_to_invalidate) > index:
                 # find the batch it is in
-                __query = bdb.construct_lucene_query({'contains': req_to_invalidate[index: index + 20]}, boolean_operator='OR')
+                __query = bdb.make_query({'contains': req_to_invalidate[index: index + 20]}, boolean_operator='OR')
                 fetched_batches += bdb.full_text_search('search', __query, page=-1)
                 index += 20
             for b in fetched_batches:

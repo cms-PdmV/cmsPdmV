@@ -120,7 +120,7 @@ class AskRole(RESTResource):
         udb.update(mcm_u.json())
 
         # get the production managers emails
-        __query = udb.construct_lucene_query({'role': 'production_manager'})
+        __query = udb.make_query({'role': 'production_manager'})
         production_managers = udb.full_text_search('search', __query, page=-1)
         # send a notification to prod manager + service
         to_who = map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')]

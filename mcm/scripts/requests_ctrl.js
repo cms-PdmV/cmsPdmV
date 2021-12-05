@@ -392,21 +392,6 @@ testApp.directive("loadFields", function ($http, $location) {
         'dataset_name'
       ];
 
-      scope.zeroPad = function (num, places) {
-        var zero = places - num.toString().length + 1;
-        return Array(+(zero > 0 && zero)).join("0") + num;
-      };
-
-      scope.goToNextPrepid = function (increment) {
-        if ($location.search()["prepid"]) {
-          var prepid = $location.search()["prepid"];
-          lastnumber = parseInt(prepid.substring(prepid.length - 5)) + increment;
-          var new_prepid = prepid.substring(0, prepid.length - 5) + scope.zeroPad(lastnumber, 5);
-          $location.search("prepid", new_prepid);
-          scope.getData();
-        }
-      };
-
       scope.cleanSearchUrl = function () {
         _.each($location.search(), function (elem, key) {
           $location.search(key, null);
@@ -433,15 +418,12 @@ testApp.directive("loadFields", function ($http, $location) {
           return {};
         }
 
-        var searchURL = "restapi/requests/unique_values/" + fieldName;
-        searchURL += "?limit=10&group=true";
-        searchURL += '&startkey=' + fieldValue + '&endkey=' + fieldValue + '\ufff0';
-
+        var searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
         var promise = $http.get(searchURL);
         return promise.then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + " field (value=" + fieldValue + "): " + data.status);
+          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
