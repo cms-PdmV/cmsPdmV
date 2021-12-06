@@ -52,16 +52,23 @@ class CreateMccm(RESTResource):
             meeting_date = MccM.get_meeting_date()
             meeting_date_full = meeting_date.strftime('%Y-%m-%d')
             meeting_date_short = meeting_date.strftime('%Y%b%d')
-            prepid = '%s-%s' % (pwg, meeting_date_short)
-            query = mccm_db.make_query({'prepid': '%s-*' % (prepid)})
-            newest = mccm_db.full_text_search('search', query, limit=1, sort_asc=False)
-            if newest:
-                self.logger.info('Newest prepid: %s', newest[0]['prepid'])
-                number = int(newest[0]['prepid'].split('-')[-1]) + 1
-            else:
-                number = 1
+            prepid_part = '%s-%s' % (pwg, meeting_date_short)
 
-            prepid = '%s-%05d' % (prepid, number)
+            newest = mccm_db.raw_query('serial_number',
+                                      {'group': True,
+                                       'key': [meeting_date_full, pwg]})
+            number = 1
+            if newest:
+                self.logger.info('Newest prepid: %s', newest[0]['value'])
+                number = newest[0]['value'] + 1
+
+            # Save last used prepid
+            # Make sure to include all deleted ones
+            prepid = '%s-%05d' % (prepid_part, number)
+            while mccm_db.db.prepid_is_used(prepid):
+                number += 1
+                prepid = '%s-%05d' % (prepid_part, number)
+
             if mccm_db.document_exists(prepid):
                 return {"results": False,
                         "message": "MccM document %s already exists" % (prepid)}

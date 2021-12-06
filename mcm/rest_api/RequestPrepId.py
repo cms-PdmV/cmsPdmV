@@ -20,17 +20,22 @@ class RequestPrepId(RESTResourceIndex):
             if prepid_part in self.serial_number_cache:
                 number = self.serial_number_cache[prepid_part] + 1
             else:
-                query = request_db.make_query({'prepid': '%s-*' % (prepid_part)})
-                newest = request_db.full_text_search('search', query, limit=1, sort_asc=False)
+                newest = request_db.raw_query('serial_number',
+                                              {'group': True,
+                                               'key': [campaign_name, pwg]})
+                number = 1
                 if newest:
-                    self.logger.info('Newest prepid: %s', newest[0]['prepid'])
-                    number = int(newest[0]['prepid'].split('-')[-1]) + 1
-                else:
-                    number = 1
+                    self.logger.info('Newest prepid: %s', newest[0]['value'])
+                    number = newest[0]['value'] + 1
 
             # Save last used prepid
-            self.serial_number_cache[prepid_part] = number
+            # Make sure to include all deleted ones
             prepid = '%s-%05d' % (prepid_part, number)
+            while request_db.db.prepid_is_used(prepid):
+                number += 1
+                prepid = '%s-%05d' % (prepid_part, number)
+
+            self.serial_number_cache[prepid_part] = number
             if request_db.document_exists(prepid):
                 self.serial_number_cache.pop(prepid_part, None)
                 return {"results": False,
