@@ -240,8 +240,8 @@ class Database():
 
         # For some reason if options end in parentheses or something
         # non-alphanumeric, like parentheses, couchdb-lucene crashes
-        self.logger.debug(options)
         options = '&' + self.to_json_query(options) + '&'
+        self.logger.debug(options)
         db_request = self.construct_lucene_request('local/%s/%s' % (self.__dbname, viewname),
                                                    method='POST',
                                                    headers={'Content-Type': 'application/x-www-form-urlencoded'},
@@ -258,7 +258,7 @@ class Database():
         options = {'limit': limit,
                    'group': True,
                    'startkey': startkey,
-                   }
+                   'endkey': endkey}
         options = self.to_json_query(options)
         url = '%s/_design/unique/_view/%s?%s' % (self.__dbname, field, options)
         db_request = self.construct_request(url)

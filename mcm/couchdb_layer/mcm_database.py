@@ -14,6 +14,7 @@ from tools.locator import locator
 from collections import defaultdict
 from couchDB_interface import *
 from tools.locker import locker
+from urllib2 import HTTPError
 
 from cachelib import SimpleCache
 
@@ -480,10 +481,10 @@ class database:
             self.logger.error('Could not count documents in database. Reason: %s' % (ex))
             return -1
 
-    def escapedSeq(self, term):
-        """ Yield the next string based on the
-            next character (either this char
-            or escaped version """
+    def escaped_term(self, term):
+        """
+        Escape special characters in given term
+        """
         escapeRules = {'-': r'\-',
                        '&': r'\&',
                        '|': r'\|',
@@ -499,18 +500,12 @@ class database:
                        '"': r'\"',
                        ';': r'\;',
                        ' ': r'\ ',
-                       '/': r'\/'}
-        for char in term:
-            if char in escapeRules.keys():
-                yield escapeRules[char]
-            else:
-                yield char
+                       '/': r'\/',
+                       '\\': r'\\'}
 
-    def escapeLuceneArg(self, term):
-        """ Apply escaping to the passed in query terms
-            escaping special characters like : , etc"""
-        term = term.replace('\\', r'\\')   # escape \ first
-        return "".join([nextStr for nextStr in self.escapedSeq(term)])
+        # Escape backslash first?
+        term = term.replace('\\', r'\\')
+        return ''.join(escapeRules.get(c, c) for c in term)
 
     def make_query(self, args):
         """
@@ -530,13 +525,17 @@ class database:
             if not isinstance(value, list):
                 value = [value]
 
-            positive = [v for v in value if v[0] != '!']
+            # Make tuples of escaped values and a flag whether they are postive
+            values = [(self.escaped_term(v.lstrip('!')), v[0] != '!') for v in value]
+            # Handle positive search first
+            positive = [v[0] for v in values if v[1]]
             if positive:
                 query.append('(%s:(%s))' % (attribute, ' '.join(v for v in positive)))
                 # If there is something positive, don't need to query for negative
                 continue
 
-            negative = [v.lstrip('!') for v in value if v[0] == '!']
+            # Negative search
+            negative = [v[0] for v in values if not v[1]]
             if negative:
                 query.append('(%s:(* %s))' % (attribute, ' '.join('-%s' % (v) for v in negative)))
 
@@ -570,13 +569,18 @@ class database:
 
                 data = self.db.lucene_search(url, options=options)
                 break
+            except HTTPError as http_err:
+                code = http_err.getcode()
+                self.logger.debug("Lucene query %s failed with code %s. Attempt %s/%s", url, code,i, __retries)
+                if 400 <= http_err.getcode() <= 400:
+                    break
+
             except Exception as ex:
-                self.logger.info("lucene DB query: %s failed %s. retrying: %s out of: %s" % (url,
-                                                                                             ex,
-                                                                                             i,
-                                                                                             __retries))
+                self.logger.error("Lucene query %s failed: %s. Attempt %s/%s", url, ex, i, __retries)
+
             # if we are retrying we should wait little bit
-            time.sleep(0.5)
+            if i < __retries:
+                time.sleep(0.5)
 
         if include_fields != '':
             rows = [r["fields"] for r in data['rows']]
