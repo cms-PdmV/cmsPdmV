@@ -616,88 +616,105 @@ class chained_request(json_base):
                 # 'This should never happen. (%s) is next according to step (%s), but is not in new status (%s)' % (
                 # next_id, next_step, next_request.get_attribute('status')))
         else:
-            # look in *other* chained campaigns whether you can suck in an existing request
-            # look up all chained requests that start from the same root request
-            # remove <pwg>-chain_ and the -serial number, replacing _ with a .
-            toMatch = '.'.join(self.get_attribute('prepid').split('_')[1:][0:next_step + 1]).split('-')[0]
-            # make sure they get ordered by prepid
-            __query = crdb.make_query({'root_request': root_request_id})
-            # do we really need to sort them?
-            related_crs = sorted(crdb.full_text_search('search', __query, page=-1), key=lambda cr: cr['prepid'])
+            # Try to reuse existing requests by looking at other chained requests
+            # Requests should come from chained requests with same root and flows
+            prepid = self.get_attribute('prepid')
+            root_request = rdb.get(root_request_id)
+            campaign_prepid = self.get_attribute('member_of_campaign')
+            chained_request_ids = root_request['member_of_chain']
+            self.logger.debug('Chained request %s is flowing, next step - %s', prepid, next_step)
+            self.logger.debug('Root request %s is member of %s chained requests',
+                              root_request_id,
+                              len(chained_request_ids))
+            # Remove current chained request
+            chained_request_ids = [p for p in chained_request_ids if p != prepid]
+            # Remove chained requests in the same chained campaign
+            chained_request_ids = [p for p in chained_request_ids if '-%s-' % (campaign_prepid) not in p]
+            # Sort by matching length
+            def mathing_length(a, b):
+                a_parts = tuple(a.split('_'))
+                b_parts = tuple(b.split('_'))
+                for i in range(min(len(a_parts), len(b_parts)), 0, -1):
+                    if a_parts[:i] == b_parts[:i]:
+                        return i - 1
 
-            vetoed_last = []
-            for existing_cr in related_crs:
-                # exclude itself
-                if existing_cr['prepid'] == self.get_attribute('prepid'):
-                    continue
-                # prevent from using a request from within the same exact chained_campaigns
-                if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
-                    mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
-                    if len(mcm_cr.get_attribute('chain')) > next_step:
-                        # one existing request in the very same chained campaign has already something used, make sure it is not going to be used
-                        vetoed_last.append(mcm_cr.get_attribute('chain')[next_step])
-                    continue
-                else:
-                    continue
-            for existing_cr in related_crs:
-                # exclude itself
-                if existing_cr['prepid'] == self.get_attribute('prepid'):
-                    continue
-                # prevent from using a request from within the same exact chained_campaigns
-                if existing_cr['member_of_campaign'] == self.get_attribute('member_of_campaign'):
-                    continue
-                truncated = '.'.join(existing_cr['prepid'].split('_')[1:][0:next_step + 1]).split('-')[0]
-                self.logger.info('to match : %s , this one %s' % (toMatch, truncated))
-                if truncated == toMatch:
-                    # we found a chained request that starts with all same steps
-                    mcm_cr = chained_request(crdb.get(existing_cr['prepid']))
-                    if len(mcm_cr.get_attribute('chain')) <= next_step:
-                        # found one, but it has not enough content either
-                        continue
-                    if mcm_cr.get_attribute('chain')[next_step] in vetoed_last:
-                        continue
+                return 0
 
-                    candidate_chain = mcm_cr.get_attribute('chain')
-                    self.logger.info('Found candidate for %s: %s\nCandidate chain: %s',
-                                     self.get_attribute('prepid'),
-                                     mcm_cr.get_attribute('prepid'),
-                                     '->'.join(candidate_chain))
-                    # Candidate's chained campaign
-                    mcm_cr_cc = ccdb.get(mcm_cr.get_attribute('member_of_campaign'))
-                    common_steps = []
-                    for i in range(min(len(mcm_cc['campaigns']), len(mcm_cr_cc['campaigns']))):
-                        if mcm_cc['campaigns'][i] == mcm_cr_cc['campaigns'][i]:
-                            common_steps.append(mcm_cc['campaigns'][i])
-                        else:
-                             # Stop comparing the candidates when chained campaigns become different
-                             break
-
-                    self.logger.info('Common steps: %s', json.dumps(common_steps, indent=2))
-                    further_steps_keep_output = False
-                    for i in range(next_step, min(len(common_steps), len(candidate_chain))):
-                        candidate_request = rdb.get(candidate_chain[i])
-                        candidate_request_keep_output = True in candidate_request['keep_output']
-                        candidate_request_status = candidate_request.get('approval')
-                        self.logger.info('Checking step %s, %s->%s request %s (%s) keeps output: %s',
-                                         i,
-                                         common_steps[i][1],
-                                         common_steps[i][0],
-                                         candidate_chain[i],
-                                         candidate_request_status,
-                                         candidate_request_keep_output)
-                        if candidate_request_status != 'submit' or candidate_request_keep_output:
-                            further_steps_keep_output = True
-
-                    if candidate_request_status != 'submit' or candidate_request_keep_output:
-                        self.logger.info('None of following common requests keep output, bad candidate')
-                        continue
-
-                    next_id = candidate_chain[next_step]
-                    break
-            if next_id:
-                approach = 'use'
-            else:
+            # Save matching length
+            chained_request_ids = [(c, mathing_length(c, prepid)) for c in chained_request_ids]
+            # Remove ones that are not macthing enough to reach next step
+            chained_request_ids = [c for c in chained_request_ids if c[1] > next_step]
+            # Sort by matching length
+            chained_request_ids = sorted(chained_request_ids, key=lambda c: c[1], reverse=True)
+            # Get existing chain
+            chain = self.get_attribute('chain')
+            # Do not proceed if none of the ids fit
+            if not chained_request_ids:
                 approach = 'create'
+            else:
+                # Store matching length in dictionary
+                matching = dict(chained_request_ids)
+                chained_requests = crdb.db.bulk_get([c[0] for c in chained_request_ids])
+                # Remove all that are not long enough
+                chained_requests = [c for c in chained_requests if len(c['chain']) > next_step]
+                self.logger.debug('%s chained are long enough (need at least %s length):\n%s',
+                                  len(chained_requests),
+                                  next_step + 1,
+                                  '\n'.join('%s (len %s, mat %s)' % (c['prepid'],
+                                                                     len(c['chain']),
+                                                                     matching[c['prepid']]) for c in chained_requests))
+
+                # All requests in the chain must match up to current step
+                self.logger.debug('Making sure these match: %s', chain[:next_step])
+                chained_requests = [c for c in chained_requests if c['chain'][:next_step] == chain[:next_step]]
+                checked_requests = set()
+
+                next_id = None
+                # Check if requests in chain save the output
+                for chained_request in chained_requests:
+                    self.logger.debug('Looking at %s, chain: %s, matching: %s',
+                                      chained_request['prepid'],
+                                      '->'.join(chained_request['chain']),
+                                      matching[chained_request['prepid']])
+
+                    match = matching[chained_request['prepid']]
+                    # This is part starting at next request and ending at last
+                    # matching request. At least one of them should save
+                    # output or be not-submitted and not-done
+                    other_chain = chained_request['chain'][len(chain):match]
+                    self.logger.debug('Relevant part of chain: %s', other_chain)
+                    # Do not check same requests twice
+                    other_chain = [o for o in other_chain if o not in checked_requests]
+                    if not other_chain:
+                        continue
+
+                    other_requests = rdb.db.bulk_get(other_chain)
+                    for other_request in other_requests:
+                        other_prepid = other_request['prepid']
+                        other_keep_output = other_request['keep_output'][-1]
+                        other_approval = other_request['approval']
+                        self.logger.debug('Other request %s keep output: %s and approval: %s',
+                                          other_request['prepid'],
+                                          other_keep_output,
+                                          other_approval)
+                        checked_requests.add(other_prepid)
+                        if other_approval != 'submit' or other_keep_output:
+                            # Important to take the first request from the checked
+                            # part of the chain, not the matching request!
+                            next_id = other_requests[0]['prepid']
+                            break
+                    else:
+                        self.logger.info('None of available requests of %s are suitable',
+                        chained_request['prepid'])
+                        continue
+
+                    # Break because next request is found
+                    break
+
+                if next_id:
+                    approach = 'use'
+                else:
+                    approach = 'create'
 
         self.logger.info('%s approach is to: %s',
                          self.get_attribute('prepid'),

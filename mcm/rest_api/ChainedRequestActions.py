@@ -40,7 +40,7 @@ class CreateChainedRequest(RESTResource):
             req = chained_request(json_input)
             cr_id = req.get_attribute('prepid')
         else:
-            cr_id = ChainedRequestPrepId().next_id(json_input['pwg'], json_input['member_of_campaign'])
+            cr_id = ChainedRequestPrepId().next_prepid(json_input['pwg'], json_input['member_of_campaign'])
             if not cr_id:
                 return {"results": False}
 

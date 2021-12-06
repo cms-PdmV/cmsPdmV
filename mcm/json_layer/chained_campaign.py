@@ -41,7 +41,7 @@ class chained_campaign(json_base):
         # parse request id
         pwg = root_request.get_attribute('pwg')
         # generate new chain id
-        chained_request_id = ChainedRequestPrepId().next_id(pwg, prepid)
+        chained_request_id = ChainedRequestPrepId().next_prepid(pwg, prepid)
         if not chained_request_id:
             raise ValueError('Prepid returned was None')
 

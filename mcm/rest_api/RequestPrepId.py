@@ -1,49 +1,47 @@
-#!/usr/bin/env python
-
-from json_layer.request import request
-from json_layer.campaign import campaign
-from couchdb_layer.mcm_database import database
+from json_layer.request import request as Request
+from json_layer.campaign import campaign as Campaign
+from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 
 
-# generates the next valid prepid
 class RequestPrepId(RESTResourceIndex):
-    def __init__(self):
-        self.db_name = 'requests'
 
-    def next_prepid(self, pwg, camp):
-        if not pwg or not camp:
+    serial_number_cache = {}
+
+    def next_prepid(self, pwg, campaign_name):
+        if not pwg or not campaign_name:
             return None
 
-        with locker.lock("%s-%s" % (pwg, camp)):
-            db = database(self.db_name)
-            query_results = db.raw_query('serial_number', {'group': True, 'key': [camp, pwg]})
-            sn = 1
-            if query_results:
-                sn = query_results[0]['value'] + 1
+        request_db = Database('requests')
+        campaign_db = Database('campaigns')
+        prepid_part = '%s-%s' % (pwg, campaign_name)
+        with locker.lock('request-prepid-%s' % (pwg)):
+            if prepid_part in self.serial_number_cache:
+                number = self.serial_number_cache[prepid_part] + 1
+            else:
+                query = request_db.make_query({'prepid': '%s-*' % (prepid_part)})
+                newest = request_db.full_text_search('search', query, limit=1, sort_asc=False)
+                if newest:
+                    self.logger.info('Newest prepid: %s', newest[0]['prepid'])
+                    number = int(newest[0]['prepid'].split('-')[-1]) + 1
+                else:
+                    number = 1
 
-            pid = '%s-%s-%05d' % (pwg, camp, sn)
-            while db.db.prepid_is_used(pid):
-                self.logger.info('PrepID %s is already used, will try +1', pid)
-                sn += 1
-                pid = '%s-%s-%05d' % (pwg, camp, sn)
-                if sn == 99999:
-                    self.logger.error('Something went horribly wrong, cannot proceed')
-                    raise Exception('Could not assign a new prepid')
+            # Save last used prepid
+            self.serial_number_cache[prepid_part] = number
+            prepid = '%s-%05d' % (prepid_part, number)
+            if request_db.document_exists(prepid):
+                self.serial_number_cache.pop(prepid_part, None)
+                return {"results": False,
+                        "message": "Request prepid %s already exists" % (prepid)}
 
-            self.logger.info('Chose PrepID: %s' % (pid))
-            if sn == 1:
-                self.logger.info('Beginning new prepid family: %s-%s' % (pwg, camp))
-
-            db_camp = database('campaigns', cache_enabled=True)
-            req_camp = campaign(db_camp.get(camp))
-            new_request = request(req_camp.add_request({'_id': pid, 'prepid': pid,
-                'pwg': pwg, 'member_of_campaign': camp}))
-            new_request.update_history({'action': 'created'})
-            db.save(new_request.json())
-            self.logger.info('New prepid : %s ' % pid)
-            return pid
-
-    def generate_prepid(self, pwg, campaign):
-        return {"prepid": self.next_prepid(pwg, campaign)}
+            campaign = Campaign(campaign_db.get(campaign_name))
+            request = Request(campaign.add_request({'_id': prepid,
+                                                    'prepid': prepid,
+                                                    'pwg': pwg,
+                                                    'member_of_campaign': campaign_name}))
+            request.update_history({'action': 'created'})
+            request_db.save(request.json())
+            self.logger.info('New request created: %s ', prepid)
+            return prepid

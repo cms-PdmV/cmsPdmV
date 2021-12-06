@@ -1,60 +1,44 @@
-#!/usr/bin/env python
-
-from couchdb_layer.mcm_database import database
+from json_layer.chained_request import chained_request as ChainedRequest
+from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
-from json_layer.chained_request import chained_request
 
 
-# generates the next valid prepid
 class ChainedRequestPrepId(RESTResourceIndex):
-    def __init__(self):
-        self.ccamp_db_name = 'chained_campaigns'
-        self.creq_db_name = 'chained_requests'
 
     serial_number_cache = {}
 
-    def next_id(self, pwg, campaign):
-        ccamp_db = database(self.ccamp_db_name)
-        creq_db = database(self.creq_db_name)
-        if not pwg:
-            self.logger.error('Physics working group provided is None.')
-            return None
-        if not campaign:
-            self.logger.error('Campaign id provided is None.')
+    def next_prepid(self, pwg, campaign_name):
+        if not pwg or not campaign_name:
             return None
 
-        with locker.lock('%s-%s' %(pwg, campaign)):
-            if not ccamp_db.document_exists(campaign):
-                self.logger.error('Campaign id {0} does not exist.'.format(campaign))
-                return None
-            if (campaign, pwg) in self.serial_number_cache:
-                sn = self.serial_number_cache[(campaign, pwg)] + 1
+        chained_request_db = Database('chained_requests')
+        prepid_part = '%s-%s' % (pwg, campaign_name)
+        with locker.lock('chained-request-prepid-%s' % (pwg)):
+            if prepid_part in self.serial_number_cache:
+                number = self.serial_number_cache[prepid_part] + 1
             else:
-                sn = 1
-                serial_number_lookup = creq_db.raw_query('serial_number', {'group': True, 'key': [campaign, pwg]})
-                if serial_number_lookup:
-                    sn = serial_number_lookup[0]['value'] + 1
+                query = chained_request_db.make_query({'prepid': '%s-*' % (prepid_part)})
+                newest = chained_request_db.full_text_search('search', query, limit=1, sort_asc=False)
+                if newest:
+                    self.logger.info('Newest prepid: %s', newest[0]['prepid'])
+                    number = int(newest[0]['prepid'].split('-')[-1]) + 1
+                else:
+                    number = 1
 
-            # construct the new id
-            new_prepid = '%s-%s-%05d' % (pwg, campaign, sn)
-            while ccamp_db.db.prepid_is_used(new_prepid):
-                self.logger.info('PrepID %s is already used, will try +1', new_prepid)
-                sn += 1
-                new_prepid = '%s-%s-%05d' % (pwg, campaign, sn)
-                if sn == 99999:
-                    self.logger.error('Something went horribly wrong, cannot proceed')
-                    raise Exception('Could not assign a new prepid')
+            # Save last used prepid
+            self.serial_number_cache[prepid_part] = number
+            prepid = '%s-%05d' % (prepid_part, number)
+            if chained_request_db.document_exists(prepid):
+                self.serial_number_cache.pop(prepid_part, None)
+                return {"results": False,
+                        "message": "Chained request prepid %s already exists" % (prepid)}
 
-            self.logger.info('Chose PrepID: %s' % (new_prepid))
-            if sn == 1:
-                self.logger.info('Beginning new prepid family: %s' % (new_prepid))
-
-            new_request = chained_request({'_id': new_prepid, 'prepid': new_prepid, 'pwg': pwg, 'member_of_campaign': campaign})
-            new_request.update_history({'action': 'created'})
-            creq_db.save(new_request.json())
-            self.serial_number_cache[(campaign, pwg)] = sn
-            self.logger.info('New chain id: %s' % new_prepid)
-
-            return new_prepid
-
+            chained_request = ChainedRequest({'_id': prepid,
+                                              'prepid': prepid,
+                                              'pwg': pwg,
+                                              'member_of_campaign': campaign_name})
+            chained_request.update_history({'action': 'created'})
+            chained_request_db.save(chained_request.json())
+            self.logger.info('New request created: %s ', prepid)
+            return prepid

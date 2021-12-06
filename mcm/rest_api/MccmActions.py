@@ -54,9 +54,9 @@ class CreateMccm(RESTResource):
             meeting_date_short = meeting_date.strftime('%Y%b%d')
             prepid = '%s-%s' % (pwg, meeting_date_short)
             query = mccm_db.make_query({'prepid': '%s-*' % (prepid)})
-            newest = mccm_db.full_text_search('search', query, limit=3, sort_asc=False)
-            self.logger.info([n['prepid'] for n in newest])
+            newest = mccm_db.full_text_search('search', query, limit=1, sort_asc=False)
             if newest:
+                self.logger.info('Newest prepid: %s', newest[0]['prepid'])
                 number = int(newest[0]['prepid'].split('-')[-1]) + 1
             else:
                 number = 1

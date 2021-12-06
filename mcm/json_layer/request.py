@@ -2625,7 +2625,7 @@ class request(json_base):
             fetched_batches = []
             while len(req_to_invalidate) > index:
                 # find the batch it is in
-                __query = bdb.make_query({'contains': req_to_invalidate[index: index + 20]}, boolean_operator='OR')
+                __query = bdb.make_query({'contains': req_to_invalidate[index: index + 20]})
                 fetched_batches += bdb.full_text_search('search', __query, page=-1)
                 index += 20
             for b in fetched_batches:
