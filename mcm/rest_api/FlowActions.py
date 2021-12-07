@@ -238,7 +238,9 @@ class UpdateFlow(FlowRESTResource):
             # Check if there are chained campaigns that are made with this flow
             # and was using the removed campaigns
             for removed_campaign in removed_campaigns:
-                chained_campaign_query = {'contains': [prepid, removed_campaign]}
+                # Contains this flow AND removed campaign
+                chained_campaign_query = {'contains': prepid,
+                                          'contains_': removed_campaign}
                 chained_campaigns = chained_campaign_db.search(chained_campaign_query,
                                                                limit=1,
                                                                include_fields='prepid')
