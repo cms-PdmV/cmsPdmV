@@ -46,7 +46,7 @@ def inspect_campaign(campaign_prepid):
 
 def get_all_campaigns():
     campaigns_db = database('campaigns')
-    all_campaigns_result = do_with_timeout(campaigns_db.raw_query, 'prepid', timeout=300)
+    all_campaigns_result = do_with_timeout(campaigns_db.get_all, timeout=300)
     if all_campaigns_result:
         prepids_list = [x['id'] for x in all_campaigns_result]
     else:
