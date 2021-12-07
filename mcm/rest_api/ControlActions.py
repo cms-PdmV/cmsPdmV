@@ -78,6 +78,8 @@ class Search(RESTResource):
         page = int(args.pop('page', 0))
         limit = int(args.pop('limit', 20))
         include_fields = args.pop('include_fields', '')
+        sort_on = args.pop('sort', None)
+        sort_asc = args.pop('sort_asc', 'True').lower() != 'false'
         # Drop get_raw attribute
         args.pop('get_raw', None)
         # Drio alias attribute
@@ -116,29 +118,20 @@ class Search(RESTResource):
             if len(from_ticket) == 1 and '*' not in from_ticket[0]:
                 mccms = [mccm_db.get(from_ticket[0])]
             else:
-                query = mccm_db.make_query({'prepid': from_ticket})
-                mccms = mccm_db.full_text_search('search', query, page=-1)
+                mccms = mccm_db.search({'prepid': from_ticket}, page=-1)
 
             args['prepid__'] = []
             for mccm in mccms:
                 args['prepid__'].extend(mccm.get('generated_chains', []).keys())
 
-        args.update(args)
-        if not args:
+        if not args and not sort_on:
             # If there are no args, use simpler fetch
             res = database.get_all(page, limit, with_total_rows=True)
         else:
             # Add types to arguments
             args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
             # Construct the complex query
-            query = database.make_query(args)
-            self.logger.debug('Lucene query: %s', query)
-            res = database.full_text_search("search",
-                                            query=query,
-                                            page=page,
-                                            limit=limit,
-                                            with_total_rows=True,
-                                            include_fields=include_fields)
+            res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
         res['results'] = res.pop('rows', [])
         return self.output_text(res, 200, {'Content-Type': 'application/json'})

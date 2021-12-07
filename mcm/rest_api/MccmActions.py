@@ -54,24 +54,24 @@ class CreateMccm(RESTResource):
             meeting_date_short = meeting_date.strftime('%Y%b%d')
             prepid_part = '%s-%s' % (pwg, meeting_date_short)
 
-            newest = mccm_db.raw_query('serial_number',
-                                      {'group': True,
-                                       'key': [meeting_date_full, pwg]})
+            newest = mccm_db.raw_query_view('mccms',
+                                            'serial_number',
+                                            page=0,
+                                            limit=1,
+                                            options={'group': True,
+                                                     'include_docs': False,
+                                                     'key': [meeting_date_full, pwg]})
             number = 1
             if newest:
-                self.logger.info('Newest prepid: %s', newest[0]['value'])
-                number = newest[0]['value'] + 1
+                self.logger.info('Highest prepid number: %05d', newest[0])
+                number = newest[0] + 1
 
             # Save last used prepid
             # Make sure to include all deleted ones
             prepid = '%s-%05d' % (prepid_part, number)
-            while mccm_db.db.prepid_is_used(prepid):
+            while mccm_db.document_exists(prepid, include_deleted=True):
                 number += 1
                 prepid = '%s-%05d' % (prepid_part, number)
-
-            if mccm_db.document_exists(prepid):
-                return {"results": False,
-                        "message": "MccM document %s already exists" % (prepid)}
 
             mccm.set_attribute('prepid', prepid)
             mccm.set_attribute('_id', prepid)
@@ -420,7 +420,7 @@ class GenerateChains(RESTResource):
 
         # Chained campaigns of ticket
         chained_campaign_db = Database('chained_campaigns')
-        chained_campaigns = chained_campaign_db.db.bulk_get(chained_campaign_prepids)
+        chained_campaigns = chained_campaign_db.bulk_get(chained_campaign_prepids)
         not_found_chained_campaigns = not_found_prepids(chained_campaign_prepids, chained_campaigns)
         if not_found_chained_campaigns:
             not_found_ids = ', '.join(list(not_found_chained_campaigns))
@@ -431,7 +431,7 @@ class GenerateChains(RESTResource):
         chained_campaigns = [ChainedCampaign(json_input=c) for c in chained_campaigns]
         # Requests of ticket
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(request_prepids)
+        requests = request_db.bulk_get(request_prepids)
         not_found_requests = not_found_prepids(request_prepids, requests)
         if not_found_requests:
             not_found_ids = ', '.join(list(not_found_requests))
@@ -469,8 +469,7 @@ class GenerateChains(RESTResource):
                 query_dict = {'member_of_campaign': chained_campaign_prepid,
                               'contains': prepid,
                               'pwg': pwg}
-                query = chained_request_db.make_query(query_dict)
-                duplicates = chained_request_db.full_text_search('search', query, limit=1)
+                duplicates = chained_request_db.search(query_dict, limit=1)
                 if duplicates and not generate_all:
                     if not skip_existing:
                         return {'prepid': mccm_id,
@@ -588,8 +587,7 @@ class MccMReminderGenContacts(RESTResource):
         don't have all requests "defined"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.make_query({'status': 'new'})
-        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        mccm_jsons = mccm_db.search({'status': 'new'}, page=-1)
         if not mccm_jsons:
             return {"results": True,
                     "message": "No new tickets, what a splendid day!"}
@@ -654,7 +652,7 @@ class MccMReminderGenContacts(RESTResource):
         """
 
         user_db = Database('users')
-        generator_contacts = user_db.query(query="role==generator_contact", page_num=-1)
+        generator_contacts = user_db.query_view('role', 'generator_contact', page_num=-1)
         by_pwg = {}
         for contact in generator_contacts:
             for pwg in contact.get('pwg', []):
@@ -677,8 +675,7 @@ class MccMReminderProdManagers(RESTResource):
         have all requests "approved"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.make_query({'status': 'new'})
-        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        mccm_jsons = mccm_db.search({'status': 'new'}, page=-1)
         if not mccm_jsons:
             return {"results": True,
                     "message": "No new tickets, what a splendid day!"}
@@ -721,7 +718,7 @@ class MccMReminderProdManagers(RESTResource):
                 message += '  %smccms?prepid=%s\n\n' % (base_url, prepid)
 
         user_db = Database('users')
-        production_managers = user_db.query(query="role==production_manager", page_num=-1)
+        production_managers = user_db.query_view('role', 'production_manager', page_num=-1)
         recipients = [manager['email'] for manager in production_managers]
         com.sendMail(recipients, subject, message)
         return {"results": True,
@@ -742,8 +739,7 @@ class MccMReminderGenConveners(RESTResource):
         don't have all requests "approved"
         """
         mccm_db = Database('mccms')
-        query = mccm_db.make_query({'status': 'new'})
-        mccm_jsons = mccm_db.full_text_search('search', query, page=-1)
+        mccm_jsons = mccm_db.search({'status': 'new'}, page=-1)
         if not mccm_jsons:
             return {"results": True,
                     "message": "No new tickets, what a splendid day!"}
@@ -796,7 +792,7 @@ class MccMReminderGenConveners(RESTResource):
 
 
         user_db = Database('users')
-        generator_conveners = user_db.query(query="role==generator_convener", page_num=-1)
+        generator_conveners = user_db.query_view('role', 'generator_convener', page_num=-1)
         recipients = [manager['email'] for manager in generator_conveners]
         com.sendMail(recipients, subject, message)
         return {"results": True,
@@ -851,7 +847,7 @@ class CheckIfAllApproved(RESTResource):
         mccm = MccM(json_input=mccm_json)
         requests_prepids = mccm.get_request_list()
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(requests_prepids)
+        requests = request_db.bulk_get(requests_prepids)
         requests_prepids = set(requests_prepids)
         allowed_approvals = {'approve', 'submit'}
         for request in requests:

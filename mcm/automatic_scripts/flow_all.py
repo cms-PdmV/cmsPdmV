@@ -13,7 +13,7 @@ def inspect_chained_request(prepid):
 
 def get_all_chained_campaigns():
     chained_campaigns_db = database('chained_campaigns')
-    all_chained_campaigns_result = do_with_timeout(chained_campaigns_db.raw_query, 'prepid', timeout=300)
+    all_chained_campaigns_result = do_with_timeout(chained_campaigns_db.get_all, timeout=300)
     if all_chained_campaigns_result:
         prepids_list = [x['id'] for x in all_chained_campaigns_result]
     else:
@@ -33,13 +33,13 @@ def multiple_inspect():
             chained_requests_db.clear_cache()
             page = 0
             chained_requests = [{}]
-            query = chained_requests_db.make_query({'member_of_campaign': chained_campaign_prepid,
-                                                    'last_status': 'done',
-                                                    'status': 'processing'})
+            query = {'member_of_campaign': chained_campaign_prepid,
+                     'last_status': 'done',
+                     'status': 'processing'}
 
             while chained_requests:
                 print('Chained campaign %s page %s' % (chained_campaign_prepid, page))
-                chained_requests = do_with_timeout(chained_requests_db.full_text_search, 'search', query, page=page, timeout=120)
+                chained_requests = do_with_timeout(chained_requests_db.search, query, page=page, timeout=120)
                 if not chained_requests:
                     break
 

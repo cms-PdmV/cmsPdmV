@@ -68,8 +68,7 @@ class mccm(json_base):
     @staticmethod
     def get_mccm_by_generated_chain(chain_id):
         mccms_db = Database('mccms')
-        query = mccms_db.make_query({'generated_chains': chain_id})
-        result = mccms_db.full_text_search('search', query)
+        result = mccms_db.search({'generated_chains': chain_id})
         if result and result[0]:
             return mccm(json_input=result[0])
 
@@ -129,7 +128,7 @@ class mccm(json_base):
         """
         requests_db = Database('requests')
         prepids = self.get_request_list()
-        requests = requests_db.db.bulk_get(prepids)
+        requests = requests_db.bulk_get(prepids)
         events = sum(max(0, r.get('total_events', 0)) for r in requests)
         self.set_attribute('total_events', events)
 
@@ -139,7 +138,7 @@ class mccm(json_base):
         """
         request_prepids = self.get_request_list()
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(request_prepids)
+        requests = request_db.bulk_get(request_prepids)
         allowed_approvals = {'approve', 'submit'}
         for request in requests:
             if request.get('approval') not in allowed_approvals:
@@ -155,7 +154,7 @@ class mccm(json_base):
         """
         request_prepids = self.get_request_list()
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(request_prepids)
+        requests = request_db.bulk_get(request_prepids)
         defined = {'define', 'approve', 'submit'}
         if [r for r in requests if r.get('approval') not in defined]:
             # There are requests that are not defined/approved/submitted
@@ -170,7 +169,7 @@ class mccm(json_base):
         """
         request_prepids = self.get_request_list()
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(request_prepids)
+        requests = request_db.bulk_get(request_prepids)
         defined = {'define', 'approve', 'submit'}
         defined_prepids = [r['prepid'] for r in requests if r.get('approval') in defined]
         not_defined_prepids = sorted(list(set(request_prepids) - set(defined_prepids)))

@@ -40,30 +40,29 @@ class BatchPrepId():
             # the returned one will be biggest
             __query_options = {"endkey": str('"%s-00001"' % (batchName)),
                                "startkey": str('"%s-99999"' % (batchName)),
-                               "descending": "true",
-                               "limit": 1}
+                               "descending": "true"}
 
-            self.bdb.logger.debug('Batch query options: %s', __query_options)
             max_in_batch = settings.get_value('max_in_batch')
-            top_batch = self.bdb.raw_query("prepid", __query_options)
+            top_batch = self.bdb.raw_query_view("batches", "prepid", 0, 1, __query_options)
             new_batch = True
             self.bdb.logger.debug('Top batch: %s', top_batch)
 
-            if len(top_batch) != 0:
+            if top_batch:
                 # we already have some existing batch, check if its fine for appending
                 # get a single batch
-                single_batch = self.bdb.get(top_batch[0]["id"])
+                single_batch = top_batch[0]
+                single_batch_prepid = single_batch['prepid']
                 if single_batch["status"] == "new":
                     # check if batch is not locked in other threads.
-                    if len(single_batch["requests"]) + semaphore_events.count(single_batch['prepid']) < max_in_batch:
+                    if len(single_batch["requests"]) + semaphore_events.count(single_batch_prepid) < max_in_batch:
                         # we found a needed batch
-                        self.bdb.logger.debug("found a matching batch:%s" % (single_batch["prepid"]))
-                        batchNumber = int(single_batch["prepid"].split("-")[-1])
+                        self.bdb.logger.debug("found a matching batch:%s" % (single_batch_prepid))
+                        batchNumber = int(single_batch_prepid.split("-")[-1])
                         new_batch = False
                 if new_batch:
                     # we default to max batch and increment its number
-                    self.bdb.logger.debug("no new batch. incementing:%s +1" % (single_batch["prepid"]))
-                    batchNumber = int(top_batch[0]["id"].split("-")[-1]) + 1
+                    self.bdb.logger.debug("no new batch. incementing: %s +1" % (single_batch_prepid))
+                    batchNumber = int(single_batch_prepid.split("-")[-1]) + 1
             else:
                 self.bdb.logger.debug("starting new batch family:%s" % (batchName))
                 batchNumber = 1

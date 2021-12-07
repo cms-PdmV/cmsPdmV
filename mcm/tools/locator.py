@@ -16,7 +16,7 @@ class locator:
         host = os.environ['HOSTNAME']
         return host in ['vocms093.cern.ch', 'vocms0493.cern.ch']  # Prod machine
 
-    def dbLocation(self):
+    def database_url(self):
         if self.isDev():
             return 'http://vocms0485.cern.ch:5984/'  # dev instance
         else:

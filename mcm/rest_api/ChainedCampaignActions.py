@@ -125,8 +125,7 @@ class DeleteChainedCampaign(RESTResource):
 
         # Check chained requests...
         ch_request_db = Database('chained_requests')
-        ch_requests = ch_request_db.query('member_of_campaign==%s' % (prepid),
-                                                    limit=3)
+        ch_requests = ch_request_db.query_view('member_of_campaign', prepid, limit=3)
         if ch_requests:
             ch_request_ids = ', '.join(x['_id'] for x in ch_requests)
             message = 'Chained request(s) %s are member of %s, delete them first' % (ch_request_ids,

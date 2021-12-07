@@ -734,8 +734,7 @@ class ChainsFromTicket(RESTResource):
         ticket_prepid = kwargs['ticket']
         chained_requests_db = database('chained_requests')
         mccms_db = database('mccms')
-        mccm_query = mccms_db.make_query({'prepid': ticket_prepid})
-        result = mccms_db.full_text_search("search", mccm_query, page=-1)
+        result = mccms_db.search({'prepid': ticket_prepid}, page=-1)
         if len(result) == 0:
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
             return {}
@@ -751,8 +750,7 @@ class ChainsFromTicket(RESTResource):
         while start < end:
             fetch_till = start + 20
             fetch_till = end if fetch_till > end else fetch_till
-            chained_request_query = chained_requests_db.make_query({'prepid': generated_chains[start:fetch_till]})
-            chained_request_list += chained_requests_db.full_text_search("search", chained_request_query)
+            chained_request_list += chained_requests_db.search({'prepid': generated_chains[start:fetch_till]})
             start += 20
         return chained_request_list
 
@@ -810,8 +808,7 @@ class TaskChainDict(RESTResource):
         if not crdb.document_exists(chained_request_id):
             # it's a request actually, pick up all chains containing it
             mcm_r = rdb.get(chained_request_id)
-            # mcm_crs = crdb.query(query="root_request==%s"% chained_request_id) ## not only when its the root of
-            mcm_crs = crdb.query(query="contains==%s" % chained_request_id)
+            mcm_crs = crdb.query_view('contains', chained_request_id, page_num=-1)
             task_name = 'task_' + chained_request_id
         else:
             mcm_crs = [crdb.get(chained_request_id)]

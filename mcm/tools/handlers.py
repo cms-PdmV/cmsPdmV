@@ -401,7 +401,7 @@ class ChainRequestInjector(SubmissionsBase):
         if not self.chained_requests_db.document_exists(self.prepid):
             # It's a request actually, pick up all chains containing it
             mcm_request = self.request_db.get(self.prepid)
-            mcm_crs = self.chained_requests_db.query(query="contains==%s" % self.prepid)
+            mcm_crs = self.chained_requests_db.query_view('contains', self.prepid, page_num=-1)
             task_name = 'task_' + self.prepid
         else:
             mcm_crs = [self.chained_requests_db.get(self.prepid)]
@@ -485,8 +485,7 @@ class RequestApprover(Handler):
     def send_email_failure(self, output, error):
         com = communicator()
         users_db = database('users')
-        query = users_db.make_query({'role': 'production_manager'})
-        production_managers = users_db.full_text_search('search', query, page=-1)
+        production_managers = users_db.search({'role': 'production_manager'}, page=-1)
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
         com.sendMail(

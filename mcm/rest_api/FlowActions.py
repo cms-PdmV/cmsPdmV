@@ -210,11 +210,9 @@ class UpdateFlow(FlowRESTResource):
         new_ps = flow.get_attribute('request_parameters').get('process_string', None)
         if old_ps != new_ps:
             request_db = Database('requests')
-            request_query = request_db.make_query({'status': 'submitted', 'flown_with': prepid})
-            requests = request_db.full_text_search('search',
-                                                   request_query,
-                                                   limit=1,
-                                                   include_fields='prepid')
+            requests = request_db.search({'status': 'submitted', 'flown_with': prepid},
+                                         limit=1,
+                                         include_fields='prepid')
             if requests:
                 return {'results': False,
                         'message': ('Cannot change process string because there are requests in '
@@ -240,12 +238,10 @@ class UpdateFlow(FlowRESTResource):
             # Check if there are chained campaigns that are made with this flow
             # and was using the removed campaigns
             for removed_campaign in removed_campaigns:
-                contains = {'contains': [prepid, removed_campaign]}
-                chained_campaign_query = chained_campaign_db.make_query(contains)
-                chained_campaigns = chained_campaign_db.full_text_search('search',
-                                                                         chained_campaign_query,
-                                                                         limit=1,
-                                                                         include_fields='prepid')
+                chained_campaign_query = {'contains': [prepid, removed_campaign]}
+                chained_campaigns = chained_campaign_db.search(chained_campaign_query,
+                                                               limit=1,
+                                                               include_fields='prepid')
                 if chained_campaigns:
                     return {'results': False,
                             'message': ('Campaign "%s" cannot be removed because there are chained '
@@ -259,12 +255,10 @@ class UpdateFlow(FlowRESTResource):
             chained_campaign_db = Database('chained_campaigns')
             # Check if there are chained campaigns that are made with this flow
             # and was using the changed next campaign
-            contains = {'contains': [prepid, previous_next_campaign]}
-            chained_campaign_query = chained_campaign_db.make_query(contains)
-            chained_campaigns = chained_campaign_db.full_text_search('search',
-                                                                     chained_campaign_query,
-                                                                     limit=1,
-                                                                     include_fields='prepid')
+            chained_campaign_query = {'contains': [prepid, previous_next_campaign]}
+            chained_campaigns = chained_campaign_db.search(chained_campaign_query,
+                                                           limit=1,
+                                                           include_fields='prepid')
             if chained_campaigns:
                 return {'results': False,
                         'message': ('Campaign "%s" cannot be removed because there are chained '
@@ -310,7 +304,7 @@ class DeleteFlow(FlowRESTResource):
 
         # Check chained campaigns...
         chained_campaign_db = Database('chained_campaigns')
-        chained_campaigns = chained_campaign_db.query('contains==%s' % (flow_id), limit=3)
+        chained_campaigns = chained_campaign_db.query_view('contains', flow_id, limit=3)
         if chained_campaigns:
             chained_campaign_ids = ', '.join(x['_id'] for x in chained_campaigns)
             message = 'Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
@@ -321,7 +315,7 @@ class DeleteFlow(FlowRESTResource):
 
         # Check requests...
         request_db = Database('requests')
-        requests = request_db.query('flown_with==%s' % (flow_id), limit=3)
+        requests = request_db.query_view('flown_with', flow_id, limit=3)
         if requests:
             request_ids = ', '.join(x['_id'] for x in requests)
             message = 'Request(s) %s are flown with %s, delete them first' % (request_ids,
