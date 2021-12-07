@@ -257,7 +257,9 @@ class UpdateFlow(FlowRESTResource):
             chained_campaign_db = Database('chained_campaigns')
             # Check if there are chained campaigns that are made with this flow
             # and was using the changed next campaign
-            chained_campaign_query = {'contains': [prepid, previous_next_campaign]}
+            # Contains this flow AND that next campaign
+            chained_campaign_query = {'contains': prepid,
+                                      'contains_': previous_next_campaign}
             chained_campaigns = chained_campaign_db.search(chained_campaign_query,
                                                            limit=1,
                                                            include_fields='prepid')
