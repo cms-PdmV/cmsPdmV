@@ -1,11 +1,10 @@
-#!/usr/bin/env python
 import os
+import subprocess
+import datetime
 
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
-import subprocess
-
 
 class GetBjobs(RESTResource):
 
@@ -84,8 +83,10 @@ class GetRevision(RESTResource):
 
 
 class GetStartTime(RESTResource):
-    def __init__(self, start_time):
-        self.time = start_time
+
+    start_time = datetime.datetime.now().strftime('%c')
+
+    def __init__(self):
         self.before_request()
         self.count_call()
 
@@ -93,7 +94,7 @@ class GetStartTime(RESTResource):
         """
         Get the time at which the server was started.
         """
-        return {"results": self.time}
+        return {"results": self.start_time}
 
 
 class GetLogs(RESTResource):

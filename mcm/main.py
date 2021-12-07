@@ -16,26 +16,29 @@ from rest_api.ListActions import GetList, UpdateList
 
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
-from tools.logger import UserFilter, MemoryFilter
+from tools.logger import UserFilter
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
-from json import dumps
-from urllib2 import unquote
 
+import json
 import signal
 import logging
 import logging.handlers
-import shelve
-import datetime
 import sys
 import os
+import argparse
+import time
 
 
-start_time = datetime.datetime.now().strftime("%c")
 app = Flask(__name__)
 app.config.update(LOGGER_NAME="mcm_error")
 api = Api(app)
 app.url_map.strict_slashes = False
+# Set flask logging to warning
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+# Set paramiko logging to warning
+logging.getLogger('paramiko').setLevel(logging.WARNING)
+
 
 @app.route('/campaigns')
 def campaigns_html():
@@ -83,12 +86,7 @@ def batches_html():
 
 @app.route('/getDefaultSequences')
 def getDefaultSequences():
-    tmpSeq = sequence()._json_base__schema
-    return dumps(tmpSeq)
-
-@app.route('/injection_status')
-def injection_status_html():
-    return send_from_directory('HTML', 'injection_status.html')
+    return json.dumps(sequence()._json_base__schema)
 
 @app.route('/mccms')
 def mccms_html():
@@ -348,7 +346,7 @@ api.add_resource(
     '/restapi/dashboard/get_log_feed/<string:filename>/<int:lines>')
 api.add_resource(GetLogs, '/restapi/dashboard/get_logs')
 api.add_resource(GetRevision, '/restapi/dashboard/get_revision')
-api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time', resource_class_kwargs={'start_time': start_time})
+api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time')
 api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
 api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
 # REST mccms Actions
@@ -386,89 +384,146 @@ api.add_resource(
     '/restapi/control/communicate/<string:message_number>')
 api.add_resource(CacheInfo, '/restapi/control/cache_info')
 api.add_resource(CacheClear, '/restapi/control/cache_clear')
-# Define loggers
-error_logger = logging.getLogger('mcm_error')
-max_bytes = getattr(error_logger, "rot_maxBytes", 10000000)
-backup_count = getattr(error_logger, "rot_backupCount", 1000)
-logger = logging.getLogger()
-logger.setLevel(0)
-user_filter = UserFilter()
-memory_filter = MemoryFilter()
-logging.getLogger('werkzeug').disabled = True
-console_logging = '--debug' in sys.argv
-console_handler = logging.StreamHandler(sys.stdout)
-# Error logger
-if console_logging:
-    error_handler = console_handler
-    error_handler.setLevel(logging.DEBUG)
-else:
-    error_log_filename = getattr(error_logger, "rot_error_file", "logs/error.log")
-    error_handler = logging.handlers.RotatingFileHandler(error_log_filename, 'a', max_bytes, backup_count)
-    error_handler.setLevel(logging.INFO)
-
-error_formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-error_handler.setFormatter(error_formatter)
-error_handler.addFilter(user_filter)
-error_logger.addHandler(error_handler)
-
-# Injection logger
-# due to LogAdapter empty space for message will be added inside of it
-injection_logger = logging.getLogger("mcm_inject")
-inject_log_filename = getattr(injection_logger, "rot_access_file", "logs/inject.log")
-if console_logging:
-    injection_handler = console_handler
-    injection_handler.setLevel(logging.DEBUG)
-else:
-    injection_handler = logging.handlers.RotatingFileHandler(inject_log_filename, 'a', max_bytes, 250)
-    injection_handler.setLevel(logging.INFO)
-
-injection_formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-injection_handler.setFormatter(injection_formatter)
-injection_logger.addHandler(injection_handler)
-
-# Access log file
-access_logger = logging.getLogger("access_log")
-access_log_filename = getattr(access_logger, "rot_access_file", "logs/access.log")
-if console_logging:
-    access_handler = console_handler
-    access_handler.setLevel(logging.DEBUG)
-else:
-    access_handler = logging.handlers.RotatingFileHandler(access_log_filename, 'a', max_bytes, backup_count)
-    access_handler.setLevel(logging.INFO)
-
-access_formatter = logging.Formatter(fmt='{%(mem)s} [%(asctime)s][%(user)s][%(levelname)s] %(message)s', datefmt='%d/%b/%Y:%H:%M:%S')
-access_handler.setFormatter(access_formatter)
-access_handler.addFilter(user_filter)
-access_handler.addFilter(memory_filter)
-access_logger.addHandler(access_handler)
-
-# Log accesses
-def after_this_request(f):
-    if not hasattr(g, 'after_request_callbacks'):
-        g.after_request_callbacks = []
-    g.after_request_callbacks.append(f)
-    return f
-
-@app.after_request
-def call_after_request_callbacks(response):
-    for callback in getattr(g, 'after_request_callbacks', ()):
-        callback(response)
-    return response
-
-@app.before_request
-def log_access():
-    query = "?" + request.query_string if request.query_string else ""
-    full_url = request.path + unquote(query).decode('utf-8').encode('ascii', 'ignore')
-    message = "%s %s %s %s" % (request.method, full_url, "%s", request.headers['User-Agent'])
-    @after_this_request
-    def after_request(response):
-        g.message = g.message % response.status_code
-        access_logger.info(g.message)
-    g.message = message
 
 
-def run_flask():
-    debug = '--debug' in sys.argv
+def setup_error_logger(debug):
+    """
+    Setup the main logger
+    Log to file and rotate for production or log to console in debug mode
+    Automatically log user email
+    """
+    logger = logging.getLogger('mcm_error')
+    if debug:
+        # If debug - log to console
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+    else:
+        # If not debug - log to files
+        if not os.path.isdir('logs'):
+            os.mkdir('logs')
+
+        log_size = 1024 ** 3  # 10MB
+        log_count = 500  # 500 files
+        log_name = 'logs/error.log'
+        handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
+        handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s][%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+    handler.addFilter(UserFilter())
+    # del logger.handlers[:]  # Clear the list
+    logger.addHandler(handler)
+    return logger
+
+
+def setup_injection_logger(debug):
+    """
+    Setup logger for injection operations
+    It will have an additional handle that shows prepid of item being injected
+    """
+    logger = logging.getLogger('mcm_inject')
+    if debug:
+        # If debug - log to console
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+    else:
+        # If not debug - log to files
+        if not os.path.isdir('logs'):
+            os.mkdir('logs')
+
+        log_size = 1024 ** 3  # 10MB
+        log_count = 500  # 500 files
+        log_name = 'logs/inject.log'
+        handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
+        handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s')
+    handler.setFormatter(formatter)
+    # del logger.handlers[:]  # Clear the list
+    logger.addHandler(handler)
+    return logger
+
+
+def setup_access_logger(debug):
+    """
+    Setup logger to log all accesses to the tool
+    Automatically log user email
+    """
+    logger = logging.getLogger('access_log')
+    if debug:
+        # If debug - log to console
+        handler = logging.StreamHandler(sys.stdout)
+    else:
+        # If not debug - log to files
+        if not os.path.isdir('logs'):
+            os.mkdir('logs')
+
+        log_size = 1024 ** 3  # 10MB
+        log_count = 500  # 500 files
+        log_name = 'logs/access.log'
+        handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
+
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(fmt='[%(asctime)s][%(user)s] %(message)s')
+    handler.setFormatter(formatter)
+    handler.addFilter(UserFilter())
+    # del logger.handlers[:]  # Clear the list
+    logger.addHandler(handler)
+    return logger
+
+
+def setup_access_logging(app, logger, debug):
+    """
+    Setup logging of access to the logger
+    Log path, status code, time taken and user agent
+    """
+    def before():
+        g.request_start_time = time.time()
+
+    def after(response):
+        try:
+            if hasattr(g, 'request_start_time'):
+                time_taken = (time.time() - g.request_start_time)
+                time_taken = '%.2fms' % (float(time_taken) * 1000.0)
+            else:
+                time_taken = ' '
+
+            code = response.status_code
+            method = request.method
+            user_agent = request.headers.get('User-Agent', '<unknown user agent>')
+            url = '%s' % (request.path)
+            if request.query_string:
+                url += '?%s' % (request.query_string)
+
+            if not debug or not url.endswith(('.html', '.css', '.js')):
+                # During debugging suppress html, css and js file access logging
+                logger.info('%s %s %s %s %s', method, url, code, time_taken, user_agent)
+        except:
+            # Do not crash everything because of failing logger
+            pass
+
+        return response
+
+    app.before_request(before)
+    app.after_request(after)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='The McM - Monte Carlo Management tool')
+    parser.add_argument('--port', help='Port, default is 8000', type=int, default=8000)
+    parser.add_argument('--host', help='Host IP, default is 0.0.0.0', default='0.0.0.0')
+    parser.add_argument('--debug', help='Run Flask in debug mode', action='store_true')
+    args = vars(parser.parse_args())
+    port = args.get('port')
+    host = args.get('host')
+    debug = args.get('debug')
+    # Setup loggers
+    logging.root.setLevel(logging.DEBUG if debug else logging.INFO)
+    error_logger = setup_error_logger(debug)
+    setup_injection_logger(debug)
+    access_logger = setup_access_logger(debug)
+    setup_access_logging(app, access_logger, debug)
+    # Write McM PID to a file
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         # Do only once, before the reloader
         pid = os.getpid()
@@ -476,7 +531,10 @@ def run_flask():
         with open('mcm.pid', 'w') as pid_file:
             pid_file.write(str(pid))
 
-    app.run(host='0.0.0.0', port=8000, threaded=True, debug=debug)
+    error_logger.info('Starting McM, host=%s, port=%s, debug=%s', host, port, debug)
+    # Run flask
+    app.run(host=host, port=port, threaded=True, debug=debug)
+
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
@@ -484,6 +542,7 @@ def at_flask_exit(*args):
     com = communicator()
     com.flush(0)
 
+
 signal.signal(signal.SIGTERM, at_flask_exit)
 if __name__ == '__main__':
-    run_flask()
+    main()
