@@ -15,7 +15,7 @@ def get_all_chained_campaigns():
     chained_campaigns_db = database('chained_campaigns')
     all_chained_campaigns_result = do_with_timeout(chained_campaigns_db.get_all, timeout=300)
     if all_chained_campaigns_result:
-        prepids_list = [x['id'] for x in all_chained_campaigns_result]
+        prepids_list = [x['_id'] for x in all_chained_campaigns_result]
     else:
         prepids_list = []
 
