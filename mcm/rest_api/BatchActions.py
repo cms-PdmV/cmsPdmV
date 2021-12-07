@@ -141,8 +141,7 @@ class InspectBatches(BatchAnnouncer):
         bdb = database('batches')
         res = []
         if settings.get_value('batch_announce'):
-            __query = bdb.make_query({'status': 'new'})
-            new_batches = bdb.full_text_search('search', __query, page=-1)
+            new_batches = bdb.search({'status': 'new'}, page=-1)
             for new_batch in new_batches:
                 if batch_id and new_batch['prepid'] != batch_id:
                     continue
@@ -155,8 +154,7 @@ class InspectBatches(BatchAnnouncer):
         if settings.get_value('batch_set_done'):
             # check on on-going batches
             rdb = database('requests')
-            __query2 = bdb.make_query({'status': 'announced'})
-            announced_batches = bdb.full_text_search('search', __query2, page=-1)
+            announced_batches = bdb.search({'status': 'announced'}, page=-1)
             for announced_batch in announced_batches:
                 if batch_id and announced_batch['prepid'] != batch_id:
                     continue

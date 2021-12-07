@@ -157,7 +157,7 @@ class DeleteCampaign(RESTResource):
 
         # Check flows...
         flow_db = Database('flows')
-        flow_allowed_campaigns = flow_db.query('allowed_campaigns==%s' % (campaign_id), limit=3)
+        flow_allowed_campaigns = flow_db.query_view('allowed_campaigns', campaign_id, limit=3)
         if flow_allowed_campaigns:
             flow_ids = ', '.join(x['_id'] for x in flow_allowed_campaigns)
             message = 'Flow(s) %s have %s as allowed campaign, edit them first' % (flow_ids,
@@ -166,7 +166,7 @@ class DeleteCampaign(RESTResource):
             return {'results': False,
                     'message': message}
 
-        flow_next_campaign = flow_db.query('next_campaign==%s' % (campaign_id), limit=3)
+        flow_next_campaign = flow_db.query_view('next_campaign', campaign_id, limit=3)
         if flow_next_campaign:
             flow_ids = ', '.join(x['_id'] for x in flow_next_campaign)
             message = 'Flow(s) %s have %s as next campaign, edit them first' % (flow_ids,
@@ -177,7 +177,7 @@ class DeleteCampaign(RESTResource):
 
         # Check chained campaigns...
         chained_campaign_db = Database('chained_campaigns')
-        chained_campaigns = chained_campaign_db.query('campaign==%s' % (campaign_id), limit=3)
+        chained_campaigns = chained_campaign_db.query_view('campaign', campaign_id, limit=3)
         if chained_campaigns:
             chained_campaign_ids = ', '.join(x['_id'] for x in chained_campaigns)
             message = 'Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
@@ -188,7 +188,7 @@ class DeleteCampaign(RESTResource):
 
         # Check requests...
         request_db = Database('requests')
-        requests = request_db.query('member_of_campaign==%s' % (campaign_id), limit=3)
+        requests = request_db.query_view('member_of_campaign', campaign_id, limit=3)
         if requests:
             request_ids = ', '.join(x['_id'] for x in requests)
             message = 'Request(s) %s are member of %s, delete them first' % (request_ids,
@@ -198,7 +198,7 @@ class DeleteCampaign(RESTResource):
                     'message': message}
 
         # Get all campaigns that contain this campaign as "next"
-        campaigns_with_next = campaign_db.query('next==' + campaign_id)
+        campaigns_with_next = campaign_db.query_view('next', campaign_id,  page_num=-1)
         for campaign_next in campaigns_with_next:
             if campaign_id in campaign_next['next']:
                 campaign_next['next'].remove(campaign_id)
@@ -306,13 +306,13 @@ class InspectCampaigns(RESTResource):
             try:
                 self.logger.info('Starting campaign inspect of %s', campaign_id)
                 yield 'Starting campaign inspect of %s\n' % (campaign_id)
-                query = request_db.make_query({'member_of_campaign': campaign_id,
-                                               'status': ['submitted', 'approved']})
+                query = {'member_of_campaign': campaign_id,
+                         'status': ['submitted', 'approved']}
                 # Do another loop over the requests themselves
                 page = 0
                 requests = [{}]
                 while len(requests) > 0:
-                    requests = request_db.full_text_search('search', query, page=page, limit=200)
+                    requests = request_db.search(query, page=page, limit=200)
                     self.logger.info('Inspecting %s requests on page %s', len(requests), page)
                     yield 'Inspecting %s requests on page %s\n' % (len(requests), page)
                     for request_json in requests:

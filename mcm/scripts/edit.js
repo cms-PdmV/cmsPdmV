@@ -675,11 +675,11 @@ testApp.directive("listEdit", function($http){
         if (scope.fieldName == undefined || fieldValue == '') {
           return {};
         }
-        const searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        const searchURL = "restapi/requests/unique_values/" + scope.fieldName + "?key=" + fieldValue;
         return $http.get(searchURL).then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
+          alert("Error getting suggestions for " + scope.fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -767,14 +767,14 @@ testApp.directive("listPredefined", function($http){
         if (scope.fieldName == undefined) {
           return {};
         }
-        let searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        let searchURL = "restapi/requests/unique_values/" + scope.fieldName + "?key=" + fieldValue;
         if (scope.fieldName === 'ppd_tags') {
           searchURL = "restapi/requests/ppd_tags/" + scope.result.prepid ;
         }
         return $http.get(searchURL).then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
+          alert("Error getting suggestions for " + scope.fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }
@@ -855,11 +855,11 @@ testApp.directive("singlePredefined", function($http){
         if (scope.fieldName == undefined) {
           return {};
         }
-        const searchURL = "restapi/requests/unique_values/" + fieldName + "?key=" + fieldValue;
+        const searchURL = "restapi/requests/unique_values/" + scope.fieldName + "?key=" + fieldValue;
         return $http.get(searchURL).then(function (data) {
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
+          alert("Error getting suggestions for " + scope.fieldName + "=" + fieldValue + ": " + data.status);
         });
       };
     }

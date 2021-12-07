@@ -452,16 +452,13 @@ class GetFragmentForRequest(RESTResource):
 
     def get(self, request_id, version=None):
         """
-      Retrieve the fragment as stored for a given request
-      """
-        # TO-DO: do we need it? We should keep it fow backward compatibility
-        v = True if version else False
-
+        Retrieve the fragment as stored for a given request
+        """
         db = database(self.db_name)
-        res = self.get_fragment(db.get(prepid=request_id), v)
+        res = self.get_fragment(db.get(prepid=request_id))
         return dumps(res) if isinstance(res, dict) else res
 
-    def get_fragment(self, data, view):
+    def get_fragment(self, data):
         try:
             mcm_req = request(json_input=data)
         except request.IllegalAttributeName:
@@ -576,8 +573,7 @@ class DeleteRequest(RESTResource):
 
     def delete_chained_requests(self, pid):
         crdb = database('chained_requests')
-        __query = crdb.make_query({'contains': pid})
-        mcm_crs = crdb.full_text_search('search', __query, page=-1)
+        mcm_crs = crdb.search({'contains': pid}, page=-1)
         for doc in mcm_crs:
             crdb.delete(doc['prepid'])
 
@@ -594,8 +590,7 @@ class GetRequestByDataset(RESTResource):
         """
         datasetname = '/' + dataset.replace('*', '')
         rdb = database('requests')
-        __query = rdb.make_query({'produce': datasetname})
-        r = rdb.full_text_search('search', __query, page=-1)
+        r = rdb.search({'produce': datasetname}, page=-1)
 
         if len(r):
             return self.output_text({"results": r[0]},
@@ -624,8 +619,7 @@ class GetRequestOutput(RESTResource):
         if is_chain == 'chain':
             collect = []
             crdb = database('chained_requests')
-            __query = crdb.make_query({'contains': prepid})
-            for cr in crdb.full_text_search('search', __query, page=-1):
+            for cr in crdb.search({'contains': prepid}, page=-1):
                 for r in reversed(cr['chain']):
                     if r not in collect:
                         collect.append(r)
@@ -823,7 +817,7 @@ class GetStatusAndApproval(RESTResource):
                     'message': 'No prepids given'}
 
         request_db = database('requests')
-        results = request_db.db.bulk_get(prepids)
+        results = request_db.bulk_get(prepids)
         return {req['prepid']: '%s-%s' % (req['approval'], req['status']) for req in results}
 
 
@@ -928,9 +922,8 @@ class UpdateEventsFromWorkflow(RESTResource):
         """
 
         rdb = database('requests')
-        __query = rdb.make_query({"reqmgr_name": wf_id})
         # include only prepids for us
-        res = rdb.full_text_search("search", __query, page=-1, include_fields='prepid')
+        res = rdb.search({"reqmgr_name": wf_id}, page=-1, include_fields='prepid')
         if len(res) == 0:
             return {"workflow": wf_id, "results": False,
                     "message": "No requests found produced by this workflow"}
@@ -1174,7 +1167,7 @@ class RequestLister():
         return {"results": all_objects}
 
     def identify_an_id(self, word, in_range_line, cdb, odb):
-        all_campaigns = map(lambda x: x['id'], cdb.raw_query("prepid"))
+        all_campaigns = map(lambda x: x['id'], cdb.get_all())
         if word.count('-') == 2:
             (pwg, campaign, serial) = word.split('-')
             if len(pwg) != 3:
@@ -1260,8 +1253,7 @@ class RequestLister():
             if not cdb.document_exists(possible_campaign):
                 continue
                 # get all requests
-            __query3 = odb.make_query({'member_of_campaign': possible_campaign})
-            all_requests = odb.full_text_search('search', __query3, page=-1)
+            all_requests = odb.search({'member_of_campaign': possible_campaign}, page=-1)
             for _request in all_requests:
                 if _request['dataset_name'] in possible_dsn:
                     all_ids.append(_request['prepid'])
@@ -1303,7 +1295,7 @@ class StalledReminder(RESTResource):
         rdb = database('requests')
         bdb = database('batches')
         statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
-        __query = rdb.make_query({'status': 'submitted'})
+        __query = rdb.make_query()
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
         reminded = 0
@@ -1312,7 +1304,7 @@ class StalledReminder(RESTResource):
         page = 0
         rs = [{}]
         while len(rs) > 0:
-            rs = rdb.full_text_search('search', __query, page=page, limit=100)
+            rs = rdb.search({'status': 'submitted'}, page=page, limit=100)
             self.logger.info('Found %d requests that are in status submitted in page %d' % (len(rs), page))
             page += 1
             for r in rs:
@@ -1332,8 +1324,9 @@ class StalledReminder(RESTResource):
 
                 if (remaining > time_remaining and remaining != float('Inf')) or (elapsed > time_since and remaining != 0):
                     reminded += 1
-                    __query2 = bdb.make_query({'contains': r['prepid'], 'status': ['announced', 'hold']})
-                    bs = bdb.full_text_search('search', __query2, page=-1)
+                    bs = bdb.search({'contains': r['prepid'],
+                                     'status': ['announced', 'hold']},
+                                    page=-1)
                     # take the last one ?
                     in_batch = 'NoBatch'
                     if len(bs):
@@ -1367,11 +1360,9 @@ class StalledReminder(RESTResource):
         com = communicator()
 
         udb = database('users')
-        __query4 = udb.make_query({'role': 'production_manager'})
-        __query5 = udb.make_query({'role': 'generator_convener'})
 
-        production_managers = udb.full_text_search('search', __query4, page=-1)
-        gen_conveners = udb.full_text_search('search', __query5, page=-1)
+        production_managers = udb.search({'role': 'production_manager'}, page=-1)
+        gen_conveners = udb.search({'role': 'generator_convener'}, page=-1)
         people_list = production_managers + gen_conveners
         subject = "Gentle reminder of %d requests that appear stalled" % (reminded)
         if reminded != 0:
@@ -1408,8 +1399,7 @@ class RequestsReminder(RESTResource):
         # fill up the reminders
         def get_all_in_status(status, extracheck=None):
             campaigns_and_ids = {}
-            __query = rdb.make_query({'status': status})
-            for mcm_r in rdb.full_text_search('search', __query, page=-1):
+            for mcm_r in rdb.search({'status': status}, page=-1):
                 # check whether it has a valid action before to add them in the reminder
                 c = mcm_r['member_of_campaign']
                 if c not in campaigns_and_ids:
@@ -1467,35 +1457,18 @@ class RequestsReminder(RESTResource):
                     res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
 
                 if len(ids_for_production_managers):
-                    __query2 = udb.make_query({'role': 'production_manager'})
-                    production_managers = udb.full_text_search('search', __query2, page=-1)
+                    production_managers = udb.search({'role': 'production_manager'}, page=-1)
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
                     subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
                     com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
 
-            # if not what or 'gen_conveners' in what or 'generator_convener' in what:
-            #     # send the reminder to generator conveners
-            #     ids_for_gen_conveners = get_all_in_status('defined')
-            #     for c in ids_for_gen_conveners:
-            #         res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_gen_conveners[c]))
-            #     if len(ids_for_gen_conveners):
-            #         __query3 = udb.construct_lucene_query({'role': 'generator_convener'})
-            #         gen_conveners = udb.full_text_search('search', __query3, page=-1)
-            #         message = 'A few requests need your approvals \n\n'
-            #         message += prepare_text_for(ids_for_gen_conveners, 'defined')
-            #         subject = 'Gentle reminder on %s requests to be approved by you' % (count_entries(ids_for_gen_conveners))
-            #         com.sendMail(map(lambda u: u['email'], gen_conveners) + [settings.get_value('service_account')], subject, message)
-
             if not what or 'gen_contact' in what or 'generator_contact' in what:
                 all_ids = set()
                 # remind the gen contact about requests that are:
                 #   - in status new, and have been flown
-                # __query4 = rdb.construct_lucene_query({'status' : 'new'})
-                __query5 = rdb.make_query({'status': 'validation'})
-                # mcm_rs = rdb.full_text_search('search', __query4, page=-1)
                 mcm_rs = []
-                mcm_rs.extend(rdb.full_text_search('search', __query5, page=-1))
+                mcm_rs.extend(rdb.search({'status': 'validation'}, page=-1))
                 for mcm_r in mcm_rs:
                     c = mcm_r['member_of_campaign']
                     request_id = mcm_r['prepid']
@@ -1539,8 +1512,7 @@ class RequestsReminder(RESTResource):
                         yield '.'
 
                 # then remove the non generator
-                __query6 = udb.make_query({'role': 'generator_contact'})
-                gen_contacts = map(lambda u: u['username'], udb.full_text_search('search', __query6, page=-1))
+                gen_contacts = map(lambda u: u['username'], udb.search('search', {'role': 'generator_contact'}, page=-1))
                 for contact in ids_for_users.keys():
                     if who and contact not in who:
                         ids_for_users.pop(contact)
@@ -1651,8 +1623,8 @@ class ListRequestPrepids(RequestRESTResource):
             return {'results': []}
 
         db = database('requests')
-        query = db.make_query(query)
-        results = db.full_text_search('search', query, limit=limit, include_fields='prepid')
+        results = db.search(query, limit=limit, include_fields='prepid')
+        self.logger.info(results)
         return {"results": [r['prepid'] for r in results]}
 
 

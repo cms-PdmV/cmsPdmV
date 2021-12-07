@@ -46,7 +46,7 @@
                    ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);">
+                <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
                 <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(3);" ng-href="#">

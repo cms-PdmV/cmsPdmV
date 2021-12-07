@@ -654,7 +654,7 @@ class chained_request(json_base):
             else:
                 # Store matching length in dictionary
                 matching = dict(chained_request_ids)
-                chained_requests = crdb.db.bulk_get([c[0] for c in chained_request_ids])
+                chained_requests = crdb.bulk_get([c[0] for c in chained_request_ids])
                 # Remove all that are not long enough
                 chained_requests = [c for c in chained_requests if len(c['chain']) > next_step]
                 self.logger.debug('%s chained are long enough (need at least %s length):\n%s',
@@ -688,7 +688,7 @@ class chained_request(json_base):
                     if not other_chain:
                         continue
 
-                    other_requests = rdb.db.bulk_get(other_chain)
+                    other_requests = rdb.bulk_get(other_chain)
                     for other_request in other_requests:
                         other_prepid = other_request['prepid']
                         other_keep_output = other_request['keep_output'][-1]

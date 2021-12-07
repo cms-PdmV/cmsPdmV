@@ -427,7 +427,7 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
         scope.newRequestPrepid[index] = undefined;
       };
       scope.refreshCampaignsForChains = function() {
-        $rootScope.campaignsForChains = scope.requests.map(x => 'chain_' + (_.isArray(x) ? x[0] : x).split('-')[1] + '_*');
+        $rootScope.campaignsForChains = scope.requests.map(x => 'chain_' + (_.isArray(x) ? x[0] : x).split('-')[1] + '*');
       };
       scope.addRequest = function(index) {
         const newPrepid = scope.newRequestPrepid[index].trim();

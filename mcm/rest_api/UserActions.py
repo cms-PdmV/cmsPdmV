@@ -120,8 +120,7 @@ class AskRole(RESTResource):
         udb.update(mcm_u.json())
 
         # get the production managers emails
-        __query = udb.make_query({'role': 'production_manager'})
-        production_managers = udb.full_text_search('search', __query, page=-1)
+        production_managers = udb.search({'role': 'production_manager'}, page=-1)
         # send a notification to prod manager + service
         to_who = map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')]
         to_who.append(user_p.get_email())
@@ -232,7 +231,7 @@ class NotifyPWG(RESTResource):
     def notify(self, body):
         db = database('users')
         data = loads(body)
-        list_of_mails = [x["value"] for x in db.raw_query('pwg-mail', {'key': data["pwg"]})]
+        list_of_mails = [x["value"] for x in db.query_view('pwg-mail', data["pwg"], page_num=-1)]
         com = communicator()
         com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
         return {'results': True, 'message': 'Sent message to {0}'.format(list_of_mails)}
