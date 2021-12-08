@@ -67,33 +67,17 @@ class RequestRESTResource(RESTResource):
 
         self.logger.info('Building new request...')
 
-        # set '_id' and 'prepid' fields
-        if mcm_req.get_attribute('_id'):
-            mcm_req.set_attribute('prepid', mcm_req.get_attribute('_id'))
-        elif mcm_req.get_attribute('prepid'):
-            mcm_req.set_attribute('_id', mcm_req.get_attribute('prepid'))
-        else:
-            mcm_req.set_attribute('_id', '')
-            mcm_req.set_attribute('prepid', '')
+        prepid = RequestPrepId().next_prepid(mcm_req.get_attribute('pwg'),
+                                             mcm_req.get_attribute('member_of_campaign'))
+        self.logger.info('New prepid: %s', prepid)
+        if not prepid:
+            return {'results': False,
+                    'message': 'Could not create new prepid. Prepid required PWG and campaign name'}
 
-        # N.B (JR), '' is always an existing document
-        existed = False
-        if db.document_exists(mcm_req.get_attribute('_id')):
-            existed = True
-            self.logger.error('prepid %s already exists. Generating another...' % (mcm_req.get_attribute('_id')))
-
-            prepid = RequestPrepId().next_prepid(mcm_req.get_attribute('pwg'),
-                                                 mcm_req.get_attribute('member_of_campaign'))
-            mcm_req = request(db.get(prepid))
-            for key in data:
-                if key not in ['prepid', '_id', 'history']:
-                    mcm_req.set_attribute(key, data[key])
-
-            if not mcm_req.get_attribute('prepid'):
-                self.logger.error('prepid returned was None')
-                return {"results": False, "message": "internal error and the request id is null"}
-
-        self.logger.info('New prepid: %s' % (mcm_req.get_attribute('prepid')))
+        mcm_req = request(db.get(prepid))
+        for key in data:
+            if key not in ['prepid', '_id', 'history']:
+                mcm_req.set_attribute(key, data[key])
 
         number_of_sequences = len(camp.get_attribute('sequences'))
         if 'time_event' not in data:
