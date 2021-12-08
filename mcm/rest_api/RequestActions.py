@@ -120,20 +120,16 @@ class RequestRESTResource(RESTResource):
                 mcm_req.update_history({'action': label})
 
         # save to database or update if existed
-        if not existed:
-            interested_pwg = mcm_req.get_attribute('interested_pwg')
-            pwg = mcm_req.get_attribute('pwg')
-            if pwg not in interested_pwg:
-                interested_pwg.append(pwg)
-                mcm_req.set_attribute('interested_pwg', interested_pwg)
+        interested_pwg = mcm_req.get_attribute('interested_pwg')
+        pwg = mcm_req.get_attribute('pwg')
+        if pwg not in interested_pwg:
+            interested_pwg.append(pwg)
+            mcm_req.set_attribute('interested_pwg', interested_pwg)
 
-            if not db.save(mcm_req.json()):
-                self.logger.error('Could not save results to database')
-                return {"results": False}
-        else:
-            if not db.update(mcm_req.json()):
-                self.logger.error('Could not update request in database')
-                return {"results": False}
+        if not db.save(mcm_req.json()):
+            self.logger.error('Could not save results to database')
+            return {"results": False}
+
         return {"results": True, "prepid": mcm_req.get_attribute('_id')}
 
 
