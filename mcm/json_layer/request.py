@@ -519,8 +519,7 @@ class request(json_base):
         request_db = Database('requests')
         dataset_name = self.get_attribute('dataset_name')
         campaign = self.get_attribute('member_of_campaign')
-        query = request_db.make_query({'dataset_name': dataset_name,
-                                       'member_of_campaign': campaign})
+        query = {'dataset_name': dataset_name, 'member_of_campaign': campaign}
         similar_requests = request_db.search('search', query, page=-1)
         if len(similar_requests) == 0:
             raise Exception('It seems that database is down, could not check for duplicates')
@@ -563,8 +562,7 @@ class request(json_base):
         """
         invalidation_db = Database('invalidations')
         prepid = self.get_attribute('prepid')
-        query = invalidation_db.make_query({'prepid': prepid})
-        invalidations = invalidation_db.search("search", query, page=-1)
+        invalidations = invalidation_db.search("search", {'prepid': prepid}, page=-1)
         invalidations = [i for i in invalidations if i["status"] in {"new", "announced"}]
         if invalidations:
             raise Exception('There are %s unacknowledged invalidations for %s' % (len(invalidations),

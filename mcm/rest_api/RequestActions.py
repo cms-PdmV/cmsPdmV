@@ -76,24 +76,7 @@ class RequestRESTResource(RESTResource):
         prepid = '%s-%s' % (pwg, campaign_name)
         with locker.lock('create-request-%s' % (prepid)):
             self.logger.info('Will try to find new prepid for request %s-*', prepid)
-            query = request_db.make_query({'prepid': '%s-*' % (prepid)})
-            newest = request_db.search('search', query, limit=1, sort_asc=False)
-            if newest:
-                number = int(newest[0]['prepid'].split('-')[-1]) + 1
-            else:
-                number = 1
-
-            prepid = '%s-%05d' % (prepid, number)
-            self.logger.info('New prepid - %s', prepid)
-            if request_db.document_exists(prepid):
-                return {"results": False,
-                        "message": "Request %s already exists" % (prepid)}
-
-            request.set_attribute('prepid', prepid)
-            request.set_attribute('_id', prepid)
-            if not request_db.save(request.json()):
-                return {'results': False,
-                        'message': 'Request could not be created'}
+            raise NotImplemented('GENERATING PREPID FOR REQUEST')
 
         return {'results': True,
                 'prepid': prepid}
@@ -435,7 +418,7 @@ class GetFragmentForRequest(RESTResource):
         """
         Retrieve the fragment as stored for a given request
         """
-        db = database(self.db_name)
+        db = Database(self.db_name)
         res = self.get_fragment(db.get(prepid=request_id))
         return dumps(res) if isinstance(res, dict) else res
 
@@ -496,7 +479,7 @@ class GetRequestByDataset(RESTResource):
         retrieve the dictionnary of a request, based on the output dataset specified
         """
         datasetname = '/' + dataset.replace('*', '')
-        rdb = database('requests')
+        rdb = Database('requests')
         r = rdb.search({'produce': datasetname}, page=-1)
 
         if len(r):
@@ -525,7 +508,7 @@ class GetRequestOutput(RESTResource):
 
         if is_chain == 'chain':
             collect = []
-            crdb = database('chained_requests')
+            crdb = Database('chained_requests')
             for cr in crdb.search({'contains': prepid}, page=-1):
                 for r in reversed(cr['chain']):
                     if r not in collect:
@@ -691,8 +674,8 @@ class GetStatusAndApproval(RESTResource):
             return {'results': False,
                     'message': 'No prepids given'}
 
-        request_db = database('requests')
-        results = request_db.bulk_get(prepids)
+        request_db = Database('requests')
+        results = [r for r in request_db.bulk_get(prepids) if r]
         return {req['prepid']: '%s-%s' % (req['approval'], req['status']) for req in results}
 
 
@@ -714,7 +697,7 @@ class InspectStatus(RESTResource):
         rlist = rid.rsplit(',')
         res = []
         db = Database('requests')
-        crdb = database('chained_requests')
+        crdb = Database('chained_requests')
         for r in rlist:
             if not db.document_exists(r):
                 res.append({"prepid": r, "results": False, 'message': '%s does not exist' % r})
@@ -796,7 +779,7 @@ class UpdateEventsFromWorkflow(RESTResource):
         Update statistics for requests from specified workflow
         """
 
-        rdb = database('requests')
+        rdb = Database('requests')
         # include only prepids for us
         res = rdb.search({"reqmgr_name": wf_id}, page=-1, include_fields='prepid')
         if len(res) == 0:
@@ -960,7 +943,7 @@ class RegisterUser(RESTResource):
 
     def register_user(self, pid):
         rdb = Database('requests')
-        udb = database('users')
+        udb = Database('users')
         request_in_db = request(rdb.get(pid))
         current_user = request_in_db.current_user
         if not current_user or not udb.document_exists(current_user):
@@ -1069,7 +1052,7 @@ class RequestLister():
         all_dsn = {}
         # parse that file for prepids
         possible_campaign = None
-        cdb = database('campaigns')
+        cdb = Database('campaigns')
 
         for line in text.split('\n'):
             in_the_line = []
@@ -1160,8 +1143,8 @@ class StalledReminder(RESTResource):
         Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
         """
         rdb = Database('requests')
-        bdb = database('batches')
-        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+        bdb = Database('batches')
+        statsDB = Database('stats', url='http://vocms074.cern.ch:5984/')
         __query = rdb.make_query()
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
@@ -1226,7 +1209,7 @@ class StalledReminder(RESTResource):
         text += "\nAttention might be required\n"
         com = communicator()
 
-        udb = database('users')
+        udb = Database('users')
 
         production_managers = udb.search({'role': 'production_manager'}, page=-1)
         gen_conveners = udb.search({'role': 'generator_convener'}, page=-1)
@@ -1256,9 +1239,9 @@ class RequestsReminder(RESTResource):
         if who is not None:
             who = who.split(',')
 
-        udb = database('users')
+        udb = Database('users')
         rdb = Database('requests')
-        crdb = database('chained_requests')
+        crdb = Database('chained_requests')
         # a dictionary contact : { campaign : [ids] }
         ids_for_users = {}
 
@@ -1489,7 +1472,7 @@ class ListRequestPrepids(RequestRESTResource):
         if not query:
             return {'results': []}
 
-        db = database('requests')
+        db = Database('requests')
         results = db.search(query, limit=limit, include_fields='prepid')
         self.logger.info(results)
         return {"results": [r['prepid'] for r in results]}
@@ -1548,7 +1531,7 @@ class GetUniqueValues(RESTResource):
         Get unique values for navigation by field_name
         """
         args = flask.request.args.to_dict()
-        db = database('requests')
+        db = Database('requests')
         return {'results': db.query_unique(field_name,
                                            args.get('key', ''),
                                            int(args.get('limit', 10)))}
@@ -1593,7 +1576,7 @@ class Reserve_and_ApproveChain(RESTResource):
     def __init__(self):
         self.before_request()
         self.count_call()
-        self.cdb = database("chained_requests")
+        self.cdb = Database("chained_requests")
         self.rdb = Database('requests')
 
     def get(self, chain_id):
