@@ -460,9 +460,9 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           viewValue = pattern[0] + '-' + pattern[1] + '-' + (sequence.length == 3 ? sequence[2] : '');
         }
         const campaign = $rootScope.campaignsForRequests.length ? '&campaign=' + $rootScope.campaignsForRequests.join(',') : '';
-        const promise = $http.get("restapi/requests/search_view?prepid=" + viewValue + campaign);
+        const promise = $http.get("search?db_name=requests&prepid=" + viewValue + campaign);
         return promise.then(function(data){
-          return data.data.results.filter(x => x != firstPrepid);
+          return data.data.results.mape(x => x['prepid']).filter(x => x != firstPrepid);
         }, function(data){
           alert("Error getting requests: " + data.data);
         });

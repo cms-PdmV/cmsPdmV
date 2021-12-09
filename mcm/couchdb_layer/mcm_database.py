@@ -9,6 +9,7 @@ import urllib2
 import urllib
 from tools.locator import locator
 from tools.locker import locker
+from tools.config_manager import Config
 from cachelib import SimpleCache
 
 
@@ -43,8 +44,7 @@ class database:
         """
         Return authentication to couchdb header
         """
-        filename = '/home/pdmvserv/private/couchdb_credentials_json.txt'
-        filename = os.getenv('COUCH_CRED', filename)
+        filename = Config.get('database_auth')
         with open(filename) as json_file:
             credentials = json.load(json_file)
 

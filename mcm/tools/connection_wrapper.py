@@ -23,23 +23,28 @@ class ConnectionWrapper():
 
     def __init__(self,
                  host,
-                 port=443,
                  keep_open=False,
                  cert_file=None,
                  key_file=None):
         self.logger = logging.getLogger('mcm_error')
         self.connection = None
-        self.https = True
+        host = host.rstrip('/')
         if host.startswith('https://'):
             self.host_url = host.replace('https://', '', 1)
+            self.https = True
+            self.port = host.split(':'[-1]) or 443
         elif host.startswith('http://'):
             self.host_url = host.replace('http://', '', 1)
             self.https = False
+            self.port = host.split(':'[-1]) or 80
+        else:
+            self.host_url = host
+            self.https = False
+            self.port = 80
 
         self.cert_file = cert_file or os.getenv('USERCRT', None)
         self.key_file = key_file or os.getenv('USERKEY', None)
         self.keep_open = keep_open
-        self.port = port
         self.connection_attempts = 3
         self.timeout = 120
 

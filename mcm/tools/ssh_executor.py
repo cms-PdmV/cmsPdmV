@@ -26,6 +26,7 @@ class ssh_executor:
         self.error_logger = logging.getLogger("mcm_error")
         self.logger = InjectionLogAdapter(logging.getLogger("mcm_inject"), {'handle': prepid})
         self.__build_ssh_client()
+        self.logger.warning('DEPRECATE old ssh_executor!')
 
     def __enter__(self):
         return self

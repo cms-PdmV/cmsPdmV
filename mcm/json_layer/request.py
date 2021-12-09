@@ -228,7 +228,7 @@ class request(json_base):
             return []
 
         chained_request_db = Database('chained_requests')
-        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
+        chained_requests = chained_request_db.bulk_get(chained_request_ids)
         return chained_requests
 
     def get_previous_request(self):
@@ -641,7 +641,7 @@ class request(json_base):
             return
 
         request_db = Database('requests')
-        requests = request_db.db.bulk_get(list(prepids))
+        requests = request_db.bulk_get(list(prepids))
         approval_status = self.get_approval_status()
         order = ['none-new',
                  'validation-new',
@@ -673,7 +673,7 @@ class request(json_base):
         def get_requests(prepids):
             to_get = [p for p in prepids if p not in requests_cache]
             if to_get:
-                requests = request_db.db.bulk_get(to_get)
+                requests = request_db.bulk_get(to_get)
                 for request in requests:
                     requests_cache[request['prepid']] = request
 
@@ -760,7 +760,7 @@ class request(json_base):
 
         # Collect chains and requests that should be submitted together
         submitted_together = self.to_be_submitted_together(chained_requests)
-
+        raise NotImplemented('Submission is no implemented')
         # TODO: submit
         # from tools.handlers import ChainRequestInjector, submit_pool
         # _q_lock = locker.thread_lock(prepid)
@@ -904,6 +904,11 @@ class request(json_base):
                 continue
 
     def reset_options(self):
+        """
+        Re-fetch energy, cmssw release, pu dataset, type, input dataset, memory
+        and sequences from the campaign and apply flow parameters if any
+        Make sure there is correct number of time and size per event values
+        """
         prepid = self.get_attribute('prepid')
         campaign_db = Database('campaigns')
         campaign_name = self.get_attribute('member_of_campaign')

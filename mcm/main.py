@@ -1,6 +1,6 @@
 from rest_api.ControlActions import Search, Communicate, CacheInfo, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, ListRequestPrepids, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
+from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
 from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -17,6 +17,7 @@ from rest_api.ListActions import GetList, UpdateList
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
 from tools.logger import UserFilter
+from tools.config_manager import Config
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 
@@ -247,7 +248,6 @@ api.add_resource(
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>')
 api.add_resource(UpdateMany, '/restapi/requests/update_many')
-api.add_resource(ListRequestPrepids, '/restapi/requests/search_view')
 api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:request_ids>')
 api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
 api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
@@ -503,12 +503,11 @@ def setup_access_logging(app, logger, debug):
 
 def main():
     parser = argparse.ArgumentParser(description='The McM - Monte Carlo Management tool')
-    parser.add_argument('--port', help='Port, default is 8000', type=int, default=8000)
-    parser.add_argument('--host', help='Host IP, default is 0.0.0.0', default='0.0.0.0')
-    parser.add_argument('--debug', help='Run Flask in debug mode', action='store_true')
+    parser.add_argument('--port', help='Port, default is 8000', type=int)
+    parser.add_argument('--host', help='Host IP, default is 0.0.0.0')
+    parser.add_argument('--debug', help='Run McM in debug mode', action='store_true')
+    parser.add_argument('--prod', help='Run McM in production mode', action='store_true')
     args = vars(parser.parse_args())
-    port = args.get('port')
-    host = args.get('host')
     debug = args.get('debug')
     # Setup loggers
     logging.root.setLevel(logging.DEBUG if debug else logging.INFO)
@@ -524,8 +523,13 @@ def main():
         with open('mcm.pid', 'w') as pid_file:
             pid_file.write(str(pid))
 
-    error_logger.info('Starting McM, host=%s, port=%s, debug=%s', host, port, debug)
+    # Read config
+    prod = args.get('prod')
+    Config.load('config.cfg', 'production' if prod else 'development')
     # Run flask
+    port = args.get('port', Config.getint('port'))
+    host = args.get('host', Config.get('host'))
+    error_logger.info('Starting McM, host=%s, port=%s, debug=%s, prod=%s', host, port, debug, prod)
     app.run(host=host, port=port, threaded=True, debug=debug)
 
 

@@ -6,7 +6,7 @@ from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
 import tools.settings as Settings
 from tools.locker import locker
-from couchdb_layer.mcm_database import Database
+from couchdb_layer.mcm_database import database as Database
 from copy import deepcopy
 from tools.user_management import access_rights
 

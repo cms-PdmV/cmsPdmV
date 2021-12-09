@@ -221,7 +221,7 @@ class UpdateRequest(RequestRESTResource):
             if new_multiplier != old_multiplier and new_multiplier > 2:
                 if new_request.current_user_level < access_rights.generator_convener:
                     return {"results": False,
-                            'message': 'You need to be at least GEN convener to set validation to >16h'}
+                            'message': 'Need to be at least GEN convener to set validation to >16h'}
 
             self.logger.info('Updating request %s' % (prepid))
             difference = self.get_obj_diff(old_request.json(),
@@ -293,7 +293,7 @@ class DeleteRequest(RESTResource):
                                    'requests that are member of chained requests'}
 
         chained_request_db = Database('chained_requests')
-        chained_requests = chained_request_db.db.bulk_get(chained_request_ids)
+        chained_requests = chained_request_db.bulk_get(chained_request_ids)
         chained_requests_with_request = []
         chained_requests_to_delete = []
         for chained_request in chained_requests:
@@ -366,7 +366,7 @@ class OptionResetForRequest(RESTResource):
         request_db = Database('requests')
         request_ids = [r.strip() for r in request_ids.split(',') if r.strip()]
         results = []
-        requests = request_db.db.bulk_get(request_ids)
+        requests = request_db.bulk_get(request_ids)
         for req_json in requests:
             if not req_json:
                 continue
@@ -558,7 +558,7 @@ class ApproveRequest(RESTResource):
         self.allowed_to_approve_users = set(settings.get_value('allowed_to_approve'))
         self.allowed_to_approve_roles = {'administrator', 'generator_convener'}
         self.request_db = Database('requests')
-        requests = self.request_db.db.bulk_get(prepids)
+        requests = self.request_db.bulk_get(prepids)
         results = []
         for prepid, request in zip(prepids, requests):
             if not request:
@@ -1451,36 +1451,6 @@ class UpdateMany(RequestRESTResource):
                 return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
         return {"results": return_info}
-
-
-class ListRequestPrepids(RequestRESTResource):
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self):
-        """
-        List all prepids for ticket editing page
-        """
-        args = flask.request.args.to_dict()
-        limit = int(args.get('limit', 10))
-        prepid = args.get('prepid', '').strip()
-        campaign =args.get('campaign', '').strip()
-        query = {}
-        if prepid:
-            query['prepid'] = '%s*' % (prepid)
-
-        if campaign:
-            query['member_of_campaign'] = campaign.split(',')
-
-        if not query:
-            return {'results': []}
-
-        db = Database('requests')
-        results = db.search(query, limit=limit, include_fields='prepid')
-        self.logger.info(results)
-        return {"results": [r['prepid'] for r in results]}
 
 
 class GetUploadCommand(RESTResource):
