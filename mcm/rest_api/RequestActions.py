@@ -73,10 +73,15 @@ class RequestRESTResource(RESTResource):
         if campaign_json.get('root') <= 0:
             request.update_generator_parameters()
 
-        prepid = '%s-%s' % (pwg, campaign_name)
-        with locker.lock('create-request-%s' % (prepid)):
-            self.logger.info('Will try to find new prepid for request %s-*', prepid)
-            raise NotImplemented('GENERATING PREPID FOR REQUEST')
+        prepid_part = '%s-%s' % (pwg, campaign_name)
+        with locker.lock('create-request-%s' % (prepid_part)):
+            prepid = request_db.get_next_prepid(prepid_part, [campaign_name, pwg])
+            request.set_attribute('prepid', prepid)
+            request.set_attribute('_id', prepid)
+            request.update_history({'action': 'created'})
+            if request_db.save(request.json()):
+                return {'results': True,
+                        'prepid': prepid}
 
         return {'results': True,
                 'prepid': prepid}

@@ -19,6 +19,7 @@ class database:
     IP_CACHE_TIMEOUT = 15 * 60
     cache = SimpleCache()
     ip_cache = SimpleCache()
+    serial_number_cache = {}
 
     def __init__(self, db_name, url=None, lucene_url=None, cache_enabled=False):
         if not url:
@@ -497,3 +498,37 @@ class database:
                     'total_rows': 0}
 
         return []
+
+    def get_next_prepid(self, prepid_part, key):
+        """
+        Return next unused prepid
+        First fetch highest number from serial_number view and then brute force
+        the number in case there are deleted documents
+        This method does NOT use locks and is not thread safe, calling function
+        should take care of that
+        """
+        cache = self.serial_number_cache[self.db_name]
+        if prepid_part in cache:
+            number = cache[prepid_part] + 1
+        else:
+            newest = self.raw_query_view(self.db_name,
+                                        'serial_number',
+                                        page=0,
+                                        limit=1,
+                                        options={'group': True,
+                                                 'include_docs': False,
+                                                 'key': key})
+            number = 1
+            if newest:
+                self.logger.info('Highest prepid number: %05d', newest[0])
+                number = newest[0] + 1
+
+        # Save last used prepid
+        # Make sure to include all deleted ones
+        prepid = '%s-%05d' % (prepid_part, number)
+        while self.document_exists(prepid, include_deleted=True):
+            number += 1
+            prepid = '%s-%05d' % (prepid_part, number)
+
+        cache[prepid_part] = number
+        return prepid

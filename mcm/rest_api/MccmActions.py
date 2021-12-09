@@ -47,36 +47,17 @@ class CreateMccm(RESTResource):
                     'message': 'Duplicated requests: %s' % (', '.join(duplicates))}
 
         mccm_db = Database('mccms')
-        # need to complete the prepid
-        with locker.lock('create-ticket-%s' % (pwg)):
-            meeting_date = MccM.get_meeting_date()
-            meeting_date_full = meeting_date.strftime('%Y-%m-%d')
-            meeting_date_short = meeting_date.strftime('%Y%b%d')
-            prepid_part = '%s-%s' % (pwg, meeting_date_short)
-
-            newest = mccm_db.raw_query_view('mccms',
-                                            'serial_number',
-                                            page=0,
-                                            limit=1,
-                                            options={'group': True,
-                                                     'include_docs': False,
-                                                     'key': [meeting_date_full, pwg]})
-            number = 1
-            if newest:
-                self.logger.info('Highest prepid number: %05d', newest[0])
-                number = newest[0] + 1
-
-            # Save last used prepid
-            # Make sure to include all deleted ones
-            prepid = '%s-%05d' % (prepid_part, number)
-            while mccm_db.document_exists(prepid, include_deleted=True):
-                number += 1
-                prepid = '%s-%05d' % (prepid_part, number)
-
+        # Needed for prepid
+        meeting_date = MccM.get_meeting_date()
+        meeting_date_full = meeting_date.strftime('%Y-%m-%d')
+        meeting_date_short = meeting_date.strftime('%Y%b%d')
+        mccm.set_attribute('meeting', meeting_date_full)
+        mccm.set_attribute('pwg', pwg) # Uppercase
+        prepid_part = '%s-%s' % (pwg, meeting_date_short)
+        with locker.lock('create-ticket-%s' % (prepid_part)):
+            prepid = mccm_db.get_next_prepid(prepid_part, [meeting_date_full, pwg])
             mccm.set_attribute('prepid', prepid)
             mccm.set_attribute('_id', prepid)
-            mccm.set_attribute('pwg', pwg) # Uppercase
-            mccm.set_attribute('meeting', meeting_date_full)
             mccm.update_history({'action': 'created'})
             if mccm_db.save(mccm.json()):
                 return {'results': True,
