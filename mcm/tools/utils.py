@@ -30,6 +30,7 @@ def get_scram_arch(cmssw_release):
     if not cmssw_release:
         return None
 
+    global __scram_arch_cache_update
     if __scram_arch_cache_update + __scram_arch_cache_timeout <= time.time():
         # Cache not timed out yet
         cached_value = __scram_arch_cache.get(cmssw_release)
@@ -54,7 +55,6 @@ def get_scram_arch(cmssw_release):
             for release in architecture:
                 __scram_arch_cache[release.attrib.get('label')] = scram_arch
 
-        global __scram_arch_cache_update
         __scram_arch_cache_update = time.time()
 
     return __scram_arch_cache.get(cmssw_release)

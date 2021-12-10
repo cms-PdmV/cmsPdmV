@@ -1,3 +1,6 @@
+import datetime
+
+from tools.settings import Settings
 from json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 
@@ -42,10 +45,8 @@ class mccm(json_base):
         """
         Get next meeting date
         """
-        import datetime
-        import tools.settings as settings
         today = datetime.date.today()
-        meeting_day = int(settings.get_value('mccm_meeting_day'))
+        meeting_day = Settings.get('mccm_meeting_day')
         weeks = 0 if meeting_day >= today.weekday() else 1
         today = today + datetime.timedelta(days=meeting_day - today.weekday(), weeks=weeks)
         return today

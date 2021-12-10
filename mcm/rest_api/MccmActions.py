@@ -13,7 +13,7 @@ from json_layer.request import request as Request
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
-import tools.settings as settings
+from tools.settings import Settings
 from tools.user_management import access_rights
 from tools.user_management import user_pack as UserPack
 from tools.priority import priority
@@ -24,8 +24,7 @@ class CreateMccm(RESTResource):
     access_limit = access_rights.generator_contact
 
     def __init__(self):
-        settings_db = Database('settings')
-        self.possible_pwgs = settings_db.get("pwg")["value"]
+        self.possible_pwgs = Settings.get('pwg')
         self.before_request()
         self.count_call()
 

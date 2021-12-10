@@ -9,7 +9,6 @@ from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
 from tools.user_management import access_rights
-import tools.settings as settings
 
 
 class CreateChainedCampaign(RESTResource):

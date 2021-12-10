@@ -1,55 +1,70 @@
-import sys
-from couchdb_layer.mcm_database import database
-from tools.locker import locker
+"""
+Module that contains Settings class
+"""
 from cachelib import SimpleCache
+from couchdb_layer.mcm_database import database as Database
+from tools.locker import locker
 
-__cache = SimpleCache()
-__db = database('settings')
-# Cache timeout in seconds
-CACHE_TIMEOUT = 30 * 60
 
-def get(label):
-    cached_value = __cache.get(label)
-    if cached_value is not None:
-        return cached_value
+def Settings():
+    """
+    Settings class provices a convenient way of managing setting objects in the
+    database
+    Fetched values are cached for an hour
+    """
+    __cache = SimpleCache(default_timeout=3600) # Cache timeout 1h
+    __database = Database('settings')
 
-    with locker.lock(label):
-        setting = __db.get(label)
-        __cache.set(label, setting, timeout=CACHE_TIMEOUT)
+    @classmethod
+    def get_setting(cls, key):
+        """
+        Get a setting object from cache or database
+        """
+        if cls.__cache.has(key):
+            return cls.__cache.get(key)
+
+        setting = cls.__database.get(key)
+        cls.__cache.set(key, setting)
         return setting
 
-def get_value(label):
-    return get(label)['value']
+    @classmethod
+    def get(cls, key):
+        """
+        Get just the setting value
+        """
+        return cls.get_setting(key)['value']
 
-def get_notes(label):
-    return get(label)['notes']
+    @classmethod
+    def set_setting(cls, key, value, notes=None):
+        """
+        Set setting value and notes and save to database
+        If notes are None, they will not be updated
+        """
+        with locker.lock('settings-%s' % (key)):
+            setting = cls.__database.get(key)
+            if not setting:
+                setting = {'_id': key}
 
-def add(label, setting):
-    with locker.lock(label):
-        result = __db.save(setting)
-        if result:
-            __cache.set(label, setting, timeout=CACHE_TIMEOUT)
+            setting['value'] = value
+            if notes is not None:
+                setting['notes'] = notes
 
-        return result
+            if cls.__database.save(setting):
+                cls.__cache.set(key, value)
+                return True
 
-def set_value(label, value):
-    with locker.lock(label):
-        setting = get(label)
-        setting['value'] = value
-        return set(label, setting)
+            return False
 
-def set(label, setting):
-    with locker.lock(label):
-        result = __db.update(setting)
-        if result:
-            __cache.set(label, setting, timeout=CACHE_TIMEOUT)
+    @classmethod
+    def set(cls, key, value):
+        """
+        Set a setting value
+        """
+        return cls.set_setting(key, value)
 
-        return result
-
-def cache_size():
-    return len(__cache._cache), sys.getsizeof(__cache._cache)
-
-def clear_cache():
-    size = cache_size()
-    __cache.clear()
-    return size
+    @classmethod
+    def clear_cache(cls):
+        """
+        Clear settings cache
+        """
+        cls.__cache.clear()

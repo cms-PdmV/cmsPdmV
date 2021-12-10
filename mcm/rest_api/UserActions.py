@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-
 from json import loads
 from flask import request
 
 from RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
-import tools.settings as settings
+from tools.settings import Settings settings
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.user import user
@@ -43,7 +41,7 @@ class GetUserPWG(RESTResource):
         """
         # this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
 
-        all_pwgs = settings.get_value('pwg')
+        all_pwgs = Settings.get('pwg')
         db = database('users')
 
         all_pwgs.sort()
@@ -122,7 +120,7 @@ class AskRole(RESTResource):
         # get the production managers emails
         production_managers = udb.search({'role': 'production_manager'}, page=-1)
         # send a notification to prod manager + service
-        to_who = map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')]
+        to_who = map(lambda u: u['email'], production_managers) + [Settings.get('service_account')]
         to_who.append(user_p.get_email())
         com = communicator()
         l_type = locator()

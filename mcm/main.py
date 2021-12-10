@@ -10,7 +10,7 @@ from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBat
 from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
 from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
-from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
+from rest_api.SettingsActions import GetSetting, SetSetting
 from rest_api.TagActions import GetTags, AddTag, RemoveTag
 from rest_api.ListActions import GetList, UpdateList
 
@@ -360,9 +360,8 @@ api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string
 api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:mccm_id>')
 api.add_resource(NotifyMccm, '/restapi/mccms/notify')
 # REST settings Actions
-api.add_resource(GetSetting, '/restapi/settings/get/<string:setting_id>')
-api.add_resource(UpdateSetting, '/restapi/settings/update')
-api.add_resource(SaveSetting, '/restapi/settings/save')
+api.add_resource(GetSetting, '/restapi/settings/get/<string:key>')
+api.add_resource(SetSetting, '/restapi/settings/set')
 # REST list Actions
 api.add_resource(GetList, '/restapi/lists/get/<string:list_id>')
 api.add_resource(UpdateList, '/restapi/lists/update')
