@@ -24,6 +24,7 @@ import tools.settings as settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
+from tools.utils import clean_split, expand_range
 from flask_restful import reqparse
 from tools.user_management import user_pack as UserPack
 
@@ -1008,131 +1009,37 @@ class SearchableRequest(RESTResource):
         return searchable
 
 
-class RequestLister():
-    def __init__(self):
-        pass
-
-    def get_objects(self, all_ids, retrieve_db):
-        all_objects = []
-        if len(all_ids) and retrieve_db:
-            for oid in all_ids:
-                if retrieve_db.document_exists(oid):
-                    all_objects.append(retrieve_db.get(oid))
-        self.logger.info("Got %s ids identified" % (len(all_objects)))
-        return {"results": all_objects}
-
-    def identify_an_id(self, word, in_range_line, cdb, odb):
-        all_campaigns = map(lambda x: x['id'], cdb.get_all())
-        if word.count('-') == 2:
-            (pwg, campaign, serial) = word.split('-')
-            if len(pwg) != 3:
-                return None
-            if not serial.isdigit():
-                return None
-            if campaign not in all_campaigns:
-                return None
-            if odb.document_exists(word):
-                return word
-            elif in_range_line:
-                return word
-        return None
-
-    def identify_a_dataset_name(self, word):
-        if word.count('/') == 3:
-            (junk, dsn, ps, tier) = word.split('/')
-            if junk:
-                return None
-            return dsn
-
-    def get_list_of_ids(self, odb, json_data=None):
-        self.logger.info("Got a file from uploading")
-        if json_data is not None:
-            data = json_data
-        else:
-            data = loads(flask.request.data.strip())
-
-        text = data['contents']
-
-        all_ids = []
-        all_dsn = {}
-        # parse that file for prepids
-        possible_campaign = None
-        cdb = Database('campaigns')
-
-        for line in text.split('\n'):
-            in_the_line = []
-            for word in line.split():
-                if word.endswith(','):
-                    word = word[0:-2]
-                if word.startswith(','):
-                    word = word[1:]
-
-                if word.startswith('@-'):
-                    possible_campaign = None
-                elif word.startswith('@'):
-                    possible_campaign = word[1:]
-                    if possible_campaign not in all_dsn:
-                        all_dsn[possible_campaign] = []
-
-                # is that a prepid ?
-                an_id = None
-                a_dsn = None
-                if possible_campaign is None:
-                    an_id = self.identify_an_id(word, '->' in line, cdb, odb)
-
-                if an_id:
-                    all_ids.append(an_id)
-                    in_the_line.append(an_id)
-                elif possible_campaign:
-                    a_dsn = self.identify_a_dataset_name(word)
-                    if a_dsn:
-                        all_dsn[possible_campaign].append(a_dsn)
-
-                # the ley word for range
-                if word == '->':
-                    if len(in_the_line):
-                        in_the_line = [in_the_line[-1]]
-
-                # dealing with id range
-                if len(in_the_line) == 2:
-                    id_start = in_the_line[0]
-                    id_end = in_the_line[1]
-                    in_the_line = []
-                    if id_start[0:4] == id_end[0:4]:
-                        serial_start = int(id_start.split('-')[-1])
-                        serial_end = int(id_end.split('-')[-1]) + 1
-                        for serial in range(serial_start, serial_end):
-                            all_ids.append('-'.join(id_start.split('-')[0: 2] + ['%05d' % serial]))
-
-        for (possible_campaign, possible_dsn) in all_dsn.items():
-            if not cdb.document_exists(possible_campaign):
-                continue
-                # get all requests
-            all_requests = odb.search({'member_of_campaign': possible_campaign}, page=-1)
-            for _request in all_requests:
-                if _request['dataset_name'] in possible_dsn:
-                    all_ids.append(_request['prepid'])
-        all_ids = list(set(all_ids))
-        all_ids.sort()
-        return all_ids
-
-
-class RequestsFromFile(RequestLister, RESTResource):
+class RequestsFromFile(RESTResource):
 
     access_limit = access_rights.user
 
     def __init__(self):
-        RequestLister.__init__(self)
         self.before_request()
         self.count_call()
 
     def put(self):
         """
-        Parse the posted text document for request id and request ranges for display of requests
+        Parse the posted text document for request id and request ranges for
+        display of requests
         """
-        rdb = Database('requests')
-        all_ids = self.get_list_of_ids(rdb)
-        return self.get_objects(all_ids, rdb)
+        request_db = database('requests')
+        self.logger.info('File was uploaded to listfromfile')
+        data = loads(flask.request.data)
+        lines = clean_split(data['contents'], '\n')
+        ids = []
+        for line in lines:
+            split_line = clean_split(line, '->')
+            if len(split_line) >= 2:
+                ids.extend(expand_range(split_line[0], split_line[1]))
+            else:
+                ids.append(line)
+
+        # Limit number of IDs to 999 not to go crazy with thousands of requests
+        self.logger.info('Parsed %s ids', len(ids))
+        ids = sorted(list(set(ids)))[:999]
+        objects = [obj for obj in request_db.bulk_get(ids) if obj]
+        self.logger.info('Fetched %s objects from %s ids', len(objects), len(ids))
+        return {"results": objects}
 
 
 class StalledReminder(RESTResource):

@@ -3,6 +3,7 @@ import datetime
 from tools.settings import Settings
 from json_base import json_base
 from couchdb_layer.mcm_database import database as Database
+from tools.utils import expand_range
 
 
 class mccm(json_base):
@@ -89,27 +90,13 @@ class mccm(json_base):
         """
         request_list = self.get_attribute("requests")
         requests = []
-        prepid = self.get_attribute('prepid')
         for entry in request_list:
             if isinstance(entry, list) and len(entry) == 2:
-                start = entry[0].split('-')
-                end = entry[1].split('-')
-                range_start = int(start[-1])
-                range_end = int(end[-1])
-                numbers = range(range_start, range_end + 1)
-                start = '-'.join(start[:-1])
-                end = '-'.join(end[:-1])
-                if start != end:
-                    raise Exception('Invalid range "%s-..." != "%s-..." for %s' % (start,
-                                                                                   end,
-                                                                                   prepid))
-
-                if range_start > range_end:
-                    raise Exception('Invalid range ...-%05d > ...-%05d' % (range_start, range_end))
-
-                requests.extend('%s-%05d' % (start, n) for n in numbers)
+                requests.extend(expand_range(entry[0], entry[1]))
             elif isinstance(entry, (basestring, str)):
                 requests.append(entry)
+            else:
+                raise Exception('Unrecognized prepid/range %s of type', entry, type(entry))
 
         return requests
 
