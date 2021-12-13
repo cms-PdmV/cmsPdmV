@@ -408,6 +408,9 @@ class json_base:
         sender = sender if sender else self.current_user_email
         self.logger.info('Notification %s from %s send to %s [acc:%s]' % (subject, sender, ', '.join(dest), accumulate))
 
+        if not hasattr(self, 'com'):
+            self.com = communicator()
+
         return self.com.sendMail(dest,
                                  subject,
                                  message,
