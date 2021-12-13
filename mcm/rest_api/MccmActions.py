@@ -3,7 +3,6 @@ import time
 
 import json
 from rest_api.RestAPIMethod import RESTResource
-from rest_api.RequestActions import RequestLister
 from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import mccm as MccM
 from json_layer.user import user as User
