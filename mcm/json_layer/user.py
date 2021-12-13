@@ -31,9 +31,6 @@ class User():
     Information is obtained from headers supplied by SSO proxy
     """
 
-    database = Database('users')
-    # TODO: Caching
-
     def __init__(self, data=None):
         if data:
             self.user_info = deepcopy(data)
@@ -41,6 +38,7 @@ class User():
             if hasattr(request_context, 'user_info'):
                 self.user_info = request_context.user_info
             else:
+                self.database = Database('users')
                 self.user_info = self.get_user_info(request.headers)
                 setattr(request_context, 'user_info', self.user_info)
 

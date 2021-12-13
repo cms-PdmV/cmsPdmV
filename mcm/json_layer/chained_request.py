@@ -31,7 +31,7 @@ class chained_request(json_base):
         'step': 0,
         'status': '',
         'threshold': 0,
-        'validate': 0,  # Whether the chain should be submitted to validation
+        'validate': False,  # Whether the chain should be submitted to validation
     }
 
     def __init__(self, json_input=None):
@@ -45,124 +45,6 @@ class chained_request(json_base):
         self.update(json_input)
         self.validate()
         self.get_current_user_role_level()
-
-    def get_actors(self, N=-1, what='author_username', Nchild=-1):
-        rdb = database('requests')
-        last_r = request(rdb.get(self.get_attribute('chain')[-1]))
-        return last_r.get_actors(N, what, Nchild)
-
-    def flow_trial(self, input_dataset='', check_stats=True, reserve=False, super_flow=False):
-        reqDB = database("requests")
-
-        __curr_step = self.get_attribute("step")
-        __list_of_campaigns = []
-
-        chainid = self.get_attribute('prepid')
-
-        __list_of_campaigns = self.get_list_of_superflows()
-        super_flow = len(__list_of_campaigns) >= 2
-
-        try:
-            if not super_flow:
-                self.logger.info("we are defaulting to normal flow for: %s" % (self.get_attribute('prepid')))
-
-                # we do original flowing
-                # and toggle last request
-                if self.flow(check_stats=check_stats):
-                    db = database('chained_requests')
-                    db.update(self.json())
-                    # toggle the last request forward
-                    __ret = self.toggle_last_request()
-                    return {"prepid": chainid, "results": True}
-            else:
-                # we have FLOW_APPRVAL_FOR_TASKCHAIN and need to:
-                # 1) reserve requests to FLOW_APPRVAL_FOR_TASKCHAIN's end
-                # 2) flow chained_req to next_step
-                # 3) approve just reserved requests
-                # 4) approve 1st request to trigger submission as TaskChain
-                self.logger.info("SUPERFLOW which flows we want to do: %s" % (__list_of_campaigns))
-
-                __submit_step = 1
-
-                ret_flow = self.flow_to_next_step(input_dataset, check_stats=check_stats)['result']
-
-                if ret_flow:
-                    # force updating the chain_request document in DB and here
-                    self.reload()
-                else:
-                    return {"results": False, "message": "Failed to flow"}
-                generated_requests = []
-                for el in __list_of_campaigns:
-                    reservation_res = self.reserve(limit=el)
-                    if not reservation_res["results"]:
-                        return {
-                            "results": False,
-                            "prepid": chainid,
-                            "message": "error while reserving request"
-                        }
-                    elif 'generated_requests' in reservation_res:
-                        generated_requests = generated_requests + reservation_res['generated_requests']
-                        reservation_res.pop('generated_requests')
-                    # we should check the last_status here
-                    # in case request is beying reused and not done - we stop.
-                    if self.get_attribute('last_status') != "new" and self.get_attribute('last_status') != "done":
-                        # TO-DO make page reload info on failure or show message even if its OK
-                        self.save_requests(generated_requests)
-                        return {"results": True,
-                                "prepid": chainid,
-                                "message": "we cannot move further with last_status not done"}
-                self.save_requests(generated_requests)
-                if reservation_res["results"]:
-                    # for now +1 because current_step was saved before actual flowing
-                    for elem in self.get_attribute("chain")[__curr_step + 1:]:
-                        if not reqDB.document_exists(elem):
-                            return {"results": False, "message": "Reuest not found in DB"}
-                        next_req = request(reqDB.get(elem))
-                        if next_req.get_attribute('approval') == 'submit':
-                            # in case we assign already existing request which completed in other chain
-                            # We have to flow chain to get its step to overpass the done request
-                            __ret = self.flow(check_stats=check_stats)
-                            if __ret:
-                                self.reload()
-                                # we don't want to submit the 1st request which is already done.
-                                __submit_step += 1
-                            # else should we explicitly crash flow or will it fail on 1st approval?
-                            continue
-
-                        with locker.lock('{0}-wait-for-approval'.format(elem)):
-                            next_req.approve()
-                            saved = reqDB.save(next_req.json())
-                        if not saved:
-                            self.logger.info("Could not save request %s to DB after approval" % (elem))
-                            return {"results": False,
-                                    "message": "Could not save request after approval"}
-
-                    to_submit_req = self.get_attribute("chain")[__curr_step + __submit_step]
-
-                    # if we reached up to here there is no point to check if request exists
-                    __sub_req = request(reqDB.get(to_submit_req))
-                    with locker.lock('{0}-wait-for-approval'.format(to_submit_req)):
-                        __sub_req.approve()
-                        saved2 = reqDB.save(__sub_req.json())
-                        self.logger.debug("SUPERFLOW to_submit_req current status: %s aprroval: %s saved2: %s" % (
-                            __sub_req.get_attribute("status"),
-                            __sub_req.get_attribute("approval"), saved2)
-                        )
-
-                    return {
-                        "results": True,
-                        "message": "SUPERFLOW finished successfully",
-                        "prepid": chainid}
-
-                else:
-                    return {
-                        "results": False,
-                        "message": "Reservation failed",
-                        "prepid": chainid}
-
-        except Exception as ex:
-            self.logger.info("Error in chained_request flow: %s" % (str(ex)))
-            return {"prepid": chainid, "results": False, "message": str(ex)}
 
     def request_join(self, req):
         with locker.lock(req.get_attribute('prepid')):
@@ -233,9 +115,6 @@ class chained_request(json_base):
         if mccm_ticket is not None:
             mccm_ticket.update_mccm_generated_chains({chain_id: generated_requests})
 
-    def flow(self, input_dataset='', check_stats=True):
-        return self.flow_to_next_step(input_dataset, check_stats)['result']
-
     def get_setup(self, for_validation, automatic_validation, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')
@@ -253,7 +132,7 @@ class chained_request(json_base):
 
         return setup_file
 
-    def flow_to_next_step(self, input_dataset='', check_stats=True, reserve=False, stop_at_campaign=None):
+    def flow(self, input_dataset='', check_stats=True, reserve=False, stop_at_campaign=None):
         self.logger.info('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
         if not self.get_attribute('chain'):
             raise self.ChainedRequestCannotFlowException(
@@ -805,17 +684,15 @@ class chained_request(json_base):
         else:
             return False
 
-    def set_priority(self, level):
-        rdb = database('requests')
-        okay = True
-        for r in self.get_attribute('chain'):
-            req = request(rdb.get(r))
-            # only those that can still be changed
-            # set to the maximum priority
-            if not req.change_priority(priority().priority(level)):
-                self.logger.info('Could not save updated priority for %s' % r)
-                okay = False
-        return okay
+    def set_priority(self, priority):
+        request_db = Database('requests')
+        at_least_one_changed = False
+        for request_prepid in self.get_attribute('chain'):
+            request = Request(request_db.get(request_prepid))
+            if request.change_priority(priority):
+                at_least_one_changed = True
+
+        return at_least_one_changed
 
     def inspect(self):
         not_good = {"prepid": self.get_attribute('prepid'), "results": False}

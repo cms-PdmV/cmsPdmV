@@ -12,6 +12,7 @@ from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
 from ChainedRequestPrepId import ChainedRequestPrepId
+from tools.priority import block_to_priority
 
 
 class CreateChainedRequest(RESTResource):
@@ -112,8 +113,9 @@ class UpdateChainedRequest(RESTResource):
         db = database(self.db_name)
         previous_version = chained_request(json_input=db.get(prepid))
         self.logger.info('Updating chained_request %s', prepid)
-        new_priority = chained_req.get_attribute('action_parameters')['block_number']
-        chained_req.set_priority(new_priority)
+        block = chained_req.get_attribute('action_parameters')['block_number']
+        priority = block_to_priority(block)
+        chained_req.set_priority(priority)
         # update history
         difference = self.get_obj_diff(previous_version.json(),
                                        chained_req.json(),
@@ -1120,7 +1122,8 @@ class ChainedRequestsPriorityChange(RESTResource):
             chain_prepid = chain['prepid']
             mcm_chained_request = chained_request(self.chained_requests_db.get(chain_prepid))
             action_parameters = chain['action_parameters']
-            if not mcm_chained_request.set_priority(action_parameters['block_number']):
+            priority = block_to_priority(action_parameters['block_number'])
+            if not mcm_chained_request.set_priority(priority):
                 message = 'Unable to set new priority in request %s' % chain_prepid
                 fails.append(message)
                 self.logger.error(message)

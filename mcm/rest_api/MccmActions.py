@@ -15,7 +15,7 @@ from tools.communicator import communicator
 from tools.settings import Settings
 from tools.user_management import access_rights
 from tools.user_management import user_pack as UserPack
-from tools.priority import priority
+from tools.priority import block_to_priority
 
 
 class CreateMccm(RESTResource):
@@ -535,18 +535,24 @@ class GenerateChains(RESTResource):
         self.logger.info('Generated requests for %s are %s',
                          chained_request_prepid,
                          generated_requests)
+        priority = block_to_priority(block)
         if request_status in ('approved', 'done'):
             # change priority of the whole chain
-            self.logger.info('Setting block %s for %s' % (block, chained_request_prepid))
-            chained_request.set_priority(block)
+            self.logger.info('Setting block %s (%s) for %s',
+                             block,
+                             priority,
+                             chained_request_prepid)
+            chained_request.set_priority(priority)
         elif request_status == 'submitted':
             # change priority only for the newly created requests
-            new_priority = priority().priority(block)
             request_db = Database('requests')
             for request_prepid in generated_requests:
                 generated_request = Request(json_input=request_db.get(request_prepid))
-                self.logger.info('Setting priority %s for %s' % (new_priority, request_prepid))
-                generated_request.change_priority(new_priority)
+                self.logger.info('Setting block %s (%s) for %s',
+                                 block,
+                                 priority,
+                                 request_prepid)
+                generated_request.change_priority(priority)
 
         return {"results":True,
                 "prepid": chained_request_prepid,
