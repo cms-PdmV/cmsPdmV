@@ -243,10 +243,7 @@ class database:
             self.logger.error('Could not find _id in document of "%s"', self.db_name)
 
         self.logger.info('Updating "%s" in "%s"...', doc_id, self.db_name)
-        if not self.document_exists(doc_id):
-            self.__save_to_cache(doc_id, None)
-            return False
-
+        self.__save_to_cache(doc_id, None)
         saved = self.save(doc)
         if saved:
             self.logger.info('Updated "%s" in "%s"', doc_id, self.db_name)
@@ -260,7 +257,8 @@ class database:
         if not doc_id:
             self.logger.error('Could not find _id in document of "%s"', self.db_name)
 
-        self.logger.info('Saving "%s" in "%s"...', doc_id, self.db_name)
+        doc_rev = doc.get('_rev')
+        self.logger.info('Saving "%s" (%s) in "%s"...', doc_id, doc_rev, self.db_name)
         request = self.couch_request(self.db_name, 'POST', data=doc)
         try:
             data = self.opener.open(request).read()
