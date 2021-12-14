@@ -382,9 +382,9 @@ class chained_request(json_base):
             # Remove chained requests in the same chained campaign
             chained_request_ids = [p for p in chained_request_ids if '-%s-' % (campaign_prepid) not in p]
             # Sort by matching length
-            def mathing_length(a, b):
-                a_parts = tuple(a.split('_'))
-                b_parts = tuple(b.split('_'))
+            def matching_length(a, b):
+                a_parts = tuple(a.split('-')[1].split('_'))
+                b_parts = tuple(b.split('-')[1].split('_'))
                 for i in range(min(len(a_parts), len(b_parts)), 0, -1):
                     if a_parts[:i] == b_parts[:i]:
                         return i - 1
@@ -392,7 +392,7 @@ class chained_request(json_base):
                 return 0
 
             # Save matching length
-            chained_request_ids = [(c, mathing_length(c, prepid)) for c in chained_request_ids]
+            chained_request_ids = [(c, matching_length(c, prepid)) for c in chained_request_ids]
             # Remove ones that are not macthing enough to reach next step
             chained_request_ids = [c for c in chained_request_ids if c[1] > next_step]
             # Sort by matching length

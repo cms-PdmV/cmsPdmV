@@ -405,6 +405,7 @@ class RewindToPreviousStep(RESTResource):
                     "prepid": crid}
 
         current_request.reset()
+        current_request.set_attribute('input_dataset', '')
         saved = rdb.update(current_request.json())
         if not saved:
             return {'results': False,

@@ -287,6 +287,7 @@ class NotifyMccm(RESTResource):
         # Subject
         subject = data.get('subject', 'Communication about %s' % (prepid)).strip()
         mccm = MccM(json_input=mccm_json)
+        mccm.get_current_user_role_level()
         mccm.notify(subject, message, accumulate=False)
         return {"results": True}
 
