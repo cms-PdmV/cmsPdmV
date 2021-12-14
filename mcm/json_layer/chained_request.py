@@ -539,9 +539,8 @@ class chained_request(json_base):
                 raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
             else:
                 allowed_request_statuses = ['done']
-                # determine if this is a root -> non-root transition to potentially apply staged number
                 at_a_transition = (current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
-                if (action_parameters['staged'] != 0 or action_parameters['threshold'] != 0) and at_a_transition:
+                if action_parameters['threshold'] != 0 and at_a_transition:
                     allowed_request_statuses.append('submitted')
                 # check status
                 if not current_request.get_attribute('status') in allowed_request_statuses:
@@ -552,10 +551,7 @@ class chained_request(json_base):
                 # special check at transition that the statistics is good enough
                 if at_a_transition:
                     self.logger.info("ChainedRequest is at transition. id: %s" % (self.get_attribute('prepid')))
-                    # at a root -> non-root transition only does the staged/threshold functions !
-                    if action_parameters['staged'] != 0:
-                        next_total_events = int(action_parameters['staged'])
-                        completed_events_to_pass = next_total_events
+                    # at a root -> non-root transition only does the threshold functions !
                     if action_parameters['threshold'] != 0:
                         next_total_events = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
                         completed_events_to_pass = next_total_events
@@ -730,8 +726,6 @@ class chained_request(json_base):
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
 
             # if case we have action parameters they overwrite the total_events
-            if action_parameters['staged'] != 0:
-                next_total_evts = int(action_parameters['staged'])
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
@@ -770,8 +764,6 @@ class chained_request(json_base):
             next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
 
             # if case we have action parameters they overwrite the total_events
-            if action_parameters['staged'] != 0:
-                next_total_evts = int(action_parameters['staged'])
             if action_parameters['threshold'] != 0:
                 next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
             next_request.set_attribute("total_events", next_total_evts)
