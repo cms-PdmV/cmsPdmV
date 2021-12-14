@@ -3,7 +3,7 @@ import json
 
 from json_base import json_base
 from json_layer.request import request as Request
-from json_layer.campaign import campaign as Campaign
+from json_layer.campaign import Campaign
 from json_layer.mccm import mccm as MccM
 from flow import flow as Flow
 from couchdb_layer.mcm_database import database as Database

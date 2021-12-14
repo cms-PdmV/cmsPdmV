@@ -1,32 +1,9 @@
 import flask
-
-from collections import defaultdict
-
 from RestAPIMethod import RESTResource
-from tools.user_management import access_rights, authenticator, user_pack
-import tools.settings as settings
-from json import dumps, loads
-
-from tools.communicator import communicator
+from json_layer.user import User
+from tools.settings import Settings
 from couchdb_layer.mcm_database import database as Database
 from tools.utils import clean_split
-
-
-class Communicate(RESTResource):
-
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, message_number=0):
-        """
-        Trigger the accumulated communications from McM, optionally above /N messages
-        """
-        com = communicator()
-        res = com.flush(message_number)
-        return {'results': True, 'subject' : res}
 
 
 class Search(RESTResource):
@@ -34,7 +11,6 @@ class Search(RESTResource):
     Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
     """
 
-    access_limit = access_rights.user
     modules = {'batches': 'batch',
                'campaigns': 'campaign',
                'chained_campaigns': 'chained_campaign',
@@ -67,7 +43,6 @@ class Search(RESTResource):
                                                                          schema_type.__name__)
 
     def __init__(self):
-        self.before_request()
         if not self.casting:
             self.prepare_casting()
 
@@ -137,59 +112,13 @@ class Search(RESTResource):
         return self.output_text(res, 200, {'Content-Type': 'application/json'})
 
 
-class CacheInfo(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self):
-        """
-        Get information about cache sizes in McM
-        """
-        db = Database('requests')
-        db_cache_length, db_cache_size = db.cache_size()
-        settings_cache_length, settings_cache_size = settings.cache_size()
-        user_cache_length, user_cache_size = user_pack.cache_size()
-        user_role_cache_length, user_role_cache_size = authenticator.cache_size()
-        return {'results': {'db_cache_length': db_cache_length,
-                            'db_cache_size': db_cache_size,
-                            'settings_cache_length': settings_cache_length,
-                            'settings_cache_size': settings_cache_size,
-                            'user_cache_length': user_cache_length,
-                            'user_cache_size': user_cache_size,
-                            'user_role_cache_length': user_role_cache_length,
-                            'user_role_cache_size': user_role_cache_size}}
-
-
 class CacheClear(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self):
         """
         Clear McM cache
         """
-        db = Database('requests')
-        db.clear_cache()
-        settings.clear_cache()
-        authenticator.clear_cache()
-        user_pack.clear_cache()
-        db_cache_length, db_cache_size = db.cache_size()
-        settings_cache_length, settings_cache_size = settings.cache_size()
-        user_cache_length, user_cache_size = user_pack.cache_size()
-        user_role_cache_length, user_role_cache_size = authenticator.cache_size()
-        return {'results': {'db_cache_length': db_cache_length,
-                            'db_cache_size': db_cache_size,
-                            'settings_cache_length': settings_cache_length,
-                            'settings_cache_size': settings_cache_size,
-                            'user_cache_length': user_cache_length,
-                            'user_cache_size': user_cache_size,
-                            'user_role_cache_length': user_role_cache_length,
-                            'user_role_cache_size': user_role_cache_size}}
+        Database.clear_cache()
+        Settings.clear_cache()
+        User.clear_cache()
+        return {'results': True}

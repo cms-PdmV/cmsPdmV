@@ -12,19 +12,18 @@ def Settings():
     database
     Fetched values are cached for an hour
     """
-    __cache = SimpleCache(default_timeout=3600) # Cache timeout 1h
-    __database = Database('settings')
+    cache = SimpleCache(default_timeout=3600) # Cache timeout 1h
 
     @classmethod
     def get_setting(cls, key):
         """
         Get a setting object from cache or database
         """
-        if cls.__cache.has(key):
-            return cls.__cache.get(key)
+        if cls.cache.has(key):
+            return cls.cache.get(key)
 
-        setting = cls.__database.get(key)
-        cls.__cache.set(key, setting)
+        setting = cls.get_database().get(key)
+        cls.cache.set(key, setting)
         return setting
 
     @classmethod
@@ -41,7 +40,7 @@ def Settings():
         If notes are None, they will not be updated
         """
         with locker.lock('settings-%s' % (key)):
-            setting = cls.__database.get(key)
+            setting = cls.get_database().get(key)
             if not setting:
                 setting = {'_id': key}
 
@@ -49,8 +48,8 @@ def Settings():
             if notes is not None:
                 setting['notes'] = notes
 
-            if cls.__database.save(setting):
-                cls.__cache.set(key, value)
+            if cls.get_database().save(setting):
+                cls.cache.set(key, value)
                 return True
 
             return False
@@ -67,4 +66,14 @@ def Settings():
         """
         Clear settings cache
         """
-        cls.__cache.clear()
+        cls.cache.clear()
+
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('settings')
+
+        return cls.database

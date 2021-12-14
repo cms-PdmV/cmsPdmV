@@ -34,6 +34,7 @@ class CreateMccm(RESTResource):
         mccm = MccM(json.loads(flask.request.data.strip()))
         pwg = mccm.get_attribute('pwg').upper()
 
+        # TODO: check if generator contacts belong to given PWG
         if pwg not in self.possible_pwgs:
             self.logger.error('Bad PWG: %s', pwg)
             return {'results': False,

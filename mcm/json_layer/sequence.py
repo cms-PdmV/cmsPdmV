@@ -1,107 +1,95 @@
-#!/usr/bin/env python
-
-import tools.settings as settings
+import json
 from json_base import json_base
 from copy import deepcopy
+from pipes import quote as shell_quote
 
 
-class sequence(json_base):
+class Sequence(json_base):
 
-    _json_base__schema = settings.get_value('cmsdriver_options')
+    _json_base__schema = {"beamspot": "",
+                          "conditions": "",
+                          "custom_conditions": "",
+                          "customise": "",
+                          "customise_commands": "",
+                          "datamix": "",
+                          "datatier": [],
+                          "donotDropOnInput": "",
+                          "dropDescendant": False,
+                          "era": "",
+                          "eventcontent": [],
+                          "extra": "",
+                          "filtername": "",
+                          "geometry": "",
+                          "gflash": "",
+                          "harvesting": "",
+                          "himix": False,
+                          "hltProcess": "",
+                          "index": -1,
+                          "inline_custom": False,
+                          "inputCommands": "",
+                          "inputEventContent": "",
+                          "magField": "",
+                          "nStreams": 0,
+                          "nThreads": 1,
+                          "outputCommand": "",
+                          "particle_table": "",
+                          "pileup": "",
+                          "procModifiers": "",
+                          "processName": "",
+                          "repacked": "",
+                          "restoreRNDSeeds": "",
+                          "runsAndWeightsForMC": "",
+                          "runsScenarioForMC": "",
+                          "scenario": "",
+                          "slhc": "",
+                          "step": [],
+                          "triggerResultsProcess": ""}
 
-    def __init__(self, json_input=None):
-        json_input = json_input if json_input else {}
+    def get_cmsdriver(self, fragmant_name, update_dict):
+        """
+        Build a cmsDriver command
+        """
+        arguments = deepcopy(self.json())
+        # Always --mc
+        arguments['mc'] = True
+        # Always --noexec
+        arguments['no_exec'] = True
+        arguments.update(update_dict)
+        command = 'cmsDriver.py'
+        if fragmant_name:
+            command += ' %s' % (fragmant_name)
 
-        self._json_base__schema = settings.get_value('cmsdriver_options')
+        for key in sorted(arguments.keys()):
+            if key in ('index', 'extra'):
+                continue
 
-        # how to get the options ?
-        # in cmssw
-        # import  Configuration.PyReleaseValidation.Options as opt
-        # map( lambda s : s.replace('--','') ,opt.parser._long_opt.keys() )
+            value = arguments[key]
+            if not value:
+                continue
 
-        # update self according to json_input
-        self.__update(json_input)
-        self.__validate()
+            if key == 'nThreads' and int(value) <= 1:
+                # Do not add nThreads if it's <= 1
+                continue
 
-    def __validate(self):
-        if not self._json_base__json:
-            return
-        for key in self._json_base__schema:
-            if key not in self._json_base__json:
-                raise self.IllegalAttributeName(key)
+            if key == 'nStreams' and int(value) <= 0:
+                # Do not add nStreams if it's <= 0
+                continue
 
-    # for all parameters in json_input store their values
-    # in self._json_base__json
-    def __update(self, json_input):
-        self._json_base__json = {}
-        if not json_input:
-            self._json_base__json = deepcopy(self._json_base__schema)
-        else:
-            for key in self._json_base__schema:
-                if key in json_input:
-                    self._json_base__json[key] = json_input[key]
-                else:
-                    self._json_base__json[key] = deepcopy(self._json_base__schema[key])
+            if isinstance(value, bool):
+                value = ''
+            elif isinstance(value, list):
+                value = ','.join(str(x) for x in value)
+            elif not isinstance(value, str):
+                value = str(value)
 
-    def srepr(self, arg):
-        if isinstance(arg, basestring):  # Python 3: isinstance(arg, str)
-            return arg.decode('utf-8')
-        elif isinstance(arg, int):  # in case we have int we should make it string for cmsDriver construction
-            return str(arg)
-        try:
-            return ",".join(self.srepr(x) for x in arg)
-        except TypeError:  # catch when for loop fails
-            return arg.decode('utf-8')  # not a sequence so just return repr
+            value = shell_quote(value) if value else value
+            command += (' --%s=%s' % (key, value)).rstrip(' =')
 
-    def to_command_line(self, attribute):
-        if attribute == 'index':
-            return ''
-        value = self.get_attribute(attribute)
-        if isinstance(value, basestring) and not value.strip():
-            return ''
-        if attribute == 'nThreads':
-            if isinstance(value, basestring) and not value.isdigit():
-                return ''
-            if int(value) <= 1:
-                return ''
-        if attribute == 'nStreams':
-            if isinstance(value, basestring) and not value.isdigit():
-                return ''
-            if int(value) <= 0:
-                return ''
+        extra_value = arguments.get('extra')
+        if extra_value:
+            command += ' %s' % (shell_quote(extra_value))
 
-        if value == True:
-            return "--" + str(attribute)
-        elif value == False:
-            return ''
-        elif attribute == 'extra' and value.strip():
-            return value.strip()
-        elif value:
-            return "--" + attribute + " " + self.srepr(value)
-        else:
-            return ''
+        return command
 
     def to_string(self):
-        text = ''
-        keys = self.json().keys()
-        keys.sort()
-        for key in keys:
-            if key in []:
-                continue
-            text += key + str(self.get_attribute(key))
-        return text
-
-    def build_cmsDriver(self):
-        # always MC in McM. better to say it
-        command = '--mc '
-
-        for key in self.json():
-            if key == "inline_custom":
-                if int(self.get_attribute(key)) == 0:  # if inline_custom is 0
-                    continue  # means that cmssw might not have inline_custom support
-            addone = self.to_command_line(key)
-            # prevent from having over spaces
-            if addone:
-                command += addone
-                command += ' '
-        return command
+        return json.dumps(self.json(), sort_keys=True)

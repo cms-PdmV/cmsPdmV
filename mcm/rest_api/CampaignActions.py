@@ -5,7 +5,7 @@ import json
 
 from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResource
-from json_layer.campaign import campaign as Campaign
+from json_layer.campaign import Campaign
 from json_layer.request import request as Request
 from json_layer.sequence import sequence as Sequence
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
@@ -279,7 +279,7 @@ class GetCmsDriverForCampaign(RESTResource):
                     'message': 'Campaign "%s" does not exist' % (campaign_id)}
 
         campaign = Campaign(json_input=campaign_db.get(campaign_id))
-        return {'results': campaign.build_cmsDrivers()}
+        return {'results': campaign.get_cmsdrivers()}
 
 
 class InspectCampaigns(RESTResource):

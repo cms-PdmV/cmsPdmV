@@ -3,7 +3,7 @@ import json
 
 from couchdb_layer.mcm_database import database as Database
 from RestAPIMethod import RESTResource
-from json_layer.campaign import campaign as Campaign
+from json_layer.campaign import Campaign
 from json_layer.flow import flow as Flow
 from tools.user_management import access_rights
 

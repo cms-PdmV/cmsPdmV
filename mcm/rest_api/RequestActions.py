@@ -15,7 +15,7 @@ from RestAPIMethod import RESTResource
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from json_layer.sequence import sequence as Sequence
-from json_layer.campaign import campaign as Campaign
+from json_layer.campaign import Campaign
 from json_layer.user import user
 from tools.locator import locator
 from tools.communicator import communicator

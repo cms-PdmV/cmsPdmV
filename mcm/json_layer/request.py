@@ -17,7 +17,7 @@ from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
 from json_layer.json_base import json_base
-from json_layer.campaign import campaign as Campaign
+from json_layer.campaign import Campaign
 from json_layer.flow import flow as Flow
 from json_layer.batch import batch as Batch
 from json_layer.generator_parameters import generator_parameters
@@ -567,6 +567,38 @@ class request(json_base):
         if invalidations:
             raise Exception('There are %s unacknowledged invalidations for %s' % (len(invalidations),
                                                                                   prepid))
+
+    def get_input_dataset(self, datasets, sequences):
+        """
+        Try to figure out a dataset of "datasets" that could be used as input
+        for the first sequence based on sequence's "step"
+        """
+        if not datasets or not sequences:
+            self.logger.warning('Return "" dataset name, becase datasets or sequences are missing')
+            return ""
+
+        steps = sequences[0]['step']
+        if isinstance(steps, (str, basestring)):
+            # TODO: Is this possible?
+            steps = steps.split(',')
+
+        # Take the first step and remove :... if needed
+        step = steps[0].split(':')[0]
+        step_input_dict = Settings.get_value('datatier_input')
+        if step not in step_input_dict:
+            self.logger.warning('Could not find input info for "%s" step, returning %s',
+                                step,
+                                datasets[0])
+            return datasets[0]
+
+        datatiers = step_input_dict[step]
+        for datatier in datatiers:
+            for dataset in datasets:
+                if dataset.split('/')[-1] == datatier:
+                    self.logger.info('Picked "%s" as input for "%s"', dataset, step)
+                    return dataset
+
+        return datasets[0]
 
     def check_with_previous(self, update_total_events=False):
         """
@@ -2694,7 +2726,7 @@ class request(json_base):
             for s in sequences:
                 if 'estimated_events_per_lumi' not in s:
                     s['estimated_events_per_lumi'] = (28800 * s['filter_efficiency'] / s['time_per_event']) if s.get('time_per_event') else 0
-                
+
             validation_info.append({'threads': int(threads),
                                     'cpu_efficiency': self.sequences_cpu_efficiency(sequences),
                                     'filter_efficiency': self.sequences_filter_efficiency(sequences),

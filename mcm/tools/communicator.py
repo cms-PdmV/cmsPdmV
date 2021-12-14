@@ -12,6 +12,7 @@ from tools.config_manager import Config
 from tools.locator import locator
 from tools.locker import locker
 from tools.utils import clean_split
+from tools.settings import Settings
 
 
 class Communicator:
@@ -40,6 +41,9 @@ class Communicator:
             subject = '[McM] ' + subject
             # Lowercase and remove pdmvserv account as it will go to CC
             recipients = [r.lower() for r in recipients if not r.startswith('pdmv')]
+            # Remove recipients that are explicitly listed as "do not notify"
+            exclude = set([r.lower() for r in Settings.get('exclude_from_notify')])
+            recipients = [r for r in recipients if r not in exclude]
             # Sort and make recipients unique
             recipients = sorted(list(set(recipients)))
 

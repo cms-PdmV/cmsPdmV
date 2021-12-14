@@ -45,6 +45,9 @@ class database:
         Return authentication to couchdb header
         """
         filename = Config.get('database_auth')
+        if not filename:
+            return None
+
         with open(filename) as json_file:
             credentials = json.load(json_file)
 
@@ -67,19 +70,12 @@ class database:
         self.logger.info('Will cache %s as %s', hostname, with_ip)
         return with_ip
 
-    def cache_size(self):
-        """
-        Return number of elements in cache and cache size in bytes
-        """
-        return len(self.cache._cache), sys.getsizeof(self.cache._cache)
-
-    def clear_cache(self):
+    @classmethod
+    def clear_cache(cls):
         """
         Clear cache
         """
-        size = self.cache_size()
-        self.cache.clear()
-        return size
+        cls.cache.clear()
 
     def __build_request(self, url, path, method, headers, data):
         """
