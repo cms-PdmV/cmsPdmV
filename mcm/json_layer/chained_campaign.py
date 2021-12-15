@@ -1,7 +1,7 @@
-from chained_request import chained_request as ChainedRequest
-from json_base import json_base
+# from chained_request import chained_request as ChainedRequest
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
-from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
+# from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class chained_campaign(json_base):

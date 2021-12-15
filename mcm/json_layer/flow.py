@@ -1,7 +1,8 @@
-from json_base import json_base
+from couchdb_layer.mcm_database import database as Database
+from json_layer.json_base import json_base
 
 
-class flow(json_base):
+class Flow(json_base):
 
     _json_base__schema = {
         '_id': '',
@@ -11,24 +12,32 @@ class flow(json_base):
         'request_parameters': {},
         'notes': '',
         'history': [],
-        'approval': ''
+        'approval': 'none'
     }
-
-    _json_base__approvalsteps = ['none', 'flow', 'submit', 'tasksubmit']
 
     _prepid_pattern = 'flow[a-zA-Z0-9]{2,60}'
 
-    def __init__(self, json_input=None):
-        json_input = json_input if json_input else {}
+    def validate(self):
+        prepid = self.get_attribute('prepid')
+        if not self.fullmatch(self._prepid_pattern, prepid):
+            raise Exception('Invalid prepid, allowed pattern: %s' % (self._prepid_pattern))
 
-        self._json_base__schema['approval'] = self.get_approval_steps()[0]
-
-        # update self according to json_input
-        self.update(json_input)
-        self.validate()
+        return super().validate()
 
     def toggle_approval(self):
-        approval_steps = self.get_approval_steps()
+        approval_steps = ('none', 'flow', 'submit', 'tasksubmit')
         approval = self.get_attribute('approval')
         index = approval_steps.index(approval)
-        self.approve(to_approval=approval_steps[(index + 1) % (len(approval_steps))])
+        new_approval = approval_steps[(index + 1) % (len(approval_steps))]
+        self.set_attribute('approval', new_approval)
+        self.update_history('approve', new_approval)
+
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('flows')
+
+        return cls.database

@@ -1,4 +1,6 @@
 import logging
+from flask import request
+from flask import g as request_context
 
 
 class InjectionLogAdapter(logging.LoggerAdapter):
@@ -16,10 +18,12 @@ class UserFilter(logging.Filter):
     """
 
     def filter(self, record):
-        from tools.user_management import user_pack
-        email = user_pack().get_email()
-        if email:
-            record.user = email
+        if not request_context:
+            record.user = 'main_thread'
         else:
-            record.user = "main_thread"
+            email = request.headers.get('Adfs-Email')
+            if email:
+                record.user = email
+            else:
+                record.user = 'unknown_email'
         return True

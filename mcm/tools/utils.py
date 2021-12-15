@@ -4,8 +4,8 @@ Common utils
 import json
 import time
 import xml.etree.ElementTree as XMLet
-from locker import locker
-from connection_wrapper import ConnectionWrapper
+from tools.locker import locker
+from tools.connection_wrapper import ConnectionWrapper
 
 
 # Scram arch cache to save some requests to cmssdt.cern.ch

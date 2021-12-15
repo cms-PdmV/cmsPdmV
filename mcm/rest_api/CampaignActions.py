@@ -4,29 +4,24 @@ import traceback
 import json
 
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import Campaign
 from json_layer.request import request as Request
-from json_layer.sequence import sequence as Sequence
+from json_layer.sequence import Sequence
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
-from tools.user_management import access_rights
+from json_layer.user import Role
 
 
 class CreateCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Create a campaign with the provided json content
         """
         data = json.loads(flask.request.data)
         campaign_db = Database('campaigns')
-        campaign = Campaign(json_input=data)
+        campaign = Campaign(data)
         prepid = campaign.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -73,12 +68,7 @@ class CreateCampaign(RESTResource):
 
 class UpdateCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Update a campaign with the provided json content
@@ -89,7 +79,7 @@ class UpdateCampaign(RESTResource):
                     'message': 'No revision provided'}
 
         campaign_db = Database('campaigns')
-        campaign = Campaign(json_input=data)
+        campaign = Campaign(data)
         prepid = campaign.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -109,7 +99,7 @@ class UpdateCampaign(RESTResource):
 
         campaign.set_attribute('sequences', sequences)
 
-        previous_version = Campaign(json_input=campaign_db.get(prepid))
+        previous_version = Campaign(campaign_db.get(prepid))
         difference = self.get_obj_diff(previous_version.json(),
                                        campaign.json(),
                                        ('history', '_rev'))
@@ -141,12 +131,7 @@ class UpdateCampaign(RESTResource):
 
 class DeleteCampaign(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def delete(self, campaign_id):
         """
         Delete a campaign
@@ -217,10 +202,6 @@ class DeleteCampaign(RESTResource):
 
 class GetCampaign(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, campaign_id):
         """
         Retrieve the campaign for given id
@@ -231,12 +212,7 @@ class GetCampaign(RESTResource):
 
 class ToggleCampaignStatus(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def get(self, campaign_id):
         """
         Toggle campaign status
@@ -247,7 +223,7 @@ class ToggleCampaignStatus(RESTResource):
             return {'results': False,
                     'message': 'Campaign "%s" does not exist' % (campaign_id)}
 
-        campaign = Campaign(json_input=campaign_db.get(campaign_id))
+        campaign = Campaign(campaign_db.get(campaign_id))
         try:
             campaign.toggle_status()
         except Exception as ex:
@@ -264,10 +240,6 @@ class ToggleCampaignStatus(RESTResource):
 
 class GetCmsDriverForCampaign(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, campaign_id):
         """
         Retrieve the list of cmsDriver commands for a given campaign id
@@ -278,18 +250,13 @@ class GetCmsDriverForCampaign(RESTResource):
             return {'results': False,
                     'message': 'Campaign "%s" does not exist' % (campaign_id)}
 
-        campaign = Campaign(json_input=campaign_db.get(campaign_id))
+        campaign = Campaign(campaign_db.get(campaign_id))
         return {'results': campaign.get_cmsdrivers()}
 
 
 class InspectCampaigns(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def get(self, campaign_id):
         """
         Inspect all requests in given campaign(s)

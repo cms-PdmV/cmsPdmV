@@ -2,15 +2,13 @@ import flask
 import json
 
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import Campaign
-from json_layer.flow import flow as Flow
-from tools.user_management import access_rights
+from json_layer.flow import Flow
+from json_layer.user import Role
 
 
 class FlowRESTResource(RESTResource):
-
-    access_limit = access_rights.production_manager
 
     def update_derived_objects(self, old_flow, new_flow):
         """
@@ -37,7 +35,7 @@ class FlowRESTResource(RESTResource):
         # Remove
         if old_next_id:
             for old_allowed_id in remove_from:
-                campaign = Campaign(json_input=campaign_db.get(old_allowed_id))
+                campaign = Campaign(campaign_db.get(old_allowed_id))
                 next_campaigns = campaign.get_attribute('next')
                 if old_next_id in next_campaigns:
                     next_campaigns.remove(old_next_id)
@@ -47,7 +45,7 @@ class FlowRESTResource(RESTResource):
         # Add
         if new_next_id:
             for new_allowed_id in add_to:
-                campaign = Campaign(json_input=campaign_db.get(new_allowed_id))
+                campaign = Campaign(campaign_db.get(new_allowed_id))
                 next_campaigns = campaign.get_attribute('next')
                 if new_next_id not in next_campaigns:
                     next_campaigns.append(new_next_id)
@@ -117,19 +115,14 @@ class FlowRESTResource(RESTResource):
 
 class CreateFlow(FlowRESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Create a flow with the provided json content
         """
         data = json.loads(flask.request.data)
         flow_db = Database('flows')
-        flow = Flow(json_input=data)
+        flow = Flow(data)
         prepid = flow.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -175,12 +168,7 @@ class CreateFlow(FlowRESTResource):
 
 class UpdateFlow(FlowRESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Update a campaign with the provided json content
@@ -191,7 +179,7 @@ class UpdateFlow(FlowRESTResource):
                     'message': 'No revision provided'}
 
         flow_db = Database('flows')
-        flow = Flow(json_input=data)
+        flow = Flow(data)
         prepid = flow.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -204,7 +192,7 @@ class UpdateFlow(FlowRESTResource):
                     'message': 'Cannot update, "%s" does not exist' % (prepid)}
 
         # find out what is the change
-        previous_version = Flow(json_input=flow_db.get(prepid))
+        previous_version = Flow(flow_db.get(prepid))
 
         old_ps = previous_version.get_attribute('request_parameters').get('process_string', None)
         new_ps = flow.get_attribute('request_parameters').get('process_string', None)
@@ -293,12 +281,7 @@ class UpdateFlow(FlowRESTResource):
 
 class DeleteFlow(FlowRESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def delete(self, flow_id):
         """
         Delete a flow
@@ -332,7 +315,7 @@ class DeleteFlow(FlowRESTResource):
                     'message': message}
 
         # Delete to DB
-        flow = Flow(json_input=flow_db.get(flow_id))
+        flow = Flow(flow_db.get(flow_id))
         if not flow_db.delete(flow_id):
             self.logger.error('Could not delete flow %s from database', flow_id)
             return {'results': False,
@@ -346,10 +329,6 @@ class DeleteFlow(FlowRESTResource):
 
 class GetFlow(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, flow_id):
         """
         Retrieve the flow for given id
@@ -360,12 +339,7 @@ class GetFlow(RESTResource):
 
 class ApproveFlow(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, flow_id):
         """
         Move the given flow(s) id to the next approval
@@ -376,7 +350,7 @@ class ApproveFlow(RESTResource):
                     'results': False,
                     'message': 'The flow "%s" does not exist' % (flow_id)}
 
-        flow = Flow(json_input=flow_db.get(flow_id))
+        flow = Flow(flow_db.get(flow_id))
         try:
             flow.toggle_approval()
             saved = flow.save()
@@ -390,12 +364,7 @@ class ApproveFlow(RESTResource):
 
 class CloneFlow(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def put(self):
         """
         Make a clone of flow

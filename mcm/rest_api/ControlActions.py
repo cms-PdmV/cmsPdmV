@@ -1,5 +1,5 @@
 import flask
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.user import User
 from tools.settings import Settings
 from couchdb_layer.mcm_database import database as Database
@@ -11,28 +11,33 @@ class Search(RESTResource):
     Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
     """
 
-    modules = {'batches': 'batch',
-               'campaigns': 'campaign',
-               'chained_campaigns': 'chained_campaign',
-               'chained_requests': 'chained_request',
-               'flows': 'flow',
-               'invalidations': 'invalidation',
-               'mccms': 'mccm',
-               'requests': 'request',
-               'settings': 'setting',
-               'users': 'user'}
+    from json_layer.campaign import Campaign
+    from json_layer.flow import Flow
+    from json_layer.mccm import MccM
+    modules = {#'batches': 'batch',
+               'campaigns': Campaign,
+               #'chained_campaigns': 'chained_campaign',
+               #'chained_requests': 'chained_request',
+               'flows': Flow,
+               #'invalidations': 'invalidation',
+               'mccms': MccM,
+               #'requests': 'request',
+               'settings': None,
+               'users': None}
     casting = None
 
     @classmethod
     def prepare_casting(cls):
         cls.logger.info('Preparing attribute casting in search')
-        import json_layer
         cls.casting = {}
-        for database_name, module_name in cls.modules.items():
-            module = getattr(json_layer, module_name)
-            class_obj = getattr(module, module_name)
-            schema = class_obj.class_schema()
+        for database_name, class_obj in cls.modules.items():
+            if not class_obj:
+                cls.casting[database_name] = {}
+                continue
+
+            schema = class_obj.schema()
             if not schema:
+                cls.casting[database_name] = {}
                 continue
 
             cls.casting[database_name] = {}
@@ -101,15 +106,15 @@ class Search(RESTResource):
 
         if not args and not sort_on:
             # If there are no args, use simpler fetch
-            res = database.get_all(page, limit, with_total_rows=True)
+            response = database.get_all(page, limit, with_total_rows=True)
         else:
             # Add types to arguments
             args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
             # Construct the complex query
-            res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
+            response = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
-        res['results'] = res.pop('rows', [])
-        return self.output_text(res, 200, {'Content-Type': 'application/json'})
+        response['results'] = response.pop('rows', [])
+        return response
 
 
 class CacheClear(RESTResource):

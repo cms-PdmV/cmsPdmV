@@ -1,235 +1,118 @@
-from json import loads
+import json
 from flask import request
-
-from RestAPIMethod import RESTResource
-from couchdb_layer.mcm_database import database
-from tools.settings import Settings settings
-from tools.communicator import communicator
+from rest_api.RestAPIMethod import RESTResource
+from couchdb_layer.mcm_database import database as Database
+from tools.locker import Locker
+from tools.settings import Settings
 from tools.locator import locator
-from json_layer.user import user
-from tools.user_management import user_pack, roles, access_rights, authenticator
-
-
-class GetUserRole(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self):
-        """
-        Retrieve the role (string) of the current user
-        """
-        return self.get_user_role()
-
-    def get_user_role(self):
-        user_p = user_pack()
-        role_index, role = authenticator.get_user_role_index(user_p.get_username(), email=user_p.get_email())
-        return {'username': user_p.get_username(), 'role': role, 'role_index': role_index}
-
-
-class GetUserPWG(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, user_id=None):
-        """
-        Retrieve the pwg of the provided user
-        """
-        # this could be a specific database in couch, to hold the list, with maybe some added information about whatever the group does...
-
-        all_pwgs = Settings.get('pwg')
-        db = database('users')
-
-        all_pwgs.sort()
-        if user_id is None:
-            return {"results": all_pwgs}
-        if db.document_exists(user_id):
-            mcm_user = user(db.get(user_id))
-            return {"results": mcm_user.get_pwgs()}
-        else:
-            return {"results": []}
+from json_layer.user import Role, User
 
 
 class GetUser(RESTResource):
-    def __init__(self):
-        self.db_name = 'users'
-        self.before_request()
-        self.count_call()
 
-    def get(self, user_id):
+    def get(self, username):
         """
         Retrieve the information about a provided user
         """
-        db = database(self.db_name)
-        return {"results": db.get(user_id)}
+        user_db = Database('users')
+        return {'results': user_db.get(username)}
 
 
-class SaveUser(RESTResource):
+class UpdateUser(RESTResource):
 
-    access_limit = access_rights.generator_convener
-
-    def __init__(self):
-        self.db_name = 'users'
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
-        Save the information about a given user
+        Save the information for given user
+        Users can't change role of users with higher role than theirs
+        e.g. PRODUCTION_MANAGER can't touch PRODUCTION_EXPERT and ADMINISTRATOR
+        Users can't change role to higher than theirs
+        e.g. PRODUCTION_MANAGER can set roles only up to PRODUCTION_MANAGER
         """
+        user_db = Database('users')
+        new_data = json.loads(request.data)
+        username = new_data.get('username')
+        changer = User()
+        with Locker().lock(username):
+            user_data = user_db.get(username)
+            if not user_data:
+                raise Exception('User "%s" cannot be found' % (username))
 
-        db = database(self.db_name)
-        data = loads(request.data.strip())
-        new_user = user(data)
-        self.logger.debug("is trying to update entry for %s" % (new_user.get_attribute('username')))
-        if '_rev' in data:
-            new_user.update_history({'action': 'updated'})
-            return {"results": db.update(new_user.json())}
-        else:
-            new_user.update_history({'action': 'created'})
-            return {"results": db.save(new_user.json())}
+            user = User(user_data)
+            updated = False
+            if new_data.get('role') != user_data.get('role'):
+                # Role change
+                if changer.get_role() < user.get_role():
+                    changer_role = str(changer.get_role())
+                    user_role = str(user.get_role())
+                    raise Exception('User with role "%s" is not allowed to change role '
+                                    'of user with "%s" role' % (changer_role, user_role))
 
+                new_role = Role[new_data['role']]
+                if changer.get_role() < new_role:
+                    changer_role = str(changer.get_role())
+                    new_role = str(new_role)
+                    raise Exception('User with role "%s" is not allowed to change '
+                                    'role to "%s" role' % (changer_role, new_role))
 
-class AskRole(RESTResource):
-    def __init__(self):
-        self.db_name = 'users'
-        self.before_request()
-        self.count_call()
+                user.set_role(new_role)
+                user.update_history('role change', str(new_role))
+                updated = True
 
-    def get(self, pwgs):
-        """
-        Ask for the increase of the role of the current user to the given pwg
-        """
-        # get who's there
-        user_p = user_pack()
-        udb = database(self.db_name)
-        mcm_u = user(udb.get(user_p.get_username()))
-        # get the requested pwgs
-        pwgs = pwgs.split(',')
-        # set the pwgs to the current user
-        current = mcm_u.get_attribute('pwg')
-        current = list(set(current + pwgs))
-        mcm_u.set_attribute('pwg', current)
-        mcm_u.update_history({'action': 'ask role', 'step': pwgs})
-        udb.update(mcm_u.json())
+            old_pwgs = sorted(list(set(user_data.get('pwg'))))
+            new_pwgs = sorted(list(set(pwg.upper() for pwg in new_data.get('pwg'))))
+            if old_pwgs != new_pwgs:
+                # PWG change
+                all_pwgs = Settings.get('pwg')
+                invalid_pwgs = set(new_pwgs) - set(all_pwgs)
+                if invalid_pwgs:
+                    raise Exception('Invalid PWGs: %s' % (','.join(invalid_pwgs)))
 
-        # get the production managers emails
-        production_managers = udb.search({'role': 'production_manager'}, page=-1)
-        # send a notification to prod manager + service
-        to_who = map(lambda u: u['email'], production_managers) + [Settings.get('service_account')]
-        to_who.append(user_p.get_email())
-        com = communicator()
-        l_type = locator()
-        subject = 'Increase role for user %s' % mcm_u.get_attribute('fullname')
-        message = 'Please increase the role of the user %s to the next level.\n\n%susers?prepid=%s' % (
-            mcm_u.get_attribute('username'),
-            l_type.baseurl(),
-            mcm_u.get_attribute('username'))
-        com.sendMail(to_who, subject, message)
+                user.set_pwgs(new_pwgs)
+                added_pwgs = ['+%s' % (pwg) for pwg in (set(new_pwgs) - set(old_pwgs))]
+                removed_pwgs = ['-%s' % (pwg) for pwg in (set(old_pwgs) - set(new_pwgs))]
+                user.update_history('pwg change', ','.join(added_pwgs + removed_pwgs))
+                updated = True
 
-        return {"results": True, "message": "user %s in for %s" % (mcm_u.get_attribute('username'), current)}
+            if updated:
+                user.save()
+
+        return {'results': user.user_info}
 
 
-class AddRole(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.db_name = 'users'
-        self.before_request()
-        self.count_call()
-
-    def add_user(self):
-        db = database(self.db_name)
-        user_p = user_pack()
-        if db.document_exists(user_p.get_username()):
-            return {"results": "User {0} already in database".format(user_p.get_username())}
-        mcm_user = user({"_id": user_p.get_username(),
-                         "username": user_p.get_username(),
-                         "email": user_p.get_email(),
-                         "role": roles[access_rights.user],
-                         "fullname": user_p.get_fullname()})
-
-        # save to db
-        if not mcm_user.reload():
-            self.logger.error('Could not save object to database')
-            return {"results": False}
-
-        mcm_user.update_history({'action': 'created'})
-        mcm_user.reload()
-        return {"results": True}
+class GetUserInfo(RESTResource):
 
     def get(self):
         """
-        Add the current user to the user database if not already
+        Retrieve the username, user name, role as string and allowed PWGS of the
+        current user
         """
-        return self.add_user()
+        user = User()
+        return {'username': user.get_username(),
+                'user_name': user.get_user_name(),
+                'role': str(user.get_role()),
+                'pwgs': user.get_user_pwgs()}
 
 
-class ChangeRole(RESTResource):
+class AddCurrentUser(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.db_name = 'users'
-        self.all_roles = roles
-        self.before_request()
-        self.count_call()
-
-    def change_role(self, username, action):
-        db = database(self.db_name)
-        doc = user(db.get(username))
-        current_role = doc.get_attribute("role")
-        if action == '-1':
-            if current_role != self.all_roles[0]:
-                doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) - 1])
-                authenticator.set_user_role(username, doc.get_attribute("role"))
-                doc.update_history({'action': 'decrease', 'step': doc.get_attribute("role")})
-                return {"results": db.update(doc.json())}
-            return {"results": username + " already is user"}  # else return that hes already a user
-        if action == '1':
-            if len(self.all_roles) != self.all_roles.index(current_role) + 1:  # if current role is not the top one
-                doc.set_attribute("role", self.all_roles[self.all_roles.index(current_role) + 1])
-                authenticator.set_user_role(username, doc.get_attribute("role"))
-                doc.update_history({'action': 'increase', 'step': doc.get_attribute("role")})
-                return {"results": db.update(doc.json())}
-            return {"results": username + " already has top role"}
-        return {"results": "Failed to update user: " + username + " role"}
-
-    def get(self, user_id, action):
+    def post(self):
         """
-        Increase /1 or decrease /-1 the given user role by one unit of role
+        Add the current user to the user database if user is not already in db
         """
-        return self.change_role(user_id, action)
+        user_db = Database('users')
+        user = User()
+        username = user.get_username()
+        if user_db.document_exists(username):
+            return {'results': False,
+                    'message': 'User "%s" is already in the database' % (username)}
 
+        user.set_role(Role.USER)
+        user.update_history('created')
+        # save to db
+        if not user.save():
+            self.logger.error('Could not save user %s to database', username)
+            return {'results': False,
+                    'message': 'Error adding %s to the database' % (username)}
 
-class NotifyPWG(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def put(self):
-        """
-        Notifying given PWG
-        """
-        try:
-            res = self.notify(request.data.strip())
-            return res
-        except Exception as e:
-            self.logger.error('Failed to notify pwg: ' + str(e))
-            return {'results': False, 'message': 'Failed to notify pwg'}
-
-    def notify(self, body):
-        db = database('users')
-        data = loads(body)
-        list_of_mails = [x["value"] for x in db.query_view('pwg-mail', data["pwg"], page_num=-1)]
-        com = communicator()
-        com.sendMail(list_of_mails, data["subject"], data["content"], user_pack().get_email())
-        return {'results': True, 'message': 'Sent message to {0}'.format(list_of_mails)}
+        return {'results': True}

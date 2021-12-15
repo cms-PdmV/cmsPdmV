@@ -1,12 +1,12 @@
 import datetime
 
 from tools.settings import Settings
-from json_base import json_base
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from tools.utils import expand_range
 
 
-class mccm(json_base):
+class MccM(json_base):
 
     _json_base__schema = {
         '_id': '',
@@ -26,20 +26,14 @@ class mccm(json_base):
         'total_events': 0  # Sum of request events in ticket not considering repetitions nor chains
     }
 
-    _json_base__status = ['new', 'done']
-
-    def __init__(self, json_input=None):
-        json_input = json_input if json_input else {}
-
-        repetitions = int(json_input.get('repetitions', 1))
+    def validate(self):
+        repetitions = int(self.get_attribute('repetitions', 1))
         if repetitions > 10:
             self.logger.error('Too many repetitions: %s', repetitions)
             raise Exception('Too many repetitions: %s' % (repetitions))
 
-        self.update(json_input)
-        self.validate()
-        # Make sure this does not throw any errors
         self.get_request_list()
+        return super().validate()
 
     @staticmethod
     def get_meeting_date():
@@ -72,7 +66,7 @@ class mccm(json_base):
         mccms_db = Database('mccms')
         result = mccms_db.search({'generated_chains': chain_id})
         if result and result[0]:
-            return mccm(json_input=result[0])
+            return MccM(result[0])
 
         return None
 
@@ -93,7 +87,7 @@ class mccm(json_base):
         for entry in request_list:
             if isinstance(entry, list) and len(entry) == 2:
                 requests.extend(expand_range(entry[0], entry[1]))
-            elif isinstance(entry, (basestring, str)):
+            elif isinstance(entry, str):
                 requests.append(entry)
             else:
                 raise Exception('Unrecognized prepid/range %s of type', entry, type(entry))

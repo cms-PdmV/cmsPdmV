@@ -1,5 +1,6 @@
 import re
-from json_base import json_base
+from couchdb_layer.mcm_database import database as Database
+from json_layer.json_base import json_base
 from json_layer.sequence import Sequence
 
 
@@ -121,3 +122,13 @@ class Campaign(json_base):
         my_release = my_release[:2]
         other_release = other_release[:2]
         return my_release >= other_release
+
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('campaigns')
+
+        return cls.database

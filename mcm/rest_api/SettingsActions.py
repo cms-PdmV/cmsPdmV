@@ -1,19 +1,14 @@
 import json
 import flask
+from json_layer.user import Role
 
 from rest_api.RestAPIMethod import RESTResource
 from tools.settings import Settings
-from tools.user_management import access_rights
 
 
 class GetSetting(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, key):
         """
         Retrieve value and notes of a given setting
@@ -23,12 +18,7 @@ class GetSetting(RESTResource):
 
 class SetSetting(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def put(self):
         """
         Save a new setting

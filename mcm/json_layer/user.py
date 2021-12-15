@@ -1,15 +1,25 @@
 """
 This module handles User class
 """
+import time
 from copy import deepcopy
-from enum import IntEnum
+from enum import EnumMeta, IntEnum
+from tools.settings import Settings
 from flask import request
 from flask import g as request_context
 from cachelib import SimpleCache
 from couchdb_layer.mcm_database import database as Database
 
 
-class Role(IntEnum):
+class RoleMeta(EnumMeta):
+    """
+    Metaclass to make roles case insensitive
+    """
+    def __getitem__(self, key):
+        return super().__getitem__(key.upper())
+
+
+class Role(IntEnum, metaclass=RoleMeta):
     """
     Roles in McM enum
     """
@@ -37,11 +47,18 @@ class User():
         if data:
             self.user_info = deepcopy(data)
         else:
-            if hasattr(request_context, 'user_info'):
-                self.user_info = request_context.user_info
+            if not request_context:
+                # Not in a request context
+                self.user_info = {'fullname': '',
+                                  'email': '',
+                                  'username': 'automatic',
+                                  'role': str(Role.ADMINISTRATOR)}
             else:
-                self.user_info = self.get_user_info(request.headers)
-                setattr(request_context, 'user_info', self.user_info)
+                if hasattr(request_context, 'user_info'):
+                    self.user_info = request_context.user_info
+                else:
+                    self.user_info = self.get_user_info(request.headers)
+                    setattr(request_context, 'user_info', self.user_info)
 
     def get_user_info(self, headers):
         """
@@ -49,14 +66,6 @@ class User():
         Also fetch info from the database and update the database if needed
         """
         username = headers.get('Adfs-Login')
-        if username is None:
-            # Not in a request context
-            user_info = {'fullname': '',
-                         'email': '',
-                         'username': 'automatic',
-                         'role': str(Role.ADMINISTRATOR)}
-            return user_info
-
         if self.cache.has(username):
             return self.cache.get(username)
 
@@ -84,6 +93,25 @@ class User():
 
         self.cache.set(username, user_info)
         return user_info
+
+    def update_history(self, action, step=''):
+        """
+        Add history entry
+        Automatically add user info and timestamp
+        """
+        history = self.user_info.setdefault('history', [])
+        entry = {'action': action}
+        if step:
+            entry['step'] = step
+
+        # Get current date and time as YYYY-mm-dd-HH-MM
+        date_and_time = time.strftime('%Y-%m-%d-%H-%M', time.localtime(time.time()))
+        entry['updater'] = {'author_username': self.get_username(),
+                            'author_name': self.get_user_name(),
+                            'author_email': self.get_email(),
+                            'submission_date': date_and_time}
+
+        history.append(entry)
 
     @classmethod
     def fetch(cls, username):
@@ -143,7 +171,7 @@ class User():
         """
         Get user name and last name
         """
-        return self.user_info['name']
+        return self.user_info['fullname']
 
     def get_email(self):
         """
@@ -161,4 +189,19 @@ class User():
         """
         Set user role
         """
-        self.user_info['role'] = role.name
+        self.user_info['role'] = str(role)
+
+    def get_user_pwgs(self):
+        """
+        Return list of PWGs that user is allowed to act on
+        """
+        if self.get_role() < Role.PRODUCTION_MANAGER:
+            return self.user_info['pwg']
+
+        return Settings.get('pwg')
+
+    def set_pwgs(self, pwgs):
+        """
+        Set new user PWGs
+        """
+        self.user_info['pwg'] = sorted(list(set(pwg.upper() for pwg in pwgs)))

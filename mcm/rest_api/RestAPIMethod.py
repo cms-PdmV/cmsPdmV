@@ -23,9 +23,12 @@ class RESTResource(Resource):
                     start_time = time.time()
                     try:
                         result = attr(*args, **kwargs)
+                        if isinstance(result, dict):
+                            result = RESTResource.build_response(result)
+
                         status_code = result.status_code
                     except Exception as ex:
-                        status_code = self.exception_to_http_code(ex)
+                        status_code = 500
                         raise ex
                     finally:
                         end_time = time.time()

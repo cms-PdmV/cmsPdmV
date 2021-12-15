@@ -4,38 +4,35 @@ import time
 import json
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
-from json_layer.mccm import mccm as MccM
-from json_layer.user import user as User
+from json_layer.mccm import MccM
+from json_layer.user import Role, User
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
-from json_layer.chained_request import chained_request as ChainedRequest
 from json_layer.request import request as Request
 from tools.locker import locker
 from tools.locator import locator
-from tools.communicator import communicator
+from tools.communicator import Communicator
 from tools.settings import Settings
-from tools.user_management import access_rights
-from tools.user_management import user_pack as UserPack
 from tools.priority import block_to_priority
 
 
 class CreateMccm(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.possible_pwgs = Settings.get('pwg')
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def put(self):
         """
         Create the mccm with the provided json content
         """
-        mccm = MccM(json.loads(flask.request.data.strip()))
+        data = json.loads(flask.request.data)
+        mccm = MccM(data)
         pwg = mccm.get_attribute('pwg').upper()
+        user = User()
+        if pwg not in user.get_user_pwgs():
+            username = user.get_username()
+            return {'results': False,
+                    'message': 'User %s is not allowed to create tickets for %s' % (username, pwg)}
 
-        # TODO: check if generator contacts belong to given PWG
-        if pwg not in self.possible_pwgs:
+        possible_pwgs = Settings.get('pwg')
+        if pwg not in possible_pwgs:
             self.logger.error('Bad PWG: %s', pwg)
             return {'results': False,
                     'message': 'Bad PWG "%s"' % (pwg)}
@@ -68,12 +65,7 @@ class CreateMccm(RESTResource):
 
 class UpdateMccm(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def put(self):
         """
         Updating a MccM with an updated dictionary
@@ -83,9 +75,8 @@ class UpdateMccm(RESTResource):
             return {'results': False,
                     'message': 'No revision provided'}
 
-        mccm_db = Database('mccms')
         try:
-            mccm = MccM(json_input=data)
+            mccm = MccM(data)
         except Exception as ex:
             return {'results': False,
                     'message': str(ex)}
@@ -96,6 +87,14 @@ class UpdateMccm(RESTResource):
             return {'results': False,
                     'message': 'Invalid prepid "%s"' % (prepid)}
 
+        pwg = mccm.get_attribute('pwg').upper()
+        user = User()
+        if pwg not in user.get_user_pwgs():
+            username = user.get_username()
+            return {'results': False,
+                    'message': 'User %s is not allowed to edit tickets for %s' % (username, pwg)}
+
+        mccm_db = Database('mccms')
         mccm_json = mccm_db.get(prepid)
         if not mccm_json:
             self.logger.error('Cannot update, %s does not exist', prepid)
@@ -107,7 +106,7 @@ class UpdateMccm(RESTResource):
             return {'results': False,
                     'message': 'Duplicated requests: %s' % (', '.join(duplicates))}
 
-        old_mccm = MccM(json_input=mccm_json)
+        old_mccm = MccM(mccm_json)
         # Find what changed
         for (key, editable) in old_mccm.get_editable().items():
             old_value = old_mccm.get_attribute(key)
@@ -142,12 +141,7 @@ class UpdateMccm(RESTResource):
 
 class DeleteMccm(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def delete(self, mccm_id):
         """
         Delete a MccM ticket
@@ -159,19 +153,19 @@ class DeleteMccm(RESTResource):
             return {'results': False,
                     'message': 'Cannot delete, %s does not exist' % (mccm_id)}
 
-        mccm = MccM(json_input=mccm_json)
+        mccm = MccM(mccm_json)
         if mccm.get_attribute('status') == 'done':
             return {"results": False,
                     "message": "Cannot delete a ticket that is done"}
 
         # User info
-        user = UserPack(db=True)
-        user_role = user.user_dict.get('role')
+        user = User()
+        user_role = user.get_role()
         self.logger.info('User %s (%s) is trying to delete %s',
                          user.get_username(),
                          user_role,
                          mccm_id)
-        if user_role not in {'production_manager', 'administrator'}:
+        if user_role < Role.PRODUCTION_MANAGER:
             username = user.get_username()
             history = mccm.get_attribute('history')
             owner = None
@@ -201,10 +195,6 @@ class DeleteMccm(RESTResource):
 
 class GetMccm(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, mccm_id):
         """
         Retrieve the MccM for given id
@@ -215,41 +205,34 @@ class GetMccm(RESTResource):
 
 class CancelMccm(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, mccm_id):
         """
         Cancel the MccM ticket provided in argument
         Does not delete it but put the status as cancelled.
         """
         mccm_db = Database('mccms')
-        user_db = Database('users')
-
-        mccm = MccM(json_input=mccm_db.get(mccm_id))
+        mccm = MccM(mccm_db.get(mccm_id))
         status = mccm.get_attribute('status')
         if status == 'done':
             return {"results": False,
                     "message": "Cannot cancel done tickets"}
 
-        mccm.get_current_user_role_level()
-        user = User(user_db.get(mccm.current_user))
-        user_pwgs = user.get_pwgs()
-        ticket_pwg = mccm.get_attribute("pwg")
-        if ticket_pwg not in user_pwgs:
-            self.logger.error('User\'s PWGs: %s, ticket: %s', user_pwgs, ticket_pwg)
-            return {"results": False,
-                    "message": "You cannot cancel ticket with different PWG than yours"}
+        user = User()
+        if user.get_role() < Role.PRODUCTION_MANAGER:
+            user_pwgs = user.get_user_pwgs()
+            ticket_pwg = mccm.get_attribute("pwg")
+            if ticket_pwg not in user_pwgs:
+                self.logger.error('User\'s PWGs: %s, ticket: %s', user_pwgs, ticket_pwg)
+                return {"results": False,
+                        "message": "You cannot cancel ticket with different PWG than yours"}
 
         if status == 'new':
             mccm.set_attribute('status', 'cancelled')
-            mccm.update_history({'action': 'cancelled'})
+            mccm.update_history('cancelled')
         elif status == 'cancelled':
             mccm.set_attribute('status', 'new')
-            mccm.update_history({'action': 'uncancelled'})
+            mccm.update_history('uncancelled')
 
         if not mccm_db.update(mccm.json()):
             return {"results": False,
@@ -260,12 +243,7 @@ class CancelMccm(RESTResource):
 
 class NotifyMccm(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Sends the prodived posted text to the users who acted on MccM ticket
@@ -287,7 +265,7 @@ class NotifyMccm(RESTResource):
 
         # Subject
         subject = data.get('subject', 'Communication about %s' % (prepid)).strip()
-        mccm = MccM(json_input=mccm_json)
+        mccm = MccM(mccm_json)
         mccm.get_current_user_role_level()
         mccm.notify(subject, message, accumulate=False)
         return {"results": True}
@@ -295,27 +273,18 @@ class NotifyMccm(RESTResource):
 
 class GetEditableMccmFields(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, mccm_id):
         """
         Retrieve the fields that are currently editable for a given mccm
         """
         mccm_db = Database('mccms')
-        mccm = MccM(json_input=mccm_db.get(mccm_id))
+        mccm = MccM(mccm_db.get(mccm_id))
         return {"results": mccm.get_editable()}
 
 
 class GenerateChains(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, mccm_id):
         """
         Operate the chaining for a given MccM document id
@@ -351,7 +320,7 @@ class GenerateChains(RESTResource):
             return {"results": False,
                     'message': '%s does not exist' % (mccm_id)}
 
-        mccm = MccM(json_input=mccm_json)
+        mccm = MccM(mccm_json)
         status = mccm.get_attribute('status')
         if status != 'new' and not skip_existing:
             return {"prepid": mccm_id,
@@ -410,7 +379,7 @@ class GenerateChains(RESTResource):
                     'results': False,
                     'message': 'Could not find %s chained campaigns' % (not_found_ids)}
 
-        chained_campaigns = [ChainedCampaign(json_input=c) for c in chained_campaigns]
+        chained_campaigns = [ChainedCampaign(c) for c in chained_campaigns]
         # Requests of ticket
         request_db = Database('requests')
         requests = request_db.bulk_get(request_prepids)
@@ -421,7 +390,7 @@ class GenerateChains(RESTResource):
                     'results': False,
                     'message': 'Could not find %s requests' % (not_found_ids)}
 
-        requests = [Request(json_input=r) for r in requests]
+        requests = [Request(r) for r in requests]
         # Root campaigns of chained campaigns
         root_campaigns = {}
         for chained_campaign in chained_campaigns:
@@ -549,7 +518,7 @@ class GenerateChains(RESTResource):
             # change priority only for the newly created requests
             request_db = Database('requests')
             for request_prepid in generated_requests:
-                generated_request = Request(json_input=request_db.get(request_prepid))
+                generated_request = Request(request_db.get(request_prepid))
                 self.logger.info('Setting block %s (%s) for %s',
                                  block,
                                  priority,
@@ -563,12 +532,7 @@ class GenerateChains(RESTResource):
 
 class MccMReminderGenContacts(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self):
         """
         Send a reminder to the generator conveners about "new" MccM tickets that
@@ -581,12 +545,12 @@ class MccMReminderGenContacts(RESTResource):
                     "message": "No new tickets, what a splendid day!"}
 
         l_type = locator()
-        com = communicator()
+        com = Communicator()
         self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
         # Quickly filter-out no request, no chain and 0 block ones
         mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
         mccm_jsons = sorted(mccm_jsons, key=lambda x: x['prepid'])
-        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        mccms = [MccM(mccm_json) for mccm_json in mccm_jsons]
         # Get all defined but not approved requests
         not_defined_requests = {}
         for mccm in mccms:
@@ -651,12 +615,7 @@ class MccMReminderGenContacts(RESTResource):
 
 class MccMReminderProdManagers(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self):
         """
         Send a reminder to the production managers about "new" MccM tickets that
@@ -669,7 +628,7 @@ class MccMReminderProdManagers(RESTResource):
                     "message": "No new tickets, what a splendid day!"}
 
         l_type = locator()
-        com = communicator()
+        com = Communicator()
         self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
         # Quickly filter-out no request, no chain and 0 block ones
         mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
@@ -680,7 +639,7 @@ class MccMReminderProdManagers(RESTResource):
             return '{:,}'.format(int(number))
 
         mccm_jsons = sorted(mccm_jsons, key=sort_attr, reverse=True)
-        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        mccms = [MccM(mccm_json) for mccm_json in mccm_jsons]
         mccms = [mccm for mccm in mccms if mccm.all_requests_approved()]
         self.logger.info('Have %s MccM tickets after filters', len(mccms))
         # Email
@@ -715,12 +674,7 @@ class MccMReminderProdManagers(RESTResource):
 
 class MccMReminderGenConveners(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self):
         """
         Send a reminder to the generator conveners about "new" MccM tickets that
@@ -733,12 +687,12 @@ class MccMReminderGenConveners(RESTResource):
                     "message": "No new tickets, what a splendid day!"}
 
         l_type = locator()
-        com = communicator()
+        com = Communicator()
         self.logger.info('Found %s new MccM tickets', len(mccm_jsons))
         # Quickly filter-out no request, no chain and 0 block ones
         mccm_jsons = [m for m in mccm_jsons if m['requests'] and m['chains'] and m['block']]
         mccm_jsons = sorted(mccm_jsons, key=lambda x: x['prepid'])
-        mccms = [MccM(json_input=mccm_json) for mccm_json in mccm_jsons]
+        mccms = [MccM(mccm_json) for mccm_json in mccm_jsons]
         # Get all defined but not approved requests
         defined_requests = {}
         for mccm in mccms:
@@ -789,12 +743,7 @@ class MccMReminderGenConveners(RESTResource):
 
 class CalculateTotalEvts(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, mccm_id):
         """
         Force to recalculate total_events for ticket
@@ -805,7 +754,7 @@ class CalculateTotalEvts(RESTResource):
             return {"results": False,
                     'message': '%s does not exist' % (mccm_id)}
 
-        mccm = MccM(json_input=mccm_json)
+        mccm = MccM(mccm_json)
         mccm.update_total_events()
         if not mccm_db.update(mccm.json()):
             return {"results": False,
@@ -816,12 +765,7 @@ class CalculateTotalEvts(RESTResource):
 
 class CheckIfAllApproved(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, mccm_id):
         """
         Return whether all requests in MccM are approve-approved
@@ -832,7 +776,7 @@ class CheckIfAllApproved(RESTResource):
             return {"results": False,
                     'message': '%s does not exist' % (mccm_id)}
 
-        mccm = MccM(json_input=mccm_json)
+        mccm = MccM(mccm_json)
         requests_prepids = mccm.get_request_list()
         request_db = Database('requests')
         requests = request_db.bulk_get(requests_prepids)

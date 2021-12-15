@@ -2,11 +2,8 @@
 
 import os
 import re
-import pprint
-import xml.dom.minidom
 import hashlib
 import copy
-import traceback
 import time
 import logging
 import math
@@ -18,18 +15,16 @@ from operator import itemgetter
 from couchdb_layer.mcm_database import database as Database
 from json_layer.json_base import json_base
 from json_layer.campaign import Campaign
-from json_layer.flow import flow as Flow
+from json_layer.flow import Flow
 from json_layer.batch import batch as Batch
 from json_layer.generator_parameters import generator_parameters
-from json_layer.sequence import sequence as Sequence
+from json_layer.sequence import Sequence
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
 from tools.installer import installer
 import tools.settings as Settings
 from tools.locker import locker
-from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
-from tools.user_management import user_pack as UserPack
 from tools.utils import get_scram_arch as fetch_scram_arch
 
 

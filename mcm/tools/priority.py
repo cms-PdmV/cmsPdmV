@@ -2,7 +2,7 @@
 This module provides number mapping from priority block to actual priority
 """
 import logging
-from connection_wrapper import ConnectionWrapper
+from tools.connection_wrapper import ConnectionWrapper
 from tools.config_manager import Config
 
 

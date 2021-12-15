@@ -1,7 +1,7 @@
 import json
-from json_base import json_base
 from copy import deepcopy
-from pipes import quote as shell_quote
+from shlex import quote as shell_quote
+from json_layer.json_base import json_base
 
 
 class Sequence(json_base):

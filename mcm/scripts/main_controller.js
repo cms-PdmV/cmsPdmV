@@ -38,11 +38,22 @@ angular.module('testApp').controller('mainCtrl',
       }
 
       // GET username and role
-      promise = $http.get("restapi/users/get_role", { cache: true });
-      promise.then(function (data) {
-        $scope.user.name = data.data.username;
+      $scope.user = {};
+      $http.get("restapi/users/get", { cache: true }).then(function (data) {
+        $scope.user.username = data.data.username;
+        $scope.user.fullname = data.data.user_name;
         $scope.user.role = data.data.role;
-        $scope.user.roleIndex = parseInt(data.data.role_index);
+        $scope.user.pwgs = data.data.pwgs;
+        const roles = ['anonymous',
+                       'user',
+                       'generator_contact',
+                       'generator_convener',
+                       'production_manager',
+                       'production_expert',
+                       'administrator'];
+        for (let role of roles) {
+          $scope.user['is_' + role] = roles.indexOf(role) <= roles.indexOf(data.data.role);
+        }
       }, function (data) {
         alert("Error getting user information. Error: " + data.status);
       });

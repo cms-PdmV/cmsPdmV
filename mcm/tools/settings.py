@@ -6,7 +6,7 @@ from couchdb_layer.mcm_database import database as Database
 from tools.locker import locker
 
 
-def Settings():
+class Settings():
     """
     Settings class provices a convenient way of managing setting objects in the
     database
