@@ -14,9 +14,10 @@ class Search(RESTResource):
     from json_layer.campaign import Campaign
     from json_layer.flow import Flow
     from json_layer.mccm import MccM
+    from json_layer.chained_campaign import ChainedCampaign
     modules = {#'batches': 'batch',
                'campaigns': Campaign,
-               #'chained_campaigns': 'chained_campaign',
+               'chained_campaigns': ChainedCampaign,
                #'chained_requests': 'chained_request',
                'flows': Flow,
                #'invalidations': 'invalidation',

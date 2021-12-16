@@ -48,10 +48,10 @@
               </div>
 
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
+                <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-show="user.is_production_manager" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-hide="role(3);" ng-href="#">
+                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
@@ -125,7 +125,7 @@
       <div class="span4">
         <div>
           <!-- MODAL -->
-          <input type="button" class="btn" ng-click="openChainCreationModal()" value="Create a chained campaign" ng-hide="role(3);" align="left" />
+          <input type="button" class="btn" ng-click="openChainCreationModal()" value="Create a chained campaign" ng-show="user.is_production_manager" align="left" />
           <script type="text/ng-template" id="chainedCampaignCreateModal.html">
             <div class="modal-header">
               <h4>Create new chained campaign</h4>

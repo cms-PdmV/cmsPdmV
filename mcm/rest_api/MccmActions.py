@@ -6,7 +6,7 @@ from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import MccM
 from json_layer.user import Role, User
-from json_layer.chained_campaign import chained_campaign as ChainedCampaign
+from json_layer.chained_campaign import ChainedCampaign
 from json_layer.request import request as Request
 from tools.locker import locker
 from tools.locator import locator

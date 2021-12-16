@@ -17,10 +17,8 @@ from cachelib import SimpleCache
 class database:
     logger = logging.getLogger("mcm_error")
     # Cache timeout in seconds
-    CACHE_TIMEOUT = 60 * 60
-    IP_CACHE_TIMEOUT = 15 * 60
-    cache = SimpleCache()
-    ip_cache = SimpleCache()
+    cache = SimpleCache(default_timeout=3600) # 1h
+    ip_cache = SimpleCache(default_timeout=900) # 15min
     serial_number_cache = {}
 
     def __init__(self, db_name, url=None, lucene_url=None, cache_enabled=False):
@@ -67,7 +65,7 @@ class database:
         host = hostname.split('//', 1)[-1].split(':', 1)[0].split('/', 1)[0]
         ip = socket.gethostbyname(host)
         with_ip = hostname.replace(host, ip).rstrip('/') + '/'
-        self.ip_cache.set(hostname, with_ip, timeout=self.IP_CACHE_TIMEOUT)
+        self.ip_cache.set(hostname, with_ip)
         self.logger.info('Will cache %s as %s', hostname, with_ip)
         return with_ip
 
@@ -162,7 +160,7 @@ class database:
         if self.cache_enabled:
             with locker.lock(key):
                 cache_key = 'mcm_database_' + key
-                self.cache.set(cache_key, value, timeout=self.CACHE_TIMEOUT)
+                self.cache.set(cache_key, value)
 
     def __get_from_cache(self, key):
         """

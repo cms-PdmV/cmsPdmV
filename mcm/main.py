@@ -2,20 +2,19 @@ from rest_api.ControlActions import Search, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
 #from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
-# from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
+from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
 # from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
 # from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
 # from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
-# from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
+from rest_api.DashboardActions import GetLocksInfo, GetValidationInfo, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
 from rest_api.SettingsActions import GetSetting, SetSetting
 # from rest_api.TagActions import GetTags, AddTag, RemoveTag
 # from rest_api.ListActions import GetList, UpdateList
 
 from json_layer.sequence import Sequence  # to get campaign sequences
-from tools.communicator import Communicator
 from tools.logger import UserFilter
 from tools.config_manager import Config
 from flask_restful import Api
@@ -254,10 +253,10 @@ api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campai
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
 # REST Chained Campaign Actions
-# api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
-# api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:chained_campaign_id>')
-# api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:chained_campaign_id>')
-# api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
+api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
+api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:chained_campaign_id>')
+api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:chained_campaign_id>')
+api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 # REST Chained Request Actions
 # api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
 # api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
@@ -322,16 +321,10 @@ api.add_resource(CloneFlow, '/restapi/flows/clone')
 # api.add_resource(PutOnHoldInvalidation, '/restapi/invalidations/new_to_hold')
 # api.add_resource(PutHoldtoNewInvalidations, '/restapi/invalidations/hold_to_new')
 # REST dashboard Actions
-# api.add_resource(GetBjobs, '/restapi/dashboard/get_bjobs/<string:options>')
-# api.add_resource(
-#     GetLogFeed,
-#     '/restapi/dashboard/get_log_feed/<string:filename>',
-#     '/restapi/dashboard/get_log_feed/<string:filename>/<int:lines>')
-# api.add_resource(GetLogs, '/restapi/dashboard/get_logs')
-# api.add_resource(GetRevision, '/restapi/dashboard/get_revision')
-# api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time')
-# api.add_resource(GetLocksInfo, '/restapi/dashboard/lock_info')
-# api.add_resource(GetQueueInfo, '/restapi/dashboard/queue_info')
+api.add_resource(GetValidationInfo, '/restapi/dashboard/get_validation_info')
+api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time')
+api.add_resource(GetLocksInfo, '/restapi/dashboard/get_lock_info')
+api.add_resource(GetQueueInfo, '/restapi/dashboard/get_submission_info')
 # REST mccms Actions
 api.add_resource(
     GetMccm,
@@ -460,8 +453,7 @@ def setup_access_logging(app, logger, debug):
     def after(response):
         try:
             if hasattr(g, 'request_start_time'):
-                time_taken = (time.time() - g.request_start_time)
-                time_taken = '%.2fms' % (float(time_taken) * 1000.0)
+                time_taken = '%.2fms' % (float(time.time() - g.request_start_time) * 1000.0)
             else:
                 time_taken = ' '
 
@@ -470,7 +462,7 @@ def setup_access_logging(app, logger, debug):
             user_agent = request.headers.get('User-Agent', '<unknown user agent>')
             url = '%s' % (request.path)
             if request.query_string:
-                url += '?%s' % (request.query_string)
+                url += '?%s' % (request.query_string.decode('ascii'))
 
             if not debug or not url.endswith(('.html', '.css', '.js')):
                 # During debugging suppress html, css and js file access logging

@@ -1,114 +1,165 @@
-import paramiko
+"""
+Module that handles all SSH operations - both ssh and ftp
+"""
+import json
 import time
 import logging
-import random
-
-from tools.logger import InjectionLogAdapter
-from threading import BoundedSemaphore
-import tools.settings as settings
+import paramiko
 
 
-class ssh_executor:
-    semaph = BoundedSemaphore(10)
+class SSHExecutor():
+    """
+    SSH executor allows to perform remote commands and upload/download files
+    """
 
-    def __init__(self, directory=None, prepid=None, server=None):
+    def __init__(self, host, credentials_path):
         self.ssh_client = None
-        if not server:
-            server = settings.get_value("node_for_test")
-        self.ssh_server = server
-        self.ssh_server_port = 22
-        self.ssh_credentials = '/home/pdmvserv/private/credentials'
-        self.hname = None
-        # TO-DO
-        # rename logger -> inject_logger
-        # error_logger -> logger
-        # to be in same naming convention as everywhere else
-        self.error_logger = logging.getLogger("mcm_error")
-        self.logger = InjectionLogAdapter(logging.getLogger("mcm_inject"), {'handle': prepid})
-        self.__build_ssh_client()
-        self.logger.warning('DEPRECATE old ssh_executor!')
+        self.ftp_client = None
+        self.logger = logging.getLogger()
+        self.remote_host = host
+        self.credentials_file_path = credentials_path
+        self.timeout = 3600
+        self.max_retries = 3
 
     def __enter__(self):
         return self
 
-    def __exit__(self, t, value, traceback):
-        self.close_executor()
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.close_connections()
+        return False
 
-    def __build_ssh_client(self):
+    def setup_ssh(self):
+        """
+        Initiate SSH connection and save it as self.ssh_client
+        """
+        self.logger.debug('Will set up ssh')
+        if self.ssh_client:
+            self.close_connections()
+
+        with open(self.credentials_file_path) as json_file:
+            credentials = json.load(json_file)
+
+        self.logger.info('Credentials loaded successfully: %s', credentials['username'])
         self.ssh_client = paramiko.SSHClient()
-        # paramiko.util.log_to_file(self.__ssh_logfile, 10)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        us, pw = self.__get_ssh_credentials()
+        self.ssh_client.connect(self.remote_host,
+                                username=credentials["username"],
+                                password=credentials["password"],
+                                timeout=30)
+        self.logger.debug('Done setting up ssh')
 
-        if not us:
-            self.logger.error('Credentials could not be retrieved. Reason: username was None')
-            raise paramiko.AuthenticationException('Credentials could not be retrieved.')
+    def setup_ftp(self):
+        """
+        Initiate SFTP connection and save it as self.ftp_client
+        If needed, SSH connection will be automatically set up
+        """
+        self.logger.debug('Will set up ftp')
+        if self.ftp_client:
+            self.close_connections()
+
+        if not self.ssh_client:
+            self.setup_ssh()
+
+        self.ftp_client = self.ssh_client.open_sftp()
+        self.logger.debug('Done setting up ftp')
+
+    def execute_command(self, command):
+        """
+        Execute command over SSH
+        """
+        start_time = time.time()
+        if isinstance(command, list):
+            command = '; '.join(command)
+
+        self.logger.debug('Executing %s', command)
+        retries = 0
+        while retries <= self.max_retries:
+            if not self.ssh_client:
+                self.setup_ssh()
+
+            (_, stdout, stderr) = self.ssh_client.exec_command(command, timeout=self.timeout)
+            self.logger.debug('Executed %s. Reading response', command)
+            stdout_list = []
+            stderr_list = []
+            for line in stdout.readlines():
+                stdout_list.append(line[0:256])
+
+            for line in stderr.readlines():
+                stderr_list.append(line[0:256])
+
+            exit_code = stdout.channel.recv_exit_status()
+            stdout = ''.join(stdout_list).strip()
+            stderr = ''.join(stderr_list).strip()
+            # Retry if AFS error occured
+            if '.bashrc: Permission denied' in stderr:
+                retries += 1
+                self.logger.warning('SSH execution failed, will do a retry number %s', retries)
+                self.close_connections()
+                time.sleep(3)
+            else:
+                break
+
+        end_time = time.time()
+        # Read output from stdout and stderr streams
+        self.logger.info('SSH command exit code %s, executed in %.2fs, command:\n\n%s\n',
+                         exit_code,
+                         end_time - start_time,
+                         command.replace('; ', '\n'))
+
+        if stdout:
+            self.logger.debug('STDOUT: %s', stdout)
+
+        if stderr:
+            self.logger.error('STDERR: %s', stderr)
+
+        return stdout, stderr, exit_code
+
+    def upload_file(self, copy_from, copy_to):
+        """
+        Upload a file
+        """
+        self.logger.debug('Will upload file %s to %s', copy_from, copy_to)
+        if not self.ftp_client:
+            self.setup_ftp()
 
         try:
-            time.sleep(2 * random.randrange(8))
-            self.ssh_client.connect(self.ssh_server, port=self.ssh_server_port, username=us, password=pw)
-        except paramiko.AuthenticationException as ex:
-            self.logger.error('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex))
-            return
-        except paramiko.BadHostKeyException as ex:
-            self.logger.error('Host key was invalid. Reason: %s' % ex)
-            return
-        except paramiko.SSHException as ex:
-            self.logger.error('There was a problem with the SSH connection. Reason: %s' % ex)
-            return
+            self.ftp_client.put(copy_from, copy_to)
+            self.logger.debug('Uploaded file to %s', copy_to)
         except Exception as ex:
-            self.logger.error('Could not allocate socket for SSH. Reason: %s' % ex)
-            return
+            self.logger.error('Error uploading file from %s to %s. %s', copy_from, copy_to, ex)
+            return False
 
-    def __get_ssh_credentials(self):
+        return True
+
+    def download_file(self, copy_from, copy_to):
+        """
+        Download file from remote host
+        """
+        self.logger.debug('Will download file %s to %s', copy_from, copy_to)
+        if not self.ftp_client:
+            self.setup_ftp()
+
         try:
-            f = open(self.ssh_credentials, 'r')
-            data = f.readlines()
-            f.close()
-        except IOError as ex:
-            self.error_logger.error('Could not access credential file. IOError: %s' % ex)
-            return None, None
+            self.ftp_client.get(copy_from, copy_to)
+            self.logger.debug('Downloaded file to %s', copy_to)
+        except Exception as ex:
+            self.logger.error('Error downloading file from %s to %s. %s', copy_from, copy_to, ex)
+            return False
 
-        username, password = None, None
-        for line in data:
-            if 'username:' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.error('Username was None')
-                    raise paramiko.AuthenticationException('Username not found.')
-                username = toks[1].strip()
-            elif 'password' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.error('Password was None')
-                    raise paramiko.AuthenticationException('Password not found.')
-                password = toks[1].strip()
+        return True
 
-        return username, password
+    def close_connections(self):
+        """
+        Close any active connections
+        """
+        if self.ftp_client:
+            self.logger.debug('Closing ftp client')
+            self.ftp_client.close()
+            self.ftp_client = None
+            self.logger.debug('Closed ftp client')
 
-    def __remote_exec(self, cmd=''):
-        if not cmd:
-            return None, None, None
-        retry = 1
-        retries = 2
-        while True:
-            try:
-                with self.semaph:
-                    return self.ssh_client.exec_command(cmd)
-            except paramiko.SSHException as ex:
-                self.logger.error('Could not execute remote command. Reason: %s' % ex)
-                return None, None, None
-            except AttributeError as ex:
-                self.logger.error('There was an AttributeError inside the paramiko during try nr %s. Error: %s ' % (retry, ex))
-                retry += 1
-                if retry > retries:
-                    self.logger.error('Attribute error two times. Returning nothing.')
-                    return None, None, None
-
-
-    def execute(self, cmd):
-        stdin, stdout, stderr = self.__remote_exec(cmd)
-        return stdin, stdout, stderr
-
-    def close_executor(self):
-        self.ssh_client.close()
+        if self.ssh_client:
+            self.logger.debug('Closing ssh client')
+            self.ssh_client.close()
+            self.ssh_client = None
+            self.logger.debug('Closed ssh client')

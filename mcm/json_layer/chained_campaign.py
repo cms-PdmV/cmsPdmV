@@ -1,10 +1,10 @@
 # from chained_request import chained_request as ChainedRequest
 from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
-# from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
-class chained_campaign(json_base):
+class ChainedCampaign(json_base):
 
     _json_base__schema = {
         '_id': '',
@@ -19,13 +19,6 @@ class chained_campaign(json_base):
         'history': [],
         'do_not_check_cmssw_versions': False
     }
-
-    def __init__(self, json_input=None):
-        json_input = json_input if json_input else {}
-
-        # update self according to json_input
-        self.update(json_input)
-        self.validate()
 
     def generate_request(self, root_request):
         """

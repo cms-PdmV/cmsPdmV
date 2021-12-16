@@ -1,24 +1,14 @@
 import flask
-import time
-
 import json
-from random import shuffle
-
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
-from json_layer.chained_request import chained_request
-from json_layer.chained_campaign import chained_campaign as ChainedCampaign
-from tools.user_management import access_rights
+from json_layer.chained_campaign import ChainedCampaign
+from json_layer.user import Role
 
 
 class CreateChainedCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Create chained campaign with the provided json content
@@ -59,12 +49,7 @@ class CreateChainedCampaign(RESTResource):
 
 class UpdateChainedCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Update a chained campaign with the provided json content
@@ -108,12 +93,7 @@ class UpdateChainedCampaign(RESTResource):
 
 class DeleteChainedCampaign(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def delete(self, chained_campaign_id):
         """
         Delete a chained campaign
@@ -146,10 +126,6 @@ class DeleteChainedCampaign(RESTResource):
 
 
 class GetChainedCampaign(RESTResource):
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, chained_campaign_id):
         """

@@ -19,7 +19,7 @@ from json_layer.flow import Flow
 from json_layer.batch import batch as Batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import Sequence
-from tools.ssh_executor import ssh_executor
+from tools.ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.installer import installer
 import tools.settings as Settings

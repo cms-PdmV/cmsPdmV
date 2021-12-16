@@ -1,120 +1,35 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-  <head>
-        <base href="/mcm/">
-        <title>Dashboard for McM</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
-        <link href="scripts/css/slider.css" rel="stylesheet" type="text/css"/>
 
-        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-        <script type="text/javascript" src="scripts/bootstrap-slider.js"></script>
+<head>
+  <title>McM - Dashboard</title>
+  <base href="/mcm/">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/dashboard_controller.js"></script>
+  <script src="scripts/snow.js"></script>
+</head>
 
-         <!--[IF IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-           </script>
-         <![endif]-->
-         <![if !IE]>
-           <script type="text/javascript">
-             var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-           </script>
-         <![endif]>
-        <script src="scripts/main_controller.js"></script>
-        <script src="scripts/dashboard_controller.js"></script>
-        <script src="scripts/snow.js"></script>
-  </head>
-  <body ng-controller="mainCtrl">
-    <span ng-controller="resultsCtrl">
-      <div ng-include="'HTML/navbar_template.html'"></div>
-      <tabs>
-        <pane heading="Batch info" active="tabsettings.batch.active">
-          <div class="row-fluid"><div class="offset4"><h2>Batch information</h2></div></div>
-            <div class="row-fluid">
-              <div class="btn-group">
-                <button type="button" class="btn btn-inverse btn-mini disabled">condor clusters </button>
-                <button type="button" class="btn btn-mini active" ng-model="bjobsOptions.bjobsOutput" btn-radio="''">Default output</button>
-                <!--<button type="button" class="btn btn-mini" ng-show="isDevMachine();" ng-model="bjobsOptions.bjobsDev" btn-checkbox btn-checkbox-true="' -J *-dev'" btn-checkbox-false="''">-J *-dev</button>-->
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.hold" btn-checkbox btn-checkbox-true="' -hold'" btn-checkbox-false="''">-hold</button>
-                <button type="button" class="btn btn-mini" ng-model="bjobsOptions.long" btn-checkbox btn-checkbox-true="' -long'" btn-checkbox-false="''">-long</button>
-              </div>
-              <a ng-click="getBjobsData()" rel="tooltip" title="Manually refresh clusters output" >
-                <i class="icon-refresh"></i>
-              </a>
-            </div>
-            <div class="row-fluid">
-              <pre><div class="well batch-info"><span id="preBatch" class="fontPre">{{results}}</span></div></pre>
-            </div>
-            <div>
-              <p>Currently waiting in <b>submission</b> queue: {{queue_info["submission_len"]}}</p>
-            </div>
-          </div>
-        </pane>
-        <pane heading="Logs" active="tabsettings.logs.active">
-          <div class="row-fluid"><h2>Feed from logs</h2></div>
-          <div class="row-fluid">
-            <div class="offset4 span6">
-              <label>Log to display:
-                  <select id="selectLog" class="span3" ng-model="selectedLog" ng-options="log.name for log in logs.list"></select>
-              </label>
-            </div>
-          </div>
-          <div class="row-fluid">
-            <div class="span6">
-              <div class="btn-group">
-                <button type="button" class="btn btn-primary btn-mini disabled">Number of lines to show:</button>
-                <button type="button" class="btn btn-inverse btn-mini disabled" style="width:25px">{{getLines(logs.lines)}}</button>
-              </div>
-              <slider value="logs.lines" sliding="logs.sliding"></slider>
-              <div class="btn-group">
-                <button type="button" class="btn btn-primary btn-mini disabled">Verbosity level:</button>
-                <a type="button" class="dropdown-toggle btn btn-primary btn-mini" data-toggle="dropdown">
-                  {{logs.verbosity}}
-                  <span class="caret"></span>
-                </a>
-                  <ul class="dropdown-menu">
-                    <li ng-repeat="(level, string) in logs.verbosities">
-                      <a ng-click="verbositySelected(level)">{{string}}</a>
-                    </li>
-                  </ul>
-              </div>
-              <a ng-click="getLogData(logs.list[getLogIndex()].name)" rel="tooltip" title="Manually refresh log feed" >
-                <i class="icon-refresh"></i>
-              </a>
-            </div>
-          </div>
-          <div class="row-fluid">
-            <pre class="pre-scrollable" style="max-height: 400px"><span id="preLogs" class="fontPre">{{logs.results}}</span></pre>
-          </div>
-        </pane>
-        <pane ng-if="!role(4)" heading="Cache info" active="tabsettings.cache.active">
-          <div class="row-fluid">
-            <pre><div class="well batch-info">Length is number of entries. Size is sys.getsizeof(...) info (in bytes)
-              <ul>
-                <li ng-repeat="(key, value) in cacheInfo">{{key}} {{value}}</li>
-              </ul>
-            </div></pre>
-          </div>
-        </pane>
-      </tabs>
-      <div class="row-fluid">
-        <div class="span3" style="margin-top:20px;">
-          <img ng-show="pendingHTTP" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
-          <div ng-show="update['success']">
-            Success. Status code:<font color="green">{{update['status_code']}}</font>
-          </div>
-          <div ng-show="update['fail']">
-            Fail. Status code:<font color="red">{{update['status_code']}}</font>
-          </div>
-        </div>
-        <div align="right">
-          <label>Font size:
-            <select class="span1" id="selectFont" ng-model="fontSize">
-              <option ng-repeat="elem in items">{{elem}}</option>
-            </select>
-          </label>
-        </div>
+<body ng-controller="mainCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <span ng-controller="resultsCtrl">
+    <div class="row-fluid">
+      <div class="offset4 span4" style="text-align: center;">
+        <h2>Validation jobs</h2>
       </div>
-    </span>
-  </body>
+    </div>
+    <div class="row-fluid">
+      <pre><div class="well batch-info"><span id="preBatch" class="fontPre">{{validation_info.results}}</span></div></pre>
+    </div>
+    <div style="margin-top: 20px">
+      <p>Currently waiting in <b>submission</b> queue: {{submission_info.results.submission_len}}</p>
+    </div>
+  </span>
+</body>
+
 </html>

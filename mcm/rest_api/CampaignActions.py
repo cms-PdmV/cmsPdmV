@@ -8,7 +8,7 @@ from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import Campaign
 from json_layer.request import request as Request
 from json_layer.sequence import Sequence
-from json_layer.chained_campaign import chained_campaign as ChainedCampaign
+from json_layer.chained_campaign import ChainedCampaign
 from json_layer.user import Role
 
 

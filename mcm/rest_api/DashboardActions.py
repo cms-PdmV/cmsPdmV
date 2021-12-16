@@ -1,132 +1,60 @@
-import os
-import subprocess
 import datetime
-
-from RestAPIMethod import RESTResource
-from tools.ssh_executor import ssh_executor
-from tools.user_management import access_rights
-
-class GetBjobs(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, options=''):
-        """
-        Get bjobs information regarding the condor clusters
-        """
-        with ssh_executor() as ssh_exec:
-            stdin, stdout, stderr = ssh_exec.execute(self.create_command(options))
-            out = stdout.read()
-            err = stderr.read()
-            if err:
-                return {"results": err}
-            return {"results": out}
-
-    def create_command(self, options):
-        bcmd = 'module load lxbatch/tzero && condor_q -nobatch '
-        for opt in options.split(','):
-            bcmd += opt
-
-        bcmd += ' | grep -v RELMON'
-        return bcmd
+from rest_api.RestAPIMethod import RESTResource
+from json_layer.user import Role
+from tools.locker import Locker
+from tools.ssh_executor import SSHExecutor
+from tools.config_manager import Config
+from cachelib import SimpleCache
 
 
-class GetLogFeed(RESTResource):
+class GetValidationInfo(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, filename, lines=-1):
-        """
-        Gets a number of lines from given log.
-        """
-        name = os.path.join('logs', os.path.basename(filename))
-        return self.read_logs(name, lines)
-
-    def read_logs(self, name, nlines):
-        if not os.path.isfile(name):
-            return {'results': 'Error: File "%s" does not exist' % (name)}
-
-        if nlines > 0:
-            command = 'tail -n%d %s' % (nlines, name)
-        else:
-            command = 'cat %s' % (name)
-
-        read_process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        data = read_process.communicate()[0]
-        return {"results": data}
-
-
-class GetRevision(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
+    __cache = SimpleCache(default_timeout=120) # 2 minutes
 
     def get(self):
         """
-        returns the current tag of the software running
+        Get information about validation jobs in HTCondor
+        Cache results for a few minutes as well as limit to only one executtion
+        at a time
         """
-        import subprocess
-        output = subprocess.Popen(["git", "describe", "--tags", "--abbrev=0"], stdout=subprocess.PIPE)
-        revision = output.communicate()[0]
-        return revision
+        key = 'validation_info'
+        cached = self.__cache.get(key)
+        if cached:
+            self.logger.debug('Found cached results for validation info')
+            return {'results': cached}
+
+        with Locker().lock(key):
+            cached = self.__cache.get(key)
+            if cached:
+                self.logger.debug('Found cached results for validation info')
+                return {'results': cached}
+
+            host = 'lxplus'
+            credentials = Config.get('ssh_auth')
+            with SSHExecutor(host, credentials) as ssh:
+                command = 'module load lxbatch/tzero && condor_q -nobatch -wide | grep -v RELMON'
+                output, error, _ = ssh.execute_command(command)
+                if error:
+                    self.__cache.set(key, error)
+                    return {'results': error}
+                else:
+                    self.__cache.set(key, output)
+                    return {'results': output}
 
 
 class GetStartTime(RESTResource):
 
     start_time = datetime.datetime.now().strftime('%c')
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self):
         """
         Get the time at which the server was started.
         """
-        return {"results": self.start_time}
-
-
-class GetLogs(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.path = "logs"
-        self.before_request()
-        self.count_call()
-
-    def get(self):
-        """
-        Gets a list of logs sorted by date.
-        """
-
-        files_dates = sorted([{"name": filename, "modified": os.path.getmtime(os.path.join(self.path, filename))}
-                              for filename in os.listdir(self.path)
-                              if os.path.isfile(os.path.join(self.path, filename))], key=lambda x: x["modified"],
-                             reverse=True)
-
-        return {"results": files_dates}
+        return {'results': self.start_time}
 
 
 class GetLocksInfo(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self):
         from tools.locker import locker, semaphore_events
         pretty_r_locks = {}
@@ -141,13 +69,8 @@ class GetLocksInfo(RESTResource):
                 "locks (thread)": pretty_locks,
                 "semaphores": semaphore_events.count_dictionary}
 
+
 class GetQueueInfo(RESTResource):
-
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self):
         from tools.handlers import submit_pool
