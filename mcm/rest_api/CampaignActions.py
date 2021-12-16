@@ -59,8 +59,8 @@ class CreateCampaign(RESTResource):
         if root in (-1, 0):
             chained_campaign_db = Database('chained_campaigns')
             chained_campaign = ChainedCampaign({'prepid': 'chain_%s' % (prepid),
-                                                '_id': 'chain_%s' % (prepid)})
-            chained_campaign.add_campaign(prepid)
+                                                '_id': 'chain_%s' % (prepid),
+                                                'campaigns': [prepid, None]})
             chained_campaign_db.save(chained_campaign.json())
 
         return {'results': True}
@@ -122,8 +122,8 @@ class UpdateCampaign(RESTResource):
             chained_campaign_id = 'chain_%s' % (prepid)
             if not chained_campaign_db.document_exists(chained_campaign_id):
                 chained_campaign = ChainedCampaign({'prepid': chained_campaign_id,
-                                                    '_id': chained_campaign_id})
-                chained_campaign.add_campaign(prepid)
+                                                    '_id': chained_campaign_id,
+                                                    'campaigns': [prepid, None]})
                 chained_campaign_db.save(chained_campaign.json())
 
         return {'results': True}
