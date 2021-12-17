@@ -147,7 +147,7 @@ class DeleteChainedRequest(RESTResource):
                     "message": "Chained request %s is not disabled" % (crid)}
         # get all objects
         mcm_r_s = []
-        for (i, rid) in reversed(enumerate(mcm_cr.get_attribute('chain'))):
+        for (i, rid) in enumerate(reversed(mcm_cr.get_attribute('chain'))):
             mcm_r = request(rdb.get(rid))
             in_chains = mcm_r.get_attribute('member_of_chain')
             if crid in in_chains:
