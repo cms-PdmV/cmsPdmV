@@ -142,37 +142,34 @@ class DeleteChainedRequest(RESTResource):
         crdb = database('chained_requests')
         rdb = database('requests')
         mcm_cr = chained_request(crdb.get(crid))
+        if mcm_cr.get_attribute('action_parameters')['flag']:
+            return {"results": False,
+                    "message": "Chained request %s is not disabled" % (crid)}
         # get all objects
         mcm_r_s = []
-        for (i, rid) in enumerate(mcm_cr.get_attribute('chain')):
+        for (i, rid) in reversed(enumerate(mcm_cr.get_attribute('chain'))):
             mcm_r = request(rdb.get(rid))
-            # this is not a valid check as it is allowed to remove a chain around already running requests
-            #    if mcm_r.get_attribute('status') != 'new':
-            #        return {"results":False,"message" : "the request %s part of the chain %s for action %s is not in new status"%( mcm_r.get_attribute('prepid'),
-            #                                                                                                                             crid,
-            #                                                                                                                             mcm_a.get_attribute('prepid'))}
             in_chains = mcm_r.get_attribute('member_of_chain')
             if crid in in_chains:
                 in_chains.remove(crid)
-                self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
-                        mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
-
+                self.logger.debug("Removing %s from member_of_chain of %s", crid, rid)
                 mcm_r.set_attribute('member_of_chain', in_chains)
 
-            if i == 0:
-                if len(in_chains) == 0 and mcm_r.get_attribute('status') != 'new':
-                    return {"results": False, "message": "the request %s, not in status new, at the root of the chain will not be chained anymore" % rid}
-            else:
-                if len(in_chains) == 0:
-                    return {"results": False, "message": "the request %s, not at the root of the chain will not be chained anymore" % rid}
+            if not in_chains:
+                # Last chain that had that request
+                approval = mcm_r.get_attribute('approval')
+                status = mcm_r.get_attribute('status')
+                if i == 0 and approval == 'submit':
+                    # Root request that is submitted or done, must be reset first
+                    return {"results": False,
+                            "message": "Root request %s, in %s-%s will not be chained anymore" % (rid, approval, status)}
+                else:
+                    # Not root request can't exist without a chain
+                    return {"results": False,
+                            "message": "Not-root request %s will not be chained anymore" % (rid)}
 
             mcm_r.update_history({'action': 'leave', 'step': crid})
             mcm_r_s.append(mcm_r)
-        if mcm_cr.get_attribute('action_parameters')['flag']:
-            return {
-                "results": False,
-                "message": "the action for %s is not disabled" % (crid)
-            }
         # then save all changes
         for mcm_r in mcm_r_s:
             if not rdb.update(mcm_r.json()):
