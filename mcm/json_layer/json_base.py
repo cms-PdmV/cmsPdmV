@@ -218,3 +218,11 @@ class json_base:
 
     def fullmatch(self, pattern, string):
         return re.match("(?:" + pattern + r")\Z", string)
+
+    @classmethod
+    def fetch(cls, prepid):
+        data = cls.get_database().get(prepid)
+        if not data:
+            return None
+
+        return cls(data)

@@ -1,6 +1,41 @@
 from rest_api.ControlActions import Search, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-#from rest_api.RequestActions import ImportRequest, DeleteRequest, GetRequest, GetRequestByDataset, UpdateRequest, GetCmsDriverForRequest, GetFragmentForRequest, GetSetupForRequest, ApproveRequest, ResetRequestApproval, SetStatus, GetStatus, GetStatusAndApproval, GetEditable, GetDefaultGenParams, CloneRequest, RegisterUser, GetActors, NotifyUser, InspectStatus, UpdateStats, RequestsFromFile, StalledReminder, RequestsReminder, SearchableRequest, UpdateMany, OptionResetForRequest, GetRequestOutput, GetInjectCommand, GetUploadCommand, GetUniqueValues, Reserve_and_ApproveChain, TaskChainRequestDict, RequestsPriorityChange, UpdateEventsFromWorkflow, GENLogOutput
+from rest_api.RequestActions import (ImportRequest,
+                                     CloneRequest,
+                                     DeleteRequest,
+                                     GetRequest,
+                                     GetRequestByDataset,
+                                     UpdateRequest,
+                                     #GetCmsDriverForRequest,
+                                     #GetFragmentForRequest,
+                                     #GetSetupForRequest,
+                                     #ApproveRequest,
+                                     #ResetRequestApproval,
+                                     #SetStatus,
+                                     #GetStatus,
+                                     #GetStatusAndApproval,
+                                     #GetEditable,
+                                     #GetDefaultGenParams,
+                                     #RegisterUser,
+                                     #GetActors,
+                                     #NotifyUser,
+                                     #InspectStatus,
+                                     #UpdateStats,
+                                     #RequestsFromFile,
+                                     #StalledReminder,
+                                     #RequestsReminder,
+                                     #SearchableRequest,
+                                     #UpdateMany,
+                                     #OptionResetForRequest,
+                                     #GetRequestOutput,
+                                     #GetInjectCommand,
+                                     #GetUploadCommand,
+                                     #GetUniqueValues,
+                                     #Reserve_and_ApproveChain,
+                                     #TaskChainRequestDict,
+                                     #RequestsPriorityChange,
+                                     #UpdateEventsFromWorkflow,
+                                     GENLogOutput)
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
 # from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
@@ -184,14 +219,14 @@ api.add_resource(UpdateUser, '/restapi/users/update')
 api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 api.add_resource(AddCurrentUser, '/restapi/users/add')
 # REST request actions
-# api.add_resource(ImportRequest, '/restapi/requests/save')
-# api.add_resource(UpdateRequest, '/restapi/requests/update')
-# api.add_resource(DeleteRequest, '/restapi/requests/delete/<string:request_id>')
-# api.add_resource(CloneRequest, '/restapi/requests/clone')
-# api.add_resource(
-#     GetRequest,
-#     '/restapi/requests/get/<string:request_id>',
-#     '/public/restapi/requests/get/<string:request_id>')
+api.add_resource(ImportRequest, '/restapi/requests/save')
+api.add_resource(CloneRequest, '/restapi/requests/clone')
+api.add_resource(UpdateRequest, '/restapi/requests/update')
+api.add_resource(DeleteRequest, '/restapi/requests/delete/<string:request_id>')
+api.add_resource(
+    GetRequest,
+    '/restapi/requests/get/<string:request_id>',
+    '/public/restapi/requests/get/<string:request_id>')
 # api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
 # api.add_resource(
 #     ApproveRequest,
@@ -243,7 +278,7 @@ api.add_resource(AddCurrentUser, '/restapi/users/add')
 # api.add_resource(GetUniqueValues, '/restapi/requests/unique_values/<string:field_name>')
 # api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
 # api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
-# api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
+api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
 # REST Campaign Actions
 api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')

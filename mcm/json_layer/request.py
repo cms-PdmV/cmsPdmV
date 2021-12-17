@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 import re
 import hashlib
@@ -8,8 +6,8 @@ import time
 import logging
 import math
 import random
+import json
 from math import sqrt
-from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
@@ -36,67 +34,56 @@ class AFSPermissionError(Exception):
         return 'AFS permission error: %s' % (self.message)
 
 
-class request(json_base):
+class Request(json_base):
     _json_base__schema = {
         '_id': '',
         'prepid': '',
-        'history': [],
-        'priority': 20000,
+        'approval': 'none',
         'cmssw_release': '',
-        'input_dataset': '',
-        'output_dataset': [],
-        'pwg': '',
-        'validation': {"valid":False, "content":"all"},
-        'dataset_name': '',
-        'pileup_dataset_name': '',
-        'process_string': '',
-        'extension': 0,
-        'fragment_tag': '',
-        'mcdb_id': -1,
-        'notes': '',
         'completed_events': -1,
-        'total_events': -1,
-        'member_of_chain': [],
-        'member_of_campaign': '',
+        'config_id': [],
+        'dataset_name': '',
+        'energy': 0.0,
+        'events_per_lumi': 0,
+        'extension': 0,
         'flown_with': '',
-        'time_event': [-1.0],
-        'size_event': [-1.0],
+        'fragment': '',
+        'fragment_tag': '',
+        'generator_parameters': [],
+        'generators': [],
+        'history': [],
+        'input_dataset': '',
+        'interested_pwg': [],
+        'keep_output': [],  # list of booleans
+        'mcdb_id': -1,
+        'member_of_campaign': '',
+        'member_of_chain': [],
         'memory': 2000,
         'name_of_fragment': '',
-        'fragment': '',
-        'config_id': [],
-        'version': 0,
-        'status': 'new',
-        'type': '',
-        'keep_output': [],  # list of booleans
-        'generators': [],
-        'sequences': [],
-        'generator_parameters': [],
-        'reqmgr_name': [],
-        'approval': 'none',
-        'energy': 0.0,
-        'tags': [],
-        'interested_pwg': [],
-        'events_per_lumi': 0,
+        'notes': '',
+        'output_dataset': [],
+        'pileup_dataset_name': '',
         'pilot': False,
+        'priority': 20000,
+        'process_string': '',
+        'pwg': '',
+        'reqmgr_name': [],
+        'sequences': [],
+        'size_event': [-1.0],
+        'status': 'new',
+        'tags': [],
+        'time_event': [-1.0],
+        'total_events': -1,
+        'type': '',
+        'validation': {"valid":False, "content":"all"},
+        'version': 0,
     }
 
     _cmssw_pattern = 'CMSSW_[0-9]{1,3}_[0-9]{1,3}_[0-9]{1,3}.{0,20}'
     _dataset_name_pattern = '^[A-Za-z][A-Za-z0-9\-_]{5,99}$'
     _processing_string_pattern = '[a-zA-Z0-9_]{3,100}'
-
-    def __init__(self, json_input=None):
-
-        # detect approval steps
-        if not json_input:
-            json_input = {}
-
-        self._json_base__approvalsteps = ['none', 'validation', 'define', 'approve', 'submit']
-        self._json_base__status = ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
-        # update self according to json_input
-        self.update(json_input)
-        self.validate()
-        self.get_current_user_role_level()
+    # Approval ['none', 'validation', 'define', 'approve', 'submit']
+    # Status ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
 
     def validate(self):
         """

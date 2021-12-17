@@ -1,19 +1,20 @@
 import time
 import json
+from json_layer.chained_campaign import ChainedCampaign
 
-from json_base import json_base
-from json_layer.request import request as Request
+from json_layer.json_base import json_base
+from json_layer.request import Request
 from json_layer.campaign import Campaign
-from json_layer.mccm import mccm as MccM
-from flow import flow as Flow
+from json_layer.mccm import MccM
+from json_layer.flow import Flow
 from couchdb_layer.mcm_database import database as Database
 from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
-import tools.settings as settings
+from tools.settings import Settings
 
 
-class chained_request(json_base):
+class ChainedRequest(json_base):
 
     _json_base__status = ['new', 'processing', 'done', 'force_done']
 
@@ -28,23 +29,23 @@ class chained_request(json_base):
         'member_of_campaign': '',
         'priority': 0,
         'pwg': '',
-        'step': 0,
         'status': '',
+        'step': 0,
         'threshold': 0,
-        'validate': False,  # Whether the chain should be submitted to validation
+        'validate': False,  # Whether the chain should be validated
     }
 
-    def __init__(self, json_input=None):
+    def __getitem__(self, index):
+        """
+        Given index, return request prepid at index in the chain
+        """
+        return self.get_attribute('chain')[index]
 
-        json_input = json_input if json_input else {}
-
-        # create all chained request in flow
-        self._json_base__schema['status'] = self.get_status_steps()[0]
-
-        # update self according to json_input
-        self.update(json_input)
-        self.validate()
-        self.get_current_user_role_level()
+    def __len__(self):
+        """
+        Return length of chain
+        """
+        return len(self.get_attribute('chain'))
 
     def request_join(self, req):
         with locker.lock(req.get_attribute('prepid')):
@@ -132,63 +133,73 @@ class chained_request(json_base):
 
         return setup_file
 
-    def flow(self, input_dataset='', check_stats=True, reserve=False, stop_at_campaign=None):
-        self.logger.info('Flowing chained_request %s to next step...' % (self.get_attribute('_id')))
-        if not self.get_attribute('chain'):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'chained_request %s has got no root' % (self.get_attribute('_id')))
+    def flow(self, check_stats=True, reserve=False, stop_at_campaign=None):
+        """
+        Flow chained request further
+        If possible, reuse requests, if not - create new ones
+        """
+        prepid = self.get_attribute('prepid')
+        self.logger.info('Flowing chained request %s to next step, reserve=%s, stop at=%s',
+                         prepid,
+                         reserve,
+                         stop_at_campaign)
+        chain = self.get_attribute('chain')
+        if not chain:
+            # Empty chained requests are not valid, they must have at least a
+            # root request
+            raise Exception('Chained request %s has no requests' % (prepid))
 
-        # check on the approval of the chained request before all
-        # let it be flowing regardless
-        # if self.get_attribute('approval') == 'none':
-        #    raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-        #    'The approval of the chained request is none, and therefore flow cannot happen')
+        if not self.get_attribute('enabled'):
+            return {'results': False,
+                    'message': 'Chained request is not enabled'}
 
-        # this operation requires to access all sorts of objects
-        rdb = database('requests')
-        cdb = database('campaigns')
-        ccdb = database('chained_campaigns')
-        crdb = database('chained_requests')
-        fdb = database('flows')
-        sdb = database('settings')
-        ldb = database('lists')
+        request_db = Database('requests')
+        campaign_db = Database('campaigns')
+        chained_campaign_db = Database('chained_campaigns')
+        chained_request_db = Database('chained_requests')
+        flow_db = Database('flows')
 
-        l_type = locator()
+        if not reserve:
+            # Normally the chain's step is the current step
+            current_step = self.get_attribute('step')
+        else:
+            # During reservation, step is not moved, so this needs to point to
+            # the last available request in the chain
+            current_step = len(chain) - 1
 
-        current_step = len(self.get_attribute('chain')) - 1 if reserve else self.get_attribute('step')
-        current_id = self.get_attribute('chain')[current_step]
+        current_prepid = chain[current_step]
         next_step = current_step + 1
+        chained_campaign_id = self.get_attribute('member_of_campaign')
+        chained_campaign = ChainedCampaign.fetch(chained_campaign_id)
 
-        if not rdb.document_exists(current_id):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'the request %s does not exist' % current_id)
+        if next_step >= len(chained_campaign):
+            return {'result': False,
+                    'message': 'Chained request does not allow any futher flowing'}
 
-        current_request = request(rdb.get(current_id))
-        current_campaign = campaign(cdb.get(current_request.get_attribute('member_of_campaign')))
+        if not chained_campaign.get_attribute('enabled'):
+            return {'result': False,
+                    'message': 'Chained campaign is not enabled'}
 
-        if not ccdb.document_exists(self.get_attribute('member_of_campaign')):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'the chain request %s is member of %s that does not exist' % (
-                    self.get_attribute('_id'),
-                    self.get_attribute('member_of_campaign')
-                )
-            )
+        next_flow_id = chained_campaign.flow(next_step)
+        next_campaign_id = chained_campaign.campaign(next_step)
+
+        self.logger.debug('Flowing %s to step %s/%s (%s + %s)',
+                          prepid,
+                          next_step + 1,
+                          len(chained_campaign),
+                          next_flow_id,
+                          next_campaign_id)
+
+        current_request = Request.fetch(current_prepid)
+        current_campaign = Campaign.fetch(current_request.get_attribute('member_of_campaign'))
+
+        next_campaign = Campaign.fetch(next_campaign_id)
+        if not next_campaign.get_attribute('status') == 'started':
+            return {'results': False,
+                    'message': 'Campaign %s is not started' % (next_campaign)}
+
         if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
             return {'result': False}
-
-        mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
-        if next_step >= len(mcm_cc['campaigns']):
-            if reserve:
-                return {'result': False}
-
-            if current_request.get_attribute('status') == 'done':
-                self.set_attribute('status', 'done')
-                self.reload()
-
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'chained_campaign %s does not allow any further flowing.' % (self.get_attribute('member_of_campaign')))
 
         if not reserve:
             # is the current request in the proper approval
@@ -212,8 +223,6 @@ class chained_request(json_base):
 
         # what is the campaign to go to next and with which flow
         (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
-        if not fdb.document_exists(flow_name):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The flow %s does not exist' % flow_name)
         mcm_f = flow(fdb.get(flow_name))
         if 'sequences' not in mcm_f.get_attribute('request_parameters'):
             raise self.ChainedRequestCannotFlowException(
@@ -227,14 +236,7 @@ class chained_request(json_base):
                     mcm_f.get_attribute("request_parameters")["process_string"],
                     ','.join(other_bad_characters)))
 
-        if not cdb.document_exists(next_campaign_id):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The next campaign %s does not exist' % next_campaign_id)
-
         next_campaign = campaign(cdb.get(next_campaign_id))
-        if len(next_campaign.get_attribute('sequences')) != len(mcm_f.get_attribute('request_parameters')['sequences']):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'the sequences changes in flow %s are not consistent with the next campaign %s' % (flow_name, next_campaign_id))
 
         if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
             raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
@@ -259,9 +261,6 @@ class chained_request(json_base):
                     'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
                         mcm_f.get_attribute('approval'),
                         self.get_attribute('approval')))
-
-        if next_campaign.get_attribute('status') == 'stopped':
-            raise self.CampaignStoppedException(next_campaign_id)
 
         # Handle a strange case where next request is already done and current does not save output
         if len(self.get_attribute('chain')) > self.get_attribute('step') + 1:
@@ -608,57 +607,19 @@ class chained_request(json_base):
 
             self.update_history({'action': action, 'step': next_request.get_attribute('prepid')})
 
-        # we remove the chain_req id from force_flow list if it's in there
-        forceflow_list = ldb.get("list_of_forceflow")
-        if self.get_attribute("prepid") in forceflow_list["value"]:
-            forceflow_list["value"].remove(self.get_attribute("prepid"))
-            ldb.update(forceflow_list)
-
         return {
             'result': True,
             'generated_request': next_request.get_attribute('prepid')
         }
 
-    def toggle_last_request(self):
-
-        # let it toggle the last request to a given approval only if the chained request allows it
-        if self.get_attribute('approval') == 'none':
-            return
-
-        ccdb = database('chained_campaigns')
-        mcm_cc = ccdb.get(self.get_attribute('member_of_campaign'))
-        (next_campaign_id, flow_name) = mcm_cc['campaigns'][self.get_attribute('step')]
-        fdb = database('flows')
-        mcm_f = flow(fdb.get(flow_name))
-        # check whether we have to do something even more subtle with the request
-        if mcm_f.get_attribute('approval') in ['submit', 'tasksubmit'] or self.get_attribute('approval') == 'submit':
-            rdb = database('requests')
-            next_request = request(rdb.get(self.get_attribute('chain')[self.get_attribute('step')]))
-
-            current_r_approval = next_request.get_attribute('approval')
-            time_out = 0
-
-            while current_r_approval != 'submit' and time_out <= 10:
-                time_out += 1
-                # get it back from db to avoid _red issues
-                next_request = request(rdb.get(next_request.get_attribute('prepid')))
-                with locker.lock('{0}-wait-for-approval'.format(next_request.get_attribute('prepid'))):
-                    next_request.approve()
-                    request_saved = rdb.save(next_request.json())
-                    if not request_saved:
-                        raise self.ChainedRequestCannotFlowException(
-                            self.get_attribute('_id'),
-                            'Could not save the new request %s while trying to move to submit approval' % (next_request.get_attribute('prepid')))
-                current_r_approval = next_request.get_attribute('approval')
-                pass
-
-        return True
-
     def set_last_status(self, status):
+        """
+        Update last status of the chained request
+        """
         if status == self.get_attribute('last_status'):
             return False
 
-        self.update_history({'action': 'set last status', 'step': status})
+        self.update_history('set last status', status)
         self.set_attribute('last_status', status)
         return True
 

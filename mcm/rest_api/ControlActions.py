@@ -15,6 +15,7 @@ class Search(RESTResource):
     from json_layer.flow import Flow
     from json_layer.mccm import MccM
     from json_layer.chained_campaign import ChainedCampaign
+    from json_layer.request import Request
     modules = {#'batches': 'batch',
                'campaigns': Campaign,
                'chained_campaigns': ChainedCampaign,
@@ -22,7 +23,7 @@ class Search(RESTResource):
                'flows': Flow,
                #'invalidations': 'invalidation',
                'mccms': MccM,
-               #'requests': 'request',
+               'requests': Request,
                'settings': None,
                'users': None}
     casting = None

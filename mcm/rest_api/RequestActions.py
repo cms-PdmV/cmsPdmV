@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from copy import deepcopy
 import flask
 import traceback
@@ -11,31 +10,23 @@ from collections import defaultdict
 import re
 
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResource
-from json_layer.request import request as Request
-from json_layer.chained_request import chained_request as ChainedRequest
-from json_layer.sequence import sequence as Sequence
+from rest_api.RestAPIMethod import RESTResource
+from json_layer.request import Request
+# from json_layer.chained_request import ChainedRequest
+from json_layer.sequence import Sequence
 from json_layer.campaign import Campaign
-from json_layer.user import user
+from json_layer.user import User
 from tools.locator import locator
-from tools.communicator import communicator
+from tools.communicator import Communicator
 from tools.locker import locker
-import tools.settings as settings
+from tools.settings import Settings
 from tools.handlers import RequestInjector, submit_pool
-from tools.user_management import access_rights
 from tools.priority import priority
 from tools.utils import clean_split, expand_range
 from flask_restful import reqparse
-from tools.user_management import user_pack as UserPack
 
 
 class RequestRESTResource(RESTResource):
-
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.db_name = 'requests'
-        self.with_trace = True
 
     def import_request(self, request_json, cloned_from=None):
         request_db = Database('requests')

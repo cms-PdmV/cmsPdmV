@@ -11,11 +11,9 @@ class ChainedCampaign(json_base):
         'prepid': '',
         'alias': '',
         'campaigns': [],  # list of lists [camp_id, flow]
+        'enabled': True,
         'notes': '',
-        'action_parameters': {
-            'threshold': 0,
-            'flag': True
-        },
+        'threshold': 0,
         'history': [],
         'do_not_check_cmssw_versions': False
     }
@@ -46,7 +44,7 @@ class ChainedCampaign(json_base):
         chained_request.set_attribute('member_of_campaign', self.get_attribute('prepid'))
         chained_request.set_attribute('action_parameters', self.get_attribute('action_parameters'))
         # By default flag should be true
-        chained_request.get_attribute('action_parameters')['flag'] = True
+        chained_request.set_attribute('enabled', True)
 
         # set the default values that will be carried over to the next step in the chain
         chained_request.set_attribute("dataset_name", root_request.get_attribute("dataset_name"))
@@ -64,3 +62,33 @@ class ChainedCampaign(json_base):
         # update history
         chained_request.update_history({'action': 'created'})
         return chained_request
+
+    def __getitem__(self, index):
+        """
+        Given index, return flow-campaign pair at index in the chain
+        """
+        if isinstance(index, slice):
+            return [self[i] for i in range(*index.indices(len(self)))]
+
+        if isinstance(index, int):
+            return self.get_attribute('campaigns')[index]
+
+        raise TypeError('Expected int or slice, but got %s' % (type(index)))
+
+    def __len__(self):
+        """
+        Return length of chain
+        """
+        return len(self.get_attribute('campaigns'))
+
+    def flow(self, index):
+        """
+        Return flow at given index
+        """
+        return self[index][1]
+
+    def campaign(self, index):
+        """
+        Return campaign at given index
+        """
+        return self[index][0]

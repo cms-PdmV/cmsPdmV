@@ -13,7 +13,7 @@ from tools.locker import locker, semaphore_events
 import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from tools.communicator import Communicator
-from json_layer.request import request, AFSPermissionError
+from json_layer.request import Request, AFSPermissionError
 from json_layer.chained_request import chained_request
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
