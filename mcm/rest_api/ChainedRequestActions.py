@@ -147,7 +147,9 @@ class DeleteChainedRequest(RESTResource):
                     "message": "Chained request %s is not disabled" % (crid)}
         # get all objects
         mcm_r_s = []
-        for (i, rid) in enumerate(reversed(mcm_cr.get_attribute('chain'))):
+        chain = mcm_cr.get_attribute('chain')
+        for rid in reversed(chain):
+            i = chain.index(rid)
             mcm_r = request(rdb.get(rid))
             in_chains = mcm_r.get_attribute('member_of_chain')
             if crid in in_chains:
@@ -163,7 +165,7 @@ class DeleteChainedRequest(RESTResource):
                     # Root request that is submitted or done, must be reset first
                     return {"results": False,
                             "message": "Root request %s, in %s-%s will not be chained anymore" % (rid, approval, status)}
-                else:
+                if i != 0:
                     # Not root request can't exist without a chain
                     return {"results": False,
                             "message": "Not-root request %s will not be chained anymore" % (rid)}
