@@ -147,6 +147,12 @@ class Request(json_base):
         if len(self.get_attribute('keep_output')) != len(sequences):
             raise Exception('Number of keep output values is different from number of sequences')
 
+    def keeps_output(self):
+        """
+        Return whether any sequence of request keeps output
+        """
+        return bool(list(filter(None, self.get('keep_output'))))
+
     def approve(self):
         """
         Approve request - move it to next status
@@ -550,11 +556,12 @@ class Request(json_base):
             raise Exception('There are %s unacknowledged invalidations for %s' % (len(invalidations),
                                                                                   prepid))
 
-    def get_input_dataset(self, datasets, sequences):
+    def get_input_dataset(self, datasets):
         """
         Try to figure out a dataset of "datasets" that could be used as input
         for the first sequence based on sequence's "step"
         """
+        sequences = self.get_attribute('sequences')
         if not datasets or not sequences:
             self.logger.warning('Return "" dataset name, becase datasets or sequences are missing')
             return ""
@@ -595,8 +602,7 @@ class Request(json_base):
         # By default, it's total_events
         previous_events = previous_request['total_events']
         # Get input dataset
-        sequences = self.get_attribute('sequences')
-        input_dataset = self.get_input_dataset(previous_request['output_dataset'], sequences)
+        input_dataset = self.get_input_dataset(previous_request['output_dataset'])
         if input_dataset and previous_request['reqmgr_name']:
             for workflow in previous_request['reqmgr_name']:
                 dataset_statuses = workflow["content"].get("pdmv_dataset_statuses", {})

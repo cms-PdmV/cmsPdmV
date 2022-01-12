@@ -4,26 +4,19 @@ import flask
 
 from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
-from json_layer.chained_request import chained_request
-from json_layer.request import request
-from json_layer.mccm import mccm
-from tools.user_management import access_rights
-from flask_restful import reqparse
+from json_layer.user import Role
+from rest_api.RestAPIMethod import RESTResource
+from json_layer.chained_request import ChainedRequest
+from json_layer.request import Request
+from json_layer.mccm import MccM
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from tools.priority import block_to_priority
 
 
 class CreateChainedRequest(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.db_name = 'chained_requests'
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def put(self):
         """
         Create a chained request from the provided json content
@@ -84,13 +77,7 @@ class CreateChainedRequest(RESTResource):
 
 class UpdateChainedRequest(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.db_name = 'chained_requests'
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Update a chained request from the provided json content
@@ -130,12 +117,7 @@ class UpdateChainedRequest(RESTResource):
 
 class DeleteChainedRequest(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def delete(self, chained_request_id):
         """
         Simply delete a chained requests
@@ -187,10 +169,6 @@ class DeleteChainedRequest(RESTResource):
 
 
 class GetChainedRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'chained_requests'
-        self.before_request()
-        self.count_call()
 
     def get(self, chained_request_id):
         """
@@ -216,12 +194,7 @@ class GetChainedRequest(RESTResource):
 # step of the chain
 class FlowToNextStep(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def put(self):
         """
         Allows to flow a chained request with the dataset and blocks provided in the json
@@ -268,7 +241,7 @@ class FlowToNextStep(RESTResource):
         db = database('chained_requests')
         chain_id = data['prepid']
         try:
-            creq = chained_request(json_input=db.get(chain_id))
+            creq = ChainedRequest(data=db.get(chain_id))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return {"results": str(ex)}
@@ -292,7 +265,7 @@ class FlowToNextStep(RESTResource):
     def flow(self, chainid, check_stats=True, reserve=False):
         try:
             db = database('chained_requests')
-            creq = chained_request(json_input=db.get(chainid))
+            creq = ChainedRequest(data=db.get(chainid))
         except Exception as ex:
             self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
             return {"results": str(ex)}
@@ -311,12 +284,7 @@ class FlowToNextStep(RESTResource):
 
 class RewindToPreviousStep(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_ids):
         """
         Rewind the provided coma separated chained requests of one step.
@@ -418,12 +386,7 @@ class RewindToPreviousStep(RESTResource):
 
 class RewindToRoot(RewindToPreviousStep):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_ids):
         """
         Rewind the provided coma separated chained requests to the root request
@@ -454,12 +417,7 @@ class RewindToRoot(RewindToPreviousStep):
 
 class ApproveChainedRequest(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_id, step=-1):
         """
         move the chained request approval to the next step
@@ -498,12 +456,7 @@ class ApproveChainedRequest(RESTResource):
 
 class InspectChain(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_id):
         """
         Inspect a chained request for next action
@@ -529,12 +482,7 @@ class InspectChain(RESTResource):
 
 class SearchableChainedRequest(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self, action=''):
         """
         Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
@@ -581,12 +529,7 @@ class SearchableChainedRequest(RESTResource):
 
 class TestChainedRequest(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, chained_request_id):
         """
         Perform test for chained requests
@@ -646,12 +589,7 @@ class TestChainedRequest(RESTResource):
 
 class SoftResetChainedRequest(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self, mode='show'):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_id):
         """
         Does a soft reset to all relevant request in the chain
@@ -678,18 +616,13 @@ class SoftResetChainedRequest(RESTResource):
 
 class InjectChainedRequest(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.mode = 'show' if 'get_inject' in flask.request.path else 'inject'
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_id):
         """
         Provides the injection command and does the injection.
         """
         from tools.handlers import ChainRequestInjector, submit_pool
+        self.mode = 'show' if 'get_inject' in flask.request.path else 'inject'
 
         _q_lock = locker.thread_lock(chained_request_id)
         if not locker.thread_acquire(chained_request_id, blocking=False):
@@ -712,20 +645,15 @@ class InjectChainedRequest(RESTResource):
 
 class ChainsFromTicket(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('ticket', type=str, required=True)
-        self.parser.add_argument('page', type=int, default=0)
-        self.parser.add_argument('limit', type=int, default=20)
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self):
         """
         Get all the generated chains from a ticket
         """
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('ticket', type=str, required=True)
+        self.parser.add_argument('page', type=int, default=0)
+        self.parser.add_argument('limit', type=int, default=20)
         kwargs = self.parser.parse_args()
         page = kwargs['page']
         limit = kwargs['limit']
@@ -759,20 +687,15 @@ class ChainsFromTicket(RESTResource):
 
 class TaskChainDict(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('scratch', type=str)
-        self.parser.add_argument('upto', type=int)
-        self.representations = {'text/plain': self.output_text}
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self, chained_request_id):
         """
         Provide the taskchain dictionnary for uploading to request manager
         """
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('scratch', type=str)
+        self.parser.add_argument('upto', type=int)
+        self.representations = {'text/plain': self.output_text}
         kwargs = self.parser.parse_args()
         crdb = database('chained_requests')
         rdb = database('requests')
@@ -940,8 +863,6 @@ class TaskChainDict(RESTResource):
 
 class GetSetupForChains(RESTResource):
 
-    access_limit = access_rights.user
-
     def __init__(self):
         path = flask.request.path
         if 'get_setup' in path:
@@ -961,6 +882,7 @@ class GetSetupForChains(RESTResource):
         self.kwargs = self.parser.parse_args()
         self.representations = {'text/plain': self.output_text}
 
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self, chained_request_id):
         """
         Retrieve the script necessary to setup and test a given chained request
@@ -984,8 +906,6 @@ class GetSetupForChains(RESTResource):
 
 class ForceChainReqToDone(RESTResource):
 
-    access_limit = access_rights.production_manager
-
     def __init__(self):
         self.crdb = database('chained_requests')
         self.ldb = database('lists')
@@ -993,6 +913,7 @@ class ForceChainReqToDone(RESTResource):
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_ids):
         """
         Force chained_request to set status to done
@@ -1026,14 +947,13 @@ class ForceChainReqToDone(RESTResource):
 
 class ForceStatusDoneToProcessing(RESTResource):
 
-    access_limit = access_rights.production_manager
-
     def __init__(self):
         self.crdb = database('chained_requests')
         self.before_request()
         self.count_call()
         self.representations = {'text/plain': self.output_text}
 
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chained_request_ids):
         """
         Move chained_request from force_done to processing
@@ -1068,14 +988,7 @@ class ForceStatusDoneToProcessing(RESTResource):
 
 class ToForceFlowList(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.ldb = database('lists')
-        self.cdb = database('chained_requests')
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, chained_request_ids):
         """
         Add selected prepid's to global force complete list for later action
@@ -1110,13 +1023,7 @@ class ToForceFlowList(RESTResource):
 
 class ChainedRequestsPriorityChange(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.chained_requests_db = database("chained_requests")
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def post(self):
         fails = []
         for chain in loads(flask.request.data):
@@ -1141,13 +1048,7 @@ class ChainedRequestsPriorityChange(RESTResource):
 
 class RemoveFromForceFlowList(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.ldb = database('lists')
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def delete(self, chained_request_ids):
         """
         Remove selected prepid's from global force_complete list
@@ -1173,9 +1074,6 @@ class RemoveFromForceFlowList(RESTResource):
 
 
 class GetUniqueChainedRequestValues(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, field_name):
         """

@@ -13,7 +13,7 @@ from rest_api.RequestActions import (ImportRequest,
                                      #ResetRequestApproval,
                                      #SetStatus,
                                      #GetStatus,
-                                     #GetStatusAndApproval,
+                                     GetStatusAndApproval,
                                      #GetEditable,
                                      #GetDefaultGenParams,
                                      #RegisterUser,
@@ -38,7 +38,28 @@ from rest_api.RequestActions import (ImportRequest,
                                      GENLogOutput)
 from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
 from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
-# from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneToProcessing, CreateChainedRequest, ChainsFromTicket, ChainedRequestsPriorityChange, UpdateChainedRequest, DeleteChainedRequest, GetChainedRequest,  FlowToNextStep, ApproveChainedRequest, InspectChain, RewindToPreviousStep, RewindToRoot, SearchableChainedRequest, TestChainedRequest, GetSetupForChains, TaskChainDict, InjectChainedRequest, SoftResetChainedRequest, ToForceFlowList, RemoveFromForceFlowList, GetUniqueChainedRequestValues
+from rest_api.ChainedRequestActions import (FlowToNextStep,
+                                            #ForceChainReqToDone,
+                                            #ForceStatusDoneToProcessing,
+                                            #CreateChainedRequest,
+                                            #ChainsFromTicket,
+                                            #ChainedRequestsPriorityChange,
+                                            #UpdateChainedRequest,
+                                            #DeleteChainedRequest,
+                                            #ApproveChainedRequest,
+                                            #InspectChain,
+                                            #RewindToPreviousStep,
+                                            #RewindToRoot,
+                                            #SearchableChainedRequest,
+                                            #TestChainedRequest,
+                                            #GetSetupForChains,
+                                            #TaskChainDict,
+                                            #InjectChainedRequest,
+                                            #SoftResetChainedRequest,
+                                            #ToForceFlowList,
+                                            #RemoveFromForceFlowList,
+                                            #GetUniqueChainedRequestValues,
+                                            GetChainedRequest)
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
 # from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
@@ -196,7 +217,7 @@ api.add_resource(
 #     '/public/restapi/requests/get_valid/<string:prepid>/<int:events>',
 #     '/public/restapi/requests/get_valid/<string:prepid>')
 # api.add_resource(GetStatus, '/public/restapi/requests/get_status/<string:request_ids>')
-# api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_approval/<string:prepid>')
+api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_approval/<string:prepid>')
 # api.add_resource(
 #     GetActors,
 #     '/public/restapi/requests/get_actors/<string:request_id>',
@@ -297,12 +318,11 @@ api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 # api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
 # api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:chained_request_id>')
 # api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:chained_request_id>')
-# api.add_resource(
-#     FlowToNextStep,
-#     '/restapi/chained_requests/flow',
-#     '/restapi/chained_requests/flow/<string:chained_request_id>',
-#     '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>',
-#     '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>/<string:reserve_campaign>')
+api.add_resource(FlowToNextStep,
+                 '/restapi/chained_requests/flow',
+                 '/restapi/chained_requests/flow/<string:chained_request_id>',
+                 '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>',
+                 '/restapi/chained_requests/flow/<string:chained_request_id>/<string:action>/<string:reserve_campaign>')
 # api.add_resource(RewindToPreviousStep, '/restapi/chained_requests/rewind/<string:chained_request_ids>')
 # api.add_resource(RewindToRoot, '/restapi/chained_requests/rewind_to_root/<string:chained_request_ids>')
 # api.add_resource(

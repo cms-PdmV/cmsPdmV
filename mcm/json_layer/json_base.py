@@ -190,6 +190,12 @@ class json_base:
 
         return self.__json[attribute]
 
+    def set(self, attribute, value):
+        return self.set_attribute(attribute, value)
+
+    def get(self, attribute, value):
+        return self.get_attribute(attribute)
+
     # TODO: Move history updates to appropriate places
     """
     def approve(self, step=-1, to_approval=None):

@@ -10,11 +10,10 @@ from queue import Queue
 from tools.ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.locker import locker, semaphore_events
-import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from tools.communicator import Communicator
 from json_layer.request import Request, AFSPermissionError
-from json_layer.chained_request import chained_request
+from json_layer.chained_request import ChainedRequest
 from json_layer.batch import batch
 from rest_api.BatchPrepId import BatchPrepId
 from tools.logger import InjectionLogAdapter
@@ -76,7 +75,7 @@ class ThreadPool:
 
 # END OF THREAD POOL
 
-submit_pool = ThreadPool("submission", settings.get_value('threads_num_submission'))
+submit_pool = ThreadPool("submission", 5)
 
 
 class Handler():

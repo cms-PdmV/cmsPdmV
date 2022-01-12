@@ -8,7 +8,6 @@ from json_layer.campaign import Campaign
 from json_layer.mccm import MccM
 from json_layer.flow import Flow
 from couchdb_layer.mcm_database import database as Database
-from tools.priority import priority
 from tools.locker import locker
 from tools.locator import locator
 from tools.settings import Settings
@@ -47,23 +46,25 @@ class ChainedRequest(json_base):
         """
         return len(self.get_attribute('chain'))
 
-    def request_join(self, req):
-        with locker.lock(req.get_attribute('prepid')):
-            chain = req.get_attribute("member_of_chain")
-            if self.get_attribute('_id') not in chain:
-                chain.append(self.get_attribute('_id'))
-                self.logger.debug("Adding chain_req member_of_chain: %s to request: %s" % (self.get_attribute("prepid"), req.get_attribute('prepid')))
-            else:
-                return False
+    def request_join(self, request):
+        """
+        Update request's member of chain and history
+        Add request's prepid to the chain
+        """
+        chain_prepid = self.get('prepid')
+        request_prepid = request.get('prepid')
+        # Update request
+        chains = request.get_attribute('member_of_chain')
+        if chain_prepid not in chains:
+            request.set_attribute('member_of_chain', sorted(chains + [chain_prepid]))
+            request.update_history('join chain', chain_prepid)
 
-            req.set_attribute("member_of_chain", chain)
-
-        req.update_history({'action': 'join chain', 'step': self.get_attribute('_id')})
-        if not req.get_attribute('prepid') in self.get_attribute('chain'):
-            chain = self.get_attribute('chain')
-            chain.append(req.get_attribute('prepid'))
-            self.set_attribute("chain", chain)
-            self.update_history({'action': 'add request', 'step': req.get_attribute('prepid')})
+        # Update chained request
+        chain = self.get_attribute('chain')
+        if request_prepid not in chain:
+            chain.append(request_prepid)
+            self.set_attribute('chain', chain)
+            self.update_history('add request', request_prepid)
 
     def reserve(self, limit=None, save_requests=True):
         steps = 0
@@ -133,35 +134,26 @@ class ChainedRequest(json_base):
 
         return setup_file
 
-    def flow(self, check_stats=True, reserve=False, stop_at_campaign=None):
+    def flow(self, reserve=False, stop_at_campaign=None):
         """
-        Flow chained request further
+        Flow chained request one step further
         If possible, reuse requests, if not - create new ones
         """
-        prepid = self.get_attribute('prepid')
-        self.logger.info('Flowing chained request %s to next step, reserve=%s, stop at=%s',
-                         prepid,
-                         reserve,
-                         stop_at_campaign)
-        chain = self.get_attribute('chain')
+        prepid = self.get('prepid')
+        self.logger.info('Flowing chained request %s to next step, reserve=%s', prepid, reserve)
+        chain = self.get('chain')
         if not chain:
             # Empty chained requests are not valid, they must have at least a
             # root request
             raise Exception('Chained request %s has no requests' % (prepid))
 
-        if not self.get_attribute('enabled'):
+        if not self.get('enabled'):
             return {'results': False,
                     'message': 'Chained request is not enabled'}
 
-        request_db = Database('requests')
-        campaign_db = Database('campaigns')
-        chained_campaign_db = Database('chained_campaigns')
-        chained_request_db = Database('chained_requests')
-        flow_db = Database('flows')
-
         if not reserve:
             # Normally the chain's step is the current step
-            current_step = self.get_attribute('step')
+            current_step = self.get('step')
         else:
             # During reservation, step is not moved, so this needs to point to
             # the last available request in the chain
@@ -169,14 +161,14 @@ class ChainedRequest(json_base):
 
         current_prepid = chain[current_step]
         next_step = current_step + 1
-        chained_campaign_id = self.get_attribute('member_of_campaign')
+        chained_campaign_id = self.get('member_of_campaign')
         chained_campaign = ChainedCampaign.fetch(chained_campaign_id)
 
         if next_step >= len(chained_campaign):
             return {'result': False,
                     'message': 'Chained request does not allow any futher flowing'}
 
-        if not chained_campaign.get_attribute('enabled'):
+        if not chained_campaign.get('enabled'):
             return {'result': False,
                     'message': 'Chained campaign is not enabled'}
 
@@ -191,406 +183,132 @@ class ChainedRequest(json_base):
                           next_campaign_id)
 
         current_request = Request.fetch(current_prepid)
-        current_campaign = Campaign.fetch(current_request.get_attribute('member_of_campaign'))
+        current_campaign_id = current_request.get('member_of_campaign')
+        if reserve and stop_at_campaign == current_campaign_id:
+            return {'result': False,
+                    'message': 'Reached limit'}
 
+        current_campaign = Campaign.fetch(current_campaign_id)
         next_campaign = Campaign.fetch(next_campaign_id)
         if not next_campaign.get_attribute('status') == 'started':
             return {'results': False,
                     'message': 'Campaign %s is not started' % (next_campaign)}
 
-        if reserve and stop_at_campaign and stop_at_campaign == current_campaign.get_attribute('prepid'):
-            return {'result': False}
-
         if not reserve:
-            # is the current request in the proper approval
-            allowed_request_approvals = ['submit']
-            if current_request.get_attribute('approval') not in allowed_request_approvals:
-                raise self.NotApprovedException(
-                    current_request.get_attribute('prepid'),
-                    current_request.get_attribute('approval'),
-                    allowed_request_approvals)
-            # is the current request in the proper status
-            allowed_request_statuses = ['submitted', 'done']
-            if current_request.get_attribute('status') not in allowed_request_statuses:
-                raise self.NotInProperStateException(
-                    current_request.get_attribute('prepid'),
-                    current_request.get_attribute('status'),
-                    allowed_request_statuses)
+            # If not reserving a chain, current step must be done
+            current_request_status = current_request.get_approval_status()
+            if current_request_status != 'submit-done':
+                return {'results': False,
+                        'message': 'Cannot flow, %s is %s and not submit-done' (current_prepid,
+                                                                                current_request_status)}
 
-        root_request_id = self.get_attribute('chain')[0]
+        # Get root request
+        root_request_id = chain[0]
+        if root_request_id == current_prepid:
+            root_request = current_request
+        else:
+            root_request = Request.fetch(root_request_id)
 
-        action_parameters = self.get_attribute('action_parameters')
+        next_campaign = Campaign.fetch(next_campaign_id)
+        if next_campaign.get('energy') != current_campaign.get('energy'):
+            return {'results': False,
+                    'message': 'Cannot flow %s, inconsistent energy in %s' % (prepid, next_campaign_id)}
 
-        # what is the campaign to go to next and with which flow
-        (next_campaign_id, flow_name) = mcm_cc['campaigns'][next_step]
-        mcm_f = flow(fdb.get(flow_name))
-        if 'sequences' not in mcm_f.get_attribute('request_parameters'):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'The flow %s does not contain sequences information.' % (flow_name))
-        other_bad_characters = [' ', '-']
-        if "process_string" in mcm_f.get_attribute('request_parameters') and mcm_f.get_attribute("request_parameters")["process_string"] and any(map(lambda char: char in mcm_f.get_attribute("request_parameters")["process_string"], other_bad_characters)):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'The flow process string (%s) contains a bad character %s' % (
-                    mcm_f.get_attribute("request_parameters")["process_string"],
-                    ','.join(other_bad_characters)))
+        next_flow = Flow.fetch(next_flow_id)
+        if not next_flow.get('approval') == 'none':
+            return {'results': False,
+                    'message': 'Flow %s does not allow flowing' % (next_flow_id)}
 
-        next_campaign = campaign(cdb.get(next_campaign_id))
-
-        if next_campaign.get_attribute('energy') != current_campaign.get_attribute('energy'):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'cannot flow any further. Request {0} has inconsistent energy.'.format(next_campaign.get_attribute("prepid")))
-
-        if not mcm_cc.get('do_not_check_cmssw_versions', False) and not next_campaign.is_release_greater_or_equal_to(current_campaign.get_attribute('cmssw_release')):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute("_id"), 'cannot flow any further. Request {0} has lower release version.'.format(next_campaign.get_attribute("prepid")))
-
-        if next_campaign.get_attribute('type') == 'MCReproc' and ('time_event' not in mcm_f.get_attribute('request_parameters')):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'the flow is getting into a MCReproc campaign but not time per event is specified')
-
-        if next_campaign.get_attribute('type') == 'MCReproc' and ('size_event' not in mcm_f.get_attribute('request_parameters')):
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'the flow is getting into a MCReproc campaign but not size per event is specified')
-
-        # check that it is allowed to flow
-        allowed_flow_approvals = ['flow', 'submit', "tasksubmit"]
-        # cascade of checks
-
-        if not mcm_f.get_attribute('approval') in allowed_flow_approvals:
-            if reserve or not self.get_attribute('approval') in allowed_flow_approvals:
-                raise self.ChainedRequestCannotFlowException(
-                    self.get_attribute('_id'),
-                    'Neither the flow (%s) nor the chained request (%s) approvals allow for flowing' % (
-                        mcm_f.get_attribute('approval'),
-                        self.get_attribute('approval')))
-
-        # Handle a strange case where next request is already done and current does not save output
-        if len(self.get_attribute('chain')) > self.get_attribute('step') + 1:
-            # If existing chain is long enough
-            existing_next_req = rdb.get(self.get_attribute('chain')[self.get_attribute('step') + 1])
-            if existing_next_req.get('status') == 'done':
-                self.set_attribute('step', self.get_attribute('step') + 1)
-                self.logger.info('Next request - %s is done, moving step to +1' % (existing_next_req.get('prepid')))
-                return {
-                    'result': True,
-                    'generated_request': existing_next_req.get('prepid')
-                }
-
-        # what is going to be the required number of events for the next request
-        # update the stats to its best
-        # used for normal flowing
+        next_events = current_request.get('total_events')
+        # Check if current request produced at least 5% of expected events
         if not reserve:
             if current_request.get_attribute('status') != 'done':
                 current_request.get_stats()
 
-            next_total_events = current_request.get_attribute('completed_events')
-            # get the original expected events and allow a margin of 5% less statistics
-            statistics_fraction = settings.get_value('statistics_fraction')
-            current_eff_error = 1. - current_request.get_efficiency_error()
-            statistics_fraction = min(statistics_fraction, current_eff_error)
-            completed_events_to_pass = int(current_request.get_attribute('total_events') * statistics_fraction)
-            total_events_for_percentage = current_request.get_attribute('total_events')
+            statistics_fraction = Settings.get('statistics_fraction')
+            current_completed_events = current_request.get('completed_events')
+            current_total_events = current_request.get('total_events')
+            current_keeps_output = current_request.keeps_output()
+            min_events = int(current_total_events * statistics_fraction)
+            if current_completed_events <= min_events and current_keeps_output:
+                raise Exception('%s keeps output, but has only %s completed events, at least '
+                                '%s are required. Will not flow %s' % (current_prepid,
+                                                                       current_completed_events,
+                                                                       min_events,
+                                                                       prepid))
 
-            notify_on_fail = True  # to be tuned according to the specific cases
-            if current_request.get_attribute('completed_events') <= 0 and current_request.get_attribute("keep_output").count(True) > 0:
-                self.logger.debug("compl_evts: %s, prepid: %s" % (
-                    current_request.get_attribute('completed_events'),
-                    current_request.get_attribute('prepid')))
+            next_events = int(current_completed_events * current_request.get_efficiency())
 
-                raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'The number of events completed is negative or null for %s' % (current_request.get_attribute('prepid')))
-            else:
-                allowed_request_statuses = ['done']
-                at_a_transition = (current_campaign.get_attribute('root') != 1 and next_campaign.get_attribute('root') == 1)
-                if action_parameters['threshold'] != 0 and at_a_transition:
-                    allowed_request_statuses.append('submitted')
-                # check status
-                if not current_request.get_attribute('status') in allowed_request_statuses:
-                    raise self.NotInProperStateException(
-                        current_request.get_attribute('prepid'),
-                        current_request.get_attribute('status'),
-                        allowed_request_statuses)
-                # special check at transition that the statistics is good enough
-                if at_a_transition:
-                    self.logger.info("ChainedRequest is at transition. id: %s" % (self.get_attribute('prepid')))
-                    # at a root -> non-root transition only does the threshold functions !
-                    if action_parameters['threshold'] != 0:
-                        next_total_events = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
-                        completed_events_to_pass = next_total_events
-
-            if check_stats and (current_request.get_attribute('completed_events') < completed_events_to_pass):
-                if current_request.get_attribute("keep_output").count(True) > 0:
-                    __percentage = 100 * float(current_request.get_attribute('completed_events')) / float(total_events_for_percentage)
-                    if notify_on_fail:
-                        message = 'For the request %s, the completed statistics %s (%.2f%%) is not enough to fullfill the requirement to the next level: need at least %s in chain %s \n\nPlease report to the operation HN or at the next MccM what action should be taken.\n\n%srequests?prepid=%s\n%schained_requests?contains=%s\n%schained_requests?prepid=%s ' % (
-                            current_request.get_attribute('prepid'),
-                            current_request.get_attribute('completed_events'),
-                            __percentage,
-                            completed_events_to_pass,
-                            self.get_attribute('prepid'),
-                            l_type.baseurl(),
-                            current_request.get_attribute('prepid'),
-                            l_type.baseurl(),
-                            current_request.get_attribute('prepid'),
-                            l_type.baseurl(),
-                            self.get_attribute('prepid'))
-
-                        subject = 'Flowing %s with not enough statistics' % (current_request.get_attribute('prepid'))
-
-                        current_request.notify(subject,
-                                               message,
-                                               accumulate=True)
-
-                    raise self.ChainedRequestCannotFlowException(
-                        self.get_attribute('_id'),
-                        'The number of events completed %s (%.2f%%) is not enough for the requirement (%s)' % (current_request.get_attribute('completed_events'), __percentage, completed_events_to_pass))
-                else:
-                    self.logger.debug("we are flowing chain_req even if current request didn't kept output")
-
-        # select what is to happened : [create, patch, use]
-        next_id = None
-        approach = None
-        next_request = None
-        if next_step != len(self.get_attribute('chain')):
-            # not at the end
-            next_id = self.get_attribute('chain')[next_step]
-            if not rdb.document_exists(next_id):
-                raise self.ChainedRequestCannotFlowException(
-                    self.get_attribute('_id'),
-                    'The next request (%s) according to the step (%s) does not exist' % (next_id, next_step))
-            next_request = request(rdb.get(next_id))
-            if next_request.get_attribute('status') == 'new':
-                # most likely a rewind + resub
-                approach = 'patch'
-            else:
-                # this is always the case in chains reserved from existing things: so use the next request
-                approach = 'use'
-                # raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'),
-                # 'This should never happen. (%s) is next according to step (%s), but is not in new status (%s)' % (
-                # next_id, next_step, next_request.get_attribute('status')))
+        # Get the next request in the chain
+        if next_step < len(self):
+            # Next request is already in the chain
+            next_request_id = chain[next_step]
+            self.logger.debug('Next request %s is in the chain - use it', next_request_id)
+            next_request = Request.fetch(next_request_id)
         else:
-            # Try to reuse existing requests by looking at other chained requests
-            # Requests should come from chained requests with same root and flows
-            prepid = self.get_attribute('prepid')
-            root_request = rdb.get(root_request_id)
-            campaign_prepid = self.get_attribute('member_of_campaign')
-            chained_request_ids = root_request['member_of_chain']
-            self.logger.debug('Chained request %s is flowing, next step - %s', prepid, next_step)
-            self.logger.debug('Root request %s is member of %s chained requests',
-                              root_request_id,
-                              len(chained_request_ids))
-            # Remove current chained request
-            chained_request_ids = [p for p in chained_request_ids if p != prepid]
-            # Remove chained requests in the same chained campaign
-            chained_request_ids = [p for p in chained_request_ids if '-%s-' % (campaign_prepid) not in p]
-            # Sort by matching length
-            def matching_length(a, b):
-                a_parts = tuple(a.split('-')[1].split('_'))
-                b_parts = tuple(b.split('-')[1].split('_'))
-                for i in range(min(len(a_parts), len(b_parts)), 0, -1):
-                    if a_parts[:i] == b_parts[:i]:
-                        return i - 1
+            # Next request is NOT in the chain
+            # Try to reuse existing requests by looking at other chains
+            # Requests should come from chained requests with same root
+            next_request = self.find_request_to_reuse(root_request, next_step)
 
-                return 0
-
-            # Save matching length
-            chained_request_ids = [(c, matching_length(c, prepid)) for c in chained_request_ids]
-            # Remove ones that are not macthing enough to reach next step
-            chained_request_ids = [c for c in chained_request_ids if c[1] > next_step]
-            # Sort by matching length
-            chained_request_ids = sorted(chained_request_ids, key=lambda c: c[1], reverse=True)
-            # Get existing chain
-            chain = self.get_attribute('chain')
-            # Do not proceed if none of the ids fit
-            if not chained_request_ids:
-                approach = 'create'
-            else:
-                # Store matching length in dictionary
-                matching = dict(chained_request_ids)
-                chained_requests = crdb.bulk_get([c[0] for c in chained_request_ids])
-                # Remove all that are not long enough
-                chained_requests = [c for c in chained_requests if len(c['chain']) > next_step]
-                self.logger.debug('%s chained are long enough (need at least %s length):\n%s',
-                                  len(chained_requests),
-                                  next_step + 1,
-                                  '\n'.join('%s (len %s, mat %s)' % (c['prepid'],
-                                                                     len(c['chain']),
-                                                                     matching[c['prepid']]) for c in chained_requests))
-
-                # All requests in the chain must match up to current step
-                self.logger.debug('Making sure these match: %s', chain[:next_step])
-                chained_requests = [c for c in chained_requests if c['chain'][:next_step] == chain[:next_step]]
-                checked_requests = set()
-
-                next_id = None
-                # Check if requests in chain save the output
-                for chained_request in chained_requests:
-                    self.logger.debug('Looking at %s, chain: %s, matching: %s',
-                                      chained_request['prepid'],
-                                      '->'.join(chained_request['chain']),
-                                      matching[chained_request['prepid']])
-
-                    match = matching[chained_request['prepid']]
-                    # This is part starting at next request and ending at last
-                    # matching request. At least one of them should save
-                    # output or be not-submitted and not-done
-                    other_chain = chained_request['chain'][len(chain):match]
-                    self.logger.debug('Relevant part of chain: %s', other_chain)
-                    # Do not check same requests twice
-                    other_chain = [o for o in other_chain if o not in checked_requests]
-                    if not other_chain:
-                        continue
-
-                    other_requests = rdb.bulk_get(other_chain)
-                    for other_request in other_requests:
-                        other_prepid = other_request['prepid']
-                        other_keep_output = other_request['keep_output'][-1]
-                        other_approval = other_request['approval']
-                        self.logger.debug('Other request %s keep output: %s and approval: %s',
-                                          other_request['prepid'],
-                                          other_keep_output,
-                                          other_approval)
-                        checked_requests.add(other_prepid)
-                        if other_approval != 'submit' or other_keep_output:
-                            # Important to take the first request from the checked
-                            # part of the chain, not the matching request!
-                            next_id = other_requests[0]['prepid']
-                            break
-                    else:
-                        self.logger.info('None of available requests of %s are suitable',
-                        chained_request['prepid'])
-                        continue
-
-                    # Break because next request is found
-                    break
-
-                if next_id:
-                    approach = 'use'
-                else:
-                    approach = 'create'
-
-        self.logger.info('%s approach is to: %s',
-                         self.get_attribute('prepid'),
-                         approach)
-        if approach == 'create':
-            from rest_api.RequestPrepId import RequestPrepId
-
-            next_id = RequestPrepId().next_prepid(current_request.get_attribute('pwg'), next_campaign_id)
-            self.logger.debug("creating new request in reservation: %s" % (next_id))
-            next_request = request(rdb.get(next_id))
-            request.transfer(current_request, next_request)
-            # set total_events accordingly to current request.
-            next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
-
-            # if case we have action parameters they overwrite the total_events
-            if action_parameters['threshold'] != 0:
-                next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
-            next_request.set_attribute("total_events", next_total_evts)
-            next_request.set_attribute("interested_pwg", [current_request.get_attribute('pwg')])
-            self.request_join(next_request)
-
-        elif approach == 'use':
-            self.logger.debug("using existing request in reservation: %s" % (next_id))
-            # there exists a request in another chained campaign that can be re-used here.
-            # take this one. advance and go on
-            next_request = request(rdb.get(next_id))
-            if not reserve:
-                self.set_attribute('step', next_step)
-                self.set_attribute('last_status', next_request.get_attribute('status'))
-                self.update_history({'action': 'flow', 'step': str(next_id)})
-                self.set_attribute('status', 'processing')
-
-            if not self.get_attribute("prepid") in next_request.get_attribute("member_of_chain"):
-                # register the chain to the next request
-                self.request_join(next_request)
-                saved = rdb.update(next_request.json())
-                if not saved:
-                    raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'Unable to save %s with updated member_of_chains' % next_id)
-                forceflow_list = ldb.get("list_of_forceflow")
-                if self.get_attribute("prepid") in forceflow_list["value"]:
-                    forceflow_list["value"].remove(self.get_attribute("prepid"))
-                    ldb.update(forceflow_list)
-            return {'result': True}
-        elif approach == 'patch':
-            self.logger.debug("patching request in reservation: %s" % (next_id))
-            # there exists already a request in the chain (step!=last) and it is usable for the next stage
-            next_request = request(next_campaign.add_request(rdb.get(next_id)))
-            # propagate again some of the fields of the previous request.
-            request.transfer(current_request, next_request)
-            # set total_events accordingly to current request.
-            next_total_evts = current_request.get_attribute("completed_events") if current_request.get_attribute("completed_events") > 0 else current_request.get_attribute("total_events")
-
-            # if case we have action parameters they overwrite the total_events
-            if action_parameters['threshold'] != 0:
-                next_total_evts = int(current_request.get_attribute('total_events') * float(action_parameters['threshold'] / 100.))
-            next_request.set_attribute("total_events", next_total_evts)
-            self.request_join(next_request)
+        next_request_data = {'pwg': current_request.get('pwg'),
+                             'member_of_campaign': next_campaign_id,
+                             'process_string': current_request.get('process_string'),
+                             'extension': current_request.get('extension'),
+                             'dataset_name': current_request.get('dataset_name'),
+                             'generators': current_request.get('generators'),
+                             'total_events': next_events,
+                             'flown_with': next_flow_id,
+                             'interested_pwg': current_request.get('interested_pwg'),}
+        if next_request:
+            self.logger.info('Next request already exists - %s', next_request.get('prepid'))
+            if next_request.get('approval') != 'submit':
+                # If request is not submitted, update it's info
+                for key, value in next_request_data.items():
+                    next_request.set(key, value)
         else:
-            raise self.ChainedRequestCannotFlowException(self.get_attribute('_id'), 'Unrecognized approach %s' % approach)
+            self.logger.info('Next request does not exist and should be created')
+            from rest_api.RequestFactory import RequestFactory
+            # Create new request from the data for the next request
+            next_request = RequestFactory.make(next_request_data)
+            self.logger.info('Created new request %s for chain %s',
+                             next_request.get('prepid'),
+                             prepid)
+
+        next_request_id = next_request.get('prepid')
+        self.request_join(next_request)
 
         # Move current step in other chains to this request too
-        for other_chained_request_prepid in next_request.get_attribute('member_of_chain'):
-            if other_chained_request_prepid == self.get_attribute('prepid'):
-                # Skipping itself
-                continue
+        # TODO: trigger/flow other chains of current_request
 
-            other_chained_request = crdb.get(other_chained_request_prepid)
-            if other_chained_request['chain'].index(next_id) > other_chained_request['step']:
-                other_chained_request['step'] = other_chained_request['chain'].index(next_id)
-                crdb.save(other_chained_request)
+        # for other_chained_request_prepid in next_request.get_attribute('member_of_chain'):
+        #     if other_chained_request_prepid == self.get_attribute('prepid'):
+        #         # Skipping itself
+        #         continue
 
-        # register the flow to the request
-        next_request.set_attribute('flown_with', flow_name)
+        #     other_chained_request = crdb.get(other_chained_request_prepid)
+        #     if other_chained_request['chain'].index(next_id) > other_chained_request['step']:
+        #         other_chained_request['step'] = other_chained_request['chain'].index(next_id)
+        #         crdb.save(other_chained_request)
 
-        # assemble the campaign+flow => request
-        request.put_together(next_campaign, mcm_f, next_request)
+        # Reset options for the next request
+        if next_request.get('approval') != 'submit':
+            next_request.reset_options()
+            # Output dataset as input for the next request if available
+            current_output = current_request.get('output_dataset')
+            if current_output:
+                input_dataset = next_request.get_input_dataset(current_output)
+                if input_dataset:
+                    self.logger.info('Will use %s from %s as input to %s',
+                                    input_dataset,
+                                    current_prepid,
+                                    next_request_id)
+                    next_request.set_attribute('input_dataset', input_dataset)
 
-        # determine whether we have an input dataset for the next request
-        if len(current_request.get_attribute('output_dataset')):
-            # here we should determine the input dataset from DB dict based on
-            # current_request's 1st step in sequence
-            input_dataset = self.get_ds_input(
-                current_request.get_attribute('output_dataset'),
-                next_request.get_attribute("sequences"))
-        elif len(current_request.get_attribute('reqmgr_name')) and current_request.get_attribute("keep_output").count(True) > 0:
-            self.logger.debug("input_ds based by request_manager....")
-            last_wma = current_request.get_attribute('reqmgr_name')[-1]
-            if 'content' in last_wma and 'pdmv_dataset_name' in last_wma['content']:
-                self.logger.debug("\tget from rqmngr")
-                input_dataset = self.get_ds_input(
-                    last_wma['content']['pdmv_dataset_list'],
-                    next_request.get_attribute("sequences"))
-            else:
-                self.logger.debug("\tget from stats")
-                statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
-                if statsDB.document_exists(last_wma['name']):
-                    latestStatus = statsDB.get(last_wma['name'])
-                    input_dataset = self.get_ds_input(
-                        latestStatus['pdmv_dataset_list'],
-                        next_request.get_attribute("sequences"))
+            next_request.change_priority(self.get('priority'))
 
-        if input_dataset:
-            self.logger.info("%s setting input_ds to: %s" % (next_request.get_attribute("prepid"), input_dataset))
-            next_request.set_attribute('input_dataset', input_dataset)
-
-        if not reserve:
-            # already taking stage and threshold into account
-            next_request.set_attribute('total_events', next_total_events)
-            next_request.update_history({'action': 'flow', 'step': self.get_attribute('prepid')})
-
-        if mcm_f.get_attribute('approval') == "tasksubmit" and next_request.get_attribute("total_events") == -1:
-            # in case we reserve multiple steps and they are injected as TaskChain
-            next_request.set_attribute("total_events", current_request.get_attribute("total_events"))
-
-        # inspect priority Do we want to override priority of a request when we flow to next step?
-        new_priority = priority().priority(action_parameters['block_number'])
-        if not next_request.change_priority(new_priority):
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'Could not save the new request %s. Error changing priority to %s' % (next_request.get_attribute('prepid'), new_priority))
-
-        request_saved = rdb.save(next_request.json())
-        if not request_saved:
-            raise self.ChainedRequestCannotFlowException(
-                self.get_attribute('_id'),
-                'Could not save the new request %s' % (next_request.get_attribute('prepid')))
+        if not next_request.save():
+            raise Exception('Could not save next request %s to the database' % (next_request_id))
 
         if not reserve:
             # sync last status
@@ -599,18 +317,106 @@ class ChainedRequest(json_base):
             self.set_attribute('status', 'processing')
             # set to next step
             self.set_attribute('step', next_step)
+            self.update_history('flow', next_request_id)
 
-            if not check_stats:
-                action = "force flow"
-            else:
-                action = "flow"
+        return next_request
 
-            self.update_history({'action': action, 'step': next_request.get_attribute('prepid')})
+    def find_request_to_reuse(self, root_request, next_step):
+        """
+        Find and return a request that could be reused as `next_step` of this
+        chained request
+        If no request could be found, return None indicating that request should
+        be created
+        """
+        prepid = self.get('prepid')
+        campaign_id = self.get_attribute('member_of_campaign')
+        chained_request_ids = root_request['member_of_chain']
+        self.logger.debug('Chained request %s is flowing, next step - %s', prepid, next_step)
+        self.logger.debug('Root request %s is member of %s chained requests',
+                          root_request.get('prepid'),
+                          len(chained_request_ids))
+        # Remove current chained request
+        chained_request_ids = [p for p in chained_request_ids if p != prepid]
+        # Remove chained requests in the same chained campaign
+        chained_request_ids = [p for p in chained_request_ids if '-%s-' % (campaign_id) not in p]
+        # Sort by matching length
+        def matching_length(a, b):
+            a_parts = tuple(a.split('-')[1].split('_'))
+            b_parts = tuple(b.split('-')[1].split('_'))
+            for i in range(min(len(a_parts), len(b_parts)), 0, -1):
+                if a_parts[:i] == b_parts[:i]:
+                    return i - 1
 
-        return {
-            'result': True,
-            'generated_request': next_request.get_attribute('prepid')
-        }
+            return 0
+
+        # Save matching length
+        chained_request_ids = [(c, matching_length(c, prepid)) for c in chained_request_ids]
+        # Remove ones that are not macthing enough to reach next step
+        chained_request_ids = [c for c in chained_request_ids if c[1] > next_step]
+        # Sort by matching length
+        chained_request_ids = sorted(chained_request_ids, key=lambda c: c[1], reverse=True)
+        # Get existing chain
+        chain = self.get_attribute('chain')
+        # Do not proceed if none of the ids fit
+        if not chained_request_ids:
+            return None
+
+        # Store matching length in dictionary
+        matching = dict(chained_request_ids)
+        chained_request_db = Database('chained_requests')
+        chained_requests = chained_request_db.bulk_get([c[0] for c in chained_request_ids])
+        # Remove all that are not long enough
+        chained_requests = [c for c in chained_requests if len(c) > next_step]
+        self.logger.debug('%s chained requests are long enough, at least %s length:\n%s',
+                          len(chained_requests),
+                          next_step + 1,
+                          '\n'.join('%s - %s' % (c['prepid'], len(c)) for c in chained_requests))
+
+        # All requests in the chain must match up to current step
+        self.logger.debug('Making sure these match: %s', chain[:next_step])
+        chained_requests = [c for c in chained_requests
+                            if c['chain'][:next_step] == chain[:next_step]]
+        checked_requests = set()
+
+        # Check if requests in chain save the output
+        request_db = Database('requests')
+        for candidate in chained_requests:
+            self.logger.debug('Looking at %s, chain: %s, matching: %s',
+                              candidate['prepid'],
+                              '->'.join(candidate['chain']),
+                              matching[candidate['prepid']])
+
+            match = matching[candidate['prepid']]
+            # This is part starting at next request and ending at last
+            # matching request. At least one of them should save
+            # output or be not-submitted and not-done
+            other_chain = candidate['chain'][len(chain):match]
+            self.logger.debug('Relevant part of chain: %s', other_chain)
+            # Do not check same requests twice
+            other_chain = [o for o in other_chain if o not in checked_requests]
+            if not other_chain:
+                continue
+
+            other_requests = request_db.bulk_get(other_chain)
+            for other_request in other_requests:
+                other_prepid = other_request['prepid']
+                other_keep_output = other_request['keep_output'][-1]
+                other_approval = other_request['approval']
+                self.logger.debug('Other request %s keep output: %s and approval: %s',
+                                    other_request['prepid'],
+                                    other_keep_output,
+                                    other_approval)
+                checked_requests.add(other_prepid)
+                if other_approval != 'submit' or other_keep_output:
+                    # Important to take the first request from the checked
+                    # part of the chain, not the matching request!
+                    return other_requests[0]['prepid']
+
+            self.logger.info('None of available requests of %s are suitable',
+                             candidate['prepid'])
+
+        return None
+
 
     def set_last_status(self, status):
         """

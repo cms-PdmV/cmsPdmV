@@ -15,13 +15,12 @@ from json_layer.request import Request
 # from json_layer.chained_request import ChainedRequest
 from json_layer.sequence import Sequence
 from json_layer.campaign import Campaign
-from json_layer.user import User
+from json_layer.user import Role, User
 from tools.locator import locator
 from tools.communicator import Communicator
 from tools.locker import locker
 from tools.settings import Settings
 from tools.handlers import RequestInjector, submit_pool
-from tools.priority import priority
 from tools.utils import clean_split, expand_range
 from flask_restful import reqparse
 
@@ -48,7 +47,9 @@ class RequestRESTResource(RESTResource):
 
         pwg = request_json['pwg']
         self.logger.info('Building new request for %s in %s', pwg, campaign_name)
-        request = Request(json_input=request_json)
+        from rest_api.RequestFactory import RequestFactory
+        request = RequestFactory.make(request_json)
+        prepid = request.get('prepid')
         request.reset_options()
         request.set_attribute('history', [])
         if cloned_from:
@@ -65,15 +66,10 @@ class RequestRESTResource(RESTResource):
         if campaign_json.get('root') <= 0:
             request.update_generator_parameters()
 
-        prepid_part = '%s-%s' % (pwg, campaign_name)
-        with locker.lock('create-request-%s' % (prepid_part)):
-            prepid = request_db.get_next_prepid(prepid_part, [campaign_name, pwg])
-            request.set_attribute('prepid', prepid)
-            request.set_attribute('_id', prepid)
-            request.update_history({'action': 'created'})
-            if request_db.save(request.json()):
-                return {'results': True,
-                        'prepid': prepid}
+        if not request_db.update(request.json()):
+            return {'results': False,
+                    'messagge': 'Could not save request %s to the database' % (prepid),
+                    'prepid': prepid}
 
         return {'results': True,
                 'prepid': prepid}
@@ -81,12 +77,7 @@ class RequestRESTResource(RESTResource):
 
 class CloneRequest(RequestRESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def put(self):
         """
         Make a clone with specific requirements
@@ -134,12 +125,7 @@ class CloneRequest(RequestRESTResource):
 
 class ImportRequest(RequestRESTResource):
 
-    #access_limit = access_rights.generator_contact ## maybe that is wrong
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def put(self):
         """
         Saving a new request from a given dictionnary
@@ -150,12 +136,7 @@ class ImportRequest(RequestRESTResource):
 
 class UpdateRequest(RequestRESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def put(self):
         """
         Updating an existing request with an updated dictionary
@@ -233,10 +214,6 @@ class UpdateRequest(RequestRESTResource):
 
 class GetRequest(RESTResource):
 
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, request_id):
         """
         Retreive the dictionnary for a given request
@@ -249,12 +226,7 @@ class GetRequest(RESTResource):
 
 class DeleteRequest(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def delete(self, request_id):
         """
         Simply delete a request
@@ -345,12 +317,7 @@ class DeleteRequest(RESTResource):
 
 class OptionResetForRequest(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, request_ids):
         """
         Reset the options for request
@@ -382,11 +349,6 @@ class OptionResetForRequest(RESTResource):
 
 
 class GetCmsDriverForRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        self.json = {}
-        self.before_request()
-        self.count_call()
 
     def get(self, request_id):
         """
@@ -405,11 +367,6 @@ class GetCmsDriverForRequest(RESTResource):
 
 
 class GetFragmentForRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
 
     def get(self, request_id, version=None):
         """
@@ -417,6 +374,7 @@ class GetFragmentForRequest(RESTResource):
         """
         db = Database(self.db_name)
         res = self.get_fragment(db.get(prepid=request_id))
+        self.representations = {'text/plain': self.output_text}
         return dumps(res) if isinstance(res, dict) else res
 
     def get_fragment(self, data):
@@ -466,15 +424,12 @@ class GetSetupForRequest(RESTResource):
 
 
 class GetRequestByDataset(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
 
     def get(self, dataset):
         """
         retrieve the dictionnary of a request, based on the output dataset specified
         """
+        self.representations = {'text/plain': self.output_text}
         datasetname = '/' + dataset.replace('*', '')
         rdb = Database('requests')
         r = rdb.search({'produce': datasetname}, page=-1)
@@ -490,10 +445,6 @@ class GetRequestByDataset(RESTResource):
 
 
 class GetRequestOutput(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        self.before_request()
-        self.count_call()
 
     def get(self, prepid, is_chain=''):
         """
@@ -526,12 +477,7 @@ class GetRequestOutput(RESTResource):
 
 class ApproveRequest(RESTResource):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def post(self):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
@@ -599,25 +545,16 @@ class ApproveRequest(RESTResource):
 
 class ResetRequestApproval(ApproveRequest):
 
-    access_limit = access_rights.generator_contact
-
-    def __init__(self):
-        ApproveRequest.__init__(self)
-        self.hard = 'soft_reset' not in flask.request.path
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, request_id):
         """
         Reste both approval and status to their initial state.
         """
+        self.hard = 'soft_reset' not in flask.request.path
         return self.multiple_approve(request_id, 0, self.hard)
 
 
 class GetStatus(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, request_ids):
         """
@@ -658,32 +595,24 @@ class GetStatus(RESTResource):
 
 
 class GetStatusAndApproval(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, prepid):
         """
         Get the status and approval of given prepid(s)
         """
-        prepids = list(set(x.strip() for x in prepid.split(',') if x.strip()))
+        prepids = clean_split(prepid)
         if not prepids:
             return {'results': False,
                     'message': 'No prepids given'}
 
         request_db = Database('requests')
         results = [r for r in request_db.bulk_get(prepids) if r]
-        return {req['prepid']: '%s-%s' % (req['approval'], req['status']) for req in results}
+        return {r['prepid']: '%s-%s' % (r['approval'], r['status']) for r in results}
 
 
 class InspectStatus(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, request_ids, force=""):
         """
         Triggers the internal inspection of the status of a request or coma separated list of request
@@ -724,12 +653,7 @@ class InspectStatus(RESTResource):
 
 class UpdateStats(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def get(self, request_id, refresh=None, forced=None):
         """
         Triggers the forced update of the stats page for the given request id
@@ -765,12 +689,7 @@ class UpdateStats(RESTResource):
 
 class UpdateEventsFromWorkflow(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def get(self, wf_id):
         """
         Update statistics for requests from specified workflow
@@ -801,12 +720,7 @@ class UpdateEventsFromWorkflow(RESTResource):
 
 class SetStatus(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self, request_ids, step=-1):
         """
         Perform the change of status to the next (/ids) or to the specified index (/ids/index)
@@ -842,9 +756,6 @@ class SetStatus(RESTResource):
 
 
 class GetEditable(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, request_id):
         """
@@ -873,12 +784,7 @@ class GetDefaultGenParams(RESTResource):
 
 class NotifyUser(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def put(self):
         """
         Sends the prodived posted text to the user registered to a list of requests request
@@ -918,9 +824,6 @@ class NotifyUser(RESTResource):
 
 
 class RegisterUser(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, request_ids):
         """
@@ -961,9 +864,6 @@ class RegisterUser(RESTResource):
 
 
 class GetActors(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, request_id, what=None):
         """
@@ -982,12 +882,7 @@ class GetActors(RESTResource):
 
 class SearchableRequest(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self):
         """
         Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
@@ -1002,12 +897,7 @@ class SearchableRequest(RESTResource):
 
 class RequestsFromFile(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def put(self):
         """
         Parse the posted text document for request id and request ranges for
@@ -1035,12 +925,7 @@ class RequestsFromFile(RESTResource):
 
 class StalledReminder(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self, time_since=15, time_remaining=15, below_completed=100.0):
         """
         Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
@@ -1124,17 +1009,12 @@ class StalledReminder(RESTResource):
 
 class RequestsReminder(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
+    @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self, what=None, who=None):
         """
         Goes through all requests and send reminder to whom is concerned. /production_manager for things to be submitted. /generator_convener for things to be approved. /generator_contact for things to be looked at by /generator_contact/contact (if specified)
         """
+        self.representations = {'text/plain': self.output_text}
         if what is not None:
             what = what.split(',')
             if 'all' in what:
@@ -1314,17 +1194,12 @@ class RequestsReminder(RESTResource):
 
 
 class UpdateMany(RequestRESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        RequestRESTResource.__init__(self)
-        self.before_request()
-        self.count_call()
-        self.updateSingle = UpdateRequest()
 
     def put(self):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
+        self.updateSingle = UpdateRequest()
         return self.update_many(loads(flask.request.data.strip()))
 
     def update_many(self, data):
@@ -1353,17 +1228,12 @@ class UpdateMany(RequestRESTResource):
 
 class GetUploadCommand(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, request_id):
         """
         Get command used to upload configurations for given request.
         """
+        self.representations = {'text/plain': self.output_text}
         db = Database('requests')
         if not db.document_exists(request_id):
             self.logger.error('GetUploadCommand: request with id {0} does not exist'.format(request_id))
@@ -1375,17 +1245,12 @@ class GetUploadCommand(RESTResource):
 
 class GetInjectCommand(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, request_id):
         """
         Get command used to inject given request.
         """
+        self.representations = {'text/plain': self.output_text}
         db = Database('requests')
         if not db.document_exists(request_id):
             self.logger.error('GetInjectCommand: request with id {0} does not exist'.format(request_id))
@@ -1395,9 +1260,6 @@ class GetInjectCommand(RESTResource):
 
 
 class GetUniqueValues(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
 
     def get(self, field_name):
         """
@@ -1412,13 +1274,7 @@ class GetUniqueValues(RESTResource):
 
 class RequestsPriorityChange(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.requests_db = Database('requests')
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def post(self):
         fails = []
         try:
@@ -1444,14 +1300,7 @@ class RequestsPriorityChange(RESTResource):
 
 class Reserve_and_ApproveChain(RESTResource):
 
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.cdb = Database("chained_requests")
-        self.rdb = Database('requests')
-
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def get(self, chain_id):
         """
         Get chained_request object:
@@ -1497,15 +1346,10 @@ class TaskChainRequestDict(RESTResource):
     Provide the taskchain dictionnary for uploading to request manager
     """
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self, request_id):
         requests_db = Database('requests')
+        self.representations = {'text/plain': self.output_text}
         mcm_request = request(requests_db.get(request_id))
         task_name = 'task_' + request_id
         request_type = mcm_request.get_wmagent_type()
@@ -1556,12 +1400,7 @@ class TaskChainRequestDict(RESTResource):
 
 class GENLogOutput(RESTResource):
 
-    access_limit = access_rights.user
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.USER)
     def get(self, request_id):
         requests_db = Database('requests')
         mcm_request = request(requests_db.get(request_id))
