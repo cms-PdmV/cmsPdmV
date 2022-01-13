@@ -79,15 +79,13 @@
                   title="Get test command" target="_self" ng-href="#">
                   <i class="icon-ok-circle"></i>
                 </a>
-                <a ng-click='actionPrompt("rewind_to_root", data.prepid)' rel="tooltip"
-                  title="Rewind chained request to root" ng-hide="role(3);" ng-href="#">
+                <a ng-click='rewindToRoot([data.prepid])' title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-fast-backward"></i>
                 </a>
-                <a ng-click='actionPrompt("rewind", data.prepid)' rel="tooltip"
-                  title="Rewind chained request by one step" ng-hide="role(3);" ng-href="#">
+                <a ng-click='rewind([data.prepid])' title="Rewind chained request by one step" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-backward"></i>
                 </a>
-                <a ng-click='actionPrompt("flow", data.prepid)' rel="tooltip" title="Flow" ng-hide="role(3);" ng-href="#">
+                <a ng-click='flow([data.prepid])' title="Flow" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-forward"></i>
                 </a>
                 <a ng-click='openReserveChainModal(data)' rel="tooltip" title="Reserve chain" ng-hide="role(3);" ng-href="#">

@@ -175,6 +175,29 @@ angular.module('testApp').controller('mainCtrl',
         });
       };
 
+      $scope.questionModal = function (question, callback) {
+        const modal = $modal.open({
+          templateUrl: 'questionModal.html',
+          controller: function ($scope, $modalInstance, question) {
+            $scope.question = question;
+            $scope.yes = function () {
+              $modalInstance.close();
+            };
+            $scope.no = function () {
+              $modalInstance.dismiss();
+            };
+          },
+          resolve: {
+            question: function () {
+              return question;
+            }
+          }
+        });
+        modal.result.then(function () {
+          callback()
+        });
+      };
+
       $scope.openErrorModal = function (prepid, message) {
         const modal = $modal.open({
           templateUrl: 'errorModal.html',

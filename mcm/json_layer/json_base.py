@@ -193,7 +193,7 @@ class json_base:
     def set(self, attribute, value):
         return self.set_attribute(attribute, value)
 
-    def get(self, attribute, value):
+    def get(self, attribute):
         return self.get_attribute(attribute)
 
     # TODO: Move history updates to appropriate places

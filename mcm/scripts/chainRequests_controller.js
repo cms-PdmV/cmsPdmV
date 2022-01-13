@@ -57,6 +57,72 @@ angular.module('testApp').controller('resultsCtrl',
         });
       };
 
+      $scope.setLoading = function(prepids, loading) {
+        for (let prepid of prepids) {
+          $scope.actionMessage[prepid] = loading ? 'loading' : '';
+        }
+      }
+
+      $scope.rewindToRoot = function(prepids) {
+        $scope.questionModal('Are you sure you want to rewind to root?', function() {
+          $scope.setLoading(prepids, true);
+          $http({ method: 'POST', url: 'restapi/chained_requests/rewind_to_root', data: {'prepid': prepids}}).success(function (data, status) {
+            let results = prepids.length == 1 ? [data] : data;
+            let shouldGetData = false;
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
+        });
+      };
+
+      $scope.rewind = function(prepids) {
+        $scope.questionModal('Are you sure you want to rewind?', function() {
+          $scope.setLoading(prepids, true);
+          $http({ method: 'POST', url: 'restapi/chained_requests/rewind', data: {'prepid': prepids}}).success(function (data, status) {
+            let results = prepids.length == 1 ? [data] : data;
+            let shouldGetData = false;
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
+        });
+      };
+
+      $scope.flow = function(prepids) {
+        $scope.questionModal('Are you sure you want to flow?', function() {
+          $scope.setLoading(prepids, true);
+          $http({ method: 'POST', url: 'restapi/chained_requests/flow', data: {'prepid': prepids}}).success(function (data, status) {
+            let results = prepids.length == 1 ? [data] : data;
+            let shouldGetData = false;
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
+        });
+      };
+
       $scope.loadShortView = function (prepid) {
         let prepids = new Set(prepid == 'selected' ? $scope.selected_prepids : prepid = [prepid]);
         let chains = $scope.result.filter(x => prepids.has(x.prepid));

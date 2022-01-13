@@ -46,6 +46,16 @@ class ChainedRequest(json_base):
         """
         return len(self.get_attribute('chain'))
 
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('chained_requests')
+
+        return cls.database
+
     def request_join(self, request):
         """
         Update request's member of chain and history
@@ -418,10 +428,15 @@ class ChainedRequest(json_base):
         return None
 
 
-    def set_last_status(self, status):
+    def set_last_status(self, status=None):
         """
         Update last status of the chained request
+        If status is None, fetch the request first
         """
+        if status is None:
+            request = Request.fetch(self[self.get('step')])
+            status = request.get('status')
+
         if status == self.get_attribute('last_status'):
             return False
 

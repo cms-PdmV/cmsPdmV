@@ -23,7 +23,7 @@ class RESTResource(Resource):
                     start_time = time.time()
                     try:
                         result = attr(*args, **kwargs)
-                        if isinstance(result, dict):
+                        if isinstance(result, (list, dict)):
                             result = RESTResource.build_response(result)
 
                         status_code = result.status_code
@@ -78,6 +78,43 @@ class RESTResource(Resource):
             return ensure_role_wrapper_wrapper
 
         return ensure_role_wrapper
+
+    @classmethod
+    def request_with_json(cls, func):
+        """
+        Ensure that request has data (POST, PUT requests) that's a valid JSON.
+        Parse the data to a dict it and pass it as a keyworded 'data' argument
+        """
+        def ensure_request_data_wrapper(*args, **kwargs):
+            """
+            Wrapper around actual function
+            """
+            data = request.data
+            logger = logging.getLogger("mcm_error")
+            logger.debug('Ensuring request data for %s', request.path)
+            if not data:
+                logger.error('No data was found in request %s', request.path)
+                return cls.build_response({'results': None,
+                                           'message': 'No data was found in request'},
+                                          code=400)
+
+            try:
+                data = json.loads(data)
+            except json.decoder.JSONDecodeError as ex:
+                logger.error('Invalid JSON: %s\nException: %s', data, ex)
+                return cls.build_response({'results': None,
+                                           'message': f'Invalid JSON {ex}'},
+                                          code=400)
+
+            kwargs['data'] = data
+            return func(*args, **kwargs)
+
+        ensure_request_data_wrapper.__name__ = func.__name__
+        ensure_request_data_wrapper.__doc__ = func.__doc__
+        if hasattr(func, '__role__'):
+            ensure_request_data_wrapper.__role__ = func.__role__
+
+        return ensure_request_data_wrapper
 
     @staticmethod
     def build_response(data, code=200, headers=None, content_type='application/json'):

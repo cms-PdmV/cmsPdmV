@@ -85,6 +85,16 @@ class Request(json_base):
     # Approval ['none', 'validation', 'define', 'approve', 'submit']
     # Status ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
 
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('requests')
+
+        return cls.database
+
     def validate(self):
         """
         Check if all attributes of the object are valid
