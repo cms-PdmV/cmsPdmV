@@ -36,13 +36,6 @@ class Campaign(json_base):
 
         return super().validate()
 
-    def add_request(self, req_json):
-        # TODO: Remove?
-        from request import request
-        req = request(json_input=req_json)
-        req.transfer_from(self)
-        return req.json()
-
     def get_cmsdrivers(self):
         """
         Return a list of dictionaries of cmsDrivers

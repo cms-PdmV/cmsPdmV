@@ -32,11 +32,11 @@ class ConnectionWrapper():
         if host.startswith('https://'):
             self.host_url = host.replace('https://', '', 1)
             self.https = True
-            self.port = host.split(':'[-1]) or 443
+            self.port = self.host_url.split(':')[-1] if self.host_url.count(':') else 443
         elif host.startswith('http://'):
             self.host_url = host.replace('http://', '', 1)
             self.https = False
-            self.port = host.split(':'[-1]) or 80
+            self.port = self.host_url.split(':')[-1] if self.host_url.count(':') else 80
         else:
             self.host_url = host
             self.https = False
@@ -123,6 +123,7 @@ class ConnectionWrapper():
                                   end_time - start_time)
                 return response_to_return
             except Exception as ex:
+                raise ex
                 self.logger.error('Exception while doing a %s to %s: %s',
                                   method,
                                   url,
@@ -132,7 +133,7 @@ class ConnectionWrapper():
                     self.logger.debug('Will sleep for %s and retry')
                     time.sleep(sleep)
 
-                self.init_connection(self.host_url)
+                self.init_connection()
 
         self.logger.error('Request failed after %d attempts', self.connection_attempts)
         return None

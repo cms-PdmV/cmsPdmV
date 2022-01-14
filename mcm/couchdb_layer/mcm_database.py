@@ -266,6 +266,7 @@ class database:
             if not success:
                 self.logger.error(data)
 
+            doc['_rev'] = data['rev']
             return success
         except Exception as ex:
             self.logger.error('Error saving %s: %s', doc_id, ex)
@@ -503,7 +504,7 @@ class database:
         This method does NOT use locks and is not thread safe, calling function
         should take care of that
         """
-        cache = self.serial_number_cache[self.db_name]
+        cache = self.serial_number_cache.setdefault(self.db_name, {})
         if prepid_part in cache:
             number = cache[prepid_part] + 1
         else:

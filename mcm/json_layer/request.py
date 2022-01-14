@@ -20,10 +20,11 @@ from json_layer.sequence import Sequence
 from tools.ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.installer import installer
-import tools.settings as Settings
+from tools.settings import Settings
 from tools.locker import locker
 from tools.logger import InjectionLogAdapter
 from tools.utils import get_scram_arch as fetch_scram_arch
+from json_layer.user import User, Role
 
 
 class AFSPermissionError(Exception):
@@ -103,7 +104,7 @@ class Request(json_base):
         self.logger.info('Validating request %s', prepid)
         # Check if PWG is valid
         pwg = self.get_attribute('pwg')
-        all_pwgs = Settings.get_value('pwg')
+        all_pwgs = Settings.get('pwg')
         if pwg not in all_pwgs:
             raise Exception('Invalid PWG - "%s"' % (pwg))
 
@@ -141,9 +142,13 @@ class Request(json_base):
 
         # Memory
         memory = self.get_attribute('memory')
-        memory_per_core = memory / cores
-        if not (1000 < memory_per_core < 4000):
-            raise Exception('Invalid memory, allowed 1-4GB/core, found %.2fMB' % (memory_per_core))
+        # Memory per core
+        for seq in sequences:
+            cores = seq.get('nThreads')
+            cores = int(cores) if cores else 1
+            memory_per_core = memory / cores
+            if not (1000 < memory_per_core < 4000):
+                raise Exception('Invalid memory, allowed 1-4GB/core, found %.2fMB' % (memory_per_core))
 
         # Number of time per event values:
         if len(self.get_attribute('time_event')) != len(sequences):
@@ -300,13 +305,14 @@ class Request(json_base):
         if approval_status == 'validation-new':
             return editable
 
-        user = UserPack(db=True)
-        user_role = user.user_dict.get('role')
-        is_admin = user_role == 'administrator'
-        is_prod_manager = is_admin or user_role == 'production_manager'
-        is_gen_convener = is_prod_manager or user_role == 'generator_convener'
-        is_gen_contact = is_gen_convener or user_role == 'generator_contact'
-        is_user = is_gen_contact or user_role == 'user'
+        user = User()
+        user_role = user.get_role()
+        is_admin = user_role >= Role.ADMINISTRATOR
+        is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
+        is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
+        is_gen_convener = user_role >= Role.GEN_CONVENER
+        is_gen_contact = user_role >= Role.MC_CONTACT
+        is_user = user_role >= Role.USER
         # Some are always editable
         editable['notes'] = is_user
         editable['tags'] = is_user
@@ -338,7 +344,7 @@ class Request(json_base):
         """
         Move request to validation-new ("validating") status
         """
-        validation_halt = Settings.get_value('validation_stop')
+        validation_halt = Settings.get('validation_stop')
         if validation_halt:
             raise Exception('Validation jobs are temporary stopped for upcoming McM restart')
 
@@ -450,7 +456,7 @@ class Request(json_base):
                                         'neither flow, nor request itself have a processing string '
                                         'to show that')
 
-        bypass_list = Settings.get_value('validation_bypass')
+        bypass_list = Settings.get('validation_bypass')
         if prepid in bypass_list:
             self.logger.info('Request %s is in validation bypass list and is being moved to approved status',
                              prepid)
@@ -476,15 +482,14 @@ class Request(json_base):
         approval = self.get_attribute('approval')
         status = self.get_attribute('status')
         if approval == 'defined' and status == 'defined':
-            # Only GEN conveners, administrators and special people are allowed
-            # to approve defined requests
-            user = UserPack(db=True)
+            # Only GEN conveners, production experts and administrators are
+            # allowed to approve defined requests
+            user = User()
             username = user.get_username()
-            user_role = user.user_dict.get('role')
+            user_role = user.get_role()
             self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
-            if user_role not in {'generator_convener', 'administrator'}:
-                if username not in Settings.get_value('allowed_to_approve'):
-                    raise Exception('You are not allowed to approve "defined" requests')
+            if user_role != Role.GEN_CONVENER and user_role < Role.PRODUCTION_EXPERT:
+                raise Exception('You are not allowed to approve "defined" requests')
 
         if not self.get_attribute('dataset_name'):
             raise Exception('Dataset name cannot be empty')
@@ -538,7 +543,7 @@ class Request(json_base):
                          ', '.join(r['prepid'] for r in similar_requests))
 
         for similar_request_json in similar_requests:
-            similar_request = request(similar_request_json)
+            similar_request = Request(similar_request_json)
             ps_and_tiers = set(similar_request.get_kept_processing_strings_and_tiers())
             # Check for collision
             collisions = my_ps_and_tiers & ps_and_tiers
@@ -577,7 +582,7 @@ class Request(json_base):
             return ""
 
         steps = sequences[0]['step']
-        if isinstance(steps, (str, basestring)):
+        if isinstance(steps, str):
             # TODO: Is this possible?
             steps = steps.split(',')
 
@@ -743,7 +748,7 @@ class Request(json_base):
         Move reqeust to approve-approved ("approved") status
         """
         prepid = self.get_attribute('prepid')
-        user = UserPack(db=True)
+        user = User(db=True)
         username = user.get_username()
         user_role = user.user_dict.get('role')
         self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
@@ -973,7 +978,7 @@ class Request(json_base):
         flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{'default': {}}]
         assert len(campaign_sequences) == len(flow_sequences)
         # Get sequence names from flow, usually "default"
-        sequence_names = [seq.keys()[0] for seq in flow_sequences]
+        sequence_names = [list(seq.keys())[0] for seq in flow_sequences]
         # Pick sequences from the flow
         flow_sequences = [seq[name] for seq, name in zip(flow_sequences, sequence_names)]
         # Pick sequences from the campaign based on names in flow

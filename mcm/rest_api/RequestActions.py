@@ -12,10 +12,10 @@ import re
 from couchdb_layer.mcm_database import database as Database
 from rest_api.RestAPIMethod import RESTResource
 from json_layer.request import Request
-# from json_layer.chained_request import ChainedRequest
 from json_layer.sequence import Sequence
 from json_layer.campaign import Campaign
 from json_layer.user import Role, User
+from json_layer.chained_request import ChainedRequest
 from tools.locator import locator
 from tools.communicator import Communicator
 from tools.locker import locker
@@ -25,32 +25,39 @@ from tools.utils import clean_split, expand_range
 from flask_restful import reqparse
 
 
-class RequestRESTResource(RESTResource):
+class RequestImport(RESTResource):
+
+    @RESTResource.ensure_role(Role.MC_CONTACT)
+    @RESTResource.request_with_json
+    def put(self, data):
+        """
+        Saving a new request from a given dictionnary
+        """
+        data = {'pwg': data['pwg'],
+                'member_of_campaign': data['member_of_campaign']}
+        return self.import_request(data)
 
     def import_request(self, request_json, cloned_from=None):
-        request_db = Database('requests')
-        campaign_db = Database('campaigns')
         campaign_name = request_json['member_of_campaign']
-        campaign_json = campaign_db.get(campaign_name)
-        if not campaign_json:
+        campaign = Campaign.fetch(campaign_name)
+        if not campaign:
             return {"results": False,
                     "message": 'Campaign %s could not be found' % (campaign_name)}
 
-        if campaign_json.get('status') != 'started':
+        if campaign.get('status') != 'started':
             return {"results": False,
                     "message": "Cannot create a request in a campaign that is not started"
-                               "%s is %s" % (campaign_name, campaign_json.get('status'))}
-
-        if 'prepid' in request_json or '_id' in request_json:
-            return {"results": False,
-                    "message": '"prepid" and "_id" should not exist in new request data'}
+                               "%s is %s" % (campaign_name, campaign.get('status'))}
 
         pwg = request_json['pwg']
         self.logger.info('Building new request for %s in %s', pwg, campaign_name)
-        from rest_api.RequestFactory import RequestFactory
-        request = RequestFactory.make(request_json)
-        prepid = request.get('prepid')
+        request = Request(request_json)
         request.reset_options()
+        request.validate()
+        # Register a new prepid
+        from rest_api.RequestFactory import RequestFactory
+        request = RequestFactory.make(request.json())
+        prepid = request.get('prepid')
         request.set_attribute('history', [])
         if cloned_from:
             request.update_history({'action': 'clone', 'step': cloned_from})
@@ -61,12 +68,7 @@ class RequestRESTResource(RESTResource):
         if pwg not in request.get_attribute('interested_pwg'):
             request.set_attribute('interested_pwg', request.get_attribute('interested_pwg') + [pwg])
 
-        # put a generator info by default in case of possible root request
-        # TODO: Review this
-        if campaign_json.get('root') <= 0:
-            request.update_generator_parameters()
-
-        if not request_db.update(request.json()):
+        if not request.save():
             return {'results': False,
                     'messagge': 'Could not save request %s to the database' % (prepid),
                     'prepid': prepid}
@@ -75,25 +77,25 @@ class RequestRESTResource(RESTResource):
                 'prepid': prepid}
 
 
-class CloneRequest(RequestRESTResource):
+class RequestClone(RequestImport):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def put(self):
+    @RESTResource.request_with_json
+    def put(self, data):
         """
         Make a clone with specific requirements
         """
-        data = json.loads(flask.request.data)
-        prepid = data.get('prepid', '').strip()
+        prepid = data.get('prepid', '')
         if not prepid:
             return {'results': False,
                     'message': 'Missing prepid'}
 
-        pwg = data.get('pwg', '').strip().upper()
+        pwg = data.get('pwg', '')
         if not prepid:
             return {'results': False,
                     'message': 'Missing PWG'}
 
-        new_campaign = data.get('member_of_campaign', '').strip()
+        new_campaign = data.get('member_of_campaign', '')
         if not prepid:
             return {'results': False,
                     'message': 'Missing campaign'}
@@ -123,29 +125,18 @@ class CloneRequest(RequestRESTResource):
         return self.import_request(new_request, cloned_from=prepid)
 
 
-class ImportRequest(RequestRESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def put(self):
-        """
-        Saving a new request from a given dictionnary
-        """
-        data = json.loads(flask.request.data)
-        return self.import_request(data)
-
-
-class UpdateRequest(RequestRESTResource):
+class RequestUpdate(RESTResource):
 
     @RESTResource.ensure_role(Role.USER)
-    def put(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Updating an existing request with an updated dictionary
         """
-        data = json.loads(flask.request.data)
         rev = data.get('_rev')
         if not rev:
             return {'results': False,
-                    'message': 'Missing revision ("_rev") in submitted data'}
+                    'message': 'Missing revision "_rev" in submitted data'}
 
         prepid = data.get('prepid', data.get('_id'))
         if not prepid:
@@ -156,18 +147,17 @@ class UpdateRequest(RequestRESTResource):
         data['_id'] = prepid
         request_db = Database('requests')
         with locker.lock('create-request-%s' % (prepid)):
-            request_json = request_db.get(prepid)
-            if not request_json:
+            old_request = Request.fetch(prepid)
+            if not old_request:
                 return {"results": False,
                         'message': 'Request "%s" does not exist' % (prepid)}
 
-            if rev != request_json['_rev']:
+            if rev != old_request.get('_rev'):
                     return {'results': False,
                             'message': 'Provided revision does not match revision in database'}
 
-            old_request = Request(request_json)
             # Create new request data
-            request_json = deepcopy(request_json)
+            request_json = deepcopy(old_request.json())
             for to_pop in ('prepid', '_id', 'history'):
                 data.pop(to_pop, None)
 
@@ -192,9 +182,9 @@ class UpdateRequest(RequestRESTResource):
             new_multiplier = old_request.get_attribute('validation').get('time_multiplier', 1)
             old_multiplier = new_request.get_attribute('validation').get('time_multiplier', 1)
             if new_multiplier != old_multiplier and new_multiplier > 2:
-                if new_request.current_user_level < access_rights.generator_convener:
+                if User().get_role() < Role.PRODUCTION_MANAGER:
                     return {"results": False,
-                            'message': 'Need to be at least GEN convener to set validation to >16h'}
+                            'message': 'Only production managers can set validation to >16h'}
 
             self.logger.info('Updating request %s' % (prepid))
             difference = self.get_obj_diff(old_request.json(),
@@ -212,47 +202,44 @@ class UpdateRequest(RequestRESTResource):
         return {"results": True}
 
 
-class GetRequest(RESTResource):
+class RequestGet(RESTResource):
 
-    def get(self, request_id):
+    def get(self, prepid):
         """
         Retreive the dictionnary for a given request
         """
-        request_db = Database('requests')
-        request_id = request_id.strip()
-        request_json = request_db.get(request_id)
-        return {"results": request_json}
+        return {"results": Request.get_database().get(prepid)}
 
 
-class DeleteRequest(RESTResource):
+class RequestDelete(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def delete(self, request_id):
+    def delete(self, prepid):
         """
         Simply delete a request
         """
         request_db = Database('requests')
-        request_json = request_db.get(request_id)
+        request_json = request_db.get(prepid)
         approval = request_json['approval']
         status = request_json['status']
         if approval != 'none' or status != 'new':
             return {'results': False,
-                    'prepid': request_id,
+                    'prepid': prepid,
                     'message': 'Cannot delete "%s-%s" request, must be "none-new"' % (approval,
                                                                                       status)}
 
         chained_request_ids = request_json['member_of_chain']
         if chained_request_ids:
             # If request is a member of chain, only prod managers can delete it
-            user = UserPack(db=True)
-            user_role = user.user_dict.get('role')
+            user = User()
+            user_role = user.get_role()
             self.logger.info('User %s (%s) is trying to delete %s',
                             user.get_username(),
                             user_role,
-                            request_id)
-            if user_role not in {'production_manager', 'administrator'}:
+                            prepid)
+            if user_role < Role.PRODUCTION_MANAGER:
                 return {"results": False,
-                        "prepid": request_id,
+                        "prepid": prepid,
                         "message": 'Only production managers and administrators can delete '
                                    'requests that are member of chained requests'}
 
@@ -266,28 +253,28 @@ class DeleteRequest(RESTResource):
                 continue
 
             chain = chained_request['chain']
-            if request_id not in chain:
+            if prepid not in chain:
                 # Don't care about this in deletion
                 continue
 
             chained_request_id = chained_request['prepid']
             if chained_request.get('action_parameters', {}).get('flag', False):
                 return {'results': False,
-                        'prepid': request_id,
+                        'prepid': prepid,
                         'message': 'Request is a member of a valid chained request %s' % (chained_request_id)}
 
-            if request_id != chain[-1]:
+            if prepid != chain[-1]:
                 return {'results': False,
-                        'prepid': request_id,
+                        'prepid': prepid,
                         'message': 'Request must be a last request in all its chained requests'}
 
-            if chained_request['step'] >= chain.index(request_id):
+            if chained_request['step'] >= chain.index(prepid):
                 # Request is the current step in the chain
                 return {'results': False,
-                        'prepid': request_id,
+                        'prepid': prepid,
                         'message': "Request is the current step of chained request %s" % (chained_request_id)}
 
-            if request_id == chain[0]:
+            if prepid == chain[0]:
                 # Request is root - delete it together with the chained request
                 chained_requests_to_delete.append(chained_request_id)
             else:
@@ -298,49 +285,108 @@ class DeleteRequest(RESTResource):
             # Chained requests that should have request at the end of the chain
             chained_request = ChainedRequest(chained_request_json)
             chain = chained_request.get_attribute('chain')
-            chain.remove(request_id)
+            chain.remove(prepid)
             chained_request.set_attribute('chain', chain)
-            chained_request.update_history({'action': 'remove request', 'step': request_id})
+            chained_request.update_history({'action': 'remove request', 'step': prepid})
             chained_request.reload()
 
         for chained_request_id in chained_requests_to_delete:
             chained_request_db.delete(chained_request_id)
 
         # Delete from DB
-        if not request_db.delete(request_id):
-            self.logger.error('Could not delete %s from database', request_id)
+        if not request_db.delete(prepid):
+            self.logger.error('Could not delete %s from database', prepid)
             return {'results': False,
-                    'message': 'Could not delete %s from database' % (request_id)}
+                    'message': 'Could not delete %s from database' % (prepid)}
 
         return {'results': True}
 
 
-class OptionResetForRequest(RESTResource):
+class RequestGetEditable(RESTResource):
+
+    def get(self, prepid):
+        """
+        Retreive the fields that are currently editable for a given request id
+        """
+        request = Request.fetch(prepid)
+        editable = request.get_editable()
+        return {'results': editable}
+
+
+class RequestOptionReset(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, request_ids):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Reset the options for request
         """
-        request_db = Database('requests')
-        request_ids = [r.strip() for r in request_ids.split(',') if r.strip()]
+        prepids = data['prepid']
+        if not isinstance(prepids, list):
+            prepids = [prepids]
+
         results = []
-        requests = request_db.bulk_get(request_ids)
-        for req_json in requests:
-            if not req_json:
+        request_db = Database('requests')
+        requests = request_db.bulk_get(prepids)
+        for prepid, request_json in zip(prepids, requests):
+            if not request_json:
+                results.append({'results': False,
+                                'prepid': prepid,
+                                'message': 'Request %s could not be found' % (prepid)})
                 continue
 
-            prepid = req_json['prepid']
-            if req_json['approval'] != 'none' or req_json['status'] != 'new':
+            prepid = request_json['prepid']
+            if request_json['approval'] != 'none' or request_json['status'] != 'new':
                 results.append({"results": False,
                                 "prepid": prepid,
-                                "message": "Cannot option reset %s because it is not none-new" % (prepid)})
+                                "message": "%s it is not none-new" % (prepid)})
                 continue
 
-            req = request(req_json)
-            req.reset_options()
+            request = Request(request_json)
+            request.reset_options()
             results.append({"results": True,
                             "prepid": prepid})
+
+        if len(results) == 1:
+            return results[0]
+
+        return results
+
+
+class RequestNextStatus(RESTResource):
+
+    @RESTResource.ensure_role(Role.MC_CONTACT)
+    @RESTResource.request_with_json
+    def post(self, data):
+        """
+        Move request to the next
+        """
+        prepids = data['prepid']
+        if not isinstance(prepids, list):
+            prepids = [prepids]
+
+        results = []
+        for prepid in prepids:
+            request = Request.fetch(prepid)
+            if not request:
+                results.append({"results": False,
+                                "prepid": prepid,
+                                'message': 'Request "%s" does not exist' % (prepid)})
+                continue
+
+            try:
+                request.approve()
+                if not request.save():
+                    results.append({'results': False,
+                                    'prepid': prepid,
+                                    'message': 'Could not save to DB'})
+                    continue
+
+                results.append({'results': True, 'prepid': prepid})
+            except Exception as ex:
+                results.append({'results': False,
+                                'prepid': prepid,
+                                'message': str(ex)})
 
         if len(results) == 1:
             return results[0]
@@ -475,75 +521,7 @@ class GetRequestOutput(RESTResource):
         return res
 
 
-class ApproveRequest(RESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def post(self):
-        """
-        Approve to next step. Ignore GET parameter, use list of prepids from POST data
-        """
-        data = json.loads(flask.request.data)
-        prepids = data.get('prepid')
-        if isinstance(prepids, (basestring, str)):
-            prepids = prepids.split(',')
-        elif not isinstance(prepids, list):
-            return {'results': False,
-                    'message': 'Expected a string or list of prepids'}
-
-        return self.approve_many(prepids)
-
-    def approve_many(self, prepids):
-        self.allowed_to_approve_users = set(settings.get_value('allowed_to_approve'))
-        self.allowed_to_approve_roles = {'administrator', 'generator_convener'}
-        self.request_db = Database('requests')
-        requests = self.request_db.bulk_get(prepids)
-        results = []
-        for prepid, request in zip(prepids, requests):
-            if not request:
-                results.append({"results": False,
-                                "prepid": prepid,
-                                'message': 'Request "%s" does not exist' % (prepid)})
-                continue
-
-            assert(prepid == request['prepid'])
-            with locker.lock(prepid):
-                results.append(self.approve(request))
-
-        if len(results) == 1:
-            return results[0]
-
-        return results
-
-    def approve(self, request_json):
-        request = Request(request_json)
-        prepid = request.get_attribute('prepid')
-        self.logger.info('Approving request %s' % (prepid))
-        if request.get_attribute('approval') == 'define' and request.get_attribute('status') == 'defined':
-            username = self.user_dict.get('username', '')
-            role = self.user_dict.get('role', 'user')
-            if role not in self.allowed_to_approve_roles and username not in self.allowed_to_approve_users:
-                self.logger.info('%s (%s) stopped from approving %s' % (username, role, prepid))
-                return {'results': False,
-                        'prepid': prepid,
-                        'message': 'You are not allowed to approve requests'}
-
-            self.logger.info('%s (%s) allowed to approve %s' % (username, role, prepid))
-
-        approved, message = request.approve()
-        if not approved:
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': message}
-
-        if not self.request_db.update(request.json()):
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': 'Error saving "%s" to database' % (prepid)}
-
-        return {'results': True, 'prepid': prepid}
-
-
-class ResetRequestApproval(ApproveRequest):
+class ResetRequestApproval(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
     def get(self, request_id):
@@ -755,31 +733,6 @@ class SetStatus(RESTResource):
         return {"prepid": rid, "results": db.update(req.json())}
 
 
-class GetEditable(RESTResource):
-
-    def get(self, request_id):
-        """
-        Retreive the fields that are currently editable for a given request id
-        """
-        request_db = Database('requests')
-        request_json = request_db.get(request_id)
-        request = Request(request_json)
-        editable = request.get_editable()
-        return {'results': editable}
-
-
-class GetDefaultGenParams(RESTResource):
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
-    def get(self, request_id):
-        """
-        Get schema for the generator parameters object in request
-        """
-        from json_layer.generator_parameters import generator_parameters
-        params = generator_parameters()
-        return {"results": params.json()}
 
 
 class NotifyUser(RESTResource):
@@ -1193,7 +1146,7 @@ class RequestsReminder(RESTResource):
         return flask.Response(flask.stream_with_context(streaming_function()))
 
 
-class UpdateMany(RequestRESTResource):
+class UpdateMany(RESTResource):
 
     def put(self):
         """

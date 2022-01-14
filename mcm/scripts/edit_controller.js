@@ -204,7 +204,7 @@ angular.module('testApp').controller('resultCtrl',
         default:
           break;
       }
-      $http({method:'PUT', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
+      $http({method:'POST', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["message"] = data["message"];

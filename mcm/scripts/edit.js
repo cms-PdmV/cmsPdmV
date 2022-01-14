@@ -507,15 +507,6 @@ testApp.directive("generatorParams", function($http){
         scope.genParam_data = ctrl.$viewValue;
         scope.defaultGenParams = [];
       };
-
-        scope.addParamLoad = true;
-        var promise = $http.get("restapi/"+ scope.dbName+"/default_generator_params/"+scope.result["prepid"]);
-        promise.then(function(data){
-          scope.defaultGenParams = data.data.results;
-            scope.addParamLoad = false;
-        }, function(){
-          alert("Error getting default generator parameters");
-        });
     }
   }
 });

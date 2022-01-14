@@ -98,10 +98,10 @@
                 <a ng-click="actionPrompt('reset', data.prepid)" rel="tooltip" title="Reset" ng-hide="data.status == 'new' || role(1);" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="actionPrompt('option_reset', data.prepid)" rel="tooltip" title="Option Reset" ng-hide="data.status != 'new' || role(1);" ng-href="#">
+                <a ng-click="optionReset([data.prepid])" title="Option Reset" ng-show="data.status == 'new' && user.is_user" ng-href="#">
                   <i class="icon-share"></i>
                 </a>
-                <a ng-click="actionPrompt('approve', data.prepid)" rel="tooltip" title="Next step" ng-hide="data.status == 'done' || role(1);" ng-href="#">
+                <a ng-click="nextStatus([data.prepid])" title="Next step" ng-show="data.status != 'done' && user.is_user" ng-href="#">
                   <i class="icon-chevron-right"></i>
                 </a>
                 <a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionary" target="_self">

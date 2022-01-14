@@ -78,6 +78,52 @@ angular.module('testApp').controller('resultsCtrl',
         })
       };
 
+      $scope.setLoading = function(prepids, loading) {
+        for (let prepid of prepids) {
+          $scope.actionMessage[prepid] = loading ? 'loading' : '';
+        }
+      }
+
+      $scope.optionReset = function(prepids) {
+        $scope.questionModal('Are you sure you want to option reset?', function() {
+          $scope.setLoading(prepids, true);
+          $http({ method: 'POST', url: 'restapi/requests/option_reset', data: {'prepid': prepids}}).success(function (data, status) {
+            let results = prepids.length == 1 ? [data] : data;
+            let shouldGetData = false;
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
+        });
+      };
+
+      $scope.nextStatus = function(prepids) {
+        $scope.questionModal('Are you sure you want to move to next status?', function() {
+          $scope.setLoading(prepids, true);
+          $http({ method: 'POST', url: 'restapi/requests/next_status', data: {'prepid': prepids}}).success(function (data, status) {
+            let results = prepids.length == 1 ? [data] : data;
+            let shouldGetData = false;
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
+        });
+      };
+
       $scope.selected_prepids = [];
       $scope.add_to_selected_list = function (prepid) {
         if (_.contains($scope.selected_prepids, prepid)) {
@@ -163,7 +209,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.openCloneRequestModal = function (request) {
         const modal = $modal.open({
           templateUrl: 'cloneRequestModal.html',
-          controller: function ($http, $scope, $modalInstance, request, user, errorModal, setSuccess) {
+          controller: function ($http, $scope, $modalInstance, request, pwgs, errorModal, setSuccess) {
             $scope.vars = {
               pwg: '',
               campaign: ''
@@ -171,10 +217,8 @@ angular.module('testApp').controller('resultsCtrl',
             $scope.request = request;
             $scope.allPWGs = [];
             $scope.allCampaigns = [];
-            $http.get("restapi/users/get_pwg/" + user).then(function (data) {
-              $scope.allPWGs = data.data.results;
-              $scope.vars.pwg = $scope.allPWGs[0];
-            });
+            $scope.allPWGs = pwgs;
+            $scope.vars.pwg = $scope.allPWGs[0];
             $http.get("search?db_name=campaigns&status=started&page=-1").then(function (data) {
               $scope.allCampaigns = data.data.results.map(x => x.prepid);
               $scope.vars.campaign = $scope.allCampaigns[0];
@@ -204,7 +248,7 @@ angular.module('testApp').controller('resultsCtrl',
           },
           resolve: {
             request: function () { return request; },
-            user: function () { return $scope.user.name },
+            pwgs: function () { return $scope.user.pwgs },
             errorModal: function () { return $scope.openErrorModal; },
             setSuccess: function () { return $scope.setSuccess; },
           }

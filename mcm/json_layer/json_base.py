@@ -152,9 +152,12 @@ class json_base:
         with locker.lock(object_id):
             object_json = self.json()
             if database.document_exists(object_id):
-                return database.update(object_json)
+                success = database.update(object_json)
+            else:
+                success = database.save(object_json)
 
-            return database.save(object_json)
+        self.set('_rev', object_json['_rev'])
+        return success
 
     def update_history(self, action, step=''):
         """
@@ -185,7 +188,7 @@ class json_base:
         return self.__json
 
     def get_attribute(self, attribute):
-        if attribute not in self.schema():
+        if attribute not in self.schema() and attribute != '_rev':
             raise Exception('Cannot get "%s" because it does not exist in schema' % (attribute))
 
         return self.__json[attribute]
@@ -218,7 +221,14 @@ class json_base:
 
     def correct_types(self):
         for key in self.__schema:
-            if not isinstance(self.__json[key], type(self.__schema[key])):
+            value = self.__json[key]
+            expected_type = type(self.__schema[key])
+            got_type = type(value)
+            if expected_type is float and got_type is int:
+                continue
+
+            if not isinstance(value, expected_type):
+                self.logger.error('Wrong type for %s, expected %s, got %s', key, expected_type, got_type)
                 return False
         return True
 

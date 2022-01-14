@@ -1,11 +1,13 @@
 from rest_api.ControlActions import Search, CacheClear
 from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
-from rest_api.RequestActions import (ImportRequest,
-                                     CloneRequest,
-                                     DeleteRequest,
-                                     GetRequest,
-                                     GetRequestByDataset,
-                                     UpdateRequest,
+from rest_api.RequestActions import (RequestImport,
+                                     RequestClone,
+                                     RequestDelete,
+                                     RequestGet,
+                                     RequestUpdate,
+                                     RequestGetEditable,
+                                     RequestOptionReset,
+                                     RequestNextStatus,
                                      #GetCmsDriverForRequest,
                                      #GetFragmentForRequest,
                                      #GetSetupForRequest,
@@ -14,7 +16,6 @@ from rest_api.RequestActions import (ImportRequest,
                                      #SetStatus,
                                      #GetStatus,
                                      GetStatusAndApproval,
-                                     #GetEditable,
                                      #GetDefaultGenParams,
                                      #RegisterUser,
                                      #GetActors,
@@ -26,7 +27,7 @@ from rest_api.RequestActions import (ImportRequest,
                                      #RequestsReminder,
                                      #SearchableRequest,
                                      #UpdateMany,
-                                     #OptionResetForRequest,
+                                     #,
                                      #GetRequestOutput,
                                      #GetInjectCommand,
                                      #GetUploadCommand,
@@ -239,21 +240,19 @@ api.add_resource(GetUserInfo, '/restapi/users/get')
 api.add_resource(UpdateUser, '/restapi/users/update')
 api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 api.add_resource(AddCurrentUser, '/restapi/users/add')
-# REST request actions
-api.add_resource(ImportRequest, '/restapi/requests/save')
-api.add_resource(CloneRequest, '/restapi/requests/clone')
-api.add_resource(UpdateRequest, '/restapi/requests/update')
-api.add_resource(DeleteRequest, '/restapi/requests/delete/<string:request_id>')
-api.add_resource(
-    GetRequest,
-    '/restapi/requests/get/<string:request_id>',
-    '/public/restapi/requests/get/<string:request_id>')
+
+# REST Request actions
+api.add_resource(RequestImport, '/restapi/requests/save')
+api.add_resource(RequestClone, '/restapi/requests/clone')
+api.add_resource(RequestUpdate, '/restapi/requests/update')
+api.add_resource(RequestDelete, '/restapi/requests/delete/<string:prepid>')
+api.add_resource(RequestGet,
+                 '/restapi/requests/get/<string:prepid>',
+                 '/public/restapi/requests/get/<string:prepid>')
+api.add_resource(RequestGetEditable, '/restapi/requests/editable/<string:prepid>')
+api.add_resource(RequestOptionReset, '/restapi/requests/option_reset')
+api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
 # api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
-# api.add_resource(
-#     ApproveRequest,
-#     '/restapi/requests/approve',
-#     '/restapi/requests/approve/<string:request_id>',
-#     '/restapi/requests/approve/<string:request_id>/<int:step>')
 # api.add_resource(
 #     ResetRequestApproval,
 #     '/restapi/requests/reset/<string:request_id>',
@@ -262,8 +261,6 @@ api.add_resource(
 #     SetStatus,
 #     '/restapi/requests/status/<string:request_ids>',
 #     '/restapi/requests/status/<string:request_ids>/<int:step>')
-# api.add_resource(GetEditable, '/restapi/requests/editable/<string:request_id>')
-# api.add_resource(GetDefaultGenParams, '/restapi/requests/default_generator_params/<string:request_id>')
 # api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
 # api.add_resource(NotifyUser, '/restapi/requests/notify')
 # api.add_resource(
@@ -293,7 +290,6 @@ api.add_resource(
 #     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
 #     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>')
 # api.add_resource(UpdateMany, '/restapi/requests/update_many')
-# api.add_resource(OptionResetForRequest, '/restapi/requests/option_reset/<string:request_ids>')
 # api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
 # api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
 # api.add_resource(GetUniqueValues, '/restapi/requests/unique_values/<string:field_name>')
