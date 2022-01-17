@@ -60,7 +60,7 @@ class CreateCampaign(RESTResource):
             chained_campaign_db = Database('chained_campaigns')
             chained_campaign = ChainedCampaign({'prepid': 'chain_%s' % (prepid),
                                                 '_id': 'chain_%s' % (prepid),
-                                                'campaigns': [prepid, None]})
+                                                'campaigns': [[prepid, None]]})
             chained_campaign_db.save(chained_campaign.json())
 
         return {'results': True}
@@ -69,7 +69,7 @@ class CreateCampaign(RESTResource):
 class UpdateCampaign(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    def post(self):
         """
         Update a campaign with the provided json content
         """
@@ -123,7 +123,7 @@ class UpdateCampaign(RESTResource):
             if not chained_campaign_db.document_exists(chained_campaign_id):
                 chained_campaign = ChainedCampaign({'prepid': chained_campaign_id,
                                                     '_id': chained_campaign_id,
-                                                    'campaigns': [prepid, None]})
+                                                    'campaigns': [[prepid, None]]})
                 chained_campaign_db.save(chained_campaign.json())
 
         return {'results': True}

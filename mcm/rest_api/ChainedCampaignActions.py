@@ -15,7 +15,7 @@ class CreateChainedCampaign(RESTResource):
         """
         data = json.loads(flask.request.data)
         chained_campaign_db = Database('chained_campaigns')
-        chained_campaign = ChainedCampaign(json_input=data)
+        chained_campaign = ChainedCampaign(data)
         campaigns = chained_campaign.get_attribute('campaigns')
         if not campaigns:
             return {'results': False,
