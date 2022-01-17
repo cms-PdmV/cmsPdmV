@@ -5,7 +5,7 @@ import time
 
 from tools.locker import locker
 from flask_restful import Resource
-from flask import request, abort, make_response, current_app, render_template
+from flask import request, make_response, current_app, render_template
 from json_layer.user import User, Role
 
 
@@ -29,7 +29,8 @@ class RESTResource(Resource):
                         status_code = result.status_code
                     except Exception as ex:
                         status_code = 500
-                        raise ex
+                        return {'results': False,
+                                'message': str(ex)}
                     finally:
                         end_time = time.time()
                         self.logger.info('[%s] %s %.4fs %s',

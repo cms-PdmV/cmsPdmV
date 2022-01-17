@@ -22,6 +22,8 @@ class json_base:
     cmssw_regex = make_regex_matcher(__cmssw_pattern)
     __dataset_pattern = '^/[a-zA-Z0-9\\-_]{1,99}/[a-zA-Z0-9\\.\\-_]{1,199}/[A-Z\\-]{1,50}$'
     dataset_regex = make_regex_matcher(__dataset_pattern)
+    __flow_prepid_pattern = 'flow[a-zA-Z0-9]{2,60}'
+    flow_prepid_regex = make_regex_matcher(__flow_prepid_pattern)
 
 
     def __init__(self, data=None, validate=False):

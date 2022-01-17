@@ -15,12 +15,14 @@ class Flow(json_base):
         'approval': 'none'
     }
 
-    _prepid_pattern = 'flow[a-zA-Z0-9]{2,60}'
-
     def validate(self):
-        prepid = self.get_attribute('prepid')
-        if not self.fullmatch(self._prepid_pattern, prepid):
-            raise Exception('Invalid prepid, allowed pattern: %s' % (self._prepid_pattern))
+        prepid = self.get('prepid')
+        if not self.flow_prepid_regex(prepid):
+            raise Exception('Invalid flow prepid')
+
+        # Make allowed campaigns unique
+        allowed_campaigns = sorted(list(set(self.get('allowed_campaigns'))))
+        self.set('allowed_campaigns', allowed_campaigns)
 
         return super().validate()
 

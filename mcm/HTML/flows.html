@@ -36,15 +36,15 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='flows?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/flows/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/flows/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
+                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && !isDevMachine();"
+                   target="_blank"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && isDevMachine();"
+                   target="_blank"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
@@ -65,6 +65,9 @@
                 <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}">
                   <i class="icon-folder-open"></i>
                 </a>
+                <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
+                <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="approval" align="center">
                 <i class="{{approvalIcon(data[column.db_name])}}" rel="tooltip" title="{{data[column.db_name]}}"></i>
@@ -93,15 +96,12 @@
                     <div ng-switch on="key">
                       <div ng-switch-when="sequences">
                         {{key}}
-                        <ul ng-repeat="el in param">
-                          <div ng-switch on="underscore.size(el)">
-                            <li ng-repeat="(sequence, variable) in el">
-                              {{sequence}}
-                              <ul>
-                                <li ng-repeat="(x, y) in variable">{{x}} : {{y}}</li>
-                              </ul>
-                            </li>
-                          </div>
+                        <ul ng-repeat="sequence in param">
+                          <li>Sequence {{$index + 1}}:
+                            <ul>
+                              <li ng-repeat="(x, y) in sequence">{{x}} : {{y}}</li>
+                            </ul>
+                          </li>
                         </ul>
                       </div>
                       <div ng-switch-default>

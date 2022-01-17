@@ -10,7 +10,7 @@ angular.module('testApp').controller('resultsCtrl',
         { text: 'Next Campaign', select: true, db_name: 'next_campaign' }
       ];
       $scope.dbName = "flows";
-
+      $scope.actionMessage = {};
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
       $scope.approvalIcon = function (value) {
         icons = {
@@ -23,18 +23,22 @@ angular.module('testApp').controller('resultsCtrl',
         }
         return "icon-question-sign";
       };
+      $scope.setLoading = function(prepids, loading) {
+        for (let prepid of prepids) {
+          $scope.actionMessage[prepid] = loading ? 'loading' : '';
+        }
+      }
 
       $scope.nextApproval = function (prepid) {
-        $http({ method: 'GET', url: 'restapi/' + $scope.dbName + '/approve/' + prepid }).success(function (data, status) {
-          $scope.setSuccess(data.results);
+        $scope.setLoading([prepid], true);
+        $http({ method: 'POST', url: 'restapi/' + $scope.dbName + '/approve/' + prepid }).success(function (data, status) {
+          $scope.actionMessage[prepid] = data.results ? 'OK' : data.message;
           if (data.results) {
             $scope.getData();
-          } else {
-            $scope.openErrorModal(prepid, data['message']);
           }
         }).error(function (data, status) {
           $scope.openErrorModal(prepid, data['message']);
-          $scope.setSuccess(false, status);
+          $scope.setLoading([prepid], false);
         });
       };
     }

@@ -36,8 +36,8 @@ angular.module('testApp').controller('resultsCtrl',
         const pwgs = $scope.user.pwgs;
         $modal.open({
           templateUrl: 'createRequestModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, pwgs, selectedPwg, prepid, errorModal, setSuccess) {
-            $scope.vars = {'prepid': prepid, 'pwgs': pwgs, 'selectedPwg': selectedPwg};
+          controller: function ($scope, $modalInstance, $window, $http, pwgs, prepid, errorModal) {
+            $scope.vars = {'prepid': prepid, 'pwgs': pwgs, 'selectedPwg': pwgs[0]};
             $scope.save = function () {
               const requestData = {member_of_campaign: $scope.vars.prepid, pwg: $scope.vars.selectedPwg};
               $http({method: 'PUT', url: 'restapi/requests/save/', data: requestData}).success(function (data) {
@@ -45,11 +45,9 @@ angular.module('testApp').controller('resultsCtrl',
                   $window.location.href = "edit?db_name=requests&query=" + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
-                  setSuccess(false, status);
                 }
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
-                setSuccess(false, status);
               });
               $modalInstance.close();
             };
@@ -59,10 +57,8 @@ angular.module('testApp').controller('resultsCtrl',
           },
           resolve: {
             pwgs: function () { return pwgs; },
-            selectedPwg: function () { return pwgs[0]; },
             prepid: function () { return campaignPrepid; },
             errorModal: function () { return $scope.openErrorModal; },
-            setSuccess: function () { return $scope.setSuccess; },
           }
         })
 

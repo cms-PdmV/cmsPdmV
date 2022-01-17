@@ -1,6 +1,4 @@
-import flask
-import json
-
+from copy import deepcopy
 from couchdb_layer.mcm_database import database as Database
 from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import Campaign
@@ -67,12 +65,19 @@ class FlowRESTResource(RESTResource):
 
         campaign_db = Database('campaigns')
         next_campaign = campaign_db.get(next_campaign_id)
-        if len(parameters['sequences']) > len(next_campaign['sequences']):
+        sequence_name = parameters.get('sequences_name', 'default')
+        campaign_sequences = next_campaign['sequences']
+        if sequence_name not in campaign_sequences:
+            return {'results': False,
+                    'message': '%s is not defined in %s' % (sequence_name, next_campaign_id)}
+
+        campaign_sequences = campaign_sequences[sequence_name]
+        if len(parameters['sequences']) > len(campaign_sequences):
             return {'results': False,
                     'message': 'Flow has more sequences than "%s" campaign' % (next_campaign_id)}
 
-        while len(parameters['sequences']) < len(next_campaign['sequences']):
-            parameters['sequences'].append({'default': {}})
+        while len(parameters['sequences']) < len(campaign_sequences):
+            parameters['sequences'].append({})
 
         flow.set_attribute('request_parameters', parameters)
         return True
@@ -116,12 +121,11 @@ class FlowRESTResource(RESTResource):
 class CreateFlow(FlowRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def put(self, data):
         """
         Create a flow with the provided json content
         """
-        data = json.loads(flask.request.data)
-        flow_db = Database('flows')
         flow = Flow(data)
         prepid = flow.get_attribute('prepid')
         if not prepid:
@@ -134,14 +138,13 @@ class CreateFlow(FlowRESTResource):
             return {'results': False,
                     'message': 'Invalid flow name "%s"' % (prepid)}
 
-        if flow_db.document_exists(prepid):
+        if Flow.fetch(prepid):
             self.logger.error('Flow "%s" already exists', prepid)
             return {'results': False,
                     'message': 'Flow "%s" already exists' % (prepid)}
 
-        # Make allowed campaigns unique
-        allowed_campaigns = sorted(list(set(flow.get_attribute('allowed_campaigns'))))
-        flow.set_attribute('allowed_campaigns', allowed_campaigns)
+        # Validate
+        flow.validate()
         # Check if allowed and next campaigns exist
         campaign_check = self.check_campaigns(flow)
         if campaign_check is not True:
@@ -155,8 +158,7 @@ class CreateFlow(FlowRESTResource):
         flow.set_attribute('_id', prepid)
         flow.update_history({'action': 'created'})
         # Save to DB
-        if not flow_db.save(flow.json()):
-            self.logger.error('Could not save flow %s to database', prepid)
+        if not flow.save():
             return {'results': False,
                     'message': 'Could not save flow %s to database' % (prepid)}
 
@@ -169,33 +171,32 @@ class CreateFlow(FlowRESTResource):
 class UpdateFlow(FlowRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Update a campaign with the provided json content
+        Update a flow with the provided json content
         """
-        data = json.loads(flask.request.data)
-        if '_rev' not in data:
-            return {'results': False,
-                    'message': 'No revision provided'}
-
-        flow_db = Database('flows')
-        flow = Flow(data)
-        prepid = flow.get_attribute('prepid')
+        prepid = data.get('prepid', data.get('_id'))
         if not prepid:
-            self.logger.error('Invalid prepid "%s"', prepid)
             return {'results': False,
-                    'message': 'Invalid prepid "%s"' % (prepid)}
+                    'message': 'Missing prepid in submitted data'}
 
-        if not flow_db.document_exists(prepid):
-            self.logger.error('Cannot update, %s does not exist', prepid)
+        old_flow = Flow.fetch(prepid)
+        if not old_flow:
+            return {"results": False,
+                    'message': 'Object "%s" does not exist' % (prepid)}
+
+        new_flow = Flow(data)
+        if new_flow.get('_rev') != old_flow.get('_rev'):
             return {'results': False,
-                    'message': 'Cannot update, "%s" does not exist' % (prepid)}
+                    'message': 'Provided revision does not match revision in database'}
 
-        # find out what is the change
-        previous_version = Flow(flow_db.get(prepid))
+        # Validate
+        new_flow.validate()
 
-        old_ps = previous_version.get_attribute('request_parameters').get('process_string', None)
-        new_ps = flow.get_attribute('request_parameters').get('process_string', None)
+        # Check if there are submitted requests when changing processing string
+        old_ps = old_flow.get_attribute('request_parameters').get('process_string', None)
+        new_ps = new_flow.get_attribute('request_parameters').get('process_string', None)
         if old_ps != new_ps:
             request_db = Database('requests')
             requests = request_db.search({'status': 'submitted', 'flown_with': prepid},
@@ -206,21 +207,19 @@ class UpdateFlow(FlowRESTResource):
                         'message': ('Cannot change process string because there are requests in '
                                     'status "submitted" that are flown with "%s"' % (prepid))}
 
-        # Make allowed campaigns unique
-        allowed_campaigns = sorted(list(set(flow.get_attribute('allowed_campaigns'))))
-        flow.set_attribute('allowed_campaigns', allowed_campaigns)
         # Check if allowed and next campaigns exist
-        campaign_check = self.check_campaigns(flow)
+        campaign_check = self.check_campaigns(new_flow)
         if campaign_check is not True:
             return campaign_check
 
         # Adjust the request parameters based on next campaign
-        parameter_check = self.set_default_request_parameters(flow)
+        parameter_check = self.set_default_request_parameters(new_flow)
         if parameter_check is not True:
             return parameter_check
 
-        previous_allowed_campaigns = previous_version.get_attribute('allowed_campaigns')
-        removed_campaigns = set(previous_allowed_campaigns) - set(allowed_campaigns)
+        old_allowed_campaigns = old_flow.get('allowed_campaigns')
+        new_allowed_campaigns = new_flow.get('allowed_campaigns')
+        removed_campaigns = set(old_allowed_campaigns) - set(new_allowed_campaigns)
         if removed_campaigns:
             chained_campaign_db = Database('chained_campaigns')
             # Check if there are chained campaigns that are made with this flow
@@ -239,42 +238,42 @@ class UpdateFlow(FlowRESTResource):
                                                                             prepid,
                                                                             removed_campaign))}
 
-        next_campaign = flow.get_attribute('next_campaign')
-        previous_next_campaign = previous_version.get_attribute('next_campaign')
-        if previous_next_campaign and previous_next_campaign != next_campaign:
+        new_next_campaign = new_flow.get('next_campaign')
+        old_next_campaign = old_flow.get('next_campaign')
+        if old_next_campaign and old_next_campaign != new_next_campaign:
             chained_campaign_db = Database('chained_campaigns')
             # Check if there are chained campaigns that are made with this flow
             # and was using the changed next campaign
             # Contains this flow AND that next campaign
             chained_campaign_query = {'contains': prepid,
-                                      'contains_': previous_next_campaign}
+                                      'contains_': old_next_campaign}
             chained_campaigns = chained_campaign_db.search(chained_campaign_query,
                                                            limit=1,
                                                            include_fields='prepid')
             if chained_campaigns:
                 return {'results': False,
                         'message': ('Campaign "%s" cannot be removed because there are chained '
-                                    'campaigns using "%s" and "%s" ' % (previous_next_campaign,
+                                    'campaigns using "%s" and "%s" ' % (old_next_campaign,
                                                                         prepid,
-                                                                        previous_next_campaign))}
+                                                                        old_next_campaign))}
 
-        difference = self.get_obj_diff(previous_version.json(),
-                                       flow.json(),
+        difference = self.get_obj_diff(old_flow.json(),
+                                       new_flow.json(),
                                        ('history', '_rev'))
         if not difference:
             return {'results': True}
 
         difference = ', '.join(difference)
-        flow.update_history({'action': 'update', 'step': difference})
+        new_flow.set('history', old_flow.get('history'))
+        new_flow.update_history({'action': 'update', 'step': difference})
 
         # Save to DB
-        if not flow_db.update(flow.json()):
-            self.logger.error('Could not save flow %s to database', prepid)
+        if not new_flow.save():
             return {'results': False,
                     'message': 'Could not save flow %s to database' % (prepid)}
 
         # Update relevant campaigns' "Next" parameter
-        self.update_derived_objects(previous_version, flow)
+        self.update_derived_objects(old_flow, new_flow)
 
         return {'results': True}
 
@@ -340,17 +339,16 @@ class GetFlow(RESTResource):
 class ApproveFlow(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def get(self, flow_id):
+    def post(self, flow_id):
         """
         Move the given flow(s) id to the next approval
         """
-        flow_db = Database('flows')
-        if not flow_db.document_exists(flow_id):
+        flow = Flow.fetch(flow_id)
+        if not flow:
             return {'prepid': flow_id,
                     'results': False,
                     'message': 'The flow "%s" does not exist' % (flow_id)}
 
-        flow = Flow(flow_db.get(flow_id))
         try:
             flow.toggle_approval()
             saved = flow.save()
@@ -365,45 +363,35 @@ class ApproveFlow(RESTResource):
 class CloneFlow(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def put(self):
+    @RESTResource.request_with_json
+    def put(self, data):
         """
         Make a clone of flow
         """
-        data = json.loads(flask.request.data)
         flow_id = data['prepid']
         new_flow_id = data['new_prepid']
-        if not flow_id or not new_flow_id:
-            self.logger.error('Invalid prepid "%s" or "%s"', flow_id, new_flow_id)
-            return {'results': False,
-                    'message': 'Invalid prepid "%s" or "%s"' % (flow_id, new_flow_id)}
-
-        if not self.fullmatch(Flow._prepid_pattern, new_flow_id):
-            self.logger.error('Invalid new flow name %s', new_flow_id)
-            return {'results': False,
-                    'message': 'Invalid new flow name "%s"' % (new_flow_id)}
-
-        flow_db = Database('flows')
-        if not flow_db.document_exists(flow_id):
+        old_flow = Flow.fetch(flow_id)
+        if not old_flow:
             return {'results': False,
                     'message': 'Flow "%s" does not exist' % (flow_id)}
 
-        if flow_db.document_exists(new_flow_id):
+        if Flow.fetch(new_flow_id):
             return {'results': False,
                     'message': 'Flow "%s" already exist' % (new_flow_id)}
 
-        new_json = flow_db.get(flow_id)
+        new_json = deepcopy(old_flow.json())
         new_json['prepid'] = new_flow_id
         new_json['_id'] = new_flow_id
         for attr in ('history', '_rev'):
             new_json.pop(attr, None)
 
-        new_flow = Flow()
-        new_flow.update(new_json)
+        new_flow = Flow(new_json)
+        new_flow.validate()
         new_flow.update_history({'action': 'clone', 'step': flow_id})
-        if new_flow.save():
-            return {'results': True,
-                    'message': 'Created %s' % (new_flow_id),
-                    'prepid': new_flow_id}
+        if not new_flow.save():
+            return {'results': False,
+                    'message': 'Error saving new flow'}
 
-        return {'results': False,
-                'message': 'Error saving new flow'}
+        return {'results': True,
+                'message': 'Created %s' % (new_flow_id),
+                'prepid': new_flow_id}
