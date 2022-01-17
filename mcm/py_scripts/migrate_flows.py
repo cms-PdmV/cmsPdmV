@@ -2,7 +2,6 @@ import logging
 import json
 import hashlib
 from copy import deepcopy
-from sqlite3 import paramstyle
 from tools.config_manager import Config
 from couchdb_layer.mcm_database import database as Database
 
